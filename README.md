@@ -10,6 +10,8 @@ Instead of orchestrating and executing test with a CI tool (jenkins, travis, cir
 - kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
 - API Server - work orchestrator, runs executors, gather execution results
 - CRDs Operator - watch KubeTest CR, handles changes communicates with API Server
+- Executors - runs tests defined by specific runner, for PoC phase we'll run 
+  Postman collection defined in CR.
 
 For PoC phase diagram looks like following: 
 
