@@ -1,38 +1,29 @@
 # KubeTest
 
+Kubernetes-native framework for definition and execution of tests in a cluster; 
 
-# Components
-
-- kubectl plugin - simple - installed w/o 3rd party repositories, communicates with  
-- REST API Server - uses
-
-## Some decisions: 
-
--  [ ] Which operator framework we shoul use for Controller - use "Operator Framework" or "Kubebuilder"
-  + https://operatorframework.io/
-  + https://book.kubebuilder.io/
-
-  https://github.com/operator-framework/operator-sdk/issues/1758
+Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
 
 
-- [ ]  Use postman, use inline postman collection definition in CRD yaml file.
+# Minimal components for PoC
 
-- [ ] Golang REST API framework 
-  + pure net/http
-  + gofiber
-  + ... or other
+- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
+- API Server - work orchestrator, runs executors, gather execution results
+- CRDs Operator - watch KubeTest CR, handles changes communicates with API Server
+- Executors - runs tests defined by specific runner, for PoC phase we'll run 
+  Postman collection defined in CR.
 
-# Where to start
+For PoC phase diagram looks like following: 
 
-- [ ] CRD definition, CRD will hold content of Postman collection
-  + Kind: KubeTest
-  + Type: PostmanCollection
-  + Content: inline json content
+![diagram][/assets/architecture.md]
 
-- We need to generate new Operator (with use of operator framework of our choice look above)
+## Key components from confluence
 
-- Create basic REST API app (consider use plain go net/http package or small framework like gofiber or similiar) 
-
+- custom crds and corresponding controllers/operators for defining testsuites consisting or supported artefacts
+- extension mechanism that allows 3rd party tool providers to add support for their test artefact
+- kubectl extension for examining/running tests
+- integration with 3rd party tools for result reporting/analysis (prometheus, etc.)
+- custom controller/operator that can be configured to run specific tests based on events/annotations/etc
 
 
 
