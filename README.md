@@ -15,7 +15,7 @@ Instead of orchestrating and executing test with a CI tool (jenkins, travis, cir
 
 For PoC phase diagram looks like following: 
 
-![diagram][/assets/architecture.md]
+![diagram](/assets/architecture.md)
 
 ## Key components from confluence
 
