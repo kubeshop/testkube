@@ -1,6 +1,10 @@
 package api
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/adaptor/v2"
+	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
 
 func NewServer() Server {
 	s := Server{
@@ -17,6 +21,7 @@ type Server struct {
 
 func (s Server) Init() {
 	s.Mux.Get("/health", s.HealthEndpoint())
+	s.Mux.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 }
 
 func (s Server) Run() {
