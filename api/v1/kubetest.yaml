@@ -116,7 +116,7 @@ paths:
                   $ref: '#/components/schemas/Execution'
 
   /scripts/{id}/executions/{executionID}/abort:
-    get:
+    post:
       parameters:
         - in: path
           name: id
