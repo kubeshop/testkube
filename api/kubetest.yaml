@@ -1,0 +1,201 @@
+openapi: 3.0.1
+info:
+  title: Kubetest
+  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubetest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
+  termsOfService: http://kubetest.io/terms/
+  contact:
+    email: api@kubetest.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.0.1
+externalDocs:
+  description: 'Find out more about Kubetest'
+  url: http://kubetest.io
+servers:
+- url: https://api.kubetest.io/v1
+tags:
+- name: scripts
+  description: 'Operation based on scripts resource' 
+
+paths:
+
+  /scripts:
+    get:
+      tags:
+      - scripts
+      summary: 'Get all scripts'
+      description: 'filters will be added later'
+      operationId: getAllScripts
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+                  
+  /scripts/{id}/executions:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 'ID of the script (uuid?)'
+      tags:
+      - scripts
+      summary: 'Starts new script execution'
+      description: 'New script execution returns new execution details on successful execution start'
+      operationId: executeScript
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+  
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
+      tags:
+      - scripts
+      summary: 'Get all script executions'
+      description: 'Returns array of all available script executions'
+      operationId: getScriptExecutions
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+                  
+
+  /scripts/{id}/executions/{executionID}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution (uuid?)
+      tags:
+      - scripts
+      summary: 'Get script execution'
+      description: 'Returns execution with given executionID'
+      operationId: getScriptExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+
+  /scripts/{id}/executions/{executionID}/abort:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution (uuid?)
+      tags:
+      - scripts
+      summary: 'Aborts execution'
+      description: 'Aborts execution and returns execution details'
+      operationId: abortScriptExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+
+  
+components:
+  schemas:
+    Script:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          description: 'Script type'
+          enum: 
+          - postman-collection
+        content:
+          type: string
+          description: 'Script content'
+        created:
+          type: string
+          format: date-time
+    
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        executor:
+          type: string
+          description: 'Executor used when executing script'
+          enum: 
+          - postman-collection
+        status: 
+          type: string
+          description: 'Excution status'
+          enum: 
+          - pending 
+          - success 
+          - failed
+        result:
+          type: string
+          description: 'Script execution output'
+        result-type:
+          type: string
+          description: 'Result type'
+          enum: 
+          - shell
+          - junit
+        start-date:
+          type: string
+          format: date-time
+        end-date:
+          type: string
+          format: date-time
