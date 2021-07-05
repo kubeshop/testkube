@@ -10,54 +10,47 @@ info:
     url: https://opensource.org/licenses/MIT
   version: 0.0.1
 externalDocs:
-  description: Find out more about Kubetest
+  description: 'Find out more about Kubetest'
   url: http://kubetest.io
 servers:
 - url: https://api.kubetest.io/v1
 tags:
 - name: scripts
-  description: Operation based on scripts resource 
+  description: 'Operation based on scripts resource' 
+
 paths:
-  /scripts/{id}:
-    put:
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: Numeric ID of the user to get
-      tags:
-      - scripts
-      summary: Update an existing script
-      operationId: updateScript
-      requestBody:
-        description: Script body
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Script'
-        required: true
-      responses:
-        400:
-          description: Invalid script content
-          content: {}
-        404:
-          description: Script not found
-          content: {}
+
+  /scripts:
     get:
+      tags:
+      - scripts
+      summary: 'Get all scripts'
+      description: 'filters will be added later'
+      operationId: getAllScripts
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+                  
+  /scripts/{id}/executions:
+    post:
       parameters:
         - in: path
           name: id
           schema:
             type: string
           required: true
-          description: Numeric ID of the user to get
+          description: 'ID of the script (uuid?)'
       tags:
       - scripts
-      summary: Get script
-      description: 'get script with given ID'
-      operationId: getScript
+      summary: 'Starts new script execution'
+      description: 'New script execution returns new execution details on successful execution start'
+      operationId: executeScript
       responses:
         200:
           description: successful operation
@@ -66,31 +59,21 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Script'
-          
-  /scripts:
-    post:
-      tags:
-      - scripts
-      summary: Create new script
-      operationId: createScript
-      requestBody:
-        description: Body with script content
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Script'
-        required: true
-      responses:
-        405:
-          description: Invalid input
-          content: {}
+                  $ref: '#/components/schemas/Execution'
+  
     get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
       tags:
       - scripts
-      summary: Get all scripts
-      description: 'filters will be added later'
-      operationId: getAllScripts
+      summary: 'Get all script executions'
+      description: 'Returns array of all available script executions'
+      operationId: getScriptExecutions
       responses:
         200:
           description: successful operation
@@ -99,7 +82,70 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Script'
+                  $ref: '#/components/schemas/Execution'
+                  
+
+  /scripts/{id}/executions/{executionID}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution (uuid?)
+      tags:
+      - scripts
+      summary: 'Get script execution'
+      description: 'Returns execution with given executionID'
+      operationId: getScriptExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+
+  /scripts/{id}/executions/{executionID}/abort:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script (uuid?)
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution (uuid?)
+      tags:
+      - scripts
+      summary: 'Aborts execution'
+      description: 'Aborts execution and returns execution details'
+      operationId: abortScriptExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+
+  
 components:
   schemas:
     Script:
@@ -115,7 +161,41 @@ components:
           - postman-collection
         content:
           type: string
-          description: 'script content'
+          description: 'Script content'
         created:
+          type: string
+          format: date-time
+    
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        executor:
+          type: string
+          description: 'Executor used when executing script'
+          enum: 
+          - postman-collection
+        status: 
+          type: string
+          description: 'Excution status'
+          enum: 
+          - pending 
+          - success 
+          - failed
+        result:
+          type: string
+          description: 'Script execution output'
+        result-type:
+          type: string
+          description: 'Result type'
+          enum: 
+          - shell
+          - junit
+        start-date:
+          type: string
+          format: date-time
+        end-date:
           type: string
           format: date-time
