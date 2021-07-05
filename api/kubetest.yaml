@@ -1,0 +1,121 @@
+openapi: 3.0.1
+info:
+  title: Kubetest
+  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubetest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
+  termsOfService: http://kubetest.io/terms/
+  contact:
+    email: api@kubetest.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.0.1
+externalDocs:
+  description: Find out more about Kubetest
+  url: http://kubetest.io
+servers:
+- url: https://api.kubetest.io/v1
+tags:
+- name: scripts
+  description: Operation based on scripts resource 
+paths:
+  /scripts/{id}:
+    put:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Numeric ID of the user to get
+      tags:
+      - scripts
+      summary: Update an existing script
+      operationId: updateScript
+      requestBody:
+        description: Script body
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Script'
+        required: true
+      responses:
+        400:
+          description: Invalid script content
+          content: {}
+        404:
+          description: Script not found
+          content: {}
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Numeric ID of the user to get
+      tags:
+      - scripts
+      summary: Get script
+      description: 'get script with given ID'
+      operationId: getScript
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Script'
+          
+  /scripts:
+    post:
+      tags:
+      - scripts
+      summary: Create new script
+      operationId: createScript
+      requestBody:
+        description: Body with script content
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Script'
+        required: true
+      responses:
+        405:
+          description: Invalid input
+          content: {}
+    get:
+      tags:
+      - scripts
+      summary: Get all scripts
+      description: 'filters will be added later'
+      operationId: getAllScripts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+components:
+  schemas:
+    Script:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          description: 'Script type'
+          enum: 
+          - postman-collection
+        content:
+          type: string
+          description: 'script content'
+        created:
+          type: string
+          format: date-time

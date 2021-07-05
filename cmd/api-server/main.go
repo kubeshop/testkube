@@ -1,9 +1,7 @@
 package main
 
-import "github.com/kubeshop/kubetest/internal/app/api"
+import v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
 
 func main() {
-
-	api.NewServer().Run()
-
+	v1API.NewServer().Run()
 }
