@@ -7,4 +7,5 @@ require (
 	github.com/gofiber/fiber/v2 v2.14.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
+	github.com/stretchr/testify v1.7.0
 )
