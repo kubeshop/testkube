@@ -12,9 +12,13 @@ const ConcurrentExecutions = 4
 
 // NewPostmanExecutor returns new PostmanExecutor instance
 func NewPostmanExecutor() PostmanExecutor {
-	return PostmanExecutor{
+	e := PostmanExecutor{
 		Mux: fiber.New(),
 	}
+
+	e.Init()
+
+	return e
 }
 
 type PostmanExecutor struct {
@@ -29,7 +33,7 @@ func (p PostmanExecutor) Init() {
 
 	executions := v1.Group("/executions")
 	executions.Post("/", p.StartExecution())
-	executions.Post("/:id", p.GetExecution())
+	executions.Get("/:id", p.GetExecution())
 }
 
 func (p PostmanExecutor) StartExecution() fiber.Handler {
@@ -53,5 +57,5 @@ func (p PostmanExecutor) GetExecution() fiber.Handler {
 }
 
 func (p PostmanExecutor) Run() error {
-	return p.Mux.Listen(":8081")
+	return p.Mux.Listen(":8082")
 }
