@@ -1,0 +1,7 @@
+apiVersion: kubetest.kubetest.io/v1
+kind: Script
+metadata:
+  name: script-sample
+spec:
+  # Add fields here
+  foo: bar
