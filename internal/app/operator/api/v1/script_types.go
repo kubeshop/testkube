@@ -29,7 +29,9 @@ type ScriptSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Script. Edit script_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Id         string `json:"id,omitempty"`
+	ScriptType string `json:"script-type"`
+	Name       string `json:"name"`
 }
 
 // ScriptStatus defines the observed state of Script
