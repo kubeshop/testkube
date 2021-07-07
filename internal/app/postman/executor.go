@@ -1,10 +1,12 @@
 package postman
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubeshop/kubetest/pkg/newman"
+	"github.com/kubeshop/kubetest/pkg/runner"
+	"github.com/kubeshop/kubetest/pkg/runner/newman"
 )
 
 // ConcurrentExecutions per node
@@ -13,20 +15,19 @@ const ConcurrentExecutions = 4
 // NewPostmanExecutor returns new PostmanExecutor instance
 func NewPostmanExecutor() PostmanExecutor {
 	e := PostmanExecutor{
-		Mux: fiber.New(),
+		Mux:    fiber.New(),
+		Runner: &newman.Runner{},
 	}
-
-	e.Init()
 
 	return e
 }
 
 type PostmanExecutor struct {
 	Mux    *fiber.App
-	Runner newman.Runner
+	Runner runner.Runner
 }
 
-func (p PostmanExecutor) Init() {
+func (p *PostmanExecutor) Init() {
 	// v1 API
 	v1 := p.Mux.Group("/v1")
 	v1.Static("/api-docs", "./api/v1")
@@ -36,17 +37,20 @@ func (p PostmanExecutor) Init() {
 	executions.Get("/:id", p.GetExecution())
 }
 
-func (p PostmanExecutor) StartExecution() fiber.Handler {
+func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request ExecuteRequest
-		c.BodyParser(request)
-		content := strings.NewReader(request.Body)
-		result, err := p.Runner.RunCollection(content)
+		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return err
 		}
-		c.JSON(result)
-		return err
+
+		content := strings.NewReader(string(request.Metadata))
+		result, err := p.Runner.Run(content)
+		if err != nil {
+			return err
+		}
+		return c.JSON(result)
 	}
 }
 
