@@ -1,0 +1,101 @@
+openapi: 3.0.1
+info:
+  title: Kubetest Executor
+  description: Executor API reference for KubeTest
+  termsOfService: http://kubetest.io/terms/
+  contact:
+    email: api@kubetest.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.0.1
+externalDocs:
+  description: 'Find out more about Kubetest'
+  url: http://kubetest.io
+servers:
+- url: https://api.kubetest.io/v1
+tags:
+- name: executor
+  description: 'Scripts execution' 
+
+paths:
+  /:
+    post:
+      tags:
+      - executor
+      summary: 'Starts script execution'
+      description: 'Starts script execution, returns pending excution with ID'
+      operationId: executueScript
+      responses:
+        201:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionResult'
+  /{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 'ID of the execution'
+      tags:
+      - executor
+      summary: 'Get execution by ID'
+      description: 'Gets execution with given ID, returns deailed information about test execution'
+      operationId: getExecution
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionResult'
+                  
+components:
+  schemas:
+    ExecutionResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        script-type:
+          type: string
+        name:
+          type: string
+          description: 'execution name'
+        status: 
+          type: string
+          description: 'Excution status'
+          enum: 
+          - pending 
+          - success 
+          - failed
+        raw-result:
+          type: string
+          description: 'RAW Script execution output'
+        result-type:
+          type: string
+          description: 'Result type'
+          enum: 
+          - shell
+          - junit
+          - json
+        start-time:
+          type: string
+          format: date-time
+        end-time:
+          type: string
+          format: date-time
+        duration:
+          type: string
+          format: duration
+    
