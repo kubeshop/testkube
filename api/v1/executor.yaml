@@ -79,14 +79,14 @@ components:
           - pending 
           - success 
           - failed
-        raw-result:
+        output:
           type: string
           description: 'RAW Script execution output'
-        result-type:
+        output-type:
           type: string
           description: 'Result type'
           enum: 
-          - shell
+          - text
           - junit
           - json
         start-time:
