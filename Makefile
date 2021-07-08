@@ -10,6 +10,10 @@ run-executor:
 run-mongo-dev: 
 	docker run --name mongo-executor -p 27017:27017 mongo
 
+# build done by vendoring to bypass private go repo problems
+build-executor: 
+	go mod vendor
+	docker build -t postman-executor -f build/postman-executor/Dockerfile .
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
