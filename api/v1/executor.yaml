@@ -71,6 +71,9 @@ components:
         script-type:
           type: string
           description: script type e.g. postman/collection
+        script-content: 
+          type: string
+          description: script metadata content
         name:
           type: string
           description: 'execution name'

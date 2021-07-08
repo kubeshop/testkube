@@ -17,6 +17,8 @@ type Execution struct {
 	Id string `json:"id,omitempty"`
 	// script type e.g. postman/collection
 	ScriptType string `json:"script-type,omitempty"`
+	// script metadata content
+	ScriptContent string `json:"script-content,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
 	// execution status

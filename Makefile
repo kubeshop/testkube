@@ -7,6 +7,9 @@ run-api-serer:
 run-executor: 
 	go run cmd/postman-executor/main.go
 
+run-mongo-dev: 
+	docker run --name mongo-executor -p 27017:27017 mongo
+
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen

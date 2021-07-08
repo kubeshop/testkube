@@ -31,7 +31,7 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 
 		// then
 		assert.NoError(t, err)
-		assert.Equal(t, resp.StatusCode, 200)
+		assert.Equal(t, 201, resp.StatusCode)
 	})
 
 }

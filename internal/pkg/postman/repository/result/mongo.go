@@ -30,3 +30,8 @@ func (r *MongoRepository) Insert(ctx context.Context, result executor.Execution)
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
+
+func (r *MongoRepository) Update(ctx context.Context, result executor.Execution) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": result.Id}, result)
+	return
+}

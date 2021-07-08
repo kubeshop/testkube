@@ -12,7 +12,7 @@ import (
 const DatabaseName = "postman-executor"
 
 type MongoConfig struct {
-	DSN string `envconfig:"MONGO_DSN" deafult:"mongodb://localhost:27017"`
+	DSN string `envconfig:"MONGO_DSN" default:"mongodb://localhost:27017"`
 }
 
 var Config MongoConfig
