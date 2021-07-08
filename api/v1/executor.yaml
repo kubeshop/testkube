@@ -24,7 +24,7 @@ paths:
       tags:
       - executor
       summary: 'Starts script execution'
-      description: 'Starts script execution, returns pending excution with ID'
+      description: 'Starts script execution, returns pending execution with ID'
       operationId: executueScript
       responses:
         201:
@@ -76,7 +76,7 @@ components:
           description: 'execution name'
         status: 
           type: string
-          description: 'excution status'
+          description: 'execution status'
           enum: 
           - queued
           - pending 
