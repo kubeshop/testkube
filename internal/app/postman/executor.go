@@ -1,10 +1,12 @@
 package postman
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
 	"github.com/kubeshop/kubetest/pkg/runner"
 	"github.com/kubeshop/kubetest/pkg/runner/newman"
 )
@@ -23,8 +25,9 @@ func NewPostmanExecutor() PostmanExecutor {
 }
 
 type PostmanExecutor struct {
-	Mux    *fiber.App
-	Runner runner.Runner
+	Mux        *fiber.App
+	Runner     runner.Runner
+	Repository result.Repository
 }
 
 func (p *PostmanExecutor) Init() {
@@ -50,6 +53,8 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 		if err != nil {
 			return err
 		}
+
+		p.Repository.Insert(context.Background(), result)
 		return c.JSON(result)
 	}
 }

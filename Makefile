@@ -4,6 +4,8 @@ test-all:
 run-api-serer: 
 	go run cmd/api-server/main.go
 
+run-executor: 
+	go run cmd/postman-executor/main.go
 
 
 install-swagger-codegen-mac: 

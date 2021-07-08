@@ -7,6 +7,6 @@ import (
 )
 
 type Repository interface {
-	Get(ctx context.Context, id string) (executor.ExecutionResult, error)
-	Insert(ctx context.Context, result executor.ExecutionResult) error
+	Get(ctx context.Context, id string) (executor.Execution, error)
+	Insert(ctx context.Context, result executor.Execution) error
 }

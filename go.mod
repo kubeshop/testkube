@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/gofiber/adaptor/v2 v2.1.7
 	github.com/gofiber/fiber/v2 v2.14.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/kubetest/internal/app/operator v0.0.0-20210706105244-914c8d666591
 	github.com/moogar0880/problems v0.1.1
 	github.com/prometheus/client_golang v1.11.0

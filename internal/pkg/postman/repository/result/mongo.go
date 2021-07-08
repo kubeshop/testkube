@@ -11,7 +11,7 @@ import (
 
 const CollectionName = "execution-results"
 
-func NewMongoRespository(db mongo.Database) *MongoRepository {
+func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
 		Coll: db.Collection(CollectionName),
 	}
@@ -21,12 +21,12 @@ type MongoRepository struct {
 	Coll *mongo.Collection
 }
 
-func (r *MongoRepository) GetBy(ctx context.Context, id string) (result executor.ExecutionResult, err error) {
+func (r *MongoRepository) Get(ctx context.Context, id string) (result executor.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) Insert(ctx context.Context, result executor.ExecutionResult) (err error) {
+func (r *MongoRepository) Insert(ctx context.Context, result executor.Execution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
