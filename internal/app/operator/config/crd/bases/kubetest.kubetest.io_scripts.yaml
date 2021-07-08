@@ -36,10 +36,17 @@ spec:
           spec:
             description: ScriptSpec defines the desired state of Script
             properties:
-              foo:
+              id:
                 description: Foo is an example field of Script. Edit script_types.go
                   to remove/update
                 type: string
+              script-content:
+                type: string
+              script-type:
+                type: string
+            required:
+            - script-content
+            - script-type
             type: object
           status:
             description: ScriptStatus defines the observed state of Script
