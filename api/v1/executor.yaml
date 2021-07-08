@@ -34,7 +34,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExecutionResult'
+                  $ref: '#/components/schemas/Execution'
   /executions/{id}:
     get:
       parameters:
@@ -57,11 +57,11 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExecutionResult'
+                  $ref: '#/components/schemas/Execution'
                   
 components:
   schemas:
-    ExecutionResult:
+    Execution:
       type: object
       properties:
         id:
@@ -70,7 +70,7 @@ components:
           format: uuid
         script-type:
           type: string
-          description: script type e.g. postman-collection
+          description: script type e.g. postman/collection
         name:
           type: string
           description: 'execution name'
@@ -89,12 +89,9 @@ components:
           type: string
           description: 'output type depends of reporter used in partucular tool'
           enum: 
-          - text
-          - junit
-          - json
-        output-content-type: 
-          type: string
-          description: 'result content-type e.g. application/json'
+          - text/plain
+          - application/junit+xml
+          - application/json
         start-time:
           type: string
           description: 'test start time'

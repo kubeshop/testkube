@@ -36,8 +36,8 @@ $ kubectl kubetest scripts  list
 
 
 ID         NAME              Type
-040-134   HomePage test      postman-collection   
-123-246   Contact API test   postman-collection
+040-134   HomePage test      postman/collection   
+123-246   Contact API test   postman/collection
 
 ```
  
