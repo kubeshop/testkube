@@ -31,7 +31,6 @@ type ScriptSpec struct {
 	// Foo is an example field of Script. Edit script_types.go to remove/update
 	Id            string `json:"id,omitempty"`
 	ScriptType    string `json:"script-type"`
-	Name          string `json:"name"`
 	ScriptContent string `json:"script-content"`
 }
 

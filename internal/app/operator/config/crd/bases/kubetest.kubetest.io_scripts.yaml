@@ -40,14 +40,11 @@ spec:
                 description: Foo is an example field of Script. Edit script_types.go
                   to remove/update
                 type: string
-              name:
-                type: string
               script-content:
                 type: string
               script-type:
                 type: string
             required:
-            - name
             - script-content
             - script-type
             type: object
