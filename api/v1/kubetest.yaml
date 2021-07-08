@@ -154,14 +154,17 @@ components:
         id:
           type: string
           format: uuid
+        name:
+          type: string
+          description: script name
         type:
           type: string
-          description: 'Script type'
+          description: script type
           enum: 
-          - postman-collection
+          - postman/collection
         content:
           type: string
-          description: 'Script content'
+          description: script content
         created:
           type: string
           format: date-time
@@ -171,31 +174,38 @@ components:
       properties:
         id:
           type: string
+          description: execution id (UUID?)
           format: uuid
-        executor:
+        script-type:
           type: string
-          description: 'Executor used when executing script'
-          enum: 
-          - postman-collection
+          description: script type e.g. postman/collection
+        name:
+          type: string
+          description: 'execution name'
         status: 
           type: string
-          description: 'Excution status'
+          description: 'execution status'
           enum: 
+          - queued
           - pending 
           - success 
           - failed
-        result:
+        output:
           type: string
-          description: 'Script execution output'
-        result-type:
+          description: 'RAW Script execution output, depends of reporter used in particular tool'
+        output-type:
           type: string
-          description: 'Result type'
+          description: 'output type depends of reporter used in partucular tool'
           enum: 
-          - shell
-          - junit
-        start-date:
+          - text/plain
+          - application/junit+xml
+          - application/json
+        start-time:
           type: string
+          description: 'test start time'
           format: date-time
-        end-date:
+        end-time:
           type: string
+          description: 'test end time'
           format: date-time
+
