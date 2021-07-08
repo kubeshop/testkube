@@ -19,7 +19,7 @@ type ExecutionResult struct {
 	ScriptType string `json:"script-type,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
-	// excution status
+	// execution status
 	Status string `json:"status,omitempty"`
 	// RAW Script execution output, depends of reporter used in particular tool
 	Output string `json:"output,omitempty"`

@@ -14,11 +14,11 @@ import (
 
 type Script struct {
 	Id string `json:"id,omitempty"`
-	// Name
+	// script name
 	Name string `json:"name,omitempty"`
-	// Script type
+	// script type
 	Type_ string `json:"type,omitempty"`
-	// Script content
+	// script content
 	Content string `json:"content,omitempty"`
 	Created time.Time `json:"created,omitempty"`
 }

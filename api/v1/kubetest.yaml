@@ -156,15 +156,15 @@ components:
           format: uuid
         name:
           type: string
-          description: 'Name'
+          description: script name
         type:
           type: string
-          description: 'Script type'
+          description: script type
           enum: 
           - postman-collection
         content:
           type: string
-          description: 'Script content'
+          description: script content
         created:
           type: string
           format: date-time
@@ -177,28 +177,30 @@ components:
           format: uuid
         executor:
           type: string
-          description: 'Executor used when executing script'
+          description: executor used when executing script
           enum: 
           - postman-collection
         status: 
           type: string
-          description: 'Excution status'
+          description: execution status
           enum: 
           - pending 
           - success 
           - failed
         result:
           type: string
-          description: 'Script execution output'
+          description: script execution output
         result-type:
           type: string
-          description: 'Result type'
+          description: result type
           enum: 
           - shell
           - junit
         start-date:
           type: string
           format: date-time
+          description: script start date
         end-date:
           type: string
           format: date-time
+          description: script end date

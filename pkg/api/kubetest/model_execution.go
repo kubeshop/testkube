@@ -14,14 +14,16 @@ import (
 
 type Execution struct {
 	Id string `json:"id,omitempty"`
-	// Executor used when executing script
+	// executor used when executing script
 	Executor string `json:"executor,omitempty"`
-	// Excution status
+	// execution status
 	Status string `json:"status,omitempty"`
-	// Script execution output
+	// script execution output
 	Result string `json:"result,omitempty"`
-	// Result type
+	// result type
 	ResultType string `json:"result-type,omitempty"`
+	// script start date
 	StartDate time.Time `json:"start-date,omitempty"`
+	// script end date
 	EndDate time.Time `json:"end-date,omitempty"`
 }
