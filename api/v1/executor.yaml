@@ -19,7 +19,7 @@ tags:
   description: 'Scripts execution' 
 
 paths:
-  /:
+  /executions/:
     post:
       tags:
       - executor
@@ -35,7 +35,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ExecutionResult'
-  /{id}:
+  /executions/{id}:
     get:
       parameters:
         - in: path
@@ -66,36 +66,40 @@ components:
       properties:
         id:
           type: string
+          description: execution id (UUID?)
           format: uuid
         script-type:
           type: string
+          description: script type e.g. postman-collection
         name:
           type: string
           description: 'execution name'
         status: 
           type: string
-          description: 'Excution status'
+          description: 'excution status'
           enum: 
+          - queued
           - pending 
           - success 
           - failed
         output:
           type: string
-          description: 'RAW Script execution output'
+          description: 'RAW Script execution output, depends of reporter used in particular tool'
         output-type:
           type: string
-          description: 'Result type'
+          description: 'output type depends of reporter used in partucular tool'
           enum: 
           - text
           - junit
           - json
+        output-content-type: 
+          type: string
+          description: 'result content-type e.g. application/json'
         start-time:
           type: string
+          description: 'test start time'
           format: date-time
         end-time:
           type: string
+          description: 'test end time'
           format: date-time
-        duration:
-          type: string
-          format: duration
-    

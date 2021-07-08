@@ -5,6 +5,10 @@ run-api-serer:
 	go run cmd/api-server/main.go
 
 
+
+install-swagger-codegen-mac: 
+	brew install swagger-codegen
+
 openapi-generate-model: openapi-generate-model-kubetest openapi-generate-model-executor
 
 openapi-generate-model-kubetest:

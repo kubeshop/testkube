@@ -13,17 +13,22 @@ import (
 )
 
 type ExecutionResult struct {
+	// execution id (UUID?)
 	Id string `json:"id,omitempty"`
+	// script type e.g. postman-collection
 	ScriptType string `json:"script-type,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
-	// Excution status
+	// excution status
 	Status string `json:"status,omitempty"`
-	// RAW Script execution output
+	// RAW Script execution output, depends of reporter used in particular tool
 	Output string `json:"output,omitempty"`
-	// Result type
+	// output type depends of reporter used in partucular tool
 	OutputType string `json:"output-type,omitempty"`
+	// result content-type e.g. application/json
+	OutputContentType string `json:"output-content-type,omitempty"`
+	// test start time
 	StartTime time.Time `json:"start-time,omitempty"`
+	// test end time
 	EndTime time.Time `json:"end-time,omitempty"`
-	Duration string `json:"duration,omitempty"`
 }
