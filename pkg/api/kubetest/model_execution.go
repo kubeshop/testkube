@@ -13,17 +13,20 @@ import (
 )
 
 type Execution struct {
+	// execution id (UUID?)
 	Id string `json:"id,omitempty"`
-	// executor used when executing script
-	Executor string `json:"executor,omitempty"`
+	// script type e.g. postman/collection
+	ScriptType string `json:"script-type,omitempty"`
+	// execution name
+	Name string `json:"name,omitempty"`
 	// execution status
 	Status string `json:"status,omitempty"`
-	// script execution output
-	Result string `json:"result,omitempty"`
-	// result type
-	ResultType string `json:"result-type,omitempty"`
-	// script start date
-	StartDate time.Time `json:"start-date,omitempty"`
-	// script end date
-	EndDate time.Time `json:"end-date,omitempty"`
+	// RAW Script execution output, depends of reporter used in particular tool
+	Output string `json:"output,omitempty"`
+	// output type depends of reporter used in partucular tool
+	OutputType string `json:"output-type,omitempty"`
+	// test start time
+	StartTime time.Time `json:"start-time,omitempty"`
+	// test end time
+	EndTime time.Time `json:"end-time,omitempty"`
 }
