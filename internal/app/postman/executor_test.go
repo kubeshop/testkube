@@ -38,11 +38,11 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 
 type RunnerMock struct {
 	Error  error
-	Result executor.Execution
+	Result string
 	T      *testing.T
 }
 
-func (r RunnerMock) Run(input io.Reader) (executor.Execution, error) {
+func (r RunnerMock) Run(input io.Reader) (string, error) {
 	body, err := ioutil.ReadAll(input)
 	require.NoError(r.T, err)
 	require.Contains(r.T, string(body), "KubeTestExampleCollection")
@@ -52,10 +52,8 @@ func (r RunnerMock) Run(input io.Reader) (executor.Execution, error) {
 func GetTestExecutor(t *testing.T) PostmanExecutor {
 	postmanExecutor := NewPostmanExecutor()
 	postmanExecutor.Runner = &RunnerMock{
-		Result: executor.Execution{
-			Output: "TEST COMPLETED",
-		},
-		T: t,
+		Result: "TEST COMPLETED",
+		T:      t,
 	}
 	postmanExecutor.Repository = &RepoMock{
 		Object: executor.Execution{Name: "example-execution"},
@@ -77,5 +75,13 @@ func (r *RepoMock) Get(ctx context.Context, id string) (result executor.Executio
 }
 
 func (r *RepoMock) Insert(ctx context.Context, result executor.Execution) (err error) {
+	return r.Error
+}
+
+func (r *RepoMock) QueuePull(ctx context.Context) (result executor.Execution, err error) {
+	return r.Object, r.Error
+}
+
+func (r *RepoMock) Update(ctx context.Context, result executor.Execution) (err error) {
 	return r.Error
 }

@@ -27,6 +27,8 @@ type Execution struct {
 	Output string `json:"output,omitempty"`
 	// output type depends of reporter used in partucular tool
 	OutputType string `json:"output-type,omitempty"`
+	// error message when status is failed, separate to output as output can be partial in case of error
+	ErrorMessage string `json:"error-message,omitempty"`
 	// test start time
 	StartTime time.Time `json:"start-time,omitempty"`
 	// test end time

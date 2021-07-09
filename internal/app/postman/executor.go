@@ -49,7 +49,7 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 			return err
 		}
 
-		// TODO UUID instead of BSON?
+		// TODO consider UUID instead of BSON? or some simplier/shorter id!?
 		execution := executor.NewExecution(
 			primitive.NewObjectID().Hex(),
 			request.Name,

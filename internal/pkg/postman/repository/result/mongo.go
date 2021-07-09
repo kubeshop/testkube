@@ -35,3 +35,8 @@ func (r *MongoRepository) Update(ctx context.Context, result executor.Execution)
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
+
+func (r *MongoRepository) QueuePull(ctx context.Context) (result executor.Execution, err error) {
+	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"status": executor.ExecutionStatusQueued}, bson.M{"$set": bson.M{"status": executor.ExecutionStatusPending}}).Decode(&result)
+	return
+}

@@ -2,10 +2,10 @@ package runner
 
 import (
 	"io"
-
-	"github.com/kubeshop/kubetest/pkg/api/executor"
 )
 
+// Runner interface to abstract runners implementations
 type Runner interface {
-	Run(io.Reader) (executor.Execution, error)
+	// Run returns output as string (for now probably we could have other needs?)
+	Run(io.Reader) (string, error)
 }

@@ -3,10 +3,14 @@ package executor
 import "time"
 
 const (
-	ExecutionStatusQueued  = "queued"
+	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
+	ExecutionStatusQueued = "queued"
+	// ExecutionStatusPending status for execution which is taken by worker
 	ExecutionStatusPending = "pending"
+	// ExecutionStatusSuceess execution complete with success
 	ExecutionStatusSuceess = "success"
-	ExecutionStatusError   = "error"
+	// ExecutionStatusSuceess execution failed
+	ExecutionStatusError = "error"
 )
 
 func NewExecution(ID string, name string, content string) Execution {
@@ -24,4 +28,13 @@ func (e *Execution) Start() {
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
+}
+
+func (e *Execution) Success() {
+	e.Status = ExecutionStatusSuceess
+}
+
+func (e *Execution) Error(err error) {
+	e.Status = ExecutionStatusError
+	e.ErrorMessage = err.Error()
 }
