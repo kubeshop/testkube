@@ -6,9 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
+	"github.com/kubeshop/kubetest/internal/pkg/postman/worker"
 	"github.com/kubeshop/kubetest/pkg/api/executor"
-	"github.com/kubeshop/kubetest/pkg/runner"
-	"github.com/kubeshop/kubetest/pkg/runner/newman"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -16,10 +15,11 @@ import (
 const ConcurrentExecutions = 4
 
 // NewPostmanExecutor returns new PostmanExecutor instance
-func NewPostmanExecutor() PostmanExecutor {
+func NewPostmanExecutor(resultRepository result.Repository) PostmanExecutor {
 	e := PostmanExecutor{
-		Mux:    fiber.New(),
-		Runner: &newman.Runner{},
+		Mux:        fiber.New(),
+		Repository: resultRepository,
+		Worker:     worker.NewWorker(resultRepository),
 	}
 
 	return e
@@ -27,8 +27,8 @@ func NewPostmanExecutor() PostmanExecutor {
 
 type PostmanExecutor struct {
 	Mux        *fiber.App
-	Runner     runner.Runner
 	Repository result.Repository
+	Worker     worker.Worker
 }
 
 func (p *PostmanExecutor) Init() {
@@ -77,5 +77,6 @@ func (p PostmanExecutor) GetExecution() fiber.Handler {
 }
 
 func (p PostmanExecutor) Run() error {
+
 	return p.Mux.Listen(":8082")
 }

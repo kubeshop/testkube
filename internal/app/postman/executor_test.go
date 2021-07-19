@@ -2,15 +2,12 @@ package postman
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/kubeshop/kubetest/pkg/api/executor"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPostmanExecutor_StartExecution(t *testing.T) {
@@ -36,29 +33,10 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 
 }
 
-type RunnerMock struct {
-	Error  error
-	Result string
-	T      *testing.T
-}
-
-func (r RunnerMock) Run(input io.Reader) (string, error) {
-	body, err := ioutil.ReadAll(input)
-	require.NoError(r.T, err)
-	require.Contains(r.T, string(body), "KubeTestExampleCollection")
-	return r.Result, r.Error
-}
-
 func GetTestExecutor(t *testing.T) PostmanExecutor {
-	postmanExecutor := NewPostmanExecutor()
-	postmanExecutor.Runner = &RunnerMock{
-		Result: "TEST COMPLETED",
-		T:      t,
-	}
-	postmanExecutor.Repository = &RepoMock{
+	postmanExecutor := NewPostmanExecutor(&RepoMock{
 		Object: executor.Execution{Name: "example-execution"},
-	}
-
+	})
 	postmanExecutor.Init()
 
 	return postmanExecutor

@@ -13,8 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	executor := postman.NewPostmanExecutor()
-	executor.Repository = result.NewMongoRespository(db)
+	executor := postman.NewPostmanExecutor(result.NewMongoRespository(db))
 	executor.Init()
 	panic(executor.Run())
 
