@@ -30,7 +30,7 @@ func TestRun(t *testing.T) {
 	result, err := runner.Run(buffer)
 
 	// then
-	output := result.Output.(string)
+	output := result.Output
 	assert.NoError(t, err)
 	assert.Contains(t, output, "Successful GET request")
 	assert.Equal(t, requestCompleted, true)

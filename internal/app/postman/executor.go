@@ -1,12 +1,15 @@
 package postman
 
 import (
+	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
+	"github.com/kubeshop/kubetest/pkg/api/executor"
 	"github.com/kubeshop/kubetest/pkg/runner"
 	"github.com/kubeshop/kubetest/pkg/runner/newman"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ConcurrentExecutions per node
@@ -23,8 +26,9 @@ func NewPostmanExecutor() PostmanExecutor {
 }
 
 type PostmanExecutor struct {
-	Mux    *fiber.App
-	Runner runner.Runner
+	Mux        *fiber.App
+	Runner     runner.Runner
+	Repository result.Repository
 }
 
 func (p *PostmanExecutor) Init() {
@@ -45,18 +49,30 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 			return err
 		}
 
-		content := strings.NewReader(string(request.Metadata))
-		result, err := p.Runner.Run(content)
+		// TODO UUID instead of BSON?
+		execution := executor.NewExecution(
+			primitive.NewObjectID().Hex(),
+			request.Name,
+			string(request.Metadata),
+		)
+		err = p.Repository.Insert(context.Background(), execution)
 		if err != nil {
 			return err
 		}
-		return c.JSON(result)
+
+		c.Response().Header.SetStatusCode(201)
+		return c.JSON(execution)
 	}
 }
 
 func (p PostmanExecutor) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return c.SendString("Getting execution 👋!")
+		execution, err := p.Repository.Get(context.Background(), c.Params("id"))
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(execution)
 	}
 }
 
