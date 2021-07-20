@@ -42,6 +42,10 @@ func (e *Execution) Error(err error) {
 	e.ErrorMessage = err.Error()
 }
 
+func (e *Execution) IsCompleted() bool {
+	return e.Status == ExecutionStatusSuceess || e.Status == ExecutionStatusError
+}
+
 type ExecuteRequest struct {
 	Type     string          `json:"type,omitempty"`
 	Name     string          `json:"name,omitempty"`

@@ -8,15 +8,16 @@ import (
 )
 
 func TestHTTClient(t *testing.T) {
+
 	t.Run("client execute script", func(t *testing.T) {
 
-		client := HTTPClient{URI: DefaultURI}
-		id, err := client.Execute(exampleCollection)
+		client := HTTPExecutorClient{URI: DefaultURI}
+		e, err := client.Execute(exampleCollection)
 
 		assert.NoError(t, err)
-		assert.NotEqual(t, "", id)
+		assert.NotEqual(t, "", e)
 
-		fmt.Printf("%+v\n", id)
+		fmt.Printf("%+v\n", e)
 		t.Fail()
 
 	})
@@ -49,7 +50,7 @@ const exampleCollection = `{
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://127.0.0.1:%s",
+					"raw": "http://127.0.0.1:8082",
 					"protocol": "http",
 					"host": [
 						"127",
