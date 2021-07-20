@@ -1,3 +1,5 @@
+.PHONY: test cover 
+
 test-all: 
 	go test -v -cover ./...
 
@@ -32,3 +34,10 @@ openapi-generate-model-executor:
 	mv tmp/api/executor/model_*.go pkg/api/executor
 	rm -rf tmp
 	find ./pkg/api/executor -type f -exec sed -i '' -e "s/package swagger/package executor/g" {} \;
+
+test: 
+	go test ./... -cover
+
+cover: 
+	@go test -mod=vendor -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
+	open testCoverage.html

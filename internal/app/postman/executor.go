@@ -8,7 +8,9 @@ import (
 	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/worker"
 	"github.com/kubeshop/kubetest/pkg/api/executor"
+	"github.com/kubeshop/kubetest/pkg/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 )
 
 // ConcurrentExecutions per node
@@ -20,6 +22,7 @@ func NewPostmanExecutor(resultRepository result.Repository) PostmanExecutor {
 		Mux:        fiber.New(),
 		Repository: resultRepository,
 		Worker:     worker.NewWorker(resultRepository),
+		Log:        log.DefaultLogger,
 	}
 
 	return e
@@ -29,6 +32,7 @@ type PostmanExecutor struct {
 	Mux        *fiber.App
 	Repository result.Repository
 	Worker     worker.Worker
+	Log        *zap.SugaredLogger
 }
 
 func (p *PostmanExecutor) Init() {
@@ -43,13 +47,16 @@ func (p *PostmanExecutor) Init() {
 
 func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request ExecuteRequest
+		var request executor.ExecuteRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return err
 		}
 
+		p.Log.Infow("new execution request", "request", request)
+
 		// TODO consider UUID instead of BSON? or some simplier/shorter id!?
+		//      ID also can be executor local, in kubetest we'll handle all IDs as strings
 		execution := executor.NewExecution(
 			primitive.NewObjectID().Hex(),
 			request.Name,
@@ -77,6 +84,9 @@ func (p PostmanExecutor) GetExecution() fiber.Handler {
 }
 
 func (p PostmanExecutor) Run() error {
+
+	executionsQueue := p.Worker.PullExecutions()
+	p.Worker.Run(executionsQueue)
 
 	return p.Mux.Listen(":8082")
 }

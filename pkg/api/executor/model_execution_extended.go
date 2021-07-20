@@ -1,6 +1,9 @@
 package executor
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
@@ -37,4 +40,10 @@ func (e *Execution) Success() {
 func (e *Execution) Error(err error) {
 	e.Status = ExecutionStatusError
 	e.ErrorMessage = err.Error()
+}
+
+type ExecuteRequest struct {
+	Type     string          `json:"type,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Metadata json.RawMessage `json:"metadata,omitempty"`
 }

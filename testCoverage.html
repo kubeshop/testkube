@@ -1,0 +1,318 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>postman: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/kubeshop/kubetest/internal/app/postman/executor.go (70.8%)</option>
+				
+				<option value="file1">github.com/kubeshop/kubetest/internal/pkg/postman/worker/worker.go (0.0%)</option>
+				
+				<option value="file2">github.com/kubeshop/kubetest/pkg/runner/newman/newman.go (80.0%)</option>
+				
+				<option value="file3">github.com/kubeshop/kubetest/pkg/tmp/files.go (71.4%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package postman
+
+import (
+        "context"
+        "encoding/json"
+
+        "github.com/gofiber/fiber/v2"
+        "github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
+        "github.com/kubeshop/kubetest/internal/pkg/postman/worker"
+        "github.com/kubeshop/kubetest/pkg/api/executor"
+        "go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// ConcurrentExecutions per node
+const ConcurrentExecutions = 4
+
+// NewPostmanExecutor returns new PostmanExecutor instance
+func NewPostmanExecutor(resultRepository result.Repository) PostmanExecutor <span class="cov8" title="1">{
+        e := PostmanExecutor{
+                Mux:        fiber.New(),
+                Repository: resultRepository,
+                Worker:     worker.NewWorker(resultRepository),
+        }
+
+        return e
+}</span>
+
+type PostmanExecutor struct {
+        Mux        *fiber.App
+        Repository result.Repository
+        Worker     worker.Worker
+}
+
+func (p *PostmanExecutor) Init() <span class="cov8" title="1">{
+        // v1 API
+        v1 := p.Mux.Group("/v1")
+        v1.Static("/api-docs", "./api/v1")
+
+        executions := v1.Group("/executions")
+        executions.Post("/", p.StartExecution())
+        executions.Get("/:id", p.GetExecution())
+}</span>
+
+func (p *PostmanExecutor) StartExecution() fiber.Handler <span class="cov8" title="1">{
+        return func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
+                var request ExecuteRequest
+                err := json.Unmarshal(c.Body(), &amp;request)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // TODO consider UUID instead of BSON? or some simplier/shorter id!?
+                <span class="cov8" title="1">execution := executor.NewExecution(
+                        primitive.NewObjectID().Hex(),
+                        request.Name,
+                        string(request.Metadata),
+                )
+                err = p.Repository.Insert(context.Background(), execution)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                <span class="cov8" title="1">c.Response().Header.SetStatusCode(201)
+                return c.JSON(execution)</span>
+        }
+}
+
+func (p PostmanExecutor) GetExecution() fiber.Handler <span class="cov8" title="1">{
+        return func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                execution, err := p.Repository.Get(context.Background(), c.Params("id"))
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                <span class="cov0" title="0">return c.JSON(execution)</span>
+        }
+}
+
+func (p PostmanExecutor) Run() error <span class="cov0" title="0">{
+
+        return p.Mux.Listen(":8082")
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package worker
+
+import (
+        "context"
+        "strings"
+
+        "github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
+        "github.com/kubeshop/kubetest/pkg/api/executor"
+        "github.com/kubeshop/kubetest/pkg/log"
+        "github.com/kubeshop/kubetest/pkg/runner/newman"
+        "go.uber.org/zap"
+)
+
+func NewWorker(resultsRepository result.Repository) Worker <span class="cov0" title="0">{
+        return Worker{
+                Concurrency: 4,
+                BufferSize:  10000,
+                Repository:  resultsRepository,
+                Runner:      &amp;newman.Runner{},
+                Log:         log.DefaultLogger,
+        }
+}</span>
+
+type Worker struct {
+        Concurrency int
+        BufferSize  int
+        Repository  result.Repository
+        Runner      *newman.Runner
+        Log         *zap.SugaredLogger
+}
+
+func (w Worker) PullExecution() (execution executor.Execution, err error) <span class="cov0" title="0">{
+        execution, err = w.Repository.QueuePull(context.Background())
+        if err != nil </span><span class="cov0" title="0">{
+                return execution, err
+        }</span>
+        <span class="cov0" title="0">execution.Start()
+        return</span>
+}
+
+func (w Worker) PullExecutions() chan executor.Execution <span class="cov0" title="0">{
+        executionChan := make(chan executor.Execution, w.BufferSize)
+
+        go func(executionChan chan executor.Execution) </span><span class="cov0" title="0">{
+                w.Log.Info("Pulling data from queue")
+                for </span><span class="cov0" title="0">{
+                        execution, err := w.PullExecution()
+                        if err != nil </span><span class="cov0" title="0">{
+                                w.Log.Errorw("pull execution error", "error", err)
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">executionChan &lt;- execution</span>
+                }
+        }(executionChan)
+
+        <span class="cov0" title="0">return executionChan</span>
+}
+
+func (w Worker) Run(executionChan chan executor.Execution) <span class="cov0" title="0">{
+        for i := 0; i &lt; w.Concurrency; i++ </span><span class="cov0" title="0">{
+                go func(executionChan chan executor.Execution) </span><span class="cov0" title="0">{
+                        ctx := context.Background()
+                        for </span><span class="cov0" title="0">{
+                                e := &lt;-executionChan
+                                w.Log.Info("Got script to run", "type", e.ScriptType, "content", e.ScriptContent, "name", e.Name, "id", e.Id)
+                                result, err := w.Runner.Run(strings.NewReader(e.ScriptContent))
+                                if err != nil </span><span class="cov0" title="0">{
+                                        w.Log.Errorw("script execution error", "error", err)
+                                        e.Error(err)
+                                }</span>
+                                <span class="cov0" title="0">e.Output = result
+                                w.Repository.Update(ctx, e)</span>
+
+                        }
+                }(executionChan)
+        }
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package newman
+
+import (
+        "io"
+
+        "github.com/kubeshop/kubetest/pkg/process"
+        "github.com/kubeshop/kubetest/pkg/tmp"
+)
+
+// Runner struct for newman based runner
+type Runner struct {
+}
+
+// Run runs particular script content on top of newman binary
+func (r *Runner) Run(input io.Reader) (string, error) <span class="cov8" title="1">{
+        path, err := tmp.ReaderToTmpfile(input)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov8" title="1">out, err := process.Execute("newman", "run", path)
+        return string(out), err</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package tmp
+
+import (
+        "io"
+        "io/ioutil"
+)
+
+func ReaderToTmpfile(input io.Reader) (path string, err error) <span class="cov8" title="1">{
+        tmpfile, err := ioutil.TempFile("", "kubetest-tmp")
+        path = tmpfile.Name()
+        if _, err := io.Copy(tmpfile, input); err != nil </span><span class="cov0" title="0">{
+                return path, err
+        }</span>
+
+        <span class="cov8" title="1">if err := tmpfile.Close(); err != nil </span><span class="cov0" title="0">{
+                return path, err
+        }</span>
+
+        <span class="cov8" title="1">return</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
