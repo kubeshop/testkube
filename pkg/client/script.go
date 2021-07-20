@@ -5,12 +5,12 @@ import (
 	"fmt"
 )
 
-// Struct which will hold Scripts returned via k8s API calls.
+// SriptsFromCRD. Struct which will hold Scripts returned via k8s API calls.
 type SriptsFromCRD struct {
 	name map[string]string
 }
 
-// Function for returning newman CRD script. Accepts ScriptName. Returng value(string).
+// Get. Function for returning newman CRD script. Accepts ScriptName. Returng value(string).
 func (s *SriptsFromCRD) Get(scriptName string) (string, error) {
 
 	// checking if there is no empty name on ScriptsFromCRD
@@ -21,10 +21,10 @@ func (s *SriptsFromCRD) Get(scriptName string) (string, error) {
 	return s.name[scriptName], nil
 }
 
-// Returns SriptsFromCRD struct from k8s API.
-func GetScriptsAPI(kubeClient kube.Client) ScriptsFromCRD {
-	return nil
-}
+// GetScriptsAPI. Returns SriptsFromCRD struct from k8s API.
+// func GetScriptsAPI(kubeClient kube.Client) ScriptsFromCRD {
+// 	return nil
+// }
 
 func main() {
 

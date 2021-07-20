@@ -2,38 +2,26 @@ package main
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGetCRDEmptiness(t *testing.T) {
-
-	var test = SriptsFromCRD{
-		name: map[string]string{
-			"First":  "firstValue",
-			"Second": "secondValue",
-			"Third":  "thirdValue",
-		},
-	}
-
-	ans, _ := test.Get("First")
-
-	if ans == "" {
-		t.Error("Get() returned empty string")
-	}
+var test = SriptsFromCRD{
+	name: map[string]string{
+		"First":  "firstValue",
+		"Second": "secondValue",
+		"Third":  "thirdValue",
+	},
 }
 
-func TestGetCRDCorrectness(t *testing.T) {
-
-	var test = SriptsFromCRD{
-		name: map[string]string{
-			"First":  "firstValue",
-			"Second": "secondValue",
-			"Third":  "thirdValue",
-		},
-	}
-
+// TestGetCRDEmptiness. Checking if returned Script value is not empty.
+func TestGetCRDEmptiness(t *testing.T) {
 	ans, _ := test.Get("First")
+	assert.NotNil(t, ans)
+}
 
-	if ans != "firstValue" {
-		t.Error("Get() returned incorrect string. Expecting, ", "firstValue. Returned", ans)
-	}
+// TestGetCRDCorrectness. Testing if returned value is what is expected.
+func TestGetCRDCorrectness(t *testing.T) {
+	ans, _ := test.Get("First")
+	assert.Equal(t, ans, "firstValue")
 }
