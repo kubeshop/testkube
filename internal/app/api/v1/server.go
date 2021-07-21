@@ -3,12 +3,15 @@ package v1
 import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/kubetest/pkg/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 func NewServer() Server {
 	s := Server{
 		Mux: fiber.New(),
+		Log: log.DefaultLogger,
 	}
 
 	s.Init()
@@ -17,6 +20,7 @@ func NewServer() Server {
 
 type Server struct {
 	Mux *fiber.App
+	Log *zap.SugaredLogger
 }
 
 func (s Server) Init() {
@@ -31,7 +35,7 @@ func (s Server) Init() {
 	scripts := v1.Group("/scripts")
 	scripts.Get("/", s.GetAllScripts())
 	scripts.Get("/:id/executions", s.GetAllScriptExecutions())
-	scripts.Post("/:id/executions", s.StartNewScriptExecution())
+	scripts.Post("/:id/executions", s.ExecuteScript())
 	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())
 	scripts.Post("/:id/executions/:executionID/abort", s.AbortScriptExecution())
 }

@@ -95,7 +95,6 @@ func (w *Worker) RunExecution(ctx context.Context, e executor.Execution) (execut
 
 	if err != nil {
 		e.Error(err)
-		return e, err
 	} else {
 		e.Success()
 	}

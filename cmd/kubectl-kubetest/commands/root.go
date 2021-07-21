@@ -8,7 +8,7 @@ import (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "kubetest",
+	Use:   "",
 	Short: "Kubetest entrypoint for plugin",
 	Long:  `Kubetest`,
 	Run: func(cmd *cobra.Command, args []string) {

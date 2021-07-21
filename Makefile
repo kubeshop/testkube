@@ -1,7 +1,7 @@
 .PHONY: test cover 
 
-test-all: 
-	go test -v -cover ./...
+BIN_DIR ?= $(HOME)/bin
+
 
 run-api-serer: 
 	go run cmd/api-server/main.go
@@ -16,6 +16,11 @@ run-mongo-dev:
 build-executor: 
 	go mod vendor
 	docker build -t postman-executor -f build/postman-executor/Dockerfile .
+
+build-kubetest-bin: 
+	go mod vendor
+	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
