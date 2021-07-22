@@ -203,6 +203,9 @@ components:
           - text/plain
           - application/junit+xml
           - application/json
+        error-message: 
+          type: string
+          description: 'error message when status is failed, separate to output as output can be partial in case of error'
         start-time:
           type: string
           description: 'test start time'

@@ -6,20 +6,23 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
+	"github.com/kubeshop/kubetest/internal/pkg/postman/worker"
 	"github.com/kubeshop/kubetest/pkg/api/executor"
-	"github.com/kubeshop/kubetest/pkg/runner"
-	"github.com/kubeshop/kubetest/pkg/runner/newman"
+	"github.com/kubeshop/kubetest/pkg/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 )
 
 // ConcurrentExecutions per node
 const ConcurrentExecutions = 4
 
 // NewPostmanExecutor returns new PostmanExecutor instance
-func NewPostmanExecutor() PostmanExecutor {
+func NewPostmanExecutor(resultRepository result.Repository) PostmanExecutor {
 	e := PostmanExecutor{
-		Mux:    fiber.New(),
-		Runner: &newman.Runner{},
+		Mux:        fiber.New(),
+		Repository: resultRepository,
+		Worker:     worker.NewWorker(resultRepository),
+		Log:        log.DefaultLogger,
 	}
 
 	return e
@@ -27,8 +30,9 @@ func NewPostmanExecutor() PostmanExecutor {
 
 type PostmanExecutor struct {
 	Mux        *fiber.App
-	Runner     runner.Runner
 	Repository result.Repository
+	Worker     worker.Worker
+	Log        *zap.SugaredLogger
 }
 
 func (p *PostmanExecutor) Init() {
@@ -43,13 +47,16 @@ func (p *PostmanExecutor) Init() {
 
 func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request ExecuteRequest
+		var request executor.ExecuteRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return err
 		}
 
-		// TODO UUID instead of BSON?
+		p.Log.Infow("new execution request", "request", request)
+
+		// TODO consider UUID instead of BSON? or some simplier/shorter id!?
+		//      ID also can be executor local, in kubetest we'll handle all IDs as strings
 		execution := executor.NewExecution(
 			primitive.NewObjectID().Hex(),
 			request.Name,
@@ -77,5 +84,9 @@ func (p PostmanExecutor) GetExecution() fiber.Handler {
 }
 
 func (p PostmanExecutor) Run() error {
+
+	executionsQueue := p.Worker.PullExecutions()
+	p.Worker.Run(executionsQueue)
+
 	return p.Mux.Listen(":8082")
 }

@@ -16,6 +16,7 @@ func TestRun(t *testing.T) {
 	// given
 	runner := &Runner{}
 
+	// and test server for getting newman responses
 	requestCompleted := false
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCompleted = true
@@ -30,9 +31,8 @@ func TestRun(t *testing.T) {
 	result, err := runner.Run(buffer)
 
 	// then
-	output := result.Output
 	assert.NoError(t, err)
-	assert.Contains(t, output, "Successful GET request")
+	assert.Contains(t, result, "Successful GET request")
 	assert.Equal(t, requestCompleted, true)
 
 }

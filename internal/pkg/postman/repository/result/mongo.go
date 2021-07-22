@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const CollectionName = "execution-results"
+const CollectionName = "executions"
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
@@ -32,6 +32,11 @@ func (r *MongoRepository) Insert(ctx context.Context, result executor.Execution)
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result executor.Execution) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	return
+}
+
+func (r *MongoRepository) QueuePull(ctx context.Context) (result executor.Execution, err error) {
+	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"status": executor.ExecutionStatusQueued}, bson.M{"$set": bson.M{"status": executor.ExecutionStatusPending}}).Decode(&result)
 	return
 }

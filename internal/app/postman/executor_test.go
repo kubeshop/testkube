@@ -2,15 +2,12 @@ package postman
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/kubeshop/kubetest/pkg/api/executor"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPostmanExecutor_StartExecution(t *testing.T) {
@@ -36,31 +33,10 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 
 }
 
-type RunnerMock struct {
-	Error  error
-	Result executor.Execution
-	T      *testing.T
-}
-
-func (r RunnerMock) Run(input io.Reader) (executor.Execution, error) {
-	body, err := ioutil.ReadAll(input)
-	require.NoError(r.T, err)
-	require.Contains(r.T, string(body), "KubeTestExampleCollection")
-	return r.Result, r.Error
-}
-
 func GetTestExecutor(t *testing.T) PostmanExecutor {
-	postmanExecutor := NewPostmanExecutor()
-	postmanExecutor.Runner = &RunnerMock{
-		Result: executor.Execution{
-			Output: "TEST COMPLETED",
-		},
-		T: t,
-	}
-	postmanExecutor.Repository = &RepoMock{
+	postmanExecutor := NewPostmanExecutor(&RepoMock{
 		Object: executor.Execution{Name: "example-execution"},
-	}
-
+	})
 	postmanExecutor.Init()
 
 	return postmanExecutor
@@ -77,5 +53,13 @@ func (r *RepoMock) Get(ctx context.Context, id string) (result executor.Executio
 }
 
 func (r *RepoMock) Insert(ctx context.Context, result executor.Execution) (err error) {
+	return r.Error
+}
+
+func (r *RepoMock) QueuePull(ctx context.Context) (result executor.Execution, err error) {
+	return r.Object, r.Error
+}
+
+func (r *RepoMock) Update(ctx context.Context, result executor.Execution) (err error) {
 	return r.Error
 }
