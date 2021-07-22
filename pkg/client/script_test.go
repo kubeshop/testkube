@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var test = SriptsFromCRD{
+var test = ScriptsKubernetesAPI{
 	name: map[string]string{
 		"First":  "firstValue",
 		"Second": "secondValue",
