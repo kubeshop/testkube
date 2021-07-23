@@ -58,7 +58,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 			return err
 		}
 
-		return c.JSON(execution)
+		return c.JSON(scriptExecution)
 	}
 }
 
@@ -74,19 +74,20 @@ func (s Server) GetScriptExecution() fiber.Handler {
 	// one client postman-collection newman based executor
 	// should be done on top level from some kind of available clients poll
 	// consider moving them to separate struct - and allow to choose by executor ID
-
-	executorClient := client.NewHTTPExecutorClient(client.DefaultURI)
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id")
 		executionID := c.Params("executionID")
 		s.Log.Infow("GET execution request", "id", scriptID, "executionID", executionID)
 
-		execution, err := executorClient.Get(executionID)
+		// TODO do we need scriptID here? consider removing it from API
+		// It would be needed only for grouping purposes. executionID will be unique for scriptExecution
+		// in API
+		scriptExecution, err := s.Repository.Get(context.Background(), executionID)
 		if err != nil {
 			return err
 		}
-		return c.JSON(execution)
+		return c.JSON(scriptExecution)
 	}
 }
 
