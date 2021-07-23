@@ -35,10 +35,15 @@ func (c HTTPExecutorClient) Watch(id string, callback func(kubetest.Execution) e
 	ticker := time.NewTicker(WatchInterval)
 	for range ticker.C {
 		execution, err = c.Get(id)
-		if err := callback(execution); err != nil {
-			return execution, fmt.Errorf("watch callback error: %w", err)
+
+		fmt.Printf("%+v\n", "running callback")
+
+		if cbErr := callback(execution); cbErr != nil {
+			return execution, fmt.Errorf("watch callback error: %w", cbErr)
 		}
+		fmt.Printf("completed %+v\n", execution.IsCompleted())
 		if err != nil || execution.IsCompleted() {
+			fmt.Printf("returning %+v\n", execution.IsCompleted())
 			return execution, err
 		}
 	}
