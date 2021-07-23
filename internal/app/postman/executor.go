@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/worker"
-	"github.com/kubeshop/kubetest/pkg/api/executor"
+	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -47,7 +47,7 @@ func (p *PostmanExecutor) Init() {
 
 func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request executor.ExecuteRequest
+		var request kubetest.ExecuteRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return err
@@ -57,9 +57,8 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 
 		// TODO consider UUID instead of BSON? or some simplier/shorter id!?
 		//      ID also can be executor local, in kubetest we'll handle all IDs as strings
-		execution := executor.NewExecution(
+		execution := kubetest.NewExecution(
 			primitive.NewObjectID().Hex(),
-			request.Name,
 			string(request.Metadata),
 		)
 		err = p.Repository.Insert(context.Background(), execution)

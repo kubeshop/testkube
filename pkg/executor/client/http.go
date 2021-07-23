@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/api/executor"
+	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 )
 
 const (
@@ -31,10 +31,13 @@ type HTTPExecutorClient struct {
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
 // TODO add timeout later
-func (c HTTPExecutorClient) Watch(id string) (execution executor.Execution, err error) {
+func (c HTTPExecutorClient) Watch(id string, callback func(kubetest.Execution) error) (execution kubetest.Execution, err error) {
 	ticker := time.NewTicker(WatchInterval)
 	for range ticker.C {
 		execution, err = c.Get(id)
+		if err := callback(execution); err != nil {
+			return execution, fmt.Errorf("watch callback error: %w", err)
+		}
 		if err != nil || execution.IsCompleted() {
 			return execution, err
 		}
@@ -42,7 +45,7 @@ func (c HTTPExecutorClient) Watch(id string) (execution executor.Execution, err 
 	return
 }
 
-func (c HTTPExecutorClient) Get(id string) (execution executor.Execution, err error) {
+func (c HTTPExecutorClient) Get(id string) (execution kubetest.Execution, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -53,10 +56,10 @@ func (c HTTPExecutorClient) Get(id string) (execution executor.Execution, err er
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c HTTPExecutorClient) Execute(content string) (execution executor.Execution, err error) {
+func (c HTTPExecutorClient) Execute(content string) (execution kubetest.Execution, err error) {
 
 	// create request
-	request := executor.ExecuteRequest{
+	request := kubetest.ExecuteRequest{
 		Metadata: json.RawMessage([]byte(content)),
 	}
 
@@ -65,7 +68,8 @@ func (c HTTPExecutorClient) Execute(content string) (execution executor.Executio
 		return execution, err
 	}
 
-	// TODO call executor API - need to have parameters (what executor?) taken from CRD?
+	// TODO call executors kube API (not ready yet)
+	// - need to have parameters (what executor?) taken from CRD?
 	resp, err := c.client.Post(c.URI+"/v1/executions/", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return execution, err
@@ -73,7 +77,7 @@ func (c HTTPExecutorClient) Execute(content string) (execution executor.Executio
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c HTTPExecutorClient) getExecutionFromResponse(resp *http.Response) (execution executor.Execution, err error) {
+func (c HTTPExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubetest.Execution, err error) {
 	defer resp.Body.Close()
 
 	// parse response

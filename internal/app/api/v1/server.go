@@ -3,15 +3,17 @@ package v1
 import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubetest/pkg/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
-func NewServer() Server {
+func NewServer(repository result.Repository) Server {
 	s := Server{
-		Mux: fiber.New(),
-		Log: log.DefaultLogger,
+		Mux:        fiber.New(),
+		Log:        log.DefaultLogger,
+		Repository: repository,
 	}
 
 	s.Init()
@@ -19,8 +21,9 @@ func NewServer() Server {
 }
 
 type Server struct {
-	Mux *fiber.App
-	Log *zap.SugaredLogger
+	Mux        *fiber.App
+	Log        *zap.SugaredLogger
+	Repository result.Repository
 }
 
 func (s Server) Init() {

@@ -1,4 +1,4 @@
-package executor
+package kubetest
 
 import (
 	"encoding/json"
@@ -16,10 +16,9 @@ const (
 	ExecutionStatusError = "error"
 )
 
-func NewExecution(ID string, name string, content string) Execution {
+func NewExecution(ID string, content string) Execution {
 	return Execution{
 		Id:            ID,
-		Name:          name,
 		ScriptType:    "postman/collection",
 		ScriptContent: content,
 		Status:        ExecutionStatusQueued,
