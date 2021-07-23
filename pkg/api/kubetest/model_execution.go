@@ -19,8 +19,6 @@ type Execution struct {
 	ScriptType string `json:"script-type,omitempty"`
 	// script metadata content
 	ScriptContent string `json:"script-content,omitempty"`
-	// execution name
-	Name string `json:"name,omitempty"`
 	// execution status
 	Status string `json:"status,omitempty"`
 	// RAW Script execution output, depends of reporter used in particular tool

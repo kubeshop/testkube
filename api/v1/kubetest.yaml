@@ -17,6 +17,8 @@ servers:
 tags:
 - name: scripts
   description: 'Operation based on scripts resource' 
+- name: executor
+  description: 'Scripts execution' 
 
 paths:
 
@@ -52,7 +54,7 @@ paths:
       description: 'New script execution returns new execution details on successful execution start'
       operationId: executeScript
       responses:
-        200:
+        201:
           description: successful operation
           content:
             application/json:
@@ -144,6 +146,45 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/Execution'
+  /executions/:
+    post:
+      tags:
+      - executor
+      summary: 'Starts script execution'
+      description: 'Starts script execution, returns pending execution with ID'
+      operationId: executueScript
+      responses:
+        201:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+  /executions/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 'ID of the execution'
+      tags:
+      - executor
+      summary: 'Get execution by ID'
+      description: 'Gets execution with given ID, returns deailed information about test execution'
+      operationId: getExecution
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
 
   
 components:
@@ -168,9 +209,9 @@ components:
         created:
           type: string
           format: date-time
-    
-    Execution:
+    ScriptExecution:
       type: object
+      description: API server script execution
       properties:
         id:
           type: string
@@ -179,12 +220,22 @@ components:
         script-type:
           type: string
           description: script type e.g. postman/collection
-        script-content: 
-          type: string
-          description: script metadata content
         name:
           type: string
           description: 'execution name'
+        execution: 
+          $ref: '#/components/schemas/Execution' 
+    Execution:
+      description: object which should be returned by REST based executors
+      type: object
+      properties:
+        id:
+          type: string
+          description: execution id (UUID?)
+          format: uuid
+        script-content: 
+          type: string
+          description: script metadata content
         status: 
           type: string
           description: 'execution status'
@@ -214,4 +265,5 @@ components:
           type: string
           description: 'test end time'
           format: date-time
+
 

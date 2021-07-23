@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/api/executor"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 )
 
@@ -38,7 +37,7 @@ func (c ScriptsAPI) Get(id string) (script kubetest.Script, err error) {
 	return c.getScriptFromResponse(resp)
 }
 
-func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution executor.Execution, err error) {
+func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubetest.Execution, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions/%s", scriptID, executionID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -49,7 +48,7 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution execut
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ScriptsAPI) Execute(scriptID string) (execution executor.Execution, err error) {
+func (c ScriptsAPI) Execute(scriptID string) (execution kubetest.Execution, err error) {
 	// TODO call executor API - need to have parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Post(uri, "application/json", nil)
@@ -59,7 +58,7 @@ func (c ScriptsAPI) Execute(scriptID string) (execution executor.Execution, err 
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution executor.Execution, err error) {
+func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubetest.Execution, err error) {
 	defer resp.Body.Close()
 
 	// parse response

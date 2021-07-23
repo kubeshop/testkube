@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubeshop/kubetest/pkg/api/executor"
+	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +35,7 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 
 func GetTestExecutor(t *testing.T) PostmanExecutor {
 	postmanExecutor := NewPostmanExecutor(&RepoMock{
-		Object: executor.Execution{Name: "example-execution"},
+		Object: kubetest.Execution{Id: "1"},
 	})
 	postmanExecutor.Init()
 
@@ -44,22 +44,22 @@ func GetTestExecutor(t *testing.T) PostmanExecutor {
 
 // r RepoMock
 type RepoMock struct {
-	Object executor.Execution
+	Object kubetest.Execution
 	Error  error
 }
 
-func (r *RepoMock) Get(ctx context.Context, id string) (result executor.Execution, err error) {
+func (r *RepoMock) Get(ctx context.Context, id string) (result kubetest.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) Insert(ctx context.Context, result executor.Execution) (err error) {
+func (r *RepoMock) Insert(ctx context.Context, result kubetest.Execution) (err error) {
 	return r.Error
 }
 
-func (r *RepoMock) QueuePull(ctx context.Context) (result executor.Execution, err error) {
+func (r *RepoMock) QueuePull(ctx context.Context) (result kubetest.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) Update(ctx context.Context, result executor.Execution) (err error) {
+func (r *RepoMock) Update(ctx context.Context, result kubetest.Execution) (err error) {
 	return r.Error
 }

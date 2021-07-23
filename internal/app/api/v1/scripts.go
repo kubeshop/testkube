@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (s Server) GetAllScripts() fiber.Handler {
@@ -39,16 +41,23 @@ func (s Server) ExecuteScript() fiber.Handler {
 		}
 
 		ctx := context.Background()
-		s.Repository.Insert(ctx, execution)
+		scriptExecution := kubetest.NewScriptExecution(
+			primitive.NewObjectID().Hex(),
+			request.Name,
+			execution,
+		)
+		s.Repository.Insert(ctx, scriptExecution)
 
-		execution, err = executorClient.Watch(execution.Id)
+		execution, err = executorClient.Watch(execution.Id, func(e kubetest.Execution) error {
+			s.Log.Infow("saving", "status", e.Status, "execution", e)
+			scriptExecution.Execution = &e
+			return s.Repository.Update(ctx, scriptExecution)
+		})
+
 		if err != nil {
 			return err
 		}
 
-		// TODO save details about execution in API server storage
-		// TODO wrap execution into some script struct ? we have additional execution name
-		//      on this level which not exists in executor API
 		return c.JSON(execution)
 	}
 }
