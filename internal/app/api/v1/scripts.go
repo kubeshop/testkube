@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
 )
@@ -32,6 +34,14 @@ func (s Server) ExecuteScript() fiber.Handler {
 		// TODO use kubeapi to get script content
 		content := exampleCollection
 		execution, err := executorClient.Execute(content)
+		if err != nil {
+			return err
+		}
+
+		ctx := context.Background()
+		s.Repository.Insert(ctx, execution)
+
+		execution, err = executorClient.Watch(execution.Id)
 		if err != nil {
 			return err
 		}

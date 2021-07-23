@@ -11,7 +11,7 @@ func TestHTTClient(t *testing.T) {
 
 	t.Run("client execute script", func(t *testing.T) {
 
-		client := HTTPExecutorClient{URI: DefaultURI}
+		client := NewHTTPExecutorClient(DefaultURI)
 		e, err := client.Execute(exampleCollection)
 
 		assert.NoError(t, err)

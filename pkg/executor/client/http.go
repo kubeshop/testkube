@@ -65,7 +65,8 @@ func (c HTTPExecutorClient) Execute(content string) (execution executor.Executio
 		return execution, err
 	}
 
-	// TODO call executor API - need to have parameters (what executor?) taken from CRD?
+	// TODO call executors kube API (not ready yet)
+	// - need to have parameters (what executor?) taken from CRD?
 	resp, err := c.client.Post(c.URI+"/v1/executions/", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return execution, err

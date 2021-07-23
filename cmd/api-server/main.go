@@ -1,7 +1,17 @@
 package main
 
-import v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
+import (
+	v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
+	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
+	"github.com/kubeshop/kubetest/internal/pkg/postman/storage"
+)
 
 func main() {
-	v1API.NewServer().Run()
+	db, err := storage.GetMongoDataBase()
+	if err != nil {
+		panic(err)
+	}
+
+	repository := result.NewMongoRespository(db)
+	v1API.NewServer(repository).Run()
 }
