@@ -24,6 +24,5 @@ var GetScriptExecutionCmd = &cobra.Command{
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
 		ui.ExitOnError("getting API for script completion", err)
 		fmt.Println(scriptExecution.Execution.Output)
-
 	},
 }
