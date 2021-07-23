@@ -48,8 +48,8 @@ func (s Server) ExecuteScript() fiber.Handler {
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 
-		execution, err = executorClient.Watch(execution.Id, func(e kubetest.Execution) error {
-			s.Log.Infow("saving", "status", e.Status, "execution", e)
+		execution, err = executorClient.Watch(scriptExecution.Execution.Id, func(e kubetest.Execution) error {
+			s.Log.Infow("saving", "status", e.Status, "scriptExecution", scriptExecution)
 			scriptExecution.Execution = &e
 			return s.Repository.Update(ctx, scriptExecution)
 		})

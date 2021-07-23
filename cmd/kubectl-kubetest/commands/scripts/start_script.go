@@ -26,24 +26,20 @@ var StartScriptCmd = &cobra.Command{
 		scriptExecution, err := client.Execute(id)
 		ui.ExitOnError("starting script execution", err)
 
-		ticker := time.NewTicker(WatchInterval)
-		for range ticker.C {
-			scriptExecution, err = client.GetExecution(id, scriptExecution.Id)
-			ui.ExitOnError("watching API for script completion", err)
+		scriptExecution, err = client.GetExecution(id, scriptExecution.Id)
+		ui.ExitOnError("watching API for script completion", err)
+		if scriptExecution.Execution.IsCompleted() {
+			ui.Success("script completed with sucess")
+			// TODO some renderer should be used here based on outpu type
+			ui.Info("ID", scriptExecution.Id)
+			ui.Info("Output")
+			fmt.Println(scriptExecution.Execution.Output)
 
-			if scriptExecution.Execution.IsCompleted() {
-				ui.Success("script completed with sucess")
-				// TODO some renderer should be used here based on outpu type
-				ui.Info("ID", scriptExecution.Id)
-				ui.Info("Output")
-				fmt.Println(scriptExecution.Execution.Output)
-
-				ui.ShellCommand(
-					"Use following command to get script execution details",
-					"kubectl kubetest scripts get test "+scriptExecution.Id,
-				)
-				return
-			}
+			ui.ShellCommand(
+				"Use following command to get script execution details",
+				"kubectl kubetest scripts execution test "+scriptExecution.Id,
+			)
+			return
 		}
 	},
 }
