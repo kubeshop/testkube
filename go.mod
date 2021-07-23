@@ -3,6 +3,7 @@ module github.com/kubeshop/kubetest
 go 1.16
 
 require (
+	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
 	github.com/gofiber/adaptor/v2 v2.1.7
 	github.com/gofiber/fiber/v2 v2.14.0
 	github.com/kelseyhightower/envconfig v1.4.0

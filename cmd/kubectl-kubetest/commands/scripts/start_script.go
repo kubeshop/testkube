@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/kubetest/pkg/api/client"
+	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -15,26 +16,32 @@ var StartScriptCmd = &cobra.Command{
 	Short: "Starts new script",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		ui.Logo()
 		if len(args) == 0 {
-			panic("Please pass script name to run")
+			ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass script name to run"))
 		}
 		id := args[0]
 
 		client := client.NewRESTClient(client.DefaultURI)
-		execution, err := client.Execute(id)
-		if err != nil {
-			panic(err) // TODO add UI lib for cli apps
-		}
+		scriptExecution, err := client.Execute(id)
+		ui.ExitOnError("starting script execution", err)
 
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {
-			execution, err = client.GetExecution(id, execution.Id)
-			if err != nil {
-				panic(err)
-			}
-			if execution.IsCompleted() {
+			scriptExecution, err = client.GetExecution(id, scriptExecution.Id)
+			ui.ExitOnError("watching API for script completion", err)
+
+			if scriptExecution.Execution.IsCompleted() {
+				ui.Success("script completed with sucess")
 				// TODO some renderer should be used here based on outpu type
-				fmt.Printf("ID:%s\noutput:\n%s", execution.Id, execution.Output)
+				ui.Info("ID", scriptExecution.Id)
+				ui.Info("Output")
+				fmt.Println(scriptExecution.Execution.Output)
+
+				ui.ShellCommand(
+					"Use following command to get script execution details",
+					"kubectl kubetest scripts get test "+scriptExecution.Id,
+				)
 				return
 			}
 		}
