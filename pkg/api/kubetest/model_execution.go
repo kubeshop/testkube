@@ -12,11 +12,10 @@ import (
 	"time"
 )
 
+// object which should be returned by REST based executors
 type Execution struct {
 	// execution id (UUID?)
 	Id string `json:"id,omitempty"`
-	// script type e.g. postman/collection
-	ScriptType string `json:"script-type,omitempty"`
 	// script metadata content
 	ScriptContent string `json:"script-content,omitempty"`
 	// execution status

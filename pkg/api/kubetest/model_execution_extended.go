@@ -19,7 +19,6 @@ const (
 func NewExecution(ID string, content string) Execution {
 	return Execution{
 		Id:            ID,
-		ScriptType:    "postman/collection",
 		ScriptContent: content,
 		Status:        ExecutionStatusQueued,
 	}

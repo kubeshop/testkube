@@ -2,11 +2,11 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (s Server) GetAllScripts() fiber.Handler {
@@ -24,7 +24,6 @@ func (s Server) ExecuteScript() fiber.Handler {
 	executorClient := client.NewHTTPExecutorClient(client.DefaultURI)
 
 	return func(c *fiber.Ctx) error {
-
 		scriptID := c.Params("id")
 		s.Log.Infow("running execution of script", "id", scriptID)
 
@@ -42,7 +41,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 
 		ctx := context.Background()
 		scriptExecution := kubetest.NewScriptExecution(
-			primitive.NewObjectID().Hex(),
+			scriptID,
 			request.Name,
 			execution,
 		)
@@ -62,9 +61,19 @@ func (s Server) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s Server) GetAllScriptExecutions() fiber.Handler {
+func (s Server) GetScriptExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return c.SendString("OK 👋!")
+		scriptID := c.Params("id")
+		s.Log.Infow("Getting script executions", "id", scriptID)
+		executions, err := s.Repository.GetScriptExecutions(context.Background(), scriptID)
+		if err != nil {
+			s.Log.Errorw("ERRRORRRRRRR", "err", err)
+			return err
+		}
+
+		fmt.Printf("%+v\n", executions)
+
+		return c.JSON(executions)
 	}
 }
 
