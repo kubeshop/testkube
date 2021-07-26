@@ -4,12 +4,13 @@ Kubernetes-native framework for definition and execution of tests in a cluster;
 
 Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
 
-
 # Architecture (C4 Diagrams)
 ## Info
 
 Diagrams was made with use of C4 diagram technique 
 (https://c4model.com/) 
+
+
 
 ## Diagrams
 
@@ -35,6 +36,23 @@ TODO  add diagram for operator
 
 TODO add diagram for executor
 
+## Building diagrams
+
+To build diagrams you'll need to install plantuml:
+
+```sh
+brew install plantuml # on mac
+sudo apt-get install -y plantuml # on ubuntu linux 
+pacman -S plantuml # on arch linux
+```
+Next run 
+```sh 
+make diagrams
+```
+to generate png files from puml files
+
+
+TIP: If using vscode there is nice extension for live preview of plantuml files.  
 
 
 # Minimal components for PoC
