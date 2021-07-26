@@ -1,0 +1,34 @@
+@startuml system_context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include FONTAWESOME/chart_line.puml
+
+
+
+LAYOUT_WITH_LEGEND()
+
+
+Person_Ext(kubectl, "Engineers kubectl", "kubectl kubetest client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubetest", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing kubetest", "html5")
+System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+
+
+Boundary(kubernetes, "kubnernetes cluster") {
+	System(kubetest, "Kubetest", "Tests stuff inside kuberbetes cluster", "kubernetes")
+	Person_Ext(crds, "Tests CRDs", "kubernetes CRD defined by engineers", "kubernetes")
+}
+
+
+Rel(kubectl, kubetest, "Runs tests, getting results")
+Rel(cicd, kubetest, "Runs tests getting results")
+Rel(web, kubetest, "Runs tests, getting restuls")
+Rel(kubetest, crds, "Getting details about tests contents")
+Rel(kubetest, metrics, "Sends business metrics")
+
+@enduml
