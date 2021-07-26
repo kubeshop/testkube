@@ -46,7 +46,7 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c ScriptsAPI) GetExecutions(scriptID string) (execution []kubetest.ScriptExecution, err error) {
+func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExecutions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -75,7 +75,7 @@ func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kub
 	return
 }
 
-func (c ScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions []kubetest.ScriptExecution, err error) {
+func (c ScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubetest.ScriptExecutions, err error) {
 	defer resp.Body.Close()
 
 	// parse response

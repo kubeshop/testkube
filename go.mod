@@ -9,6 +9,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/kubetest/internal/app/operator v0.0.0-20210706105244-914c8d666591
 	github.com/moogar0880/problems v0.1.1
+	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0

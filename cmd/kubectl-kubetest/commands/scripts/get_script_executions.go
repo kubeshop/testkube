@@ -1,7 +1,7 @@
 package scripts
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
@@ -22,6 +22,8 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		client := client.NewRESTClient(client.DefaultURI)
 		executions, err := client.GetExecutions(scriptID)
 		ui.ExitOnError("getting executions ", err)
-		fmt.Println(executions)
+
+		ui.Table(executions, os.Stdout)
+
 	},
 }
