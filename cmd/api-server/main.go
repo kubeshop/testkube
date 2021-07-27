@@ -5,6 +5,7 @@ import (
 	v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/storage"
+	"github.com/kubeshop/kubetest/pkg/kubernetes/client"
 )
 
 type MongoConfig struct {
@@ -19,11 +20,15 @@ func init() {
 }
 
 func main() {
+	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
 	if err != nil {
 		panic(err)
 	}
 
+	kubeClient := client.GetClient()
+	scriptsKubeAPI := client.NewScripts(kubeClient)
+
 	repository := result.NewMongoRespository(db)
-	v1API.NewServer(repository).Run()
+	v1API.NewServer(repository, scriptsKubeAPI).Run()
 }

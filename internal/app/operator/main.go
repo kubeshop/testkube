@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kubetestv1 "github.com/kubeshop/kubetest/api/v1"
-	"github.com/kubeshop/kubetest/controllers"
+	kubetestv1 "github.com/kubeshop/kubetest/internal/app/operator/api/v1"
+	"github.com/kubeshop/kubetest/internal/app/operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
