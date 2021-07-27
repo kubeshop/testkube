@@ -10,6 +10,7 @@ import (
 func TestScriptsAPI(t *testing.T) {
 
 	t.Run("Get executed script details", func(t *testing.T) {
+		t.Skip("Implement real test") // TODO implement me
 		client := NewRESTClient(DefaultURI)
 		execution, err := client.GetExecution("test", "60f807e2cd42fbe1286ecfa3")
 
@@ -22,7 +23,7 @@ func TestScriptsAPI(t *testing.T) {
 	})
 
 	t.Run("Execute script with given ID", func(t *testing.T) {
-		t.Skip("Implement real test")
+		t.Skip("Implement real test") // TODO Implement me
 		client := NewRESTClient(DefaultURI)
 		execution, err := client.Execute("test")
 

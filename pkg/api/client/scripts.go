@@ -46,6 +46,15 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 	return c.getExecutionFromResponse(resp)
 }
 
+func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExecutions, err error) {
+	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return execution, err
+	}
+	return c.getExecutionsFromResponse(resp)
+}
+
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ScriptsAPI) Execute(scriptID string) (execution kubetest.ScriptExecution, err error) {
@@ -63,6 +72,14 @@ func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kub
 
 	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&execution)
+	return
+}
+
+func (c ScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubetest.ScriptExecutions, err error) {
+	defer resp.Body.Close()
+
+	// parse response
+	err = json.NewDecoder(resp.Body).Decode(&executions)
 	return
 }
 

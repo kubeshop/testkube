@@ -72,7 +72,7 @@ func (w *Worker) Run(executionChan chan kubetest.Execution) {
 			ctx := context.Background()
 			for {
 				e := <-executionChan
-				l := w.Log.With("type", e.ScriptType, "executionID", e.Id)
+				l := w.Log.With("executionID", e.Id)
 				l.Infow("Got script to run")
 
 				e, err := w.RunExecution(ctx, e)
