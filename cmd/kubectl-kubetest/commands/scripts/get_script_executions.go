@@ -18,12 +18,10 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		}
 
 		scriptID := args[0]
-
 		client := client.NewRESTClient(client.DefaultURI)
+
 		executions, err := client.GetExecutions(scriptID)
 		ui.ExitOnError("getting executions ", err)
-
 		ui.Table(executions, os.Stdout)
-
 	},
 }

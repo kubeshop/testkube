@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
@@ -67,11 +66,8 @@ func (s Server) GetScriptExecutions() fiber.Handler {
 		s.Log.Infow("Getting script executions", "id", scriptID)
 		executions, err := s.Repository.GetScriptExecutions(context.Background(), scriptID)
 		if err != nil {
-			s.Log.Errorw("ERRRORRRRRRR", "err", err)
 			return err
 		}
-
-		fmt.Printf("%+v\n", executions)
 
 		return c.JSON(executions)
 	}
