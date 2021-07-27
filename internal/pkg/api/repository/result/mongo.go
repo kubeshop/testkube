@@ -26,6 +26,15 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result kubetest.S
 	return
 }
 
+func (r *MongoRepository) GetScriptExecutions(ctx context.Context, id string) (result []kubetest.ScriptExecution, err error) {
+	cursor, err := r.Coll.Find(ctx, bson.M{"scriptname": id})
+	if err != nil {
+		return result, err
+	}
+	cursor.All(ctx, &result)
+	return
+}
+
 func (r *MongoRepository) Insert(ctx context.Context, result kubetest.ScriptExecution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
@@ -33,10 +42,5 @@ func (r *MongoRepository) Insert(ctx context.Context, result kubetest.ScriptExec
 
 func (r *MongoRepository) Update(ctx context.Context, result kubetest.ScriptExecution) (err error) {
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
-	return
-}
-
-func (r *MongoRepository) QueuePull(ctx context.Context) (result kubetest.ScriptExecution, err error) {
-	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"status": kubetest.ExecutionStatusQueued}, bson.M{"$set": bson.M{"status": kubetest.ExecutionStatusPending}}).Decode(&result)
 	return
 }
