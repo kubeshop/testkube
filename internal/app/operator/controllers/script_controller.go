@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Kubeshop.
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	kubetestv1 "github.com/kubeshop/kubetest/internal/app/operator/api/v1"
+	kubetestv1 "github.com/kubeshop/kubetest/api/v1"
 )
 
 // ScriptReconciler reconciles a Script object
@@ -33,9 +33,9 @@ type ScriptReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=kubetest.kubetest.io,resources=scripts,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=kubetest.kubetest.io,resources=scripts/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=kubetest.kubetest.io,resources=scripts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=tests.kubetest.io,resources=scripts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=tests.kubetest.io,resources=scripts/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=tests.kubetest.io,resources=scripts/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

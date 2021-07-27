@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Kubeshop.
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,19 +25,16 @@ import (
 
 // ScriptSpec defines the desired state of Script
 type ScriptSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Script. Edit script_types.go to remove/update
-	Id            string `json:"id,omitempty"`
-	ScriptType    string `json:"script-type"`
-	ScriptContent string `json:"script-content"`
+	ID      string `json:"id,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Content string `json:"content,omitempty"`
 }
 
 // ScriptStatus defines the observed state of Script
 type ScriptStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	LastExecution   metav1.Time `json:"last_execution,omitempty"`
+	ExecutionsCount int         `json:"executions_count,omitempty"`
 }
 
 //+kubebuilder:object:root=true
