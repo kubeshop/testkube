@@ -59,12 +59,15 @@ Container_Boundary(kubernetes, "Kubernetes native resources") {
 	Rel(curlExecutor, executorsCrds, "registers itself in cluster as executor")
 }
 
+System_Ext(sut, "SUT", "System Under Test", "html5")
+Rel(executors, sut, "runs test")
+
 Rel(engineer, scriptsCrds, "applying script definition to cluster")
-Rel(kubectl, apiServer, "Runs tests, getting results")
-Rel(cicd, apiServer, "Runs tests getting results")
-Rel(web, apiServer, "Runs tests, getting restuls")
-Rel(apiServer, scriptsCrds, "Reads informations about test details from Custom Resources")
-Rel(metricsMiddleware, metrics, "Stores test runs metrics")
-Rel(api, logs, "Store logs")
+Rel(kubectl, apiServer, "runs tests, getting results")
+Rel(cicd, apiServer, "runs tests getting results")
+Rel(web, apiServer, "runs tests, getting restuls")
+Rel(apiServer, scriptsCrds, "reads informations about test details from Custom Resources")
+Rel(metricsMiddleware, metrics, "stores test runs metrics")
+Rel(api, logs, "store logs")
 
 @enduml

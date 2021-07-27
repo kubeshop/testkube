@@ -22,13 +22,17 @@ System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 Boundary(kubernetes, "kubnernetes cluster") {
 	System(kubetest, "Kubetest", "Tests stuff inside kuberbetes cluster", "kubernetes")
 	Person_Ext(crds, "Tests CRDs", "kubernetes CRD defined by engineers", "kubernetes")
+	System_Ext(sut, "SUT", "System Under Test", "html5")
+	Rel_U(crds, kubetest, "Getting details about tests contents")
 }
 
 
 Rel(kubectl, kubetest, "Runs tests, getting results")
 Rel(cicd, kubetest, "Runs tests getting results")
 Rel(web, kubetest, "Runs tests, getting restuls")
-Rel(kubetest, crds, "Getting details about tests contents")
+
 Rel(kubetest, metrics, "Sends business metrics")
+Rel_L(kubetest, sut, "Runs test on SUT")
+
 
 @enduml
