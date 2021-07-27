@@ -13,8 +13,8 @@ var GetScriptExecutionsCmd = &cobra.Command{
 	Short: "Gets script executions details",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			ui.Errf("invlid script arguments please pass test name and execution id")
+		if len(args) != 1 {
+			ui.Errf("invalid script arguments please pass test name")
 		}
 
 		scriptID := args[0]
