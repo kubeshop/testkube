@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Kubeshop.
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package v1 contains API Schema definitions for the kubetest v1 API group
 //+kubebuilder:object:generate=true
-//+groupName=kubetest.kubetest.io
+//+groupName=tests.kubetest.io
 package v1
 
 import (
@@ -26,7 +26,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "kubetest.kubetest.io", Version: "v1"}
+	GroupVersion = schema.GroupVersion{Group: "tests.kubetest.io", Version: "v1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
