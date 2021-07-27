@@ -32,7 +32,7 @@ Container_Boundary(api, "API Application") {
     Component(apiServer, "API REST Server", "OpenAPI v3 REST server", "Listens for commands to execute", "go")
     Component(executorClient, "HTTP Executor", "OpenAPI v3 REST", "Orchestrates executor runs to valid registered executor", "go")
     Component(metricsMiddleware, "Metrics endpoints middleware", "Prometheus HTTP endpoints", "Provides Prometheus enpoints with metrics, technical and business", "go")
-	ComponentDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
+	ComponentDb(db, "MongoDB", "Storage", "Stores execution results, can be external", "mongodb")
 
     Rel(apiServer, executorClient, "Runs exeution of test", "HTTP")
     Rel(apiServer, metricsMiddleware , "Stores metrics")
