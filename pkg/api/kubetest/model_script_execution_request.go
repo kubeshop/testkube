@@ -9,17 +9,10 @@
  */
 package kubetest
 
-// API server script execution
-type ScriptExecution struct {
+// scripts execution request body
+type ScriptExecutionRequest struct {
 	// execution id (UUID?)
-	Id string `json:"id,omitempty"`
-	// unique script name (CRD Script name)
-	ScriptName string `json:"script-name,omitempty"`
-	// script type e.g. postman/collection
-	ScriptType string `json:"script-type,omitempty"`
-	// execution name
 	Name string `json:"name,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
-	Execution *Execution `json:"execution,omitempty"`
 }

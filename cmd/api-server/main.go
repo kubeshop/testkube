@@ -27,7 +27,7 @@ func main() {
 	}
 
 	kubeClient := client.GetClient()
-	scriptsKubeAPI := client.NewScripts(kubeClient)
+	scriptsKubeAPI := client.NewScriptsKubeAPI(kubeClient)
 
 	repository := result.NewMongoRespository(db)
 	v1API.NewServer(repository, scriptsKubeAPI).Run()

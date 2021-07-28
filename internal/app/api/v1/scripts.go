@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
+	"github.com/kubeshop/kubetest/pkg/rand"
 )
 
 func (s Server) GetAllScripts() fiber.Handler {
@@ -35,14 +36,16 @@ func (s Server) ExecuteScript() fiber.Handler {
 		scriptID := c.Params("id")
 		s.Log.Infow("running execution of script", "id", scriptID)
 
-		var request struct {
-			Name string
-		}
+		var request kubetest.ScriptExecutionRequest
 		c.BodyParser(&request)
+
+		if request.Name == "" {
+			request.Name = rand.Name()
+		}
 
 		// TODO use kubeapi to get script content
 		content := exampleCollection
-		execution, err := executorClient.Execute(content)
+		execution, err := executorClient.Execute(content, request.Params)
 		if err != nil {
 			return err
 		}
@@ -52,6 +55,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 			scriptID,
 			request.Name,
 			execution,
+			request.Params,
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 

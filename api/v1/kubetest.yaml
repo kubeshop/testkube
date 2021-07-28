@@ -53,6 +53,13 @@ paths:
       summary: 'Starts new script execution'
       description: 'New script execution returns new execution details on successful execution start'
       operationId: executeScript
+      requestBody:
+        description: body passed to configure execution
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScriptExecutionRequest'
       responses:
         201:
           description: successful operation
@@ -226,7 +233,16 @@ components:
         name:
           type: string
           description: 'execution name'
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
         execution: 
+          description: 'execution result returned from executor'
           $ref: '#/components/schemas/Execution' 
     Execution:
       description: object which should be returned by REST based executors
@@ -268,5 +284,19 @@ components:
           type: string
           description: 'test end time'
           format: date-time
-
-
+    ScriptExecutionRequest: 
+      description: scripts execution request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: execution id (UUID?)
+          format: uuid
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"

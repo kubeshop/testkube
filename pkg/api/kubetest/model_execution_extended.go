@@ -44,8 +44,11 @@ func (e *Execution) IsCompleted() bool {
 	return e.Status == ExecutionStatusSuceess || e.Status == ExecutionStatusError
 }
 
+type ExecutionParams map[string]string
+
 type ExecuteRequest struct {
 	Type     string          `json:"type,omitempty"`
 	Name     string          `json:"name,omitempty"`
+	Params   ExecutionParams `json:"params,omitempty"`
 	Metadata json.RawMessage `json:"metadata,omitempty"`
 }
