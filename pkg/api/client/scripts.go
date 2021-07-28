@@ -46,6 +46,7 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 	return c.getExecutionFromResponse(resp)
 }
 
+// GetExecutions list all executions in given script
 func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExecutions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
@@ -58,13 +59,26 @@ func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExe
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ScriptsAPI) Execute(scriptID string) (execution kubetest.ScriptExecution, err error) {
-	// TODO call executor API - need to have parameters (what executor?) taken from CRD?
+	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Post(uri, "application/json", nil)
 	if err != nil {
 		return execution, err
 	}
 	return c.getExecutionFromResponse(resp)
+}
+
+// GetExecutions list all executions in given script
+func (c ScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err error) {
+	uri := fmt.Sprintf(c.URI+"/v1/scripts?namespace=%s", namespace)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return scripts, fmt.Errorf("GET client error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&scripts)
+	return
 }
 
 func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubetest.ScriptExecution, err error) {

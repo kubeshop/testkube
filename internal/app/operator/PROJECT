@@ -1,16 +1,16 @@
 domain: kubetest.io
 layout:
 - go.kubebuilder.io/v3
-projectName: kubetest-operator
-repo: github.com/kubeshop/kubetest/internal/app/operator
+projectName: kubetest
+repo: github.com/kubeshop/kubetest
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: kubetest.io
-  group: kubetest
+  group: tests
   kind: Script
-  path: github.com/kubeshop/kubetest/internal/app/operator/api/v1
+  path: github.com/kubeshop/kubetest/api/v1
   version: v1
 version: "3"

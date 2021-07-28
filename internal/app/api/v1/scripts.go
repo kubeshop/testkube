@@ -6,11 +6,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
+	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
 )
 
 func (s Server) GetAllScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return c.SendString("OK 👋!")
+		namespace := c.Query("ns", "default")
+		crScripts, err := s.ScriptsKubeAPI.List(namespace)
+		if err != nil {
+			return err
+		}
+
+		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
+
+		return c.JSON(scripts)
 	}
 }
 
