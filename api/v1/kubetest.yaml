@@ -290,8 +290,9 @@ components:
       properties:
         name:
           type: string
-          description: execution id (UUID?)
+          description: script execution custom name; 
           format: uuid
+          example: testing with 1000 users
         params: 
           type: object
           description: 'execution params passed to executor'

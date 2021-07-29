@@ -1,7 +1,6 @@
 package v1
 
+import "github.com/kubeshop/kubetest/pkg/api/kubetest"
+
 //
-type ExecuteRequest struct {
-	Name   string
-	Params map[string]string
-}
+type ExecuteRequest kubetest.ScriptExecutionRequest
