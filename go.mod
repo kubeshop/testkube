@@ -2,7 +2,7 @@ module github.com/kubeshop/kubetest
 
 go 1.16
 
-replace github.com/kubeshop/kubetest-operator v0.0.2 => ../kubetest-operator
+// replace github.com/kubeshop/kubetest-operator v0.0.2 => ../kubetest-operator
 
 require (
 	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
