@@ -3,6 +3,8 @@ package kubetest
 import (
 	"encoding/json"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -16,9 +18,9 @@ const (
 	ExecutionStatusError = "error"
 )
 
-func NewExecution(ID string, content string) Execution {
+func NewExecution(content string) Execution {
 	return Execution{
-		Id:            ID,
+		Id:            primitive.NewObjectID().Hex(),
 		ScriptContent: content,
 		Status:        ExecutionStatusQueued,
 	}
