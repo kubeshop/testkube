@@ -14,7 +14,7 @@ import (
 
 // object which should be returned by REST based executors
 type Execution struct {
-	// execution id (UUID?)
+	// execution id
 	Id string `json:"id,omitempty"`
 	// script metadata content
 	ScriptContent string `json:"script-content,omitempty"`

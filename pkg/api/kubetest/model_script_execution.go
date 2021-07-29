@@ -11,7 +11,7 @@ package kubetest
 
 // API server script execution
 type ScriptExecution struct {
-	// execution id (UUID?)
+	// execution id
 	Id string `json:"id,omitempty"`
 	// unique script name (CRD Script name)
 	ScriptName string `json:"script-name,omitempty"`

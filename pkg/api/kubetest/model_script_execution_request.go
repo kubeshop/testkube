@@ -11,7 +11,7 @@ package kubetest
 
 // scripts execution request body
 type ScriptExecutionRequest struct {
-	// execution id (UUID?)
+	// script execution custom name;
 	Name string `json:"name,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`

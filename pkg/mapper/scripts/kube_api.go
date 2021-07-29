@@ -1,7 +1,7 @@
 package scripts
 
 import (
-	scriptsV1 "github.com/kubeshop/kubetest/internal/app/operator/api/v1"
+	scriptsV1 "github.com/kubeshop/kubetest-operator/apis/script/v1"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 )
 

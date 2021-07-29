@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/kelseyhightower/envconfig"
+	"github.com/kubeshop/kubetest-operator/client"
+	scriptscr "github.com/kubeshop/kubetest-operator/client/scripts"
 	v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/storage"
-	"github.com/kubeshop/kubetest/pkg/kubernetes/client"
 )
 
 type MongoConfig struct {
@@ -27,8 +28,8 @@ func main() {
 	}
 
 	kubeClient := client.GetClient()
-	scriptsKubeAPI := client.NewScriptsKubeAPI(kubeClient)
+	scriptsClient := scriptscr.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
-	v1API.NewServer(repository, scriptsKubeAPI).Run()
+	v1API.NewServer(repository, scriptsClient).Run()
 }

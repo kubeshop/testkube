@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
@@ -13,7 +14,7 @@ import (
 func (s Server) GetAllScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
-		crScripts, err := s.ScriptsKubeAPI.List(namespace)
+		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
 			return err
 		}
@@ -33,8 +34,9 @@ func (s Server) ExecuteScript() fiber.Handler {
 	executorClient := client.NewHTTPExecutorClient(client.DefaultURI)
 
 	return func(c *fiber.Ctx) error {
+		namespace := c.Query("ns", "default")
 		scriptID := c.Params("id")
-		s.Log.Infow("running execution of script", "id", scriptID)
+		s.Log.Infow("running execution of script", "script", scriptID)
 
 		var request kubetest.ScriptExecutionRequest
 		c.BodyParser(&request)
@@ -43,9 +45,17 @@ func (s Server) ExecuteScript() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
-		// TODO use kubeapi to get script content
-		content := exampleCollection
-		execution, err := executorClient.Execute(content, request.Params)
+		scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+		if err != nil {
+			return err
+		}
+
+		content, err := json.Marshal(scriptCR)
+		if err != nil {
+			return err
+		}
+
+		execution, err := executorClient.Execute(string(content), request.Params)
 		if err != nil {
 			return err
 		}
@@ -114,72 +124,3 @@ func (s Server) AbortScriptExecution() fiber.Handler {
 		return nil
 	}
 }
-
-// TODO remove when reading from API will be implemented
-const exampleCollection = `{
-	"info": {
-		"_postman_id": "fa1ce97f-ff5d-40ed-9c9c-e0a92063ce98",
-		"name": "Remotes",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Google",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"    pm.test(\"Successful GET request\", function () {",
-							"        pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
-							"    });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "https://google.com",
-					"protocol": "https",
-					"host": [
-						"google",
-						"com"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Kasia.in Homepage",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Body matches string\", function () {",
-							"    pm.expect(pm.response.text()).to.include(\"PRZEPIS NA CHLEB\");",
-							"});"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "https://kasia.in",
-					"protocol": "https",
-					"host": [
-						"kasia",
-						"in"
-					]
-				}
-			},
-			"response": []
-		}
-	]
-}`
