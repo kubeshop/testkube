@@ -5,11 +5,11 @@ COPY . .
 ENV GONOSUMDB=github.com/kubeshop/* 
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-RUN cd cmd/postman-executor;go build -o /app -mod vendor -a .
+RUN cd cmd/api-server;go build -o /app -mod vendor -a .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=0 /app /bin/app
-EXPOSE 8082
+EXPOSE 8080
 CMD ["/bin/app"]

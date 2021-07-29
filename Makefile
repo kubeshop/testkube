@@ -17,6 +17,10 @@ build-executor:
 	go mod vendor
 	docker build -t postman-executor -f build/postman-executor/Dockerfile .
 
+build-api-server:
+	go mod vendor
+	docker build -t api-server -f build/api-server/Dockerfile .
+
 build-kubetest-bin: 
 	go mod vendor
 	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go

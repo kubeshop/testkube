@@ -36,6 +36,7 @@ type PostmanExecutor struct {
 }
 
 func (p *PostmanExecutor) Init() {
+	p.Mux.Get("/health", p.HealthEndpoint())
 	// v1 API
 	v1 := p.Mux.Group("/v1")
 	v1.Static("/api-docs", "./api/v1")
