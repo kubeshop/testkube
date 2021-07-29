@@ -57,7 +57,7 @@ func (c HTTPExecutorClient) Get(id string) (execution kubetest.Execution, err er
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c HTTPExecutorClient) Execute(content string) (execution kubetest.Execution, err error) {
+func (c HTTPExecutorClient) Execute(content string, params map[string]string) (execution kubetest.Execution, err error) {
 
 	// create request
 	request := kubetest.ExecuteRequest{

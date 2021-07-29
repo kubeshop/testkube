@@ -14,11 +14,12 @@ import (
 )
 
 const EmptyQueueWaitTime = 2 * time.Second
+const WorkerQueueBufferSize = 10000
 
 func NewWorker(resultsRepository result.Repository) Worker {
 	return Worker{
 		Concurrency: 4,
-		BufferSize:  10000,
+		BufferSize:  WorkerQueueBufferSize,
 		Repository:  resultsRepository,
 		Runner:      &newman.Runner{},
 		Log:         log.DefaultLogger,
@@ -41,6 +42,7 @@ func (w *Worker) PullExecution() (execution kubetest.Execution, err error) {
 	return
 }
 
+// PullExecutions gets executions from queue - returns executions channel
 func (w *Worker) PullExecutions() chan kubetest.Execution {
 	executionChan := make(chan kubetest.Execution, w.BufferSize)
 
@@ -51,7 +53,6 @@ func (w *Worker) PullExecutions() chan kubetest.Execution {
 			if err != nil {
 				if err == mongo.ErrNoDocuments {
 					w.Log.Debug("no records found in queue to process")
-					// TODO - to not kill mongo - consider some exp function
 					time.Sleep(EmptyQueueWaitTime)
 					continue
 				}

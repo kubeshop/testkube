@@ -4,16 +4,18 @@ import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
+	"github.com/kubeshop/kubetest/pkg/kubernetes/client"
 	"github.com/kubeshop/kubetest/pkg/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
-func NewServer(repository result.Repository) Server {
+func NewServer(repository result.Repository, scriptsKubeAPI client.ScriptsKubeAPI) Server {
 	s := Server{
-		Mux:        fiber.New(),
-		Log:        log.DefaultLogger,
-		Repository: repository,
+		Mux:            fiber.New(),
+		Log:            log.DefaultLogger,
+		Repository:     repository,
+		ScriptsKubeAPI: scriptsKubeAPI,
 	}
 
 	s.Init()
@@ -21,9 +23,10 @@ func NewServer(repository result.Repository) Server {
 }
 
 type Server struct {
-	Mux        *fiber.App
-	Log        *zap.SugaredLogger
-	Repository result.Repository
+	Mux            *fiber.App
+	Log            *zap.SugaredLogger
+	Repository     result.Repository
+	ScriptsKubeAPI client.ScriptsKubeAPI
 }
 
 func (s Server) Init() {

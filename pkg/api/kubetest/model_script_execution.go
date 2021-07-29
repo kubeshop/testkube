@@ -19,5 +19,7 @@ type ScriptExecution struct {
 	ScriptType string `json:"script-type,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
+	// execution params passed to executor
+	Params map[string]string `json:"params,omitempty"`
 	Execution *Execution `json:"execution,omitempty"`
 }
