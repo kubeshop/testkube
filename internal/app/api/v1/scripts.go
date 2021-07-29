@@ -13,7 +13,7 @@ import (
 func (s Server) GetAllScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
-		crScripts, err := s.ScriptsKubeAPI.List(namespace)
+		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
 			return err
 		}

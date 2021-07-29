@@ -3,19 +3,19 @@ package v1
 import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	scriptscr "github.com/kubeshop/kubetest-operator/client/scripts"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubetest/pkg/kubernetes/client"
 	"github.com/kubeshop/kubetest/pkg/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
-func NewServer(repository result.Repository, scriptsKubeAPI client.ScriptsKubeAPI) Server {
+func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClient) Server {
 	s := Server{
-		Mux:            fiber.New(),
-		Log:            log.DefaultLogger,
-		Repository:     repository,
-		ScriptsKubeAPI: scriptsKubeAPI,
+		Mux:           fiber.New(),
+		Log:           log.DefaultLogger,
+		Repository:    repository,
+		ScriptsClient: scriptsClient,
 	}
 
 	s.Init()
@@ -23,10 +23,10 @@ func NewServer(repository result.Repository, scriptsKubeAPI client.ScriptsKubeAP
 }
 
 type Server struct {
-	Mux            *fiber.App
-	Log            *zap.SugaredLogger
-	Repository     result.Repository
-	ScriptsKubeAPI client.ScriptsKubeAPI
+	Mux           *fiber.App
+	Log           *zap.SugaredLogger
+	Repository    result.Repository
+	ScriptsClient scriptscr.ScriptsClient
 }
 
 func (s Server) Init() {
