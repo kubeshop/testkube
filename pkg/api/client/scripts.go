@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,7 +15,7 @@ const (
 	WatchInterval = time.Second
 )
 
-func NewRESTClient(URI string) ScriptsAPI {
+func NewScriptsAPI(URI string) ScriptsAPI {
 	return ScriptsAPI{
 		URI: URI,
 		client: &http.Client{
@@ -58,10 +59,21 @@ func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExe
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ScriptsAPI) Execute(scriptID string) (execution kubetest.ScriptExecution, err error) {
+func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kubetest.ExecutionParams) (execution kubetest.ScriptExecution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
-	resp, err := c.client.Post(uri, "application/json", nil)
+
+	request := ExecuteRequest{
+		Name:   executionName,
+		Params: executionParams,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return execution, err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return execution, err
 	}

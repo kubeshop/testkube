@@ -18,7 +18,7 @@ var ListScriptsCmd = &cobra.Command{
 			ns = args[0]
 		}
 
-		client := client.NewRESTClient(client.DefaultURI)
+		client := client.NewScriptsAPI(client.DefaultURI)
 		scripts, err := client.ListScripts(ns)
 		ui.ExitOnError("getting all scripts in ns="+ns, err)
 		ui.Table(scripts, os.Stdout)
