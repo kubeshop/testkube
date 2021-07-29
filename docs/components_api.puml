@@ -1,0 +1,73 @@
+@startuml components_api
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Component.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include DEVICONS/go.puml
+!include DEVICONS/mongodb.puml
+!include FONTAWESOME/chart_line.puml
+!include FONTAWESOME/file_alt.puml
+
+
+
+
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for KubeTest API
+
+Person_Ext(kubectl, "Engineers kubectl", "kubectl kubetest client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubetest", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing kubetest", "html5")
+System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+System_Ext(logs, "Logs", "Logs aggregator", "file_alt")
+
+
+Container_Boundary(api, "API Application") {
+    Component(apiServer, "API REST Server", "OpenAPI v3 REST server", "Listens for commands to execute", "go")
+    Component(executorClient, "HTTP Executor", "OpenAPI v3 REST", "Orchestrates executor runs to valid registered executor", "go")
+    Component(metricsMiddleware, "Metrics endpoints middleware", "Prometheus HTTP endpoints", "Provides Prometheus enpoints with metrics, technical and business", "go")
+	ComponentDb(db, "MongoDB", "Storage", "Stores execution results, can be external", "mongodb")
+
+    Rel(apiServer, executorClient, "Runs exeution of test", "HTTP")
+    Rel(apiServer, metricsMiddleware , "Stores metrics")
+    Rel(apiServer, db, "Stores results")
+}
+
+
+Container_Boundary(executors, "Executors") {
+    Component(postmanExecutor, "Postman Collections Executor", "OpenAPI v3 REST server", "Executes exported postman collections", "go")
+    Component(curlExecutor, "Example curl executor", "OpenAPI v3 REST server", "Executes curl commands", "go")
+
+	Rel(executorClient, postmanExecutor, "executes postman collections scripts")
+	Rel(executorClient, curlExecutor, "executes example curl scripts")
+
+}
+
+Person_Ext(engineer, "Engineer", "kubectl apply -f script.yaml")
+
+Container_Boundary(kubernetes, "Kubernetes native resources") {
+	System_Ext(scriptsCrds, "Scripts CRD", "YAML", "kubernetes")
+	System_Ext(executorsCrds, "Executors CRD", "YAML", "kubernetes")
+
+	Rel(postmanExecutor, executorsCrds, "registers itself in cluster as executor")
+	Rel(curlExecutor, executorsCrds, "registers itself in cluster as executor")
+}
+
+System_Ext(sut, "SUT", "System Under Test", "html5")
+Rel(executors, sut, "runs test")
+
+Rel(engineer, scriptsCrds, "applying script definition to cluster")
+Rel(kubectl, apiServer, "runs tests, getting results")
+Rel(cicd, apiServer, "runs tests getting results")
+Rel(web, apiServer, "runs tests, getting restuls")
+Rel(apiServer, scriptsCrds, "reads informations about test details from Custom Resources")
+Rel(metricsMiddleware, metrics, "stores test runs metrics")
+Rel(api, logs, "store logs")
+
+@enduml
