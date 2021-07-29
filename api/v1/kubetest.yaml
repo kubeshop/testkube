@@ -47,7 +47,12 @@ paths:
           schema:
             type: string
           required: true
-          description: 'ID of the script (uuid?)'
+          description: 'ID of the script'
+        - in: query
+          name: namespace
+          schema:
+            type: integer
+          description: kubernetes namespace 
       tags:
       - scripts
       summary: 'Starts new script execution'
@@ -77,7 +82,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script (uuid?)
+          description: ID of the script
       tags:
       - scripts
       summary: 'Get all script executions'
@@ -102,13 +107,13 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script (uuid?)
+          description: ID of the script 
         - in: path
           name: executionID
           schema:
             type: string
           required: true
-          description: ID of the script execution (uuid?)
+          description: ID of the script execution
       tags:
       - scripts
       summary: 'Get script execution'
@@ -132,13 +137,13 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script (uuid?)
+          description: ID of the script
         - in: path
           name: executionID
           schema:
             type: string
           required: true
-          description: ID of the script execution (uuid?)
+          description: ID of the script execution
       tags:
       - scripts
       summary: 'Aborts execution'
@@ -201,7 +206,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
+          format: bson objectId
         name:
           type: string
           description: script name
@@ -222,8 +227,8 @@ components:
       properties:
         id:
           type: string
-          description: execution id (UUID?)
-          format: uuid
+          description: execution id 
+          format: bson objectId
         script-name:
           type: string
           description: unique script name (CRD Script name)
@@ -250,8 +255,8 @@ components:
       properties:
         id:
           type: string
-          description: execution id (UUID?)
-          format: uuid
+          description: execution id
+          format: bson objectId
         script-content: 
           type: string
           description: script metadata content
