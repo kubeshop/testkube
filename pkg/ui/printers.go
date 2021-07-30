@@ -15,6 +15,10 @@ const IconMedal = "🥇"
 // IconError emoji
 const IconError = "💔"
 
+func BR() {
+	fmt.Println()
+}
+
 // Warn shows warning in terminal
 func Success(message string, subMessages ...string) {
 	fmt.Printf("%s", color.LightYellow(message))
@@ -43,12 +47,20 @@ func Info(message string, subMessages ...string) {
 }
 
 func Err(err error) {
-	fmt.Printf("%s %s %s\n\n", color.LightRed("⨯"), color.Red(err.Error()), IconError)
-	os.Exit(1)
+	fmt.Printf("%s %s %s\n", color.LightRed("⨯"), color.Red(err.Error()), IconError)
 }
 
 func Errf(err string, params ...interface{}) {
-	fmt.Printf("%s %s\n\n", color.LightRed("⨯"), color.Red(fmt.Sprintf(err, params...)))
+	fmt.Printf("%s %s\n", color.LightRed("⨯"), color.Red(fmt.Sprintf(err, params...)))
+}
+
+func Fail(err error) {
+	Err(err)
+	os.Exit(1)
+}
+
+func Failf(err string, params ...interface{}) {
+	Errf(err, params...)
 	os.Exit(1)
 }
 
