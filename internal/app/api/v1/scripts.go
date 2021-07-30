@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
@@ -36,6 +35,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
 		scriptID := c.Params("id")
+
 		s.Log.Infow("running execution of script", "script", scriptID)
 
 		var request kubetest.ScriptExecutionRequest
@@ -50,12 +50,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 			return err
 		}
 
-		content, err := json.Marshal(scriptCR)
-		if err != nil {
-			return err
-		}
-
-		execution, err := executorClient.Execute(string(content), request.Params)
+		execution, err := executorClient.Execute(scriptCR.Spec.Content, request.Params)
 		if err != nil {
 			return err
 		}
@@ -97,11 +92,6 @@ func (s Server) GetScriptExecutions() fiber.Handler {
 }
 
 func (s Server) GetScriptExecution() fiber.Handler {
-	// TODO use kube API to get registered executor details - for now it'll be fixed
-	// we need to choose client based on script type in future for now there is only
-	// one client postman-collection newman based executor
-	// should be done on top level from some kind of available clients poll
-	// consider moving them to separate struct - and allow to choose by executor ID
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id")

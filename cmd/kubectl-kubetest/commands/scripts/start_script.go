@@ -22,15 +22,18 @@ func init() {
 var StartScriptCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Starts new script",
-	Long:  ``,
+	Long:  `Starts new script based on Script Custom Resource name, returns results to console`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
+
+		// TODO move it to some Validator
 		if len(args) == 0 {
 			ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass script name to run"))
 		}
+
 		id := args[0]
 		name := cmd.Flag("name").Value.String()
-		// TODO pass params in flags (maybe as key=val,key2=val)
+		// TODO pass params in flags (maybe as key=val,key2=val) some custom flag? - for now leaving empty
 		params := kubetest.ExecutionParams{}
 
 		client := client.NewScriptsAPI(client.DefaultURI)
@@ -39,19 +42,21 @@ var StartScriptCmd = &cobra.Command{
 
 		scriptExecution, err = client.GetExecution(id, scriptExecution.Id)
 		ui.ExitOnError("watching API for script completion", err)
-		if scriptExecution.Execution.IsCompleted() {
 
-			ui.Success("script completed with sucess")
-			// TODO some renderer should be used here based on outpu type
-			ui.Info("ID", scriptExecution.Id)
-			ui.Info("Output")
+		switch true {
+		case scriptExecution.Execution.IsSuccesful():
 			fmt.Println(scriptExecution.Execution.Output)
-
-			ui.ShellCommand(
-				"Use following command to get script execution details",
-				"kubectl kubetest scripts execution test "+scriptExecution.Id,
-			)
-			return
+			ui.Success("Script execution completed with sucess")
+		case scriptExecution.Execution.IsFailed():
+			fmt.Println(scriptExecution.Execution.ErrorMessage)
+			ui.Errf("Script execution failed")
 		}
+
+		ui.BR()
+		ui.ShellCommand(
+			"Use following command to get script execution details",
+			"kubectl kubetest scripts execution test "+scriptExecution.Id,
+		)
+
 	},
 }

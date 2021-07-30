@@ -43,7 +43,15 @@ func (e *Execution) Error(err error) {
 }
 
 func (e *Execution) IsCompleted() bool {
-	return e.Status == ExecutionStatusSuceess || e.Status == ExecutionStatusError
+	return e.IsSuccesful() || e.IsCompleted()
+}
+
+func (e *Execution) IsSuccesful() bool {
+	return e.Status == ExecutionStatusSuceess
+}
+
+func (e *Execution) IsFailed() bool {
+	return e.Status == ExecutionStatusError
 }
 
 type ExecutionParams map[string]string
