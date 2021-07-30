@@ -21,18 +21,20 @@ var CreateScriptsCmd = &cobra.Command{
 	Short: "Create new script",
 	Long:  `Create new Script Custom Resource, `,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// get values from flags
 		name := cmd.Flag("name").Value.String()
 		namespace := cmd.Flag("namespace").Value.String()
 		executorType := cmd.Flag("type").Value.String()
 		file := cmd.Flag("file").Value.String()
 
+		// read script content
 		content, err := ioutil.ReadFile(file)
 		ui.ExitOnError("reading file"+file, err)
 
 		client := client.NewScriptsAPI(client.DefaultURI)
 		script, err := client.Create(name, executorType, string(content), namespace)
 		ui.ExitOnError("creating script "+name, err)
-		ui.Info("Script created", script.Name)
-
+		ui.Success("Script created", script.Name)
 	},
 }
