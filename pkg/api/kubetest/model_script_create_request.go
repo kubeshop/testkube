@@ -9,10 +9,14 @@
  */
 package kubetest
 
-// scripts execution request body
-type ScriptExecutionRequest struct {
-	// script execution custom name
+// scripts create request body
+type ScriptCreateRequest struct {
+	// script name - Custom Resource name - must be unique
 	Name string `json:"name,omitempty"`
-	// execution params passed to executor
-	Params map[string]string `json:"params,omitempty"`
+	// script type - what executor type should be used during test execution
+	Type_ string `json:"type,omitempty"`
+	// kubernetes namespace (defaults to 'default')
+	Namespace string `json:"namespace,omitempty"`
+	// script content - executor specific e.g. fo postman-collections executor
+	Content string `json:"content,omitempty"`
 }

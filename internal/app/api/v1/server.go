@@ -40,6 +40,7 @@ func (s Server) Init() {
 
 	scripts := v1.Group("/scripts")
 	scripts.Get("/", s.GetAllScripts())
+	scripts.Post("/", s.CreateScript())
 	scripts.Get("/:id/executions", s.GetScriptExecutions())
 	scripts.Post("/:id/executions", s.ExecuteScript())
 	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())

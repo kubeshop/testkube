@@ -38,6 +38,28 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Script'
+    post:
+      tags:
+      - scripts
+      summary: 'create new script'
+      description: 'filters will be added later'
+      operationId: createScript
+      requestBody:
+        description: script details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScriptCreateRequest'
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
                   
   /scripts/{id}/executions:
     post:
@@ -295,7 +317,7 @@ components:
       properties:
         name:
           type: string
-          description: script execution custom name; 
+          description: script execution custom name
           example: testing with 1000 users
         params: 
           type: object
@@ -305,3 +327,41 @@ components:
           example: 
             users: "3"
             prefix: "some-"
+    ScriptCreateRequest: 
+      description: scripts create request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script name - Custom Resource name - must be unique
+          example: kubeshop-homepage-test
+        type:
+          type: string
+          description: script type - what executor type should be used during test execution
+          example: postman/collection
+        namespace:
+          type: string
+          description: kubernetes namespace (defaults to 'default')
+          example: default
+        content:
+          type: string
+          description: script content - executor specific e.g. fo postman-collections executor
+          example: >
+            {
+              "info": {
+                "_postman_id": "57ad6291-5b8f-4b2d-b24d-d2d2ce8785bb",
+                "name": "SimpleKubeshop",
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+              },
+              "item": [
+                {
+                  "name": "Homepage",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": null
+                  },
+                  "response": []
+                }
+              ] 
+            }

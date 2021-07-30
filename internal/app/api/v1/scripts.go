@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
+	scriptsv1 "github.com/kubeshop/kubetest-operator/apis/script/v1"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubetest/pkg/rand"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (s Server) GetAllScripts() fiber.Handler {
@@ -22,6 +24,35 @@ func (s Server) GetAllScripts() fiber.Handler {
 		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
 
 		return c.JSON(scripts)
+	}
+}
+
+func (s Server) CreateScript() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		request := CreateRequest{}
+		err := c.BodyParser(&request)
+		if err != nil {
+			return err
+		}
+
+		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      request.Name,
+				Namespace: request.Namespace,
+			},
+			Spec: scriptsv1.ScriptSpec{
+				Type:    request.Type_,
+				Content: request.Content,
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(script)
+
 	}
 }
 
