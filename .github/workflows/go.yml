@@ -18,6 +18,8 @@ jobs:
       env:
         TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       run: git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
+      run: echo "Checking-TOKEN -- ${TOKEN}"
+      run: echo "Checking GOPRIVATE -- ${GOPRIVATE}"
 
     - uses: actions/checkout@v2
 
