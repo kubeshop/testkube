@@ -12,7 +12,7 @@ var RootCmd = &cobra.Command{
 	Short: "Kubetest entrypoint for plugin",
 	Long:  `Kubetest`,
 	Run: func(cmd *cobra.Command, args []string) {
-		println("ROOT")
+		cmd.Usage()
 	},
 }
 

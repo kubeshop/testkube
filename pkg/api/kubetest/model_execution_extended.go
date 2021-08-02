@@ -43,7 +43,7 @@ func (e *Execution) Error(err error) {
 }
 
 func (e *Execution) IsCompleted() bool {
-	return e.IsSuccesful() || e.IsCompleted()
+	return e.IsSuccesful() || e.IsFailed()
 }
 
 func (e *Execution) IsSuccesful() bool {

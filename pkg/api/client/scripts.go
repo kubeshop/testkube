@@ -47,7 +47,7 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 	return c.getExecutionFromResponse(resp)
 }
 
-// GetExecutions list all executions in given script
+// GetExecutions list all executions for given script name
 func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExecutions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
@@ -57,12 +57,36 @@ func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExe
 	return c.getExecutionsFromResponse(resp)
 }
 
+// Create creates new Script Custom Resource
+func (c ScriptsAPI) Create(scriptName, scriptType, scriptContent, namespace string) (script kubetest.Script, err error) {
+	uri := fmt.Sprintf(c.URI + "/v1/scripts")
+
+	request := kubetest.ScriptCreateRequest{
+		Name:      scriptName,
+		Content:   scriptContent,
+		Type_:     scriptType,
+		Namespace: namespace,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return script, err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return script, err
+	}
+	return c.getScriptFromResponse(resp)
+}
+
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kubetest.ExecutionParams) (execution kubetest.ScriptExecution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 
+	// TODO migrate to OpenAPI ScriptExecutionRequest
 	request := ExecuteRequest{
 		Name:   executionName,
 		Params: executionParams,

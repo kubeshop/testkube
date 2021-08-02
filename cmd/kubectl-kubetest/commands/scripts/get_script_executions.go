@@ -9,9 +9,9 @@ import (
 )
 
 var GetScriptExecutionsCmd = &cobra.Command{
-	Use:   "list-executions",
-	Short: "Gets script executions details",
-	Long:  ``,
+	Use:   "executions",
+	Short: "Gets script executions list",
+	Long:  `Getting list of execution for given script name`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			ui.Failf("invalid script arguments please pass test name")
