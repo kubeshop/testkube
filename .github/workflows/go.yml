@@ -10,7 +10,15 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: "github.com/kubeshop/*"
+
     steps:
+    - name: Configure git for private modules
+      env:
+        TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      run: git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
+
     - uses: actions/checkout@v2
 
     - name: Set up Go
