@@ -25,6 +25,12 @@ build-kubetest-bin:
 	go mod vendor
 	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
 
+# build all the GO packages
+build:
+	go mod vendor
+	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+	go build -o "$(BIN_DIR)/api-server" cmd/api-server/main.go
+	go build -o "$(BIN_DIR)/postman-executor" cmd/postman-executor/main.go
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
