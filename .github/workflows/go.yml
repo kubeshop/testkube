@@ -17,10 +17,7 @@ jobs:
     - name: Configure git for private modules
       env:
         TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-      run: |
-        git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
-        echo "Checking-TOKEN -- ${TOKEN}"
-        echo "Checking GOPRIVATE -- ${GOPRIVATE}"
+      run: git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
 
     - uses: actions/checkout@v2
 
