@@ -13,7 +13,8 @@ func init() {
 	// TODO find a good way to handle short flags
 	CreateScriptsCmd.Flags().String("name", "", "unique script name - mandatory")
 	CreateScriptsCmd.Flags().String("file", "", "script file - will be read from stdin if not specified")
-	CreateScriptsCmd.Flags().String("type", "postman/collection", "script type (defaults to postman-collection)")
+
+  CreateScriptsCmd.Flags().String("type", "postman/collection", "script type (defaults to postman-collection)")
 	CreateScriptsCmd.Flags().String("namespace", "default", "script type (defaults to postman-collection)")
 }
 

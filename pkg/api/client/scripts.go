@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubetest/pkg/problem"
 )
 
 const (
@@ -35,6 +36,15 @@ func (c ScriptsAPI) Get(id string) (script kubetest.Script, err error) {
 	if err != nil {
 		return script, err
 	}
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return script, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return script, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
+
 	return c.getScriptFromResponse(resp)
 }
 
@@ -44,6 +54,15 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 	if err != nil {
 		return execution, err
 	}
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return execution, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
+
 	return c.getExecutionFromResponse(resp)
 }
 
@@ -54,6 +73,15 @@ func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExe
 	if err != nil {
 		return execution, err
 	}
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return execution, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
+
 	return c.getExecutionsFromResponse(resp)
 }
 
@@ -77,6 +105,15 @@ func (c ScriptsAPI) Create(scriptName, scriptType, scriptContent, namespace stri
 	if err != nil {
 		return script, err
 	}
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return script, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return script, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
+
 	return c.getScriptFromResponse(resp)
 }
 
@@ -101,6 +138,15 @@ func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kube
 	if err != nil {
 		return execution, err
 	}
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return execution, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
+
 	return c.getExecutionFromResponse(resp)
 }
 
@@ -112,6 +158,14 @@ func (c ScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err
 		return scripts, fmt.Errorf("GET client error: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if c.isErrorResponse(resp) {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return scripts, fmt.Errorf("can't get problem from api response: %w", err)
+		}
+		return scripts, fmt.Errorf("api returned error: %s", pr.Detail)
+	}
 
 	err = json.NewDecoder(resp.Body).Decode(&scripts)
 	return
@@ -139,4 +193,15 @@ func (c ScriptsAPI) getScriptFromResponse(resp *http.Response) (script kubetest.
 	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&script)
 	return
+}
+func (c ScriptsAPI) getProblemFromResponse(resp *http.Response) (p problem.Problem, err error) {
+	defer resp.Body.Close()
+
+	// parse response
+	err = json.NewDecoder(resp.Body).Decode(&p)
+	return
+}
+
+func (c ScriptsAPI) isErrorResponse(resp *http.Response) bool {
+	return resp.StatusCode >= 400
 }

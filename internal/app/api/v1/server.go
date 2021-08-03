@@ -6,6 +6,7 @@ import (
 	scriptscr "github.com/kubeshop/kubetest-operator/client/scripts"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubetest/pkg/log"
+	"github.com/kubeshop/kubetest/pkg/problem"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
@@ -45,6 +46,10 @@ func (s Server) Init() {
 	scripts.Post("/:id/executions", s.ExecuteScript())
 	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())
 	scripts.Post("/:id/executions/:executionID/abort", s.AbortScriptExecution())
+}
+func (s Server) Error(c *fiber.Ctx, status int, err error) error {
+	c.Status(status)
+	return c.JSON(problem.New(status, err.Error()))
 }
 
 func (s Server) Run() {

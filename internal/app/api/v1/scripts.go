@@ -2,6 +2,8 @@ package v1
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubetest-operator/apis/script/v1"
@@ -17,7 +19,7 @@ func (s Server) GetAllScripts() fiber.Handler {
 		namespace := c.Query("ns", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
@@ -32,7 +34,7 @@ func (s Server) CreateScript() fiber.Handler {
 		request := CreateRequest{}
 		err := c.BodyParser(&request)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
@@ -47,11 +49,10 @@ func (s Server) CreateScript() fiber.Handler {
 		})
 
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		return c.JSON(script)
-
 	}
 }
 
@@ -78,12 +79,12 @@ func (s Server) ExecuteScript() fiber.Handler {
 
 		scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		execution, err := executorClient.Execute(scriptCR.Spec.Content, request.Params)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		ctx := context.Background()
@@ -102,7 +103,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 		})
 
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		return c.JSON(scriptExecution)
@@ -115,7 +116,7 @@ func (s Server) GetScriptExecutions() fiber.Handler {
 		s.Log.Infow("Getting script executions", "id", scriptID)
 		executions, err := s.Repository.GetScriptExecutions(context.Background(), scriptID)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		return c.JSON(executions)
@@ -134,7 +135,7 @@ func (s Server) GetScriptExecution() fiber.Handler {
 		// in API
 		scriptExecution, err := s.Repository.Get(context.Background(), executionID)
 		if err != nil {
-			return err
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 		return c.JSON(scriptExecution)
 	}
@@ -142,6 +143,6 @@ func (s Server) GetScriptExecution() fiber.Handler {
 
 func (s Server) AbortScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return nil
+		return s.Error(c, http.StatusBadRequest, fmt.Errorf("not implemented"))
 	}
 }
