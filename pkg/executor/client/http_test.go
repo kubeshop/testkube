@@ -13,7 +13,7 @@ func TestHTTPClient(t *testing.T) {
 		t.Skip("Implement valid script") // TODO  implement me
 
 		client := NewHTTPExecutorClient(DefaultURI)
-		e, err := client.Execute(exampleCollection)
+		e, err := client.Execute("", make(map[string]string)) // To be fixed with the proper types call.
 
 		assert.NoError(t, err)
 		assert.NotEqual(t, "", e)
