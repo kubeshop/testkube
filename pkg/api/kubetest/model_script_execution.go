@@ -19,6 +19,8 @@ type ScriptExecution struct {
 	ScriptType string `json:"script-type,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
+	// execution envs passed to executor
+	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
 	Execution *Execution `json:"execution,omitempty"`

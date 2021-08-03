@@ -42,7 +42,7 @@ func (c ScriptsAPI) Get(id string) (script kubetest.Script, err error) {
 		if err != nil {
 			return script, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return script, fmt.Errorf("api returned error: %s", pr.Detail)
+		return script, fmt.Errorf("api: get script returned error: %s", pr.Detail)
 	}
 
 	return c.getScriptFromResponse(resp)
@@ -60,7 +60,7 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 		if err != nil {
 			return execution, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+		return execution, fmt.Errorf("api: get execution returned error: %s", pr.Detail)
 	}
 
 	return c.getExecutionFromResponse(resp)
@@ -79,7 +79,7 @@ func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExe
 		if err != nil {
 			return execution, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+		return execution, fmt.Errorf("api: get excutions returned error: %s", pr.Detail)
 	}
 
 	return c.getExecutionsFromResponse(resp)
@@ -111,7 +111,7 @@ func (c ScriptsAPI) Create(scriptName, scriptType, scriptContent, namespace stri
 		if err != nil {
 			return script, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return script, fmt.Errorf("api returned error: %s", pr.Detail)
+		return script, fmt.Errorf("api: create returned error: %s", pr.Detail)
 	}
 
 	return c.getScriptFromResponse(resp)
@@ -144,7 +144,7 @@ func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kube
 		if err != nil {
 			return execution, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return execution, fmt.Errorf("api returned error: %s", pr.Detail)
+		return execution, fmt.Errorf("api: execute returned error: %s", pr.Detail)
 	}
 
 	return c.getExecutionFromResponse(resp)
@@ -164,7 +164,7 @@ func (c ScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err
 		if err != nil {
 			return scripts, fmt.Errorf("can't get problem from api response: %w", err)
 		}
-		return scripts, fmt.Errorf("api returned error: %s", pr.Detail)
+		return scripts, fmt.Errorf("api: list scripts returned error: %s", pr.Detail)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&scripts)

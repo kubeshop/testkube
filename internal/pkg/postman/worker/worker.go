@@ -90,7 +90,7 @@ func (w *Worker) Run(executionChan chan kubetest.Execution) {
 
 func (w *Worker) RunExecution(ctx context.Context, e kubetest.Execution) (kubetest.Execution, error) {
 	e.Start()
-	result, err := w.Runner.Run(strings.NewReader(e.ScriptContent))
+	result, err := w.Runner.Run(strings.NewReader(e.ScriptContent), e.Params)
 	e.Stop()
 	e.Output = result
 

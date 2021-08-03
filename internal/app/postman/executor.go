@@ -3,6 +3,7 @@ package postman
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
@@ -54,7 +55,9 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 			return err
 		}
 
-		execution := kubetest.NewExecution(string(request.Metadata))
+		fmt.Printf("%+v\n", request)
+
+		execution := kubetest.NewExecution(string(request.Metadata), request.Params)
 		err = p.Repository.Insert(context.Background(), execution)
 		if err != nil {
 			return err
