@@ -17,6 +17,7 @@ func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClie
 		Log:           log.DefaultLogger,
 		Repository:    repository,
 		ScriptsClient: scriptsClient,
+		Metrics:       NewMetrics(),
 	}
 
 	s.Init()
@@ -28,6 +29,7 @@ type Server struct {
 	Log           *zap.SugaredLogger
 	Repository    result.Repository
 	ScriptsClient scriptscr.ScriptsClient
+	Metrics       Metrics
 }
 
 func (s Server) Init() {

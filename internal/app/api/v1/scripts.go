@@ -48,6 +48,8 @@ func (s Server) CreateScript() fiber.Handler {
 			},
 		})
 
+		s.Metrics.IncCreateScript(script.Spec.Type, err)
+
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -102,6 +104,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 			return s.Repository.Update(ctx, scriptExecution)
 		})
 
+		s.Metrics.IncExecution(scriptExecution)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -143,6 +146,8 @@ func (s Server) GetScriptExecution() fiber.Handler {
 
 func (s Server) AbortScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// TODO fill valid values when abort will be implemented
+		s.Metrics.IncAbortScript("type", nil)
 		return s.Error(c, http.StatusBadRequest, fmt.Errorf("not implemented"))
 	}
 }
