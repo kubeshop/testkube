@@ -18,11 +18,12 @@ const (
 	ExecutionStatusError = "error"
 )
 
-func NewExecution(content string) Execution {
+func NewExecution(content string, params map[string]string) Execution {
 	return Execution{
 		Id:            primitive.NewObjectID().Hex(),
 		ScriptContent: content,
 		Status:        ExecutionStatusQueued,
+		Params:        params,
 	}
 }
 func (e *Execution) Start() {

@@ -17,21 +17,16 @@ build: build-executor build-api-server build-kubetest-bin
 
 # build done by vendoring to bypass private go repo problems
 build-executor: 
+	go mod vendor
 	go build -o $(BIN_DIR)/postman-executor cmd/postman-executor/main.go
 
 build-api-server:
+	go mod vendor
 	go build -o $(BIN_DIR)/api-server cmd/api-server/main.go 
 
 build-kubetest-bin: 
 	go mod vendor
 	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
-
-# build all the GO packages
-build:
-	go mod vendor
-	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
-	go build -o "$(BIN_DIR)/api-server" cmd/api-server/main.go
-	go build -o "$(BIN_DIR)/postman-executor" cmd/postman-executor/main.go
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen

@@ -28,7 +28,7 @@ func TestRun(t *testing.T) {
 	buffer := strings.NewReader(fmt.Sprintf(exampleCollection, port, port))
 
 	// when
-	result, err := runner.Run(buffer)
+	result, err := runner.Run(buffer, map[string]string{})
 
 	// then
 	assert.NoError(t, err)

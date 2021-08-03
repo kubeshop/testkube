@@ -260,6 +260,14 @@ components:
         name:
           type: string
           description: 'execution name'
+        envs: 
+          type: object
+          description: 'execution envs passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
         params: 
           type: object
           description: 'execution params passed to executor'
@@ -282,6 +290,14 @@ components:
         script-content: 
           type: string
           description: script metadata content
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
         status: 
           type: string
           description: 'execution status'
@@ -319,6 +335,14 @@ components:
           type: string
           description: script execution custom name
           example: testing with 1000 users
+        envs: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
         params: 
           type: object
           description: 'execution params passed to executor'
@@ -363,5 +387,3 @@ components:
                   },
                   "response": []
                 }
-              ] 
-            }

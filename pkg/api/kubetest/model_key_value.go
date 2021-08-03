@@ -9,12 +9,8 @@
  */
 package kubetest
 
-// scripts execution request body
-type ScriptExecutionRequest struct {
-	// script execution custom name
+// environment variable
+type KeyValue struct {
 	Name string `json:"name,omitempty"`
-	// execution params passed to executor
-	Envs map[string]string `json:"envs,omitempty"`
-	// execution params passed to executor
-	Params map[string]string `json:"params,omitempty"`
+	Value string `json:"value,omitempty"`
 }
