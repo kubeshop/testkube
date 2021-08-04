@@ -226,9 +226,6 @@ components:
     Script:
       type: object
       properties:
-        id:
-          type: string
-          format: bson objectId
         name:
           type: string
           description: script name
