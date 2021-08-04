@@ -4,10 +4,10 @@ BIN_DIR ?= $(HOME)/bin
 
 
 run-api-serer: 
-	go run cmd/api-server/main.go
+	APISERVER_PORT=8080 go run cmd/api-server/main.go
 
 run-executor: 
-	go run cmd/postman-executor/main.go
+	POSTMANEXECUTOR_PORT=8082 go run cmd/postman-executor/main.go
 
 run-mongo-dev: 
 	docker run -p 27017:27017 mongo
@@ -27,6 +27,17 @@ build-api-server:
 build-kubetest-bin: 
 	go mod vendor
 	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+
+
+# build done by vendoring to bypass private go repo problems
+docker-build-executor: 
+	go mod vendor
+	docker build -t postman-executor -f build/postman-executor/Dockerfile .
+
+docker-build-api-server:
+	go mod vendor
+	docker build -t api-server -f build/api-server/Dockerfile .
+
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen

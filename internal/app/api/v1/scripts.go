@@ -14,7 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (s Server) GetAllScripts() fiber.Handler {
+// GetAllScripts for getting list of all available scripts
+func (s KubetestAPI) GetAllScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
@@ -28,7 +29,8 @@ func (s Server) GetAllScripts() fiber.Handler {
 	}
 }
 
-func (s Server) CreateScript() fiber.Handler {
+// CreateScript creates new script CR based on script content
+func (s KubetestAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		request := CreateRequest{}
@@ -58,7 +60,7 @@ func (s Server) CreateScript() fiber.Handler {
 	}
 }
 
-func (s Server) ExecuteScript() fiber.Handler {
+func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	// TODO use kube API to get registered executor details - for now it'll be fixed
 	// we need to choose client based on script type in future for now there is only
 	// one client postman-collection newman based executor
@@ -113,7 +115,7 @@ func (s Server) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s Server) GetScriptExecutions() fiber.Handler {
+func (s KubetestAPI) GetScriptExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 		s.Log.Infow("Getting script executions", "id", scriptID)
@@ -126,7 +128,7 @@ func (s Server) GetScriptExecutions() fiber.Handler {
 	}
 }
 
-func (s Server) GetScriptExecution() fiber.Handler {
+func (s KubetestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id")
@@ -144,7 +146,7 @@ func (s Server) GetScriptExecution() fiber.Handler {
 	}
 }
 
-func (s Server) AbortScriptExecution() fiber.Handler {
+func (s KubetestAPI) AbortScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO fill valid values when abort will be implemented
 		s.Metrics.IncAbortScript("type", nil)
