@@ -13,7 +13,6 @@ import (
 )
 
 type Script struct {
-	Id string `json:"id,omitempty"`
 	// script name
 	Name string `json:"name,omitempty"`
 	// script type
