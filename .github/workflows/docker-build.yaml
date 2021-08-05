@@ -48,7 +48,7 @@ jobs:
         with:
           files: |
             build/api-server/docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
+            ${{ steps.meta_api_server.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
@@ -74,7 +74,7 @@ jobs:
         with:
           files: |
             build/postman-executor/docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
+            ${{ steps.meta_postman_executor.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
