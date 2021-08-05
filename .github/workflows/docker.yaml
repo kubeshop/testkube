@@ -26,7 +26,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          bake-target: build
+          bake-target: default
           images: kubeshop/kubetest-api-server
           tags: |
             type=ref,event=branch
@@ -43,7 +43,6 @@ jobs:
         with:
           files: |
             ${{ steps.meta.outputs.bake-file }}
-          target: build
 
 
       # -
