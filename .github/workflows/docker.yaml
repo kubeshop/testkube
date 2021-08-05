@@ -20,19 +20,56 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      -
+        name: Docker meta api-server
+        id: meta_api_server
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            kubeshop/kubetest-api-server
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha 
       -
         name: Build and push api-server
         id: docker_build_api_server
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ steps.vars.outputs.tag }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           file: build/api-server/Dockerfile
+      -
+        name: Docker meta postman executor
+        id: meta_postman_executor
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            kubeshop/kubetest-postman-executor
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha 
       -
         name: Build and push postman-executor
         id: docker_build_postman_executor
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ steps.vars.outputs.tag }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           file: build/postman-executor/Dockerfile
