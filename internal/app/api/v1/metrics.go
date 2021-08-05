@@ -44,14 +44,14 @@ func (m Metrics) IncExecution(scriptExecution kubetest.ScriptExecution) {
 }
 
 func (m Metrics) IncCreateScript(scriptType string, err error) {
-	status := "created"
+	result := "created"
 	if err != nil {
-		status = "error"
+		result = "error"
 	}
 
 	m.Creations.With(map[string]string{
 		"type":   scriptType,
-		"status": status,
+		"result": result,
 	}).Inc()
 }
 
