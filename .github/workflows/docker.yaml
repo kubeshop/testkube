@@ -21,26 +21,38 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+
       -
-        name: Docker meta api-server
-        id: meta_api_server
+        name: Docker meta
+        id: meta
         uses: docker/metadata-action@v3
         with:
-          # list of Docker images to use as base name for tags
-          images: |
-            kubeshop/kubetest-api-server
-          # generate Docker tags based on the following events/attributes
+          images: kubeshop/kubetest-api-server
           tags: |
-            type=schedule
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha 
+            type=sha
+      -
+        name: Build
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: build
+
+
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: kubeshop/kubetest-api-server
       - name: Set selected color
         run: echo ${{ steps.meta.outputs.tags }}; echo ${{ steps.meta.outputs.labels }}
-        id: random-color-generator
+        id: echo-1
       -
         name: Build and push api-server
         id: docker_build_api_server
@@ -54,6 +66,7 @@ jobs:
         name: Docker meta postman executor
         id: meta_postman_executor
         uses: docker/metadata-action@v3
+        
         with:
           # list of Docker images to use as base name for tags
           images: |
