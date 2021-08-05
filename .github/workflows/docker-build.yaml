@@ -60,7 +60,7 @@ jobs:
         id: meta_postman_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/kubetest-api-server
+          images: kubeshop/kubetest-postman-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -69,7 +69,7 @@ jobs:
             type=sha
 
       - 
-        name: Build API Server
+        name: Build Postman Executor
         uses: docker/bake-action@v1
         with:
           files: |

@@ -5,7 +5,12 @@ COPY . .
 ENV GONOSUMDB=github.com/kubeshop/* 
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-RUN cd cmd/postman-executor;go build -o /app -mod vendor -a .
+
+# TODO remove after going public - used for private operator repo deps 
+ARG TOKEN
+RUN git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
+
+RUN cd cmd/postman-executor;go build -o /app -mod mod -a .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates
