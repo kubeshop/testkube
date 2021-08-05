@@ -33,13 +33,15 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+      - 
+        name: echo
+        run: cat "${{ steps.meta.outputs.bake-file }}"
       -
         name: Build
         uses: docker/bake-action@v1
         with:
           files: |
             ${{ steps.meta.outputs.bake-file }}
-          targets: build
 
 
       # -
