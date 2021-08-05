@@ -48,6 +48,7 @@ jobs:
             ${{ steps.meta.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          push: true
 
 
       # -
