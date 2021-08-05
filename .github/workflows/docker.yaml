@@ -38,7 +38,6 @@ jobs:
         uses: docker/bake-action@v1
         with:
           files: |
-            ./docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}
           targets: build
 
