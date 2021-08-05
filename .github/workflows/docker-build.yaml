@@ -1,3 +1,4 @@
+name: Docker images building and pushing
 on:
   push:
     tags: 
@@ -8,15 +9,19 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+
       -
         name: Checkout
         uses: actions/checkout@v2
+
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
+
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+
       -
         name: Login to DockerHub
         uses: docker/login-action@v1 
@@ -25,8 +30,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       -
-        name: Docker meta
-        id: meta
+        name: Docker meta for API Server
+        id: meta_api_server
         uses: docker/metadata-action@v3
         with:
           images: kubeshop/kubetest-api-server
@@ -36,45 +41,42 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+
       - 
-        name: t 
-        run: ls -la
-      - 
-        name: Build
+        name: Build API Server
         uses: docker/bake-action@v1
         with:
           files: |
-            docker-bake-api.hcl
+            build/api-server/docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
 
 
-      # -
-      #   name: Docker meta postman executor
-      #   id: meta_postman_executor
-      #   uses: docker/metadata-action@v3
-        
-      #   with:
-      #     # list of Docker images to use as base name for tags
-      #     images: |
-      #       kubeshop/kubetest-postman-executor
-      #     # generate Docker tags based on the following events/attributes
-      #     tags: |
-      #       type=schedule
-      #       type=ref,event=branch
-      #       type=ref,event=pr
-      #       type=semver,pattern={{version}}
-      #       type=semver,pattern={{major}}.{{minor}}
-      #       type=semver,pattern={{major}}
-      #       type=sha 
-      # -
-      #   name: Build and push postman-executor
-      #   id: docker_build_postman_executor
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     tags: ${{ steps.meta.outputs.tags }}
-      #     labels: ${{ steps.meta.outputs.labels }}
-      #     file: build/postman-executor/Dockerfile
+
+      -
+        name: Docker meta for Postman executor
+        id: meta_postman_executor
+        uses: docker/metadata-action@v3
+        with:
+          images: kubeshop/kubetest-api-server
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - 
+        name: Build API Server
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            build/postman-executor/docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: build
+          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          push: true
+
+

@@ -1,4 +1,4 @@
-name: Go
+name: Code build and checks
 
 on:
   push:
