@@ -33,7 +33,10 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
-      -
+      - 
+        name: t 
+        run: ls -la
+      - 
         name: Build
         uses: docker/bake-action@v1
         with:
