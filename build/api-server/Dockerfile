@@ -5,7 +5,7 @@ COPY . .
 ENV GONOSUMDB=github.com/kubeshop/* 
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-RUN cd cmd/api-server;go build -o /app -mod vendor -a .
+RUN cd cmd/api-server;go build -o /app -mod mod -a .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates
