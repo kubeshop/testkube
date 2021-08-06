@@ -5,18 +5,25 @@ import (
 	scriptscr "github.com/kubeshop/kubetest-operator/client/scripts"
 	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubetest/internal/pkg/server"
+	"github.com/kubeshop/kubetest/pkg/executor/client"
 )
 
 func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClient) KubetestAPI {
 
+	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
+	// TODO remove it when executor CRD will be fully implemented
+	var executorClientConfig client.Config
+	envconfig.Process("POSTMANEXECUTOR", &executorClientConfig)
+
 	s := KubetestAPI{
-		HTTPServer:    server.NewServer(httpConfig),
-		Repository:    repository,
-		ScriptsClient: scriptsClient,
-		Metrics:       NewMetrics(),
+		HTTPServer:     server.NewServer(httpConfig),
+		Repository:     repository,
+		ScriptsClient:  scriptsClient,
+		Metrics:        NewMetrics(),
+		ExecutorClient: client.NewHTTPExecutorClient(executorClientConfig),
 	}
 
 	s.Init()
@@ -25,9 +32,10 @@ func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClie
 
 type KubetestAPI struct {
 	server.HTTPServer
-	Repository    result.Repository
-	ScriptsClient scriptscr.ScriptsClient
-	Metrics       Metrics
+	Repository     result.Repository
+	ScriptsClient  scriptscr.ScriptsClient
+	Metrics        Metrics
+	ExecutorClient client.HTTPExecutorClient
 }
 
 func (s KubetestAPI) Init() {

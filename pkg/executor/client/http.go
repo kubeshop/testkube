@@ -15,9 +15,13 @@ const (
 	WatchInterval = time.Second
 )
 
-func NewHTTPExecutorClient(URI string) HTTPExecutorClient {
+type Config struct {
+	URI string
+}
+
+func NewHTTPExecutorClient(config Config) HTTPExecutorClient {
 	return HTTPExecutorClient{
-		URI: URI,
+		URI: config.URI,
 		client: &http.Client{
 			Timeout: time.Second * 10,
 		},

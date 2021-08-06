@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/problem"
 )
@@ -16,9 +17,23 @@ const (
 	WatchInterval = time.Second
 )
 
-func NewScriptsAPI(URI string) ScriptsAPI {
+type Config struct {
+	URI string
+}
+
+var config Config
+
+func init() {
+	envconfig.Process("KUBETEST_API", &config)
+}
+
+func NewScriptsAPI(uri ...string) ScriptsAPI {
+	apiURI := config.URI
+	if len(uri) > 0 {
+		apiURI = uri[0]
+	}
 	return ScriptsAPI{
-		URI: URI,
+		URI: apiURI,
 		client: &http.Client{
 			Timeout: time.Second * 10,
 		},

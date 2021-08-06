@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubetest-operator/apis/script/v1"
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
-	"github.com/kubeshop/kubetest/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubetest/pkg/rand"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,9 +65,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	// we need to choose client based on script type in future for now there is only
 	// one client postman-collection newman based executor
 	// should be done on top level from some kind of available clients poll
-	// consider moving them to separate struct - and allow to choose by executor ID
-	executorClient := client.NewHTTPExecutorClient(client.DefaultURI)
-
+	// for - s.ExecutorClient calls
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 
@@ -88,7 +85,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("getting script CR error: %w", err))
 		}
 
-		execution, err := executorClient.Execute(scriptCR.Spec.Content, request.Params)
+		execution, err := s.ExecutorClient.Execute(scriptCR.Spec.Content, request.Params)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -102,7 +99,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 
-		execution, err = executorClient.Watch(scriptExecution.Execution.Id, func(e kubetest.Execution) error {
+		execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubetest.Execution) error {
 			s.Log.Infow("saving", "status", e.Status, "scriptExecution", scriptExecution)
 			scriptExecution.Execution = &e
 			return s.Repository.Update(ctx, scriptExecution)
