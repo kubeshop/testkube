@@ -19,7 +19,7 @@ var ListScriptsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		namespace := cmd.Flag("namespace").Value.String()
-		client := client.NewScriptsAPI(client.DefaultURI)
+		client := client.NewScriptsAPI()
 
 		scripts, err := client.ListScripts(namespace)
 		ui.ExitOnError("getting all scripts in namespace "+namespace, err)
