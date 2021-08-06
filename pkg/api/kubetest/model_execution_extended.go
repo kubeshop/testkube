@@ -1,7 +1,6 @@
 package kubetest
 
 import (
-	"encoding/json"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -53,13 +52,4 @@ func (e *Execution) IsSuccesful() bool {
 
 func (e *Execution) IsFailed() bool {
 	return e.Status == ExecutionStatusError
-}
-
-type ExecutionParams map[string]string
-
-type ExecuteRequest struct {
-	Type     string          `json:"type,omitempty"`
-	Name     string          `json:"name,omitempty"`
-	Params   ExecutionParams `json:"params,omitempty"`
-	Metadata json.RawMessage `json:"metadata,omitempty"`
 }

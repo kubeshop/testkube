@@ -14,7 +14,7 @@ func init() {
 	CreateScriptsCmd.Flags().String("name", "", "unique script name - mandatory")
 	CreateScriptsCmd.Flags().String("file", "", "script file - will be read from stdin if not specified")
 
-  CreateScriptsCmd.Flags().String("type", "postman/collection", "script type (defaults to postman-collection)")
+	CreateScriptsCmd.Flags().String("type", "postman/collection", "script type (defaults to postman-collection)")
 	CreateScriptsCmd.Flags().String("namespace", "default", "script type (defaults to postman-collection)")
 }
 
@@ -43,8 +43,8 @@ var CreateScriptsCmd = &cobra.Command{
 		}
 
 		client := client.NewScriptsAPI(client.DefaultURI)
-		script, err := client.Create(name, executorType, string(content), namespace)
-		ui.ExitOnError("creating script "+name, err)
+		script, err := client.CreateScript(name, executorType, string(content), namespace)
+		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 		ui.Success("Script created", script.Name)
 	},
 }

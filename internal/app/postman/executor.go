@@ -44,7 +44,7 @@ func (p *PostmanExecutor) Init() {
 func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubetest.ExecuteRequest
+		var request kubetest.ExecutionRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return err

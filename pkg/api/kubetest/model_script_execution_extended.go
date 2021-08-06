@@ -2,7 +2,7 @@ package kubetest
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-func NewScriptExecution(scriptName, name string, execution Execution, params ExecutionParams) ScriptExecution {
+func NewScriptExecution(scriptName, name string, execution Execution, params map[string]string) ScriptExecution {
 	return ScriptExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		Name:       name,

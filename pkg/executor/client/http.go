@@ -60,8 +60,8 @@ func (c HTTPExecutorClient) Get(id string) (execution kubetest.Execution, err er
 func (c HTTPExecutorClient) Execute(content string, params map[string]string) (execution kubetest.Execution, err error) {
 
 	// create request
-	request := kubetest.ExecuteRequest{
-		Metadata: json.RawMessage([]byte(content)),
+	request := kubetest.ExecutionRequest{
+		Metadata: content,
 		Params:   params,
 	}
 

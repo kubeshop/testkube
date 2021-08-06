@@ -8,19 +8,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	ListScriptsCmd.Flags().String("namespace", "default", "script type (defaults to postman-collection)")
+}
+
 var ListScriptsCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Get all available scripts",
-	Long:  ``,
+	Long:  `Getting all available scritps from given namespace - if no namespace given "default" namespace is used`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ns := "default"
-		if len(args) == 1 {
-			ns = args[0]
-		}
 
+		namespace := cmd.Flag("namespace").Value.String()
 		client := client.NewScriptsAPI(client.DefaultURI)
-		scripts, err := client.ListScripts(ns)
-		ui.ExitOnError("getting all scripts in ns="+ns, err)
+
+		scripts, err := client.ListScripts(namespace)
+		ui.ExitOnError("getting all scripts in namespace "+namespace, err)
 
 		ui.Table(scripts, os.Stdout)
 	},

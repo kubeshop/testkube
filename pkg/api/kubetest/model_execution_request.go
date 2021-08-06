@@ -10,11 +10,13 @@
 package kubetest
 
 // scripts execution request body
-type ScriptExecutionRequest struct {
+type ExecutionRequest struct {
+	// script type
+	Type_ string `json:"type,omitempty"`
 	// script execution custom name
 	Name string `json:"name,omitempty"`
-	// script kubernetes namespace (\"default\" when not set)
-	Namespace string `json:"namespace,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
+	// script content as string (content depends from executor)
+	Metadata string `json:"metadata,omitempty"`
 }

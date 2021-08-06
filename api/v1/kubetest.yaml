@@ -8,7 +8,7 @@ info:
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
-  version: 0.0.1
+  version: 0.0.5
 externalDocs:
   description: 'Find out more about Kubetest'
   url: http://kubetest.io
@@ -223,6 +223,7 @@ paths:
   
 components:
   schemas:
+
     Script:
       type: object
       properties:
@@ -240,6 +241,7 @@ components:
         created:
           type: string
           format: date-time
+
     ScriptExecution:
       type: object
       description: API server script execution
@@ -276,6 +278,7 @@ components:
         execution: 
           description: 'execution result returned from executor'
           $ref: '#/components/schemas/Execution' 
+
     Execution:
       description: object which should be returned by REST based executors
       type: object
@@ -324,22 +327,19 @@ components:
           type: string
           description: 'test end time'
           format: date-time
-    ScriptExecutionRequest: 
+
+    ExecutionRequest: 
       description: scripts execution request body
       type: object
       properties:
+        type:
+          type: string
+          description: script type
+          example: postaman/collection
         name:
           type: string
           description: script execution custom name
           example: testing with 1000 users
-        envs: 
-          type: object
-          description: 'execution params passed to executor'
-          additionalProperties: 
-            type: string
-          example: 
-            users: "3"
-            prefix: "some-"
         params: 
           type: object
           description: 'execution params passed to executor'
@@ -348,6 +348,31 @@ components:
           example: 
             users: "3"
             prefix: "some-"
+        metadata: 
+          type: string
+          description: script content as string (content depends from executor)
+
+    ScriptExecutionRequest: 
+      description: scripts execution request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script execution custom name
+          example: testing with 1000 users
+        namespace:
+          type: string
+          description: script kubernetes namespace ("default" when not set)
+          example: default
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+
     ScriptCreateRequest: 
       description: scripts create request body
       type: object

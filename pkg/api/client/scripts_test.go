@@ -25,7 +25,7 @@ func TestScriptsAPI(t *testing.T) {
 	t.Run("Execute script with given ID", func(t *testing.T) {
 		t.Skip("Implement real test") // TODO Implement me
 		client := NewScriptsAPI(DefaultURI)
-		execution, err := client.Execute("test", "some name", map[string]string{})
+		execution, err := client.ExecuteScript("test", "default", "some name", map[string]string{})
 
 		fmt.Printf("%+v\n", execution)
 
