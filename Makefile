@@ -1,6 +1,7 @@
 .PHONY: test cover 
 
 BIN_DIR ?= $(HOME)/bin
+GITHUB_TOKEN ?= "SET_ME"
 
 
 run-api-serer: 
@@ -29,11 +30,11 @@ build-kubetest-bin:
 # build done by vendoring to bypass private go repo problems
 docker-build-executor: 
 	go mod vendor
-	docker build -t postman-executor -f build/postman-executor/Dockerfile .
+	docker build --build-arg TOKEN=$(GITHUB_TOKEN) -t postman-executor -f build/postman-executor/Dockerfile .
 
 docker-build-api-server:
 	go mod vendor
-	docker build -t api-server -f build/api-server/Dockerfile .
+	docker build --build-arg TOKEN=$(GITHUB_TOKEN) -t api-server -f build/api-server/Dockerfile .
 
 
 install-swagger-codegen-mac: 

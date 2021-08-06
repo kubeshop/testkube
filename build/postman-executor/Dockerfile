@@ -12,7 +12,7 @@ RUN git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "htt
 
 RUN cd cmd/postman-executor;go build -o /app -mod mod -a .
 
-FROM alpine:latest  
+FROM postman/newman
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=0 /app /bin/app
