@@ -11,12 +11,11 @@ import (
 )
 
 const (
-	DefaultURI    = "http://localhost:8082"
 	WatchInterval = time.Second
 )
 
 type Config struct {
-	URI string
+	URI string `default:"http://localhost:8082"`
 }
 
 func NewHTTPExecutorClient(config Config) HTTPExecutorClient {
