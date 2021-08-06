@@ -19,7 +19,7 @@ func TestPostmanExecutor_StartExecution(t *testing.T) {
 		req := httptest.NewRequest(
 			"POST",
 			"/v1/executions/",
-			strings.NewReader(`{"type": "postman/collection", "metadata": {"info":{"name":"KubeTestExampleCollection"}}}`),
+			strings.NewReader(`{"type": "postman/collection", "metadata": "{\"info\":{\"name\":\"KubeTestExampleCollection\"}}"}`),
 		)
 
 		// when
