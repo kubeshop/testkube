@@ -18,7 +18,7 @@ const (
 )
 
 type Config struct {
-	URI string
+	URI string `default:"http://localhost:8080"`
 }
 
 var config Config
