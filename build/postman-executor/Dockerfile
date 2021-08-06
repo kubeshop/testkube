@@ -17,4 +17,4 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=0 /app /bin/app
 EXPOSE 8082
-CMD ["/bin/app"]
+ENTRYPOINT ["/bin/app"]
