@@ -1,7 +1,13 @@
 package main
 
-func main() {
-	var currentVersion, kind string
+import (
+	"fmt"
 
-	version.Next(currentVersion, kind)
+	"github.com/kubeshop/kubetest/pkg/version"
+)
+
+func main() {
+	fmt.Println(version.Next("0.0.2", version.Major))
+	fmt.Println(version.Next("0.0.2", version.Minor))
+	fmt.Println(version.Next("0.0.2", version.Patch))
 }
