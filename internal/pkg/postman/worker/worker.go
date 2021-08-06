@@ -100,5 +100,10 @@ func (w *Worker) RunExecution(ctx context.Context, e kubetest.Execution) (kubete
 		e.Success()
 	}
 
-	return e, w.Repository.Update(ctx, e)
+	// we want always write even if there is error
+	if werr := w.Repository.Update(ctx, e); werr != nil {
+		return e, werr
+	}
+
+	return e, err
 }

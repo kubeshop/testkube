@@ -5,6 +5,7 @@ go 1.16
 // replace github.com/kubeshop/kubetest-operator v0.0.2 => ../kubetest-operator
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/gofiber/adaptor/v2 v2.1.7
