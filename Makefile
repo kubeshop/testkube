@@ -58,3 +58,14 @@ cover:
 
 diagrams: 
 	plantuml docs/*.puml
+
+version-bump: version-bump-patch
+
+version-bump-patch:
+	go run scripts/bump.go -kind patch
+
+version-bump-minor:
+	go run scripts/bump.go -kind minor
+
+version-bump-major:
+	go run scripts/bump.go -kind major

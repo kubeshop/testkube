@@ -2,16 +2,17 @@ package version
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/Masterminds/semver"
 )
 
 const (
-	// Major version constant
+	// Major version
 	Major = "major"
-	// Minor version constant
+	// Minor version
 	Minor = "minor"
-	// Patch version constant
+	// Patch version
 	Patch = "patch"
 )
 
@@ -31,13 +32,10 @@ func Next(currentVersion, kind string) (string, error) {
 	switch kind {
 	case Major:
 		inc = version.IncMajor()
-		break
 	case Minor:
 		inc = version.IncMinor()
-		break
 	case Patch:
 		inc = version.IncPatch()
-		break
 	default:
 		return "", fmt.Errorf("invalid position" + kind)
 	}
@@ -64,5 +62,22 @@ func validateVersionPostion(kind string) error {
 		return nil
 	}
 
-	return fmt.Errorf("Invalid version kind: %s: use one of major|minor|patch", kind)
+	return fmt.Errorf("invalid version kind: %s: use one of major|minor|patch", kind)
+}
+
+func GetNewest(versions []string) string {
+	semversions := []*semver.Version{}
+	for _, ver := range versions {
+		v, err := semver.NewVersion(ver)
+
+		if err == nil {
+			semversions = append(semversions, v)
+		}
+	}
+
+	sort.Slice(semversions, func(i, j int) bool {
+		return semversions[j].LessThan(semversions[i])
+	})
+
+	return semversions[0].String()
 }
