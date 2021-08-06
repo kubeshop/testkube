@@ -36,7 +36,7 @@ var StartScriptCmd = &cobra.Command{
 		name := cmd.Flag("name").Value.String()
 		namespace := cmd.Flag("namespace").Value.String()
 		namespacedName := fmt.Sprintf("%s/%s", namespace, scriptID)
-		client := client.NewScriptsAPI()
+		client := client.NewDefaultScriptsAPI()
 
 		scriptExecution, err := client.ExecuteScript(scriptID, namespace, name, params)
 		ui.ExitOnError("starting script execution "+namespacedName, err)

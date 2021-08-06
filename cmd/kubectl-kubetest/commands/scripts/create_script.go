@@ -42,7 +42,7 @@ var CreateScriptsCmd = &cobra.Command{
 			ui.ExitOnError("reading stdin", err)
 		}
 
-		client := client.NewScriptsAPI()
+		client := client.NewDefaultScriptsAPI()
 		script, err := client.CreateScript(name, executorType, string(content), namespace)
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 		ui.Success("Script created", script.Name)
