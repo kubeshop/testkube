@@ -30,19 +30,15 @@ type ScriptsAPI struct {
 	client HTTPClient
 }
 
-func (c ScriptsAPI) Get(id string) (script kubetest.Script, err error) {
+func (c ScriptsAPI) GetScript(id string) (script kubetest.Script, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return script, err
 	}
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return script, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return script, fmt.Errorf("api: get script returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/get-script returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)
@@ -55,43 +51,35 @@ func (c ScriptsAPI) GetExecution(scriptID, executionID string) (execution kubete
 		return execution, err
 	}
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return execution, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return execution, fmt.Errorf("api: get execution returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/get-execution returned error: %w", err)
 	}
 
 	return c.getExecutionFromResponse(resp)
 }
 
-// GetExecutions list all executions for given script name
-func (c ScriptsAPI) GetExecutions(scriptID string) (execution kubetest.ScriptExecutions, err error) {
+// ListExecutions list all executions for given script name
+func (c ScriptsAPI) ListExecutions(scriptID string) (executions kubetest.ScriptExecutions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
-		return execution, err
+		return executions, err
 	}
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return execution, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return execution, fmt.Errorf("api: get excutions returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/get-executions returned error: %w", err)
 	}
 
 	return c.getExecutionsFromResponse(resp)
 }
 
-// Create creates new Script Custom Resource
-func (c ScriptsAPI) Create(scriptName, scriptType, scriptContent, namespace string) (script kubetest.Script, err error) {
+// CreateScript creates new Script Custom Resource
+func (c ScriptsAPI) CreateScript(name, scriptType, content, namespace string) (script kubetest.Script, err error) {
 	uri := fmt.Sprintf(c.URI + "/v1/scripts")
 
 	request := kubetest.ScriptCreateRequest{
-		Name:      scriptName,
-		Content:   scriptContent,
+		Name:      name,
+		Content:   content,
 		Type_:     scriptType,
 		Namespace: namespace,
 	}
@@ -106,27 +94,23 @@ func (c ScriptsAPI) Create(scriptName, scriptType, scriptContent, namespace stri
 		return script, err
 	}
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return script, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return script, fmt.Errorf("api: create returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/create-script returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)
 }
 
-// Execute starts new external script execution, reads data and returns ID
+// ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kubetest.ExecutionParams) (execution kubetest.ScriptExecution, err error) {
+func (c ScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubetest.ScriptExecution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
+	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", id)
 
-	// TODO migrate to OpenAPI ScriptExecutionRequest
-	request := ExecuteRequest{
-		Name:   executionName,
-		Params: executionParams,
+	request := kubetest.ScriptExecutionRequest{
+		Name:      executionName,
+		Namespace: namespace,
+		Params:    executionParams,
 	}
 
 	body, err := json.Marshal(request)
@@ -139,12 +123,8 @@ func (c ScriptsAPI) Execute(scriptID, executionName string, executionParams kube
 		return execution, err
 	}
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return execution, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return execution, fmt.Errorf("api: execute returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/execute-script returned error: %w", err)
 	}
 
 	return c.getExecutionFromResponse(resp)
@@ -159,12 +139,8 @@ func (c ScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err
 	}
 	defer resp.Body.Close()
 
-	if c.isErrorResponse(resp) {
-		pr, err := c.getProblemFromResponse(resp)
-		if err != nil {
-			return scripts, fmt.Errorf("can't get problem from api response: %w", err)
-		}
-		return scripts, fmt.Errorf("api: list scripts returned error: %s", pr.Detail)
+	if err := c.responseError(resp); err != nil {
+		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&scripts)
@@ -174,7 +150,6 @@ func (c ScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err
 func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubetest.ScriptExecution, err error) {
 	defer resp.Body.Close()
 
-	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&execution)
 	return
 }
@@ -182,7 +157,6 @@ func (c ScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kub
 func (c ScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubetest.ScriptExecutions, err error) {
 	defer resp.Body.Close()
 
-	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&executions)
 	return
 }
@@ -190,18 +164,25 @@ func (c ScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions k
 func (c ScriptsAPI) getScriptFromResponse(resp *http.Response) (script kubetest.Script, err error) {
 	defer resp.Body.Close()
 
-	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&script)
 	return
 }
 func (c ScriptsAPI) getProblemFromResponse(resp *http.Response) (p problem.Problem, err error) {
 	defer resp.Body.Close()
 
-	// parse response
 	err = json.NewDecoder(resp.Body).Decode(&p)
 	return
 }
 
-func (c ScriptsAPI) isErrorResponse(resp *http.Response) bool {
-	return resp.StatusCode >= 400
+func (c ScriptsAPI) responseError(resp *http.Response) error {
+	if resp.StatusCode >= 400 {
+		pr, err := c.getProblemFromResponse(resp)
+		if err != nil {
+			return fmt.Errorf("can't get problem from api response: %w", err)
+		}
+
+		return fmt.Errorf("problem: %+v", pr.Detail)
+	}
+
+	return nil
 }

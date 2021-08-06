@@ -20,7 +20,7 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		scriptID := args[0]
 		client := client.NewScriptsAPI(client.DefaultURI)
 
-		executions, err := client.GetExecutions(scriptID)
+		executions, err := client.ListExecutions(scriptID)
 		ui.ExitOnError("getting executions ", err)
 		ui.Table(executions, os.Stdout)
 	},

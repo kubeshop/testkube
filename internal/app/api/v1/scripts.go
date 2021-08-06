@@ -14,8 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// GetAllScripts for getting list of all available scripts
-func (s KubetestAPI) GetAllScripts() fiber.Handler {
+// ListScripts for getting list of all available scripts
+func (s KubetestAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
@@ -33,7 +33,7 @@ func (s KubetestAPI) GetAllScripts() fiber.Handler {
 func (s KubetestAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		request := CreateRequest{}
+		var request kubetest.ScriptCreateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -60,6 +60,7 @@ func (s KubetestAPI) CreateScript() fiber.Handler {
 	}
 }
 
+// ExecuteScript calls particular executor based on execution request content and type
 func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	// TODO use kube API to get registered executor details - for now it'll be fixed
 	// we need to choose client based on script type in future for now there is only
@@ -69,21 +70,22 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	executorClient := client.NewHTTPExecutorClient(client.DefaultURI)
 
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("ns", "default")
 		scriptID := c.Params("id")
-
-		s.Log.Infow("running execution of script", "script", scriptID)
 
 		var request kubetest.ScriptExecutionRequest
 		c.BodyParser(&request)
 
+		s.Log.Infow("running execution of script", "script", request)
+
+		// generate random execution name in case there is no one set
+		// like for docker images
 		if request.Name == "" {
 			request.Name = rand.Name()
 		}
 
-		scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+		scriptCR, err := s.ScriptsClient.Get(request.Namespace, scriptID)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("getting script CR error: %w", err))
 		}
 
 		execution, err := executorClient.Execute(scriptCR.Spec.Content, request.Params)
@@ -115,7 +117,8 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s KubetestAPI) GetScriptExecutions() fiber.Handler {
+// ListExecutions returns array of available script executions
+func (s KubetestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 		s.Log.Infow("Getting script executions", "id", scriptID)
@@ -128,16 +131,18 @@ func (s KubetestAPI) GetScriptExecutions() fiber.Handler {
 	}
 }
 
+// GetScriptExecution returns script execution object for given script and execution id
 func (s KubetestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		scriptID := c.Params("id")
-		executionID := c.Params("executionID")
-		s.Log.Infow("GET execution request", "id", scriptID, "executionID", executionID)
 
 		// TODO do we need scriptID here? consider removing it from API
 		// It would be needed only for grouping purposes. executionID will be unique for scriptExecution
 		// in API
+		scriptID := c.Params("id")
+		executionID := c.Params("executionID")
+
+		s.Log.Infow("GET execution request", "id", scriptID, "executionID", executionID)
+
 		scriptExecution, err := s.Repository.Get(context.Background(), executionID)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
