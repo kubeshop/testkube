@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	DefaultURI    = "http://localhost:8080"
-	WatchInterval = time.Second
+	WatchInterval     = time.Second
+	ClientHTTPTimeout = 10 * time.Second
 )
 
 type Config struct {
@@ -26,18 +26,17 @@ var config Config
 func init() {
 	envconfig.Process("KUBETEST_API", &config)
 }
-
-func NewScriptsAPI(uri ...string) ScriptsAPI {
-	apiURI := config.URI
-	if len(uri) > 0 {
-		apiURI = uri[0]
-	}
+func NewScriptsAPI(uri string) ScriptsAPI {
 	return ScriptsAPI{
-		URI: apiURI,
+		URI: uri,
 		client: &http.Client{
-			Timeout: time.Second * 10,
+			Timeout: ClientHTTPTimeout,
 		},
 	}
+}
+
+func NewDefaultScriptsAPI() ScriptsAPI {
+	return NewScriptsAPI(config.URI)
 }
 
 type ScriptsAPI struct {

@@ -20,7 +20,7 @@ var GetScriptExecutionCmd = &cobra.Command{
 		scriptID := args[0]
 		executionID := args[1]
 
-		client := client.NewScriptsAPI()
+		client := client.NewDefaultScriptsAPI()
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
 		ui.ExitOnError("getting API for script completion", err)
 		if scriptExecution.Execution.ErrorMessage != "" {
