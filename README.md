@@ -34,7 +34,8 @@ TODO  add diagram for operator
 
 #### Executor
 
-TODO add diagram for executor
+![Postman-Executor](docs/components_executor.png)
+
 
 ## Building diagrams
 

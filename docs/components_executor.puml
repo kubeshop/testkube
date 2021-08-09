@@ -1,0 +1,50 @@
+@startuml components_api
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Component.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include DEVICONS/go.puml
+!include DEVICONS/javascript.puml
+!include DEVICONS/mongodb.puml
+!include FONTAWESOME/chart_line.puml
+!include FONTAWESOME/file_alt.puml
+
+
+
+
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Postman executor
+
+Person_Ext(api, "REST API Server", "OpenAPI v3 REST server")
+System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+System_Ext(logs, "Logs", "Logs aggregator", "file_alt")
+
+
+Container_Boundary(executor, "Postman collections executor") {
+    Component(executorAPI, "REST API Server", "OpenAPI v3 REST server", "Listens for commands to execute", "go")
+    Component(workers, "Internal worker", "Synchronized by queue", "Dequeue incoming scripts from queue", "go")
+    Component(newman, "newman command", "Postaman NPM based cli command", "Runs scripts", "javascript")
+    Component(metricsMiddleware, "Metrics endpoints middleware", "Prometheus HTTP endpoints", "Provides Prometheus enpoints with metrics, technical and business", "go")
+	ComponentDb(db, "MongoDB", "Queue storage", "Stores incoming scripts runs", "mongodb")
+
+    Rel(api, executorAPI, "Runs exeution of postman collection", "HTTP")
+    Rel(executorAPI, db, "Creates new entry for incoming test run", "HTTP")
+    Rel(db, workers, "Takes available execution and passes it to newman worker", "Queue")
+    Rel(workers, newman, "Runs script on newman", "Queue")
+}
+
+Person_Ext(engineer, "Engineer", "kubectl kubetest script start some-script-name")
+
+Rel(engineer, api, "Runs test", "cli")
+Rel(metricsMiddleware, metrics, "Aggregate metrics", "HTTP")
+Rel(executor, logs, "Aggregate logs", "stdin/stderr output")
+
+
+@enduml
