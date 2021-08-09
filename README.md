@@ -257,7 +257,9 @@ https://github.com/firstcontributions/first-contributions
 
 ## General guidance for contributing to KubeTest project
 
-You're very welcome to help in KubeTest, there is a lot of incoming work to do :). We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into KubeTest repo.
+You're very welcome to help in KubeTest development, there is a lot of incoming work to do :). 
+
+We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into KubeTest repo.
 
 ### For golang based components
 
