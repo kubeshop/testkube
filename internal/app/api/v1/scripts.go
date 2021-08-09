@@ -19,7 +19,7 @@ func (s KubetestAPI) ListScripts() fiber.Handler {
 		namespace := c.Query("ns", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
@@ -52,7 +52,7 @@ func (s KubetestAPI) CreateScript() fiber.Handler {
 		s.Metrics.IncCreateScript(script.Spec.Type, err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		return c.JSON(script)
@@ -70,7 +70,10 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 		scriptID := c.Params("id")
 
 		var request kubetest.ScriptExecutionRequest
-		c.BodyParser(&request)
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
+		}
 
 		s.Log.Infow("running execution of script", "script", request)
 
@@ -82,12 +85,12 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 
 		scriptCR, err := s.ScriptsClient.Get(request.Namespace, scriptID)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("getting script CR error: %w", err))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
 		}
 
 		execution, err := s.ExecutorClient.Execute(scriptCR.Spec.Content, request.Params)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
 		ctx := context.Background()
@@ -121,7 +124,7 @@ func (s KubetestAPI) ListExecutions() fiber.Handler {
 		s.Log.Infow("Getting script executions", "id", scriptID)
 		executions, err := s.Repository.GetScriptExecutions(context.Background(), scriptID)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
 		return c.JSON(executions)
@@ -142,7 +145,7 @@ func (s KubetestAPI) GetScriptExecution() fiber.Handler {
 
 		scriptExecution, err := s.Repository.Get(context.Background(), executionID)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, err)
 		}
 		return c.JSON(scriptExecution)
 	}
@@ -152,6 +155,6 @@ func (s KubetestAPI) AbortScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO fill valid values when abort will be implemented
 		s.Metrics.IncAbortScript("type", nil)
-		return s.Error(c, http.StatusBadRequest, fmt.Errorf("not implemented"))
+		return s.Error(c, http.StatusNotImplemented, fmt.Errorf("not implemented"))
 	}
 }

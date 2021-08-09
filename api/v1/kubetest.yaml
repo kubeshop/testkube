@@ -1,4 +1,5 @@
 openapi: 3.0.1
+
 info:
   title: Kubetest
   description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubetest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
@@ -9,11 +10,14 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   version: 0.0.5
+
 externalDocs:
   description: 'Find out more about Kubetest'
   url: http://kubetest.io
+
 servers:
 - url: https://api.kubetest.io/v1
+
 tags:
 - name: scripts
   description: 'Operation based on scripts resource' 
@@ -26,9 +30,9 @@ paths:
     get:
       tags:
       - scripts
-      summary: 'Get all scripts'
+      summary: 'List scripts'
       description: 'filters will be added later'
-      operationId: getAllScripts
+      operationId: listScripts
       responses:
         200:
           description: 'successful operation'
@@ -38,6 +42,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Script'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
     post:
       tags:
       - scripts
@@ -60,6 +72,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Script'
+        400:
+          description: 'problem with script definition - probably some bad input occurs (ivalid JSON body or similar)'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
                   
   /scripts/{id}/executions:
     post:
@@ -96,6 +124,30 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/Execution'
+        400:
+          description: 'problem with request body'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        500:
+          description: 'problem with script execution'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
   
     get:
       parameters:
@@ -119,6 +171,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
                   
 
   /scripts/{id}/executions/{executionID}:
@@ -150,6 +210,14 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   /scripts/{id}/executions/{executionID}/abort:
     post:
@@ -172,14 +240,15 @@ paths:
       description: 'Aborts execution and returns execution details'
       operationId: abortScriptExecution
       responses:
-        200:
-          description: successful operation
+        501:
+          description: not implemented yet
           content:
             application/json:
               schema:
                 type: object
                 items:
                   $ref: '#/components/schemas/Execution'
+
   /executions/:
     post:
       tags:
@@ -189,13 +258,30 @@ paths:
       operationId: executueScript
       responses:
         201:
-          description: 'successful operation'
+          description: 'execution added to queue'
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Execution'
+        400:
+          description: 'problem with request body'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        500:
+          description: 'poblem with saving script details into queue'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
   /executions/{id}:
     get:
       parameters:
@@ -219,6 +305,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting information from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   
 components:
@@ -409,3 +503,28 @@ components:
                   },
                   "response": []
                 }
+                
+    Problem: 
+      description: problem response in case of error
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type contains a URI that identifies the problem type. This URI will,
+          example: http://kubeshop.io/kubetest/problems/invalid-script-name
+        title:
+          type: string
+          description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
+          example: Invalid script name
+        status:
+          type: integer
+          description: HTTP status code for this occurrence of the problem.
+          example: 500
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+          example: Your script name can't contain forbidden characters like "}}}" passed
+        instance:
+          type: string
+          description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
+          example: http://10.23.23.123:8080/scripts

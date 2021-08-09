@@ -45,6 +45,7 @@ func (s *HTTPServer) Init() {
 // Error writes rfc-7807 json problem to response
 func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error) error {
 	c.Status(status)
+	c.Response().Header.Set("Content-Type", "application/problem+json")
 	return c.JSON(problem.New(status, err.Error()))
 }
 
