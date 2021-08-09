@@ -43,13 +43,34 @@ kubectl kubetest install
 
 Helm install 
 
-TODO - add valid helm installation after fixing charts
+[Helm](https://helm.sh) must be installed to use the charts.  Please refer to
+Helm's [documentation](https://helm.sh/docs) to get started.
 
-```
-helm install kubetest build/chart
-helm install -f mycustomvalues.yaml 
-```
+Once Helm has been set up correctly, add the repo as follows:
 
+    helm repo add kubetest https://kubeshop.github.io/kubetest
+
+If you had already added this repo earlier, run `helm repo update` to retrieve
+the latest versions of the packages.  You can then run `helm search repo
+kubetest` to see the charts.
+
+To install the api-server chart:
+
+    helm install my-<chart-name> kubetest/api-server
+
+To uninstall the api-server chart:
+
+    helm delete my-<chart-name> kubetest/api-server
+
+To install the postman-executor chart:
+
+    helm install my-<chart-name> kubetest/api-server
+
+To uninstall the postman-executor chart:
+
+    helm delete my-<chart-name> kubetest/api-server
+```
+Please not the these charts even though they can be instaled independently, they are supposed to be installed via centralised chart with the dependencies [Kubetest-operator](https://github.com/kubeshop/kubetest-operator).
 
 ## Usage 
 
@@ -67,9 +88,10 @@ cat my_collection_file.json | kubectl kubetest scripts create --name my-test-nam
 
 
 
-You can create new test by creating new Custom Resource 'by hand' e.g.:
+You can create new test by creating new Custom Resource 'by hand' (via `kubectl apply -f ...` cli possibility) e.g.:
 
 ```yaml
+cat <<EOF | kubectl apply -f -
 apiVersion: tests.kubetest.io/v1
 kind: Script
 metadata:
@@ -156,12 +178,12 @@ spec:
         }
       ]
     }
+EOF
 ```
 
 Where content is simply exported postman collection in example above. 
 Name is unique Sript Custom Resource name. 
 Type is `postman/collection` as it runs exported postman collections.
-
 
 
 1) Starting new script execution 
@@ -171,8 +193,13 @@ $ kubectl kubetest scripts start my-test-name
 
 Script "my-test-name" started
 Execution ID 02wi02-29329-2392930-93939
-
 ```
+> Please keep in mind if you follow examples and have created `test script` by hand via `kubectl apply -f ...` then you should start it with the usage of what has been provided here:
+> ```
+> metadata:
+>  name: test-kubeshop
+> ```
+>>_E.G. `kubectl kubetest scripts start test-kubeshop`_
 
 2) [TODO] Aborting already started script execution 
 ```
@@ -180,7 +207,6 @@ $ kubectl kubetest scripts abort SOME_EXECUTION_ID
 Script "SCRIPTNAME" Execution aborted
 
 ```
-
 
 3) Getting available scripts
 ```
