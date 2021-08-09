@@ -3,6 +3,7 @@ package postman
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kelseyhightower/envconfig"
@@ -47,13 +48,13 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 		var request kubetest.ExecutionRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
-			return p.Error(c, 400, err)
+			return p.Error(c, http.StatusBadRequest, err)
 		}
 
 		execution := kubetest.NewExecution(string(request.Metadata), request.Params)
 		err = p.Repository.Insert(context.Background(), execution)
 		if err != nil {
-			return p.Error(c, 400, err)
+			return p.Error(c, http.StatusInternalServerError, err)
 
 		}
 
@@ -67,7 +68,7 @@ func (p PostmanExecutor) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		execution, err := p.Repository.Get(context.Background(), c.Params("id"))
 		if err != nil {
-			return p.Error(c, 400, err)
+			return p.Error(c, http.StatusInternalServerError, err)
 		}
 
 		return c.JSON(execution)
