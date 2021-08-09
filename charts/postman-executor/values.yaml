@@ -5,14 +5,17 @@
 replicaCount: 1
 
 image:
-  repository: nginx # app docker tag and and repository name to be provided here.
+  repository: kubeshop/kubetest-postman-executor
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: "postman-executor"
 fullnameOverride: "postman-executor-chart"
+
+mongoDSN: "mongodb://mongodb-chart:27017"
+apiServerURI: "http://api-server-chart:8080"
 
 serviceAccount:
   # Specifies whether a service account should be created
