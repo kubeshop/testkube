@@ -3,7 +3,6 @@ package scripts
 import (
 	"os"
 
-	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -17,9 +16,9 @@ var ListScriptsCmd = &cobra.Command{
 	Short: "Get all available scripts",
 	Long:  `Getting all available scritps from given namespace - if no namespace given "default" namespace is used`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		namespace := cmd.Flag("namespace").Value.String()
-		client := client.NewDefaultScriptsAPI()
+
+		client := GetClient(cmd)
 
 		scripts, err := client.ListScripts(namespace)
 		ui.ExitOnError("getting all scripts in namespace "+namespace, err)

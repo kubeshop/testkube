@@ -3,7 +3,6 @@ package scripts
 import (
 	"os"
 
-	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +17,7 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		}
 
 		scriptID := args[0]
-		client := client.NewDefaultScriptsAPI()
+		client := GetClient(cmd)
 
 		executions, err := client.ListExecutions(scriptID)
 		ui.ExitOnError("getting executions ", err)

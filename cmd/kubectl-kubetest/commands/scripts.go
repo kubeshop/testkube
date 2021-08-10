@@ -2,11 +2,15 @@ package commands
 
 import (
 	"github.com/kubeshop/kubetest/cmd/kubectl-kubetest/commands/scripts"
+	"github.com/kubeshop/kubetest/pkg/ui"
 
 	"github.com/spf13/cobra"
 )
 
 func init() {
+	scriptsCmd.PersistentFlags().String("client", "proxy", "Client used for connecting to Kubetest API one of proxy|direct")
+	scriptsCmd.PersistentFlags().Bool("verbose", false, "should I show additional debug messages")
+
 	scriptsCmd.AddCommand(scripts.AbortExecutionCmd)
 	scriptsCmd.AddCommand(scripts.ListScriptsCmd)
 	scriptsCmd.AddCommand(scripts.StartScriptCmd)
@@ -22,5 +26,11 @@ var scriptsCmd = &cobra.Command{
 	Long:  `All available scripts and scripts executions commands`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
+	},
+
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if verbose, err := cmd.Flags().GetBool("verbose"); !verbose && err == nil {
+			ui.QuietMode = true
+		}
 	},
 }

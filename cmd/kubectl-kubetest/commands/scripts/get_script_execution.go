@@ -3,7 +3,6 @@ package scripts
 import (
 	"fmt"
 
-	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +19,7 @@ var GetScriptExecutionCmd = &cobra.Command{
 		scriptID := args[0]
 		executionID := args[1]
 
-		client := client.NewDefaultScriptsAPI()
+		client := GetClient(cmd)
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
 		ui.ExitOnError("getting API for script completion", err)
 		if scriptExecution.Execution.ErrorMessage != "" {
