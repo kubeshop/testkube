@@ -70,7 +70,7 @@ To uninstall the postman-executor chart:
 
     helm delete my-<chart-name> kubetest/api-server
 ```
-Please not the these charts even though they can be instaled independently, they are supposed to be installed via centralised chart with the dependencies [Kubetest-operator](https://github.com/kubeshop/kubetest-operator).
+Please note that these charts even though they can be instaled independently, they are supposed to be installed via centralised chart with the dependencies [Kubetest-operator](https://github.com/kubeshop/kubetest-operator).
 
 ## Usage 
 
