@@ -10,9 +10,11 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    # To be removed before going public.
     env:
       GOPRIVATE: "github.com/kubeshop/*"
-
+    
+    # To be removed before going public.
     steps:
     - name: Configure git for private modules
       env:
