@@ -7,7 +7,7 @@ metadata:
 subjects:
 # You can specify more than one "subject"
 - kind: User
-  name: "system:serviceaccount:{{ .Release.Namespace }}:api-server-chart" # namespace to be parametrised
+  name: "system:serviceaccount:{{ .Release.Namespace }}:{{ .Values.fullnameOverride }}" # namespace to be parametrised
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   # "roleRef" specifies the binding to a Role / ClusterRole
