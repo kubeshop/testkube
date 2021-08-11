@@ -223,7 +223,8 @@ func (c ProxyScriptsAPI) responseError(resp rest.Result) error {
 		pr, err := c.getProblemFromResponse(resp)
 
 		if err != nil {
-			return fmt.Errorf("can't get problem from api response: %w", err)
+			content, _ := resp.Raw()
+			return fmt.Errorf("unhandled api server response: %w\nresponse: %s", err, content)
 		}
 
 		return fmt.Errorf("problem: %+v", pr.Detail)
@@ -233,7 +234,6 @@ func (c ProxyScriptsAPI) responseError(resp rest.Result) error {
 }
 
 func (c ProxyScriptsAPI) GetProxy(requestType string) *rest.Request {
-
 	return c.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(c.config.Namespace).
 		Resource("services").
