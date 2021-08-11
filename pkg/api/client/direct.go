@@ -34,7 +34,7 @@ func NewDirectScriptsAPI(uri string) DirectScriptsAPI {
 	}
 }
 
-func NewDafultDirectScriptsAPI() DirectScriptsAPI {
+func NewDefaultDirectScriptsAPI() DirectScriptsAPI {
 	return NewDirectScriptsAPI(config.URI)
 }
 

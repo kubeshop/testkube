@@ -11,7 +11,7 @@ func GetClient(clientType ClientType) (client Client, err error) {
 	switch clientType {
 
 	case ClientDirect:
-		client = NewDafultDirectScriptsAPI()
+		client = NewDefaultDirectScriptsAPI()
 	case ClientProxy:
 		clientset, err := GetClientSet()
 		if err != nil {
