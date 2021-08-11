@@ -1,18 +1,21 @@
-# Default values for api-server.
+# Default values for postman-executor.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
 
 image:
-  repository: nginx # app docker tag and and repository name to be provided here.
+  repository: kubeshop/kubetest-postman-executor
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
-nameOverride: "api-server"
-fullnameOverride: "api-server-chart"
+nameOverride: "postman-executor"
+fullnameOverride: "postman-executor-kubetest"
+
+mongoDSN: "mongodb://mongodb-kubetest:27017"
+apiServerURI: "http://api-server-kubetest:8080"
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -38,7 +41,7 @@ securityContext: {}
 
 service:
   type: NodePort # for working with real k8s we should use "ClusterIP" type.
-  port: 8080
+  port: 8082
 
 ingress:
   enabled: false
