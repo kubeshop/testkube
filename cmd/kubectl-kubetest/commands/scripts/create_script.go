@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +41,7 @@ var CreateScriptsCmd = &cobra.Command{
 			ui.ExitOnError("reading stdin", err)
 		}
 
-		client := client.NewDefaultScriptsAPI()
+		client := GetClient(cmd)
 		script, err := client.CreateScript(name, executorType, string(content), namespace)
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 		ui.Success("Script created", script.Name)

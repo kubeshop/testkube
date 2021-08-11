@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/api/client"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +35,8 @@ var StartScriptCmd = &cobra.Command{
 		name := cmd.Flag("name").Value.String()
 		namespace := cmd.Flag("namespace").Value.String()
 		namespacedName := fmt.Sprintf("%s/%s", namespace, scriptID)
-		client := client.NewDefaultScriptsAPI()
+
+		client := GetClient(cmd)
 
 		scriptExecution, err := client.ExecuteScript(scriptID, namespace, name, params)
 		ui.ExitOnError("starting script execution "+namespacedName, err)
