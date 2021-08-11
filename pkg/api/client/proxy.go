@@ -27,14 +27,33 @@ func GetClientSet() (clientset *kubernetes.Clientset, err error) {
 	return kubernetes.NewForConfig(restcfg)
 }
 
-func NewProxyScriptsAPI(client *kubernetes.Clientset) ProxyScriptsAPI {
+func NewProxyScriptsAPI(client *kubernetes.Clientset, config ProxyConfig) ProxyScriptsAPI {
 	return ProxyScriptsAPI{
 		client: client,
+		config: config,
 	}
+}
+
+func NewDefaultProxyConfig() ProxyConfig {
+	return ProxyConfig{
+		Namespace:   "default",
+		ServiceName: "api-server-kubetest",
+		ServicePort: 8080,
+	}
+}
+
+type ProxyConfig struct {
+	// Namespace where kubetest is installed
+	Namespace string
+	// API Server service name
+	ServiceName string
+	// API Server service port
+	ServicePort int
 }
 
 type ProxyScriptsAPI struct {
 	client *kubernetes.Clientset
+	config ProxyConfig
 }
 
 func (c ProxyScriptsAPI) GetScript(id string) (script kubetest.Script, err error) {
@@ -216,8 +235,9 @@ func (c ProxyScriptsAPI) responseError(resp rest.Result) error {
 func (c ProxyScriptsAPI) GetProxy(requestType string) *rest.Request {
 
 	return c.client.CoreV1().RESTClient().Verb(requestType).
-		Namespace("default").
+		Namespace(c.config.Namespace).
 		Resource("services").
-		Name("api-server-chart:8080").
+		SetHeader("Content-Type", "application/json").
+		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy")
 }

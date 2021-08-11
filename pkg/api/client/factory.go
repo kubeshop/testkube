@@ -17,7 +17,7 @@ func GetClient(clientType ClientType) (client Client, err error) {
 		if err != nil {
 			return client, err
 		}
-		client = NewProxyScriptsAPI(clientset)
+		client = NewProxyScriptsAPI(clientset, NewDefaultProxyConfig())
 	}
 
 	return client, err
