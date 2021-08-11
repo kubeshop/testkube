@@ -85,7 +85,7 @@ affinity: {}
 # https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
 mongodb:
   nameOverride: "mongodb"
-  fullnameOverride: "mongodb-kubetest"
+  fullnameOverride: "kubetest-mongodb"
   architecture: "standalone"
   auth:
     enabled: false
@@ -98,7 +98,7 @@ mongodb:
 
 api-server:
   nameOverride: "api-server"
-  fullnameOverride: "api-server-kubetest"
+  fullnameOverride: "kubetest-api-server"
   image:
     repository: kubeshop/kubetest-api-server
     pullPolicy: Always
@@ -107,12 +107,12 @@ api-server:
   service:
     type: NodePort # for working with real k8s we should use "ClusterIP" type.
     port: 8080
-  mongoDSN: "mongodb://mongodb-kubetest:27017"
-  postmanExecutorURI: "http://postman-executor-kubetest:8082"
+  mongoDSN: "mongodb://kubetest-mongodb:27017"
+  postmanExecutorURI: "http://kubetest-postman-executor:8082"
 
 postman-executor:
   nameOverride: "postman-executor"
-  fullnameOverride: "postman-executor-kubetest"
+  fullnameOverride: "kubetest-postman-executor"
   image:
     repository: kubeshop/kubetest-postman-executor
     pullPolicy: Always
@@ -121,5 +121,5 @@ postman-executor:
   service:
     type: NodePort # for working with real k8s we should use "ClusterIP" type.
     port: 8082
-  mongoDSN: "mongodb://mongodb-kubetest:27017"
-  apiServerURI: "http://api-server-kubetest:8080"
+  mongoDSN: "mongodb://kubetest-mongodb:27017"
+  apiServerURI: "http://kubetest-api-server:8080"

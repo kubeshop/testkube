@@ -33,9 +33,9 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
 
   - name: api-server
-    version: 0.5.1
+    version: 0.5.0
     repository: https://kubeshop.github.io/kubetest
     
   - name: postman-executor
-    version: 0.5.1
+    version: 0.5.0
     repository: https://kubeshop.github.io/kubetest

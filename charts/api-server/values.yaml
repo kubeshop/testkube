@@ -12,10 +12,10 @@ image:
 
 imagePullSecrets: []
 nameOverride: "api-server"
-fullnameOverride: "api-server-kubetest"
+fullnameOverride: "kubetest-api-server"
 
-mongoDSN: "mongodb://mongodb-kubetest:27017"
-postmanExecutorURI: "http://postman-executor-kubetest:8082"
+mongoDSN: "mongodb://kubetest-mongodb:27017"
+postmanExecutorURI: "http://kubetest-postman-executor:8082"
 
 serviceAccount:
   # Specifies whether a service account should be created
