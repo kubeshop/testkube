@@ -25,7 +25,7 @@ appVersion: "0.4.1"
 
 dependencies:
   - name: kubetest-operator
-    version: 0.4.1
+    version: 0.4.2
     repository: https://kubeshop.github.io/kubetest-operator
 
   - name: mongodb
@@ -33,9 +33,9 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
 
   - name: api-server
-    version: 0.4.1
+    version: 0.4.2
     repository: https://kubeshop.github.io/kubetest
     
   - name: postman-executor
-    version: 0.4.1
+    version: 0.4.2
     repository: https://kubeshop.github.io/kubetest
