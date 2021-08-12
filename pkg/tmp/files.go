@@ -18,3 +18,8 @@ func ReaderToTmpfile(input io.Reader) (path string, err error) {
 
 	return
 }
+
+func Name() string {
+	tmpfile, _ := ioutil.TempFile("", "kubetest-tmp")
+	return tmpfile.Name()
+}

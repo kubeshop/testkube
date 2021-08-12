@@ -373,6 +373,8 @@ components:
           description: 'execution result returned from executor'
           $ref: '#/components/schemas/Execution' 
 
+
+
     Execution:
       description: object which should be returned by REST based executors
       type: object
@@ -400,16 +402,18 @@ components:
           - pending 
           - success 
           - failed
-        output:
+        raw-output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
-        output-type:
+        raw-output-type:
           type: string
           description: 'output type depends of reporter used in partucular tool'
           enum: 
           - text/plain
           - application/junit+xml
           - application/json
+        result: 
+          $ref: '#/components/schemas/ExecutionResult'
         error-message: 
           type: string
           description: 'error message when status is failed, separate to output as output can be partial in case of error'
@@ -421,6 +425,70 @@ components:
           type: string
           description: 'test end time'
           format: date-time
+
+
+    ExecutionResult:
+      description: execution result data
+      type: object
+      properties:
+        start-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        end-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        status: 
+          type: string
+          description: script execution status
+          enum: [success, failed]
+        steps: 
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionResultStep'
+          description: execution steps (for collection of requests)
+
+    ExecutionResultStep:
+      description: execution result data
+      type: object
+      properties:
+        name:
+          type: string
+          description: step name
+        start-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        end-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        status: 
+          type: string
+          description: execution step status
+          enum: [success, failed]
+        assertions: 
+          type: array
+          $ref: '#/components/schemas/ExecutionResultStepAssertion'
+        
+    ExecutionResultStepAssertion:
+      description: execution result data
+      type: object
+      properties:
+        name: 
+          type: string
+        status:
+          type: string
+          enum: [success, failed]
+        error-message: 
+          type: string
+
+
+
+
+
+
 
     ExecutionRequest: 
       description: scripts execution request body

@@ -23,9 +23,10 @@ type Execution struct {
 	// execution status
 	Status string `json:"status,omitempty"`
 	// RAW Script execution output, depends of reporter used in particular tool
-	Output string `json:"output,omitempty"`
+	RawOutput string `json:"raw-output,omitempty"`
 	// output type depends of reporter used in partucular tool
-	OutputType string `json:"output-type,omitempty"`
+	RawOutputType string `json:"raw-output-type,omitempty"`
+	Result *ExecutionResult `json:"result,omitempty"`
 	// error message when status is failed, separate to output as output can be partial in case of error
 	ErrorMessage string `json:"error-message,omitempty"`
 	// test start time

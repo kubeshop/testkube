@@ -47,7 +47,7 @@ var StartScriptCmd = &cobra.Command{
 		switch true {
 
 		case scriptExecution.Execution.IsSuccesful():
-			fmt.Println(scriptExecution.Execution.Output)
+			fmt.Println(scriptExecution.Execution.RawOutput)
 			ui.Success("Script execution completed with sucess")
 
 		case scriptExecution.Execution.IsFailed():

@@ -29,6 +29,6 @@ var GetScriptExecutionCmd = &cobra.Command{
 			ui.Info("Script execution success")
 
 		}
-		fmt.Println(scriptExecution.Execution.Output)
+		fmt.Println(scriptExecution.Execution.RawOutput)
 	},
 }

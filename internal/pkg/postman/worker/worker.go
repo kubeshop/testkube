@@ -90,12 +90,12 @@ func (w *Worker) Run(executionChan chan kubetest.Execution) {
 
 func (w *Worker) RunExecution(ctx context.Context, e kubetest.Execution) (kubetest.Execution, error) {
 	e.Start()
-	result, err := w.Runner.Run(strings.NewReader(e.ScriptContent), e.Params)
+	result := w.Runner.Run(strings.NewReader(e.ScriptContent), e.Params)
 	e.Stop()
-	e.Output = result
+	e.RawOutput = result.RawOutput
 
-	if err != nil {
-		e.Error(err)
+	if result.Error != nil {
+		e.Error(result.Error)
 	} else {
 		e.Success()
 	}
@@ -105,5 +105,5 @@ func (w *Worker) RunExecution(ctx context.Context, e kubetest.Execution) (kubete
 		return e, werr
 	}
 
-	return e, err
+	return e, result.Error
 }
