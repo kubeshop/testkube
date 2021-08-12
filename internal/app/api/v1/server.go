@@ -42,10 +42,14 @@ func (s KubetestAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 
 	scripts := s.Routes.Group("/scripts")
+
 	scripts.Get("/", s.ListScripts())
+	scripts.Get("/:id", s.GetScript())
 	scripts.Post("/", s.CreateScript())
-	scripts.Get("/:id/executions", s.ListExecutions())
+
 	scripts.Post("/:id/executions", s.ExecuteScript())
-	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())
 	scripts.Post("/:id/executions/:executionID/abort", s.AbortScriptExecution())
+
+	scripts.Get("/:id/executions", s.ListExecutions())
+	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())
 }
