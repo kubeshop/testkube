@@ -5,27 +5,17 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	"github.com/kubeshop/kubetest/pkg/process"
 	"github.com/kubeshop/kubetest/pkg/tmp"
 )
-
-type ExecutionResult struct {
-	Error     error
-	RawOutput string
-	Metadata  ExecutionJSONResult
-}
-
-func (r ExecutionResult) Err(err error) ExecutionResult {
-	r.Error = err
-	return r
-}
 
 // Runner struct for newman based runner
 type Runner struct {
 }
 
 // Run runs particular script content on top of newman binary
-func (r *Runner) Run(input io.Reader, params map[string]string) (result ExecutionResult) {
+func (r *Runner) Run(input io.Reader, params map[string]string) (result kubetest.ExecutionResult) {
 	path, err := tmp.ReaderToTmpfile(input)
 	if err != nil {
 		return result.Err(err)
@@ -41,22 +31,27 @@ func (r *Runner) Run(input io.Reader, params map[string]string) (result Executio
 		return result.Err(err)
 	}
 
+	var newmanResult NewmanExecutionResult
+
 	tmpName := tmp.Name()
 	out, err := process.Execute("newman", "run", path, "-e", envpath, "--reporters", "cli,json", "--reporter-json-export", tmpName)
 	if err != nil {
 		return result.Err(err)
 	}
 
+	newmanResult.RawOutput = string(out)
+
+	// parse JSON output of newman script
 	bytes, err := ioutil.ReadFile(tmpName)
 	if err != nil {
 		return result.Err(err)
 	}
-	err = json.Unmarshal(bytes, &result.Metadata)
+
+	err = json.Unmarshal(bytes, &newmanResult.Metadata)
 	if err != nil {
 		return result.Err(err)
 	}
 
-	result.RawOutput = string(out)
-
-	return
+	// convert newman result to OpenAPI struct
+	return MapMetadataToResult(newmanResult)
 }

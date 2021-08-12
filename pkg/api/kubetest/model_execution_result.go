@@ -14,12 +14,18 @@ import (
 
 // execution result data
 type ExecutionResult struct {
+	// script execution status
+	Status string `json:"status,omitempty"`
+	// RAW Script execution output, depends of reporter used in particular tool
+	RawOutput string `json:"raw-output,omitempty"`
+	// output type depends of reporter used in partucular tool
+	RawOutputType string `json:"raw-output-type,omitempty"`
+	// error message when status is failed, separate to output as output can be partial in case of error
+	ErrorMessage string `json:"error-message,omitempty"`
 	// script execution start time
 	StartTime time.Time `json:"start-time,omitempty"`
 	// script execution start time
 	EndTime time.Time `json:"end-time,omitempty"`
-	// script execution status
-	Status string `json:"status,omitempty"`
 	// execution steps (for collection of requests)
-	Steps []ExecutionResultStep `json:"steps,omitempty"`
+	Steps []ExecutionStepResult `json:"steps,omitempty"`
 }

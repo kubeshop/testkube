@@ -31,7 +31,7 @@ func TestRun(t *testing.T) {
 	result := runner.Run(buffer, map[string]string{})
 
 	// then
-	assert.NoError(t, result.Error)
+	assert.Empty(t, result.ErrorMessage)
 	assert.Contains(t, result.RawOutput, "Successful GET request")
 	assert.Equal(t, requestCompleted, true)
 

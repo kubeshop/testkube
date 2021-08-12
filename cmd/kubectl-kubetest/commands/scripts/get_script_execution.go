@@ -22,13 +22,15 @@ var GetScriptExecutionCmd = &cobra.Command{
 		client := GetClient(cmd)
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
 		ui.ExitOnError("getting API for script completion", err)
-		if scriptExecution.Execution.ErrorMessage != "" {
+
+		// TODO make some wrapper functions for getting Errors and output
+		if scriptExecution.Execution.Result.ErrorMessage != "" {
 			ui.Errf("Script execution error")
-			fmt.Println(scriptExecution.Execution.ErrorMessage)
+			fmt.Println(scriptExecution.Execution.Result.ErrorMessage)
 		} else {
 			ui.Info("Script execution success")
 
 		}
-		fmt.Println(scriptExecution.Execution.RawOutput)
+		fmt.Println(scriptExecution.Execution.Result.RawOutput)
 	},
 }

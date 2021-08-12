@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -91,19 +92,21 @@ func (w *Worker) Run(executionChan chan kubetest.Execution) {
 func (w *Worker) RunExecution(ctx context.Context, e kubetest.Execution) (kubetest.Execution, error) {
 	e.Start()
 	result := w.Runner.Run(strings.NewReader(e.ScriptContent), e.Params)
-	e.Stop()
-	e.RawOutput = result.RawOutput
+	e.Result = &result
 
-	if result.Error != nil {
-		e.Error(result.Error)
+	var err error
+	if result.ErrorMessage != "" {
+		e.Error()
+		err = fmt.Errorf("execution error: %s", result.ErrorMessage)
 	} else {
 		e.Success()
 	}
 
+	e.Stop()
 	// we want always write even if there is error
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
 
-	return e, result.Error
+	return e, err
 }

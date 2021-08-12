@@ -402,21 +402,8 @@ components:
           - pending 
           - success 
           - failed
-        raw-output:
-          type: string
-          description: 'RAW Script execution output, depends of reporter used in particular tool'
-        raw-output-type:
-          type: string
-          description: 'output type depends of reporter used in partucular tool'
-          enum: 
-          - text/plain
-          - application/junit+xml
-          - application/json
         result: 
           $ref: '#/components/schemas/ExecutionResult'
-        error-message: 
-          type: string
-          description: 'error message when status is failed, separate to output as output can be partial in case of error'
         start-time:
           type: string
           description: 'test start time'
@@ -431,6 +418,23 @@ components:
       description: execution result data
       type: object
       properties:
+        status: 
+          type: string
+          description: script execution status
+          enum: [success, failed]
+        raw-output:
+          type: string
+          description: 'RAW Script execution output, depends of reporter used in particular tool'
+        raw-output-type:
+          type: string
+          description: 'output type depends of reporter used in partucular tool'
+          enum: 
+          - text/plain
+          - application/junit+xml
+          - application/json
+        error-message: 
+          type: string
+          description: 'error message when status is failed, separate to output as output can be partial in case of error'
         start-time:
           type: string
           description: script execution start time
@@ -439,17 +443,13 @@ components:
           type: string
           description: script execution start time
           format: date-time
-        status: 
-          type: string
-          description: script execution status
-          enum: [success, failed]
         steps: 
           type: array
           items:
-            $ref: '#/components/schemas/ExecutionResultStep'
+            $ref: '#/components/schemas/ExecutionStepResult'
           description: execution steps (for collection of requests)
 
-    ExecutionResultStep:
+    ExecutionStepResult:
       description: execution result data
       type: object
       properties:
@@ -468,11 +468,11 @@ components:
           type: string
           description: execution step status
           enum: [success, failed]
-        assertions: 
+        assertionResults: 
           type: array
-          $ref: '#/components/schemas/ExecutionResultStepAssertion'
+          $ref: '#/components/schemas/AssertionResult'
         
-    ExecutionResultStepAssertion:
+    AssertionResult:
       description: execution result data
       type: object
       properties:
@@ -485,10 +485,9 @@ components:
           type: string
 
 
-
-
-
-
+#
+# Requests
+#
 
     ExecutionRequest: 
       description: scripts execution request body
@@ -572,6 +571,10 @@ components:
                   "response": []
                 }
                 
+#
+# Errors
+#
+
     Problem: 
       description: problem response in case of error
       type: object

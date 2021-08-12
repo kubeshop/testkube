@@ -12,19 +12,15 @@ import (
 	"time"
 )
 
-// object which should be returned by REST based executors
-type Execution struct {
-	// execution id
-	Id string `json:"id,omitempty"`
-	// script metadata content
-	ScriptContent string `json:"script-content,omitempty"`
-	// execution params passed to executor
-	Params map[string]string `json:"params,omitempty"`
-	// execution status
-	Status string `json:"status,omitempty"`
-	Result *ExecutionResult `json:"result,omitempty"`
-	// test start time
+// execution result data
+type ExecutionStepResult struct {
+	// step name
+	Name string `json:"name,omitempty"`
+	// script execution start time
 	StartTime time.Time `json:"start-time,omitempty"`
-	// test end time
+	// script execution start time
 	EndTime time.Time `json:"end-time,omitempty"`
+	// execution step status
+	Status string `json:"status,omitempty"`
+	AssertionResults *AssertionResult `json:"assertionResults,omitempty"`
 }

@@ -23,6 +23,7 @@ func NewExecution(content string, params map[string]string) Execution {
 		ScriptContent: content,
 		Status:        ExecutionStatusQueued,
 		Params:        params,
+		Result:        &ExecutionResult{},
 	}
 }
 func (e *Execution) Start() {
@@ -37,9 +38,8 @@ func (e *Execution) Success() {
 	e.Status = ExecutionStatusSuceess
 }
 
-func (e *Execution) Error(err error) {
+func (e *Execution) Error() {
 	e.Status = ExecutionStatusError
-	e.ErrorMessage = err.Error()
 }
 
 func (e *Execution) IsCompleted() bool {

@@ -44,14 +44,15 @@ var StartScriptCmd = &cobra.Command{
 		scriptExecution, err = client.GetExecution(scriptID, scriptExecution.Id)
 		ui.ExitOnError("watching API for script completion", err)
 
+		result := scriptExecution.Execution.Result
 		switch true {
 
 		case scriptExecution.Execution.IsSuccesful():
-			fmt.Println(scriptExecution.Execution.RawOutput)
+			fmt.Println(result.RawOutput)
 			ui.Success("Script execution completed with sucess")
 
 		case scriptExecution.Execution.IsFailed():
-			fmt.Println(scriptExecution.Execution.ErrorMessage)
+			fmt.Println(result.ErrorMessage)
 			ui.Errf("Script execution failed")
 
 		}
