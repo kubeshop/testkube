@@ -53,7 +53,7 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-release_kubetest:
+  release_kubetest:
     needs: [release_api, release_postman]
     runs-on: ubuntu-latest
     steps:
