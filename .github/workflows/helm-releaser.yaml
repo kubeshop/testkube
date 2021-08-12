@@ -2,18 +2,49 @@ name: Release Charts
 
 on:
   push:
-    branches:
-      - main
-  pull_request: # To be removed once confirmed to be working. For testing purposes only.
-    branches: 
-      - main
+    # branches:
+    #   - main
+    paths:
+      - 'charts/**'
+
+  #   branches:
+  #     - main
+  # pull_request: # To be removed once confirmed to be working. For testing purposes only.
+  #   branches: 
+  #     - main
 
 jobs:
-  release:
+
+  release_api_and_postman:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         charts-path: [charts/api-server, charts/postman-executor, charts/kubetest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: ${{ matrix.charts-path }}
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  release_kubetest:
+    needs: [release_api_and_postman]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        charts-path: [charts/kubetest]
 
     steps:
       - name: Checkout
