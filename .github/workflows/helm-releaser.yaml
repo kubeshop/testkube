@@ -2,43 +2,19 @@ name: Release Charts
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     paths:
       - 'charts/**'
-      
+
 jobs:
 
   release_api_and_postman:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
-        charts-path: [charts/api-server, charts/postman-executor]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.2.1
-        with:
-          charts_dir: ${{ matrix.charts-path }}
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-  release_kubetest:
-    needs: [release_api_and_postman]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        charts-path: [charts/kubetest]
+        charts-path: [charts/api-server, charts/postman-executor, charts/kubetest]
 
     steps:
       - name: Checkout
