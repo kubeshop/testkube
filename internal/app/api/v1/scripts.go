@@ -104,10 +104,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
-		scriptExecution, err := s.Repository.GetByName(context.Background(), request.Name)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't get existing script execution: %w", err))
-		}
+		scriptExecution, _ := s.Repository.GetByName(context.Background(), request.Name)
 		if scriptExecution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
