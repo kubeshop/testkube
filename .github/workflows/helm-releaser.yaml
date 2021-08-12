@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        charts-path: [charts/api-server, charts/postman-executor, charts/kubetest]
+        charts-path: [charts/api-server, charts/postman-executor]
 
     steps:
       - name: Checkout
