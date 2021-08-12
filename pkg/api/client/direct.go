@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ClientHTTPTimeout = 20 * time.Second
+	ClientHTTPTimeout = time.Minute
 )
 
 type Config struct {
