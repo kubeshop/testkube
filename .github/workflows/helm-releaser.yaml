@@ -22,7 +22,23 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
+      - name: Run chart-releaser for api-server chart
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts/api-server
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Run chart-releaser for postman-executor chart
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts/postman-executor
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Run chart-releaser for kubetest chart
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts/kubetest
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
