@@ -47,31 +47,21 @@ Helm install
 Helm's [documentation](https://helm.sh/docs) to get started.
 
 Once Helm has been set up correctly, add the repo as follows:
-
-    helm repo add kubetest https://kubeshop.github.io/kubetest
-
+```sh
+helm repo add kubetest https://kubeshop.github.io/kubetest
+```
 If you had already added this repo earlier, run `helm repo update` to retrieve
-the latest versions of the packages.  You can then run `helm search repo
+the `latest` versions of the packages.  You can then run `helm search repo
 kubetest` to see the charts.
 
-To install the api-server chart:
-
-    helm install my-<chart-name> kubetest/api-server
-
-To uninstall the api-server chart:
-
-    helm delete my-<chart-name> kubetest/api-server
-
-To install the postman-executor chart:
-
-    helm install my-<chart-name> kubetest/api-server
-
-To uninstall the postman-executor chart:
-
-    helm delete my-<chart-name> kubetest/api-server
+To install the `kubetest` chart:
+```sh
+helm install my-<chart-name> kubetest/kubetest
 ```
-Please note that these charts even though they can be instaled independently, they are supposed to be installed via centralised chart with the dependencies [Kubetest-operator](https://github.com/kubeshop/kubetest-operator).
-
+To uninstall the `kubetest` chart:
+```sh
+helm delete my-<chart-name> kubetest/kubetest
+```
 ## Usage 
 
 0) First you'll need to define test, tests are defined as Curstom Resource in Kubernetes cluster (access to Kubernetes cluster would be also needed)

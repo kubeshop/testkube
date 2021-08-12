@@ -1,15 +1,15 @@
-name: Release Charts
+name: Release Api Server chart
 
 on:
   push:
     branches:
       - main
-  pull_request: # To be removed once confirmed to be working. For testing purposes only.
-    branches: 
-      - main
+    paths:
+      - 'charts/api-server/**'
 
 jobs:
-  release:
+
+  release_api:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,6 +23,8 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts/api-server
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
