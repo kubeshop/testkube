@@ -21,21 +21,21 @@ version: 0.4.3
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "0.4.3"  
+appVersion: "0.4.0"
 
 dependencies:
-  # - name: kubetest-operator
-  #   version: 0.4.0
-  #   repository: https://kubeshop.github.io/kubetest-operator
+  - name: kubetest-operator
+    version: 0.4.0
+    repository: https://kubeshop.github.io/kubetest-operator
 
   - name: mongodb
     version: 10.0.0
     repository: https://charts.bitnami.com/bitnami
 
   - name: api-server
-    version: 0.4.4
+    version: 0.4.0
     repository: https://kubeshop.github.io/kubetest
     
   - name: postman-executor
-    version: 0.4.5
+    version: 0.4.0
     repository: https://kubeshop.github.io/kubetest
