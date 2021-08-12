@@ -2,8 +2,8 @@ name: Release Postman Executor chart
 
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
     paths:
       - 'charts/postman-executor/**'
 

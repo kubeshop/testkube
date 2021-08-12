@@ -2,8 +2,8 @@ name: Release Api Server chart
 
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
     paths:
       - 'charts/api-server/**'
 

@@ -2,21 +2,15 @@ name: Release kubetest chart
 
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
     paths:
       - 'charts/kubetest/**'
-  # workflow_run:
-  #   workflows: ["Release Api Server chart","Release Postman Executor chart"]
-  #   # branches: [main]
-  #   types: 
-  #     - completed
 
 jobs:
 
   release_kubetest:
     runs-on: ubuntu-latest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout
