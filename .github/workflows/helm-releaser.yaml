@@ -11,6 +11,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        charts-path: [charts/api-server, charts/postman-executor, charts/kubetest]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -22,23 +26,9 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Run chart-releaser for api-server chart
+      - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.1
         with:
-          charts_dir: charts/api-server
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Run chart-releaser for postman-executor chart
-        uses: helm/chart-releaser-action@v1.2.1
-        with:
-          charts_dir: charts/postman-executor
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Run chart-releaser for kubetest chart
-        uses: helm/chart-releaser-action@v1.2.1
-        with:
-          charts_dir: charts/kubetest
+          charts_dir: ${{ matrix.charts-path }}
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
