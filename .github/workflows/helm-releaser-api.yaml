@@ -9,7 +9,7 @@ on:
 
 jobs:
 
-  release_api_and_postman:
+  release_api:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
