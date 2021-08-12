@@ -2,17 +2,11 @@ name: Release Charts
 
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
     paths:
       - 'charts/**'
-
-  #   branches:
-  #     - main
-  # pull_request: # To be removed once confirmed to be working. For testing purposes only.
-  #   branches: 
-  #     - main
-
+      
 jobs:
 
   release_api_and_postman:
