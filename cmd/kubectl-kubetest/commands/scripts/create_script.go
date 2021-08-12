@@ -42,7 +42,15 @@ var CreateScriptsCmd = &cobra.Command{
 		}
 
 		client := GetClient(cmd)
-		script, err := client.CreateScript(name, executorType, string(content), namespace)
+
+		script, err := client.GetScript(name)
+		ui.ExitOnError("checking if script "+name+" exists in namespace "+namespace, err)
+
+		if name == script.Name {
+			ui.Errf("Script with name '%s' already exists in namespace %s", name, namespace)
+		}
+
+		script, err = client.CreateScript(name, executorType, string(content), namespace)
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 		ui.Success("Script created", script.Name)
 	},

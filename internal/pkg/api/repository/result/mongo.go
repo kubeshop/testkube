@@ -26,6 +26,11 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result kubetest.S
 	return
 }
 
+func (r *MongoRepository) GetByName(ctx context.Context, name string) (result kubetest.ScriptExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+	return
+}
+
 func (r *MongoRepository) GetScriptExecutions(ctx context.Context, id string) (result []kubetest.ScriptExecution, err error) {
 	cursor, err := r.Coll.Find(ctx, bson.M{"scriptname": id})
 	if err != nil {

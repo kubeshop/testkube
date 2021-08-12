@@ -10,8 +10,29 @@ import (
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
 	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubetest/pkg/rand"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// ListScripts for getting list of all available scripts
+func (s KubetestAPI) GetScript() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		namespace := c.Query("ns", "default")
+		crScript, err := s.ScriptsClient.Get(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		scripts := scriptsMapper.MapScriptKubeToAPI(*crScript)
+
+		return c.JSON(scripts)
+	}
+}
 
 // ListScripts for getting list of all available scripts
 func (s KubetestAPI) ListScripts() fiber.Handler {
@@ -83,6 +104,14 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
+		scriptExecution, err := s.Repository.GetByName(context.Background(), request.Name)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't get existing script execution: %w", err))
+		}
+		if scriptExecution.Name == request.Name {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
+		}
+
 		scriptCR, err := s.ScriptsClient.Get(request.Namespace, scriptID)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
@@ -94,7 +123,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		ctx := context.Background()
-		scriptExecution := kubetest.NewScriptExecution(
+		scriptExecution = kubetest.NewScriptExecution(
 			scriptID,
 			request.Name,
 			execution,

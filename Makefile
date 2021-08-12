@@ -4,7 +4,7 @@ BIN_DIR ?= $(HOME)/bin
 GITHUB_TOKEN ?= "SET_ME"
 
 
-run-api-serer: 
+run-api-server: 
 	APISERVER_PORT=8080 go run cmd/api-server/main.go
 
 run-executor: 

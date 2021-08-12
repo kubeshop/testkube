@@ -37,7 +37,7 @@ func NewProxyScriptsAPI(client *kubernetes.Clientset, config ProxyConfig) ProxyS
 func NewDefaultProxyConfig() ProxyConfig {
 	return ProxyConfig{
 		Namespace:   "default",
-		ServiceName: "api-server-kubetest",
+		ServiceName: "kubetest-api-server",
 		ServicePort: 8080,
 	}
 }
@@ -205,10 +205,11 @@ func (c ProxyScriptsAPI) getScriptFromResponse(resp rest.Result) (script kubetes
 
 	return script, err
 }
-func (c ProxyScriptsAPI) getProblemFromResponse(resp rest.Result) (problemResponse problem.Problem, err error) {
+func (c ProxyScriptsAPI) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
 	bytes, respErr := resp.Raw()
 
-	err = json.Unmarshal(bytes, &problemResponse)
+	problemResponse := problem.Problem{}
+	err := json.Unmarshal(bytes, &problemResponse)
 
 	// add kubeAPI client error to details
 	if respErr != nil {
@@ -218,16 +219,18 @@ func (c ProxyScriptsAPI) getProblemFromResponse(resp rest.Result) (problemRespon
 	return problemResponse, err
 }
 
+// responseError tries to lookup if response is of Problem type
 func (c ProxyScriptsAPI) responseError(resp rest.Result) error {
 	if resp.Error() != nil {
 		pr, err := c.getProblemFromResponse(resp)
 
+		// if can't process response return content from response
 		if err != nil {
 			content, _ := resp.Raw()
-			return fmt.Errorf("unhandled api server response: %w\nresponse: %s", err, content)
+			return fmt.Errorf("api server response: '%s'\nerror: %w", content, resp.Error())
 		}
 
-		return fmt.Errorf("problem: %+v", pr.Detail)
+		return fmt.Errorf("api server problem: %s", pr.Detail)
 	}
 
 	return nil
