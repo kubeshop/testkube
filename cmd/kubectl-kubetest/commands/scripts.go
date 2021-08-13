@@ -11,6 +11,10 @@ func init() {
 	scriptsCmd.PersistentFlags().String("client", "proxy", "Client used for connecting to Kubetest API one of proxy|direct")
 	scriptsCmd.PersistentFlags().Bool("verbose", false, "should I show additional debug messages")
 
+	// output renderer flags
+	scriptsCmd.PersistentFlags().String("output", "raw", "output typoe one of raw|json|go ")
+	scriptsCmd.PersistentFlags().String("go-template", "", "output typoe one of raw|json|go ")
+
 	scriptsCmd.AddCommand(scripts.AbortExecutionCmd)
 	scriptsCmd.AddCommand(scripts.ListScriptsCmd)
 	scriptsCmd.AddCommand(scripts.StartScriptCmd)
