@@ -28,9 +28,11 @@ func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionR
 	runHasFailedAssertions := false
 	for _, execution := range newmanResult.Metadata.Run.Executions {
 
+		duration := time.Duration(execution.Response.ResponseTime) * time.Millisecond
 		step := kubetest.ExecutionStepResult{
-			Name:   execution.Item.Name,
-			Status: "success",
+			Name:     execution.Item.Name,
+			Status:   "success",
+			Duration: duration.String(),
 		}
 
 		executionHasFailedAssertions := false
