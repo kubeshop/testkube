@@ -24,6 +24,7 @@ var GetScriptExecutionCmd = &cobra.Command{
 		ui.ExitOnError("getting API for script completion", err)
 
 		render := GetRenderer(cmd)
-		render.Render(scriptExecution, os.Stdout)
+		err = render.Render(scriptExecution, os.Stdout)
+		ui.ExitOnError("rendering", err)
 	},
 }

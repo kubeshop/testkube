@@ -23,6 +23,7 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		ui.ExitOnError("Getting executions for script "+scriptID, err)
 
 		renderer := GetListRenderer(cmd)
-		renderer.Render(executions, os.Stdout)
+		err = renderer.Render(executions, os.Stdout)
+		ui.ExitOnError("rendering", err)
 	},
 }
