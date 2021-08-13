@@ -20,7 +20,10 @@ var GetScriptExecutionsCmd = &cobra.Command{
 		client := GetClient(cmd)
 
 		executions, err := client.ListExecutions(scriptID)
-		ui.ExitOnError("getting executions ", err)
-		ui.Table(executions, os.Stdout)
+		ui.ExitOnError("Getting executions for script "+scriptID, err)
+
+		renderer := GetListRenderer(cmd)
+		err = renderer.Render(executions, os.Stdout)
+		ui.ExitOnError("rendering", err)
 	},
 }

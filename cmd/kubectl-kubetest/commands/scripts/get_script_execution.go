@@ -1,7 +1,7 @@
 package scripts
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
@@ -23,14 +23,8 @@ var GetScriptExecutionCmd = &cobra.Command{
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
 		ui.ExitOnError("getting API for script completion", err)
 
-		// TODO make some wrapper functions for getting Errors and output
-		if scriptExecution.Execution.Result.ErrorMessage != "" {
-			ui.Errf("Script execution error")
-			fmt.Println(scriptExecution.Execution.Result.ErrorMessage)
-		} else {
-			ui.Info("Script execution success")
-
-		}
-		fmt.Println(scriptExecution.Execution.Result.RawOutput)
+		render := GetRenderer(cmd)
+		err = render.Render(scriptExecution, os.Stdout)
+		ui.ExitOnError("rendering", err)
 	},
 }
