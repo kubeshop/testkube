@@ -28,11 +28,11 @@ func TestRun(t *testing.T) {
 	buffer := strings.NewReader(fmt.Sprintf(exampleCollection, port, port))
 
 	// when
-	result, err := runner.Run(buffer, map[string]string{})
+	result := runner.Run(buffer, map[string]string{})
 
 	// then
-	assert.NoError(t, err)
-	assert.Contains(t, result, "Successful GET request")
+	assert.Empty(t, result.ErrorMessage)
+	assert.Contains(t, result.RawOutput, "Successful GET request")
 	assert.Equal(t, requestCompleted, true)
 
 }

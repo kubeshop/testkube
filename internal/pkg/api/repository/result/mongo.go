@@ -26,8 +26,8 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result kubetest.S
 	return
 }
 
-func (r *MongoRepository) GetByName(ctx context.Context, name string) (result kubetest.ScriptExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result kubetest.ScriptExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "scriptname": script}).Decode(&result)
 	return
 }
 
