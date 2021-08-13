@@ -22,5 +22,5 @@ type ExecutionStepResult struct {
 	EndTime time.Time `json:"end-time,omitempty"`
 	// execution step status
 	Status string `json:"status,omitempty"`
-	AssertionResults *AssertionResult `json:"assertionResults,omitempty"`
+	AssertionResults []AssertionResult `json:"assertionResults,omitempty"`
 }

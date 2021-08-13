@@ -15,7 +15,8 @@ func Execute(command string, arguments ...string) (out []byte, err error) {
 	proc.Start()
 	err = proc.Wait()
 	if err != nil {
-		return out, fmt.Errorf("process error: %w\noutput: %s", err, buffer.String())
+		// TODO clean error output (currently it has buffer too - need to refactor in cmd)
+		return buffer.Bytes(), fmt.Errorf("process error: %w\noutput: %s", err, buffer.String())
 	}
 
 	return buffer.Bytes(), nil

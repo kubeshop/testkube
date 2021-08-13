@@ -37,30 +37,22 @@ type Info struct {
 }
 
 type Item struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Request struct {
-		URL struct {
-			Protocol string        `json:"protocol"`
-			Path     []string      `json:"path"`
-			Host     []string      `json:"host"`
-			Query    []interface{} `json:"query"`
-			Variable []interface{} `json:"variable"`
-		} `json:"url"`
-		Method string `json:"method"`
-	} `json:"request"`
+	ID       string        `json:"id"`
+	Name     string        `json:"name"`
+	Request  Request       `json:"request"`
 	Response []interface{} `json:"response"`
-	Event    []struct {
-		Listen string `json:"listen"`
-		Script struct {
-			ID              string   `json:"id"`
-			Type            string   `json:"type"`
-			Exec            []string `json:"exec"`
-			LastExecutionID string   `json:"_lastExecutionId"`
-		} `json:"script"`
-	} `json:"event"`
+	Event    []Event       `json:"event"`
 }
 
+type Event struct {
+	Listen string `json:"listen"`
+	Script struct {
+		ID              string   `json:"id"`
+		Type            string   `json:"type"`
+		Exec            []string `json:"exec"`
+		LastExecutionID string   `json:"_lastExecutionId"`
+	} `json:"script"`
+}
 type Run struct {
 	Stats      RunStats    `json:"stats"`
 	Timings    RunTimings  `json:"timings"`
@@ -69,7 +61,7 @@ type Run struct {
 		ResponseTotal int `json:"responseTotal"`
 	} `json:"transfers"`
 	Failures []Failure `json:"failures"`
-	Error    RunError  `json:"error"`
+	Error    *RunError `json:"error,omitempty"`
 }
 
 type RunTimings struct {
@@ -196,125 +188,78 @@ type FailureError struct {
 	} `json:"stacktrace"`
 }
 type Execution struct {
-	Cursor struct {
-		Position      int    `json:"position"`
-		Iteration     int    `json:"iteration"`
-		Length        int    `json:"length"`
-		Cycles        int    `json:"cycles"`
-		Empty         bool   `json:"empty"`
-		EOF           bool   `json:"eof"`
-		Bof           bool   `json:"bof"`
-		Cr            bool   `json:"cr"`
-		Ref           string `json:"ref"`
-		HTTPRequestID string `json:"httpRequestId"`
-	} `json:"cursor,omitempty"`
-	Item struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		Request struct {
-			URL struct {
-				Protocol string        `json:"protocol"`
-				Path     []string      `json:"path"`
-				Host     []string      `json:"host"`
-				Query    []interface{} `json:"query"`
-				Variable []interface{} `json:"variable"`
-			} `json:"url"`
-			Method string `json:"method"`
-		} `json:"request"`
-		Response []interface{} `json:"response"`
-		Event    []struct {
-			Listen string `json:"listen"`
-			Script struct {
-				ID              string   `json:"id"`
-				Type            string   `json:"type"`
-				Exec            []string `json:"exec"`
-				LastExecutionID string   `json:"_lastExecutionId"`
-			} `json:"script"`
-		} `json:"event"`
-	} `json:"item"`
-	Request struct {
-		URL struct {
-			Protocol string        `json:"protocol"`
-			Path     []string      `json:"path"`
-			Host     []string      `json:"host"`
-			Query    []interface{} `json:"query"`
-			Variable []interface{} `json:"variable"`
-		} `json:"url"`
-		Header []struct {
-			Key    string `json:"key"`
-			Value  string `json:"value"`
-			System bool   `json:"system"`
-		} `json:"header"`
-		Method string `json:"method"`
-	} `json:"request"`
-	Response struct {
-		ID     string `json:"id"`
-		Status string `json:"status"`
-		Code   int    `json:"code"`
-		Header []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"header"`
-		Stream struct {
-			Type string `json:"type"`
-			Data []int  `json:"data"`
-		} `json:"stream"`
-		Cookie       []interface{} `json:"cookie"`
-		ResponseTime int           `json:"responseTime"`
-		ResponseSize int           `json:"responseSize"`
-	} `json:"response"`
-	ID         string `json:"id"`
-	Assertions []struct {
-		Assertion string   `json:"assertion"`
-		Skipped   bool     `json:"skipped"`
-		Error     RunError `json:"error,omitempty"`
-	} `json:"assertions"`
+	Cursor     ExecutionCursor `json:"cursor,omitempty"`
+	Item       Item            `json:"item"`
+	Request    Request         `json:"request"`
+	Response   Response        `json:"response"`
+	ID         string          `json:"id"`
+	Assertions []Assertion     `json:"assertions"`
+}
+
+type Assertion struct {
+	Assertion string    `json:"assertion"`
+	Skipped   bool      `json:"skipped"`
+	Error     *RunError `json:"error,omitempty"`
+}
+
+type Request struct {
+	URL struct {
+		Protocol string        `json:"protocol"`
+		Path     []string      `json:"path"`
+		Host     []string      `json:"host"`
+		Query    []interface{} `json:"query"`
+		Variable []interface{} `json:"variable"`
+	} `json:"url"`
+	Header []struct {
+		Key    string `json:"key"`
+		Value  string `json:"value"`
+		System bool   `json:"system"`
+	} `json:"header"`
+	Method string `json:"method"`
+}
+
+type Response struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Code   int    `json:"code"`
+	Header []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"header"`
+	Stream struct {
+		Type string `json:"type"`
+		Data []int  `json:"data"`
+	} `json:"stream"`
+	Cookie       []interface{} `json:"cookie"`
+	ResponseTime int           `json:"responseTime"`
+	ResponseSize int           `json:"responseSize"`
+}
+type ExecutionCursor struct {
+	Position      int    `json:"position"`
+	Iteration     int    `json:"iteration"`
+	Length        int    `json:"length"`
+	Cycles        int    `json:"cycles"`
+	Empty         bool   `json:"empty"`
+	EOF           bool   `json:"eof"`
+	Bof           bool   `json:"bof"`
+	Cr            bool   `json:"cr"`
+	Ref           string `json:"ref"`
+	HTTPRequestID string `json:"httpRequestId"`
 }
 
 type RunStats struct {
-	Iterations struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"iterations"`
-	Items struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"items"`
-	Scripts struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"scripts"`
-	Prerequests struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"prerequests"`
-	Requests struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"requests"`
-	Tests struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"tests"`
-	Assertions struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"assertions"`
-	TestScripts struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"testScripts"`
-	PrerequestScripts struct {
-		Total   int `json:"total"`
-		Pending int `json:"pending"`
-		Failed  int `json:"failed"`
-	} `json:"prerequestScripts"`
+	Iterations        Stat `json:"iterations"`
+	Items             Stat `json:"items"`
+	Scripts           Stat `json:"scripts"`
+	Prerequests       Stat `json:"prerequests"`
+	Requests          Stat `json:"requests"`
+	Tests             Stat `json:"tests"`
+	Assertions        Stat `json:"assertions"`
+	TestScripts       Stat `json:"testScripts"`
+	PrerequestScripts Stat `json:"prerequestScripts"`
+}
+type Stat struct {
+	Total   int `json:"total"`
+	Pending int `json:"pending"`
+	Failed  int `json:"failed"`
 }

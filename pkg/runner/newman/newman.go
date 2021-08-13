@@ -2,6 +2,7 @@ package newman
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -33,7 +34,7 @@ func (r *Runner) Run(input io.Reader, params map[string]string) (result kubetest
 
 	var newmanResult NewmanExecutionResult
 
-	tmpName := tmp.Name()
+	tmpName := tmp.Name() + ".json"
 	out, err := process.Execute("newman", "run", path, "-e", envpath, "--reporters", "cli,json", "--reporter-json-export", tmpName)
 	if err != nil {
 		return result.Err(err)
@@ -47,11 +48,17 @@ func (r *Runner) Run(input io.Reader, params map[string]string) (result kubetest
 		return result.Err(err)
 	}
 
+	fmt.Printf("JSON:\n%+v\n", string(bytes))
+	fmt.Printf("TMPFILE:\n%+v\n", tmpName)
+
 	err = json.Unmarshal(bytes, &newmanResult.Metadata)
 	if err != nil {
-		return result.Err(err)
+		return result.Err(fmt.Errorf("parsing results metadata error: %w", err))
 	}
 
 	// convert newman result to OpenAPI struct
-	return MapMetadataToResult(newmanResult)
+	res := MapMetadataToResult(newmanResult)
+	fmt.Printf("RESULT: %+v\n", res)
+
+	return res
 }

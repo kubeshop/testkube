@@ -470,7 +470,8 @@ components:
           enum: [success, failed]
         assertionResults: 
           type: array
-          $ref: '#/components/schemas/AssertionResult'
+          items:
+            $ref: '#/components/schemas/AssertionResult'
         
     AssertionResult:
       description: execution result data
@@ -483,6 +484,8 @@ components:
           enum: [success, failed]
         error-message: 
           type: string
+          nullable: true
+
 
 
 #

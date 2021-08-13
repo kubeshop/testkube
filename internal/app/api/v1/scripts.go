@@ -104,21 +104,25 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
-		scriptExecution, _ := s.Repository.GetByName(context.Background(), request.Name)
+		// script name + script execution name should be unique
+		scriptExecution, _ := s.Repository.GetByNameAndScript(context.Background(), request.Name, scriptID)
 		if scriptExecution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
 
+		// get script content from Custom Resource
 		scriptCR, err := s.ScriptsClient.Get(request.Namespace, scriptID)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
 		}
 
+		// pass content to executor client
 		execution, err := s.ExecutorClient.Execute(scriptCR.Spec.Content, request.Params)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
+		// store execution
 		ctx := context.Background()
 		scriptExecution = kubetest.NewScriptExecution(
 			scriptID,
@@ -128,12 +132,14 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 
+		// watch for execution results
 		execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubetest.Execution) error {
 			s.Log.Infow("saving", "status", e.Status, "scriptExecution", scriptExecution)
 			scriptExecution.Execution = &e
 			return s.Repository.Update(ctx, scriptExecution)
 		})
 
+		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
