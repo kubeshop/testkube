@@ -3,7 +3,7 @@
 - [KubeTest - your testing friend](#kubetest---your-testing-friend)
 - [Kubectl kubetest plugin](#kubectl-kubetest-plugin)
   * [Installation](#installation)
-    + [Manual installation](#manual-installation)
+    + [Helm installation](#helm-installation)
   * [Usage](#usage)
 - [Architecture (C4 Diagrams)](#architecture--c4-diagrams-)
   * [Info](#info)
@@ -39,7 +39,7 @@ you can use following command to install all required components of KubeTest:
 kubectl kubetest install
 ```
 
-### Manual installation
+### Helm installation
 
 Helm install 
 
@@ -62,6 +62,36 @@ To uninstall the `kubetest` chart:
 ```sh
 helm delete my-<chart-name> kubetest/kubetest
 ```
+
+Helm defaults used in the `Kubetest` chart:
+
+| Parameter | Is optional | Default |
+| --- | --- | --- |
+| mongodb.auth.enabled | yes | false |
+| mongodb.service.port | yes | "27017" |
+| mongodb.service.portNmae | yes | "mongodb" |
+| mongodb.service.nodePort | yes | true |
+| mongodb.service.clusterIP | yes | "" |
+| mongodb.nameOverride | yes | "mongodb" |
+| mongodb.fullnameOverride | yes | "kubetest-mongodb" |
+| api-server.image.repository | yes | "kubeshop/kubetest-api-server" |
+| api-server.image.pullPolicy | yes | "Always" |
+| api-server.image.tag | yes | "latest" |
+| api-server.service.type | yes | "NodePort" |
+| api-server.service.port | yes | 8080 |
+| api-server.mongoDSN | yes | "mongodb://kubetest-mongodb:27017" |
+| api-server.postmanExecutorURI | yes | "http://kubetest-postman-executor:8082" |
+| postman-executor.image.repository | yes | "kubeshop/kubetest-postman-executor" |
+| postman-executor.image.pullPolicy | yes | "Always" |
+| postman-executor.image.tag | yes | "latest" |
+| postman-executor.service.type | yes | "NodePort" |
+| postman-executor.service.port | yes | 8082 |
+| postman-executor.mongoDSN | yes | "mongodb://kubetest-mongodb:27017" |
+| postman-executor.apiServerURI | yes | "http://kubetest-api-server:8080" |
+
+>For more configuration parameters of `MongoDB` chart please look here:
+https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
+
 ## Usage 
 
 0) First you'll need to define test, tests are defined as Curstom Resource in Kubernetes cluster (access to Kubernetes cluster would be also needed)
