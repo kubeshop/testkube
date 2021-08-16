@@ -7,14 +7,12 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  generate:
-    name: Create and upload release-artifacts
+  release_creation:
+    name: Prepares Release on GitHub
+    needs: [build_kubetest_binary]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v2
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -29,15 +27,22 @@ jobs:
           draft: false
           prerelease: false
 
+  build_and_upload:
+    name: Create and upload release-artifacts
+    needs: [release_creation]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
       - name: Generate the artifacts
         uses: skx/github-action-build@master
         with:
           builder: .github/kubectl-kubetest-builder
-
       - name: Upload the artifacts to release
         uses: skx/github-action-publish-binaries@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ needs.create_release.outputs.id }}
+          releaseId: ${{ needs.release_creation.outputs.id }}
           args: 'kubectl-kubetest'
