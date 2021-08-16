@@ -1,2 +1,0 @@
-go build -o "/github/home/kubectl-kubetest" cmd/kubectl-kubetest/main.go
-ls -al /github/home/kubectl-kubetest

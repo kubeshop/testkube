@@ -35,9 +35,9 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v2
       - name: Generate the artifacts
-        uses: skx/github-action-build@master
-        with:
-          builder: .github/kubectl-kubetest-builder
+        run: |
+          go build -o "/github/workspace/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+          ls -al /github/workspace/kubectl-kubetest
       - name: Upload the artifacts to release
         uses: skx/github-action-publish-binaries@master
         env:
