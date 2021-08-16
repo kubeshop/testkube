@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/kubeshop/kubetest/pkg/process"
 	"github.com/kubeshop/kubetest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,10 @@ var installCmd = &cobra.Command{
 	Short: "Install Helm chart registry in current kubectl context",
 	Long:  `Install can be configured with use of particular `,
 	Run: func(cmd *cobra.Command, args []string) {
-		ui.Errf("NOT IMPLEMENTED")
+
+		out, err := process.Execute("helm", "install", "kubetest", "./charts/kubetest")
+		ui.ExitOnError("executing helm install", err)
+
+		ui.Info("Helm output", string(out))
 	},
 }
