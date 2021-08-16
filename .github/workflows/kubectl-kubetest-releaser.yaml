@@ -9,7 +9,6 @@ on:
 jobs:
   release_creation:
     name: Prepares Release on GitHub
-    needs: [build_kubetest_binary]
     runs-on: ubuntu-latest
 
     steps:
