@@ -1,6 +1,6 @@
 # Kubetest (by Kubeshop) Community Code of Conduct
 
-Kubetest follows the CNCF Code of Conduct. The text of the CNCF CoC is replicated below, as of commit 214585e. If you notice that this is out of date, please file an issue.
+Kubetest follows the CNCF Code of Conduct. The text of the CNCF CoC is replicated below. If you notice that this is out of date, please file an issue.
 
 If you notice a violation of the Code of Conduct at an event or meeting, in Slack, or in another communication mechanism, reach out to the Kubetest Code of Conduct Committee. You can reach us by email at contact@kubeshop.io Your anonymity will be protected.
 
