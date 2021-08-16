@@ -10,8 +10,7 @@ func init() {
 
 	RootCmd.AddCommand(installCmd)
 
-	installCmd.Flags().String("namespace", "default", "namespace where kubetest should be installed to")
-	installCmd.Flags().String("port", ":8080", "kubetest api server port")
+	installCmd.Flags().String("chart", "./charts/kubetest", "chart name")
 }
 
 var installCmd = &cobra.Command{
@@ -20,7 +19,9 @@ var installCmd = &cobra.Command{
 	Long:  `Install can be configured with use of particular `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		out, err := process.Execute("helm", "install", "kubetest", "./charts/kubetest")
+		chart := cmd.Flag("chart").Value.String()
+
+		out, err := process.Execute("helm", "install", "kubetest", chart)
 		ui.ExitOnError("executing helm install", err)
 
 		ui.Info("Helm output", string(out))
