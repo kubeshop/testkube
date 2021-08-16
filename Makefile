@@ -7,6 +7,10 @@ GITHUB_TOKEN ?= "SET_ME"
 run-api-server: 
 	APISERVER_PORT=8080 go run cmd/api-server/main.go
 
+run-api-server-telepresence: 
+	API_MONGO_DSN=mongodb://kubetest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubetest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
+
+
 run-executor: 
 	POSTMANEXECUTOR_PORT=8082 go run cmd/postman-executor/main.go
 
