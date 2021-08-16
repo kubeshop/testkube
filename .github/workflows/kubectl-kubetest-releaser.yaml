@@ -6,7 +6,6 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-*"
 
-name: Handle Kubetest plugin GO Release
 jobs:
   generate:
     name: Create and upload release-artifacts
