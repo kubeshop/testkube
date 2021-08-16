@@ -10,6 +10,7 @@ jobs:
   generate:
     name: Create and upload release-artifacts
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v2
