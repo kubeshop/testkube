@@ -1,7 +1,6 @@
 package newman
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/kubeshop/kubetest/pkg/api/kubetest"
@@ -42,7 +41,6 @@ func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionR
 				Status: "success",
 			}
 
-			fmt.Printf("%+v %+v\n", assertion.Assertion, assertion.Error)
 			if assertion.Error != nil {
 
 				assertionResult.ErrorMessage = assertion.Error.Message
