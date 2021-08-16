@@ -10,10 +10,11 @@ jobs:
   release_creation:
     name: Prepares Release on GitHub
     runs-on: ubuntu-latest
-
+    outputs:
+      id: ${{ steps.main_step.outputs.id }}
     steps:
       - name: Create Release
-        id: create_release
+        id: main_step
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
