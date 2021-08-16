@@ -46,6 +46,7 @@ func (s *HTTPServer) Init() {
 func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error) error {
 	c.Status(status)
 	c.Response().Header.Set("Content-Type", "application/problem+json")
+	s.Log.Errorw(err.Error(), "status", status)
 	return c.JSON(problem.New(status, err.Error()))
 }
 
