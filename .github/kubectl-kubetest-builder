@@ -1,1 +1,1 @@
-make build-kubetest-bin
+go build -o "/github/home/kubectl-kubetest" cmd/kubectl-kubetest/main.go

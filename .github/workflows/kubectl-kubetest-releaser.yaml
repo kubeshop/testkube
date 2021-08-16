@@ -10,7 +10,7 @@ jobs:
   generate:
     name: Create and upload release-artifacts
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v2
@@ -40,4 +40,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ needs.create_release.outputs.id }}
-          args: 'kubectl-kubetest-*'
+          args: 'kubectl-kubetest'
