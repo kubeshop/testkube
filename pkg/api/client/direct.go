@@ -171,6 +171,7 @@ func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (execut
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&executions)
+
 	return
 }
 
