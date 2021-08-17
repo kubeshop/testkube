@@ -16,13 +16,11 @@ func NewScriptExecution(scriptName, name string, execution Execution, params map
 type ScriptExecutions []ScriptExecution
 
 func (executions ScriptExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Script", "Type", "Execution ID", "Execution Name", "Status"}
+	header = []string{"Name", "ID", "Status"}
 	for _, e := range executions {
 		output = append(output, []string{
-			e.ScriptName,
-			e.ScriptType,
-			e.Id,
 			e.Name,
+			e.Id,
 			e.Execution.Status,
 		})
 	}
