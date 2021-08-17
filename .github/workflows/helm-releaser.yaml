@@ -1,20 +1,20 @@
-name: Release Kubetest api-server chart.
+name: Release Kubetest charts.
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'charts/api-server/**'
+      - 'charts/**'
   pull_request:
     branches:
       - main
     paths:
-      - 'charts/api-server/**'
+      - 'charts/**'
 
 jobs:
 
-  release_api_server:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
