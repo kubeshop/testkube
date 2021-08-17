@@ -1,20 +1,20 @@
-name: Release Kubetest charts.
+name: Release Kubetest api-server chart.
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'charts/**'
+      - 'charts/api-server/**'
   pull_request:
     branches:
       - main
     paths:
-      - 'charts/**'
+      - 'charts/api-server/**'
 
 jobs:
 
-  release:
+  release_api_server:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,5 +29,7 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts/api-server
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
