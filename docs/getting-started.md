@@ -1,6 +1,10 @@
 # Getting Started 
 
-0) First you'll need to define test, tests are defined as Curstom Resource in Kubernetes cluster (access to Kubernetes cluster would be also needed)
+Please follow [install steps](/docs/installing.md) for kubetest installation
+
+## Defining tests
+
+First you'll need to define test, tests are defined as Curstom Resource in Kubernetes cluster (access to Kubernetes cluster would be also needed)
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
@@ -109,7 +113,7 @@ Name is unique Sript Custom Resource name.
 Type is `postman/collection` as it runs exported postman collections.
 
 
-1) Starting new script execution 
+## Starting new script execution 
 
 ```
 $ kubectl kubetest scripts start my-test-name 
@@ -124,14 +128,14 @@ Execution ID 02wi02-29329-2392930-93939
 > ```
 >>_E.G. `kubectl kubetest scripts start test-kubeshop`_
 
-2) [TODO] Aborting already started script execution 
+## [TODO] Aborting already started script execution - NOT IMPLEMENTED
 ```
 $ kubectl kubetest scripts abort SOME_EXECUTION_ID
 Script "SCRIPTNAME" Execution aborted
 
 ```
 
-3) Getting available scripts
+## Getting available scripts
 ```
 $ kubectl kubetest scripts list
 
@@ -141,10 +145,10 @@ ID         NAME              Type
 
 ```
  
-4) Getting available executions
+## Getting available executions
 
 ```sh
-kubectl kubetest scripts executions
+kubectl kubetest scripts executions script-name
 
 ID         NAME             Status     Complete   Start              End
 1233-333   HomePage run     pending    75%        2021-07-30 12:33   
@@ -154,7 +158,7 @@ ID         NAME             Status     Complete   Start              End
 5) Getting execution details
 
 ```sh
-kubectl kubetest scripts execution test 6103a45b7e18c4ea04883866
+kubectl kubetest scripts execution script-name 6103a45b7e18c4ea04883866
 
 ....
 some execution details
