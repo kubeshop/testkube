@@ -9,6 +9,7 @@ before:
 builds:
   - 
     main: ./cmd/kubectl-kubetest
+    binary: kubectl-kubetest
     env:
       - CGO_ENABLED=0
     goos:
