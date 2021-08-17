@@ -3,7 +3,7 @@ name: Release Kubetest kubetest chart.
 on:
   push:
     paths:
-      - 'charts/kubetest/**'
+      - 'build/kubetest/**'
     branches:
       - main
 
@@ -36,6 +36,6 @@ jobs:
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.1
         with:
-          charts_dir: charts/kubetest/charts
+          charts_dir:  build/kubetest/charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

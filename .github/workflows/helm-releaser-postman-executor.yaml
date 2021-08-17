@@ -3,7 +3,7 @@ name: Release Kubetest postman-executor chart.
 on:
   push:
     paths:
-      - 'charts/postman-executor/**'
+      - 'build/postman-executor/**'
     branches:
       - main
 
@@ -30,6 +30,6 @@ jobs:
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.1
         with:
-          charts_dir: charts/postman-executor/charts
+          charts_dir: build/postman-executor/charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
