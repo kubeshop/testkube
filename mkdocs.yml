@@ -1,0 +1,25 @@
+site_name: Kubetest
+site_description: 'Your Kubernetes Testing Friend'
+site_author: 'Kubeshop Kubetest Team'
+docs_dir: docs/
+repo_name: 'kubeshop/kubetest'
+repo_url: 'https://github.com/kubeshop/kubetest'
+edit_uri: blob/main/docs/
+
+theme:
+  name: material
+  locale: en
+  highlightjs: true
+  hljs_languages:
+    - yaml
+
+nav:
+  - Welcome: index.md
+  - Installation: installing.md
+  - Usage: getting-started.md
+  - Reference: reference.md
+  - Architecture: architecture.md
+  - Contributing: contributing.md
+
+copyright: Copyright &copy; 2021 <a href="https://kubeshop.io">Kubeshop</a>
+

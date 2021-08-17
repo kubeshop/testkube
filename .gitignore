@@ -22,5 +22,6 @@ vendor/
 
 .DS_Store
 bin/
-
+build
+site
 dist/
