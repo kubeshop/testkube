@@ -37,8 +37,11 @@ jobs:
         uses: actions/checkout@v2
       - name: Generate the artifacts
         run: |
-          go build -o "./kubectl-kubetest" cmd/kubectl-kubetest/main.go
-          ls -al ./kubectl-kubetest
+          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o "./kubectl-kubetest-x64" cmd/kubectl-kubetest/main.go
+          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o "./kubectl-kubetest-x64.exe" cmd/kubectl-kubetest/main.go
+          CGO_ENABLED=1 GOOS=ios GOARCH=amd64 go build -o "./kubectl-kubetest-ios-x64" cmd/kubectl-kubetest/main.go
+          CGO_ENABLED=1 GOOS=ios GOARCH=arm64 go build -o "./kubectl-kubetest-ios-arm64" cmd/kubectl-kubetest/main.go
+          ls -al ./kubectl-kubetest*
       - name: Upload the artifacts to release
         uses: skx/github-action-publish-binaries@master
         env:
