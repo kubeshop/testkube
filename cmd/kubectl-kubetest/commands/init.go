@@ -10,7 +10,9 @@ func init() {
 
 	RootCmd.AddCommand(installCmd)
 
-	installCmd.Flags().String("chart", "./charts/kubetest", "chart name")
+	installCmd.Flags().String("chart", "kubetest/kubetest", "chart name")
+	installCmd.Flags().String("name", "kubetest", "installation name")
+	installCmd.Flags().String("namespace", "default", "namespace where to install")
 }
 
 var installCmd = &cobra.Command{
@@ -20,8 +22,13 @@ var installCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		chart := cmd.Flag("chart").Value.String()
+		name := cmd.Flag("name").Value.String()
+		namespace := cmd.Flag("namespace").Value.String()
 
-		out, err := process.Execute("helm", "install", "kubetest", chart)
+		_, err := process.Execute("helm", "repo", "add", "kubetest", "https://kubeshop.github.io/kubetest")
+		ui.ExitOnError("adding kubetest repo", err)
+
+		out, err := process.Execute("helm", "install", "--namespace", namespace, name, chart)
 		ui.ExitOnError("executing helm install", err)
 
 		ui.Info("Helm output", string(out))
