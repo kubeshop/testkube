@@ -2,15 +2,16 @@ name: Release Kubetest api-server chart.
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'charts/api-server/**'
+    branches:
+      - main
+
   pull_request:
-    branches:
-      - main
     paths:
       - 'charts/api-server/**'
+    branches:
+      - main
 
 jobs:
 

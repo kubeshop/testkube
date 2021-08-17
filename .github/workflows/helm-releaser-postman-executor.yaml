@@ -2,15 +2,15 @@ name: Release Kubetest postman-executor chart.
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'charts/postman-executor/**'
+    branches:
+      - main
   pull_request:
-    branches:
-      - main
     paths:
       - 'charts/postman-executor/**'
+    branches:
+      - main
 
 jobs:
 

@@ -2,15 +2,15 @@ name: Release Kubetest kubetest chart.
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'charts/kubetest/**'
+    branches:
+      - main
   pull_request:
-    branches:
-      - main
     paths:
       - 'charts/kubetest/**'
+    branches:
+      - main
 
 jobs:
 
