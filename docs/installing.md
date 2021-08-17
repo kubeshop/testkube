@@ -6,7 +6,7 @@ To install `kubectl kubetest` plugin please download [latest release of kubetest
 https://github.com/kubeshop/kubetest/releases) unpack binary and put it somewhere in 
 your `$PATH`. 
 
-We have in plans to build installers for most popular OS and system distros.
+We have plans to build installers for most popular OS and system distros.
 
 ## Cluster
 
