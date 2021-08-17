@@ -33,16 +33,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the repository
+      -
+        name: Checkout
         uses: actions/checkout@v2
-      - name: Generate the artifacts
-        run: |
-          go build -o "./kubectl-kubetest" cmd/kubectl-kubetest/main.go
-          ls -al ./kubectl-kubetest
-      - name: Upload the artifacts to release
-        uses: skx/github-action-publish-binaries@master
+        with:
+          fetch-depth: 0
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      -
+        name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          releaseId: ${{ needs.release_creation.outputs.id }}
-          args: 'kubectl-kubetest'
+          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
