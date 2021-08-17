@@ -34,8 +34,8 @@ builds:
   - linux_386
   - darwin_amd64
   - darwin_arm64
-  dir: cmd/kubectl-kubetest
-  main: main.go
+  dir: .
+  main: .
   ldflags:
   - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
     -X main.builtBy=goreleaser
