@@ -1,16 +1,11 @@
-name: Release Kubetest charts.
+name: Release Kubetest postman-executor chart.
 
 on:
   push:
+    paths:
+      - 'build/postman-executor/**'
     branches:
       - main
-    paths:
-      - 'charts/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'charts/**'
 
 jobs:
 
@@ -27,7 +22,14 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.4.0
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: build/postman-executor/charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

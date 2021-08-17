@@ -1,0 +1,41 @@
+name: Release Kubetest kubetest chart.
+
+on:
+  push:
+    paths:
+      - 'build/kubetest/**'
+    branches:
+      - main
+
+jobs:
+
+  release_kubetest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.4.0
+
+      - name: Installing repositories
+        run: |
+          helm repo add kubetest-operator https://kubeshop.github.io/kubetest-operator
+          helm repo add kubetest https://kubeshop.github.io/kubetest
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir:  build/kubetest/charts
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

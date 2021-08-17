@@ -19,6 +19,8 @@ vendor/
 .idea
 *.iml
 
+# Helm
+Chart.lock
 
 .DS_Store
 bin/
