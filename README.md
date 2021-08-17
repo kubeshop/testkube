@@ -1,6 +1,7 @@
 # TOC 
 
 - [KubeTest - your testing friend](#kubetest---your-testing-friend)
+- [Contribution to project](#contribution-to-project)
 - [Kubectl kubetest plugin](#kubectl-kubetest-plugin)
   * [Installation](#installation)
     + [Helm installation](#helm-installation)
@@ -14,12 +15,7 @@
       - [API](#api)
       - [Operator](#operator)
       - [Executor](#executor)
-- [Contribution to project](#contribution-to-project)
-  * [General guidance for contributing to KubeTest project](#general-guidance-for-contributing-to-kubetest-project)
-    + [For golang based components](#for-golang-based-components)
-    + [For infrastructure / Kubernetes based components](#for-infrastructure---kubernetes-based-components)
   * [Building diagrams](#building-diagrams)
-- [Minimal components for PoC](#minimal-components-for-poc)
 
 # KubeTest - your testing friend
 
@@ -27,8 +23,29 @@ Kubernetes-native framework for definition and execution of tests in a cluster;
 
 Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
 
+Minimal components for PoC
+
+- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
+- API Server - work orchestrator, runs executors, gather execution results
+- CRDs Operator - watch KubeTest CR, handles changes communicates with API Server
+- Executors - runs tests defined by specific runner, for PoC phase we'll run Postman collection defined in CR.
+
+# Contribution to project
+
+Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
 # Kubectl kubetest plugin
+
+## Getting plugin 
+
+Quick way - use following snippet to download and install Kubetest plugin in your `$PATH`
+
+```
+curl -s https://raw.githubusercontent.com/kubeshop/kubetest/main/install.sh | sh
+```
+
+or do it manually from [releases page](https://github.com/kubeshop/kubetest/releases) and grab recent `kubectl-kubetest` binary
+
 
 ## Installation 
 
@@ -294,32 +311,6 @@ TODO  add diagram for operator
 
 
 
-# Contribution to project 
-
-If you're new in Open-source community there is nice guide how to start contributing to projects: 
-https://github.com/firstcontributions/first-contributions
-
-
-
-## General guidance for contributing to KubeTest project
-
-You're very welcome to help in KubeTest development, there is a lot of incoming work to do :). 
-
-We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into KubeTest repo.
-
-### For golang based components
-
-- Always use gofmt
-- Follow golang good practices (proverbs) in your code
-- Tests are your friend (we will target 80% CC in our code)
-- Use clean names, don't brake basic design patterns and rules.
-
-### For infrastructure / Kubernetes based components
-
-- Comment non-obvious decisions
-- Use current Helm/Kubernetes versions
-
-
 
 
 
@@ -342,10 +333,4 @@ to generate png files from puml files
 TIP: If using vscode there is nice extension for live preview of plantuml files.  
 
 
-# Minimal components for PoC
 
-- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
-- API Server - work orchestrator, runs executors, gather execution results
-- CRDs Operator - watch KubeTest CR, handles changes communicates with API Server
-- Executors - runs tests defined by specific runner, for PoC phase we'll run 
-  Postman collection defined in CR.
