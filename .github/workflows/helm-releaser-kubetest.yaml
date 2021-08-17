@@ -6,11 +6,6 @@ on:
       - 'charts/kubetest/**'
     branches:
       - main
-  pull_request:
-    paths:
-      - 'charts/kubetest/**'
-    branches:
-      - main
 
 jobs:
 
