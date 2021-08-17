@@ -48,4 +48,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ needs.release_creation.outputs.id }}
-          args: 'kubectl-kubetest'
+          args: 'kubectl-kubetest*'
