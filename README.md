@@ -271,17 +271,17 @@ Diagrams was made with use of C4 diagram technique
 
 ### System Context 
 
-![Kubetest system context diagram](docs/system_context.png)
+![Kubetest system context diagram](docs/img/system_context.png)
 
 ### Containers
 
-![Kubetest container diagram](docs/containers.png)
+![Kubetest container diagram](docs/img/containers.png)
 
 ### Components
 
 #### API 
 
-![API](docs/components_api.png)
+![API](docs/img/components_api.png)
 
 #### Operator
 
@@ -289,7 +289,7 @@ TODO  add diagram for operator
 
 #### Executor
 
-![Postman-Executor](docs/components_executor.png)
+![Postman-Executor](docs/img/components_executor.png)
 
 
 
