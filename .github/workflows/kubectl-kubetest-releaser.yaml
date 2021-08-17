@@ -1,0 +1,48 @@
+name: Release Kubetest CLI for Kubectl.
+
+on:
+  push:
+    tags: 
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
+
+jobs:
+  release_creation:
+    name: Prepares Release on GitHub
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.main_step.outputs.id }}
+    steps:
+      - name: Create Release
+        id: main_step
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Kubetest CLI ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - Releasing new version of the Kubetest CLI for Kubectl.
+          draft: false
+          prerelease: false
+
+  build_and_upload:
+    name: Create and upload release-artifacts
+    needs: [release_creation]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+      - name: Generate the artifacts
+        run: |
+          go build -o "./kubectl-kubetest" cmd/kubectl-kubetest/main.go
+          ls -al ./kubectl-kubetest
+      - name: Upload the artifacts to release
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.release_creation.outputs.id }}
+          args: 'kubectl-kubetest'
