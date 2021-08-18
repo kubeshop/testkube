@@ -2,7 +2,9 @@
 
 BIN_DIR ?= $(HOME)/bin
 GITHUB_TOKEN ?= "SET_ME"
-
+USER ?= $(USER)
+DATE ?= $(shell date -u --iso-8601=seconds)
+COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 
 run-api-server: 
 	APISERVER_PORT=8080 go run cmd/api-server/main.go
@@ -28,7 +30,7 @@ build-api-server:
 	go build -o $(BIN_DIR)/api-server cmd/api-server/main.go 
 
 build-kubetest-bin: 
-	go build -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
 
 
 # build done by vendoring to bypass private go repo problems

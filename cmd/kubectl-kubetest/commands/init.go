@@ -13,6 +13,8 @@ func init() {
 	installCmd.Flags().String("chart", "kubetest/kubetest", "chart name")
 	installCmd.Flags().String("name", "kubetest", "installation name")
 	installCmd.Flags().String("namespace", "default", "namespace where to install")
+
+	RootCmd.AddCommand(versionCmd)
 }
 
 var installCmd = &cobra.Command{
@@ -32,5 +34,20 @@ var installCmd = &cobra.Command{
 		ui.ExitOnError("executing helm install", err)
 
 		ui.Info("Helm output", string(out))
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Shows version and build info",
+	Long:  `Shows version and build info`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		ui.Logo()
+		ui.Info("Version", Version)
+		ui.Info("Commit", Commit)
+		ui.Info("Built by", BuiltBy)
+		ui.Info("Build date", Date)
+
 	},
 }

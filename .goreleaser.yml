@@ -10,6 +10,8 @@ builds:
   - 
     main: ./cmd/kubectl-kubetest
     binary: kubectl-kubetest
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{ .Tag }}-{{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=kubetest-ci
     env:
       - CGO_ENABLED=0
     goos:
