@@ -7,6 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	Commit  string
+	Version string
+	BuiltBy string
+	Date    string
+)
+
 var RootCmd = &cobra.Command{
 	Use:   "",
 	Short: "Kubetest entrypoint for plugin",

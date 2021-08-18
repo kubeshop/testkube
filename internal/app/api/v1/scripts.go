@@ -153,8 +153,19 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 func (s KubetestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
-		s.Log.Infow("Getting script executions", "id", scriptID)
-		executions, err := s.Repository.GetScriptExecutions(context.Background(), scriptID)
+
+		var executions []kubetest.ScriptExecution
+		var err error
+
+		// TODO should we split this to separate endpoint?
+		// or should scriptID be a query string as it's some kind of filter?
+		if scriptID == "-" {
+			s.Log.Infow("Getting newest script executions (no id passed)")
+			executions, err = s.Repository.GetNewestExecutions(context.Background(), 10)
+		} else {
+			s.Log.Infow("Getting script executions", "id", scriptID)
+			executions, err = s.Repository.GetScriptExecutions(context.Background(), scriptID)
+		}
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}

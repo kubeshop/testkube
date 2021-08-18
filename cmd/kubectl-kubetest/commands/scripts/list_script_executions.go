@@ -7,20 +7,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var GetScriptExecutionsCmd = &cobra.Command{
+var ListScriptExecutionsCmd = &cobra.Command{
 	Use:   "executions",
-	Short: "Gets script executions list",
-	Long:  `Getting list of execution for given script name`,
+	Short: "List scripts executions list",
+	Long:  `Getting list of execution for given script name or recent executions if there is no script name passed`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			ui.Failf("invalid script arguments please pass test name")
+		var scriptID string
+		if len(args) == 0 {
+			scriptID = "-"
+		} else if len(args) > 0 {
+			scriptID = args[0]
 		}
 
-		scriptID := args[0]
 		client := GetClient(cmd)
-
 		executions, err := client.ListExecutions(scriptID)
-		ui.ExitOnError("Getting executions for script "+scriptID, err)
+		ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
 		renderer := GetListRenderer(cmd)
 		err = renderer.Render(executions, os.Stdout)

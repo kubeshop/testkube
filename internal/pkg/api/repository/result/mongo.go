@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const CollectionName = "results"
@@ -28,6 +29,18 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result kubetest.S
 
 func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result kubetest.ScriptExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "scriptname": script}).Decode(&result)
+	return
+}
+
+func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []kubetest.ScriptExecution, err error) {
+	resultLimit := int64(limit)
+	opts := &options.FindOptions{Limit: &resultLimit}
+	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	cursor, err := r.Coll.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return result, err
+	}
+	cursor.All(ctx, &result)
 	return
 }
 
