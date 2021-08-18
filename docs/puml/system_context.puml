@@ -22,12 +22,15 @@ System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 Boundary(kubernetes, "kubnernetes cluster") {
 	System(kubetest, "Kubetest", "Tests stuff inside kuberbetes cluster", "kubernetes")
 
-	Person_Ext(testCrds, "Tests CRDs", "tests definitions Custom Resources", "kubernetes")
-	Person_Ext(executorCrds, "Executors CRDs", "executors CR (internal and custom) Custom Resources", "kubernetes")
+	Boundary(crds, "Custom Resources") {
+		System_Ext(testCrds, "Tests CRDs", "tests definitions Custom Resources", "kubernetes")
+		System_Ext(executorCrds, "Executors CRDs", "executors CR (internal and custom) Custom Resources", "kubernetes")
+	}
+
 	System_Ext(sut, "SUT", "System Under Test", "html5")
 
 	Rel_U(testCrds, kubetest, "Getting details about tests contents")
-	Rel_D(kubectl, testCrds, "Creates new tests from files with test content")
+	Rel_D(kubectl, crds, "Creates new Custom Resources")
 
 	Rel_U(executorCrds, kubetest, "Read connection details from executors CRDs")
 }
@@ -37,7 +40,7 @@ Rel(kubectl, kubetest, "Runs tests, getting results")
 Rel(cicd, kubetest, "Runs tests getting results")
 Rel(web, kubetest, "Runs tests, getting restuls")
 
-Rel(kubetest, metrics, "Sends business metrics")
+Rel(metrics, kubetest, "Reads business metrics")
 Rel_L(kubetest, sut, "Runs test on SUT")
 
 

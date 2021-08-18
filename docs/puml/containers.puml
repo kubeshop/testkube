@@ -15,38 +15,44 @@ LAYOUT_WITH_LEGEND()
 Person_Ext(kubectl, "Engineers kubectl", "kubectl kubetest client")
 System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubetest", "jenkins")
 System_Ext(web, "WebUI", "Single Page app for managing kubetest", "html5")
-System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 
 Boundary(kubernetes, "kubnernetes cluster") {
-	System_Boundary(kubetest, "kubetest") {
-		Container(api, "Kubetest API", "golang", "Orchestrate incoming test runs", "go")
-		Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
-		ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
+	System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+
+	Boundary(crds, "CRDs") {
+		System_Ext(testCrds, "Tests CRDs", "kubernetes CRD defined by engineers", "kubernetes")
+		System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
 	}
 
-	System_Boundary(executors, "Executors") {
+	Boundary(executors, "Executors") {
 		System_Ext(executorn, "Executor n ", "Tests executor", "kubernetes")
 		System_Ext(executor2, "Executor 2 ", "Tests executor", "kubernetes")
 		System_Ext(executor1, "Executor 1", "Tests executor", "kubernetes")
 	}
 
-	System_Ext(testCrds, "Tests CRDs", "kubernetes CRD defined by engineers", "kubernetes")
-	System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
+	Boundary(kubetest, "kubetest") {
+		Container(api, "Kubetest API", "golang", "Orchestrate incoming test runs", "go")
+		Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
+		ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
+	}
 
 	System_Ext(sut, "SUT", "System Under Test", "html5")
+
+	Rel(api, db, "stores results")
+	Rel(api, executor1, "calls execution")
+	Rel(executor1, sut, "Runs tests")
+	Rel(api, metrics, "Stores test runs metrics")
 }
 
-Rel(api, db, "stores results")
-Rel_D(api, executor1, "calls execution")
-Rel_D(executor1, sut, "Runs tests")
 
-Rel_L(operator, testCrds, "watch for new crd/changes")
-Rel_L(testCrds, api, "get scripts content")
-Rel_L(executorCrds, api, "get executor uri and other details")
+Rel(operator, testCrds, "watch for new crd/changes")
+Rel(testCrds, api, "get scripts content")
 
-Rel(kubectl, api, "Runs tests, getting results")
-Rel(cicd, api, "Runs tests getting results")
-Rel(web, api, "Runs tests, getting restuls")
-Rel_L(api, metrics, "Stores test runs metrics")
+Rel(executorCrds, api, "get executor uri and other details")
+
+BiRel_L(kubectl, api, "Runs tests, getting results")
+BiRel_L(cicd, api, "Runs tests getting results")
+BiRel_L(web, api, "Runs tests, getting restuls")
+
 
 @enduml
