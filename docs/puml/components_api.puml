@@ -51,7 +51,7 @@ Container_Boundary(executors, "Executors") {
 
 Person_Ext(engineer, "Engineer", "kubectl apply -f script.yaml")
 
-Container_Boundary(kubernetes, "Kubernetes native resources") {
+Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
 	System_Ext(scriptsCrds, "Scripts CRD", "YAML", "kubernetes")
 	System_Ext(executorsCrds, "Executors CRD", "YAML", "kubernetes")
 

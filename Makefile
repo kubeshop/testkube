@@ -63,7 +63,7 @@ cover:
 	open testCoverage.html
 
 diagrams: 
-	plantuml docs/*.puml
+	plantuml ./docs/puml/*.puml -o ../img/
 
 version-bump: version-bump-patch
 
