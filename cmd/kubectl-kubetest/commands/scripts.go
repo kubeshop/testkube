@@ -8,12 +8,12 @@ import (
 )
 
 func init() {
-	scriptsCmd.PersistentFlags().String("client", "proxy", "Client used for connecting to Kubetest API one of proxy|direct")
-	scriptsCmd.PersistentFlags().Bool("verbose", false, "should I show additional debug messages")
+	scriptsCmd.PersistentFlags().StringP("client", "c", "proxy", "Client used for connecting to Kubetest API one of proxy|direct")
+	scriptsCmd.PersistentFlags().BoolP("verbose", "v", false, "should I show additional debug messages")
 
 	// output renderer flags
-	scriptsCmd.PersistentFlags().String("output", "raw", "output typoe one of raw|json|go ")
-	scriptsCmd.PersistentFlags().String("go-template", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
+	scriptsCmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")
+	scriptsCmd.PersistentFlags().StringP("go-template", "t", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
 	scriptsCmd.AddCommand(scripts.AbortExecutionCmd)
 	scriptsCmd.AddCommand(scripts.ListScriptsCmd)

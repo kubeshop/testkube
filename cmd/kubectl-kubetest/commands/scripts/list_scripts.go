@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	ListScriptsCmd.Flags().String("namespace", "default", "script type (defaults to postman-collection)")
+	ListScriptsCmd.Flags().StringP("namespace", "s", "default", "script type (defaults to postman-collection)")
 }
 
 var ListScriptsCmd = &cobra.Command{

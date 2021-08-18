@@ -10,7 +10,7 @@ import (
 var GetScriptExecutionCmd = &cobra.Command{
 	Use:   "execution",
 	Short: "Gets script execution details",
-	Long:  ``,
+	Long:  `Gets script execution details, you can change output format`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
 			ui.Failf("invalid script arguments please pass test name and execution id")
