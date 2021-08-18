@@ -1,13 +1,33 @@
 # Installation 
 
-For installation we're using Helm charts. To simplify install 
-you can use following command to install all required components of KubeTest: 
+## kubectl-kubetest plugin
+
+To install `kubectl kubetest` plugin please download [latest release of kubetest](
+https://github.com/kubeshop/kubetest/releases) unpack binary and put it somewhere in 
+your `$PATH`. 
+
+We have plans to build installers for most popular OS and system distros.
+
+## Cluster
+
+For installation we're using Helm charts so you need to have recent `helm` command installed
+on your system. 
+
+
+### Kubetest cluster install from plugin
+
+To simplify install you can use following command to install all required components of KubeTest: 
 
 ```
 kubectl kubetest install
 ```
 
-## Helm installation
+You should have everything installed 🏅
+
+By default kubetest is installed in `default` namespace but you can change it in manual install if you want.
+
+
+### Manual Kubetest Helm charts installation
 
 Helm install 
 
