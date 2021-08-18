@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -181,18 +182,20 @@ func (c DirectScriptsAPI) getScriptFromResponse(resp *http.Response) (script kub
 	err = json.NewDecoder(resp.Body).Decode(&script)
 	return
 }
-func (c DirectScriptsAPI) getProblemFromResponse(resp *http.Response) (p problem.Problem, err error) {
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&p)
-	return
-}
 
 func (c DirectScriptsAPI) responseError(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
-		pr, err := c.getProblemFromResponse(resp)
+		var pr problem.Problem
+
+		bytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("can't get problem from api response: %w", err)
+			return fmt.Errorf("can't get problem from api response: can't read response body %w", err)
+		}
+		defer resp.Body.Close()
+
+		err = json.Unmarshal(bytes, &pr)
+		if err != nil {
+			return fmt.Errorf("can't get problem from api response: %w, output: %s", err, string(bytes))
 		}
 
 		return fmt.Errorf("problem: %+v", pr.Detail)
