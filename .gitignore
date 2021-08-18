@@ -24,6 +24,5 @@ Chart.lock
 
 .DS_Store
 bin/
-build
 site
 dist/
