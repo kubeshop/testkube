@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	ListScriptsCmd.Flags().String("namespace", "default", "script type (defaults to postman-collection)")
+	ListScriptsCmd.Flags().StringP("namespace", "s", "default", "kubernetes namespace from where scripts should be listed")
 }
 
 var ListScriptsCmd = &cobra.Command{

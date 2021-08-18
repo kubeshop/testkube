@@ -9,7 +9,7 @@ import (
 
 var ListScriptExecutionsCmd = &cobra.Command{
 	Use:   "executions",
-	Short: "List scripts executions list",
+	Short: "List scripts executions",
 	Long:  `Getting list of execution for given script name or recent executions if there is no script name passed`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var scriptID string
