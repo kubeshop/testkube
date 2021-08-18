@@ -13,6 +13,7 @@ type TableData interface {
 
 func Table(tableData TableData, writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
+	table.SetBorder(false)
 	header, data := tableData.Table()
 	table.SetHeader(header)
 
