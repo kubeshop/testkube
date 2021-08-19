@@ -1,22 +1,18 @@
 openapi: 3.0.1
 
 info:
-  title: kubtest
-  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubtest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
-  termsOfService: http://kubtest.io/terms/
+  title: Kubtest API
+  description: 'Kubtest provides a Kubernetes-native framework for test definition, execution and results'
   contact:
-    email: api@kubtest.io
+    email: kubtest@kubshop.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
-  version: 0.0.5
+  version: 1.0.0
 
 externalDocs:
   description: 'Find out more about kubtest'
   url: http://kubtest.io
-
-servers:
-- url: https://api.kubtest.io/v1
 
 tags:
 - name: scripts
@@ -370,13 +366,10 @@ components:
             users: "3"
             prefix: "some-"
         execution: 
-          description: 'execution result returned from executor'
-          $ref: '#/components/schemas/Execution' 
-
-
+          $ref: '#/components/schemas/Execution'
 
     Execution:
-      description: object which should be returned by REST based executors
+      description: execution result returned from executor
       type: object
       properties:
         id:
