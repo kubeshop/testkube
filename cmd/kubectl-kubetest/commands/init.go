@@ -10,7 +10,7 @@ func init() {
 
 	RootCmd.AddCommand(installCmd)
 
-	installCmd.Flags().String("chart", "kubetest/kubetest", "chart name")
+	installCmd.Flags().String("chart", "kubeshop/kubetest", "chart name")
 	installCmd.Flags().String("name", "kubetest", "installation name")
 	installCmd.Flags().String("namespace", "default", "namespace where to install")
 
