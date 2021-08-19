@@ -22,6 +22,8 @@ var installCmd = &cobra.Command{
 	Long:  `Install can be configured with use of particular `,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		ui.Logo()
+
 		chart := cmd.Flag("chart").Value.String()
 		name := cmd.Flag("name").Value.String()
 		namespace := cmd.Flag("namespace").Value.String()

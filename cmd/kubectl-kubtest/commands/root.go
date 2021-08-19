@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,7 @@ var RootCmd = &cobra.Command{
 	Short: "kubtest entrypoint for plugin",
 	Long:  `kubtest`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ui.Logo()
 		cmd.Usage()
 	},
 }
