@@ -6,11 +6,13 @@
 ██   ██  ██████  ██████     ██    ███████ ███████    ██    
                                /kjuːb tɛst/ by Kubeshop
 ```
-                                                           
+
+Known vulnerabilities: ![kubtest](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)
+![kubtest-operator](https://snyk.io/test/github/kubeshop-operator/kubtest/badge.svg)
+![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)
                                                            
 # kubtest - your testing friend for your cloud apps
 
-![Known Vulnerabilities](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)
 
 Kubernetes-native framework for definition and execution of tests in a cluster; 
 
