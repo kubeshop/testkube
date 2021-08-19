@@ -1,190 +1,12 @@
-```
+# Reference for 'kubectl kubetest` plugin
 
-██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████ 
-██  ██  ██    ██ ██   ██    ██    ██      ██         ██    
-█████   ██    ██ ██████     ██    █████   ███████    ██    
-██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
-██   ██  ██████  ██████     ██    ███████ ███████    ██    
-                               /kjuːb tɛst/ by Kubeshop
-
-
-```
-# Commands reference for `kubectl kubetest` plugin
-
-Commands tree
-```
-completion
-	bash
-	fish
-	powershell
-	zsh
-doc
-help
-install
-scripts
-	abort
-	create
-	execution
-	executions
-	list
-	start
-version
-```
-
-
-## `completion` command
-
-
-```
-
-Generate the autocompletion script for  for the specified shell.
-See each sub-command's help for details on how to use the generated script.
-
-Usage:
-   completion [command]
-
-Available Commands:
-  bash        generate the autocompletion script for bash
-  fish        generate the autocompletion script for fish
-  powershell  generate the autocompletion script for powershell
-  zsh         generate the autocompletion script for zsh
-
-Use " completion [command] --help" for more information about a command.
-```
-
-
-### `bash` command
-
-
-```
-
-Generate the autocompletion script for the bash shell.
-
-This script depends on the 'bash-completion' package.
-If it is not installed already, you can install it via your OS's package manager.
-
-To load completions in your current shell session:
-$ source <( completion bash)
-
-To load completions for every new session, execute once:
-Linux:
-  $  completion bash > /etc/bash_completion.d/
-MacOS:
-  $  completion bash > /usr/local/etc/bash_completion.d/
-
-You will need to start a new shell for this setup to take effect.
-
-Usage:
-   completion bash
-
-Flags:
-      --no-descriptions   disable completion descriptions
-```
-
-
-### `fish` command
-
-
-```
-
-Generate the autocompletion script for the fish shell.
-
-To load completions in your current shell session:
-$  completion fish | source
-
-To load completions for every new session, execute once:
-$  completion fish > ~/.config/fish/completions/.fish
-
-You will need to start a new shell for this setup to take effect.
-
-Usage:
-   completion fish [flags]
-
-Flags:
-      --no-descriptions   disable completion descriptions
-```
-
-
-### `powershell` command
-
-
-```
-
-Generate the autocompletion script for powershell.
-
-To load completions in your current shell session:
-PS C:\>  completion powershell | Out-String | Invoke-Expression
-
-To load completions for every new session, add the output of the above command
-to your powershell profile.
-
-Usage:
-   completion powershell [flags]
-
-Flags:
-      --no-descriptions   disable completion descriptions
-```
-
-
-### `zsh` command
-
-
-```
-
-Generate the autocompletion script for the zsh shell.
-
-If shell completion is not already enabled in your environment you will need
-to enable it.  You can execute the following once:
-
-$ echo "autoload -U compinit; compinit" >> ~/.zshrc
-
-To load completions for every new session, execute once:
-# Linux:
-$  completion zsh > "${fpath[1]}/_"
-# macOS:
-$  completion zsh > /usr/local/share/zsh/site-functions/_
-
-You will need to start a new shell for this setup to take effect.
-
-Usage:
-   completion zsh [flags]
-
-Flags:
-      --no-descriptions   disable completion descriptions
-```
-
-
-## `doc` command
-
-
-```
-Generate docs for kubectl kubtest
-
-Usage:
-   doc [flags]
-
-Flags:
-  -h, --help   help for doc
-```
-
-
-## `help` command
-
-
-```
-Help provides help for any command in the application.
-Simply type  help [path to command] for full details.
-
-Usage:
-   help [command]
-```
-
+The Kubtest kubectl plugin provides commands for installation, script-related tasks, code-completion, etc.
 
 ## `install` command
 
+Installs Kubtest in your active cluster.
 
-```
-Install can be configured with use of particular
+```shell
 
 Usage:
    install [flags]
@@ -195,12 +17,11 @@ Flags:
       --namespace string   namespace where to install (default "default")
 ```
 
-
 ## `scripts` command
 
+Show all available scripts and scripts executions commands
 
-```
-All available scripts and scripts executions commands
+```shell
 
 Usage:
    scripts [flags]
@@ -223,13 +44,11 @@ Flags:
 Use " scripts [command] --help" for more information about a command.
 ```
 
+### `abort` sub-command
 
-### `abort` command
-
-
-```
 (NOT IMPLEMENTED) Aborts execution of the script
 
+```shell
 Usage:
    scripts abort [flags]
 
@@ -241,11 +60,11 @@ Global Flags:
 ```
 
 
-### `create` command
+### `create` sub-command
 
+Create a new Script Custom Resource
 
-```
-Create new Script Custom Resource,
+```shell
 
 Usage:
    scripts create [flags]
@@ -263,12 +82,11 @@ Global Flags:
   -v, --verbose              should I show additional debug messages
 ```
 
+### `execution` sub-command
 
-### `execution` command
-
-
-```
 Gets script execution details, you can change output format
+
+```shell
 
 Usage:
    scripts execution [flags]
@@ -280,13 +98,11 @@ Global Flags:
   -v, --verbose              should I show additional debug messages
 ```
 
+### `executions` sub-command
 
-### `executions` command
-
-
-```
 Getting list of execution for given script name or recent executions if there is no script name passed
 
+```shell
 Usage:
    scripts executions [flags]
 
@@ -298,12 +114,11 @@ Global Flags:
 ```
 
 
-### `list` command
+### `list` sub-command
 
+Getting all available scripts from given namespace - if no namespace given "default" namespace is used
 
-```
-Getting all available scritps from given namespace - if no namespace given "default" namespace is used
-
+```shell
 Usage:
    scripts list [flags]
 
@@ -317,13 +132,11 @@ Global Flags:
   -v, --verbose              should I show additional debug messages
 ```
 
+### `start` sub-command
 
-### `start` command
-
-
-```
 Starts new script based on Script Custom Resource name, returns results to console
 
+```shell
 Usage:
    scripts start [flags]
 
@@ -339,15 +152,176 @@ Global Flags:
   -v, --verbose              should I show additional debug messages
 ```
 
-
 ## `version` command
 
+Shows Kubtest version and build info
 
-```
-Shows version and build info
-
+```shell
 Usage:
    version
 ```
+
+## `completion` command
+
+Generate the autocompletion script for the specified shell.
+See each sub-command's help for details on how to use the generated script.
+
+
+```shell
+Usage:
+   completion [command]
+
+Available Commands:
+  bash        generate the autocompletion script for bash
+  fish        generate the autocompletion script for fish
+  powershell  generate the autocompletion script for powershell
+  zsh         generate the autocompletion script for zsh
+
+Use " completion [command] --help" for more information about a command.
+```
+
+
+### `bash` subcommand
+
+Generate the autocompletion script for the bash shell.
+
+This script depends on the 'bash-completion' package.
+If it is not installed already, you can install it via your OS's package manager.
+
+To load completions in your current shell session:
+
+```shell
+$ source <( completion bash)
+```
+
+To load completions for every new session, execute once:
+
+#### Linux
+
+```shell
+  $  completion bash > /etc/bash_completion.d/
+```
+
+#### MacOS
+
+```shell
+  $  completion bash > /usr/local/etc/bash_completion.d/
+```
+
+You will need to start a new shell for this setup to take effect.
+
+```shell
+Usage:
+   completion bash
+
+Flags:
+      --no-descriptions   disable completion descriptions
+```
+### `fish` sub-command
+
+Generate the autocompletion script for the fish shell.
+
+To load completions in your current shell session:
+
+```shell
+$  completion fish | source
+```
+
+To load completions for every new session, execute once:
+
+```shell
+$  completion fish > ~/.config/fish/completions/.fish
+```
+
+You will need to start a new shell for this setup to take effect.
+
+```shell
+Usage:
+   completion fish [flags]
+
+Flags:
+      --no-descriptions   disable completion descriptions
+```
+
+### `powershell` sub-command
+
+
+Generate the autocompletion script for powershell.
+
+To load completions in your current shell session:
+
+```shell
+PS C:\>  completion powershell | Out-String | Invoke-Expression
+```
+
+To load completions for every new session, add the output of the above command
+to your powershell profile.
+
+```shell
+Usage:
+   completion powershell [flags]
+
+Flags:
+      --no-descriptions   disable completion descriptions
+```
+
+### `zsh` sub-command
+
+Generate the autocompletion script for the zsh shell.
+
+If shell completion is not already enabled in your environment you will need
+to enable it.  You can execute the following once:
+
+```shell
+$ echo "autoload -U compinit; compinit" >> ~/.zshrc
+```
+
+To load completions for every new session, execute once:
+
+#### Linux
+
+```shell
+$  completion zsh > "${fpath[1]}/_"
+```
+
+#### MacOS
+
+```shell
+$  completion zsh > /usr/local/share/zsh/site-functions/_
+```
+
+You will need to start a new shell for this setup to take effect.
+
+```shell
+Usage:
+   completion zsh [flags]
+
+Flags:
+      --no-descriptions   disable completion descriptions
+```
+
+
+## `doc` command
+
+Generate docs for kubectl kubtest
+
+```shell
+Usage:
+   doc [flags]
+
+Flags:
+  -h, --help   help for doc
+```
+
+## `help` command
+
+Help provides help for any command in the application.
+Simply type  help [path to command] for full details.
+
+```shell
+Usage:
+   help [command]
+```
+
 
 
