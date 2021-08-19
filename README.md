@@ -11,33 +11,43 @@ Known vulnerabilities: ![kubtest](https://snyk.io/test/github/kubeshop/kubtest/b
 ![kubtest-operator](https://snyk.io/test/github/kubeshop-operator/kubtest/badge.svg)
 ![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)
                                                            
-# kubtest - your testing friend for your cloud apps
+# Welcome to Kubtest - your friendly Kubernetes testing framework!
 
+Kubtest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
+clusters state and can be executed as needed:
 
-Kubernetes-native framework for definition and execution of tests in a cluster; 
+- Manually via cli as needed
+- Externally triggered via API (CI, external tooling, etc)
+- Automatically on deployment of annotated/labeled services/pods/etc (WIP)
 
-Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
+Main Kubtest components are:
 
-kubtest components:
-- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
+- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
-- CRDs Operator - watch kubtest CR, handles changes communicates with API Server
-- Executors - runs tests defined by specific runner, for PoC phase we'll run Postman collection defined in CR.
+- CRDs Operator - watch Kubtest CR, handles changes communicates with API Server
+- Executors - runs tests defined for specific runner
+- Results DB - for centralized test results mgmt
+
+Kubtest attempts to:
+
+- Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
+- Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters, 
+  without having to wrap them in docker-images or providing network access
+- Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
+- Centralize all test results in a consistent format for "actionable QA analytics"
+- Provide a modular architecture for adding new types of test scripts and executors
+
+## Getting Started
+
+Check out the [Installation](https://kubeshop.github.io/kubtest/installing.md) and
+[Getting Started](https://kubeshop.github.io/kubtest/getting-started.md) guides to set up Kubtest and
+run your first tests!
+
+# Documentation
+
+Is available at [https://kubeshop.github.io/kubtest](https://kubeshop.github.io/kubtest)
 
 # Contribution to project
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
-
-# Installing 
-
-For install instructions [go to install manual](docs/installing.md) 
-
-# Getting started and Usage
-
-For getting started or usage follow 
-[getting started docs](docs/getting-started.md) 
-
-# Architecture
-
-Go to [architecture diagrams](docs/architecture.md) for architecture docs
 
