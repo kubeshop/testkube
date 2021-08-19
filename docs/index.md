@@ -30,5 +30,5 @@ Kubtest attempts to:
 - Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters, without having to wrap them in docker-images or providing network access
 - Provide a modular architecture for adding new types of test scripts and executors
 
-Check out the [Installation](installing.md) and [Gettin Started](getting-started.md) guides to setup Kubtest and 
+Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to setup Kubtest and 
 run your first tests!
