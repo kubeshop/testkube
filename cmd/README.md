@@ -5,7 +5,7 @@
 TODO add small decription
 
 
-## kubectl-kubetest
+## kubectl-kubtest
 
 TODO add small description
 

@@ -1,9 +1,9 @@
 # Installation 
 
-## kubectl-kubetest plugin
+## kubectl-kubtest plugin
 
-To install `kubectl kubetest` plugin please download [latest release of kubetest](
-https://github.com/kubeshop/kubetest/releases) unpack binary and put it somewhere in 
+To install `kubectl kubtest` plugin please download [latest release of kubtest](
+https://github.com/kubeshop/kubtest/releases) unpack binary and put it somewhere in 
 your `$PATH`. 
 
 We have plans to build installers for most popular OS and system distros.
@@ -14,20 +14,20 @@ For installation we're using Helm charts so you need to have recent `helm` comma
 on your system. 
 
 
-### Kubetest cluster install from plugin
+### kubtest cluster install from plugin
 
-To simplify install you can use following command to install all required components of KubeTest: 
+To simplify install you can use following command to install all required components of kubtest: 
 
 ```
-kubectl kubetest install
+kubectl kubtest install
 ```
 
 You should have everything installed 🏅
 
-By default kubetest is installed in `default` namespace but you can change it in manual install if you want.
+By default kubtest is installed in `default` namespace but you can change it in manual install if you want.
 
 
-### Manual Kubetest Helm charts installation
+### Manual kubtest Helm charts installation
 
 Helm install 
 
@@ -36,22 +36,22 @@ Helm's [documentation](https://helm.sh/docs) to get started.
 
 Once Helm has been set up correctly, add the repo as follows:
 ```sh
-helm repo add kubetest https://kubeshop.github.io/kubetest
+helm repo add kubtest https://kubeshop.github.io/kubtest
 ```
 If you had already added this repo earlier, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
-kubetest` to see the charts.
+kubtest` to see the charts.
 
-To install the `kubetest` chart:
+To install the `kubtest` chart:
 ```sh
-helm install my-<chart-name> kubetest/kubetest
+helm install my-<chart-name> kubtest/kubtest
 ```
-To uninstall the `kubetest` chart:
+To uninstall the `kubtest` chart:
 ```sh
-helm delete my-<chart-name> kubetest/kubetest
+helm delete my-<chart-name> kubtest/kubtest
 ```
 
-Helm defaults used in the `Kubetest` chart:
+Helm defaults used in the `kubtest` chart:
 
 | Parameter | Is optional | Default |
 | --- | --- | --- |
@@ -61,21 +61,21 @@ Helm defaults used in the `Kubetest` chart:
 | mongodb.service.nodePort | yes | true |
 | mongodb.service.clusterIP | yes | "" |
 | mongodb.nameOverride | yes | "mongodb" |
-| mongodb.fullnameOverride | yes | "kubetest-mongodb" |
-| api-server.image.repository | yes | "kubeshop/kubetest-api-server" |
+| mongodb.fullnameOverride | yes | "kubtest-mongodb" |
+| api-server.image.repository | yes | "kubeshop/kubtest-api-server" |
 | api-server.image.pullPolicy | yes | "Always" |
 | api-server.image.tag | yes | "latest" |
 | api-server.service.type | yes | "NodePort" |
 | api-server.service.port | yes | 8080 |
-| api-server.mongoDSN | yes | "mongodb://kubetest-mongodb:27017" |
-| api-server.postmanExecutorURI | yes | "http://kubetest-postman-executor:8082" |
-| postman-executor.image.repository | yes | "kubeshop/kubetest-postman-executor" |
+| api-server.mongoDSN | yes | "mongodb://kubtest-mongodb:27017" |
+| api-server.postmanExecutorURI | yes | "http://kubtest-postman-executor:8082" |
+| postman-executor.image.repository | yes | "kubeshop/kubtest-postman-executor" |
 | postman-executor.image.pullPolicy | yes | "Always" |
 | postman-executor.image.tag | yes | "latest" |
 | postman-executor.service.type | yes | "NodePort" |
 | postman-executor.service.port | yes | 8082 |
-| postman-executor.mongoDSN | yes | "mongodb://kubetest-mongodb:27017" |
-| postman-executor.apiServerURI | yes | "http://kubetest-api-server:8080" |
+| postman-executor.mongoDSN | yes | "mongodb://kubtest-mongodb:27017" |
+| postman-executor.apiServerURI | yes | "http://kubtest-api-server:8080" |
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters

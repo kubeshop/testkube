@@ -1,8 +1,8 @@
 package scripts
 
 import (
-	"github.com/kubeshop/kubetest/pkg/api/client"
-	"github.com/kubeshop/kubetest/pkg/ui"
+	"github.com/kubeshop/kubtest/pkg/api/client"
+	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 

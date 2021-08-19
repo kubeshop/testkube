@@ -8,10 +8,10 @@ before:
     - go generate ./...
 builds:
   - 
-    main: ./cmd/kubectl-kubetest
-    binary: kubectl-kubetest
+    main: ./cmd/kubectl-kubtest
+    binary: kubectl-kubtest
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{ .Tag }}-{{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=kubetest-ci
+      - -s -w -X main.version={{.Version}} -X main.commit={{ .Tag }}-{{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=kubtest-ci
     env:
       - CGO_ENABLED=0
     goos:

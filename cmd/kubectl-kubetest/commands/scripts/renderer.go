@@ -5,7 +5,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/spf13/cobra"
 )
 
@@ -16,13 +16,13 @@ const (
 )
 
 type Renderer interface {
-	Render(result kubetest.ScriptExecution, writer io.Writer) error
+	Render(result kubtest.ScriptExecution, writer io.Writer) error
 }
 
 type JSONRenderer struct {
 }
 
-func (r JSONRenderer) Render(result kubetest.ScriptExecution, writer io.Writer) error {
+func (r JSONRenderer) Render(result kubtest.ScriptExecution, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(result)
 }
 
@@ -30,7 +30,7 @@ type GoTemplateRenderer struct {
 	Template string
 }
 
-func (r GoTemplateRenderer) Render(result kubetest.ScriptExecution, writer io.Writer) error {
+func (r GoTemplateRenderer) Render(result kubtest.ScriptExecution, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (r GoTemplateRenderer) Render(result kubetest.ScriptExecution, writer io.Wr
 type RawRenderer struct {
 }
 
-func (r RawRenderer) Render(execution kubetest.ScriptExecution, writer io.Writer) error {
+func (r RawRenderer) Render(execution kubtest.ScriptExecution, writer io.Writer) error {
 	if execution.Execution.Result.ErrorMessage != "" {
 		_, err := writer.Write([]byte(execution.Execution.Result.ErrorMessage + "\n\n"))
 		if err != nil {

@@ -1,14 +1,14 @@
 package commands
 
 import (
-	"github.com/kubeshop/kubetest/cmd/kubectl-kubetest/commands/scripts"
-	"github.com/kubeshop/kubetest/pkg/ui"
+	"github.com/kubeshop/kubtest/cmd/kubectl-kubtest/commands/scripts"
+	"github.com/kubeshop/kubtest/pkg/ui"
 
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	scriptsCmd.PersistentFlags().StringP("client", "c", "proxy", "Client used for connecting to Kubetest API one of proxy|direct")
+	scriptsCmd.PersistentFlags().StringP("client", "c", "proxy", "Client used for connecting to kubtest API one of proxy|direct")
 	scriptsCmd.PersistentFlags().BoolP("verbose", "v", false, "should I show additional debug messages")
 
 	// output renderer flags

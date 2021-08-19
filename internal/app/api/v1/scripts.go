@@ -6,16 +6,16 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	scriptsv1 "github.com/kubeshop/kubetest-operator/apis/script/v1"
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
-	scriptsMapper "github.com/kubeshop/kubetest/pkg/mapper/scripts"
-	"github.com/kubeshop/kubetest/pkg/rand"
+	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
+	"github.com/kubeshop/kubtest/pkg/rand"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ListScripts for getting list of all available scripts
-func (s KubetestAPI) GetScript() fiber.Handler {
+func (s kubtestAPI) GetScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("ns", "default")
@@ -35,7 +35,7 @@ func (s KubetestAPI) GetScript() fiber.Handler {
 }
 
 // ListScripts for getting list of all available scripts
-func (s KubetestAPI) ListScripts() fiber.Handler {
+func (s kubtestAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("ns", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
@@ -50,10 +50,10 @@ func (s KubetestAPI) ListScripts() fiber.Handler {
 }
 
 // CreateScript creates new script CR based on script content
-func (s KubetestAPI) CreateScript() fiber.Handler {
+func (s kubtestAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubetest.ScriptCreateRequest
+		var request kubtest.ScriptCreateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -81,7 +81,7 @@ func (s KubetestAPI) CreateScript() fiber.Handler {
 }
 
 // ExecuteScript calls particular executor based on execution request content and type
-func (s KubetestAPI) ExecuteScript() fiber.Handler {
+func (s kubtestAPI) ExecuteScript() fiber.Handler {
 	// TODO use kube API to get registered executor details - for now it'll be fixed
 	// we need to choose client based on script type in future for now there is only
 	// one client postman-collection newman based executor
@@ -90,7 +90,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 
-		var request kubetest.ScriptExecutionRequest
+		var request kubtest.ScriptExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
@@ -124,7 +124,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 
 		// store execution
 		ctx := context.Background()
-		scriptExecution = kubetest.NewScriptExecution(
+		scriptExecution = kubtest.NewScriptExecution(
 			scriptID,
 			request.Name,
 			execution,
@@ -133,7 +133,7 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 		s.Repository.Insert(ctx, scriptExecution)
 
 		// watch for execution results
-		execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubetest.Execution) error {
+		execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
 			s.Log.Infow("saving", "status", e.Status, "scriptExecution", scriptExecution)
 			scriptExecution.Execution = &e
 			return s.Repository.Update(ctx, scriptExecution)
@@ -150,11 +150,11 @@ func (s KubetestAPI) ExecuteScript() fiber.Handler {
 }
 
 // ListExecutions returns array of available script executions
-func (s KubetestAPI) ListExecutions() fiber.Handler {
+func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 
-		var executions []kubetest.ScriptExecution
+		var executions []kubtest.ScriptExecution
 		var err error
 
 		// TODO should we split this to separate endpoint?
@@ -175,7 +175,7 @@ func (s KubetestAPI) ListExecutions() fiber.Handler {
 }
 
 // GetScriptExecution returns script execution object for given script and execution id
-func (s KubetestAPI) GetScriptExecution() fiber.Handler {
+func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		// TODO do we need scriptID here? consider removing it from API
@@ -194,7 +194,7 @@ func (s KubetestAPI) GetScriptExecution() fiber.Handler {
 	}
 }
 
-func (s KubetestAPI) AbortScriptExecution() fiber.Handler {
+func (s kubtestAPI) AbortScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO fill valid values when abort will be implemented
 		s.Metrics.IncAbortScript("type", nil)

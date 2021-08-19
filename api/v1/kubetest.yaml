@@ -1,22 +1,22 @@
 openapi: 3.0.1
 
 info:
-  title: Kubetest
-  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubetest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
-  termsOfService: http://kubetest.io/terms/
+  title: kubtest
+  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubtest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
+  termsOfService: http://kubtest.io/terms/
   contact:
-    email: api@kubetest.io
+    email: api@kubtest.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   version: 0.0.5
 
 externalDocs:
-  description: 'Find out more about Kubetest'
-  url: http://kubetest.io
+  description: 'Find out more about kubtest'
+  url: http://kubtest.io
 
 servers:
-- url: https://api.kubetest.io/v1
+- url: https://api.kubtest.io/v1
 
 tags:
 - name: scripts
@@ -580,7 +580,7 @@ components:
         type:
           type: string
           description: Type contains a URI that identifies the problem type. This URI will,
-          example: http://kubeshop.io/kubetest/problems/invalid-script-name
+          example: http://kubeshop.io/kubtest/problems/invalid-script-name
         title:
           type: string
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/ui"
+	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +60,7 @@ var StartScriptCmd = &cobra.Command{
 		ui.BR()
 		ui.ShellCommand(
 			"Use following command to get script execution details",
-			"kubectl kubetest scripts execution test "+scriptExecution.Id,
+			"kubectl kubtest scripts execution test "+scriptExecution.Id,
 		)
 
 	},

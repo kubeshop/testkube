@@ -1,4 +1,4 @@
-name: Release Kubetest CLI for Kubectl.
+name: Release kubtest CLI for Kubectl.
 
 on:
   push:
@@ -20,10 +20,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: ${{ github.ref }}
-          release_name: Kubetest CLI ${{ github.ref }}
+          release_name: kubtest CLI ${{ github.ref }}
           body: |
             Changes in this Release
-            - Releasing new version of the Kubetest CLI for Kubectl.
+            - Releasing new version of the kubtest CLI for Kubectl.
           draft: false
           prerelease: false
 

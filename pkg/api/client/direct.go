@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
-	"github.com/kubeshop/kubetest/pkg/problem"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/problem"
 )
 
 const (
@@ -24,7 +24,7 @@ type Config struct {
 var config Config
 
 func init() {
-	envconfig.Process("KUBETEST_API", &config)
+	envconfig.Process("kubtest_API", &config)
 }
 func NewDirectScriptsAPI(uri string) DirectScriptsAPI {
 	return DirectScriptsAPI{
@@ -44,7 +44,7 @@ type DirectScriptsAPI struct {
 	client HTTPClient
 }
 
-func (c DirectScriptsAPI) GetScript(id string) (script kubetest.Script, err error) {
+func (c DirectScriptsAPI) GetScript(id string) (script kubtest.Script, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -58,7 +58,7 @@ func (c DirectScriptsAPI) GetScript(id string) (script kubetest.Script, err erro
 	return c.getScriptFromResponse(resp)
 }
 
-func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution kubetest.ScriptExecution, err error) {
+func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution kubtest.ScriptExecution, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions/%s", scriptID, executionID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubetest.ScriptExecutions, err error) {
+func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.ScriptExecutions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -88,10 +88,10 @@ func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubetest.S
 }
 
 // CreateScript creates new Script Custom Resource
-func (c DirectScriptsAPI) CreateScript(name, scriptType, content, namespace string) (script kubetest.Script, err error) {
+func (c DirectScriptsAPI) CreateScript(name, scriptType, content, namespace string) (script kubtest.Script, err error) {
 	uri := fmt.Sprintf(c.URI + "/v1/scripts")
 
-	request := kubetest.ScriptCreateRequest{
+	request := kubtest.ScriptCreateRequest{
 		Name:      name,
 		Content:   content,
 		Type_:     scriptType,
@@ -117,11 +117,11 @@ func (c DirectScriptsAPI) CreateScript(name, scriptType, content, namespace stri
 
 // ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubetest.ScriptExecution, err error) {
+func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.ScriptExecution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", id)
 
-	request := kubetest.ScriptExecutionRequest{
+	request := kubtest.ScriptExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
@@ -145,7 +145,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 }
 
 // GetExecutions list all executions in given script
-func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubetest.Scripts, err error) {
+func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts?namespace=%s", namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -161,14 +161,14 @@ func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubetest.Script
 	return
 }
 
-func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubetest.ScriptExecution, err error) {
+func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubtest.ScriptExecution, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&execution)
 	return
 }
 
-func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubetest.ScriptExecutions, err error) {
+func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubtest.ScriptExecutions, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&executions)
@@ -176,7 +176,7 @@ func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (execut
 	return
 }
 
-func (c DirectScriptsAPI) getScriptFromResponse(resp *http.Response) (script kubetest.Script, err error) {
+func (c DirectScriptsAPI) getScriptFromResponse(resp *http.Response) (script kubtest.Script, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&script)

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
 const (
@@ -34,7 +34,7 @@ type HTTPExecutorClient struct {
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
 // TODO add timeout later
-func (c HTTPExecutorClient) Watch(id string, callback func(kubetest.Execution) error) (execution kubetest.Execution, err error) {
+func (c HTTPExecutorClient) Watch(id string, callback func(kubtest.Execution) error) (execution kubtest.Execution, err error) {
 	ticker := time.NewTicker(WatchInterval)
 	for range ticker.C {
 		execution, err = c.Get(id)
@@ -49,7 +49,7 @@ func (c HTTPExecutorClient) Watch(id string, callback func(kubetest.Execution) e
 	return
 }
 
-func (c HTTPExecutorClient) Get(id string) (execution kubetest.Execution, err error) {
+func (c HTTPExecutorClient) Get(id string) (execution kubtest.Execution, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -60,10 +60,10 @@ func (c HTTPExecutorClient) Get(id string) (execution kubetest.Execution, err er
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c HTTPExecutorClient) Execute(content string, params map[string]string) (execution kubetest.Execution, err error) {
+func (c HTTPExecutorClient) Execute(content string, params map[string]string) (execution kubtest.Execution, err error) {
 
 	// create request
-	request := kubetest.ExecutionRequest{
+	request := kubtest.ExecutionRequest{
 		Metadata: content,
 		Params:   params,
 	}
@@ -82,7 +82,7 @@ func (c HTTPExecutorClient) Execute(content string, params map[string]string) (e
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c HTTPExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubetest.Execution, err error) {
+func (c HTTPExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubtest.Execution, err error) {
 	defer resp.Body.Close()
 
 	// parse response

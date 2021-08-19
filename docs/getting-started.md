@@ -1,14 +1,14 @@
 # Getting Started 
 
-Please follow [install steps](/docs/installing.md) for kubetest installation
+Please follow [install steps](/docs/installing.md) for kubtest installation
 
 ## Getting help 
 
 ```sh 
-kubectl kubetest --help 
+kubectl kubtest --help 
 
 # or for scripts runs
-kubectl kubetest scripts --help 
+kubectl kubtest scripts --help 
 ```
 ## Defining tests
 
@@ -19,18 +19,18 @@ For now we're handling exported *Postman collections* but in future we plan to h
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
 ```sh
-kubectl kubetest scripts create --file my_collection_file.json --name my-test-name
+kubectl kubtest scripts create --file my_collection_file.json --name my-test-name
 
 #or 
-cat my_collection_file.json | kubectl kubetest scripts create --name my-test-name
+cat my_collection_file.json | kubectl kubtest scripts create --name my-test-name
 ```
 
 
-You can also create new test by creating new Custom Resource 'by hand' (via `kubectl apply -f ...`) it's equivalent to running `kubectl kubetest create` command e.g.:
+You can also create new test by creating new Custom Resource 'by hand' (via `kubectl apply -f ...`) it's equivalent to running `kubectl kubtest create` command e.g.:
 
 ```yaml
 cat <<EOF | kubectl apply -f -
-apiVersion: tests.kubetest.io/v1
+apiVersion: tests.kubtest.io/v1
 kind: Script
 metadata:
   name: my-test-name
@@ -129,14 +129,14 @@ Where:
 When our script is defined as CR we can now run it: 
 
 ```
-$ kubectl kubetest scripts start my-test-name 
+$ kubectl kubtest scripts start my-test-name 
 
 ... some script run data ...
 
 Script execution completed 
 
 Use following command to get script execution details:
-$ kubectl kubetest scripts execution test 611b6da38cd74034e7c9d408
+$ kubectl kubtest scripts execution test 611b6da38cd74034e7c9d408
 ```
 
 ## Getting execution details
@@ -144,7 +144,7 @@ After script completed with success or error you can go back to script details b
 scripts execution command:
 
 ```sh
-kubectl kubetest scripts execution script-name 6103a45b7e18c4ea04883866
+kubectl kubtest scripts execution script-name 6103a45b7e18c4ea04883866
 
 ....
 some execution details
@@ -157,7 +157,7 @@ some execution details
 To run script execution you'll need to know script name
 
 ```
-$ kubectl kubetest scripts list
+$ kubectl kubtest scripts list
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
@@ -174,7 +174,7 @@ $ kubectl kubetest scripts list
 ## Getting available executions
 
 ```sh
-kubectl kubetest scripts executions script-name
+kubectl kubtest scripts executions script-name
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
@@ -190,7 +190,7 @@ kubectl kubetest scripts executions script-name
 
 ## [TODO] Aborting already started script execution - NOT IMPLEMENTED
 ```
-$ kubectl kubetest scripts abort SOME_EXECUTION_ID
+$ kubectl kubtest scripts abort SOME_EXECUTION_ID
 Script "SCRIPTNAME" Execution aborted
 
 ```

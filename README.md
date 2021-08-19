@@ -1,13 +1,13 @@
-# KubeTest - your testing friend for your cloud apps
+# kubtest - your testing friend for your cloud apps
 
 Kubernetes-native framework for definition and execution of tests in a cluster; 
 
 Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
 
-Kubetest components:
+kubtest components:
 - kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with  
 - API Server - work orchestrator, runs executors, gather execution results
-- CRDs Operator - watch KubeTest CR, handles changes communicates with API Server
+- CRDs Operator - watch kubtest CR, handles changes communicates with API Server
 - Executors - runs tests defined by specific runner, for PoC phase we'll run Postman collection defined in CR.
 
 # Contribution to project

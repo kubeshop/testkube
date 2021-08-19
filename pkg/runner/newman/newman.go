@@ -6,9 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
-	"github.com/kubeshop/kubetest/pkg/process"
-	"github.com/kubeshop/kubetest/pkg/tmp"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/process"
+	"github.com/kubeshop/kubtest/pkg/tmp"
 )
 
 // Runner struct for newman based runner
@@ -16,7 +16,7 @@ type Runner struct {
 }
 
 // Run runs particular script content on top of newman binary
-func (r *Runner) Run(input io.Reader, params map[string]string) (result kubetest.ExecutionResult) {
+func (r *Runner) Run(input io.Reader, params map[string]string) (result kubtest.ExecutionResult) {
 	path, err := tmp.ReaderToTmpfile(input)
 	if err != nil {
 		return result.Err(err)

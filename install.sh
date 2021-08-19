@@ -1,1 +1,1 @@
-echo "Getting kubectl-kubetest plugin"
+echo "Getting kubectl-kubtest plugin"

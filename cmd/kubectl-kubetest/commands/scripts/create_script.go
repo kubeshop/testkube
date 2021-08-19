@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/kubeshop/kubetest/pkg/ui"
+	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 

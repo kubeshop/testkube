@@ -16,8 +16,8 @@ var (
 
 var RootCmd = &cobra.Command{
 	Use:   "",
-	Short: "Kubetest entrypoint for plugin",
-	Long:  `Kubetest`,
+	Short: "kubtest entrypoint for plugin",
+	Long:  `kubtest`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Usage()
 	},

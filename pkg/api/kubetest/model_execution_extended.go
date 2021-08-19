@@ -1,4 +1,4 @@
-package kubetest
+package kubtest
 
 import (
 	"time"

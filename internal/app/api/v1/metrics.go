@@ -1,23 +1,23 @@
 package v1
 
 import (
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var executionCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubetest_executions_count",
+	Name: "kubtest_executions_count",
 	Help: "The total number of script executions",
 }, []string{"type", "name", "result"})
 
 var creationCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubetest_scripts_creation_count",
+	Name: "kubtest_scripts_creation_count",
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 
 var abortCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubetest_scripts_abort_count",
+	Name: "kubtest_scripts_abort_count",
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 
@@ -35,7 +35,7 @@ type Metrics struct {
 	Abort      *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecution(scriptExecution kubetest.ScriptExecution) {
+func (m Metrics) IncExecution(scriptExecution kubtest.ScriptExecution) {
 	m.Executions.With(map[string]string{
 		"type":   scriptExecution.ScriptType,
 		"name":   scriptExecution.ScriptName,
