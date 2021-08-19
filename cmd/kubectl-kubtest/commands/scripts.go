@@ -13,7 +13,7 @@ func init() {
 
 	// output renderer flags
 	scriptsCmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")
-	scriptsCmd.PersistentFlags().StringP("go-template", "t", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
+	scriptsCmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
 	scriptsCmd.AddCommand(scripts.AbortExecutionCmd)
 	scriptsCmd.AddCommand(scripts.ListScriptsCmd)
