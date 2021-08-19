@@ -1,11 +1,34 @@
-# kubtest - your friendly Kubernetes testing framework
+```
+██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████ 
+██  ██  ██    ██ ██   ██    ██    ██      ██         ██    
+█████   ██    ██ ██████     ██    █████   ███████    ██    
+██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
+██   ██  ██████  ██████     ██    ███████ ███████    ██    
+                               /kjuːb tɛst/ by Kubeshop
+```
 
-Kubernetes-native framework for test definition and execution. 
+Welcome to Kubtest - your friendly Kubernetes testing framework!
 
-Instead of orchestrating and executing tests with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc),
-tests are defined/orchestrated/executed using k8s native concepts (manifests, etc.) and executed either manually via kubectl 
-or automatically on external (i.e. CI/CD) or internal triggers (for example when resources are updated in a cluster). 
-Results are written to existing tooling (prometheus, etc). 
+Kubetest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
+clusters state and can be executed as needed:
 
-This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when 
-corresponding resources are updated (which could still be part of a CI/CD workflow). 
+- Manually via cli
+- Externally triggered via API (CI, external tooling, etc)
+- Automatically on deployment of annotated/labeled services/pods/etc (WIP)
+
+Main Kubtest components are:
+
+- A kubectl plugin for creating/running tests
+- Custom resource definitions and corresponding controllers/operators for defining test scripts - WIP
+- Extension mechanism that allows 3rd party tool providers to add support for their test scripts
+- Integration with 3rd party tools for result reporting/analysis (prometheus, etc.) - WIP
+- Custom controller/operator that can be configured to run specific tests based on events/annotations/etc - WIP
+
+Kubtest attempts to:
+
+- Avoid vendor lock-in for CI/CD test orchestration and execution pipelines
+- Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters, without having to wrap them in docker-images or providing network access
+- Provide a modular architecture for adding new types of test scripts and executors
+
+Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to setup Kubtest and 
+run your first tests!

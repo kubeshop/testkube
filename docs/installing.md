@@ -1,33 +1,33 @@
 # Installation 
 
-## kubectl-kubtest plugin
+To get Kubtest up and running you will need to
+
+1. Install the kubectl kubtest plugin
+2. Install Kubtest in your cluster 
+
+## Install the kubectl kubtest plugin
 
 To install `kubectl kubtest` plugin please download [latest release of kubtest](
-https://github.com/kubeshop/kubtest/releases) unpack binary and put it somewhere in 
+https://github.com/kubeshop/kubtest/releases), unpack the binary and put it somewhere in 
 your `$PATH`. 
 
 We have plans to build installers for most popular OS and system distros.
 
-### MacOS 
+#### MacOS 
 
-to run kubectl-kubtest you need to remove quarantine flags from file
+To run kubectl-kubtest you need to remove quarantine flags from file
 
 ```sh
 xattr -d com.apple.quarantine kubectl-kubtest
 ```
 
+## Install kubtest components in your cluster
 
-## Cluster
+The kubtest kubectl plugin provides an install command to install kubtest in your cluster. Internally 
+this uses Helm and so you will need to have recent `helm` command installed on your system.
 
-For installation we're using Helm charts so you need to have recent `helm` command installed
-on your system. 
-
-
-### kubtest cluster install from plugin
-
-To simplify install you can use following command to install all required components of kubtest: 
-
-```
+Run 
+```shell
 kubectl kubtest install
 ```
 
@@ -35,30 +35,34 @@ You should have everything installed 🏅
 
 By default kubtest is installed in `default` namespace but you can change it in manual install if you want.
 
-
 ### Manual kubtest Helm charts installation
 
-Helm install 
+[Helm](https://helm.sh) must be installed to use the charts.  
+Please refer to  Helm's [documentation](https://helm.sh/docs) to get started.
 
-[Helm](https://helm.sh) must be installed to use the charts.  Please refer to
-Helm's [documentation](https://helm.sh/docs) to get started.
+Once Helm has been set up correctly, add the Kubeshop Helm repository  as follows:
 
-Once Helm has been set up correctly, add the repo as follows:
 ```sh
 helm repo add kubtest https://kubeshop.github.io/helm-charts
 ```
+
 If you had already added this repo earlier, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 kubtest` to see the charts.
 
 To install the `kubtest` chart:
+
 ```sh
 helm install my-<chart-name> kubtest/kubtest
 ```
+
 To uninstall the `kubtest` chart:
+
 ```sh
 helm delete my-<chart-name> kubtest/kubtest
 ```
+
+### Helm Properties
 
 Helm defaults used in the `kubtest` chart:
 

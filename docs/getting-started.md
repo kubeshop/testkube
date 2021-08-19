@@ -4,17 +4,19 @@ Please follow [install steps](/docs/installing.md) for kubtest installation
 
 ## Getting help 
 
-```sh 
+```sh
 kubectl kubtest --help 
 
 # or for scripts runs
 kubectl kubtest scripts --help 
 ```
+
 ## Defining tests
 
-First you'll need to define test, tests are defined as Curstom Resource in Kubernetes cluster (access to Kubernetes cluster would be also needed)
+After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
+(access to Kubernetes cluster would be also needed)
 
-For now we're handling exported *Postman collections* but in future we plan to handle more testing tools.
+For now Kubtest only supports  *Postman collections* but we plan to handle more testing tools soon,.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
@@ -25,8 +27,8 @@ kubectl kubtest scripts create --file my_collection_file.json --name my-test-nam
 cat my_collection_file.json | kubectl kubtest scripts create --name my-test-name
 ```
 
-
-You can also create new test by creating new Custom Resource 'by hand' (via `kubectl apply -f ...`) it's equivalent to running `kubectl kubtest create` command e.g.:
+You can also create new scripts with `kubectl apply -f ...`, 
+which is equivalent to running `kubectl kubtest create` command e.g.:
 
 ```yaml
 cat <<EOF | kubectl apply -f -
@@ -120,6 +122,7 @@ EOF
 ```
 
 Where:
+
 - `content` is exported postman collection in example above. 
 - `name` is unique Sript Custom Resource name. 
 - `type` is `postman/collection` as it runs exported postman collections.
@@ -128,7 +131,7 @@ Where:
 
 When our script is defined as CR we can now run it: 
 
-```
+```shell
 $ kubectl kubtest scripts start my-test-name 
 
 ... some script run data ...
@@ -150,13 +153,11 @@ kubectl kubtest scripts execution script-name 6103a45b7e18c4ea04883866
 some execution details
 ```
 
-
-
 ## Getting available scripts
 
 To run script execution you'll need to know script name
 
-```
+```shell
 $ kubectl kubtest scripts list
 
 +----------------------+--------------------+
@@ -173,7 +174,7 @@ $ kubectl kubtest scripts list
  
 ## Getting available executions
 
-```sh
+```shell
 kubectl kubtest scripts executions script-name
 
 +------------+--------------------+--------------------------+---------------------------+----------+
@@ -189,16 +190,15 @@ kubectl kubtest scripts executions script-name
 ```
 
 ## [TODO] Aborting already started script execution - NOT IMPLEMENTED
-```
+```shell
 $ kubectl kubtest scripts abort SOME_EXECUTION_ID
 Script "SCRIPTNAME" Execution aborted
-
 ```
-
 
 ## Changing output format
 
-For lists and details you can use different ouput format (`--output` flag) for now we're supporting following formats:
+For lists and details you can use different output format (`--output` flag) for now we're supporting following formats:
+
 - RAW - it's raw output from given executor (e.g. for Postman collection it's terminal text with colors and tables)
 - JSON - test run data are encoded in JSON 
 - GO - go-template formatting (like in Docker and Kubernetes) you'll need to add `--go-template` flag with custom format (defaults to {{ . | printf("%+v") }} will help you check available fields) 

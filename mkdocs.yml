@@ -9,15 +9,11 @@ edit_uri: blob/main/docs/
 theme:
   name: material
   locale: en
-  highlightjs: true
-  hljs_languages:
-    - yaml
-    - go
 
 nav:
   - Welcome: index.md
   - Installation: installing.md
-  - Usage: getting-started.md
+  - Getting Started: getting-started.md
   - Reference: reference.md
   - Architecture: architecture.md
   - Contributing: contributing.md
@@ -39,6 +35,12 @@ extra:
 
 plugins:
   - render_swagger
+
+# Extensions
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
 
 copyright: Copyright &copy; 2021 <a href="https://kubeshop.io">Kubeshop</a>
 
