@@ -3,11 +3,11 @@
 If you're new in Open-source community there is nice guide how to start contributing to projects: 
 https://github.com/firstcontributions/first-contributions
 
-## General guidance for contributing to KubeTest project
+## General guidance for contributing to kubtest project
 
-You're very welcome to help in KubeTest development, there is a lot of incoming work to do :). 
+You're very welcome to help in kubtest development, there is a lot of incoming work to do :). 
 
-We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into KubeTest repo.
+We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into kubtest repo.
 
 ### For golang based components
 

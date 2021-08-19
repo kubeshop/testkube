@@ -7,10 +7,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
-	"github.com/kubeshop/kubetest/internal/pkg/postman/worker"
-	"github.com/kubeshop/kubetest/internal/pkg/server"
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/internal/pkg/postman/repository/result"
+	"github.com/kubeshop/kubtest/internal/pkg/postman/worker"
+	"github.com/kubeshop/kubtest/internal/pkg/server"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
 // ConcurrentExecutions per node
@@ -45,13 +45,13 @@ func (p *PostmanExecutor) Init() {
 func (p *PostmanExecutor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubetest.ExecutionRequest
+		var request kubtest.ExecutionRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return p.Error(c, http.StatusBadRequest, err)
 		}
 
-		execution := kubetest.NewExecution(string(request.Metadata), request.Params)
+		execution := kubtest.NewExecution(string(request.Metadata), request.Params)
 		err = p.Repository.Insert(context.Background(), execution)
 		if err != nil {
 			return p.Error(c, http.StatusInternalServerError, err)

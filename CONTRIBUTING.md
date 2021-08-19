@@ -1,4 +1,4 @@
-# Contribution to Kubetest 
+# Contribution to kubtest 
 
 Thanks for reaching out contribution 🎉
 
@@ -7,21 +7,21 @@ https://github.com/firstcontributions/first-contributions
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the Kubetest [code of conduct](CODE_OF_CONDUCT.md)
+This project and everyone participating in it is governed by the kubtest [code of conduct](CODE_OF_CONDUCT.md)
 
 ## Have questions or idea? 
 
-We're using github discussions for managing pre-development ideas and clarifications, feel free to add one at our [Q&A discussion page](https://github.com/kubeshop/kubetest/discussions/categories/q-a)
+We're using github discussions for managing pre-development ideas and clarifications, feel free to add one at our [Q&A discussion page](https://github.com/kubeshop/kubtest/discussions/categories/q-a)
 
-New ideas should be placed in [Ideas discussion page](https://github.com/kubeshop/kubetest/discussions/categories/ideas)
+New ideas should be placed in [Ideas discussion page](https://github.com/kubeshop/kubtest/discussions/categories/ideas)
 
 
 
-## General guidance for contributing to KubeTest project
+## General guidance for contributing to kubtest project
 
-You're very welcome to help in KubeTest development, there is a lot of incoming work to do :). 
+You're very welcome to help in kubtest development, there is a lot of incoming work to do :). 
 
-We're trying hard to limit technical debt from the beginning so we defined simple rules into KubeTest repo to help with it.
+We're trying hard to limit technical debt from the beginning so we defined simple rules into kubtest repo to help with it.
 
 ### For golang based components
 
@@ -32,13 +32,13 @@ We're trying hard to limit technical debt from the beginning so we defined simpl
 
 ### For infrastructure / Kubernetes based components
 
-- We're using helm charts to build and share Kubetest
+- We're using helm charts to build and share kubtest
 - Comment non-obvious decisions
 - Use current Helm/Kubernetes versions
 
 
 ## How can I help?
 
-- By fixing [one of many Issues](https://github.com/kubeshop/kubetest/issues) - simply fork our repo and create new Pull Request with new code changes. 
-- By helping to reach out valid results [from discussions](https://github.com/kubeshop/kubetest/discussions)
+- By fixing [one of many Issues](https://github.com/kubeshop/kubtest/issues) - simply fork our repo and create new Pull Request with new code changes. 
+- By helping to reach out valid results [from discussions](https://github.com/kubeshop/kubtest/discussions)
 

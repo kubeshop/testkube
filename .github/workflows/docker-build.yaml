@@ -34,7 +34,7 @@ jobs:
         id: meta_api_server
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/kubetest-api-server
+          images: kubeshop/kubtest-api-server
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -60,7 +60,7 @@ jobs:
         id: meta_postman_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/kubetest-postman-executor
+          images: kubeshop/kubtest-postman-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr

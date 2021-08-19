@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubetest/internal/app/postman"
-	"github.com/kubeshop/kubetest/internal/pkg/postman/repository/result"
-	"github.com/kubeshop/kubetest/internal/pkg/postman/storage"
+	"github.com/kubeshop/kubtest/internal/app/postman"
+	"github.com/kubeshop/kubtest/internal/pkg/postman/repository/result"
+	"github.com/kubeshop/kubtest/internal/pkg/postman/storage"
 )
 
 const DatabaseName = "postman-executor"

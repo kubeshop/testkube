@@ -3,8 +3,8 @@ package server
 import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubeshop/kubetest/pkg/log"
-	"github.com/kubeshop/kubetest/pkg/problem"
+	"github.com/kubeshop/kubtest/pkg/log"
+	"github.com/kubeshop/kubtest/pkg/problem"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )

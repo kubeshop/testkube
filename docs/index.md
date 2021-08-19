@@ -1,4 +1,4 @@
-# Kubetest - your friendly Kubernetes testing framework
+# kubtest - your friendly Kubernetes testing framework
 
 Kubernetes-native framework for test definition and execution. 
 

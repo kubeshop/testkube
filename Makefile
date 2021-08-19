@@ -10,7 +10,7 @@ run-api-server:
 	APISERVER_PORT=8080 go run cmd/api-server/main.go
 
 run-api-server-telepresence: 
-	API_MONGO_DSN=mongodb://kubetest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubetest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
+	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
 
 
 run-executor: 
@@ -20,7 +20,7 @@ run-mongo-dev:
 	docker run -p 27017:27017 mongo
 
 
-build: build-executor build-api-server build-kubetest-bin
+build: build-executor build-api-server build-kubtest-bin
 
 # build done by vendoring to bypass private go repo problems
 build-executor: 
@@ -29,8 +29,8 @@ build-executor:
 build-api-server:
 	go build -o $(BIN_DIR)/api-server cmd/api-server/main.go 
 
-build-kubetest-bin: 
-	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-kubetest" cmd/kubectl-kubetest/main.go
+build-kubtest-bin: 
+	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-kubtest" cmd/kubectl-kubtest/main.go
 
 
 # build done by vendoring to bypass private go repo problems
@@ -46,13 +46,13 @@ docker-build-api-server:
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
 
-openapi-generate-model: openapi-generate-model-kubetest 
+openapi-generate-model: openapi-generate-model-kubtest 
 
-openapi-generate-model-kubetest:
-	swagger-codegen generate -i api/v1/kubetest.yaml -l go -o tmp/api/kubetest
-	mv tmp/api/kubetest/model_*.go pkg/api/kubetest
+openapi-generate-model-kubtest:
+	swagger-codegen generate -i api/v1/kubtest.yaml -l go -o tmp/api/kubtest
+	mv tmp/api/kubtest/model_*.go pkg/api/kubtest
 	rm -rf tmp
-	find ./pkg/api/kubetest -type f -exec sed -i '' -e "s/package swagger/package kubetest/g" {} \;
+	find ./pkg/api/kubtest -type f -exec sed -i '' -e "s/package swagger/package kubtest/g" {} \;
 	
 
 test: 

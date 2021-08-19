@@ -41,7 +41,7 @@ const exampleCollection = `
 {
 	"info": {
 		"_postman_id": "3d9a6be2-bd3e-4cf7-89ca-354103aab4a7",
-		"name": "KubeTest",
+		"name": "kubtest",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [

@@ -1,9 +1,9 @@
-site_name: Kubetest
+site_name: kubtest
 site_description: 'Your Kubernetes Testing Friend'
-site_author: 'Kubeshop Kubetest Team'
+site_author: 'Kubeshop kubtest Team'
 docs_dir: docs/
-repo_name: 'kubeshop/kubetest'
-repo_url: 'https://github.com/kubeshop/kubetest'
+repo_name: 'kubeshop/kubtest'
+repo_url: 'https://github.com/kubeshop/kubtest'
 edit_uri: blob/main/docs/
 
 theme:

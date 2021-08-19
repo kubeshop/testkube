@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
 type HTTPClient interface {
@@ -13,10 +13,10 @@ type HTTPClient interface {
 }
 
 type Client interface {
-	GetScript(id string) (script kubetest.Script, err error)
-	GetExecution(scriptID, executionID string) (execution kubetest.ScriptExecution, err error)
-	ListExecutions(scriptID string) (executions kubetest.ScriptExecutions, err error)
-	CreateScript(name, scriptType, content, namespace string) (script kubetest.Script, err error)
-	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubetest.ScriptExecution, err error)
-	ListScripts(namespace string) (scripts kubetest.Scripts, err error)
+	GetScript(id string) (script kubtest.Script, err error)
+	GetExecution(scriptID, executionID string) (execution kubtest.ScriptExecution, err error)
+	ListExecutions(scriptID string) (executions kubtest.ScriptExecutions, err error)
+	CreateScript(name, scriptType, content, namespace string) (script kubtest.Script, err error)
+	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.ScriptExecution, err error)
+	ListScripts(namespace string) (scripts kubtest.Scripts, err error)
 }

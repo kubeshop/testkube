@@ -22,6 +22,6 @@ type RunnerMock struct {
 func (r RunnerMock) Run(input io.Reader) (string, error) {
 	body, err := ioutil.ReadAll(input)
 	require.NoError(r.T, err)
-	require.Contains(r.T, string(body), "KubeTestExampleCollection")
+	require.Contains(r.T, string(body), "kubtestExampleCollection")
 	return r.Result, r.Error
 }

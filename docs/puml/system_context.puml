@@ -13,14 +13,14 @@
 LAYOUT_WITH_LEGEND()
 
 
-Person_Ext(kubectl, "Engineers kubectl", "kubectl kubetest client")
-System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubetest", "jenkins")
-System_Ext(web, "WebUI", "Single Page app for managing kubetest", "html5")
+Person_Ext(kubectl, "Engineers kubectl", "kubectl kubtest client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubtest", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing kubtest", "html5")
 System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 
 
 Boundary(kubernetes, "kubnernetes cluster") {
-	System(kubetest, "Kubetest", "Tests stuff inside kuberbetes cluster", "kubernetes")
+	System(kubtest, "kubtest", "Tests stuff inside kuberbetes cluster", "kubernetes")
 
 	Boundary(crds, "Custom Resources") {
 		System_Ext(testCrds, "Tests CRDs", "tests definitions Custom Resources", "kubernetes")
@@ -29,19 +29,19 @@ Boundary(kubernetes, "kubnernetes cluster") {
 
 	System_Ext(sut, "SUT", "System Under Test", "html5")
 
-	Rel_U(testCrds, kubetest, "Getting details about tests contents")
+	Rel_U(testCrds, kubtest, "Getting details about tests contents")
 	Rel_D(kubectl, crds, "Creates new Custom Resources")
 
-	Rel_U(executorCrds, kubetest, "Read connection details from executors CRDs")
+	Rel_U(executorCrds, kubtest, "Read connection details from executors CRDs")
 }
 
 
-Rel(kubectl, kubetest, "Runs tests, getting results")
-Rel(cicd, kubetest, "Runs tests getting results")
-Rel(web, kubetest, "Runs tests, getting restuls")
+Rel(kubectl, kubtest, "Runs tests, getting results")
+Rel(cicd, kubtest, "Runs tests getting results")
+Rel(web, kubtest, "Runs tests, getting restuls")
 
-Rel(metrics, kubetest, "Reads business metrics")
-Rel_L(kubetest, sut, "Runs test on SUT")
+Rel(metrics, kubtest, "Reads business metrics")
+Rel_L(kubtest, sut, "Runs test on SUT")
 
 
 @enduml

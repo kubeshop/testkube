@@ -3,10 +3,10 @@ package newman
 import (
 	"time"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
-func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionResult {
+func MapMetadataToResult(newmanResult NewmanExecutionResult) kubtest.ExecutionResult {
 
 	startTime := time.Unix(0, newmanResult.Metadata.Run.Timings.Started*int64(time.Millisecond))
 	endTime := time.Unix(0, newmanResult.Metadata.Run.Timings.Completed*int64(time.Millisecond))
@@ -16,7 +16,7 @@ func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionR
 		status = "failed"
 	}
 
-	result := kubetest.ExecutionResult{
+	result := kubtest.ExecutionResult{
 		RawOutput:     newmanResult.RawOutput,
 		RawOutputType: "text/plain",
 		StartTime:     startTime,
@@ -28,7 +28,7 @@ func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionR
 	for _, execution := range newmanResult.Metadata.Run.Executions {
 
 		duration := time.Duration(execution.Response.ResponseTime) * time.Millisecond
-		step := kubetest.ExecutionStepResult{
+		step := kubtest.ExecutionStepResult{
 			Name:     execution.Item.Name,
 			Status:   "success",
 			Duration: duration.String(),
@@ -36,7 +36,7 @@ func MapMetadataToResult(newmanResult NewmanExecutionResult) kubetest.ExecutionR
 
 		executionHasFailedAssertions := false
 		for _, assertion := range execution.Assertions {
-			assertionResult := kubetest.AssertionResult{
+			assertionResult := kubtest.AssertionResult{
 				Name:   assertion.Assertion,
 				Status: "success",
 			}

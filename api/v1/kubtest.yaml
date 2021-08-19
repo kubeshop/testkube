@@ -1,0 +1,599 @@
+openapi: 3.0.1
+
+info:
+  title: kubtest
+  description: 'Efficient testing of k8s applications mandates a k8s native approach to test mgmt/definition/execution - kubtest provides a “quality control plane” that natively integrates testing activities into k8s development and operational workflows'
+  termsOfService: http://kubtest.io/terms/
+  contact:
+    email: api@kubtest.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.0.5
+
+externalDocs:
+  description: 'Find out more about kubtest'
+  url: http://kubtest.io
+
+servers:
+- url: https://api.kubtest.io/v1
+
+tags:
+- name: scripts
+  description: 'Operation based on scripts resource' 
+- name: executor
+  description: 'Scripts execution' 
+
+paths:
+
+  /scripts:
+    get:
+      tags:
+      - scripts
+      summary: 'List scripts'
+      description: 'filters will be added later'
+      operationId: listScripts
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+    post:
+      tags:
+      - scripts
+      summary: 'create new script'
+      description: 'filters will be added later'
+      operationId: createScript
+      requestBody:
+        description: script details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScriptCreateRequest'
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+        400:
+          description: 'problem with script definition - probably some bad input occurs (ivalid JSON body or similar)'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+                  
+  /scripts/{id}/executions:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 'ID of the script'
+        - in: query
+          name: namespace
+          schema:
+            type: integer
+          description: kubernetes namespace 
+      tags:
+      - scripts
+      summary: 'Starts new script execution'
+      description: 'New script execution returns new execution details on successful execution start'
+      operationId: executeScript
+      requestBody:
+        description: body passed to configure execution
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScriptExecutionRequest'
+      responses:
+        201:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+        400:
+          description: 'problem with request body'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        500:
+          description: 'problem with script execution'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+  
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+      tags:
+      - scripts
+      summary: 'Get all script executions'
+      description: 'Returns array of all available script executions'
+      operationId: getScriptExecutions
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+                  
+
+  /scripts/{id}/executions/{executionID}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script 
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
+      tags:
+      - scripts
+      summary: 'Get script execution'
+      description: 'Returns execution with given executionID'
+      operationId: getScriptExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+  /scripts/{id}/executions/{executionID}/abort:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
+      tags:
+      - scripts
+      summary: 'Aborts execution'
+      description: 'Aborts execution and returns execution details'
+      operationId: abortScriptExecution
+      responses:
+        501:
+          description: not implemented yet
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+
+  /executions/:
+    post:
+      tags:
+      - executor
+      summary: 'Starts script execution'
+      description: 'Starts script execution, returns pending execution with ID'
+      operationId: executueScript
+      responses:
+        201:
+          description: 'execution added to queue'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+        400:
+          description: 'problem with request body'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        500:
+          description: 'poblem with saving script details into queue'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+  /executions/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 'ID of the execution'
+      tags:
+      - executor
+      summary: 'Get execution by ID'
+      description: 'Gets execution with given ID, returns deailed information about test execution'
+      operationId: getExecution
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting information from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+  
+components:
+  schemas:
+
+    Script:
+      type: object
+      properties:
+        name:
+          type: string
+          description: script name
+        type:
+          type: string
+          description: script type
+          enum: 
+          - postman/collection
+        content:
+          type: string
+          description: script content
+        created:
+          type: string
+          format: date-time
+
+    ScriptExecution:
+      type: object
+      description: API server script execution
+      properties:
+        id:
+          type: string
+          description: execution id 
+          format: bson objectId
+        script-name:
+          type: string
+          description: unique script name (CRD Script name)
+        script-type:
+          type: string
+          description: script type e.g. postman/collection
+        name:
+          type: string
+          description: 'execution name'
+        envs: 
+          type: object
+          description: 'execution envs passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+        execution: 
+          description: 'execution result returned from executor'
+          $ref: '#/components/schemas/Execution' 
+
+
+
+    Execution:
+      description: object which should be returned by REST based executors
+      type: object
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        script-content: 
+          type: string
+          description: script metadata content
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+        status: 
+          type: string
+          description: 'execution status'
+          enum: 
+          - queued
+          - pending 
+          - success 
+          - failed
+        result: 
+          $ref: '#/components/schemas/ExecutionResult'
+        start-time:
+          type: string
+          description: 'test start time'
+          format: date-time
+        end-time:
+          type: string
+          description: 'test end time'
+          format: date-time
+
+
+    ExecutionResult:
+      description: execution result data
+      type: object
+      properties:
+        status: 
+          type: string
+          description: script execution status
+          enum: [success, failed]
+        raw-output:
+          type: string
+          description: 'RAW Script execution output, depends of reporter used in particular tool'
+        raw-output-type:
+          type: string
+          description: 'output type depends of reporter used in partucular tool'
+          enum: 
+          - text/plain
+          - application/junit+xml
+          - application/json
+        error-message: 
+          type: string
+          description: 'error message when status is failed, separate to output as output can be partial in case of error'
+        start-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        end-time:
+          type: string
+          description: script execution start time
+          format: date-time
+        steps: 
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionStepResult'
+          description: execution steps (for collection of requests)
+
+    ExecutionStepResult:
+      description: execution result data
+      type: object
+      properties:
+        name:
+          type: string
+          description: step name
+        duration: 
+          type: string 
+          format: duration
+        status: 
+          type: string
+          description: execution step status
+          enum: [success, failed]
+        assertionResults: 
+          type: array
+          items:
+            $ref: '#/components/schemas/AssertionResult'
+        
+    AssertionResult:
+      description: execution result data
+      type: object
+      properties:
+        name: 
+          type: string
+        status:
+          type: string
+          enum: [success, failed]
+        error-message: 
+          type: string
+          nullable: true
+
+
+
+#
+# Requests
+#
+
+    ExecutionRequest: 
+      description: scripts execution request body
+      type: object
+      properties:
+        type:
+          type: string
+          description: script type
+          example: postaman/collection
+        name:
+          type: string
+          description: script execution custom name
+          example: testing with 1000 users
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+        metadata: 
+          type: string
+          description: script content as string (content depends from executor)
+
+    ScriptExecutionRequest: 
+      description: scripts execution request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script execution custom name
+          example: testing with 1000 users
+        namespace:
+          type: string
+          description: script kubernetes namespace ("default" when not set)
+          example: default
+        params: 
+          type: object
+          description: 'execution params passed to executor'
+          additionalProperties: 
+            type: string
+          example: 
+            users: "3"
+            prefix: "some-"
+
+    ScriptCreateRequest: 
+      description: scripts create request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script name - Custom Resource name - must be unique
+          example: kubeshop-homepage-test
+        type:
+          type: string
+          description: script type - what executor type should be used during test execution
+          example: postman/collection
+        namespace:
+          type: string
+          description: kubernetes namespace (defaults to 'default')
+          example: default
+        content:
+          type: string
+          description: script content - executor specific e.g. fo postman-collections executor
+          example: >
+            {
+              "info": {
+                "_postman_id": "57ad6291-5b8f-4b2d-b24d-d2d2ce8785bb",
+                "name": "SimpleKubeshop",
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+              },
+              "item": [
+                {
+                  "name": "Homepage",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": null
+                  },
+                  "response": []
+                }
+                
+#
+# Errors
+#
+
+    Problem: 
+      description: problem response in case of error
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type contains a URI that identifies the problem type. This URI will,
+          example: http://kubeshop.io/kubtest/problems/invalid-script-name
+        title:
+          type: string
+          description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
+          example: Invalid script name
+        status:
+          type: integer
+          description: HTTP status code for this occurrence of the problem.
+          example: 500
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+          example: Your script name can't contain forbidden characters like "}}}" passed
+        instance:
+          type: string
+          description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
+          example: http://10.23.23.123:8080/scripts

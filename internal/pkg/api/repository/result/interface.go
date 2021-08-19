@@ -3,20 +3,20 @@ package result
 import (
 	"context"
 
-	"github.com/kubeshop/kubetest/pkg/api/kubetest"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
 type Repository interface {
 	// Get gets execution result by id
-	Get(ctx context.Context, id string) (kubetest.ScriptExecution, error)
+	Get(ctx context.Context, id string) (kubtest.ScriptExecution, error)
 	// GetByName gets execution result by name
-	GetByNameAndScript(ctx context.Context, name, script string) (kubetest.ScriptExecution, error)
+	GetByNameAndScript(ctx context.Context, name, script string) (kubtest.ScriptExecution, error)
 	// GetNewestExecutions gets top X newest executions
-	GetNewestExecutions(ctx context.Context, limit int) ([]kubetest.ScriptExecution, error)
+	GetNewestExecutions(ctx context.Context, limit int) ([]kubtest.ScriptExecution, error)
 	// GetScriptExecutions gets executions for given script ID
-	GetScriptExecutions(ctx context.Context, scriptID string) ([]kubetest.ScriptExecution, error)
+	GetScriptExecutions(ctx context.Context, scriptID string) ([]kubtest.ScriptExecution, error)
 	// Insert inserts new execution result
-	Insert(ctx context.Context, result kubetest.ScriptExecution) error
+	Insert(ctx context.Context, result kubtest.ScriptExecution) error
 	// Update updates execution result
-	Update(ctx context.Context, result kubetest.ScriptExecution) error
+	Update(ctx context.Context, result kubtest.ScriptExecution) error
 }

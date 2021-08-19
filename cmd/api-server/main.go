@@ -2,16 +2,16 @@ package main
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubetest-operator/client"
-	scriptscr "github.com/kubeshop/kubetest-operator/client/scripts"
-	v1API "github.com/kubeshop/kubetest/internal/app/api/v1"
-	"github.com/kubeshop/kubetest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubetest/internal/pkg/postman/storage"
+	"github.com/kubeshop/kubtest-operator/client"
+	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
+	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
+	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
+	"github.com/kubeshop/kubtest/internal/pkg/postman/storage"
 )
 
 type MongoConfig struct {
 	DSN string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	DB  string `envconfig:"API_MONGO_DB" default:"kubetest"`
+	DB  string `envconfig:"API_MONGO_DB" default:"kubtest"`
 }
 
 var Config MongoConfig
