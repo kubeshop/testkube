@@ -10,6 +10,8 @@
                                                            
 # kubtest - your testing friend for your cloud apps
 
+![Known Vulnerabilities](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)
+
 Kubernetes-native framework for definition and execution of tests in a cluster; 
 
 Instead of orchestrating and executing test with a CI tool (jenkins, travis, circle-ci, GitHub/GitLab, etc) tests are defined/orchestrated in the cluster using k8s native concepts (manifests, etc) and executed automatically when target resources are updated in the cluster. Results are written to existing tooling (prometheus, etc). This decouples test-definition and execution from CI-tooling/pipelines and ensures that tests are run when corresponding resources are updated (which could still be part of a CI/CD workflow). 
