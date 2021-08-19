@@ -29,6 +29,9 @@ var installCmd = &cobra.Command{
 		_, err := process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 		ui.ExitOnError("adding kubtest repo", err)
 
+		_, err = process.Execute("helm", "repo", "update")
+		ui.ExitOnError("updating helm repositories", err)
+
 		out, err := process.Execute("helm", "install", "--namespace", namespace, name, chart)
 		ui.ExitOnError("executing helm install", err)
 

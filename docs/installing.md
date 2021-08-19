@@ -8,6 +8,15 @@ your `$PATH`.
 
 We have plans to build installers for most popular OS and system distros.
 
+### MacOS 
+
+to run kubectl-kubtest you need to remove quarantine flags from file
+
+```sh
+xattr -d com.apple.quarantine kubectl-kubtest
+```
+
+
 ## Cluster
 
 For installation we're using Helm charts so you need to have recent `helm` command installed
