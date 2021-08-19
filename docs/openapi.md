@@ -1,0 +1,1 @@
+!!swagger-http https://raw.githubusercontent.com/kubeshop/kubtest/main/api/v1/kubtest.yaml!!
