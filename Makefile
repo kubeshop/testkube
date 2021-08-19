@@ -75,3 +75,6 @@ version-bump-minor:
 
 version-bump-major:
 	go run scripts/bump.go -kind major
+
+commands-reference: 
+	go run cmd/kubectl-kubtest/main.go doc > ./docs/reference.md

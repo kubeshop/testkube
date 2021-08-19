@@ -20,3 +20,8 @@ func Logo() {
 	fmt.Print(color.Blue(logo))
 	fmt.Println()
 }
+
+func LogoNoColor() {
+	fmt.Print(logo)
+	fmt.Println()
+}
