@@ -12,6 +12,7 @@ theme:
   highlightjs: true
   hljs_languages:
     - yaml
+    - go
 
 nav:
   - Welcome: index.md
@@ -20,6 +21,7 @@ nav:
   - Reference: reference.md
   - Architecture: architecture.md
   - Contributing: contributing.md
+  - Development: development.md
 
 copyright: Copyright &copy; 2021 <a href="https://kubeshop.io">Kubeshop</a>
 
