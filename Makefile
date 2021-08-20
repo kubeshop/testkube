@@ -3,6 +3,7 @@
 BIN_DIR ?= $(HOME)/bin
 GITHUB_TOKEN ?= "SET_ME"
 USER ?= $(USER)
+NAMESPACE ?= "kt1"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 
@@ -57,6 +58,12 @@ openapi-generate-model-kubtest:
 
 test: 
 	go test ./... -cover
+
+test-e2e:
+	go test --tags=e2e -v ./test/e2e
+
+test-e2e-namespace:
+	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
 cover: 
 	@go test -mod=vendor -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 

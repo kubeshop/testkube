@@ -14,7 +14,6 @@ func init() {
 	CreateScriptsCmd.Flags().StringP("file", "f", "", "script file - will be read from stdin if not specified")
 
 	CreateScriptsCmd.Flags().StringP("type", "t", "postman/collection", "script type (defaults to postman-collection)")
-	CreateScriptsCmd.Flags().StringP("namespace", "s", "default", "kubernetes namespace where script will be created")
 }
 
 var CreateScriptsCmd = &cobra.Command{

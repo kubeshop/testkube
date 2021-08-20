@@ -7,10 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	ListScriptsCmd.Flags().StringP("namespace", "s", "default", "kubernetes namespace from where scripts should be listed")
-}
-
 var ListScriptsCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Get all available scripts",
