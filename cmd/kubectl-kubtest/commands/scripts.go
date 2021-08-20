@@ -10,6 +10,7 @@ import (
 func init() {
 	scriptsCmd.PersistentFlags().StringP("client", "c", "proxy", "Client used for connecting to kubtest API one of proxy|direct")
 	scriptsCmd.PersistentFlags().BoolP("verbose", "v", false, "should I show additional debug messages")
+	scriptsCmd.PersistentFlags().StringP("namespace", "s", "default", "kubernetes namespace")
 
 	// output renderer flags
 	scriptsCmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")

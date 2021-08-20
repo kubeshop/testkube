@@ -58,6 +58,9 @@ openapi-generate-model-kubtest:
 test: 
 	go test ./... -cover
 
+test-e2e:
+	go test --tags=e2e -v ./test/e2e
+
 cover: 
 	@go test -mod=vendor -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
 	open testCoverage.html
