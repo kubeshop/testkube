@@ -12,7 +12,7 @@ Welcome to Kubtest - your friendly Kubernetes testing framework!
 Kubetest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
 clusters state and can be executed as needed:
 
-- Manually via cli
+- Manually via kubectl cli
 - Externally triggered via API (CI, external tooling, etc)
 - Automatically on deployment of annotated/labeled services/pods/etc (WIP)
 
