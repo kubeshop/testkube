@@ -7,7 +7,7 @@ const (
 	ClientProxy  ClientType = "proxy"
 )
 
-func GetClient(clientType ClientType) (client Client, err error) {
+func GetClient(clientType ClientType, namespace string) (client Client, err error) {
 	switch clientType {
 
 	case ClientDirect:
@@ -17,7 +17,7 @@ func GetClient(clientType ClientType) (client Client, err error) {
 		if err != nil {
 			return client, err
 		}
-		client = NewProxyScriptsAPI(clientset, NewDefaultProxyConfig())
+		client = NewProxyScriptsAPI(clientset, NewProxyConfig(namespace))
 	}
 
 	return client, err
