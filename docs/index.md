@@ -18,17 +18,20 @@ clusters state and can be executed as needed:
 
 Main Kubtest components are:
 
-- A kubectl plugin for creating/running tests
-- Custom resource definitions and corresponding controllers/operators for defining test scripts - WIP
-- Extension mechanism that allows 3rd party tool providers to add support for their test scripts
-- Integration with 3rd party tools for result reporting/analysis (prometheus, etc.) - WIP
-- Custom controller/operator that can be configured to run specific tests based on events/annotations/etc - WIP
+- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
+- API Server - work orchestrator, runs executors, gather execution results
+- CRDs Operator - watch Kubtest CR, handles changes communicates with API Server
+- Executors - runs tests defined for specific runner
+- Results DB - for centralized test results mgmt
 
 Kubtest attempts to:
 
-- Avoid vendor lock-in for CI/CD test orchestration and execution pipelines
-- Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters, without having to wrap them in docker-images or providing network access
+- Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
+- Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters,
+  without having to wrap them in docker-images or providing network access
+- Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
+- Centralize all test results in a consistent format for "actionable QA analytics"
 - Provide a modular architecture for adding new types of test scripts and executors
 
-Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to setup Kubtest and 
+Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to set up Kubtest and 
 run your first tests!
