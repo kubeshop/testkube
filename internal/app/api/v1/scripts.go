@@ -18,7 +18,7 @@ import (
 func (s kubtestAPI) GetScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("ns", "default")
+		namespace := c.Query("namespace", "default")
 		crScript, err := s.ScriptsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -37,7 +37,7 @@ func (s kubtestAPI) GetScript() fiber.Handler {
 // ListScripts for getting list of all available scripts
 func (s kubtestAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("ns", "default")
+		namespace := c.Query("namespace", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
