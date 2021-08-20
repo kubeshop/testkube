@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -13,11 +14,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var namespace string
+
+func init() {
+	if ns, ok := os.LookupEnv("NAMESPACE"); ok {
+		namespace = ns
+	}
+
+}
+
 func TestE2E(t *testing.T) {
 	a := require.New(t)
 	test := kubtest.NewKubtest()
+	test.Namespace = namespace
 	scriptName := fmt.Sprintf("script-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
+
+	t.Logf("Sctipt name: %s", scriptName)
+	t.Logf("Collection file name: %s", collectionFile)
+	t.Logf("Kubernetes namespace: %s", namespace)
 
 	t.Run("install test", func(t *testing.T) {
 		// given
