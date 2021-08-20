@@ -34,9 +34,9 @@ func NewProxyScriptsAPI(client *kubernetes.Clientset, config ProxyConfig) ProxyS
 	}
 }
 
-func NewDefaultProxyConfig() ProxyConfig {
+func NewProxyConfig(namespace string) ProxyConfig {
 	return ProxyConfig{
-		Namespace:   "default",
+		Namespace:   namespace,
 		ServiceName: "kubtest-api-server",
 		ServicePort: 8080,
 	}

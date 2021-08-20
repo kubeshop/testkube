@@ -7,9 +7,10 @@ import (
 )
 
 func GetClient(cmd *cobra.Command) client.Client {
-	clientType, err := cmd.Flags().GetString("client")
-	ui.ExitOnError("getting client type", err)
-	client, err := client.GetClient(client.ClientType(clientType))
+	clientType := cmd.Flag("client").Value.String()
+	namespace := cmd.Flag("namespace").Value.String()
+
+	client, err := client.GetClient(client.ClientType(clientType), namespace)
 	ui.ExitOnError("setting up client type", err)
 	return client
 }
