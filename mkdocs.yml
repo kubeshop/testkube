@@ -14,7 +14,8 @@ nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
-  - Reference: reference.md
+  - CLI Reference: reference.md
+  - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md
   - Development: development.md
