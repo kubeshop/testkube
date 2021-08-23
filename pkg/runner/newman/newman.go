@@ -48,9 +48,6 @@ func (r *Runner) Run(input io.Reader, params map[string]string) (result kubtest.
 		return result.Err(err)
 	}
 
-	fmt.Printf("JSON:\n%+v\n", string(bytes))
-	fmt.Printf("TMPFILE:\n%+v\n", tmpName)
-
 	err = json.Unmarshal(bytes, &newmanResult.Metadata)
 	if err != nil {
 		return result.Err(fmt.Errorf("parsing results metadata error: %w", err))
@@ -58,7 +55,6 @@ func (r *Runner) Run(input io.Reader, params map[string]string) (result kubtest.
 
 	// convert newman result to OpenAPI struct
 	res := MapMetadataToResult(newmanResult)
-	fmt.Printf("RESULT: %+v\n", res)
 
 	return res
 }
