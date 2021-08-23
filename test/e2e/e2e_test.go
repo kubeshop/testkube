@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var namespace string
+var namespace = "default"
 
 func init() {
 	if ns, ok := os.LookupEnv("NAMESPACE"); ok {
