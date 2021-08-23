@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -23,6 +24,12 @@ func init() {
 
 }
 
+var install = flag.Bool("install", false, "test")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
 func TestE2E(t *testing.T) {
 	a := require.New(t)
 	test := kubtest.NewKubtest(namespace)
@@ -34,6 +41,9 @@ func TestE2E(t *testing.T) {
 	t.Logf("Kubernetes namespace: %s", namespace)
 
 	t.Run("install test", func(t *testing.T) {
+		if !*install {
+			t.Skip("install flag not passed ignoring install test")
+		}
 		// given
 		test.Output = "json"
 
@@ -50,10 +60,10 @@ func TestE2E(t *testing.T) {
 		a.NoError(err)
 		a.Contains(string(out), "STATUS: deployed")
 		a.Contains(string(out), "Visit http://127.0.0.1:8080 to use your application")
-	})
 
-	// TODO change to watch for changes
-	sleep(t, time.Minute)
+		// TODO change to watch for changes
+		sleep(t, time.Minute)
+	})
 
 	t.Run("scripts management", func(t *testing.T) {
 		// given
@@ -67,6 +77,8 @@ func TestE2E(t *testing.T) {
 
 		// then
 		a.Contains(string(out), scriptName)
+
+		sleep(t, 5*time.Second)
 	})
 
 	t.Run("scripts run", func(t *testing.T) {
