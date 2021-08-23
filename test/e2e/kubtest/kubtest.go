@@ -16,9 +16,9 @@ kubectl kubtest scripts executions      # copy last execution id
 kubectl kubtest scripts execution SCRIPT_NAME EXECUTION_ID
 ***/
 
-func NewKubtest() Kubtest {
+func NewKubtest(namespace string) Kubtest {
 	return Kubtest{
-		Namespace: "default",
+		Namespace: namespace,
 		Output:    "raw",
 	}
 }

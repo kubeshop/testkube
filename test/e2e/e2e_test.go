@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var namespace string
+var namespace = "default"
 
 func init() {
 	if ns, ok := os.LookupEnv("NAMESPACE"); ok {
@@ -25,8 +25,7 @@ func init() {
 
 func TestE2E(t *testing.T) {
 	a := require.New(t)
-	test := kubtest.NewKubtest()
-	test.Namespace = namespace
+	test := kubtest.NewKubtest(namespace)
 	scriptName := fmt.Sprintf("script-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 
