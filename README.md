@@ -7,9 +7,12 @@
                                /kjuːb tɛst/ by Kubeshop
 ```
 
+<!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
+
 Known vulnerabilities: ![kubtest](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)
 ![kubtest-operator](https://snyk.io/test/github/kubeshop-operator/kubtest/badge.svg)
 ![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)
+-->
                                                            
 # Welcome to Kubtest - your friendly Kubernetes testing framework!
 
