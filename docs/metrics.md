@@ -10,7 +10,7 @@ currently exposes the following metrics:
 
 ## Installation
 
-If yout don't have installed prometheus operator please follow https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/ first 
+If yout don't have installed Prometheus operator please follow [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/) first 
 
 Next you'll need to add `ServiceMonitor` custom resource to your cluster which will scrape metrics from our
 kubtest API server.
@@ -40,4 +40,4 @@ command:
 
 If you want use our dashboard please import this json definition:
 
-https://kubeshop.github.io/kubetest/asserts/grafana-dashboard.json
+[https://github.com/kubeshop/kubtest/blob/main/assets/grafana-dasboard.json](https://github.com/kubeshop/kubtest/blob/main/assets/grafana-dasboard.json)
