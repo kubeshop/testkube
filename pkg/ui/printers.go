@@ -56,11 +56,13 @@ func Errf(err string, params ...interface{}) {
 
 func Fail(err error) {
 	Err(err)
+	fmt.Println()
 	os.Exit(1)
 }
 
 func Failf(err string, params ...interface{}) {
 	Errf(err, params...)
+	fmt.Println()
 	os.Exit(1)
 }
 
