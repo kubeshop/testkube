@@ -40,4 +40,4 @@ command:
 
 If you want use our dashboard please import this json definition:
 
-https://kubeshop.github.io/kubetest/asserts/grafana-dashboard.json
+https://raw.githubusercontent.com/kubeshop/kubtest/main/assets/grafana-dasboard.json
