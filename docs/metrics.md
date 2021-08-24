@@ -35,3 +35,9 @@ If you're installing kubtest manually by our Helm chart you can pass `prometheus
 command: 
 
 
+
+## Grafana dashboard 
+
+If you want use our dashboard please import this json definition:
+
+https://kubeshop.github.io/kubetest/asserts/grafana-dashboard.json
