@@ -50,7 +50,7 @@ var StartScriptCmd = &cobra.Command{
 
 		switch true {
 
-		case execution.IsPending():
+		case execution.IsQueued():
 			ui.Warn("Script queued for execution")
 
 		case execution.IsPending():
