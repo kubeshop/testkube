@@ -29,7 +29,7 @@ var GetScriptExecutionCmd = &cobra.Command{
 
 		client := GetClient(cmd)
 		scriptExecution, err := client.GetExecution(scriptID, executionID)
-		ui.ExitOnError("getting API for script completion", err)
+		ui.ExitOnError("getting script execution: "+scriptID+"/"+executionID, err)
 
 		render := GetRenderer(cmd)
 		err = render.Render(scriptExecution, os.Stdout)

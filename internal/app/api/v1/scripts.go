@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubtest/pkg/rand"
+	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -184,19 +185,33 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 // GetScriptExecution returns script execution object for given script and execution id
 func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		// TODO do we need scriptID here? consider removing it from API
-		// It would be needed only for grouping purposes. executionID will be unique for scriptExecution
-		// in API
-		scriptID := c.Params("id")
+		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		s.Log.Infow("GET execution request", "id", scriptID, "executionID", executionID)
+		s.Log.Infow("get execution request", "id", scriptID, "executionID", executionID)
 
-		scriptExecution, err := s.Repository.Get(context.Background(), executionID)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+		var scriptExecution kubtest.ScriptExecution
+		var err error
+
+		if scriptID == "-" {
+			scriptExecution, err = s.Repository.Get(context.Background(), executionID)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
+			}
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		} else {
+			scriptExecution, err = s.Repository.GetByNameAndScript(context.Background(), executionID, scriptID)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
+			}
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+
 		}
+
 		return c.JSON(scriptExecution)
 	}
 }
