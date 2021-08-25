@@ -55,11 +55,14 @@ func (p *PostmanExecutor) StartExecution() fiber.Handler {
 		err = p.Repository.Insert(context.Background(), execution)
 		if err != nil {
 			return p.Error(c, http.StatusInternalServerError, err)
-
 		}
 
-		p.Log.Infow("starting new execution", "execution", execution)
+		p.Log.Infow("execution request", "executionID", execution.Id, "params", execution.Params)
+		// log execution content only in debug mode to not flood logs
+		p.Log.Debugw("execution request - debug)", "executionID", execution.Id, "execution", execution)
+
 		c.Response().Header.SetStatusCode(201)
+
 		return c.JSON(execution)
 	}
 }

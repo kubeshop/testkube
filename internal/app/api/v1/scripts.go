@@ -132,12 +132,19 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 
-		// watch for execution results
-		execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
-			s.Log.Infow("saving", "status", e.Status, "scriptExecution", scriptExecution)
-			scriptExecution.Execution = &e
-			return s.Repository.Update(ctx, scriptExecution)
-		})
+		// save watch result asynchronously
+		go func(scriptExecution kubtest.ScriptExecution) {
+			// watch for execution results
+			execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+
+				l := s.Log.With("executionID", e.Id, "status", e.Status, "duration", e.Duration().String())
+				l.Infow("saving", "result", e.Result)
+				l.Debugw("saving - debug", "scriptExecution", scriptExecution)
+
+				scriptExecution.Execution = &e
+				return s.Repository.Update(ctx, scriptExecution)
+			})
+		}(scriptExecution)
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)

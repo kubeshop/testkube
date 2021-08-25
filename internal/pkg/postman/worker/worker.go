@@ -48,9 +48,10 @@ func (w *Worker) PullExecutions() chan kubtest.Execution {
 	executionChan := make(chan kubtest.Execution, w.BufferSize)
 
 	go func(executionChan chan kubtest.Execution) {
-		w.Log.Info("Watching queue start")
+		w.Log.Info("starting queue watcher")
 		for {
 			execution, err := w.PullExecution()
+			l := w.Log.With("executionID", execution.Id, "items", len(executionChan), "status", execution.Status)
 			if err != nil {
 				if err == mongo.ErrNoDocuments {
 					w.Log.Debug("no records found in queue to process")
@@ -61,7 +62,9 @@ func (w *Worker) PullExecutions() chan kubtest.Execution {
 				continue
 			}
 
+			l.Debug("pushing to executionChan")
 			executionChan <- execution
+			l.Debug("pushed to executionChan")
 		}
 	}(executionChan)
 
@@ -70,12 +73,12 @@ func (w *Worker) PullExecutions() chan kubtest.Execution {
 
 func (w *Worker) Run(executionChan chan kubtest.Execution) {
 	for i := 0; i < w.Concurrency; i++ {
-		go func(executionChan chan kubtest.Execution) {
+		go func(executionChan chan kubtest.Execution, i int) {
 			ctx := context.Background()
 			for {
 				e := <-executionChan
-				l := w.Log.With("executionID", e.Id)
-				l.Infow("Got script to run")
+				l := w.Log.With("executionID", e.Id, "workerID", i)
+				l.Infow("running execution")
 
 				e, err := w.RunExecution(ctx, e)
 				if err != nil {
@@ -85,12 +88,17 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 				}
 
 			}
-		}(executionChan)
+		}(executionChan, i)
 	}
 }
 
 func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
 	e.Start()
+	// write start time to repo
+	if werr := w.Repository.Update(ctx, e); werr != nil {
+		return e, werr
+	}
+
 	result := w.Runner.Run(strings.NewReader(e.ScriptContent), e.Params)
 	e.Result = &result
 

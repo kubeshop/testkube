@@ -33,7 +33,8 @@ type HTTPExecutorClient struct {
 }
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
-// TODO add timeout later
+// Worker should set valid state for success or error after script completion
+// TODO add timeout
 func (c HTTPExecutorClient) Watch(id string, callback func(kubtest.Execution) error) (execution kubtest.Execution, err error) {
 	ticker := time.NewTicker(WatchInterval)
 	for range ticker.C {

@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const CollectionName = "executions"
@@ -36,6 +37,14 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) 
 }
 
 func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
-	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"status": kubtest.ExecutionStatusQueued}, bson.M{"$set": bson.M{"status": kubtest.ExecutionStatusPending}}).Decode(&result)
+	after := options.After
+	err = r.Coll.FindOneAndUpdate(
+		ctx,
+		bson.M{"status": kubtest.ExecutionStatusQueued},
+		bson.M{"$set": bson.M{"status": kubtest.ExecutionStatusPending}},
+		&options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
+		},
+	).Decode(&result)
 	return
 }

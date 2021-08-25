@@ -2,6 +2,7 @@ package scripts
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"text/template"
 
@@ -43,6 +44,11 @@ type RawRenderer struct {
 }
 
 func (r RawRenderer) Render(execution kubtest.ScriptExecution, writer io.Writer) error {
+	err := r.renderDetails(execution, writer)
+	if err != nil {
+		return err
+	}
+
 	if execution.Execution.Result.ErrorMessage != "" {
 		_, err := writer.Write([]byte(execution.Execution.Result.ErrorMessage + "\n\n"))
 		if err != nil {
@@ -51,8 +57,20 @@ func (r RawRenderer) Render(execution kubtest.ScriptExecution, writer io.Writer)
 	}
 
 	// TODO handle output-types
-	_, err := writer.Write([]byte(execution.Execution.Result.RawOutput))
+	_, err = writer.Write([]byte(execution.Execution.Result.RawOutput))
 	return err
+}
+
+func (r RawRenderer) renderDetails(execution kubtest.ScriptExecution, writer io.Writer) error {
+
+	_, err := fmt.Fprintf(writer, "Name: %s\nStatus: %s\nDuration: %s\n\n",
+		execution.Name,
+		execution.Execution.Status,
+		execution.Execution.Duration(),
+	)
+
+	return err
+
 }
 
 func GetRenderer(cmd *cobra.Command) Renderer {
