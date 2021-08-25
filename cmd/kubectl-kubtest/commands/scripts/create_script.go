@@ -21,6 +21,7 @@ var CreateScriptsCmd = &cobra.Command{
 	Short: "Create new script",
 	Long:  `Create new Script Custom Resource, `,
 	Run: func(cmd *cobra.Command, args []string) {
+		ui.Logo()
 
 		name := cmd.Flag("name").Value.String()
 		namespace := cmd.Flag("namespace").Value.String()
@@ -44,6 +45,10 @@ var CreateScriptsCmd = &cobra.Command{
 		script, _ := client.GetScript(name)
 		if name == script.Name {
 			ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
+		}
+
+		if len(content) == 0 {
+			ui.Failf("Empty script content. Please pass some script content to create script")
 		}
 
 		script, err = client.CreateScript(name, executorType, string(content), namespace)
