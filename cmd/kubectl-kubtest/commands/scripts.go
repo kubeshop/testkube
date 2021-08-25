@@ -20,6 +20,7 @@ func init() {
 	scriptsCmd.AddCommand(scripts.ListScriptsCmd)
 	scriptsCmd.AddCommand(scripts.StartScriptCmd)
 	scriptsCmd.AddCommand(scripts.GetScriptExecutionCmd)
+	scriptsCmd.AddCommand(scripts.WatchScriptExecutionCmd)
 	scriptsCmd.AddCommand(scripts.ListScriptExecutionsCmd)
 	scriptsCmd.AddCommand(scripts.CreateScriptsCmd)
 	RootCmd.AddCommand(scriptsCmd)

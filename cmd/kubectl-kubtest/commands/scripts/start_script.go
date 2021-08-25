@@ -70,7 +70,11 @@ var StartScriptCmd = &cobra.Command{
 		ui.BR()
 		ui.ShellCommand(
 			"Use following command to get script execution details",
-			"kubectl kubtest scripts execution test "+scriptExecution.Id,
+			"kubectl kubtest scripts execution "+scriptExecution.Id,
+		)
+		ui.ShellCommand(
+			"or watch script execution until complete",
+			"kubectl kubtest scripts watch "+scriptExecution.Id,
 		)
 
 	},
