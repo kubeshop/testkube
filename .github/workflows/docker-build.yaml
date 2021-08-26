@@ -55,28 +55,6 @@ jobs:
 
 
 
-      -
-        name: Docker meta for Postman executor
-        id: meta_postman_executor
-        uses: docker/metadata-action@v3
-        with:
-          images: kubeshop/kubtest-postman-executor
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
 
-      - 
-        name: Build Postman Executor
-        uses: docker/bake-action@v1
-        with:
-          files: |
-            build/postman-executor/docker-bake.hcl
-            ${{ steps.meta_postman_executor.outputs.bake-file }}
-          targets: build
-          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          push: true
 
 
