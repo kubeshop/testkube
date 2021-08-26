@@ -18,13 +18,13 @@ func init() {
 }
 
 var StartScriptCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Starts new script",
-	Long:  `Starts new script based on Script Custom Resource name, returns results to console`,
+	Use:     "start",
+	Aliases: []string{"run"},
+	Short:   "Starts new script",
+	Long:    `Starts new script based on Script Custom Resource name, returns results to console`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
 
-		// TODO move it to some Validator
 		if len(args) == 0 {
 			ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass script name to run"))
 		}
@@ -39,18 +39,23 @@ var StartScriptCmd = &cobra.Command{
 		scriptExecution, err := client.ExecuteScript(scriptID, namespace, name, params)
 		ui.ExitOnError("starting script execution "+namespacedName, err)
 
-		scriptExecution, err = client.GetExecution(scriptID, scriptExecution.Id)
-		ui.ExitOnError("watching API for script completion", err)
+		execution := scriptExecution.Execution
 
-		result := scriptExecution.Execution.Result
 		switch true {
 
-		case scriptExecution.Execution.IsSuccesful():
-			fmt.Println(result.RawOutput)
-			ui.Success("Script execution completed with sucess")
+		case execution.IsQueued():
+			ui.Warn("Script queued for execution")
 
-		case scriptExecution.Execution.IsFailed():
-			fmt.Println(result.ErrorMessage)
+		case execution.IsPending():
+			ui.Warn("Script execution started")
+
+		case execution.IsSuccesful():
+			fmt.Println(execution.Result.RawOutput)
+			duration := execution.EndTime.Sub(execution.StartTime)
+			ui.Success("Script execution completed with sucess in " + duration.String())
+
+		case execution.IsFailed():
+			fmt.Println(execution.Result.ErrorMessage)
 			ui.Errf("Script execution failed")
 
 		}
@@ -58,7 +63,11 @@ var StartScriptCmd = &cobra.Command{
 		ui.BR()
 		ui.ShellCommand(
 			"Use following command to get script execution details",
-			"kubectl kubtest scripts execution test "+scriptExecution.Id,
+			"kubectl kubtest scripts execution "+scriptExecution.Id,
+		)
+		ui.ShellCommand(
+			"or watch script execution until complete",
+			"kubectl kubtest scripts watch "+scriptExecution.Id,
 		)
 
 	},

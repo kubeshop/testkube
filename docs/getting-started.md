@@ -130,16 +130,17 @@ Where:
 ## Starting new script execution 
 
 When our script is defined as CR we can now run it: 
-
 ```shell
 $ kubectl kubtest scripts start my-test-name 
 
 ... some script run data ...
 
-Script execution completed 
-
 Use following command to get script execution details:
-$ kubectl kubtest scripts execution test 611b6da38cd74034e7c9d408
+$ kubectl kubtest scripts execution 611b6da38cd74034e7c9d408
+
+or watch for completition with
+$ kubectl kubtest scripts watch 611b6da38cd74034e7c9d408
+
 ```
 
 ## Getting execution details
@@ -147,7 +148,7 @@ After script completed with success or error you can go back to script details b
 scripts execution command:
 
 ```sh
-kubectl kubtest scripts execution script-name 6103a45b7e18c4ea04883866
+kubectl kubtest scripts execution 6103a45b7e18c4ea04883866
 
 ....
 some execution details

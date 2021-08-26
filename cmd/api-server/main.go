@@ -6,7 +6,7 @@ import (
 	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
 	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubtest/internal/pkg/postman/storage"
+	"github.com/kubeshop/kubtest/internal/pkg/api/repository/storage"
 )
 
 type MongoConfig struct {
