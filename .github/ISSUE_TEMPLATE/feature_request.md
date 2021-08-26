@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest an idea or new feature for Kubtest
 title: ''
-labels: kind/feature
+labels: 'feature-request 🚀'
 assignees: ''
 
 ---
