@@ -2,7 +2,7 @@
 name: Enhancement
 about: Suggest an enhancement to existing Kubtest functionality
 title: ''
-labels: kind/enhancement
+labels: 'enhancement 🚀'
 assignees: ''
 
 ---
