@@ -42,8 +42,8 @@ Kubtest attempts to:
 
 ## Getting Started
 
-Check out the [Installation](https://kubeshop.github.io/kubtest/installing.md) and
-[Getting Started](https://kubeshop.github.io/kubtest/getting-started.md) guides to set up Kubtest and
+Check out the [Installation](https://kubeshop.github.io/kubtest/installing/) and
+[Getting Started](https://kubeshop.github.io/kubtest/getting-started/) guides to set up Kubtest and
 run your first tests!
 
 # Documentation
