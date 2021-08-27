@@ -26,8 +26,7 @@ build-kubtest-bin:
 	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-kubtest" cmd/kubectl-kubtest/main.go
 
 docker-build-api-server:
-	go mod vendor
-	docker build --build-arg TOKEN=$(GITHUB_TOKEN) -t api-server -f build/api-server/Dockerfile .
+	docker build -t api-server -f build/api-server/Dockerfile .
 
 
 install-swagger-codegen-mac: 

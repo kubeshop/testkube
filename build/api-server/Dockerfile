@@ -2,18 +2,14 @@
 FROM golang:1.16
 WORKDIR /build
 COPY . .
-ENV GONOSUMDB=github.com/kubeshop/* 
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-
-# TODO remove after going public - used for private operator repo deps 
-ARG TOKEN
-RUN git config --global url."https://fog1985:${TOKEN}@github.com".insteadOf "https://github.com"
-
 RUN cd cmd/api-server;go build -o /app -mod mod -a .
 
 FROM alpine:latest  
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates libssl1.1
+# TODO remove when alpine will get it - We need upgrade libssl to fix 
+RUN apk upgrade libssl1.1
 WORKDIR /root/
 COPY --from=0 /app /bin/app
 EXPOSE 8080
