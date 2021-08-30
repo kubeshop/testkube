@@ -66,8 +66,12 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
-				Type:    request.Type_,
-				Content: request.Content,
+				Type:         request.Type_,
+				InputType:    request.InputType,
+				Content:      request.Content,
+				Uri:          request.Uri,
+				GitBranch:    request.GitBranch,
+				GitDirectory: request.GitDirectory,
 			},
 		})
 
