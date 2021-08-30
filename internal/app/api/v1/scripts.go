@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -121,8 +122,17 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
 		}
 
-		// pass content to executor client
-		execution, err := s.ExecutorClient.Execute(scriptCR.Spec.Content, request.Params)
+		// pass options to executor client
+		execution, err := s.ExecutorClient.Execute(client.ExecuteOptions{
+			Type_:        scriptCR.Spec.Type,
+			Content:      scriptCR.Spec.Content,
+			Uri:          scriptCR.Spec.Uri,
+			GitBranch:    scriptCR.Spec.GitBranch,
+			GitDirectory: scriptCR.Spec.GitDirectory,
+			InputType:    scriptCR.Spec.InputType,
+			Params:       request.Params,
+		})
+
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}

@@ -18,6 +18,8 @@ type Config struct {
 	URI string `default:"http://localhost:8082"`
 }
 
+type ExecuteOptions kubtest.ExecutionRequest
+
 func NewHTTPExecutorClient(config Config) HTTPExecutorClient {
 	return HTTPExecutorClient{
 		URI: config.URI,
@@ -61,15 +63,9 @@ func (c HTTPExecutorClient) Get(id string) (execution kubtest.Execution, err err
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c HTTPExecutorClient) Execute(content string, params map[string]string) (execution kubtest.Execution, err error) {
+func (c HTTPExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Execution, err error) {
 
-	// create request
-	request := kubtest.ExecutionRequest{
-		Metadata: content,
-		Params:   params,
-	}
-
-	body, err := json.Marshal(request)
+	body, err := json.Marshal(kubtest.ExecutionRequest(options))
 	if err != nil {
 		return execution, err
 	}

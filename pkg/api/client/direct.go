@@ -88,15 +88,10 @@ func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Sc
 }
 
 // CreateScript creates new Script Custom Resource
-func (c DirectScriptsAPI) CreateScript(name, scriptType, content, namespace string) (script kubtest.Script, err error) {
+func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script kubtest.Script, err error) {
 	uri := fmt.Sprintf(c.URI + "/v1/scripts")
 
-	request := kubtest.ScriptCreateRequest{
-		Name:      name,
-		Content:   content,
-		Type_:     scriptType,
-		Namespace: namespace,
-	}
+	request := kubtest.ScriptCreateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

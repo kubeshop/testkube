@@ -13,7 +13,7 @@ func TestHTTPClient(t *testing.T) {
 		t.Skip("Implement valid script") // TODO  implement me
 
 		client := NewHTTPExecutorClient(Config{URI: "http://localhost:8082"})
-		e, err := client.Execute("", make(map[string]string)) // To be fixed with the proper types call.
+		e, err := client.Execute(ExecuteOptions{Content: "", Params: make(map[string]string)}) // To be fixed with the proper types call.
 
 		assert.NoError(t, err)
 		assert.NotEqual(t, "", e)
@@ -24,47 +24,3 @@ func TestHTTPClient(t *testing.T) {
 	})
 
 }
-
-const exampleCollection = `{
-	"info": {
-		"_postman_id": "3d9a6be2-bd3e-4cf7-89ca-354103aab4a7",
-		"name": "kubtest",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Test",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"    pm.test(\"Successful GET request\", function () {",
-							"        pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
-							"    });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8082",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "%s"
-	
-				},
-				"host": ["localhost"]
-			},
-			"response": []
-		}
-	]
-}`

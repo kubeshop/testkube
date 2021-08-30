@@ -4,16 +4,21 @@ import (
 	"io/ioutil"
 	"os"
 
+	apiClient "github.com/kubeshop/kubtest/pkg/api/client"
 	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	// TODO find a good way to handle short flags
 	CreateScriptsCmd.Flags().StringP("name", "n", "", "unique script name - mandatory")
 	CreateScriptsCmd.Flags().StringP("file", "f", "", "script file - will be read from stdin if not specified")
 
+	// TODO - type should be autodetected
 	CreateScriptsCmd.Flags().StringP("type", "t", "postman/collection", "script type (defaults to postman-collection)")
+
+	CreateScriptsCmd.Flags().StringP("uri", "", "", "if resource need to be loaded from URI")
+	CreateScriptsCmd.Flags().StringP("git-branch", "main", "", "if uri is git repository we can set additional branch parameter")
+	CreateScriptsCmd.Flags().StringP("git-directory", "", "", "if repository is big we need to define additional directory to checkout partially")
 }
 
 var CreateScriptsCmd = &cobra.Command{
@@ -27,6 +32,9 @@ var CreateScriptsCmd = &cobra.Command{
 		namespace := cmd.Flag("namespace").Value.String()
 		executorType := cmd.Flag("type").Value.String()
 		file := cmd.Flag("file").Value.String()
+		uri := cmd.Flag("uri").Value.String()
+		gitBranch := cmd.Flag("git-branch").Value.String()
+		gitDir := cmd.Flag("git-directory").Value.String()
 
 		var content []byte
 		var err error
@@ -51,7 +59,15 @@ var CreateScriptsCmd = &cobra.Command{
 			ui.Failf("Empty script content. Please pass some script content to create script")
 		}
 
-		script, err = client.CreateScript(name, executorType, string(content), namespace)
+		script, err = client.CreateScript(apiClient.CreateScriptOptions{
+			Name:         name,
+			Type_:        executorType,
+			Content:      string(content),
+			Namespace:    namespace,
+			Uri:          uri,
+			GitBranch:    gitBranch,
+			GitDirectory: gitDir,
+		})
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
 		ui.Success("Script created", script.Name)
