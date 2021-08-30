@@ -124,13 +124,15 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 		// pass options to executor client
 		execution, err := s.ExecutorClient.Execute(client.ExecuteOptions{
-			Type_:        scriptCR.Spec.Type,
-			Content:      scriptCR.Spec.Content,
-			Uri:          scriptCR.Spec.Uri,
-			GitBranch:    scriptCR.Spec.GitBranch,
-			GitDirectory: scriptCR.Spec.GitDirectory,
-			InputType:    scriptCR.Spec.InputType,
-			Params:       request.Params,
+			Type_:   scriptCR.Spec.Type,
+			Content: scriptCR.Spec.Content,
+			Repository: &kubtest.Repository{
+				Uri:       scriptCR.Spec.Uri,
+				Branch:    scriptCR.Spec.GitBranch,
+				Directory: scriptCR.Spec.GitDirectory,
+			},
+			InputType: scriptCR.Spec.InputType,
+			Params:    request.Params,
 		})
 
 		if err != nil {

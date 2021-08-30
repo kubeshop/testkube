@@ -507,20 +507,30 @@ components:
           type: string
           description: >
             script content type can be: 
-            - direct content - created from file, 
-            - git repo directory checkout in case when test is some kind of project or have more than one file, 
-            - or file uri
+            - direct content - created from file,
+            - git repo directory checkout in case when test is some kind of project or have more than one file,
           enum:
             - content
             - git
-            - uri
+        repository: 
+          $ref: '#/components/schemas/Repository'
+
+    Repository: 
+      description: scripts execution request body
+      type: object
+      properties:
+        type: 
+          type: string
+          enum:
+            - git
+          description: VCS repository type
         uri: 
           type: string
           description: uri of content file or git directory
-        git-branch:
+        branch:
           type: string
-          description: git branch/tag name for checkout
-        git-directory:
+          description: branch/tag name for checkout
+        directory:
           type: string
           description: if needed we can checkout particular directory in case of BIG/mono repositories
 
