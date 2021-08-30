@@ -12,11 +12,11 @@ package kubtest
 // scripts execution request body
 type Repository struct {
 	// VCS repository type
-	Type_ string `json:"type,omitempty"`
+	Type_ string `json:"type"`
 	// uri of content file or git directory
-	Uri string `json:"uri,omitempty"`
+	Uri string `json:"uri"`
 	// branch/tag name for checkout
-	Branch string `json:"branch,omitempty"`
+	Branch string `json:"branch"`
 	// if needed we can checkout particular directory in case of BIG/mono repositories
 	Directory string `json:"directory,omitempty"`
 }

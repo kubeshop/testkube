@@ -518,6 +518,10 @@ components:
     Repository: 
       description: scripts execution request body
       type: object
+      required:
+        - type
+        - uri 
+        - branch
       properties:
         type: 
           type: string
