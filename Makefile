@@ -39,6 +39,7 @@ openapi-generate-model-kubtest:
 	mv tmp/api/kubtest/model_*.go pkg/api/kubtest
 	rm -rf tmp
 	find ./pkg/api/kubtest -type f -exec sed -i '' -e "s/package swagger/package kubtest/g" {} \;
+	go fmt pkg/api/kubtest/*.go
 	
 
 test: 
