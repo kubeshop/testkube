@@ -61,6 +61,7 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		s.Log.Infow("creating script", "request", request)
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,

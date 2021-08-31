@@ -18,7 +18,7 @@ func init() {
 	CreateScriptsCmd.Flags().StringP("type", "t", "postman/collection", "script type (defaults to postman-collection)")
 
 	CreateScriptsCmd.Flags().StringP("uri", "", "", "if resource need to be loaded from URI")
-	CreateScriptsCmd.Flags().StringP("git-branch", "main", "", "if uri is git repository we can set additional branch parameter")
+	CreateScriptsCmd.Flags().StringP("git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	CreateScriptsCmd.Flags().StringP("git-directory", "", "", "if repository is big we need to define additional directory to checkout partially")
 }
 
@@ -56,21 +56,26 @@ var CreateScriptsCmd = &cobra.Command{
 			ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
 		}
 
-		if len(content) == 0 {
+		if len(content) == 0 && uri == "" {
 			ui.Failf("Empty script content. Please pass some script content to create script")
 		}
 
-		script, err = client.CreateScript(apiClient.CreateScriptOptions{
-			Name:      name,
-			Type_:     executorType,
-			Content:   string(content),
-			Namespace: namespace,
-			Repository: &kubtest.Repository{
+		var repository *kubtest.Repository
+		if uri != "" && gitBranch != "" {
+			repository = &kubtest.Repository{
 				Type_:     "git",
 				Uri:       uri,
 				Branch:    gitBranch,
 				Directory: gitDir,
-			},
+			}
+		}
+
+		script, err = client.CreateScript(apiClient.CreateScriptOptions{
+			Name:       name,
+			Type_:      executorType,
+			Content:    string(content),
+			Namespace:  namespace,
+			Repository: repository,
 		})
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 

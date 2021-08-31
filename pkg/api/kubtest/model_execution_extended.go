@@ -40,11 +40,11 @@ func (e *Execution) WithParams(params map[string]string) *Execution {
 	return e
 }
 
-func (e *Execution) WithRepositoryData(uri, branch, dir string) *Execution {
+func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
 	e.Repository = &Repository{
-		Uri:       uri,
-		Branch:    branch,
-		Directory: dir,
+		Uri:    uri,
+		Branch: branch,
+		Path:   path,
 	}
 	return e
 }

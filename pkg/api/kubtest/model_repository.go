@@ -17,6 +17,6 @@ type Repository struct {
 	Uri string `json:"uri"`
 	// branch/tag name for checkout
 	Branch string `json:"branch"`
-	// if needed we can checkout particular directory in case of BIG/mono repositories
-	Directory string `json:"directory,omitempty"`
+	// if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
+	Path string `json:"path,omitempty"`
 }

@@ -625,9 +625,9 @@ components:
         branch:
           type: string
           description: branch/tag name for checkout
-        directory:
+        path :
           type: string
-          description: if needed we can checkout particular directory in case of BIG/mono repositories
+          description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 
     ScriptExecutionRequest: 
       description: scripts execution request body
