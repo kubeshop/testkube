@@ -41,6 +41,11 @@ type kubtestAPI struct {
 func (s kubtestAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 
+	executions := s.Routes.Group("/executions")
+
+	executions.Get("/executions", s.ListExecutions())
+	executions.Get("/executions/:id", s.GetScriptExecution())
+
 	scripts := s.Routes.Group("/scripts")
 
 	scripts.Get("/", s.ListScripts())

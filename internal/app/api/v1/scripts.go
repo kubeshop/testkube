@@ -61,22 +61,28 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		// TODO think about this one - should we introduce cyclic relation
+		// between those two projects ?
+
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
 				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
-				Type:         request.Type_,
-				InputType:    request.InputType,
-				Content:      request.Content,
-				Uri:          request.Uri,
-				GitBranch:    request.GitBranch,
-				GitDirectory: request.GitDirectory,
+				Type_:     request.Type_,
+				InputType: request.InputType,
+				Content:   request.Content,
+				Repository: &scriptsv1.Repository{
+					Type_:     "git",
+					Uri:       request.Repository.Uri,
+					Branch:    request.Repository.Branch,
+					Directory: request.Repository.Directory,
+				},
 			},
 		})
 
-		s.Metrics.IncCreateScript(script.Spec.Type, err)
+		s.Metrics.IncCreateScript(script.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -124,15 +130,16 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 		// pass options to executor client
 		execution, err := s.ExecutorClient.Execute(client.ExecuteOptions{
-			Type_:   scriptCR.Spec.Type,
-			Content: scriptCR.Spec.Content,
-			Repository: &kubtest.Repository{
-				Uri:       scriptCR.Spec.Uri,
-				Branch:    scriptCR.Spec.GitBranch,
-				Directory: scriptCR.Spec.GitDirectory,
-			},
+			Type_:     scriptCR.Spec.Type_,
 			InputType: scriptCR.Spec.InputType,
-			Params:    request.Params,
+			Content:   scriptCR.Spec.Content,
+			Repository: &kubtest.Repository{
+				Type_:     "git",
+				Uri:       scriptCR.Spec.Repository.Uri,
+				Branch:    scriptCR.Spec.Repository.Branch,
+				Directory: scriptCR.Spec.Repository.Directory,
+			},
+			Params: request.Params,
 		})
 
 		if err != nil {
@@ -176,7 +183,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 // ListExecutions returns array of available script executions
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		scriptID := c.Params("id")
+		scriptID := c.Params("id", "-")
 
 		var executions []kubtest.ScriptExecution
 		var err error
