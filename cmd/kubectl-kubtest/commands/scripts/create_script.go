@@ -19,7 +19,7 @@ func init() {
 
 	CreateScriptsCmd.Flags().StringP("uri", "", "", "if resource need to be loaded from URI")
 	CreateScriptsCmd.Flags().StringP("git-branch", "", "", "if uri is git repository we can set additional branch parameter")
-	CreateScriptsCmd.Flags().StringP("git-directory", "", "", "if repository is big we need to define additional directory to checkout partially")
+	CreateScriptsCmd.Flags().StringP("git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 }
 
 var CreateScriptsCmd = &cobra.Command{
@@ -35,7 +35,7 @@ var CreateScriptsCmd = &cobra.Command{
 		file := cmd.Flag("file").Value.String()
 		uri := cmd.Flag("uri").Value.String()
 		gitBranch := cmd.Flag("git-branch").Value.String()
-		gitDir := cmd.Flag("git-directory").Value.String()
+		gitPath := cmd.Flag("git-path").Value.String()
 
 		var content []byte
 		var err error
@@ -63,10 +63,10 @@ var CreateScriptsCmd = &cobra.Command{
 		var repository *kubtest.Repository
 		if uri != "" && gitBranch != "" {
 			repository = &kubtest.Repository{
-				Type_:     "git",
-				Uri:       uri,
-				Branch:    gitBranch,
-				Directory: gitDir,
+				Type_:  "git",
+				Uri:    uri,
+				Branch: gitBranch,
+				Path:   gitPath,
 			}
 		}
 
