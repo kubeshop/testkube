@@ -468,6 +468,8 @@ components:
         script-content: 
           type: string
           description: script metadata content
+        repository: 
+          $ref: '#/components/schemas/Repository'
         params: 
           type: object
           description: 'execution params passed to executor'
