@@ -2,7 +2,7 @@ module github.com/kubeshop/kubtest
 
 go 1.16
 
-replace github.com/kubeshop/kubtest-operator v0.1.3 => ../kubtest-operator
+// replace github.com/kubeshop/kubtest-operator v0.1.3 => ../kubtest-operator
 
 require (
 	github.com/Masterminds/semver v1.5.0
