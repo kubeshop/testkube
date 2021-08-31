@@ -9,6 +9,11 @@ import (
 )
 
 func TestExecutors(t *testing.T) {
+	t.Skip("move it to some e2e test suite on cluster when ready")
+
+	// TODO create resources
+
+	// TODO test
 
 	kubeClient := client.GetClient()
 	executorsClient := executorscr.NewClient(kubeClient)
@@ -19,7 +24,7 @@ func TestExecutors(t *testing.T) {
 	fmt.Printf("%+v\n", err)
 	fmt.Printf("%+v\n", postmanExec)
 
-	curlExec, err := execs.Get("curl/command")
+	curlExec, err := execs.Get("curl/test")
 	fmt.Printf("curl\n")
 	fmt.Printf("%+v\n", err)
 	fmt.Printf("%+v\n", curlExec)
@@ -33,6 +38,8 @@ func TestExecutors(t *testing.T) {
 	fmt.Printf("Non existing\n")
 	fmt.Printf("%+v\n", err)
 	fmt.Printf("%+v\n", nonexistingExec)
+
+	// TODO remove resources
 
 	t.Fail()
 }
