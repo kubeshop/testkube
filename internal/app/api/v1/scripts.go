@@ -133,10 +133,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			InputType: scriptCR.Spec.InputType,
 			Content:   scriptCR.Spec.Content,
 			Repository: &kubtest.Repository{
-				Type_:     "git",
-				Uri:       scriptCR.Spec.Repository.Uri,
-				Branch:    scriptCR.Spec.Repository.Branch,
-				Directory: scriptCR.Spec.Repository.Directory,
+				Type_:  "git",
+				Uri:    scriptCR.Spec.Repository.Uri,
+				Branch: scriptCR.Spec.Repository.Branch,
+				Path:   scriptCR.Spec.Repository.Path,
 			},
 			Params: request.Params,
 		})
