@@ -15,17 +15,95 @@ externalDocs:
   url: http://kubtest.io
 
 tags:
-- name: scripts
-  description: 'Operation based on scripts resource' 
+- name: api
+  description: 'Kubtest API operations' 
 - name: executor
-  description: 'Scripts execution' 
+  description: 'scripts execution API' 
+- name: scripts
+  description: 'scripts based operations' 
+- name: executions
+  description: 'executions based operations' 
 
 paths:
+
+  /executions/{executionID}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
+      tags:
+      - executions
+      - api
+      summary: 'Get script execution'
+      description: 'Returns execution with given executionID'
+      operationId: getScriptExecutionByID
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+  /executions:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+      tags:
+      - executions
+      - api
+      summary: 'Get all script executions'
+      description: 'Returns array of recent available scripts executions'
+      operationId: getRecentExecutions
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+
 
   /scripts:
     get:
       tags:
       - scripts
+      - api 
       summary: 'List scripts'
       description: 'filters will be added later'
       operationId: listScripts
@@ -49,6 +127,7 @@ paths:
     post:
       tags:
       - scripts
+      - api 
       summary: 'create new script'
       description: 'filters will be added later'
       operationId: createScript
@@ -93,14 +172,16 @@ paths:
           schema:
             type: string
           required: true
-          description: 'ID of the script'
+          description: ID of the script
         - in: query
           name: namespace
           schema:
             type: integer
           description: kubernetes namespace 
       tags:
+      - api 
       - scripts
+      - executions
       summary: 'Starts new script execution'
       description: 'New script execution returns new execution details on successful execution start'
       operationId: executeScript
@@ -154,7 +235,9 @@ paths:
           required: true
           description: ID of the script
       tags:
+      - api
       - scripts
+      - executions
       summary: 'Get all script executions'
       description: 'Returns array of all available script executions'
       operationId: getScriptExecutions
@@ -193,7 +276,9 @@ paths:
           required: true
           description: ID of the script execution
       tags:
+      - api
       - scripts
+      - executions
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
       operationId: getScriptExecution
@@ -231,7 +316,9 @@ paths:
           required: true
           description: ID of the script execution
       tags:
+      - api
       - scripts
+      - executions
       summary: 'Aborts execution'
       description: 'Aborts execution and returns execution details'
       operationId: abortScriptExecution
@@ -249,6 +336,7 @@ paths:
     post:
       tags:
       - executor
+      - executions
       summary: 'Starts script execution'
       description: 'Starts script execution, returns pending execution with ID'
       operationId: executueScript
@@ -289,6 +377,7 @@ paths:
           description: 'ID of the execution'
       tags:
       - executor
+      - executions
       summary: 'Get execution by ID'
       description: 'Gets execution with given ID, returns deailed information about test execution'
       operationId: getExecution
@@ -606,6 +695,8 @@ components:
                   },
                   "response": []
                 }
+
+
                 
 #
 # Errors

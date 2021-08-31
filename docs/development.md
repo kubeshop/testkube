@@ -22,6 +22,19 @@ make run-executor
 make run-api-server
 ```
 
+### Installing local executors
+
+You can development executors by running 
+
+```sh
+make dev-install-local-executors
+```
+
+It'll register Custom Resources for 
+- postman/collection
+- cypress/project
+- curl/test
+script types
 
 ## Intercepting api server on cluster
 

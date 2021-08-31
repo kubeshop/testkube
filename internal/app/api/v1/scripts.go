@@ -61,9 +61,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		// TODO think about this one - should we introduce cyclic relation
-		// between those two projects ?
-
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
@@ -94,11 +91,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 
 // ExecuteScript calls particular executor based on execution request content and type
 func (s kubtestAPI) ExecuteScript() fiber.Handler {
-	// TODO use kube API to get registered executor details - for now it'll be fixed
-	// we need to choose client based on script type in future for now there is only
-	// one client postman-collection newman based executor
-	// should be done on top level from some kind of available clients poll
-	// for - s.ExecutorClient calls
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 
@@ -128,8 +120,14 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
 		}
 
+		// get executor from kubernetes CRs
+		executor, err := s.Executors.Get(scriptCR.Spec.Type_)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+		}
+
 		// pass options to executor client
-		execution, err := s.ExecutorClient.Execute(client.ExecuteOptions{
+		execution, err := executor.Execute(client.ExecuteOptions{
 			Type_:     scriptCR.Spec.Type_,
 			InputType: scriptCR.Spec.InputType,
 			Content:   scriptCR.Spec.Content,
@@ -157,9 +155,9 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		s.Repository.Insert(ctx, scriptExecution)
 
 		// save watch result asynchronously
-		go func(scriptExecution kubtest.ScriptExecution) {
+		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
 			// watch for execution results
-			execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
 
 				l := s.Log.With("executionID", e.Id, "status", e.Status, "duration", e.Duration().String())
 				l.Infow("saving", "result", e.Result)
@@ -168,7 +166,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 				scriptExecution.Execution = &e
 				return s.Repository.Update(ctx, scriptExecution)
 			})
-		}(scriptExecution)
+		}(scriptExecution, executor)
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
@@ -188,7 +186,8 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		var executions []kubtest.ScriptExecution
 		var err error
 
-		// TODO should we split this to separate endpoint?
+		// TODO should we split this to separate endpoint? currently this one handles
+		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
 			s.Log.Infow("Getting newest script executions (no id passed)")

@@ -2,13 +2,14 @@ package v1
 
 import (
 	"github.com/kelseyhightower/envconfig"
+	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
 	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubtest/internal/pkg/server"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
 )
 
-func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClient) kubtestAPI {
+func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient) kubtestAPI {
 
 	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
@@ -19,11 +20,12 @@ func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClie
 	envconfig.Process("POSTMANEXECUTOR", &executorClientConfig)
 
 	s := kubtestAPI{
-		HTTPServer:     server.NewServer(httpConfig),
-		Repository:     repository,
-		ScriptsClient:  scriptsClient,
-		Metrics:        NewMetrics(),
-		ExecutorClient: client.NewHTTPExecutorClient(executorClientConfig),
+		HTTPServer:      server.NewServer(httpConfig),
+		Repository:      repository,
+		ScriptsClient:   scriptsClient,
+		ExecutorsClient: executorsClient,
+		Metrics:         NewMetrics(),
+		Executors:       client.NewExecutors(executorsClient),
 	}
 
 	s.Init()
@@ -32,10 +34,11 @@ func NewServer(repository result.Repository, scriptsClient scriptscr.ScriptsClie
 
 type kubtestAPI struct {
 	server.HTTPServer
-	Repository     result.Repository
-	ScriptsClient  scriptscr.ScriptsClient
-	Metrics        Metrics
-	ExecutorClient client.HTTPExecutorClient
+	Repository      result.Repository
+	Executors       client.Executors
+	ScriptsClient   *scriptscr.ScriptsClient
+	ExecutorsClient *executorscr.ExecutorsClient
+	Metrics         Metrics
 }
 
 func (s kubtestAPI) Init() {
