@@ -5,6 +5,7 @@ import (
 	"os"
 
 	apiClient "github.com/kubeshop/kubtest/pkg/api/client"
+	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -60,13 +61,16 @@ var CreateScriptsCmd = &cobra.Command{
 		}
 
 		script, err = client.CreateScript(apiClient.CreateScriptOptions{
-			Name:         name,
-			Type_:        executorType,
-			Content:      string(content),
-			Namespace:    namespace,
-			Uri:          uri,
-			GitBranch:    gitBranch,
-			GitDirectory: gitDir,
+			Name:      name,
+			Type_:     executorType,
+			Content:   string(content),
+			Namespace: namespace,
+			Repository: &kubtest.Repository{
+				Type_:     "git",
+				Uri:       uri,
+				Branch:    gitBranch,
+				Directory: gitDir,
+			},
 		})
 		ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 

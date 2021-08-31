@@ -581,20 +581,11 @@ components:
             script content type can be: 
             - direct content - created from file, 
             - git repo directory checkout in case when test is some kind of project or have more than one file, 
-            - or file uri
           enum:
             - content
             - git
-            - uri
-        uri: 
-          type: string
-          description: uri of content file or git directory
-        git-branch:
-          type: string
-          description: git branch/tag name for checkout
-        git-directory:
-          type: string
-          description: if needed we can checkout particular directory in case of BIG/mono repositories
+        repository: 
+          $ref: '#/components/schemas/Repository'
         content:
           type: string
           description: script content - executor specific e.g. fo postman-collections executor
