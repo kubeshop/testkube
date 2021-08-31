@@ -6,6 +6,6 @@ import (
 
 // Runner interface to abstract runners implementations
 type Runner interface {
-	// Run takes Execution data and returns result, can take additional params map
-	Run(execution kubtest.Execution, params map[string]string) kubtest.ExecutionResult
+	// Run takes Execution data and returns execution result
+	Run(execution kubtest.Execution) kubtest.ExecutionResult
 }
