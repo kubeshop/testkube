@@ -126,18 +126,26 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
 		}
 
-		// pass options to executor client
-		execution, err := executor.Execute(client.ExecuteOptions{
-			Type_:     scriptCR.Spec.Type_,
-			InputType: scriptCR.Spec.InputType,
-			Content:   scriptCR.Spec.Content,
-			Repository: &kubtest.Repository{
+		// TODO move to mapper
+
+		// check if repository exists in cr repository
+		var respository *kubtest.Repository
+		if scriptCR.Spec.Repository != nil {
+			respository = &kubtest.Repository{
 				Type_:  "git",
 				Uri:    scriptCR.Spec.Repository.Uri,
 				Branch: scriptCR.Spec.Repository.Branch,
 				Path:   scriptCR.Spec.Repository.Path,
-			},
-			Params: request.Params,
+			}
+		}
+
+		// pass options to executor client
+		execution, err := executor.Execute(client.ExecuteOptions{
+			Type_:      scriptCR.Spec.Type_,
+			InputType:  scriptCR.Spec.InputType,
+			Content:    scriptCR.Spec.Content,
+			Repository: respository,
+			Params:     request.Params,
 		})
 
 		if err != nil {
