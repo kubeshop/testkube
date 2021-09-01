@@ -4,7 +4,7 @@
 █████   ██    ██ ██████     ██    █████   ███████    ██    
 ██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
 ██   ██  ██████  ██████     ██    ███████ ███████    ██    
-                               /kjuːb tɛst/ by Kubeshop
+                                 /kʌb tɛst/ by Kubeshop
 ```
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347

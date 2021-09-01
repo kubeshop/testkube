@@ -97,15 +97,10 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Scr
 }
 
 // CreateScript creates new Script Custom Resource
-func (c ProxyScriptsAPI) CreateScript(name, scriptType, content, namespace string) (script kubtest.Script, err error) {
-	uri := fmt.Sprintf("/v1/scripts")
+func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script kubtest.Script, err error) {
+	uri := "/v1/scripts"
 
-	request := kubtest.ScriptCreateRequest{
-		Name:      name,
-		Content:   content,
-		Type_:     scriptType,
-		Namespace: namespace,
-	}
+	request := kubtest.ScriptCreateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

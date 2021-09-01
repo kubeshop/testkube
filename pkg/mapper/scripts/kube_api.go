@@ -16,7 +16,7 @@ func MapScriptKubeToAPI(crScript scriptsV1.Script) (script kubtest.Script) {
 	script.Name = crScript.Name
 	script.Content = crScript.Spec.Content
 	script.Created = crScript.Status.LastExecution.Time
-	script.Type_ = crScript.Spec.Type
+	script.Type_ = crScript.Spec.Type_
 
 	return
 }

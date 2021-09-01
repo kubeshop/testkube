@@ -1,13 +1,13 @@
 package v1
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -60,18 +60,26 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		s.Log.Infow("creating script", "request", request)
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
 				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
-				Type:    request.Type_,
-				Content: request.Content,
+				Type_:     request.Type_,
+				InputType: request.InputType,
+				Content:   request.Content,
+				Repository: &scriptsv1.Repository{
+					Type_:  "git",
+					Uri:    request.Repository.Uri,
+					Branch: request.Repository.Branch,
+					Path:   request.Repository.Path,
+				},
 			},
 		})
 
-		s.Metrics.IncCreateScript(script.Spec.Type, err)
+		s.Metrics.IncCreateScript(script.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -83,11 +91,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 
 // ExecuteScript calls particular executor based on execution request content and type
 func (s kubtestAPI) ExecuteScript() fiber.Handler {
-	// TODO use kube API to get registered executor details - for now it'll be fixed
-	// we need to choose client based on script type in future for now there is only
-	// one client postman-collection newman based executor
-	// should be done on top level from some kind of available clients poll
-	// for - s.ExecutorClient calls
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id")
 
@@ -106,7 +109,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// script name + script execution name should be unique
-		scriptExecution, _ := s.Repository.GetByNameAndScript(context.Background(), request.Name, scriptID)
+		scriptExecution, _ := s.Repository.GetByNameAndScript(c.Context(), request.Name, scriptID)
 		if scriptExecution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
@@ -117,14 +120,32 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
 		}
 
-		// pass content to executor client
-		execution, err := s.ExecutorClient.Execute(scriptCR.Spec.Content, request.Params)
+		// get executor from kubernetes CRs
+		executor, err := s.Executors.Get(scriptCR.Spec.Type_)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+		}
+
+		// pass options to executor client
+		execution, err := executor.Execute(client.ExecuteOptions{
+			Type_:     scriptCR.Spec.Type_,
+			InputType: scriptCR.Spec.InputType,
+			Content:   scriptCR.Spec.Content,
+			Repository: &kubtest.Repository{
+				Type_:  "git",
+				Uri:    scriptCR.Spec.Repository.Uri,
+				Branch: scriptCR.Spec.Repository.Branch,
+				Path:   scriptCR.Spec.Repository.Path,
+			},
+			Params: request.Params,
+		})
+
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
 		// store execution
-		ctx := context.Background()
+		ctx := c.Context()
 		scriptExecution = kubtest.NewScriptExecution(
 			scriptID,
 			request.Name,
@@ -134,9 +155,9 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		s.Repository.Insert(ctx, scriptExecution)
 
 		// save watch result asynchronously
-		go func(scriptExecution kubtest.ScriptExecution) {
+		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
 			// watch for execution results
-			execution, err = s.ExecutorClient.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
 
 				l := s.Log.With("executionID", e.Id, "status", e.Status, "duration", e.Duration().String())
 				l.Infow("saving", "result", e.Result)
@@ -145,7 +166,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 				scriptExecution.Execution = &e
 				return s.Repository.Update(ctx, scriptExecution)
 			})
-		}(scriptExecution)
+		}(scriptExecution, executor)
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
@@ -160,19 +181,21 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 // ListExecutions returns array of available script executions
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		scriptID := c.Params("id")
+		scriptID := c.Params("id", "-")
+		ctx := c.Context()
 
 		var executions []kubtest.ScriptExecution
 		var err error
 
-		// TODO should we split this to separate endpoint?
+		// TODO should we split this to separate endpoint? currently this one handles
+		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
 			s.Log.Infow("Getting newest script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(context.Background(), 10)
+			executions, err = s.Repository.GetNewestExecutions(ctx, 10)
 		} else {
 			s.Log.Infow("Getting script executions", "id", scriptID)
-			executions, err = s.Repository.GetScriptExecutions(context.Background(), scriptID)
+			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
 		}
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -185,6 +208,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 // GetScriptExecution returns script execution object for given script and execution id
 func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
@@ -194,7 +218,7 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		var err error
 
 		if scriptID == "-" {
-			scriptExecution, err = s.Repository.Get(context.Background(), executionID)
+			scriptExecution, err = s.Repository.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
 			}
@@ -202,14 +226,13 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			scriptExecution, err = s.Repository.GetByNameAndScript(context.Background(), executionID, scriptID)
+			scriptExecution, err = s.Repository.GetByNameAndScript(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
-
 		}
 
 		return c.JSON(scriptExecution)

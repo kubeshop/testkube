@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/kubtest-operator/client"
+	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
 	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
 	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
@@ -29,7 +30,8 @@ func main() {
 
 	kubeClient := client.GetClient()
 	scriptsClient := scriptscr.NewClient(kubeClient)
+	executorsClient := executorscr.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
-	v1API.NewServer(repository, scriptsClient).Run()
+	v1API.NewServer(repository, scriptsClient, executorsClient).Run()
 }

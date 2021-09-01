@@ -17,15 +17,38 @@ const (
 	ExecutionStatusError = "error"
 )
 
-func NewExecution(content string, params map[string]string) Execution {
+func NewExecution() Execution {
 	return Execution{
-		Id:            primitive.NewObjectID().Hex(),
-		ScriptContent: content,
-		Status:        ExecutionStatusQueued,
-		Params:        params,
-		Result:        &ExecutionResult{},
+		Id:     primitive.NewObjectID().Hex(),
+		Status: ExecutionStatusQueued,
+		Result: &ExecutionResult{},
 	}
 }
+
+func (e *Execution) WithContent(content string) *Execution {
+	e.ScriptContent = content
+	return e
+}
+
+func (e *Execution) WithRepository(repository *Repository) *Execution {
+	e.Repository = repository
+	return e
+}
+
+func (e *Execution) WithParams(params map[string]string) *Execution {
+	e.Params = params
+	return e
+}
+
+func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
+	e.Repository = &Repository{
+		Uri:    uri,
+		Branch: branch,
+		Path:   path,
+	}
+	return e
+}
+
 func (e *Execution) Start() {
 	e.StartTime = time.Now()
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // Partial checkout will checkout only given directory from Git repository
-func PartialCheckout(repo, dir, branch string) (outputDir string, err error) {
+func PartialCheckout(uri, path, branch string) (outputDir string, err error) {
 
 	tmpDir, err := ioutil.TempDir("", "kubtest-scripts")
 	if err != nil {
@@ -25,7 +25,7 @@ func PartialCheckout(repo, dir, branch string) (outputDir string, err error) {
 		"--depth", "1",
 		"--filter", "blob:none",
 		"--sparse",
-		repo, "repo",
+		uri, "repo",
 	)
 	if err != nil {
 		return "", err
@@ -36,11 +36,11 @@ func PartialCheckout(repo, dir, branch string) (outputDir string, err error) {
 		"git",
 		"sparse-checkout",
 		"set",
-		dir,
+		path,
 	)
 	if err != nil {
 		return "", err
 	}
 
-	return tmpDir + "/repo/" + dir, nil
+	return tmpDir + "/repo/" + path, nil
 }

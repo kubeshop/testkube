@@ -4,7 +4,8 @@
 █████   ██    ██ ██████     ██    █████   ███████    ██    
 ██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
 ██   ██  ██████  ██████     ██    ███████ ███████    ██    
-                               /kjuːb tɛst/ by Kubeshop
+                                 /kʌb tɛst/ by Kubeshop
+
 ```
 
 Welcome to Kubtest - your friendly Kubernetes testing framework!
