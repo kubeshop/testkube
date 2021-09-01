@@ -56,7 +56,7 @@ var CreateScriptsCmd = &cobra.Command{
 			ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
 		}
 
-		if len(content) == 0 && uri == "" {
+		if len(content) == 0 && len(uri) == 0 {
 			ui.Failf("Empty script content. Please pass some script content to create script")
 		}
 

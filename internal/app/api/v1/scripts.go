@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -110,7 +109,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// script name + script execution name should be unique
-		scriptExecution, _ := s.Repository.GetByNameAndScript(context.Background(), request.Name, scriptID)
+		scriptExecution, _ := s.Repository.GetByNameAndScript(c.Context(), request.Name, scriptID)
 		if scriptExecution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
@@ -146,7 +145,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// store execution
-		ctx := context.Background()
+		ctx := c.Context()
 		scriptExecution = kubtest.NewScriptExecution(
 			scriptID,
 			request.Name,
@@ -183,6 +182,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id", "-")
+		ctx := c.Context()
 
 		var executions []kubtest.ScriptExecution
 		var err error
@@ -192,10 +192,10 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
 			s.Log.Infow("Getting newest script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(context.Background(), 10)
+			executions, err = s.Repository.GetNewestExecutions(ctx, 10)
 		} else {
 			s.Log.Infow("Getting script executions", "id", scriptID)
-			executions, err = s.Repository.GetScriptExecutions(context.Background(), scriptID)
+			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
 		}
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -208,6 +208,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 // GetScriptExecution returns script execution object for given script and execution id
 func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
@@ -217,7 +218,7 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		var err error
 
 		if scriptID == "-" {
-			scriptExecution, err = s.Repository.Get(context.Background(), executionID)
+			scriptExecution, err = s.Repository.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
 			}
@@ -225,14 +226,13 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			scriptExecution, err = s.Repository.GetByNameAndScript(context.Background(), executionID, scriptID)
+			scriptExecution, err = s.Repository.GetByNameAndScript(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
-
 		}
 
 		return c.JSON(scriptExecution)
