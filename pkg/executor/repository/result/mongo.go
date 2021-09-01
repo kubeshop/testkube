@@ -10,7 +10,12 @@ import (
 
 const CollectionName = "executions"
 
-func NewMongoRespository(db *mongo.Database) *MongoRepository {
+// NewMongoRespository creates new result repository with db setup for given collection
+func NewMongoRespository(db *mongo.Database, collection string) *MongoRepository {
+	if collection == "" {
+		collection = CollectionName
+	}
+
 	return &MongoRepository{
 		Coll: db.Collection(CollectionName),
 	}
