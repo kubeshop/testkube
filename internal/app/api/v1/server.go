@@ -5,8 +5,8 @@ import (
 	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
 	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubtest/internal/pkg/server"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
+	"github.com/kubeshop/kubtest/pkg/server"
 )
 
 func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient) kubtestAPI {
