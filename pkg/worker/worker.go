@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
-	"github.com/kubeshop/kubtest/pkg/executor/repository"
+	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
 	"github.com/kubeshop/kubtest/pkg/log"
 	"github.com/kubeshop/kubtest/pkg/runner"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,7 +17,7 @@ const EmptyQueueWaitTime = 2 * time.Second
 const WorkerQueueBufferSize = 10000
 
 // NewWorker returns new worker instance with data repository and runner
-func NewWorker(resultsRepository repository.Repository, runner runner.Runner) Worker {
+func NewWorker(resultsRepository result.Repository, runner runner.Runner) Worker {
 	return Worker{
 		Concurrency: 4,
 		BufferSize:  WorkerQueueBufferSize,
@@ -31,7 +31,7 @@ func NewWorker(resultsRepository repository.Repository, runner runner.Runner) Wo
 type Worker struct {
 	Concurrency int
 	BufferSize  int
-	Repository  repository.Repository
+	Repository  result.Repository
 	Runner      runner.Runner
 	Log         *zap.SugaredLogger
 }

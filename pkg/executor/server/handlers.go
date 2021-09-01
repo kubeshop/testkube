@@ -7,11 +7,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
-	"github.com/kubeshop/kubtest/pkg/executor/repository"
+	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
 	"github.com/kubeshop/kubtest/pkg/server"
 )
 
-func StartExecution(s server.HTTPServer, repository repository.Repository) fiber.Handler {
+func StartExecution(s server.HTTPServer, repository result.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request kubtest.ExecutionRequest
@@ -45,7 +45,7 @@ func StartExecution(s server.HTTPServer, repository repository.Repository) fiber
 	}
 }
 
-func GetExecution(s server.HTTPServer, repository repository.Repository) fiber.Handler {
+func GetExecution(s server.HTTPServer, repository result.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		execution, err := repository.Get(context.Background(), c.Params("id"))
 		if err != nil {

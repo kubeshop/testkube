@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
+// Repository represent execution result repository
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (kubtest.Execution, error)

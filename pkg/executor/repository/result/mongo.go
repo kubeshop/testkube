@@ -11,6 +11,7 @@ import (
 const CollectionName = "executions"
 
 // NewMongoRespository creates new result repository with db setup for given collection
+// use empty collection name as param for default "executions" collection name
 func NewMongoRespository(db *mongo.Database, collection string) *MongoRepository {
 	if collection == "" {
 		collection = CollectionName
