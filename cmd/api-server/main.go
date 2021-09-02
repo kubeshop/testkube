@@ -8,6 +8,7 @@ import (
 	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/storage"
+	"github.com/kubeshop/kubtest/pkg/ui"
 )
 
 type MongoConfig struct {
@@ -24,14 +25,13 @@ func init() {
 func main() {
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
-	if err != nil {
-		panic(err)
-	}
+	ui.ExitOnError("Getting mongo databse", err)
 
 	kubeClient := client.GetClient()
 	scriptsClient := scriptscr.NewClient(kubeClient)
 	executorsClient := executorscr.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
-	v1API.NewServer(repository, scriptsClient, executorsClient).Run()
+	err = v1API.NewServer(repository, scriptsClient, executorsClient).Run()
+	ui.ExitOnError("Running API Server", err)
 }
