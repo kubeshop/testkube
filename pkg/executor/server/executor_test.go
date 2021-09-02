@@ -34,9 +34,12 @@ func TestCypressExecutor_StartExecution(t *testing.T) {
 }
 
 func GetTestExecutor(t *testing.T) Executor {
-	cypressExecutor := NewExecutor(&RepoMock{
-		Object: kubtest.Execution{Id: "1"},
-	})
+	cypressExecutor := NewExecutor(
+		&RepoMock{
+			Object: kubtest.Execution{Id: "1"},
+		},
+		&ExampleRunner{},
+	)
 	cypressExecutor.Init()
 
 	return cypressExecutor
@@ -62,4 +65,15 @@ func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Execution, err
 
 func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err error) {
 	return r.Error
+}
+
+// ExampleRunner for template - change me to some valid runner
+type ExampleRunner struct {
+}
+
+func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
+	return kubtest.ExecutionResult{
+		Status:    kubtest.ExecutionStatusSuceess,
+		RawOutput: "exmaple test output",
+	}
 }
