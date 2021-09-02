@@ -15,13 +15,21 @@ var (
 	Date    string
 )
 
+func init() {
+	RootCmd.AddCommand(NewDocsCmd())
+	RootCmd.AddCommand(NewScriptsCmd())
+	RootCmd.AddCommand(NewVersionCmd())
+	RootCmd.AddCommand(NewInstallCmd())
+}
+
 var RootCmd = &cobra.Command{
-	Use:   "",
+	Use:   "kubtest",
 	Short: "kubtest entrypoint for plugin",
 	Long:  `kubtest`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
 		cmd.Usage()
+		cmd.DisableAutoGenTag = true
 	},
 }
 

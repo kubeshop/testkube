@@ -1,6 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"net"
+	"os"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/kubtest-operator/client"
 	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
@@ -8,6 +12,7 @@ import (
 	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
 	"github.com/kubeshop/kubtest/internal/pkg/api/repository/storage"
+	"github.com/kubeshop/kubtest/pkg/ui"
 )
 
 type MongoConfig struct {
@@ -22,16 +27,35 @@ func init() {
 }
 
 func main() {
-	// DI
-	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
-	if err != nil {
-		panic(err)
+
+  if os.Getenv("KUBECONFIG") == "" {
+		fmt.Println("KUBECONFIG not present. Exiting...")
+		os.Exit(1)
 	}
 
+	port := os.Getenv("APISERVER_PORT")
+
+	ln, err := net.Listen("tcp", ":"+port)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't listen on port %q: %s", port, err)
+		os.Exit(1)
+	}
+
+	ln.Close()
+	fmt.Printf("TCP Port %q is available", port)
+
+	// DI
+	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
+	ui.ExitOnError("Getting mongo databse", err)
+
 	kubeClient := client.GetClient()
+
 	scriptsClient := scriptscr.NewClient(kubeClient)
+
 	executorsClient := executorscr.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
-	v1API.NewServer(repository, scriptsClient, executorsClient).Run()
+	err = v1API.NewServer(repository, scriptsClient, executorsClient).Run()
+	ui.ExitOnError("Running API Server", err)
 }

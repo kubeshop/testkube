@@ -7,17 +7,15 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
-	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
-	"github.com/kubeshop/kubtest/pkg/server"
 )
 
-func StartExecution(s server.HTTPServer, repository result.Repository) fiber.Handler {
+func (e *Executor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request kubtest.ExecutionRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return e.Error(c, http.StatusBadRequest, err)
 		}
 
 		execution := kubtest.NewExecution()
@@ -33,23 +31,23 @@ func StartExecution(s server.HTTPServer, repository result.Repository) fiber.Han
 			)
 		}
 
-		err = repository.Insert(context.Background(), execution)
+		err = e.Repository.Insert(context.Background(), execution)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return e.Error(c, http.StatusInternalServerError, err)
 
 		}
 
-		s.Log.Infow("starting new execution", "execution", execution)
+		e.Log.Infow("starting new execution", "execution", execution)
 		c.Response().Header.SetStatusCode(201)
 		return c.JSON(execution)
 	}
 }
 
-func GetExecution(s server.HTTPServer, repository result.Repository) fiber.Handler {
+func (e *Executor) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		execution, err := repository.Get(context.Background(), c.Params("id"))
+		execution, err := e.Repository.Get(context.Background(), c.Params("id"))
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return e.Error(c, http.StatusInternalServerError, err)
 		}
 
 		return c.JSON(execution)
