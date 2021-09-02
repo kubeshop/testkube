@@ -7,36 +7,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	scriptsCmd.PersistentFlags().StringP("client", "c", "proxy", "Client used for connecting to kubtest API one of proxy|direct")
-	scriptsCmd.PersistentFlags().BoolP("verbose", "v", false, "should I show additional debug messages")
-	scriptsCmd.PersistentFlags().StringP("namespace", "s", "default", "kubernetes namespace")
+var (
+	client    string
+	verbose   bool
+	namespace string
+)
+
+func NewScriptsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "scripts",
+		Short: "Scripts management commands",
+		Long:  `All available scripts and scripts executions commands`,
+		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Help()
+		},
+
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			ui.QuietMode = verbose
+		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to kubtest API one of proxy|direct")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "default", "kubernetes namespace")
 
 	// output renderer flags
-	scriptsCmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")
-	scriptsCmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
+	cmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")
+	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
-	scriptsCmd.AddCommand(scripts.AbortExecutionCmd)
-	scriptsCmd.AddCommand(scripts.ListScriptsCmd)
-	scriptsCmd.AddCommand(scripts.StartScriptCmd)
-	scriptsCmd.AddCommand(scripts.GetScriptExecutionCmd)
-	scriptsCmd.AddCommand(scripts.WatchScriptExecutionCmd)
-	scriptsCmd.AddCommand(scripts.ListScriptExecutionsCmd)
-	scriptsCmd.AddCommand(scripts.CreateScriptsCmd)
-	RootCmd.AddCommand(scriptsCmd)
-}
-
-var scriptsCmd = &cobra.Command{
-	Use:   "scripts",
-	Short: "Scripts management commands",
-	Long:  `All available scripts and scripts executions commands`,
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
-	},
-
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if verbose, err := cmd.Flags().GetBool("verbose"); !verbose && err == nil {
-			ui.QuietMode = true
-		}
-	},
+	cmd.AddCommand(scripts.NewAbortExecutionCmd())
+	cmd.AddCommand(scripts.NewListScriptsCmd())
+	cmd.AddCommand(scripts.NewStartScriptCmd())
+	cmd.AddCommand(scripts.NewGetScriptExecutionCmd())
+	cmd.AddCommand(scripts.NewWatchScriptExecutionCmd())
+	cmd.AddCommand(scripts.NewListScriptExecutionsCmd())
+	cmd.AddCommand(scripts.NewCreateScriptsCmd())
+	return cmd
 }
