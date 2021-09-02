@@ -25,9 +25,7 @@ func init() {
 func main() {
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
-	if err != nil {
-		panic(err)
-	}
+	ui.ExitOnError("getting mongo databse", err)
 
 	kubeClient := client.GetClient()
 	scriptsClient := scriptscr.NewClient(kubeClient)
