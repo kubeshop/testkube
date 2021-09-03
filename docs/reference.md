@@ -1,4 +1,4 @@
-# Reference for 'kubectl kubetest` plugin
+# Reference for 'kubectl kubtest` plugin
 
 The Kubtest kubectl plugin provides commands for installation, script-related tasks, code-completion, etc.
 

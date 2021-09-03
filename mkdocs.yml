@@ -1,4 +1,4 @@
-site_name: kubtest
+site_name: Kubtest
 site_description: 'Your Kubernetes Testing Friend'
 site_author: 'Kubeshop kubtest Team'
 docs_dir: docs/
@@ -9,12 +9,20 @@ edit_uri: blob/main/docs/
 theme:
   name: material
   locale: en
+  features:
+    - navigation.expand
 
 nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
+  - Executors:
+      - Postman Collections: postman.md
+      - Cypress Tests: cypress.md
+      - Curl Commands: curl.md
+      - Creating your own: custom-executor.md
   - CLI Reference: reference.md
+  - The Kubtest Dashboard: dashboard.md
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md

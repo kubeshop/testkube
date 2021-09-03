@@ -27,9 +27,14 @@ Main Kubtest components are:
 
 - kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
-- CRDs Operator - watch Kubtest CR, handles changes communicates with API Server
+- [CRDs Operator](https://github.com/kubeshop/kubtest-operator) - watch Kubtest CR, handles changes communicates with API Server
 - Executors - runs tests defined for specific runner
+  - [Postman Executor](https://github.com/kubeshop/kubtest-executor-postman) - runs Postman Collections
+  - [Cypress Executor](https://github.com/kubeshop/kubtest-executor-cypress) - runs Cypress Tests
+  - [Curl Executor](https://github.com/kubeshop/kubtest-executor-curl) - runs simple Curl commands
+  - [Executor Template](https://github.com/kubeshop/kubtest-executor-template) - for creating your own executors
 - Results DB - for centralized test results mgmt
+- [Kubtest Dashboard](https://github.com/kubeshop/kubtest-dashboard) - a standalone web application for viewing real-time Kubtest test results
 
 Kubtest attempts to:
 
@@ -46,11 +51,14 @@ Check out the [Installation](https://kubeshop.github.io/kubtest/installing/) and
 [Getting Started](https://kubeshop.github.io/kubtest/getting-started/) guides to set up Kubtest and
 run your first tests!
 
-# Documentation
+## Documentation
 
 Is available at [https://kubeshop.github.io/kubtest](https://kubeshop.github.io/kubtest)
 
-# Contribution to project
+## Contribution to project
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
+# Feedback 
+
+Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
