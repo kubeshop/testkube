@@ -417,6 +417,9 @@ components:
           type: string
           description: execution id
           format: bson objectId
+        script-name:
+          type: string
+          description: name of the script
         script-type:
           type: string
           description: the type of script for this execution
