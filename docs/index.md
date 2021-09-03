@@ -8,7 +8,7 @@
 
 ```
 
-Welcome to Kubtest - your friendly Kubernetes testing framework!
+Welcome to Kubtest - your somewhat opinionated and friendly Kubernetes testing framework!
 
 Kubetest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
 clusters state and can be executed as needed:
@@ -36,3 +36,5 @@ Kubtest attempts to:
 
 Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to set up Kubtest and 
 run your first tests!
+
+Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
