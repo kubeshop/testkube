@@ -61,21 +61,28 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		}
 
 		s.Log.Infow("creating script", "request", request)
+
+		var repository *scriptsv1.Repository
+
+		if request.Repository != nil {
+			repository = &scriptsv1.Repository{
+				Type_:  "git",
+				Uri:    request.Repository.Uri,
+				Branch: request.Repository.Branch,
+				Path:   request.Repository.Path,
+			}
+		}
+
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
 				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
-				Type_:     request.Type_,
-				InputType: request.InputType,
-				Content:   request.Content,
-				Repository: &scriptsv1.Repository{
-					Type_:  "git",
-					Uri:    request.Repository.Uri,
-					Branch: request.Repository.Branch,
-					Path:   request.Repository.Path,
-				},
+				Type_:      request.Type_,
+				InputType:  request.InputType,
+				Content:    request.Content,
+				Repository: repository,
 			},
 		})
 
