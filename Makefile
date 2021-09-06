@@ -14,7 +14,7 @@ run-api-server-telepresence:
 	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
 
 run-mongo-dev: 
-	docker run -p 27017:27017 mongo
+	docker run --name mongodb -p 27017:27017 --rm mongo
 
 
 build: build-api-server build-kubtest-bin

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
@@ -60,6 +61,7 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
+		fmt.Println("REQ:", spew.Sdump(request))
 
 		s.Log.Infow("creating script", "request", request)
 
