@@ -28,7 +28,7 @@ func init() {
 
 func main() {
 
-  if os.Getenv("KUBECONFIG") == "" {
+	if os.Getenv("KUBECONFIG") == "" {
 		fmt.Println("KUBECONFIG not present. Exiting...")
 		os.Exit(1)
 	}
