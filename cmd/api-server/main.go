@@ -1,6 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"net"
+	"os"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/kubtest-operator/client"
 	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
@@ -23,12 +27,32 @@ func init() {
 }
 
 func main() {
+
+	if os.Getenv("KUBECONFIG") == "" {
+		fmt.Println("KUBECONFIG not present. Exiting...")
+		os.Exit(1)
+	}
+
+	port := os.Getenv("APISERVER_PORT")
+
+	ln, err := net.Listen("tcp", ":"+port)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't listen on port %q: %s", port, err)
+		os.Exit(1)
+	}
+
+	ln.Close()
+	fmt.Printf("TCP Port %q is available", port)
+
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
 	ui.ExitOnError("Getting mongo databse", err)
 
 	kubeClient := client.GetClient()
+
 	scriptsClient := scriptscr.NewClient(kubeClient)
+
 	executorsClient := executorscr.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
