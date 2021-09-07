@@ -28,11 +28,6 @@ func init() {
 
 func main() {
 
-	if os.Getenv("KUBECONFIG") == "" {
-		fmt.Println("KUBECONFIG not present. Exiting...")
-		os.Exit(1)
-	}
-
 	port := os.Getenv("APISERVER_PORT")
 
 	ln, err := net.Listen("tcp", ":"+port)
