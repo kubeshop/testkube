@@ -17,7 +17,7 @@ func ExitOnError(item string, errors ...error) {
 		}
 	}
 
-	if !QuietMode {
+	if !Verbose {
 		fmt.Printf("%s %s\n", color.Blue("\xE2\x9C\x94"), color.Green(item))
 	}
 }
