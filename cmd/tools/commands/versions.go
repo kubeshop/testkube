@@ -11,6 +11,7 @@ import (
 
 var verbose bool
 var kind string
+var dev bool
 
 func NewVersionBumpCmd() *cobra.Command {
 
@@ -24,8 +25,20 @@ func NewVersionBumpCmd() *cobra.Command {
 
 			versions := strings.Split(string(out), "\n")
 			currentVersion := version.GetNewest(versions)
-			nextVersion, err := version.Next(currentVersion, kind)
+
+			var nextVersion string
+
+			switch true {
+			case dev && version.IsPrerelease(currentVersion):
+				nextVersion, err = version.NextPrerelease(currentVersion)
+			case dev && !version.IsPrerelease(currentVersion):
+				nextVersion, err = version.Next(currentVersion, version.Patch)
+				nextVersion = nextVersion + "-beta1"
+			default:
+				nextVersion, err = version.Next(currentVersion, kind)
+			}
 			ui.ExitOnError("getting next version for "+kind, err)
+
 			nextVersion = "v" + nextVersion
 
 			ui.Info("Generated new version", nextVersion)
@@ -41,6 +54,7 @@ func NewVersionBumpCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&kind, "kind", "k", "patch", "version kind one of (patch|minor|major")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
+	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")
 
 	ui.Verbose = verbose
 

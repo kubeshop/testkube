@@ -2,7 +2,10 @@ package version
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 )
@@ -15,6 +18,31 @@ const (
 	// Patch version
 	Patch = "patch"
 )
+
+func NextPrerelease(currentVersion string) (string, error) {
+	version, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		return "", err
+	}
+
+	if version.Prerelease() != "" {
+		version = bumpPrerelease(version)
+		return version.String(), nil
+	}
+
+	return "", nil
+
+}
+
+func IsPrerelease(currentVersion string) bool {
+	version, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		return false
+	}
+
+	return version.Prerelease() != ""
+
+}
 
 // Next returns next generated semver based on version position
 func Next(currentVersion, kind string) (string, error) {
@@ -41,6 +69,27 @@ func Next(currentVersion, kind string) (string, error) {
 	}
 
 	return inc.String(), nil
+}
+
+// bumpPrerelease bumps number in versions like 0.0.1-alpha2 or 0.0.3-omega4
+func bumpPrerelease(version *semver.Version) *semver.Version {
+	prerelease := version.Prerelease()
+	r := regexp.MustCompile("[0-9]+$")
+
+	matches := r.FindStringSubmatch(prerelease)
+	if len(matches) == 1 {
+		num, err := strconv.Atoi(matches[0])
+		if err == nil {
+			num = num + 1
+			prerelease = strings.Replace(prerelease, matches[0], strconv.Itoa(num), -1)
+			v, _ := version.SetPrerelease(prerelease)
+			return &v
+
+		}
+	}
+
+	return version
+
 }
 
 // Lt checks if version1 is less-than version2, returns error in case of invalid version string
