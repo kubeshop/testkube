@@ -33,7 +33,7 @@ In order to be able to run tests using some new tools for which there is no exec
 
     ```js
     {
-        "type": "curl",
+        "type": "curl/test",
         "name": "test1",
         "content": "{\"command\": [\"curl\", \"https://reqbin.com/echo/get/json\", \"-H\", \"'Accept: application/json'\"],\"expected_status\":200,\"expected_body\":\"{\\\"success\\\":\\\"true\\\"}\"}"
     }
