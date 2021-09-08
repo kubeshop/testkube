@@ -59,7 +59,7 @@ func TestE2E(t *testing.T) {
 		// then
 		a.NoError(err)
 		a.Contains(string(out), "STATUS: deployed")
-		a.Contains(string(out), "Visit http://127.0.0.1:8080 to use your application")
+		a.Contains(string(out), "Visit http://127.0.0.1:8088 to use your application")
 
 		// TODO change to watch for changes
 		sleep(t, time.Minute)

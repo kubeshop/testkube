@@ -40,7 +40,7 @@ func NewProxyConfig(namespace string) ProxyConfig {
 	return ProxyConfig{
 		Namespace:   namespace,
 		ServiceName: "kubtest-api-server",
-		ServicePort: 8080,
+		ServicePort: 8088,
 	}
 }
 
