@@ -97,6 +97,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
+	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
 
 	result := w.Runner.Run(e)
 	e.Result = &result
@@ -114,6 +115,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
+	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
 
 	return e, err
 }
