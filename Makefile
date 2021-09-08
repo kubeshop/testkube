@@ -8,10 +8,10 @@ DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 
 run-api-server: 
-	APISERVER_PORT=8080 go run cmd/api-server/main.go
+	APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-api-server-telepresence: 
-	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
+	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
 	docker run --name mongodb -p 27017:27017 --rm mongo

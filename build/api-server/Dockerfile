@@ -12,5 +12,5 @@ RUN apk --no-cache add ca-certificates libssl1.1
 RUN apk upgrade libssl1.1
 WORKDIR /root/
 COPY --from=0 /app /bin/app
-EXPOSE 8080
+EXPOSE 8088
 CMD ["/bin/app"]

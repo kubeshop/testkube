@@ -26,7 +26,7 @@ func TestProxy(t *testing.T) {
 	req := clientset.CoreV1().RESTClient().Get().
 		Namespace("default").
 		Resource("services").
-		Name("api-server-chart:8080").
+		Name("api-server-chart:8088").
 		SubResource("proxy").
 		// The server URL path, without leading "/" goes here...
 		Suffix("v1/scripts").Param("namespace", "default")

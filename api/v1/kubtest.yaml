@@ -709,4 +709,4 @@ components:
         instance:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
-          example: http://10.23.23.123:8080/scripts
+          example: http://10.23.23.123:8088/scripts

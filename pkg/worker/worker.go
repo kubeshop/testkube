@@ -92,6 +92,12 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 
 func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
 	e.Start()
+
+	// save start time
+	if werr := w.Repository.Update(ctx, e); werr != nil {
+		return e, werr
+	}
+
 	result := w.Runner.Run(e)
 	e.Result = &result
 

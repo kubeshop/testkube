@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"os"
 
@@ -31,14 +30,9 @@ func main() {
 	port := os.Getenv("APISERVER_PORT")
 
 	ln, err := net.Listen("tcp", ":"+port)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Can't listen on port %q: %s", port, err)
-		os.Exit(1)
-	}
-
+	ui.ExitOnError("Checking if port "+port+"is free", err)
 	ln.Close()
-	fmt.Printf("TCP Port %q is available", port)
+	ui.Info("TCP Port is available", port)
 
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
