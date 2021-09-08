@@ -21,4 +21,21 @@ func TestVersioning(t *testing.T) {
 
 	})
 
+	t.Run("next - bump patch", func(t *testing.T) {
+		next, err := Next("0.0.5", Patch)
+		assert.NoError(t, err)
+		assert.Equal(t, "0.0.6", next)
+	})
+
+	t.Run("next - bump minor", func(t *testing.T) {
+		next, err := Next("0.0.5", Minor)
+		assert.NoError(t, err)
+		assert.Equal(t, "0.1.0", next)
+	})
+
+	t.Run("next - bump major", func(t *testing.T) {
+		next, err := Next("0.0.5", Major)
+		assert.NoError(t, err)
+		assert.Equal(t, "1.0.0", next)
+	})
 }
