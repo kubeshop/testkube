@@ -23,7 +23,7 @@ func main() {
 
 	ui.Info("Generated new version", nextVersion)
 
-	_, err = process.Execute("git", "tag", nextVersion)
+	_, err = process.Execute("git", "tag", "v"+nextVersion)
 	ui.ExitOnError("tagging new version", err)
 
 	_, err = process.Execute("git", "push", "--tags")
