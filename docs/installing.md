@@ -79,7 +79,7 @@ Helm defaults used in the `kubtest` chart:
 | api-server.image.pullPolicy | yes | "Always" |
 | api-server.image.tag | yes | "latest" |
 | api-server.service.type | yes | "NodePort" |
-| api-server.service.port | yes | 8080 |
+| api-server.service.port | yes | 8088 |
 | api-server.mongoDSN | yes | "mongodb://kubtest-mongodb:27017" |
 | api-server.postmanExecutorURI | yes | "http://kubtest-postman-executor:8082" |
 | postman-executor.image.repository | yes | "kubeshop/kubtest-postman-executor" |
@@ -88,7 +88,7 @@ Helm defaults used in the `kubtest` chart:
 | postman-executor.service.type | yes | "NodePort" |
 | postman-executor.service.port | yes | 8082 |
 | postman-executor.mongoDSN | yes | "mongodb://kubtest-mongodb:27017" |
-| postman-executor.apiServerURI | yes | "http://kubtest-api-server:8080" |
+| postman-executor.apiServerURI | yes | "http://kubtest-api-server:8088" |
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters

@@ -1,4 +1,4 @@
 package ui
 
-// QuietMode bypassing info messages in case of checking errors
-var QuietMode = false
+// Verbose adds additional info messages e.g. in case of checking errors
+var Verbose = false

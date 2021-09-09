@@ -3,7 +3,9 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
@@ -59,23 +61,31 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
+		fmt.Println("REQ:", spew.Sdump(request))
 
 		s.Log.Infow("creating script", "request", request)
+
+		var repository *scriptsv1.Repository
+
+		if request.Repository != nil {
+			repository = &scriptsv1.Repository{
+				Type_:  "git",
+				Uri:    request.Repository.Uri,
+				Branch: request.Repository.Branch,
+				Path:   request.Repository.Path,
+			}
+		}
+
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
 				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
-				Type_:     request.Type_,
-				InputType: request.InputType,
-				Content:   request.Content,
-				Repository: &scriptsv1.Repository{
-					Type_:  "git",
-					Uri:    request.Repository.Uri,
-					Branch: request.Repository.Branch,
-					Path:   request.Repository.Path,
-				},
+				Type_:      request.Type_,
+				InputType:  request.InputType,
+				Content:    request.Content,
+				Repository: repository,
 			},
 		})
 
@@ -190,17 +200,23 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id", "-")
+		limit, err := strconv.Atoi(c.Params("limit", "100"))
+		if err != nil {
+			limit = 100
+		} else if limit < 1 || limit > 1000 {
+			limit = 1000
+		}
+
 		ctx := c.Context()
 
 		var executions []kubtest.ScriptExecution
-		var err error
 
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
-			s.Log.Infow("Getting newest script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(ctx, 10)
+			s.Log.Infow("Getting script executions (no id passed)")
+			executions, err = s.Repository.GetNewestExecutions(ctx, limit)
 		} else {
 			s.Log.Infow("Getting script executions", "id", scriptID)
 			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
@@ -209,7 +225,20 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		return c.JSON(executions)
+		// convert to summary
+		result := make([]kubtest.ExecutionSummary, len(executions))
+		for i, s := range executions {
+			result[i] = kubtest.ExecutionSummary{
+				Id:         s.Id,
+				ScriptName: s.ScriptName,
+				ScriptType: s.ScriptType,
+				Status:     s.Execution.Status,
+				StartTime:  s.Execution.StartTime,
+				EndTime:    s.Execution.EndTime,
+			}
+		}
+
+		return c.JSON(result)
 	}
 }
 

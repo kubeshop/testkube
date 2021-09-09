@@ -8,13 +8,13 @@ DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 
 run-api-server: 
-	APISERVER_PORT=8080 go run cmd/api-server/main.go
+	APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-api-server-telepresence: 
-	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8080 go run cmd/api-server/main.go
+	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 POSTMANEXECUTOR_URI=http://kubtest-postman-executor:8082 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
-	docker run -p 27017:27017 mongo
+	docker run --name mongodb -p 27017:27017 --rm mongo
 
 
 build: build-api-server build-kubtest-bin
@@ -63,13 +63,13 @@ diagrams:
 version-bump: version-bump-patch
 
 version-bump-patch:
-	go run scripts/bump.go -kind patch
+	go run cmd/tools/main.go bump -k patch
 
 version-bump-minor:
-	go run scripts/bump.go -kind minor
+	go run cmd/tools/main.go bump -k minor
 
 version-bump-major:
-	go run scripts/bump.go -kind major
+	go run cmd/tools/main.go bump -k major
 
 commands-reference: 
 	go run cmd/kubectl-kubtest/main.go doc > ./docs/reference.md

@@ -7,6 +7,7 @@ go 1.16
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/gofiber/adaptor/v2 v2.1.7
 	github.com/gofiber/fiber/v2 v2.14.0

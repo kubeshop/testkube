@@ -15,26 +15,53 @@ externalDocs:
   url: http://kubtest.io
 
 tags:
-- name: api
-  description: 'Kubtest API operations' 
-- name: executor
-  description: 'scripts execution API' 
-- name: scripts
-  description: 'scripts based operations' 
-- name: executions
-  description: 'executions based operations' 
+  - name: api
+    description: 'Kubtest API operations'
+  - name: executor
+    description: 'Executor operations'
+  - name: scripts
+    description: 'Script operations'
+  - name: executions
+    description: 'Execution operations'
 
 paths:
+  /executions:
+    get:
+      tags:
+        - executions
+        - api
+      summary: 'Get all script executions'
+      description: 'Returns array of scripts executions'
+      operationId: listExecutions
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+          description: the number of executions to get
+          required: false
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionSummary'
+        500:
+          description: 'problem with getting script executions from storage'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   /executions/{executionID}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the script
         - in: path
           name: executionID
           schema:
@@ -42,8 +69,8 @@ paths:
           required: true
           description: ID of the script execution
       tags:
-      - executions
-      - api
+        - executions
+        - api
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
       operationId: getScriptExecutionByID
@@ -53,9 +80,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/Execution'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -64,46 +89,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
-  /executions:
-    get:
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the script
-      tags:
-      - executions
-      - api
-      summary: 'Get all script executions'
-      description: 'Returns array of recent available scripts executions'
-      operationId: getRecentExecutions
-      responses:
-        200:
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution'
-        500:
-          description: 'problem with getting script executions from storage'
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Problem'
-
-
 
   /scripts:
     get:
       tags:
-      - scripts
-      - api 
+        - scripts
+        - api
       summary: 'List scripts'
       description: 'filters will be added later'
       operationId: listScripts
@@ -126,8 +117,8 @@ paths:
                   $ref: '#/components/schemas/Problem'
     post:
       tags:
-      - scripts
-      - api 
+        - scripts
+        - api
       summary: 'create new script'
       description: 'filters will be added later'
       operationId: createScript
@@ -148,7 +139,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Script'
         400:
-          description: 'problem with script definition - probably some bad input occurs (ivalid JSON body or similar)'
+          description: 'problem with script definition - probably some bad input occurs (invalid JSON body or similar)'
           content:
             application/problem+json:
               schema:
@@ -163,7 +154,38 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
-                  
+
+  /scripts/{id}:
+    get:
+      tags:
+        - scripts
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+      summary: 'Get script'
+      description: 'Gets the specified script'
+      operationId: getScript
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Script'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
   /scripts/{id}/executions:
     post:
       parameters:
@@ -177,11 +199,12 @@ paths:
           name: namespace
           schema:
             type: integer
-          description: kubernetes namespace 
+          description: kubernetes namespace
+          required: false
       tags:
-      - api 
-      - scripts
-      - executions
+        - api
+        - scripts
+        - executions
       summary: 'Starts new script execution'
       description: 'New script execution returns new execution details on successful execution start'
       operationId: executeScript
@@ -225,7 +248,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
-  
+
     get:
       parameters:
         - in: path
@@ -235,12 +258,12 @@ paths:
           required: true
           description: ID of the script
       tags:
-      - api
-      - scripts
-      - executions
+        - api
+        - scripts
+        - executions
       summary: 'Get all script executions'
       description: 'Returns array of all available script executions'
-      operationId: getScriptExecutions
+      operationId: listScriptExecutions
       responses:
         200:
           description: successful operation
@@ -249,7 +272,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/ExecutionSummary'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -258,7 +281,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
-                  
 
   /scripts/{id}/executions/{executionID}:
     get:
@@ -268,7 +290,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script 
+          description: ID of the script
         - in: path
           name: executionID
           schema:
@@ -276,9 +298,9 @@ paths:
           required: true
           description: ID of the script execution
       tags:
-      - api
-      - scripts
-      - executions
+        - api
+        - scripts
+        - executions
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
       operationId: getScriptExecution
@@ -288,9 +310,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/Execution'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -316,9 +336,9 @@ paths:
           required: true
           description: ID of the script execution
       tags:
-      - api
-      - scripts
-      - executions
+        - api
+        - scripts
+        - executions
       summary: 'Aborts execution'
       description: 'Aborts execution and returns execution details'
       operationId: abortScriptExecution
@@ -332,74 +352,6 @@ paths:
                 items:
                   $ref: '#/components/schemas/Execution'
 
-  /executions/:
-    post:
-      tags:
-      - executor
-      - executions
-      summary: 'Starts script execution'
-      description: 'Starts script execution, returns pending execution with ID'
-      operationId: executueScript
-      responses:
-        201:
-          description: 'execution added to queue'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution'
-        400:
-          description: 'problem with request body'
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Problem'
-        500:
-          description: 'poblem with saving script details into queue'
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Problem'
-
-  /executions/{id}:
-    get:
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: 'ID of the execution'
-      tags:
-      - executor
-      - executions
-      summary: 'Get execution by ID'
-      description: 'Gets execution with given ID, returns deailed information about test execution'
-      operationId: getExecution
-      responses:
-        200:
-          description: 'successful operation'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution'
-        500:
-          description: 'problem with getting information from storage'
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Problem'
-
-  
 components:
   schemas:
 
@@ -412,8 +364,8 @@ components:
         type:
           type: string
           description: script type
-          enum: 
-          - postman/collection
+          enum:
+            - postman/collection
         content:
           type: string
           description: script content
@@ -427,7 +379,7 @@ components:
       properties:
         id:
           type: string
-          description: execution id 
+          description: execution id
           format: bson objectId
         script-name:
           type: string
@@ -438,24 +390,55 @@ components:
         name:
           type: string
           description: 'execution name'
-        envs: 
+        envs:
           type: object
           description: 'execution envs passed to executor'
-          additionalProperties: 
+          additionalProperties:
             type: string
-          example: 
+          example:
             users: "3"
             prefix: "some-"
-        params: 
+        params:
           type: object
           description: 'execution params passed to executor'
-          additionalProperties: 
+          additionalProperties:
             type: string
-          example: 
+          example:
             users: "3"
             prefix: "some-"
-        execution: 
+        execution:
           $ref: '#/components/schemas/Execution'
+
+    ExecutionSummary:
+      description: execution summary
+      type: object
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        script-name:
+          type: string
+          description: name of the script
+        script-type:
+          type: string
+          description: the type of script for this execution
+        status:
+          type: string
+          description: 'execution status'
+          enum:
+            - queued
+            - pending
+            - success
+            - failed
+        start-time:
+          type: string
+          description: 'test execution start time'
+          format: date-time
+        end-time:
+          type: string
+          description: 'test execution end time'
+          format: date-time
 
     Execution:
       description: execution result returned from executor
@@ -465,28 +448,28 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-content: 
+        script-content:
           type: string
           description: script metadata content
-        repository: 
+        repository:
           $ref: '#/components/schemas/Repository'
-        params: 
+        params:
           type: object
           description: 'execution params passed to executor'
-          additionalProperties: 
+          additionalProperties:
             type: string
-          example: 
+          example:
             users: "3"
             prefix: "some-"
-        status: 
+        status:
           type: string
           description: 'execution status'
-          enum: 
-          - queued
-          - pending 
-          - success 
-          - failed
-        result: 
+          enum:
+            - queued
+            - pending
+            - success
+            - failed
+        result:
           $ref: '#/components/schemas/ExecutionResult'
         start-time:
           type: string
@@ -497,26 +480,25 @@ components:
           description: 'test end time'
           format: date-time
 
-
     ExecutionResult:
       description: execution result data
       type: object
       properties:
-        status: 
+        status:
           type: string
           description: script execution status
-          enum: [success, failed]
+          enum: [ success, failed ]
         raw-output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
         raw-output-type:
           type: string
           description: 'output type depends of reporter used in partucular tool'
-          enum: 
-          - text/plain
-          - application/junit+xml
-          - application/json
-        error-message: 
+          enum:
+            - text/plain
+            - application/junit+xml
+            - application/json
+        error-message:
           type: string
           description: 'error message when status is failed, separate to output as output can be partial in case of error'
         start-time:
@@ -527,7 +509,7 @@ components:
           type: string
           description: script execution start time
           format: date-time
-        steps: 
+        steps:
           type: array
           items:
             $ref: '#/components/schemas/ExecutionStepResult'
@@ -540,38 +522,38 @@ components:
         name:
           type: string
           description: step name
-        duration: 
-          type: string 
+        duration:
+          type: string
           format: duration
-        status: 
+        status:
           type: string
           description: execution step status
-          enum: [success, failed]
-        assertionResults: 
+          enum: [ success, failed ]
+        assertionResults:
           type: array
           items:
             $ref: '#/components/schemas/AssertionResult'
-        
+
     AssertionResult:
       description: execution result data
       type: object
       properties:
-        name: 
+        name:
           type: string
         status:
           type: string
-          enum: [success, failed]
-        error-message: 
+          enum: [ success, failed ]
+        error-message:
           type: string
           nullable: true
 
 
 
-#
-# Requests
-#
+    #
+    # Requests
+    #
 
-    ExecutionRequest: 
+    ExecutionRequest:
       description: scripts execution request body
       type: object
       properties:
@@ -583,15 +565,15 @@ components:
           type: string
           description: script execution custom name
           example: testing with 1000 users
-        params: 
+        params:
           type: object
           description: 'execution params passed to executor'
-          additionalProperties: 
+          additionalProperties:
             type: string
-          example: 
+          example:
             users: "3"
             prefix: "some-"
-        content: 
+        content:
           type: string
           description: script content as string (content depends from executor)
         input-type:
@@ -603,33 +585,33 @@ components:
           enum:
             - content
             - git
-        repository: 
+        repository:
           $ref: '#/components/schemas/Repository'
 
-    Repository: 
+    Repository:
       description: scripts execution request body
       type: object
       required:
         - type
-        - uri 
+        - uri
         - branch
       properties:
-        type: 
+        type:
           type: string
           enum:
             - git
           description: VCS repository type
-        uri: 
+        uri:
           type: string
           description: uri of content file or git directory
         branch:
           type: string
           description: branch/tag name for checkout
-        path :
+        path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 
-    ScriptExecutionRequest: 
+    ScriptExecutionRequest:
       description: scripts execution request body
       type: object
       properties:
@@ -641,16 +623,16 @@ components:
           type: string
           description: script kubernetes namespace ("default" when not set)
           example: default
-        params: 
+        params:
           type: object
           description: 'execution params passed to executor'
-          additionalProperties: 
+          additionalProperties:
             type: string
-          example: 
+          example:
             users: "3"
             prefix: "some-"
 
-    ScriptCreateRequest: 
+    ScriptCreateRequest:
       description: scripts create request body
       type: object
       properties:
@@ -675,7 +657,7 @@ components:
           enum:
             - content
             - git
-        repository: 
+        repository:
           $ref: '#/components/schemas/Repository'
         content:
           type: string
@@ -699,12 +681,12 @@ components:
                 }
 
 
-                
-#
-# Errors
-#
 
-    Problem: 
+    #
+    # Errors
+    #
+
+    Problem:
       description: problem response in case of error
       type: object
       properties:
@@ -727,4 +709,4 @@ components:
         instance:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
-          example: http://10.23.23.123:8080/scripts
+          example: http://10.23.23.123:8088/scripts

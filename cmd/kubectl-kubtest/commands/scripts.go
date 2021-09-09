@@ -23,7 +23,7 @@ func NewScriptsCmd() *cobra.Command {
 		},
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			ui.QuietMode = verbose
+			ui.Verbose = verbose
 		},
 	}
 
