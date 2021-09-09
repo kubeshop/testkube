@@ -25,7 +25,7 @@ clusters state and can be executed as needed:
 
 Main Kubtest components are:
 
-- kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
+- kubectl Kubtest plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
 - [CRDs Operator](https://github.com/kubeshop/kubtest-operator) - watches Kubtest CR, handles changes, communicates with API Server
 - Executors - runs tests defined for specific runner
