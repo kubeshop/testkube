@@ -6,21 +6,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const (
-	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
-	ExecutionStatusQueued = "queued"
-	// ExecutionStatusPending status for execution which is taken by worker
-	ExecutionStatusPending = "pending"
-	// ExecutionStatusSuceess execution complete with success
-	ExecutionStatusSuceess = "success"
-	// ExecutionStatusSuceess execution failed
-	ExecutionStatusError = "error"
-)
-
 func NewExecution() Execution {
+	status := QUEUED_ExecutionStatus
 	return Execution{
 		Id:     primitive.NewObjectID().Hex(),
-		Status: ExecutionStatusQueued,
+		Status: &status,
 		Result: &ExecutionResult{},
 	}
 }
@@ -58,11 +48,13 @@ func (e *Execution) Stop() {
 }
 
 func (e *Execution) Success() {
-	e.Status = ExecutionStatusSuceess
+	success := SUCCESS_ExecutionStatus
+	e.Status = &success
 }
 
 func (e *Execution) Error() {
-	e.Status = ExecutionStatusError
+	failed := FAILED_ExecutionStatus
+	e.Status = &failed
 }
 
 func (e *Execution) IsCompleted() bool {
@@ -70,19 +62,19 @@ func (e *Execution) IsCompleted() bool {
 }
 
 func (e *Execution) IsPending() bool {
-	return e.Status == ExecutionStatusPending
+	return *e.Status == PENDING_ExecutionStatus
 }
 
 func (e *Execution) IsQueued() bool {
-	return e.Status == ExecutionStatusQueued
+	return *e.Status == QUEUED_ExecutionStatus
 }
 
 func (e *Execution) IsSuccesful() bool {
-	return e.Status == ExecutionStatusSuceess
+	return *e.Status == SUCCESS_ExecutionStatus
 }
 
 func (e *Execution) IsFailed() bool {
-	return e.Status == ExecutionStatusError
+	return *e.Status == FAILED_ExecutionStatus
 }
 
 func (e *Execution) Duration() time.Duration {

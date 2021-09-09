@@ -75,7 +75,7 @@ func (r RawRenderer) renderDetails(execution kubtest.ScriptExecution, writer io.
 
 	_, err := fmt.Fprintf(writer, "Name: %s,Status: %s,Duration: %s\n\n",
 		execution.Name,
-		execution.Execution.Status,
+		string(*execution.Execution.Status),
 		execution.Execution.Duration(),
 	)
 
