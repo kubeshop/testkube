@@ -51,12 +51,7 @@ paths:
         - in: query
           name: status
           schema:
-            type: string
-            enum:
-              - passed
-              - failed
-              - pending
-              - running
+            $ref: '#/components/schemas/ExecutionStatus'
           description: optional status filter
           required: false
       responses:
@@ -473,13 +468,7 @@ components:
           type: string
           description: the type of script for this execution
         status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - failed
+          $ref: '#/components/schemas/ExecutionStatus'
         start-time:
           type: string
           description: 'test execution start time'
@@ -488,6 +477,14 @@ components:
           type: string
           description: 'test execution end time'
           format: date-time
+
+    ExecutionStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - failed
 
     Execution:
       description: execution result returned from executor
@@ -511,13 +508,7 @@ components:
             users: "3"
             prefix: "some-"
         status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - failed
+          $ref: '#/components/schemas/ExecutionStatus'
         result:
           $ref: '#/components/schemas/ExecutionResult'
         start-time:
