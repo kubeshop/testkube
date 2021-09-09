@@ -43,21 +43,31 @@ func (r GoTemplateRenderer) Render(result kubtest.ScriptExecution, writer io.Wri
 type RawRenderer struct {
 }
 
-func (r RawRenderer) Render(execution kubtest.ScriptExecution, writer io.Writer) error {
-	err := r.renderDetails(execution, writer)
+func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
+	err := r.renderDetails(scriptExecution, writer)
 	if err != nil {
 		return err
 	}
 
-	if execution.Execution.Result.ErrorMessage != "" {
-		_, err := writer.Write([]byte(execution.Execution.Result.ErrorMessage + "\n\n"))
+	if scriptExecution.Execution == nil {
+		return fmt.Errorf("invalid script execution, want struct but got nil")
+	}
+
+	if scriptExecution.Execution.Result == nil {
+		return fmt.Errorf("invalid execution result, want struct but got nil")
+	}
+
+	result := scriptExecution.Execution.Result
+
+	if result.ErrorMessage != "" {
+		_, err := writer.Write([]byte(result.ErrorMessage + "\n\n"))
 		if err != nil {
 			return err
 		}
 	}
 
 	// TODO handle output-types
-	_, err = writer.Write([]byte(execution.Execution.Result.RawOutput))
+	_, err = writer.Write([]byte(result.RawOutput))
 	return err
 }
 
