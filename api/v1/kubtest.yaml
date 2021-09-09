@@ -34,26 +34,9 @@ paths:
       description: 'Returns array of scripts executions'
       operationId: listExecutions
       parameters:
-        - in: query
-          name: pageSize
-          schema:
-            type: integer
-            default: 100
-          description: the number of executions to get, setting to 0 will return only totals
-          required: false
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 0
-          description: the page index to start at
-          required: false
-        - in: query
-          name: status
-          schema:
-            $ref: '#/components/schemas/ExecutionStatus'
-          description: optional status filter
-          required: false
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       responses:
         200:
           description: successful operation
@@ -81,6 +64,9 @@ paths:
             type: string
           required: true
           description: ID of the script execution
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       tags:
         - executions
         - api
@@ -446,10 +432,10 @@ components:
         failed:
           type: integer
           description: the total number of failed executions available
-        pending:
+        queued:
           type: integer
-          description: the total number of pending executions available
-        running:
+          description: the total number of queued executions available
+        pending:
           type: integer
           description: the total number of running executions available
 
@@ -750,3 +736,27 @@ components:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
           example: http://10.23.23.123:8088/scripts
+  parameters:
+    ExecutionsPageSize:
+      in: query
+      name: pageSize
+      schema:
+        type: integer
+        default: 100
+      description: the number of executions to get, setting to 0 will return only totals
+      required: false
+    ExecutionsPageIndex:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 0
+      description: the page index to start at
+      required: false
+    ExecutionsStatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: '#/components/schemas/ExecutionStatus'
+      description: optional status filter
+      required: false

@@ -22,9 +22,8 @@ type Execution struct {
 	Repository    *Repository `json:"repository,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
-	// execution status
-	Status string           `json:"status,omitempty"`
-	Result *ExecutionResult `json:"result,omitempty"`
+	Status *ExecutionStatus  `json:"status,omitempty"`
+	Result *ExecutionResult  `json:"result,omitempty"`
 	// test start time
 	StartTime time.Time `json:"start-time,omitempty"`
 	// test end time

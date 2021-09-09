@@ -200,12 +200,19 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id", "-")
-		limit, err := strconv.Atoi(c.Params("limit", "100"))
+		pageSize, err := strconv.Atoi(c.Params("pageSize", "100"))
 		if err != nil {
-			limit = 100
-		} else if limit < 1 || limit > 1000 {
-			limit = 1000
+			pageSize = 100
+		} else if pageSize < 1 || pageSize > 1000 {
+			pageSize = 1000
 		}
+
+		page, err := strconv.Atoi(c.Params("page", "0"))
+		if err != nil {
+			page = 0
+		}
+
+		statusFilter := c.Params("status", "")
 
 		ctx := c.Context()
 
@@ -216,7 +223,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
 			s.Log.Infow("Getting script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(ctx, limit)
+			executions, err = s.Repository.GetNewestExecutions(ctx, 10000)
 		} else {
 			s.Log.Infow("Getting script executions", "id", scriptID)
 			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
@@ -225,20 +232,61 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		// convert to summary
-		result := make([]kubtest.ExecutionSummary, len(executions))
-		for i, s := range executions {
-			result[i] = kubtest.ExecutionSummary{
-				Id:         s.Id,
-				ScriptName: s.ScriptName,
-				ScriptType: s.ScriptType,
-				Status:     s.Execution.Status,
-				StartTime:  s.Execution.StartTime,
-				EndTime:    s.Execution.EndTime,
+		totals := kubtest.ExecutionTotals{
+			Results: int32(len(executions)),
+			Passed:  0,
+			Failed:  0,
+			Queued:  0,
+			Pending: 0,
+		}
+
+		executionResults := make([]kubtest.ExecutionSummary, pageSize)
+		addedToResultCount := 0
+		filteredCount := 0
+
+		for _, s := range executions {
+
+			switch *s.Execution.Status {
+			case kubtest.QUEUED_ExecutionStatus:
+				totals.Queued++
+				break
+			case kubtest.SUCCESS_ExecutionStatus:
+				totals.Passed++
+				break
+			case kubtest.FAILED_ExecutionStatus:
+				totals.Failed++
+				break
+			case kubtest.PENDING_ExecutionStatus:
+				totals.Pending++
+				break
+			}
+
+			if addedToResultCount < pageSize {
+				if statusFilter == "" || string(*s.Execution.Status) == statusFilter {
+					if filteredCount == page*pageSize {
+						executionResults[addedToResultCount] = kubtest.ExecutionSummary{
+							Id:         s.Id,
+							ScriptName: s.ScriptName,
+							ScriptType: s.ScriptType,
+							Status:     s.Execution.Status,
+							StartTime:  s.Execution.StartTime,
+							EndTime:    s.Execution.EndTime,
+						}
+						addedToResultCount++
+					} else {
+						filteredCount++
+					}
+				}
 			}
 		}
 
-		return c.JSON(result)
+		// convert to summary
+		results := kubtest.ExecutionsResult{
+			Totals:  &totals,
+			Results: executionResults[0:addedToResultCount],
+		}
+
+		return c.JSON(results)
 	}
 }
 
@@ -248,7 +296,6 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		ctx := c.Context()
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
-
 		s.Log.Infow("get execution request", "id", scriptID, "executionID", executionID)
 
 		var scriptExecution kubtest.ScriptExecution
