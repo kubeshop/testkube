@@ -50,11 +50,11 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 	}
 
 	if scriptExecution.Execution == nil {
-		return fmt.Errorf("invalid script execution, want struct but got nil")
+		return fmt.Errorf("invalid script execution, want struct but got nil, please ensure executor returns valid Execution object")
 	}
 
 	if scriptExecution.Execution.Result == nil {
-		return fmt.Errorf("invalid execution result, want struct but got nil")
+		return fmt.Errorf("invalid execution result, want struct but got nil, please ensure executor returns valid ExecutionResult object")
 	}
 
 	result := scriptExecution.Execution.Result
