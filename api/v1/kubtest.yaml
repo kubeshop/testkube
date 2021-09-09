@@ -35,11 +35,29 @@ paths:
       operationId: listExecutions
       parameters:
         - in: query
-          name: limit
+          name: pageSize
           schema:
             type: integer
             default: 100
-          description: the number of executions to get
+          description: the number of executions to get, setting to 0 will return only totals
+          required: false
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+          description: the page index to start at
+          required: false
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - passed
+              - failed
+              - pending
+              - running
+          description: optional status filter
           required: false
       responses:
         200:
@@ -49,7 +67,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExecutionSummary'
+                  $ref: '#/components/schemas/ExecutionsResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -408,6 +426,37 @@ components:
             prefix: "some-"
         execution:
           $ref: '#/components/schemas/Execution'
+
+    ExecutionsResult:
+      description: the result for a page of executions
+      type: object
+      properties:
+        totals:
+          $ref: '#/components/schemas/ExecutionTotals'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionSummary'
+
+    ExecutionTotals:
+      type: object
+      description: various execution counters
+      properties:
+        results:
+          type: integer
+          description: the total number of executions available
+        passed:
+          type: integer
+          description: the total number of passed executions available
+        failed:
+          type: integer
+          description: the total number of failed executions available
+        pending:
+          type: integer
+          description: the total number of pending executions available
+        running:
+          type: integer
+          description: the total number of running executions available
 
     ExecutionSummary:
       description: execution summary
