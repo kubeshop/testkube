@@ -1,4 +1,10 @@
-fog1985
-olensmar
-exu
-nicufk
+assets/* @olensmar @exu
+docs/* @olensmar @exu
+img/* @olensmar @exu
+
+*.md @olensmar
+*.go @kubtest
+*.yaml @kubtest
+*.yml @kubtest
+*.json @kubtest
+./* @kubtest

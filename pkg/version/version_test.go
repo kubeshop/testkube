@@ -40,7 +40,7 @@ func TestVersioning(t *testing.T) {
 	})
 
 	t.Run("next - bump prerelease number", func(t *testing.T) {
-		next, err := Next("0.0.5-beta1", Patch)
+		next, err := NextPrerelease("0.0.5-beta1")
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.5-beta2", next)
 	})
