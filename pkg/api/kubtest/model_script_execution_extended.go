@@ -4,13 +4,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewScriptExecution(scriptName, name string, execution Execution, params map[string]string) ScriptExecution {
+func NewScriptExecution(scriptName, name, scriptType string, execution Execution, params map[string]string) ScriptExecution {
 	return ScriptExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		Name:       name,
 		ScriptName: scriptName,
 		Execution:  &execution,
-		ScriptType: "postman/collection", // TODO need to be passed from CRD type
+		ScriptType: scriptType,
 		Params:     params,
 	}
 }
