@@ -261,21 +261,19 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 				break
 			}
 
-			if addedToResultCount < pageSize {
-				if statusFilter == "" || string(*s.Execution.Status) == statusFilter {
-					if filteredCount == page*pageSize {
-						executionResults[addedToResultCount] = kubtest.ExecutionSummary{
-							Id:         s.Id,
-							ScriptName: s.ScriptName,
-							ScriptType: s.ScriptType,
-							Status:     s.Execution.Status,
-							StartTime:  s.Execution.StartTime,
-							EndTime:    s.Execution.EndTime,
-						}
-						addedToResultCount++
-					} else {
-						filteredCount++
+			if addedToResultCount < pageSize && (statusFilter == "" || string(*s.Execution.Status) == statusFilter) {
+				if filteredCount == page*pageSize {
+					executionResults[addedToResultCount] = kubtest.ExecutionSummary{
+						Id:         s.Id,
+						ScriptName: s.ScriptName,
+						ScriptType: s.ScriptType,
+						Status:     s.Execution.Status,
+						StartTime:  s.Execution.StartTime,
+						EndTime:    s.Execution.EndTime,
 					}
+					addedToResultCount++
+				} else {
+					filteredCount++
 				}
 			}
 		}
