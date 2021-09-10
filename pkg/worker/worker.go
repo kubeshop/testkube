@@ -92,14 +92,16 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 
 func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
 	e.Start()
+	l := w.Log.With("executionID", e.Id, "startTime", e.StartTime.String())
 
 	// save start time
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
-	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
 
+	l.Infow("script started", "status", e.Status)
 	result := w.Runner.Run(e)
+	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
 	e.Result = &result
 
 	var err error
@@ -111,11 +113,12 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	}
 
 	e.Stop()
-	// we want always write even if there is error
+
+	// save end time
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
-	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
+	l.Infow("script ended", "status", e.Status, "endTime", e.EndTime.String())
 
 	return e, err
 }

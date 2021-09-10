@@ -73,14 +73,13 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 
 func (r RawRenderer) renderDetails(execution kubtest.ScriptExecution, writer io.Writer) error {
 
-	_, err := fmt.Fprintf(writer, "Name: %s,Status: %s,Duration: %s\n\n",
+	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		execution.Name,
 		string(*execution.Execution.Status),
 		execution.Execution.Duration(),
 	)
 
 	return err
-
 }
 
 func GetRenderer(cmd *cobra.Command) Renderer {

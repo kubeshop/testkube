@@ -150,13 +150,15 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// pass options to executor client
-		execution, err := executor.Execute(client.ExecuteOptions{
+		options := client.ExecuteOptions{
 			Type_:      scriptCR.Spec.Type_,
 			InputType:  scriptCR.Spec.InputType,
 			Content:    scriptCR.Spec.Content,
 			Repository: respository,
 			Params:     request.Params,
-		})
+		}
+		s.Log.Infow("calling executor with options", "options", options)
+		execution, err := executor.Execute(options)
 
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
