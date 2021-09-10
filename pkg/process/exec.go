@@ -3,6 +3,8 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 )
 
@@ -17,8 +19,12 @@ func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, 
 		cmd.Dir = dir
 	}
 	buffer := new(bytes.Buffer)
-	cmd.Stdout = buffer
-	cmd.Stderr = buffer
+
+	// log output to stodout for now
+	// TODO add some better logging
+	w := io.MultiWriter(buffer, os.Stdout)
+	cmd.Stdout = w
+	cmd.Stderr = w
 	cmd.Start()
 	err = cmd.Wait()
 	if err != nil {
