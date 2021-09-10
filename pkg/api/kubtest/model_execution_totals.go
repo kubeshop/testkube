@@ -12,13 +12,13 @@ package kubtest
 // various execution counters
 type ExecutionTotals struct {
 	// the total number of executions available
-	Results int32 `json:"results,omitempty"`
+	Results int32 `json:"results"`
 	// the total number of passed executions available
-	Passed int32 `json:"passed,omitempty"`
+	Passed int32 `json:"passed"`
 	// the total number of failed executions available
-	Failed int32 `json:"failed,omitempty"`
+	Failed int32 `json:"failed"`
 	// the total number of queued executions available
-	Queued int32 `json:"queued,omitempty"`
+	Queued int32 `json:"queued"`
 	// the total number of running executions available
-	Pending int32 `json:"pending,omitempty"`
+	Pending int32 `json:"pending"`
 }

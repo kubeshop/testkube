@@ -232,59 +232,62 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		totals := kubtest.ExecutionTotals{
-			Results: int32(len(executions)),
-			Passed:  0,
-			Failed:  0,
-			Queued:  0,
-			Pending: 0,
-		}
-
-		executionResults := make([]kubtest.ExecutionSummary, pageSize)
-		addedToResultCount := 0
-		filteredCount := 0
-
-		for _, s := range executions {
-
-			switch *s.Execution.Status {
-			case kubtest.QUEUED_ExecutionStatus:
-				totals.Queued++
-				break
-			case kubtest.SUCCESS_ExecutionStatus:
-				totals.Passed++
-				break
-			case kubtest.FAILED_ExecutionStatus:
-				totals.Failed++
-				break
-			case kubtest.PENDING_ExecutionStatus:
-				totals.Pending++
-				break
-			}
-
-			if addedToResultCount < pageSize && (statusFilter == "" || string(*s.Execution.Status) == statusFilter) {
-				if filteredCount == page*pageSize {
-					executionResults[addedToResultCount] = kubtest.ExecutionSummary{
-						Id:         s.Id,
-						ScriptName: s.ScriptName,
-						ScriptType: s.ScriptType,
-						Status:     s.Execution.Status,
-						StartTime:  s.Execution.StartTime,
-						EndTime:    s.Execution.EndTime,
-					}
-					addedToResultCount++
-				} else {
-					filteredCount++
-				}
-			}
-		}
-
-		// convert to summary
-		results := kubtest.ExecutionsResult{
-			Totals:  &totals,
-			Results: executionResults[0:addedToResultCount],
-		}
+		results := createListExecutionsResult(executions, pageSize, statusFilter, page)
 
 		return c.JSON(results)
+	}
+}
+
+func createListExecutionsResult(executions []kubtest.ScriptExecution, pageSize int, statusFilter string, page int) kubtest.ExecutionsResult {
+	totals := kubtest.ExecutionTotals{
+		Results: int32(len(executions)),
+		Passed:  0,
+		Failed:  0,
+		Queued:  0,
+		Pending: 0,
+	}
+
+	executionResults := make([]kubtest.ExecutionSummary, pageSize)
+	addedToResultCount := 0
+	filteredCount := 0
+
+	for _, s := range executions {
+
+		switch *s.Execution.Status {
+		case kubtest.QUEUED_ExecutionStatus:
+			totals.Queued++
+			break
+		case kubtest.SUCCESS_ExecutionStatus:
+			totals.Passed++
+			break
+		case kubtest.FAILED_ExecutionStatus:
+			totals.Failed++
+			break
+		case kubtest.PENDING_ExecutionStatus:
+			totals.Pending++
+			break
+		}
+
+		if addedToResultCount < pageSize && (statusFilter == "" || string(*s.Execution.Status) == statusFilter) {
+			if filteredCount == page*pageSize {
+				executionResults[addedToResultCount] = kubtest.ExecutionSummary{
+					Id:         s.Id,
+					ScriptName: s.ScriptName,
+					ScriptType: s.ScriptType,
+					Status:     s.Execution.Status,
+					StartTime:  s.Execution.StartTime,
+					EndTime:    s.Execution.EndTime,
+				}
+				addedToResultCount++
+			} else {
+				filteredCount++
+			}
+		}
+	}
+
+	return kubtest.ExecutionsResult{
+		Totals:  &totals,
+		Results: executionResults[0:addedToResultCount],
 	}
 }
 

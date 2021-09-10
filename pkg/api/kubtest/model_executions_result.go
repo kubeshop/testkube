@@ -11,6 +11,6 @@ package kubtest
 
 // the result for a page of executions
 type ExecutionsResult struct {
-	Totals  *ExecutionTotals   `json:"totals,omitempty"`
-	Results []ExecutionSummary `json:"results,omitempty"`
+	Totals  *ExecutionTotals   `json:"totals"`
+	Results []ExecutionSummary `json:"results"`
 }

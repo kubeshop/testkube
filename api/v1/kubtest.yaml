@@ -411,6 +411,9 @@ components:
     ExecutionsResult:
       description: the result for a page of executions
       type: object
+      required:
+        - totals
+        - results
       properties:
         totals:
           $ref: '#/components/schemas/ExecutionTotals'
@@ -422,6 +425,12 @@ components:
     ExecutionTotals:
       type: object
       description: various execution counters
+      required:
+        - results
+        - passed
+        - failed
+        - queued
+        - pending
       properties:
         results:
           type: integer
@@ -442,6 +451,12 @@ components:
     ExecutionSummary:
       description: execution summary
       type: object
+      required:
+        - id
+        - script-name
+        - script-type
+        - status
+        - start-time
       properties:
         id:
           type: string
