@@ -89,7 +89,6 @@ func bumpPrerelease(version *semver.Version) *semver.Version {
 	}
 
 	return version
-
 }
 
 // Lt checks if version1 is less-than version2, returns error in case of invalid version string
