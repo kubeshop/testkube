@@ -19,6 +19,7 @@ type ScriptExecutions []ScriptExecution
 
 func (executions ScriptExecutions) Table() (header []string, output [][]string) {
 	header = []string{"Script", "Type", "Name", "ID", "Status"}
+
 	for _, e := range executions {
 		status := "unknown"
 		if e.Execution != nil {

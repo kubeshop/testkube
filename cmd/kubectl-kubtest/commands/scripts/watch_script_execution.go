@@ -33,11 +33,8 @@ func NewWatchScriptExecutionCmd() *cobra.Command {
 
 			scriptExecution, err := client.GetExecution(scriptID, executionID)
 			ui.ExitOnError("get script execution details", err)
-			ui.Warn("Type          :", scriptExecution.ScriptType)
-			ui.Warn("Name          :", scriptExecution.ScriptName)
-			ui.Warn("Execution ID  :", scriptExecution.Execution.Id)
-			ui.Warn("Execution name:", scriptExecution.Name)
-			ui.BR()
+
+			PrintScriptExecutionDetails(scriptExecution)
 
 			ui.Info("Watching for changes")
 			for range time.Tick(time.Second) {
