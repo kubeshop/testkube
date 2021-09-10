@@ -99,7 +99,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 		return e, werr
 	}
 
-	l.Infow("script started")
+	l.Infow("script started", "status", e.Status)
 	result := w.Runner.Run(e)
 	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
 	e.Result = &result
@@ -118,7 +118,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
-	l.Infow("script ended", "endTime", e.EndTime.String())
+	l.Infow("script ended", "status", e.Status, "endTime", e.EndTime.String())
 
 	return e, err
 }
