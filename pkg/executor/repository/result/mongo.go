@@ -46,8 +46,8 @@ func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Executi
 	returnDocument := options.After
 	err = r.Coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"status": kubtest.ExecutionStatusQueued},
-		bson.M{"$set": bson.M{"status": kubtest.ExecutionStatusPending}},
+		bson.M{"status": kubtest.QUEUED_ExecutionStatus},
+		bson.M{"$set": bson.M{"status": kubtest.PENDING_ExecutionStatus}},
 		&options.FindOneAndUpdateOptions{ReturnDocument: &returnDocument},
 	).Decode(&result)
 	return
