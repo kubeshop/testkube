@@ -31,7 +31,7 @@ func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, 
 	return buffer.Bytes(), nil
 }
 
-func LoggedExecuteInDir(dir string, command string, writer io.Writer, arguments ...string) (out []byte, err error) {
+func LoggedExecuteInDir(dir string, writer io.Writer, command string, arguments ...string) (out []byte, err error) {
 	cmd := exec.Command(command, arguments...)
 	if dir != "" {
 		cmd.Dir = dir
