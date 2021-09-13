@@ -97,10 +97,7 @@ func UpdateValuesImageTag(path, tag string) error {
 		return err
 	}
 
-	r := regexp.MustCompile(`tag:\s*".*"$`)
-	matches := r.FindAllString(string(input), -1)
-	fmt.Printf("%s\n\n%+v\n", input, matches)
-
+	r := regexp.MustCompile(`tag: "[^"]+"`)
 	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`tag: "%s"`, tag)))
 
 	return ioutil.WriteFile(path, output, 0644)
