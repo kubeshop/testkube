@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -88,4 +89,16 @@ func Find(dir string) (chartPath string, err error) {
 	})
 
 	return
+}
+
+func UpdateValuesImageTag(path, tag string) error {
+	input, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	r := regexp.MustCompile(`^  tag: ".*"$`)
+	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`  tag: "%s"`, tag)))
+
+	return ioutil.WriteFile(path, output, 0644)
 }
