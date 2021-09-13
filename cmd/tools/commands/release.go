@@ -3,12 +3,15 @@ package commands
 import (
 	"strings"
 
+	"github.com/kubeshop/kubtest/pkg/git"
 	"github.com/kubeshop/kubtest/pkg/helm"
 	"github.com/kubeshop/kubtest/pkg/process"
 	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/kubeshop/kubtest/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+var appName string
 
 func NewReleaseCmd() *cobra.Command {
 
@@ -24,11 +27,6 @@ func NewReleaseCmd() *cobra.Command {
 			versions := strings.Split(string(out), "\n")
 			currentVersion := version.GetNewest(versions)
 			ui.Info("Current version based on tags", currentVersion)
-
-			chart, path, err := helm.GetChart("charts/")
-			ui.ExitOnError("getting chart path", err)
-			ui.Info("Current "+path+" version", helm.GetVersion(chart))
-			valuesPath := strings.Replace(path, "Chart.yaml", "values.yaml", -1)
 
 			// generate next version
 			var nextVersion string
@@ -52,6 +50,18 @@ func NewReleaseCmd() *cobra.Command {
 			_, err = process.Execute("git", "push", "--tags")
 			ui.ExitOnError("pushing new version to repository", err)
 
+			// save Chart.yaml, and push changes to git
+			// as https://github.com/helm/chart-releaser-action/issues/60
+			// we need to push changes after tag is created
+
+			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "api-server", "main")
+			ui.ExitOnError("checking out helm charts to "+dir, err)
+
+			chart, path, err := helm.GetChart(dir)
+			ui.ExitOnError("getting chart path", err)
+			ui.Info("Current "+path+" version", helm.GetVersion(chart))
+			valuesPath := strings.Replace(path, "Chart.yaml", "values.yaml", -1)
+
 			// save version in Chart.yaml
 			helm.SaveString(&chart, "version", nextVersion)
 			helm.SaveString(&chart, "appVersion", nextVersion)
@@ -60,22 +70,20 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving Chart.yaml file", err)
 
-			// save Chart.yaml, and push changes to git
-			// as https://github.com/helm/chart-releaser-action/issues/60
-			// we need to push changes after tag is created
-			_, err = process.Execute("git", "add", "charts/")
+			_, err = process.ExecuteInDir(dir, "git", "add", "charts/")
 			ui.ExitOnError("adding changes in charts directory", err)
 
-			_, err = process.Execute("git", "commit", "-m", "updating chart version to "+nextVersion)
+			_, err = process.ExecuteInDir(dir, "git", "commit", "-m", "updating api-server chart version to "+nextVersion)
 			ui.ExitOnError("updating chart version to"+nextVersion, err)
 
-			_, err = process.Execute("git", "push")
+			_, err = process.ExecuteInDir(dir, "git", "push")
 			ui.ExitOnError("pushing changes", err)
 
 			ui.Warn("Upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
 		},
 	}
 
+	cmd.Flags().StringVarP(&appName, "app", "a", "api-server", "app name chart")
 	cmd.Flags().StringVarP(&kind, "kind", "k", "patch", "version kind one of (patch|minor|major")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
 	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")
