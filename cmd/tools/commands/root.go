@@ -16,7 +16,7 @@ var (
 )
 
 func init() {
-	RootCmd.AddCommand(NewHelmReleaseCmd())
+	RootCmd.AddCommand(NewReleaseCmd())
 }
 
 var RootCmd = &cobra.Command{

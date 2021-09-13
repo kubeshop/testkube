@@ -10,12 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewHelmReleaseCmd() *cobra.Command {
+func NewReleaseCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "helm-release",
-		Short: "Release Helm chart image",
-		Long:  `Release Helm chart, bump version, put version as helm app and chart version, create tag, push`,
+		Use:   "release",
+		Short: "Release Helm Chart image",
+		Long:  `Release Helm Chart, bump version, put version as helm app and chart version, create tag, push`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			out, err := process.Execute("git", "tag")
@@ -25,11 +25,11 @@ func NewHelmReleaseCmd() *cobra.Command {
 			currentVersion := version.GetNewest(versions)
 			ui.Info("Current version based on tags", currentVersion)
 
-			// update chart
 			chart, path, err := helm.GetChart("charts/")
 			ui.ExitOnError("getting chart path", err)
 			ui.Info("Current "+path+" version", helm.GetVersion(chart))
 
+			// generate next version
 			var nextVersion string
 
 			switch true {
@@ -42,18 +42,27 @@ func NewHelmReleaseCmd() *cobra.Command {
 				nextVersion, err = version.Next(currentVersion, kind)
 			}
 			ui.ExitOnError("getting next version for "+kind, err)
-			ui.Warn("Upgrading version from "+currentVersion+" to:", nextVersion)
 
+			// save version in Chart.yaml
 			helm.SaveString(&chart, "version", nextVersion)
 			helm.SaveString(&chart, "appVersion", nextVersion)
 
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving Chart.yaml file", err)
 
-			// add "v" for go compatibility (Semver don't have it as prefix)
-			nextVersion = "v" + nextVersion
+			// save Chart.yaml, and push changes to git
+			_, err = process.Execute("git", "add", "charts/")
+			ui.ExitOnError("adding changes in charts directory", err)
 
-			ui.Info("Generated new version", nextVersion)
+			_, err = process.Execute("git", "commit", "-m", "updating chart version to "+nextVersion)
+			ui.ExitOnError("updating chart version to"+nextVersion, err)
+
+			_, err = process.Execute("git", "push")
+			ui.ExitOnError("pushing changes", err)
+
+			// add "v" for go compatibility (Semver don't have it as prefix)
+			// set new tag and push
+			nextVersion = "v" + nextVersion
 
 			_, err = process.Execute("git", "tag", nextVersion)
 			ui.ExitOnError("tagging new version", err)
@@ -61,6 +70,7 @@ func NewHelmReleaseCmd() *cobra.Command {
 			_, err = process.Execute("git", "push", "--tags")
 			ui.ExitOnError("pushing new version to repository", err)
 
+			ui.Warn("Upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
 		},
 	}
 
