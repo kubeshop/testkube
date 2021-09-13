@@ -44,6 +44,14 @@ func NewReleaseCmd() *cobra.Command {
 			}
 			ui.ExitOnError("getting next version for "+kind, err)
 
+			// add "v" for go compatibility (Semver don't have it as prefix)
+			// set new tag and push
+			_, err = process.Execute("git", "tag", "v"+nextVersion)
+			ui.ExitOnError("tagging new version", err)
+
+			_, err = process.Execute("git", "push", "--tags")
+			ui.ExitOnError("pushing new version to repository", err)
+
 			// save version in Chart.yaml
 			helm.SaveString(&chart, "version", nextVersion)
 			helm.SaveString(&chart, "appVersion", nextVersion)
@@ -53,6 +61,8 @@ func NewReleaseCmd() *cobra.Command {
 			ui.ExitOnError("saving Chart.yaml file", err)
 
 			// save Chart.yaml, and push changes to git
+			// as https://github.com/helm/chart-releaser-action/issues/60
+			// we need to push changes after tag is created
 			_, err = process.Execute("git", "add", "charts/")
 			ui.ExitOnError("adding changes in charts directory", err)
 
@@ -61,16 +71,6 @@ func NewReleaseCmd() *cobra.Command {
 
 			_, err = process.Execute("git", "push")
 			ui.ExitOnError("pushing changes", err)
-
-			// add "v" for go compatibility (Semver don't have it as prefix)
-			// set new tag and push
-			nextVersion = "v" + nextVersion
-
-			_, err = process.Execute("git", "tag", nextVersion)
-			ui.ExitOnError("tagging new version", err)
-
-			_, err = process.Execute("git", "push", "--tags")
-			ui.ExitOnError("pushing new version to repository", err)
 
 			ui.Warn("Upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
 		},
