@@ -28,5 +28,6 @@ jobs:
           charts_dir: charts
           owner: kubeshop
           repo: helm-charts
+          charts_repo_url: https://kubeshop.github.io/helm-charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
