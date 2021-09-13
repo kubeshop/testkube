@@ -2,5 +2,5 @@ apiVersion: v2
 name: api-server
 description: A Helm chart for Api-server
 type: application
-version: 0.5.16-beta006
-appVersion: 0.5.16-beta006
+version: 0.5.16-beta007
+appVersion: 0.5.16-beta007
