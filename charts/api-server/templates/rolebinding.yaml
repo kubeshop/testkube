@@ -1,0 +1,31 @@
+apiVersion: rbac.authorization.k8s.io/v1
+# This role binding allows "system:serviceaccount:default:api-server-chart" to manage secrets in the "default" namespace.
+# You need to already have a Role named "scripts.operator.api-server" in that namespace.
+kind: RoleBinding
+metadata:
+  name: manage-scripts
+subjects:
+# You can specify more than one "subject"
+- kind: User
+  name: "system:serviceaccount:{{ .Release.Namespace }}:{{ .Values.fullnameOverride }}" # namespace to be parametrised
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # "roleRef" specifies the binding to a Role / ClusterRole
+  kind: Role #this must be Role or ClusterRole
+  name: scripts.operator.api-server # this must match the name of the Role or ClusterRole you wish to bind to
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: executors-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: executors-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: kubtest-api-server
+  namespace: default
