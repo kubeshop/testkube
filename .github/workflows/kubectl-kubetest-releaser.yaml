@@ -1,10 +1,6 @@
 name: Release kubtest CLI for Kubectl.
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: push
 # on:
 #   push:
 #     tags: 
