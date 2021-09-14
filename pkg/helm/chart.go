@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type HelmChart yaml.MapSlice
@@ -29,6 +29,68 @@ func Write(filePath string, helmChart HelmChart) (err error) {
 		return err
 	}
 	return ioutil.WriteFile(filePath, content, 0644)
+}
+
+func UpdateDependencyVersion(in HelmChart, dependency, version string) (out HelmChart, err error) {
+	// go through SliceMap
+	for ci, i := range in {
+		if i.Key == "dependencies" {
+			deps, ok := i.Value.([]interface{})
+			if !ok {
+				return out, fmt.Errorf("dependencies key is not array")
+			}
+
+			for di, idep := range deps {
+				fields, ok := idep.(HelmChart)
+				if !ok {
+					return out, fmt.Errorf("invalid dependencies key values")
+				}
+
+				for _, f := range fields {
+					if f.Key == "name" && f.Value == dependency {
+						for fi, f := range fields {
+							if f.Key == "version" {
+								in[ci].Value.([]interface{})[di].(HelmChart)[fi].Value = version
+								return in, nil
+							}
+
+						}
+					}
+				}
+			}
+		}
+	}
+	return out, fmt.Errorf("dependency not found")
+}
+
+func GetDependencyVersion(helmChart HelmChart, dependency string) (string, error) {
+	for _, i := range helmChart {
+		if i.Key == "dependencies" {
+			deps, ok := i.Value.([]interface{})
+			if !ok {
+				return "", fmt.Errorf("dependencies key is not array")
+			}
+
+			for _, ifields := range deps {
+				fields, ok := ifields.(HelmChart)
+				if !ok {
+					return "", fmt.Errorf("invalid dependencies key values")
+				}
+
+				for _, f := range fields {
+					if f.Key == "name" && f.Value == dependency {
+						for _, f := range fields {
+							if f.Key == "version" {
+								return f.Value.(string), nil
+							}
+
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("version key not found in dependency " + dependency)
 }
 
 func GetVersion(helmChart HelmChart) string {

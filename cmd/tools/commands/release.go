@@ -21,6 +21,7 @@ func NewReleaseCmd() *cobra.Command {
 		Long:  `Release Helm Chart, bump version, put version as helm app and chart version, create tag, push`,
 		Run: func(cmd *cobra.Command, args []string) {
 
+			// get current version
 			out, err := process.Execute("git", "tag")
 			ui.ExitOnError("getting tags", err)
 
@@ -65,7 +66,7 @@ func NewReleaseCmd() *cobra.Command {
 			helm.UpdateValuesImageTag(valuesPath, nextVersion)
 
 			err = helm.Write(path, chart)
-			ui.ExitOnError("saving Chart.yaml file", err)
+			ui.ExitOnError("saving "+appName+" Chart.yaml file", err)
 
 			_, err = process.ExecuteInDir(dir, "git", "add", "charts/")
 			ui.ExitOnError("adding changes in charts directory", err)
@@ -76,7 +77,38 @@ func NewReleaseCmd() *cobra.Command {
 			_, err = process.ExecuteInDir(dir, "git", "push")
 			ui.ExitOnError("pushing changes", err)
 
-			ui.Warn(appName+" upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
+			// Checkout main kubtest chart and bump main chart with next version
+			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "kubtest", "main")
+			ui.ExitOnError("checking out helm charts to "+dir, err)
+
+			chart, path, err = helm.GetChart(dir)
+			ui.ExitOnError("getting chart path", err)
+
+			kubtestVersion := helm.GetVersion(chart)
+			var nextKubtestVersion string
+			switch true {
+			case dev && version.IsPrerelease(kubtestVersion):
+				nextKubtestVersion, err = version.NextPrerelease(kubtestVersion)
+			case dev && !version.IsPrerelease(kubtestVersion):
+				nextKubtestVersion, err = version.Next(kubtestVersion, version.Patch)
+				nextKubtestVersion = nextKubtestVersion + "-beta1"
+			default:
+				nextKubtestVersion, err = version.Next(kubtestVersion, kind)
+			}
+			ui.ExitOnError("getting next version for kubtest ", err)
+			ui.Info("Generated new kubtest version", nextKubtestVersion)
+
+			// bump main kubtest chart version
+			helm.SaveString(&chart, "version", nextKubtestVersion)
+			helm.SaveString(&chart, "appVersion", nextKubtestVersion)
+
+			// set app dependency version
+			helm.UpdateDependencyVersion(chart, appName, nextVersion)
+
+			err = helm.Write(path, chart)
+			ui.ExitOnError("saving kubtest Chart.yaml file", err)
+
+			ui.Warn(appName+" upgrade completed, version upgraded from "+kubtestVersion+" to ", nextVersion)
 		},
 	}
 
