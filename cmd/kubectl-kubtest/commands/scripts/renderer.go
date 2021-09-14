@@ -18,6 +18,7 @@ const (
 
 type Renderer interface {
 	Render(result kubtest.ScriptExecution, writer io.Writer) error
+	Watch(result kubtest.ScriptExecution, writer io.Writer) error
 }
 
 type JSONRenderer struct {
@@ -25,6 +26,9 @@ type JSONRenderer struct {
 
 func (r JSONRenderer) Render(result kubtest.ScriptExecution, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(result)
+}
+func (r JSONRenderer) Watch(result kubtest.ScriptExecution, writer io.Writer) error {
+	return r.Render(result, writer)
 }
 
 type GoTemplateRenderer struct {
@@ -38,6 +42,9 @@ func (r GoTemplateRenderer) Render(result kubtest.ScriptExecution, writer io.Wri
 	}
 
 	return tmpl.Execute(writer, result)
+}
+func (r GoTemplateRenderer) Watch(result kubtest.ScriptExecution, writer io.Writer) error {
+	return r.Render(result, writer)
 }
 
 type RawRenderer struct {
@@ -71,12 +78,20 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 	return err
 }
 
-func (r RawRenderer) renderDetails(execution kubtest.ScriptExecution, writer io.Writer) error {
+func (r RawRenderer) Watch(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
+	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
+		scriptExecution.Execution.Status,
+		scriptExecution.Execution.Duration(),
+	)
 
+	return err
+}
+
+func (r RawRenderer) renderDetails(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
-		execution.Name,
-		execution.Execution.Status,
-		execution.Execution.Duration(),
+		scriptExecution.Name,
+		scriptExecution.Execution.Status,
+		scriptExecution.Execution.Duration(),
 	)
 
 	return err
