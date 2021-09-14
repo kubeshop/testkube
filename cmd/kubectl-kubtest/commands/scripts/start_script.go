@@ -64,7 +64,7 @@ func NewStartScriptCmd() *cobra.Command {
 				"or watch script execution until complete",
 				"kubectl kubtest scripts watch "+scriptExecution.Id,
 			)
-			ui.BR()
+			ui.NL()
 			if watch {
 				for range time.Tick(time.Second) {
 					scriptExecution, err := client.GetExecution("-", scriptExecution.Id)

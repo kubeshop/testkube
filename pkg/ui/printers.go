@@ -15,7 +15,7 @@ const IconMedal = "🥇"
 // IconError emoji
 const IconError = "💔"
 
-func BR() {
+func NL() {
 	fmt.Println()
 }
 
@@ -82,7 +82,6 @@ func Completed(main string, sub ...string) {
 	} else {
 		fmt.Println(color.LightGray(main), color.LightBlue(strings.Join(sub, " ")))
 	}
-	fmt.Println()
 }
 
 func GroupCompleted(main string, sub ...string) {

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os"
 	"strings"
 
 	"github.com/kubeshop/kubtest/pkg/git"
@@ -14,46 +15,26 @@ import (
 var appName string
 
 func NewReleaseCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "release",
 		Short: "Release Helm Chart image",
 		Long:  `Release Helm Chart, bump version, put version as helm app and chart version, create tag, push`,
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Verbose = verbose
 
-			// get current version
-			out, err := process.Execute("git", "tag")
-			ui.ExitOnError("getting tags", err)
-
-			versions := strings.Split(string(out), "\n")
-			currentVersion := version.GetNewest(versions)
-			ui.Info("Current version based on tags", currentVersion)
-
-			// generate next version
-			var nextVersion string
-
-			switch true {
-			case dev && version.IsPrerelease(currentVersion):
-				nextVersion, err = version.NextPrerelease(currentVersion)
-			case dev && !version.IsPrerelease(currentVersion):
-				nextVersion, err = version.Next(currentVersion, version.Patch)
-				nextVersion = nextVersion + "-beta1"
-			default:
-				nextVersion, err = version.Next(currentVersion, kind)
+			if dev {
+				ui.Warn("Using prerelease version mode")
+			} else {
+				ui.Warn("Using production version mode")
 			}
-			ui.ExitOnError("getting next version for "+kind, err)
 
-			// add "v" for go compatibility (Semver don't have it as prefix)
-			// set new tag and push
-			_, err = process.Execute("git", "tag", "v"+nextVersion)
-			ui.ExitOnError("tagging new version", err)
-
-			_, err = process.Execute("git", "push", "--tags")
-			ui.ExitOnError("pushing new version to repository", err)
+			currentAppVersion := getCurrentAppVersion()
+			nextAppVersion := getNextVersion(dev, currentAppVersion, kind)
+			pushVersionTag(nextAppVersion)
 
 			// Let's checkout helm chart repo and put changes to particular app
 			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
-			ui.ExitOnError("checking out helm charts to "+dir, err)
+			ui.ExitOnError("checking out "+appName+" chart to "+dir, err)
 
 			chart, path, err := helm.GetChart(dir)
 			ui.ExitOnError("getting chart path", err)
@@ -61,41 +42,24 @@ func NewReleaseCmd() *cobra.Command {
 			valuesPath := strings.Replace(path, "Chart.yaml", "values.yaml", -1)
 
 			// save version in Chart.yaml
-			helm.SaveString(&chart, "version", nextVersion)
-			helm.SaveString(&chart, "appVersion", nextVersion)
-			helm.UpdateValuesImageTag(valuesPath, nextVersion)
+			helm.SaveString(&chart, "version", nextAppVersion)
+			helm.SaveString(&chart, "appVersion", nextAppVersion)
+			helm.UpdateValuesImageTag(valuesPath, nextAppVersion)
 
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving "+appName+" Chart.yaml file", err)
 
-			_, err = process.ExecuteInDir(dir, "git", "add", "charts/")
-			ui.ExitOnError("adding changes in charts directory", err)
-
-			_, err = process.ExecuteInDir(dir, "git", "commit", "-m", "updating api-server chart version to "+nextVersion)
-			ui.ExitOnError("updating chart version to"+nextVersion, err)
-
-			_, err = process.ExecuteInDir(dir, "git", "push")
-			ui.ExitOnError("pushing changes", err)
+			saveChartChanges(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
 			// Checkout main kubtest chart and bump main chart with next version
 			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "kubtest", "main")
-			ui.ExitOnError("checking out helm charts to "+dir, err)
+			ui.ExitOnError("checking out kubtest chart to "+dir, err)
 
 			chart, path, err = helm.GetChart(dir)
 			ui.ExitOnError("getting chart path", err)
 
 			kubtestVersion := helm.GetVersion(chart)
-			var nextKubtestVersion string
-			switch true {
-			case dev && version.IsPrerelease(kubtestVersion):
-				nextKubtestVersion, err = version.NextPrerelease(kubtestVersion)
-			case dev && !version.IsPrerelease(kubtestVersion):
-				nextKubtestVersion, err = version.Next(kubtestVersion, version.Patch)
-				nextKubtestVersion = nextKubtestVersion + "-beta1"
-			default:
-				nextKubtestVersion, err = version.Next(kubtestVersion, kind)
-			}
-			ui.ExitOnError("getting next version for kubtest ", err)
+			nextKubtestVersion := getNextVersion(dev, kubtestVersion, version.Patch)
 			ui.Info("Generated new kubtest version", nextKubtestVersion)
 
 			// bump main kubtest chart version
@@ -103,12 +67,25 @@ func NewReleaseCmd() *cobra.Command {
 			helm.SaveString(&chart, "appVersion", nextKubtestVersion)
 
 			// set app dependency version
-			helm.UpdateDependencyVersion(chart, appName, nextVersion)
+			helm.UpdateDependencyVersion(chart, appName, nextAppVersion)
 
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving kubtest Chart.yaml file", err)
 
-			ui.Warn(appName+" upgrade completed, version upgraded from "+kubtestVersion+" to ", nextVersion)
+			saveChartChanges(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
+
+			tab := ui.NewArrayTable([][]string{
+				{appName + " previous version", nextAppVersion},
+				{"kubtest previous version", nextKubtestVersion},
+				{appName + " next version", nextAppVersion},
+				{"kubtest next version", nextKubtestVersion},
+			})
+
+			ui.NL()
+			ui.Table(tab, os.Stdout)
+
+			ui.Completed("Release completed", "kubtest:"+nextKubtestVersion)
+			ui.NL()
 		},
 	}
 
@@ -117,7 +94,56 @@ func NewReleaseCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
 	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")
 
-	ui.Verbose = verbose
-
 	return cmd
+}
+
+func pushVersionTag(nextAppVersion string) {
+	// set new tag and push
+	// add "v" for go compatibility (Semver don't have it as prefix)
+	_, err := process.Execute("git", "tag", "v"+nextAppVersion)
+	ui.ExitOnError("tagging new version", err)
+
+	_, err = process.Execute("git", "push", "--tags")
+	ui.ExitOnError("pushing new version to repository", err)
+
+}
+
+func getCurrentAppVersion() string {
+	// get current app version based on tags
+	out, err := process.Execute("git", "tag")
+	ui.ExitOnError("getting tags", err)
+
+	versions := strings.Split(string(out), "\n")
+	currentAppVersion := version.GetNewest(versions)
+	ui.Info("Current version based on tags", currentAppVersion)
+
+	return currentAppVersion
+}
+
+func getNextVersion(dev bool, currentVersion string, kind string) (nextVersion string) {
+	var err error
+	switch true {
+	case dev && version.IsPrerelease(currentVersion):
+		nextVersion, err = version.NextPrerelease(currentVersion)
+	case dev && !version.IsPrerelease(currentVersion):
+		nextVersion, err = version.Next(currentVersion, version.Patch)
+		nextVersion = nextVersion + "-beta1"
+	default:
+		nextVersion, err = version.Next(currentVersion, kind)
+	}
+	ui.ExitOnError("getting next version for "+kind, err)
+
+	return
+
+}
+
+func saveChartChanges(dir, message string) {
+	_, err := process.ExecuteInDir(dir, "git", "add", "charts/")
+	ui.ExitOnError("adding changes in charts directory (+"+dir+"+)", err)
+
+	_, err = process.ExecuteInDir(dir, "git", "commit", "-m", message)
+	ui.ExitOnError(message, err)
+
+	_, err = process.ExecuteInDir(dir, "git", "push")
+	ui.ExitOnError("pushing changes", err)
 }

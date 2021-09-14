@@ -16,6 +16,8 @@ func NewVersionBumpCmd() *cobra.Command {
 		Short: "Shows version and build info",
 		Long:  `Shows version and build info`,
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Verbose = verbose
+
 			out, err := process.Execute("git", "tag")
 			ui.ExitOnError("getting tags", err)
 
@@ -51,8 +53,6 @@ func NewVersionBumpCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&kind, "kind", "k", "patch", "version kind one of (patch|minor|major")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
 	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")
-
-	ui.Verbose = verbose
 
 	return cmd
 }
