@@ -169,6 +169,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		scriptExecution = kubtest.NewScriptExecution(
 			scriptID,
 			request.Name,
+			scriptCR.Spec.Type_,
 			execution,
 			request.Params,
 		)
