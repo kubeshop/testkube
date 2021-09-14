@@ -50,11 +50,8 @@ func NewReleaseCmd() *cobra.Command {
 			_, err = process.Execute("git", "push", "--tags")
 			ui.ExitOnError("pushing new version to repository", err)
 
-			// save Chart.yaml, and push changes to git
-			// as https://github.com/helm/chart-releaser-action/issues/60
-			// we need to push changes after tag is created
-
-			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "api-server", "main")
+			// Let's checkout helm chart repo and put changes to particular app
+			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
 			ui.ExitOnError("checking out helm charts to "+dir, err)
 
 			chart, path, err := helm.GetChart(dir)
@@ -79,7 +76,7 @@ func NewReleaseCmd() *cobra.Command {
 			_, err = process.ExecuteInDir(dir, "git", "push")
 			ui.ExitOnError("pushing changes", err)
 
-			ui.Warn("Upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
+			ui.Warn(appName+" upgrade completed, version upgraded from "+currentVersion+" to ", nextVersion)
 		},
 	}
 
