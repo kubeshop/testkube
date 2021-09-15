@@ -9,9 +9,9 @@
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
 
-Known vulnerabilities: ![kubtest](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)
-![kubtest-operator](https://snyk.io/test/github/kubeshop-operator/kubtest/badge.svg)
-![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)
+Known vulnerabilities: [![Kubtest](https://snyk.io/test/github/kubeshop/kubtest/badge.svg)](https://snyk.io/test/github/kubeshop/kubtest)
+[![kubtest-operator](https://snyk.io/test/github/kubeshop/kubtest-operator/badge.svg)](https://snyk.io/test/github/kubeshop/kubtest-operator)
+[![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)](https://snyk.io/test/github/kubeshop/helm-charts)
 -->
                                                            
 # Welcome to Kubtest - your friendly Kubernetes testing framework!
@@ -45,6 +45,10 @@ Kubtest attempts to:
 Check out the [Installation](https://kubeshop.github.io/kubtest/installing/) and
 [Getting Started](https://kubeshop.github.io/kubtest/getting-started/) guides to set up Kubtest and
 run your first tests!
+
+# Discord
+
+Don't hesitate to say hi to the team and ask questions on our [Discord server](https://discord.gg/uNuhy6GDyn).
 
 # Documentation
 
