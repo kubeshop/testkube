@@ -16,7 +16,7 @@ var (
 )
 
 func init() {
-	RootCmd.AddCommand(NewVersionBumpCmd())
+	RootCmd.AddCommand(NewReleaseCmd())
 }
 
 var RootCmd = &cobra.Command{
