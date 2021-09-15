@@ -233,6 +233,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		for i, s := range executions {
 			result[i] = kubtest.ExecutionSummary{
 				Id:         s.Id,
+				Name:       s.Name,
 				ScriptName: s.ScriptName,
 				ScriptType: s.ScriptType,
 				Status:     s.Execution.Status,

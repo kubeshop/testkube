@@ -53,6 +53,9 @@ test-e2e:
 test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
+test-postman-local-api-server:
+	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill 
+
 cover: 
 	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
 	open testCoverage.html
