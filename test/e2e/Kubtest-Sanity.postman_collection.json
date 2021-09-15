@@ -146,7 +146,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Response data test\", function () {",
+							"pm.test(\"Check response data\", function () {",
 							"    var jsonData = pm.response.json();",
 							"    pm.expect(jsonData.name).to.eql(pm.environment.get(\"script_name\"));",
 							"});",
@@ -259,8 +259,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Successfull test execution\", function () {",
+							"pm.test(\"Check successfull test execution\", function () {",
 							"    var jsonData = pm.response.json();",
+							"",
+							"    console.log(\"response\", pm.response.json());",
 							"",
 							"    console.log(\"execution status\", jsonData.execution.status);",
 							"    if(jsonData.execution.status != \"success\") {                ",
@@ -321,7 +323,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Successfull test execution\", function () {",
+							"pm.test(\"Get recent execution from execution list\", function () {",
+							"    console.log(\"response\", pm.response.json());",
 							"    let jsonData = pm.response.json();",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
@@ -376,7 +379,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Successfull test execution\", function () {",
+							"pm.test(\"Get execution by id\", function () {",
+							"    console.log(\"response\", pm.response.json());",
 							"    var jsonData = pm.response.json();",
 							"    pm.expect(jsonData.execution.status).to.eql(\"success\");",
 							"    pm.expect(jsonData[\"script-name\"]).to.eql(pm.environment.get(\"script_name\"));",
@@ -428,6 +432,7 @@
 					"script": {
 						"exec": [
 							"pm.test(\"Most recent execution is that one recently run\", function () {",
+							"    console.log(\"response\", pm.response.json());",
 							"    let jsonArray = pm.response.json();",
 							"    let jsonData = jsonArray[0];",
 							"",

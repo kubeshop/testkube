@@ -53,8 +53,15 @@ test-e2e:
 test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
+test-reload-sanity-script:
+	kubectl delete script sanity || true
+	kubectl kubtest scripts create -f test/e2e/Kubtest-Sanity.postman_collection.json --name sanity
+
 test-postman-local-api-server:
 	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill 
+
+test-postman-cluster: 
+	kubectl kubtest scripts start sanity -f -p api_uri=http://kubtest-api-server:8088 -p script_type=postman/collection -p script_name=fill-me -p execution_name=fill-me
 
 cover: 
 	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
