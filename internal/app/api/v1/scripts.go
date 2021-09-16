@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
@@ -62,7 +61,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		fmt.Println("REQ:", spew.Sdump(request))
 
 		s.Log.Infow("creating script", "request", request)
 
@@ -111,8 +109,6 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
 		}
 
-		s.Log.Infow("running execution of script", "name", scriptID, "script", request)
-
 		// generate random execution name in case there is no one set
 		// like for docker images
 		if request.Name == "" {
@@ -158,7 +154,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			Repository: respository,
 			Params:     request.Params,
 		}
-		s.Log.Infow("calling executor with options", "options", options)
+		s.Log.Debugw("calling executor with options", "options", options)
 		execution, err := executor.Execute(options)
 
 		if err != nil {
@@ -176,6 +172,8 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		)
 		s.Repository.Insert(ctx, scriptExecution)
 
+		s.Log.Infow("running execution of script", "name", scriptID, "script", request, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name)
+
 		// save watch result asynchronously
 		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
 			// watch for execution results
@@ -188,6 +186,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 				scriptExecution.Execution = &e
 				return s.Repository.Update(ctx, scriptExecution)
 			})
+
+			if err != nil {
+				s.Log.Errorw("watch execution error", "error", err.Error())
+			}
 		}(scriptExecution, executor)
 
 		// metrics increase
