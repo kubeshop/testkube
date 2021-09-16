@@ -203,6 +203,7 @@
 							"    let jsonData = pm.response.json();",
 							"    let script = pm.environment.get(\"script_name\")",
 							"    pm.expect(jsonData[\"script-name\"]).to.eql(script);",
+							"    console.log(\"create response\", jsonData);",
 							"",
 							"    let executionName = jsonData.name ",
 							"    let executionID = jsonData.id ",
@@ -323,8 +324,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Get recent execution from execution list\", function () {",
-							"    console.log(\"response\", pm.response.json());",
+							"pm.test(\"Successfull test execution\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
@@ -436,9 +436,11 @@
 							"    let jsonArray = pm.response.json();",
 							"    let jsonData = jsonArray[0];",
 							"",
-							"    pm.expect(jsonData[\"script-name\"]).to.eql(pm.environment.get(\"script_name\"));",
+							"    pm.expect(jsonData[\"script-name\"]).to.eql(pm.environment.get(\"script_name\"))",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
-							"});"
+							"});",
+							"",
+							""
 						],
 						"type": "text/javascript"
 					}
@@ -462,13 +464,19 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/executions",
+					"raw": "{{api_uri}}/v1/executions?limit=2",
 					"host": [
 						"{{api_uri}}"
 					],
 					"path": [
 						"v1",
 						"executions"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "2"
+						}
 					]
 				}
 			},

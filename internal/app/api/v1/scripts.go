@@ -110,7 +110,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
 		}
 
-		s.Log.Infow("running execution of script", "script", request)
+		s.Log.Infow("running execution of script", "name", scriptID, "script", request)
 
 		// generate random execution name in case there is no one set
 		// like for docker images
@@ -203,7 +203,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scriptID := c.Params("id", "-")
-		limit, err := strconv.Atoi(c.Params("limit", "100"))
+		limit, err := strconv.Atoi(c.Query("limit", "100"))
 		if err != nil {
 			limit = 100
 		} else if limit < 1 || limit > 1000 {
@@ -218,7 +218,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
-			s.Log.Infow("Getting script executions (no id passed)")
+			s.Log.Infow("Getting script executions (no id passed)", "limit", limit)
 			executions, err = s.Repository.GetNewestExecutions(ctx, limit)
 		} else {
 			s.Log.Infow("Getting script executions", "id", scriptID)
