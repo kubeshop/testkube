@@ -205,7 +205,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id", "-")
-		pager := s.GetPagerParams(c)
+		pager := s.GetPager(c)
 		l := s.Log.With("script", scriptID, "pager", pager)
 		ctx := c.Context()
 

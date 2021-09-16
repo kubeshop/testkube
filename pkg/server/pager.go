@@ -18,7 +18,7 @@ type Pager struct {
 	NextID string
 }
 
-func (s HTTPServer) GetPagerParams(c *fiber.Ctx) Pager {
+func (s HTTPServer) GetPager(c *fiber.Ctx) Pager {
 	limit, err := strconv.Atoi(c.Query("limit", "100"))
 	if err != nil || limit < 1 {
 		limit = DefaultLimit
