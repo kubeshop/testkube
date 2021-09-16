@@ -184,7 +184,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 				// save only if status changed or output changed
 				if e.Status != scriptExecution.Execution.Status || e.Result.RawOutput != scriptExecution.Execution.Result.RawOutput {
 
-					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String())
+					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String(), "scriptName", scriptExecution.ScriptName)
 					l.Infow("saving", "result", e.Result, "oldStatus", scriptExecution.Execution.Status, "newStatus", e.Status)
 					l.Debugw("saving - debug", "scriptExecution", scriptExecution)
 
