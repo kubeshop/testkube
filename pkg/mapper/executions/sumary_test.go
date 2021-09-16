@@ -30,6 +30,10 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 	ex1 := new(kubtest.Execution).
 		WithContent("content1").
 		WithParams(map[string]string{"p": "v1"})
+
+	ex1.Start()
+	ex1.Stop()
+
 	execution1 := kubtest.NewScriptExecution(
 		"script1",
 		"execution1",
@@ -40,6 +44,10 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 	ex2 := new(kubtest.Execution).
 		WithContent("content1").
 		WithParams(map[string]string{"p": "v1"})
+
+	ex2.Start()
+	ex2.Stop()
+
 	execution2 := kubtest.NewScriptExecution(
 		"script1",
 		"execution2",
