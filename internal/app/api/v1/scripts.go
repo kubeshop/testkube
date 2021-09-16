@@ -3,14 +3,15 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
+	executionsMapper "github.com/kubeshop/kubtest/pkg/mapper/executions"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
+
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -202,26 +203,23 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 // ListExecutions returns array of available script executions
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		scriptID := c.Params("id", "-")
-		limit, err := strconv.Atoi(c.Query("limit", "100"))
-		if err != nil {
-			limit = 100
-		} else if limit < 1 || limit > 1000 {
-			limit = 1000
-		}
 
+		scriptID := c.Params("id", "-")
+		pager := s.GetPagerParams(c)
+		l := s.Log.With("script", scriptID, "pager", pager)
 		ctx := c.Context()
 
 		var executions []kubtest.ScriptExecution
+		var err error
 
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
-			s.Log.Infow("Getting script executions (no id passed)", "limit", limit)
-			executions, err = s.Repository.GetNewestExecutions(ctx, limit)
+			l.Infow("Getting script executions (no id passed)")
+			executions, err = s.Repository.GetNewestExecutions(ctx, pager.Limit)
 		} else {
-			s.Log.Infow("Getting script executions", "id", scriptID)
+			l.Infow("Getting script executions")
 			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
 		}
 		if err != nil {
@@ -229,18 +227,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		}
 
 		// convert to summary
-		result := make([]kubtest.ExecutionSummary, len(executions))
-		for i, s := range executions {
-			result[i] = kubtest.ExecutionSummary{
-				Id:         s.Id,
-				Name:       s.Name,
-				ScriptName: s.ScriptName,
-				ScriptType: s.ScriptType,
-				Status:     s.Execution.Status,
-				StartTime:  s.Execution.StartTime,
-				EndTime:    s.Execution.EndTime,
-			}
-		}
+		result := executionsMapper.MapToSummary(executions)
 
 		return c.JSON(result)
 	}
