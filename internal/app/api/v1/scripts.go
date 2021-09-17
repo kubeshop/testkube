@@ -183,11 +183,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 			// watch for execution results
 			s.Log.Infow("in goroutine", "executionID", scriptExecution.Id, "scriptName", scriptExecution.ScriptName)
+			se := scriptExecution
 
 			// Watch calls simple Get request to executor in intervals and writes result
 			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
-
-				se := scriptExecution
 
 				// save only if status changed or output changed
 				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
@@ -196,11 +195,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
 					l.Infow("watch - saving script execution - debug", "scriptExecution", se)
 
-					// copy struct - debug those possible mem leaks :/
-					execution := e
-					se.Execution = &execution
-
-					err := s.Repository.Update(ctx, se)
+					err := s.Repository.UpdateExecution(ctx, se.Id, e)
 					if err != nil {
 						l.Errorw("watch - got error when updating script execution", "error", err.Error())
 						return err

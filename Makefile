@@ -94,3 +94,9 @@ version-bump-dev:
 
 commands-reference: 
 	go run cmd/kubectl-kubtest/main.go doc > ./docs/reference.md
+
+prerelease: 
+	go run cmd/tools/main.go release -d
+
+release: 
+	go run cmd/tools/main.go release
