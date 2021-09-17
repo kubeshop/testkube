@@ -185,18 +185,20 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			// Watch calls simple Get request to executor in intervals and writes result
 			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
 
-				// save only if status changed or output changed
-				if e.Status != scriptExecution.Execution.Status || e.Result.RawOutput != scriptExecution.Execution.Result.RawOutput {
+				se := scriptExecution
 
-					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String(), "scriptName", scriptExecution.ScriptName)
-					l.Infow("watch - saving script execution", "oldStatus", scriptExecution.Execution.Status, "newStatus", e.Status, "result", e.Result)
-					l.Infow("watch - saving script execution - debug", "scriptExecution", scriptExecution)
+				// save only if status changed or output changed
+				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
+
+					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
+					l.Infow("watch - saving script execution - debug", "scriptExecution", se)
 
 					// copy struct - debug those possible mem leaks :/
 					execution := e
-					scriptExecution.Execution = &execution
+					se.Execution = &execution
 
-					err := s.Repository.Update(ctx, scriptExecution)
+					err := s.Repository.Update(ctx, se)
 					if err != nil {
 						l.Errorw("watch - got error when updating script execution", "error", err.Error())
 						return err
