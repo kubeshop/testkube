@@ -190,7 +190,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String(), "scriptName", scriptExecution.ScriptName)
 					l.Infow("watch - saving script execution", "oldStatus", scriptExecution.Execution.Status, "newStatus", e.Status, "result", e.Result)
-					l.Debugw("watch - saving script execution - debug", "scriptExecution", scriptExecution)
+					l.Infow("watch - saving script execution - debug", "scriptExecution", scriptExecution)
 
 					// copy struct - debug those possible mem leaks :/
 					execution := e
