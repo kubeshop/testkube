@@ -407,6 +407,7 @@ components:
             users: "3"
             prefix: "some-"
         execution:
+          required: true
           $ref: '#/components/schemas/Execution'
 
     ExecutionSummary:

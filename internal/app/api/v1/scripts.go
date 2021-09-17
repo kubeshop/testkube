@@ -170,7 +170,11 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			execution,
 			request.Params,
 		)
-		s.Repository.Insert(ctx, scriptExecution)
+
+		err = s.Repository.Insert(ctx, scriptExecution)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
 
 		s.Log.Infow("running execution of script", "name", scriptID, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name, "request", request)
 
@@ -185,11 +189,18 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 				if e.Status != scriptExecution.Execution.Status || e.Result.RawOutput != scriptExecution.Execution.Result.RawOutput {
 
 					l := s.Log.With("executionID", e.Id, "duration", e.Duration().String(), "scriptName", scriptExecution.ScriptName)
-					l.Infow("saving", "result", e.Result, "oldStatus", scriptExecution.Execution.Status, "newStatus", e.Status)
-					l.Debugw("saving - debug", "scriptExecution", scriptExecution)
+					l.Infow("watch - saving script execution", "oldStatus", scriptExecution.Execution.Status, "newStatus", e.Status, "result", e.Result)
+					l.Debugw("watch - saving script execution - debug", "scriptExecution", scriptExecution)
 
-					scriptExecution.Execution = &e
-					return s.Repository.Update(ctx, scriptExecution)
+					// copy struct - debug those possible mem leaks :/
+					execution := e
+					scriptExecution.Execution = &execution
+
+					err := s.Repository.Update(ctx, scriptExecution)
+					if err != nil {
+						l.Errorw("watch - got error when updating script execution", "error", err.Error())
+						return err
+					}
 				}
 
 				return nil
