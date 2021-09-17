@@ -16,6 +16,7 @@ type Client interface {
 	GetScript(id string) (script kubtest.Script, err error)
 	GetExecution(scriptID, executionID string) (execution kubtest.ScriptExecution, err error)
 	ListExecutions(scriptID string) (executions kubtest.ScriptExecutions, err error)
+	AbortExecution(script string, id string) error
 	CreateScript(options CreateScriptOptions) (script kubtest.Script, err error)
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.ScriptExecution, err error)
 	ListScripts(namespace string) (scripts kubtest.Scripts, err error)

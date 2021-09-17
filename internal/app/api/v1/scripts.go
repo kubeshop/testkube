@@ -10,6 +10,7 @@ import (
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
+	"github.com/kubeshop/kubtest/pkg/jobs"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -131,10 +132,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// get executor from kubernetes CRs
-		executor, err := s.Executors.Get(scriptCR.Spec.Type_)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
-		}
+		// executor, err := s.Executors.Get(scriptCR.Spec.Type_)
+		// if err != nil {
+		// 	return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+		// }
 
 		// TODO move to mapper
 
@@ -158,11 +159,13 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			Params:     request.Params,
 		}
 		s.Log.Infow("calling executor with options", "options", options)
-		execution, err := executor.Execute(options)
+		// execution, err := executor.Execute(options)
 
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
-		}
+		execution := kubtest.NewExecution()
+		execution.ScriptContent = options.Content
+		execution.Repository = options.Repository
+		execution.Result = &kubtest.ExecutionResult{Status: "queued"}
+		execution.Params = options.Params
 
 		// store execution
 		ctx := c.Context()
@@ -173,21 +176,27 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			execution,
 			request.Params,
 		)
-		s.Repository.Insert(ctx, scriptExecution)
+		err = s.Repository.Insert(ctx, scriptExecution)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("inserting script CR error: %w", err))
 
+		}
+		jobClient, err := jobs.NewJobClient()
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get k8s client: %w", err))
+		}
 		// save watch result asynchronously
-		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
-			// watch for execution results
-			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+		go func(scriptExecution kubtest.ScriptExecution) error {
+			result := jobClient.LaunchK8sJob(scriptExecution.Id, getImageFromCRType(scriptCR.Spec.Type_), execution)
 
-				l := s.Log.With("executionID", e.Id, "status", e.Status, "duration", e.Duration().String())
-				l.Infow("saving", "result", e.Result)
-				l.Debugw("saving - debug", "scriptExecution", scriptExecution)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+			scriptExecution.Execution.Result = result
+			scriptExecution.Execution.Status = result.Status
+			return s.Repository.Update(ctx, scriptExecution)
 
-				scriptExecution.Execution = &e
-				return s.Repository.Update(ctx, scriptExecution)
-			})
-		}(scriptExecution, executor)
+		}(scriptExecution)
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
@@ -279,10 +288,24 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 	}
 }
 
-func (s kubtestAPI) AbortScriptExecution() fiber.Handler {
+func (s kubtestAPI) AbortExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// TODO fill valid values when abort will be implemented
-		s.Metrics.IncAbortScript("type", nil)
-		return s.Error(c, http.StatusNotImplemented, fmt.Errorf("not implemented"))
+		jobClient, err := jobs.NewJobClient()
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		return c.JSON(jobClient.AbortK8sJob(c.Params("executionID")))
 	}
+}
+
+func getImageFromCRType(crType string) string {
+	switch crType {
+	case "postman/collection":
+		return "jasmingacic/postman-agent"
+	case "cypress/project":
+		return "jasmingacic/cypress-agent"
+	case "curl/test":
+		return "jasmingacic/curl-agent"
+	}
+	return ""
 }

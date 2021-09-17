@@ -156,6 +156,23 @@ func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts
 	return
 }
 
+func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
+	fmt.Println("TADA")
+	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions/%s/abort", scriptID, id)
+	resp, err := c.client.Post(uri, "application/json", nil)
+
+	fmt.Println("DELETE", uri)
+	if err != nil {
+		return err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/get-script returned error: %w", err)
+	}
+
+	return nil
+}
+
 func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution kubtest.ScriptExecution, err error) {
 	defer resp.Body.Close()
 
