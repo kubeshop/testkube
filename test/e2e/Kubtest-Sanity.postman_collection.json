@@ -254,20 +254,19 @@
 			"response": []
 		},
 		{
-			"name": "Get created script execution",
+			"name": "Get created script execution by ID",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
+							"",
 							"pm.test(\"Check successfull test execution\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    ",
-							"    console.log(\"response\", pm.response.json());",
-							"",
+							"    let jsonData = pm.response.json();",
+							"    console.log(\"response\", jsonData);",
 							"    let status = jsonData.execution.status;",
-							"",
 							"    console.log(\"execution status\", status);",
+							"    ",
 							"    pm.expect(status).to.not.eq(\"error\");",
 							"    if(status != \"success\") {                ",
 							"        setTimeout(() => {}, 1000); // wait for 1 second before retrying",
@@ -433,7 +432,7 @@
 			"response": []
 		},
 		{
-			"name": "Get created script execution by ID",
+			"name": "Get created script execution by script and execution name",
 			"event": [
 				{
 					"listen": "test",
@@ -471,13 +470,13 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/executions/{{script_name}}/executions/{{execution_name}}",
+					"raw": "{{api_uri}}/v1/scripts/{{script_name}}/executions/{{execution_name}}",
 					"host": [
 						"{{api_uri}}"
 					],
 					"path": [
 						"v1",
-						"executions",
+						"scripts",
 						"{{script_name}}",
 						"executions",
 						"{{execution_name}}"

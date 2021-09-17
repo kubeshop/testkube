@@ -5,6 +5,7 @@ import (
 )
 
 func NewScriptExecution(scriptName, name, scriptType string, execution Execution, params map[string]string) ScriptExecution {
+	params["scriptNameWhenCreated"] = scriptName
 	return ScriptExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		Name:       name,
