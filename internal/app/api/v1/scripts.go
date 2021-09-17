@@ -3,12 +3,12 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
-	executionsMapper "github.com/kubeshop/kubtest/pkg/mapper/executions"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 
 	"github.com/kubeshop/kubtest/pkg/rand"

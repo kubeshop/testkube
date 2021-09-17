@@ -21,7 +21,7 @@ type ExecutionResult struct {
 	RawOutput string `json:"raw-output,omitempty"`
 	// output type depends of reporter used in partucular tool
 	RawOutputType string `json:"raw-output-type,omitempty"`
-	// error message when status is error, separate to output as output can be partial in case of error
+	// error message when status is failed, separate to output as output can be partial in case of error
 	ErrorMessage string `json:"error-message,omitempty"`
 	// script execution start time
 	StartTime time.Time `json:"start-time,omitempty"`
