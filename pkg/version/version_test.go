@@ -40,23 +40,23 @@ func TestVersioning(t *testing.T) {
 	})
 
 	t.Run("next - bump prerelease number", func(t *testing.T) {
-		next, err := NextPrerelease("0.0.5-beta1")
+		next, err := NextPrerelease("0.0.5-beta001")
 		assert.NoError(t, err)
-		assert.Equal(t, "0.0.5-beta2", next)
+		assert.Equal(t, "0.0.5-beta002", next)
 	})
 }
 
 func TestNextPrerelease(t *testing.T) {
 
 	t.Run("beta postfix", func(t *testing.T) {
-		bumped, err := NextPrerelease("0.0.1-beta8")
+		bumped, err := NextPrerelease("0.0.1-beta008")
 		assert.NoError(t, err)
-		assert.Equal(t, "0.0.1-beta9", bumped)
+		assert.Equal(t, "0.0.1-beta009", bumped)
 	})
 
 	t.Run("alpha postfix", func(t *testing.T) {
-		bumped, err := NextPrerelease("0.0.1-alpha9")
+		bumped, err := NextPrerelease("0.0.1-alpha009")
 		assert.NoError(t, err)
-		assert.Equal(t, "0.0.1-alpha10", bumped)
+		assert.Equal(t, "0.0.1-alpha010", bumped)
 	})
 }

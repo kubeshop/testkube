@@ -3,14 +3,14 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
+	executionsMapper "github.com/kubeshop/kubtest/pkg/mapper/executions"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
+
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +61,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		fmt.Println("REQ:", spew.Sdump(request))
 
 		s.Log.Infow("creating script", "request", request)
 
@@ -110,8 +109,6 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
 		}
 
-		s.Log.Infow("running execution of script", "script", request)
-
 		// generate random execution name in case there is no one set
 		// like for docker images
 		if request.Name == "" {
@@ -157,7 +154,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			Repository: respository,
 			Params:     request.Params,
 		}
-		s.Log.Infow("calling executor with options", "options", options)
+		s.Log.Debugw("calling executor with options", "options", options)
 		execution, err := executor.Execute(options)
 
 		if err != nil {
@@ -169,23 +166,40 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		scriptExecution = kubtest.NewScriptExecution(
 			scriptID,
 			request.Name,
+			scriptCR.Spec.Type_,
 			execution,
 			request.Params,
 		)
-		s.Repository.Insert(ctx, scriptExecution)
 
-		// save watch result asynchronously
-		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
-			// watch for execution results
+		err = s.Repository.Insert(ctx, scriptExecution)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		s.Log.Infow("running execution of script", "scriptName", scriptExecution.ScriptName, "scriptName(pararms)", scriptID, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name, "request", request)
+		// save watched results asynchronously
+		go func(se kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
+			// Watch calls simple Get request to executor in intervals and writes result
 			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+				// save only if status changed or output changed
+				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
+					l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
+					l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
 
-				l := s.Log.With("executionID", e.Id, "status", e.Status, "duration", e.Duration().String())
-				l.Infow("saving", "result", e.Result)
-				l.Debugw("saving - debug", "scriptExecution", scriptExecution)
+					return s.Repository.UpdateExecution(ctx, se.Id, e)
+				}
 
-				scriptExecution.Execution = &e
-				return s.Repository.Update(ctx, scriptExecution)
+				return nil
 			})
+
+			if err != nil {
+				s.Log.Errorw("watch execution error", "error", err.Error())
+				return
+			}
+
+			s.Log.Infow("watch execution completed", "executionID", scriptExecution.Id, "status", scriptExecution.Execution.Status)
+
 		}(scriptExecution, executor)
 
 		// metrics increase
@@ -201,6 +215,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 // ListExecutions returns array of available script executions
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+
 		scriptID := c.Params("id", "-")
 		pageSize, err := strconv.Atoi(c.Params("pageSize", "100"))
 		if err != nil {

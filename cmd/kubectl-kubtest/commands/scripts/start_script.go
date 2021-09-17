@@ -35,6 +35,8 @@ func NewStartScriptCmd() *cobra.Command {
 			scriptExecution, err := client.ExecuteScript(scriptID, namespace, name, params)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
+			PrintScriptExecutionDetails(scriptExecution)
+
 			execution := scriptExecution.Execution
 
 			switch true {
@@ -56,27 +58,30 @@ func NewStartScriptCmd() *cobra.Command {
 
 			}
 
-			ui.ShellCommand(
-				"Use following command to get script execution details",
-				"kubectl kubtest scripts execution "+scriptExecution.Id,
-			)
-			ui.ShellCommand(
-				"or watch script execution until complete",
-				"kubectl kubtest scripts watch "+scriptExecution.Id,
-			)
-			ui.BR()
+			uiShellCommandBlock(scriptExecution.Id)
+
 			if watch {
+				ui.Info("Watching for changes")
 				for range time.Tick(time.Second) {
 					scriptExecution, err := client.GetExecution("-", scriptExecution.Id)
-					ui.ExitOnError("getting API for script completion", err)
+					ui.ExitOnError("get script execution details", err)
 					render := GetRenderer(cmd)
-					err = render.Render(scriptExecution, os.Stdout)
-					ui.ExitOnError("rendering", err)
+					err = render.Watch(scriptExecution, os.Stdout)
+					ui.ExitOnError("watching for changes", err)
 					if scriptExecution.Execution.IsCompleted() {
+						ui.Info("\nGetting results")
+						render.Render(scriptExecution, os.Stdout)
+						ui.ShellCommand(
+							"Use following command to get script execution details",
+							"kubectl kubtest scripts execution "+scriptExecution.Id,
+						)
+						ui.Warn("Script execution completed in", scriptExecution.Execution.Duration().String())
 						return
 					}
 				}
+
 			}
+
 		},
 	}
 
@@ -85,4 +90,17 @@ func NewStartScriptCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watch, "watch", "f", false, "watch for changes after start")
 
 	return cmd
+}
+
+func uiShellCommandBlock(id string) {
+	ui.ShellCommand(
+		"Use following command to get script execution details",
+		"kubectl kubtest scripts execution "+id,
+	)
+	ui.ShellCommand(
+		"or watch script execution until complete",
+		"kubectl kubtest scripts watch "+id,
+	)
+	ui.NL()
+
 }
