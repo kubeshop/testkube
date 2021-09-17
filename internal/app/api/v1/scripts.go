@@ -177,29 +177,17 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		s.Log.Infow("running execution of script", "scriptName", scriptExecution.ScriptName, "scriptName(pararms)", scriptID, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name, "request", request)
-		s.Log.Infow("before goroutine", "scriptName", scriptExecution.ScriptName, "executionID", scriptExecution.Id)
 		// save watched results asynchronously
-		go func(scriptExecution kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
-
-			// watch for execution results
-			s.Log.Infow("in goroutine", "executionID", scriptExecution.Id, "scriptName", scriptExecution.ScriptName)
-			se := scriptExecution
-
+		go func(se kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
 			// Watch calls simple Get request to executor in intervals and writes result
 			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
-
 				// save only if status changed or output changed
 				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
-
 					l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
 					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
-					l.Infow("watch - saving script execution - debug", "scriptExecution", se)
+					l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
 
-					err := s.Repository.UpdateExecution(ctx, se.Id, e)
-					if err != nil {
-						l.Errorw("watch - got error when updating script execution", "error", err.Error())
-						return err
-					}
+					return s.Repository.UpdateExecution(ctx, se.Id, e)
 				}
 
 				return nil

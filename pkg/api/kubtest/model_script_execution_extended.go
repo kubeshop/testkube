@@ -1,21 +1,10 @@
 package kubtest
 
 import (
-	"fmt"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func NewScriptExecution(scriptName, name, scriptType string, execution Execution, params map[string]string) ScriptExecution {
-
-	fmt.Printf("%+v\n", params)
-
-	if params == nil {
-		params = map[string]string{"scriptNameWhenCreated": scriptName}
-	} else {
-		params["scriptNameWhenCreated"] = scriptName
-	}
-
 	return ScriptExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		Name:       name,
