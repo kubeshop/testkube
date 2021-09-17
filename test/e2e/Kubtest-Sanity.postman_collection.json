@@ -62,7 +62,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"name\": \"{{script_name}}\",\n    \"type\": \"{{script_type}}\",\n    \"namespace\": \"default\",\n    \"content\": \"{\\r\\n\\t\\\"info\\\": {\\r\\n\\t\\t\\\"_postman_id\\\": \\\"3d9a6be2-bd3e-4cf7-89ca-354103aab4a7\\\",\\r\\n\\t\\t\\\"name\\\": \\\"KubTest\\\",\\r\\n\\t\\t\\\"schema\\\": \\\"https:\\/\\/schema.getpostman.com\\/json\\/collection\\/v2.1.0\\/collection.json\\\"\\r\\n\\t},\\r\\n\\t\\\"item\\\": [\\r\\n\\t\\t{\\r\\n\\t\\t\\t\\\"name\\\": \\\"Health\\\",\\r\\n\\t\\t\\t\\\"event\\\": [\\r\\n\\t\\t\\t\\t{\\r\\n\\t\\t\\t\\t\\t\\\"listen\\\": \\\"test\\\",\\r\\n\\t\\t\\t\\t\\t\\\"script\\\": {\\r\\n\\t\\t\\t\\t\\t\\t\\\"exec\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"pm.test(\\\\\\\"Status code is 200\\\\\\\", function () {\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"    pm.response.to.have.status(200);\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"});\\\"\\r\\n\\t\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"text\\/javascript\\\"\\r\\n\\t\\t\\t\\t\\t}\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t],\\r\\n\\t\\t\\t\\\"request\\\": {\\r\\n\\t\\t\\t\\t\\\"method\\\": \\\"GET\\\",\\r\\n\\t\\t\\t\\t\\\"header\\\": [],\\r\\n\\t\\t\\t\\t\\\"url\\\": {\\r\\n\\t\\t\\t\\t\\t\\\"raw\\\": \\\"{{api_uri}}\\/health\\\",\\r\\n\\t\\t\\t\\t\\t\\\"host\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"{{api_uri}}\\\"\\r\\n\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\\"path\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"health\\\"\\r\\n\\t\\t\\t\\t\\t]\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t},\\r\\n\\t\\t\\t\\\"response\\\": []\\r\\n\\t\\t}\\r\\n\\t]\\r\\n}\"\n}",
+					"raw": "{\n    \"name\": \"{{script_name}}\",\n    \"type\": \"{{script_type}}\",\n    \"namespace\": \"default\",\n    \"content\": \"{\\r\\n\\t\\\"info\\\": {\\r\\n\\t\\t\\\"_postman_id\\\": \\\"3d9a6be2-bd3e-4cf7-89ca-354103aab4a7\\\",\\r\\n\\t\\t\\\"name\\\": \\\"KubTest\\\",\\r\\n\\t\\t\\\"schema\\\": \\\"https:\\/\\/schema.getpostman.com\\/json\\/collection\\/v2.1.0\\/collection.json\\\"\\r\\n\\t},\\r\\n\\t\\\"item\\\": [\\r\\n\\t\\t{\\r\\n\\t\\t\\t\\\"name\\\": \\\"Health\\\",\\r\\n\\t\\t\\t\\\"event\\\": [\\r\\n\\t\\t\\t\\t{\\r\\n\\t\\t\\t\\t\\t\\\"listen\\\": \\\"test\\\",\\r\\n\\t\\t\\t\\t\\t\\\"script\\\": {\\r\\n\\t\\t\\t\\t\\t\\t\\\"exec\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"pm.test(\\\\\\\"Status code is 200\\\\\\\", function () {\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"    pm.response.to.have.status(200);\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"});\\\"\\r\\n\\t\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"text\\/javascript\\\"\\r\\n\\t\\t\\t\\t\\t}\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t],\\r\\n\\t\\t\\t\\\"request\\\": {\\r\\n\\t\\t\\t\\t\\\"method\\\": \\\"GET\\\",\\r\\n\\t\\t\\t\\t\\\"header\\\": [],\\r\\n\\t\\t\\t\\t\\\"url\\\": {\\r\\n\\t\\t\\t\\t\\t\\\"raw\\\": \\\"{{script_api_uri}}\\/health\\\",\\r\\n\\t\\t\\t\\t\\t\\\"host\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"{{script_api_uri}}\\\"\\r\\n\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\\"path\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"health\\\"\\r\\n\\t\\t\\t\\t\\t]\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t},\\r\\n\\t\\t\\t\\\"response\\\": []\\r\\n\\t\\t}\\r\\n\\t]\\r\\n}\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -203,6 +203,7 @@
 							"    let jsonData = pm.response.json();",
 							"    let script = pm.environment.get(\"script_name\")",
 							"    pm.expect(jsonData[\"script-name\"]).to.eql(script);",
+							"    console.log(\"create response\", jsonData);",
 							"",
 							"    let executionName = jsonData.name ",
 							"    let executionID = jsonData.id ",
@@ -253,19 +254,21 @@
 			"response": []
 		},
 		{
-			"name": "Get created script execution",
+			"name": "Get created script execution by ID",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
+							"",
 							"pm.test(\"Check successfull test execution\", function () {",
-							"    var jsonData = pm.response.json();",
-							"",
-							"    console.log(\"response\", pm.response.json());",
-							"",
-							"    console.log(\"execution status\", jsonData.execution.status);",
-							"    if(jsonData.execution.status != \"success\") {                ",
+							"    let jsonData = pm.response.json();",
+							"    console.log(\"response\", jsonData);",
+							"    let status = jsonData.execution.status;",
+							"    console.log(\"execution status\", status);",
+							"    ",
+							"    pm.expect(status).to.not.eq(\"error\");",
+							"    if(status != \"success\") {                ",
 							"        setTimeout(() => {}, 1000); // wait for 1 second before retrying",
 							"        postman.setNextRequest(pm.info.requestId);",
 							"        return;",
@@ -290,6 +293,7 @@
 							"console.log(\"script name\", pm.environment.get(\"script_name\"))",
 							"console.log(\"script type\", pm.environment.get(\"script_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
+							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							"",
 							""
 						],
@@ -301,16 +305,14 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts/{{script_name}}/executions/{{execution_name}}",
+					"raw": "{{api_uri}}/v1/executions/{{execution_id}}",
 					"host": [
 						"{{api_uri}}"
 					],
 					"path": [
 						"v1",
-						"scripts",
-						"{{script_name}}",
 						"executions",
-						"{{execution_name}}"
+						"{{execution_id}}"
 					]
 				}
 			},
@@ -323,8 +325,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Get recent execution from execution list\", function () {",
-							"    console.log(\"response\", pm.response.json());",
+							"pm.test(\"Successfull test execution\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
@@ -347,7 +348,7 @@
 							"console.log(\"script name\", pm.environment.get(\"script_name\"))",
 							"console.log(\"script type\", pm.environment.get(\"script_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
-							"",
+							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							""
 						],
 						"type": "text/javascript"
@@ -373,7 +374,65 @@
 			"response": []
 		},
 		{
-			"name": "Get created script execution by ID",
+			"name": "List recent script executions",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Most recent execution is that one recently run\", function () {",
+							"    console.log(\"response\", pm.response.json());",
+							"    let jsonArray = pm.response.json();",
+							"    let jsonData = jsonArray[0];",
+							"",
+							"    pm.expect(jsonData[\"script-name\"]).to.eql(pm.environment.get(\"script_name\"))",
+							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
+							"console.log(\"script name\", pm.environment.get(\"script_name\"))",
+							"console.log(\"script type\", pm.environment.get(\"script_type\"))",
+							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
+							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{api_uri}}/v1/executions?limit=2",
+					"host": [
+						"{{api_uri}}"
+					],
+					"path": [
+						"v1",
+						"executions"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "2"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get created script execution by script and execution name",
 			"event": [
 				{
 					"listen": "test",
@@ -400,7 +459,7 @@
 							"console.log(\"script name\", pm.environment.get(\"script_name\"))",
 							"console.log(\"script type\", pm.environment.get(\"script_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
-							"",
+							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							""
 						],
 						"type": "text/javascript"
@@ -411,64 +470,16 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/executions/{{execution_id}}",
+					"raw": "{{api_uri}}/v1/scripts/{{script_name}}/executions/{{execution_name}}",
 					"host": [
 						"{{api_uri}}"
 					],
 					"path": [
 						"v1",
+						"scripts",
+						"{{script_name}}",
 						"executions",
-						"{{execution_id}}"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "List recent script executions",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Most recent execution is that one recently run\", function () {",
-							"    console.log(\"response\", pm.response.json());",
-							"    let jsonArray = pm.response.json();",
-							"    let jsonData = jsonArray[0];",
-							"",
-							"    pm.expect(jsonData[\"script-name\"]).to.eql(pm.environment.get(\"script_name\"));",
-							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
-							"});"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"script_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"script_type\"))",
-							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
-							"",
-							""
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{api_uri}}/v1/executions",
-					"host": [
-						"{{api_uri}}"
-					],
-					"path": [
-						"v1",
-						"executions"
+						"{{execution_name}}"
 					]
 				}
 			},

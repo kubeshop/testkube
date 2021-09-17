@@ -75,8 +75,8 @@ func NewReleaseCmd() *cobra.Command {
 			saveChartChanges(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
-				{appName + " previous version", nextAppVersion},
-				{"kubtest previous version", nextKubtestVersion},
+				{appName + " previous version", currentAppVersion},
+				{"kubtest previous version", kubtestVersion},
 				{appName + " next version", nextAppVersion},
 				{"kubtest next version", nextKubtestVersion},
 			})
@@ -127,7 +127,8 @@ func getNextVersion(dev bool, currentVersion string, kind string) (nextVersion s
 		nextVersion, err = version.NextPrerelease(currentVersion)
 	case dev && !version.IsPrerelease(currentVersion):
 		nextVersion, err = version.Next(currentVersion, version.Patch)
-		nextVersion = nextVersion + "-beta1"
+		// semver sorting prerelease parts as strings
+		nextVersion = nextVersion + "-beta001"
 	default:
 		nextVersion, err = version.Next(currentVersion, kind)
 	}
