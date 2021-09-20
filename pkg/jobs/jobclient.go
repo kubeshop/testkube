@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -155,7 +156,14 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 
 // connectToK8s returns ClientSet
 func connectToK8s() (*kubernetes.Clientset, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	var err error
+	var config *rest.Config
+	if cfg, exists := os.LookupEnv("KUBECONFIG"); !exists {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", cfg)
+	}
+
 	if err != nil {
 		return nil, err
 	}
