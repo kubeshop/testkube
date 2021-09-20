@@ -7,7 +7,6 @@ func MapToSummary(executions []kubtest.ScriptExecution) []kubtest.ExecutionSumma
 	for i, s := range executions {
 		result[i] = kubtest.ExecutionSummary{
 			Id:         s.Id,
-			Name:       s.Name,
 			ScriptName: s.ScriptName,
 			ScriptType: s.ScriptType,
 			Status:     s.Execution.Status,

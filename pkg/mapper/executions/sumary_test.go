@@ -17,7 +17,6 @@ func TestMapToSummary(t *testing.T) {
 	// then - test mappings
 	for i := 0; i < len(executions); i++ {
 		assert.Equal(t, result[i].Id, executions[i].Id)
-		assert.Equal(t, result[i].Name, executions[i].Name)
 		assert.Equal(t, result[i].ScriptName, executions[i].ScriptName)
 		assert.Equal(t, result[i].ScriptType, executions[i].ScriptType)
 		assert.Equal(t, result[i].Status, executions[i].Execution.Status)

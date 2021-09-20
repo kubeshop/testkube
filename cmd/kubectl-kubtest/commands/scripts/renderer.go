@@ -80,7 +80,7 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 
 func (r RawRenderer) Watch(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
-		scriptExecution.Execution.Status,
+		*scriptExecution.Execution.Status,
 		scriptExecution.Execution.Duration(),
 	)
 
@@ -90,7 +90,7 @@ func (r RawRenderer) Watch(scriptExecution kubtest.ScriptExecution, writer io.Wr
 func (r RawRenderer) renderDetails(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		scriptExecution.Name,
-		scriptExecution.Execution.Status,
+		*scriptExecution.Execution.Status,
 		scriptExecution.Execution.Duration(),
 	)
 
