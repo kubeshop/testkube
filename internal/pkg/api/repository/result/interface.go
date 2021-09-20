@@ -19,4 +19,6 @@ type Repository interface {
 	Insert(ctx context.Context, result kubtest.ScriptExecution) error
 	// Update updates execution result
 	Update(ctx context.Context, result kubtest.ScriptExecution) error
+	// UpdateExecution updates execution in scriptExecution
+	UpdateExecution(ctx context.Context, id string, execution kubtest.Execution) error
 }

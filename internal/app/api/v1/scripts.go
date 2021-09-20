@@ -3,15 +3,15 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
 	"github.com/kubeshop/kubtest/pkg/jobs"
+	executionsMapper "github.com/kubeshop/kubtest/pkg/mapper/executions"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
+
 	"github.com/kubeshop/kubtest/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -62,7 +62,6 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		fmt.Println("REQ:", spew.Sdump(request))
 
 		s.Log.Infow("creating script", "request", request)
 
@@ -111,8 +110,6 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
 		}
 
-		s.Log.Infow("running execution of script", "script", request)
-
 		// generate random execution name in case there is no one set
 		// like for docker images
 		if request.Name == "" {
@@ -132,10 +129,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// get executor from kubernetes CRs
-		// executor, err := s.Executors.Get(scriptCR.Spec.Type_)
-		// if err != nil {
-		// 	return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
-		// }
+		executor, err := s.Executors.Get(scriptCR.Spec.Type_)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+		}
 
 		// TODO move to mapper
 
@@ -159,9 +156,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			Params:     request.Params,
 		}
 		s.Log.Infow("calling executor with options", "options", options)
-		// execution, err := executor.Execute(options)
+		execution, err := executor.Execute(options)
 
-		execution := kubtest.NewExecution()
+		// need to be moved to executor for job
+		execution = kubtest.NewExecution()
 		execution.ScriptContent = options.Content
 		execution.Repository = options.Repository
 		execution.Result = &kubtest.ExecutionResult{Status: "queued"}
@@ -176,6 +174,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			execution,
 			request.Params,
 		)
+		// -------- old
 		err = s.Repository.Insert(ctx, scriptExecution)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("inserting script CR error: %w", err))
@@ -197,6 +196,39 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Repository.Update(ctx, scriptExecution)
 
 		}(scriptExecution)
+		// -- END
+
+		err = s.Repository.Insert(ctx, scriptExecution)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		s.Log.Infow("running execution of script", "scriptName", scriptExecution.ScriptName, "scriptName(pararms)", scriptID, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name, "request", request)
+		// save watched results asynchronously
+		go func(se kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
+			// Watch calls simple Get request to executor in intervals and writes result
+			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
+				// save only if status changed or output changed
+				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
+					l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
+					l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
+
+					return s.Repository.UpdateExecution(ctx, se.Id, e)
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				s.Log.Errorw("watch execution error", "error", err.Error())
+				return
+			}
+
+			s.Log.Infow("watch execution completed", "executionID", scriptExecution.Id, "status", scriptExecution.Execution.Status)
+
+		}(scriptExecution, executor)
+		// ----------- origin/main
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
@@ -211,26 +243,23 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 // ListExecutions returns array of available script executions
 func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		scriptID := c.Params("id", "-")
-		limit, err := strconv.Atoi(c.Params("limit", "100"))
-		if err != nil {
-			limit = 100
-		} else if limit < 1 || limit > 1000 {
-			limit = 1000
-		}
 
+		scriptID := c.Params("id", "-")
+		pager := s.GetPager(c)
+		l := s.Log.With("script", scriptID, "pager", pager)
 		ctx := c.Context()
 
 		var executions []kubtest.ScriptExecution
+		var err error
 
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
-			s.Log.Infow("Getting script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(ctx, limit)
+			l.Infow("Getting script executions (no id passed)")
+			executions, err = s.Repository.GetNewestExecutions(ctx, pager.Limit)
 		} else {
-			s.Log.Infow("Getting script executions", "id", scriptID)
+			l.Infow("Getting script executions")
 			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
 		}
 		if err != nil {
@@ -238,17 +267,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		}
 
 		// convert to summary
-		result := make([]kubtest.ExecutionSummary, len(executions))
-		for i, s := range executions {
-			result[i] = kubtest.ExecutionSummary{
-				Id:         s.Id,
-				ScriptName: s.ScriptName,
-				ScriptType: s.ScriptType,
-				Status:     s.Execution.Status,
-				StartTime:  s.Execution.StartTime,
-				EndTime:    s.Execution.EndTime,
-			}
-		}
+		result := executionsMapper.MapToSummary(executions)
 
 		return c.JSON(result)
 	}

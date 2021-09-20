@@ -58,15 +58,8 @@ func NewStartScriptCmd() *cobra.Command {
 
 			}
 
-			ui.ShellCommand(
-				"Use following command to get script execution details",
-				"kubectl kubtest scripts execution "+scriptExecution.Id,
-			)
-			ui.ShellCommand(
-				"or watch script execution until complete",
-				"kubectl kubtest scripts watch "+scriptExecution.Id,
-			)
-			ui.BR()
+			uiShellCommandBlock(scriptExecution.Id)
+
 			if watch {
 				ui.Info("Watching for changes")
 				for range time.Tick(time.Second) {
@@ -78,11 +71,17 @@ func NewStartScriptCmd() *cobra.Command {
 					if scriptExecution.Execution.IsCompleted() {
 						ui.Info("\nGetting results")
 						render.Render(scriptExecution, os.Stdout)
+						ui.ShellCommand(
+							"Use following command to get script execution details",
+							"kubectl kubtest scripts execution "+scriptExecution.Id,
+						)
 						ui.Warn("Script execution completed in", scriptExecution.Execution.Duration().String())
 						return
 					}
 				}
+
 			}
+
 		},
 	}
 
@@ -91,4 +90,17 @@ func NewStartScriptCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watch, "watch", "f", false, "watch for changes after start")
 
 	return cmd
+}
+
+func uiShellCommandBlock(id string) {
+	ui.ShellCommand(
+		"Use following command to get script execution details",
+		"kubectl kubtest scripts execution "+id,
+	)
+	ui.ShellCommand(
+		"or watch script execution until complete",
+		"kubectl kubtest scripts watch "+id,
+	)
+	ui.NL()
+
 }

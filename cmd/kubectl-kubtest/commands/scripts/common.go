@@ -21,5 +21,5 @@ func PrintScriptExecutionDetails(scriptExecution kubtest.ScriptExecution) {
 	ui.Warn("Name          :", scriptExecution.ScriptName)
 	ui.Warn("Execution ID  :", scriptExecution.Execution.Id)
 	ui.Warn("Execution name:", scriptExecution.Name)
-	ui.BR()
+	ui.NL()
 }

@@ -1,0 +1,30 @@
+[
+	{
+		"NAME": "postman-test-1",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-2",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-3",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-4",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-5",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-6",
+		"TYPE": "local-postman/collection"
+	},
+	{
+		"NAME": "postman-test-7",
+		"TYPE": "local-postman/collection"
+	}
+]

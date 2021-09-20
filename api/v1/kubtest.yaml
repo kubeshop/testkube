@@ -407,6 +407,7 @@ components:
             users: "3"
             prefix: "some-"
         execution:
+          required: true
           $ref: '#/components/schemas/Execution'
 
     ExecutionSummary:
@@ -417,6 +418,9 @@ components:
           type: string
           description: execution id
           format: bson objectId
+        name:
+          type: string
+          description: execution name
         script-name:
           type: string
           description: name of the script
@@ -430,7 +434,7 @@ components:
             - queued
             - pending
             - success
-            - failed
+            - error
         start-time:
           type: string
           description: 'test execution start time'
@@ -468,7 +472,7 @@ components:
             - queued
             - pending
             - success
-            - failed
+            - error
         result:
           $ref: '#/components/schemas/ExecutionResult'
         start-time:
@@ -487,7 +491,7 @@ components:
         status:
           type: string
           description: script execution status
-          enum: [ success, failed ]
+          enum: [ success, error ]
         raw-output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
@@ -500,7 +504,7 @@ components:
             - application/json
         error-message:
           type: string
-          description: 'error message when status is failed, separate to output as output can be partial in case of error'
+          description: 'error message when status is error, separate to output as output can be partial in case of error'
         start-time:
           type: string
           description: script execution start time
@@ -528,7 +532,7 @@ components:
         status:
           type: string
           description: execution step status
-          enum: [ success, failed ]
+          enum: [ success, error ]
         assertionResults:
           type: array
           items:
@@ -542,7 +546,7 @@ components:
           type: string
         status:
           type: string
-          enum: [ success, failed ]
+          enum: [ success, error ]
         error-message:
           type: string
           nullable: true
