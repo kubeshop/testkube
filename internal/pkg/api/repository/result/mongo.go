@@ -62,3 +62,8 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.ScriptExecu
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
+
+func (r *MongoRepository) UpdateExecution(ctx context.Context, id string, execution kubtest.Execution) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"execution": execution}})
+	return
+}

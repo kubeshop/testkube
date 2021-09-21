@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -39,7 +38,7 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest.Execution) *kubtest.ExecutionResult {
+func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest.Execution) (*kubtest.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	var result string
 
@@ -47,30 +46,33 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		return &kubtest.ExecutionResult{
 			Status:       kubtest.ExecutionStatusError,
 			ErrorMessage: err.Error(),
-		}
+		}, err
 	}
 
 	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return &kubtest.ExecutionResult{
 			Status:       kubtest.ExecutionStatusError,
 			ErrorMessage: err.Error(),
-		}
+		}, err
 	}
 
 	if err := c.CreatePersistentVolumeClaim(jobName); err != nil {
 		return &kubtest.ExecutionResult{
 			Status:       kubtest.ExecutionStatusError,
 			ErrorMessage: err.Error(),
-		}
+		}, err
 	}
 	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return &kubtest.ExecutionResult{
 			Status:       kubtest.ExecutionStatusError,
 			ErrorMessage: err.Error(),
-		}
+		}, err
 	}
 
-	jsn, _ := json.Marshal(execution)
+	jsn, err := json.Marshal(execution)
+	if err != nil {
+		return nil, err
+	}
 
 	var TTLSecondsAfterFinished int32 = 1
 	var backOffLimit int32 = 2
@@ -114,9 +116,9 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		},
 	}
 
-	_, err := jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
+	_, err = jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 	if err != nil {
-		log.Println("Failed to create K8s job.", err)
+		return nil, err
 	}
 
 	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
@@ -124,18 +126,17 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		return &kubtest.ExecutionResult{
 			Status:       kubtest.ExecutionStatusError,
 			ErrorMessage: err.Error(),
-		}
+		}, err
 	}
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
 			if pod.Labels["job-name"] == jobName {
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-					fmt.Println(err)
 					return &kubtest.ExecutionResult{
 						Status:       kubtest.ExecutionStatusError,
 						ErrorMessage: err.Error(),
-					}
+					}, err
 				}
 			}
 			result, err = c.GetPodLogs(pod.Name, jobName, jobName)
@@ -143,7 +144,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 				return &kubtest.ExecutionResult{
 					Status:       kubtest.ExecutionStatusError,
 					ErrorMessage: err.Error(),
-				}
+				}, err
 			}
 		}
 	}
@@ -151,7 +152,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	return &kubtest.ExecutionResult{
 		Status:    kubtest.ExecutionStatusSuceess,
 		RawOutput: result,
-	}
+	}, nil
 }
 
 // connectToK8s returns ClientSet
@@ -272,7 +273,6 @@ func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage 
 }
 
 func (c *JobClient) AbortK8sJob(jobName string) *kubtest.ExecutionResult {
-	fmt.Println("ABORT")
 	var zero int64 = 0
 	bg := metav1.DeletePropagationBackground
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)

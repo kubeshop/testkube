@@ -17,6 +17,8 @@ import (
 type ExecutionSummary struct {
 	// execution id
 	Id string `json:"id,omitempty"`
+	// execution name
+	Name string `json:"name,omitempty"`
 	// name of the script
 	ScriptName string `json:"script-name,omitempty"`
 	// the type of script for this execution

@@ -7,6 +7,8 @@ import (
 )
 
 const (
+	// ExecutionStatusCreated status for execution which is requested to queue
+	ExecutionStatusCreated = "created"
 	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
 	ExecutionStatusQueued = "queued"
 	// ExecutionStatusPending status for execution which is taken by worker
@@ -21,7 +23,15 @@ func NewExecution() Execution {
 	return Execution{
 		Id:     primitive.NewObjectID().Hex(),
 		Status: ExecutionStatusQueued,
-		Result: &ExecutionResult{},
+		Result: &ExecutionResult{Status: ExecutionStatusQueued},
+	}
+}
+
+func NewQueuedExecution() Execution {
+	return Execution{
+		Id:     primitive.NewObjectID().Hex(),
+		Status: ExecutionStatusQueued,
+		Result: &ExecutionResult{Status: ExecutionStatusQueued},
 	}
 }
 
