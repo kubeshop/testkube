@@ -48,9 +48,6 @@ func (p *Executors) Get(scriptType string) (client ExecutorClient, err error) {
 		// get executor based on type
 		var executor ExecutorClient
 
-		fmt.Printf("SPEC: %+v\n", executorCR)
-		fmt.Printf("SPEC: %+v\n", executorCR.Spec)
-
 		switch spec.ExecutorType {
 		case ExecutorTypeRest:
 			executor, err = p.GetOpenAPIExecutor(spec.URI)

@@ -41,9 +41,6 @@ func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
 		for range ticker.C {
 			execution, err := c.Get(id)
 
-			fmt.Printf("REST execution err %+v\n", err)
-			fmt.Printf("REST execution %+v\n", execution)
-
 			events <- ExecuteEvent{
 				Execution: execution,
 				Error:     err,
