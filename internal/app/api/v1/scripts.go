@@ -171,6 +171,9 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		if uerr := s.Repository.UpdateExecution(ctx, scriptExecution.Id, execution); uerr != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
 		}
+
+		// set execution from one created
+		scriptExecution.Execution = &execution
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
 		}
@@ -192,8 +195,9 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 func (s kubtestAPI) ExecutionListener(ctx context.Context, se kubtest.ScriptExecution, executor client.ExecutorClient) {
 	for event := range executor.Watch(se.Execution.Id) {
 		e := event.Execution
-		if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
-			l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+		l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+		l.Infow("got execution event", "event", e)
+		if event.Error != nil || e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
 			l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
 			l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
 
@@ -247,8 +251,6 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		s.Log.Infow("get execution request", "id", scriptID, "executionID", executionID)
-
 		var scriptExecution kubtest.ScriptExecution
 		var err error
 
@@ -269,6 +271,8 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		}
+
+		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID, "scriptExecution", scriptExecution)
 
 		return c.JSON(scriptExecution)
 	}

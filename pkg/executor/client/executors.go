@@ -48,13 +48,16 @@ func (p *Executors) Get(scriptType string) (client ExecutorClient, err error) {
 		// get executor based on type
 		var executor ExecutorClient
 
+		fmt.Printf("SPEC: %+v\n", executorCR)
+		fmt.Printf("SPEC: %+v\n", executorCR.Spec)
+
 		switch spec.ExecutorType {
 		case ExecutorTypeRest:
 			executor, err = p.GetOpenAPIExecutor(spec.URI)
 		case ExecutorTypeJob:
 			executor, err = p.GetJobExecutor(scriptType)
 		default:
-			err = fmt.Errorf("can't handle runner type: %s", spec.ExecutorType)
+			err = fmt.Errorf("can't handle runner type '%s' for script type '%s'", spec.ExecutorType, scriptType)
 		}
 
 		if err != nil {

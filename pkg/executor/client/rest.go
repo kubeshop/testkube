@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/problem"
 )
 
 type RestExecutorConfig struct {
@@ -39,6 +41,9 @@ func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
 		for range ticker.C {
 			execution, err := c.Get(id)
 
+			fmt.Printf("REST execution err %+v\n", err)
+			fmt.Printf("REST execution %+v\n", execution)
+
 			events <- ExecuteEvent{
 				Execution: execution,
 				Error:     err,
@@ -61,6 +66,11 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.Execution, err err
 	if err != nil {
 		return execution, err
 	}
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("rest-executor/get-execution returned error: %w", err)
+	}
+
 	return c.getExecutionFromResponse(resp)
 }
 
@@ -77,6 +87,11 @@ func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.E
 	if err != nil {
 		return execution, err
 	}
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("rest-executor/execute returned error: %w", err)
+	}
+
 	return c.getExecutionFromResponse(resp)
 }
 
@@ -87,7 +102,39 @@ func (c RestExecutorClient) Abort(id string) error {
 func (c RestExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubtest.Execution, err error) {
 	defer resp.Body.Close()
 
-	// parse response
-	err = json.NewDecoder(resp.Body).Decode(&execution)
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return execution, fmt.Errorf("can't read response body: %w", err)
+	}
+
+	if err = json.Unmarshal(bytes, &execution); err != nil {
+		// if there is strange result try to decode to interface and attach to error
+		var out interface{}
+		if jerr := json.Unmarshal(bytes, &out); jerr != nil {
+			return execution, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
+		}
+		return execution, fmt.Errorf("JSON decode error: %w, trying to decode response: %+v", err, out)
+	}
 	return
+}
+
+func (c RestExecutorClient) responseError(resp *http.Response) error {
+	if resp.StatusCode >= 400 {
+		var pr problem.Problem
+
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("can't get problem from api response: can't read response body %w", err)
+		}
+		defer resp.Body.Close()
+
+		err = json.Unmarshal(bytes, &pr)
+		if err != nil {
+			return fmt.Errorf("can't get problem from api response: %w, output: %s", err, string(bytes))
+		}
+
+		return fmt.Errorf("problem: %+v", pr.Detail)
+	}
+
+	return nil
 }
