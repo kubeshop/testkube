@@ -1,10 +1,5 @@
-assets/* @olensmar @exu
-docs/* @olensmar @exu
-img/* @olensmar @exu
+assets/* @olensmar 
+docs/* @olensmar 
+img/* @olensmar 
 
-*.md @olensmar
-*.go @kubtest
-*.yaml @kubtest
-*.yml @kubtest
-*.json @kubtest
-./* @kubtest
+* @exu @nicufk @jasmingacic
