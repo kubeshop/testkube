@@ -179,7 +179,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// watch for changes run listener in async mode
-		s.Log.Infow("running execution of script", "scriptExecution", execution, "request", request)
+		s.Log.Infow("running execution of script", "execution", execution, "request", request)
 		go s.ExecutionListener(ctx, execution, executor)
 
 		// metrics increase
@@ -201,7 +201,7 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Exe
 		// if something changed during execution
 		if event.Error != nil || result.Status != execution.Result.Status || result.Result.Output != execution.Result.Result.Output {
 			l.Infow("watch - saving script execution", "oldStatus", execution.Result.Status, "newStatus", result.Status, "result", result.Result)
-			l.Debugw("watch - saving script execution - debug", "scriptExecution", execution)
+			l.Debugw("watch - saving script execution - debug", "execution", execution)
 
 			err := s.Repository.UpdateResult(ctx, execution.Id, result)
 			if err != nil {
@@ -253,11 +253,11 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		var scriptExecution kubtest.Execution
+		var execution kubtest.Execution
 		var err error
 
 		if scriptID == "-" {
-			scriptExecution, err = s.Repository.Get(ctx, executionID)
+			execution, err = s.Repository.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
 			}
@@ -265,7 +265,7 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			scriptExecution, err = s.Repository.GetByNameAndScript(ctx, executionID, scriptID)
+			execution, err = s.Repository.GetByNameAndScript(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
 			}
@@ -274,9 +274,9 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 			}
 		}
 
-		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID, "scriptExecution", scriptExecution)
+		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID, "execution", execution)
 
-		return c.JSON(scriptExecution)
+		return c.JSON(execution)
 	}
 }
 
@@ -285,12 +285,12 @@ func (s kubtestAPI) AbortExecution() fiber.Handler {
 		id := c.Params("id")
 
 		// get script execution by id to get executor type
-		scriptExecution, err := s.Repository.Get(c.Context(), id)
+		execution, err := s.Repository.Get(c.Context(), id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get execution id:%s, error:%w", id, err))
 		}
 
-		executor, err := s.Executors.Get(scriptExecution.ScriptType)
+		executor, err := s.Executors.Get(execution.ScriptType)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
 		}

@@ -50,21 +50,21 @@ func (r GoTemplateRenderer) Watch(result kubtest.Execution, writer io.Writer) er
 type RawRenderer struct {
 }
 
-func (r RawRenderer) Render(scriptExecution kubtest.Execution, writer io.Writer) error {
-	err := r.renderDetails(scriptExecution, writer)
+func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error {
+	err := r.renderDetails(execution, writer)
 	if err != nil {
 		return err
 	}
 
-	if scriptExecution.Result == nil {
+	if execution.Result == nil {
 		return fmt.Errorf("invalid script execution, want struct but got nil, please ensure executor returns valid Execution object")
 	}
 
-	if scriptExecution.Result.Result == nil {
+	if execution.Result.Result == nil {
 		return fmt.Errorf("invalid execution result, want struct but got nil, please ensure executor returns valid ExecutionResult object")
 	}
 
-	result := scriptExecution.Result.Result
+	result := execution.Result.Result
 
 	if result.ErrorMessage != "" {
 		_, err := writer.Write([]byte(result.ErrorMessage + "\n\n"))
@@ -78,20 +78,20 @@ func (r RawRenderer) Render(scriptExecution kubtest.Execution, writer io.Writer)
 	return err
 }
 
-func (r RawRenderer) Watch(scriptExecution kubtest.Execution, writer io.Writer) error {
+func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
-		scriptExecution.Result.Status,
-		scriptExecution.Result.Duration(),
+		execution.Result.Status,
+		execution.Result.Duration(),
 	)
 
 	return err
 }
 
-func (r RawRenderer) renderDetails(scriptExecution kubtest.Execution, writer io.Writer) error {
+func (r RawRenderer) renderDetails(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
-		scriptExecution.Name,
-		scriptExecution.Result.Status,
-		scriptExecution.Result.Duration(),
+		execution.Name,
+		execution.Result.Status,
+		execution.Result.Duration(),
 	)
 
 	return err

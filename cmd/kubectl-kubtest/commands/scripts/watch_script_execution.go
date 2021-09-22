@@ -31,22 +31,22 @@ func NewWatchScriptExecutionCmd() *cobra.Command {
 
 			client, _ := GetClient(cmd)
 
-			scriptExecution, err := client.GetExecution(scriptID, executionID)
+			execution, err := client.GetExecution(scriptID, executionID)
 			ui.ExitOnError("get script execution details", err)
 
-			PrintScriptExecutionDetails(scriptExecution)
+			PrintScriptExecutionDetails(execution)
 
 			ui.Info("Watching for changes")
 			for range time.Tick(time.Second) {
-				scriptExecution, err := client.GetExecution(scriptID, executionID)
+				execution, err := client.GetExecution(scriptID, executionID)
 				ui.ExitOnError("get script execution details", err)
 				render := GetRenderer(cmd)
-				err = render.Watch(scriptExecution, os.Stdout)
+				err = render.Watch(execution, os.Stdout)
 				ui.ExitOnError("watching for changes", err)
-				if scriptExecution.Result.IsCompleted() {
+				if execution.Result.IsCompleted() {
 					ui.Info("\nGetting results")
-					render.Render(scriptExecution, os.Stdout)
-					ui.Warn("Script execution completed in", scriptExecution.Result.Duration().String())
+					render.Render(execution, os.Stdout)
+					ui.Warn("Script execution completed in", execution.Result.Duration().String())
 					return
 				}
 			}

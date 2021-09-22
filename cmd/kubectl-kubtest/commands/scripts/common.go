@@ -16,10 +16,10 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	return client, namespace
 }
 
-func PrintScriptExecutionDetails(scriptExecution kubtest.Execution) {
-	ui.Warn("Type          :", scriptExecution.ScriptType)
-	ui.Warn("Name          :", scriptExecution.ScriptName)
-	ui.Warn("Execution ID  :", scriptExecution.Result.Id)
-	ui.Warn("Execution name:", scriptExecution.Name)
+func PrintScriptExecutionDetails(execution kubtest.Execution) {
+	ui.Warn("Type          :", execution.ScriptType)
+	ui.Warn("Name          :", execution.ScriptName)
+	ui.Warn("Execution ID  :", execution.Result.Id)
+	ui.Warn("Execution name:", execution.Name)
 	ui.NL()
 }
