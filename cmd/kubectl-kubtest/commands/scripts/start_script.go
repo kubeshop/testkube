@@ -48,7 +48,7 @@ func NewStartScriptCmd() *cobra.Command {
 				ui.Warn("Script execution started")
 
 			case execution.IsSuccesful():
-				fmt.Println(execution.Result.RawOutput)
+				fmt.Println(execution.Result.Output)
 				duration := execution.EndTime.Sub(execution.StartTime)
 				ui.Success("Script execution completed with sucess in " + duration.String())
 
@@ -63,11 +63,14 @@ func NewStartScriptCmd() *cobra.Command {
 			if watch {
 				ui.Info("Watching for changes")
 				for range time.Tick(time.Second) {
+
 					scriptExecution, err := client.GetExecution("-", scriptExecution.Id)
 					ui.ExitOnError("get script execution details", err)
+
 					render := GetRenderer(cmd)
 					err = render.Watch(scriptExecution, os.Stdout)
 					ui.ExitOnError("watching for changes", err)
+
 					if scriptExecution.Execution.IsCompleted() {
 						ui.Info("\nGetting results")
 						render.Render(scriptExecution, os.Stdout)

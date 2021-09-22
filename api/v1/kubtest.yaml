@@ -17,8 +17,6 @@ externalDocs:
 tags:
   - name: api
     description: 'Kubtest API operations'
-  - name: executor
-    description: 'Executor operations'
   - name: scripts
     description: 'Script operations'
   - name: executions
@@ -71,7 +69,7 @@ paths:
       tags:
         - executions
         - api
-      summary: 'Get script execution'
+      summary: 'Get script execution by ID'
       description: 'Returns execution with given executionID'
       operationId: getScriptExecutionByID
       responses:
@@ -120,7 +118,7 @@ paths:
         - scripts
         - api
       summary: 'create new script'
-      description: 'filters will be added later'
+      description: 'create new script based on script content or git based data'
       operationId: createScript
       requestBody:
         description: script details body
@@ -381,10 +379,10 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-name:
+        scriptName:
           type: string
           description: unique script name (CRD Script name)
-        script-type:
+        scriptType:
           type: string
           description: script type e.g. postman/collection
         name:
@@ -421,10 +419,10 @@ components:
         name:
           type: string
           description: execution name
-        script-name:
+        scriptName:
           type: string
           description: name of the script
-        script-type:
+        scriptType:
           type: string
           description: the type of script for this execution
         status:
@@ -435,11 +433,11 @@ components:
             - pending
             - success
             - error
-        start-time:
+        startTime:
           type: string
           description: 'test execution start time'
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: 'test execution end time'
           format: date-time
@@ -452,7 +450,7 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-content:
+        scriptContent:
           type: string
           description: script metadata content
         repository:
@@ -475,11 +473,11 @@ components:
             - error
         result:
           $ref: '#/components/schemas/ExecutionResult'
-        start-time:
+        startTime:
           type: string
           description: 'test start time'
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: 'test end time'
           format: date-time
@@ -492,24 +490,24 @@ components:
           type: string
           description: script execution status
           enum: [ success, error ]
-        raw-output:
+        output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
-        raw-output-type:
+        outputType:
           type: string
           description: 'output type depends of reporter used in partucular tool'
           enum:
             - text/plain
             - application/junit+xml
             - application/json
-        error-message:
+        errorMessage:
           type: string
           description: 'error message when status is error, separate to output as output can be partial in case of error'
-        start-time:
+        startTime:
           type: string
           description: script execution start time
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: script execution start time
           format: date-time
@@ -547,7 +545,7 @@ components:
         status:
           type: string
           enum: [ success, error ]
-        error-message:
+        errorMessage:
           type: string
           nullable: true
 
@@ -580,12 +578,12 @@ components:
         content:
           type: string
           description: script content as string (content depends from executor)
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 
             - direct content - created from file,
-            - git repo directory checkout in case when test is some kind of project or have more than one file,
+            - git repository with path, will be checked out, useful when test have more than one file or complicated directory structure,
           enum:
             - content
             - git
@@ -642,7 +640,7 @@ components:
       properties:
         name:
           type: string
-          description: script name - Custom Resource name - must be unique
+          description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
           example: kubeshop-homepage-test
         type:
           type: string
@@ -652,7 +650,7 @@ components:
           type: string
           description: kubernetes namespace (defaults to 'default')
           example: default
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 
@@ -684,8 +682,6 @@ components:
                   "response": []
                 }
 
-
-
     #
     # Errors
     #
@@ -697,7 +693,7 @@ components:
         type:
           type: string
           description: Type contains a URI that identifies the problem type. This URI will,
-          example: http://kubeshop.io/kubtest/problems/invalid-script-name
+          example: http://kubeshop.io/kubtest/problems/invalidscriptname
         title:
           type: string
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.

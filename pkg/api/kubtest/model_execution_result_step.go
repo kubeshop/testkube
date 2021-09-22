@@ -18,9 +18,9 @@ type ExecutionResultStep struct {
 	// step name
 	Name string `json:"name,omitempty"`
 	// script execution start time
-	StartTime time.Time `json:"start-time,omitempty"`
+	StartTime time.Time `json:"startTime,omitempty"`
 	// script execution start time
-	EndTime time.Time `json:"end-time,omitempty"`
+	EndTime time.Time `json:"endTime,omitempty"`
 	// execution step status
 	Status     string                        `json:"status,omitempty"`
 	Assertions *ExecutionResultStepAssertion `json:"assertions,omitempty"`

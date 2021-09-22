@@ -150,8 +150,8 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	}
 
 	return &kubtest.ExecutionResult{
-		Status:    kubtest.ExecutionStatusSuceess,
-		RawOutput: result,
+		Status: kubtest.ExecutionStatusSuceess,
+		Output: result,
 	}, nil
 }
 
@@ -282,8 +282,8 @@ func (c *JobClient) AbortK8sJob(jobName string) *kubtest.ExecutionResult {
 	})
 	if err != nil {
 		return &kubtest.ExecutionResult{
-			Status:    kubtest.ExecutionStatusError,
-			RawOutput: err.Error(),
+			Status: kubtest.ExecutionStatusError,
+			Output: err.Error(),
 		}
 	}
 	return &kubtest.ExecutionResult{

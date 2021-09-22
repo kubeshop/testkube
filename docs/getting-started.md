@@ -176,7 +176,7 @@ $ kubectl kubtest scripts list
 ## Getting available executions
 
 ```shell
-kubectl kubtest scripts executions script-name
+kubectl kubtest scripts executions SCRIPT_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
