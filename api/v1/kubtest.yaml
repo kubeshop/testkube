@@ -583,7 +583,7 @@ components:
           description: >
             script content type can be: 
             - direct content - created from file,
-            - git repo directory checkout in case when test is some kind of project or have more than one file,
+            - git repository with path, will be checked out, useful when test have more than one file or complicated directory structure,
           enum:
             - content
             - git
