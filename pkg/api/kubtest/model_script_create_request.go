@@ -11,7 +11,7 @@ package kubtest
 
 // scripts create request body
 type ScriptCreateRequest struct {
-	// script name - Custom Resource name - must be unique
+	// script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
 	Name string `json:"name,omitempty"`
 	// script type - what executor type should be used during test execution
 	Type_ string `json:"type,omitempty"`
