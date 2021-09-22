@@ -159,6 +159,19 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts,
 	return c.getScriptsFromResponse(resp)
 }
 
+// GetExecutions list all executions in given script
+func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
+	uri := fmt.Sprintf("v1/scripts/%s/executions/%s/abort", scriptID, id)
+	req := c.GetProxy("POST").Suffix(uri)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution kubtest.ScriptExecution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {

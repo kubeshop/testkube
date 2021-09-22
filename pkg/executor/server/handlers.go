@@ -18,7 +18,7 @@ func (e *Executor) StartExecution() fiber.Handler {
 			return e.Error(c, http.StatusBadRequest, err)
 		}
 
-		execution := kubtest.NewExecution()
+		execution := kubtest.NewQueuedExecution()
 
 		execution.WithContent(request.Content).
 			WithParams(request.Params)

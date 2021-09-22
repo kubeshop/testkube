@@ -16,7 +16,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	envconfig.Process("APISERVER", &httpConfig)
 
 	// TODO remove it when executor CRD will be fully implemented
-	var executorClientConfig client.Config
+	var executorClientConfig client.RestExecutorConfig
 	envconfig.Process("POSTMANEXECUTOR", &executorClientConfig)
 
 	s := kubtestAPI{
@@ -56,7 +56,7 @@ func (s kubtestAPI) Init() {
 	scripts.Post("/", s.CreateScript())
 
 	scripts.Post("/:id/executions", s.ExecuteScript())
-	scripts.Post("/:id/executions/:executionID/abort", s.AbortScriptExecution())
+	scripts.Post("/:id/executions/:executionID/abort", s.AbortExecution())
 
 	scripts.Get("/:id/executions", s.ListExecutions())
 	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())

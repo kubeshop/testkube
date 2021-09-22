@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -98,16 +99,40 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 	}
 }
 
+func (s kubtestAPI) GetExecuteOptions(namespace, scriptID string, request kubtest.ScriptExecutionRequest) (options client.ExecuteOptions, err error) {
+	// get script content from kubernetes CRs
+	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+	if err != nil {
+		return options, fmt.Errorf("can't get script custom resource %w", err)
+	}
+
+	// get executor from kubernetes CRs
+	executorCR, err := s.ExecutorsClient.GetByType(scriptCR.Spec.Type_)
+	if err != nil {
+		return options, fmt.Errorf("can't get executor spec: %w", err)
+	}
+
+	return client.ExecuteOptions{
+		ID:           scriptID,
+		ScriptSpec:   scriptCR.Spec,
+		ExecutorSpec: executorCR.Spec,
+		Request:      request,
+	}, nil
+}
+
 // ExecuteScript calls particular executor based on execution request content and type
 func (s kubtestAPI) ExecuteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		scriptID := c.Params("id")
+		ctx := c.Context()
 
 		var request kubtest.ScriptExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
 		}
+
+		scriptID := c.Params("id")
+		namespace := request.Namespace
 
 		// generate random execution name in case there is no one set
 		// like for docker images
@@ -121,86 +146,41 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
 
-		// get script content from Custom Resource
-		scriptCR, err := s.ScriptsClient.Get(request.Namespace, scriptID)
+		// merge available data into execution options script spec, executor spec, request, script id
+		options, err := s.GetExecuteOptions(namespace, scriptID, request)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("getting script CR error: %w", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
 		}
 
-		// get executor from kubernetes CRs
-		executor, err := s.Executors.Get(scriptCR.Spec.Type_)
+		// store execution in storage, can be get from API now
+		scriptExecution = NewScriptExecutionFromExecutionOptions(options)
+		err = s.Repository.Insert(ctx, scriptExecution)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
+		}
+
+		// get executor
+		executor, err := s.Executors.Get(options.ScriptSpec.Type_)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
 		}
 
-		// TODO move to mapper
-
-		// check if repository exists in cr repository
-		var respository *kubtest.Repository
-		if scriptCR.Spec.Repository != nil {
-			respository = &kubtest.Repository{
-				Type_:  "git",
-				Uri:    scriptCR.Spec.Repository.Uri,
-				Branch: scriptCR.Spec.Repository.Branch,
-				Path:   scriptCR.Spec.Repository.Path,
-			}
-		}
-
-		// pass options to executor client
-		options := client.ExecuteOptions{
-			Type_:      scriptCR.Spec.Type_,
-			InputType:  scriptCR.Spec.InputType,
-			Content:    scriptCR.Spec.Content,
-			Repository: respository,
-			Params:     request.Params,
-		}
-		s.Log.Debugw("calling executor with options", "options", options)
+		// call executor rest or job based and update execution object after queueing execution
+		s.Log.Infow("calling executor with options", "options", options)
 		execution, err := executor.Execute(options)
-
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+		if uerr := s.Repository.UpdateExecution(ctx, scriptExecution.Id, execution); uerr != nil {
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
 		}
 
-		// store execution
-		ctx := c.Context()
-		scriptExecution = kubtest.NewScriptExecution(
-			scriptID,
-			request.Name,
-			scriptCR.Spec.Type_,
-			execution,
-			request.Params,
-		)
-
-		err = s.Repository.Insert(ctx, scriptExecution)
+		// set execution from one created
+		scriptExecution.Execution = &execution
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
 		}
 
-		s.Log.Infow("running execution of script", "scriptName", scriptExecution.ScriptName, "scriptName(pararms)", scriptID, "executionID", scriptExecution.Id, "executionName", scriptExecution.Name, "request", request)
-		// save watched results asynchronously
-		go func(se kubtest.ScriptExecution, executor client.HTTPExecutorClient) {
-			// Watch calls simple Get request to executor in intervals and writes result
-			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
-				// save only if status changed or output changed
-				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
-					l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
-					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
-					l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
-
-					return s.Repository.UpdateExecution(ctx, se.Id, e)
-				}
-
-				return nil
-			})
-
-			if err != nil {
-				s.Log.Errorw("watch execution error", "error", err.Error())
-				return
-			}
-
-			s.Log.Infow("watch execution completed", "executionID", scriptExecution.Id, "status", scriptExecution.Execution.Status)
-
-		}(scriptExecution, executor)
+		// watch for changes
+		s.Log.Infow("running execution of script", "scriptExecution", scriptExecution, "request", request)
+		go s.ExecutionListener(ctx, scriptExecution, executor)
 
 		// metrics increase
 		s.Metrics.IncExecution(scriptExecution)
@@ -210,6 +190,25 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 		return c.JSON(scriptExecution)
 	}
+}
+
+func (s kubtestAPI) ExecutionListener(ctx context.Context, se kubtest.ScriptExecution, executor client.ExecutorClient) {
+	for event := range executor.Watch(se.Execution.Id) {
+		e := event.Execution
+		l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
+		l.Infow("got execution event", "event", e)
+		if event.Error != nil || e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
+			l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
+			l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
+
+			err := s.Repository.UpdateExecution(ctx, se.Id, e)
+			if err != nil {
+				s.Log.Errorw("update execution error", err.Error())
+			}
+		}
+	}
+
+	s.Log.Infow("watch execution completed", "executionID", se.Id, "status", se.Execution.Status)
 }
 
 // ListExecutions returns array of available script executions
@@ -252,8 +251,6 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		s.Log.Infow("get execution request", "id", scriptID, "executionID", executionID)
-
 		var scriptExecution kubtest.ScriptExecution
 		var err error
 
@@ -275,14 +272,37 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 			}
 		}
 
+		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID, "scriptExecution", scriptExecution)
+
 		return c.JSON(scriptExecution)
 	}
 }
 
-func (s kubtestAPI) AbortScriptExecution() fiber.Handler {
+func (s kubtestAPI) AbortExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// TODO fill valid values when abort will be implemented
-		s.Metrics.IncAbortScript("type", nil)
-		return s.Error(c, http.StatusNotImplemented, fmt.Errorf("not implemented"))
+		id := c.Params("id")
+
+		// get script execution by id to get executor type
+		scriptExecution, err := s.Repository.Get(c.Context(), id)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get execution id:%s, error:%w", id, err))
+		}
+
+		executor, err := s.Executors.Get(scriptExecution.ScriptType)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+		}
+
+		return executor.Abort(id)
 	}
+}
+
+func NewScriptExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.ScriptExecution {
+	return kubtest.NewScriptExecution(
+		options.ScriptSpec.Name,
+		options.Request.Name,
+		options.ScriptSpec.Type_,
+		kubtest.NewExecution(),
+		options.Request.Params,
+	)
 }
