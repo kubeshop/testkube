@@ -20,13 +20,13 @@ type ExecutionSummary struct {
 	// execution name
 	Name string `json:"name,omitempty"`
 	// name of the script
-	ScriptName string `json:"script-name,omitempty"`
+	ScriptName string `json:"scriptName,omitempty"`
 	// the type of script for this execution
-	ScriptType string `json:"script-type,omitempty"`
+	ScriptType string `json:"scriptType,omitempty"`
 	// execution status
 	Status string `json:"status,omitempty"`
 	// test execution start time
-	StartTime time.Time `json:"start-time,omitempty"`
+	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time
-	EndTime time.Time `json:"end-time,omitempty"`
+	EndTime time.Time `json:"endTime,omitempty"`
 }

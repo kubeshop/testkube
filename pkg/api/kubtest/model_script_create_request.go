@@ -18,7 +18,7 @@ type ScriptCreateRequest struct {
 	// kubernetes namespace (defaults to 'default')
 	Namespace string `json:"namespace,omitempty"`
 	// script content type can be:  - direct content - created from file,  - git repo directory checkout in case when test is some kind of project or have more than one file,
-	InputType  string      `json:"input-type,omitempty"`
+	InputType  string      `json:"inputType,omitempty"`
 	Repository *Repository `json:"repository,omitempty"`
 	// script content - executor specific e.g. fo postman-collections executor
 	Content string `json:"content,omitempty"`

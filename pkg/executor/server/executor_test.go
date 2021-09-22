@@ -73,7 +73,7 @@ type ExampleRunner struct {
 
 func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
 	return kubtest.ExecutionResult{
-		Status:    kubtest.ExecutionStatusSuceess,
-		RawOutput: "exmaple test output",
+		Status: kubtest.ExecutionStatusSuceess,
+		Output: "exmaple test output",
 	}
 }

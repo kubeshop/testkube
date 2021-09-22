@@ -13,5 +13,5 @@ package kubtest
 type ExecutionResultStepAssertion struct {
 	Name         string `json:"name,omitempty"`
 	Status       string `json:"status,omitempty"`
-	ErrorMessage string `json:"error-message,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
