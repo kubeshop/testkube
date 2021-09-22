@@ -38,7 +38,7 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest.Execution) (*kubtest.ExecutionResult, error) {
+func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest.Result) (*kubtest.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	var result string
 

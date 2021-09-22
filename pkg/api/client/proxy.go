@@ -71,7 +71,7 @@ func (c ProxyScriptsAPI) GetScript(id string) (script kubtest.Script, err error)
 	return c.getScriptFromResponse(resp)
 }
 
-func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution kubtest.ScriptExecution, err error) {
+func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution kubtest.Execution, err error) {
 	uri := fmt.Sprintf("v1/scripts/%s/executions/%s", scriptID, executionID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -119,7 +119,7 @@ func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script kubte
 
 // ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.ScriptExecution, err error) {
+func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.Execution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf("v1/scripts/%s/executions", id)
 
@@ -172,7 +172,7 @@ func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
-func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution kubtest.ScriptExecution, err error) {
+func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution kubtest.Execution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return execution, err

@@ -78,7 +78,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/Result'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -221,7 +221,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/Result'
         400:
           description: 'problem with request body'
           content:
@@ -308,7 +308,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/Result'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -348,7 +348,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/Result'
 
 components:
   schemas:
@@ -406,7 +406,8 @@ components:
             prefix: "some-"
         execution:
           required: true
-          $ref: '#/components/schemas/Execution'
+          description: result passed from executor
+          $ref: '#/components/schemas/Result'
 
     ExecutionSummary:
       description: execution summary
@@ -442,7 +443,7 @@ components:
           description: 'test execution end time'
           format: date-time
 
-    Execution:
+    Result:
       description: execution result returned from executor
       type: object
       properties:
@@ -471,8 +472,6 @@ components:
             - pending
             - success
             - error
-        result:
-          $ref: '#/components/schemas/ExecutionResult'
         startTime:
           type: string
           description: 'test start time'
@@ -481,15 +480,6 @@ components:
           type: string
           description: 'test end time'
           format: date-time
-
-    ExecutionResult:
-      description: execution result data
-      type: object
-      properties:
-        status:
-          type: string
-          description: script execution status
-          enum: [ success, error ]
         output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
@@ -503,19 +493,12 @@ components:
         errorMessage:
           type: string
           description: 'error message when status is error, separate to output as output can be partial in case of error'
-        startTime:
-          type: string
-          description: script execution start time
-          format: date-time
-        endTime:
-          type: string
-          description: script execution start time
-          format: date-time
         steps:
           type: array
           items:
             $ref: '#/components/schemas/ExecutionStepResult'
           description: execution steps (for collection of requests)
+
 
     ExecutionStepResult:
       description: execution result data

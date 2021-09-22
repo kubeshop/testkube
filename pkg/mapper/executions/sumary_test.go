@@ -20,14 +20,14 @@ func TestMapToSummary(t *testing.T) {
 		assert.Equal(t, result[i].Name, executions[i].Name)
 		assert.Equal(t, result[i].ScriptName, executions[i].ScriptName)
 		assert.Equal(t, result[i].ScriptType, executions[i].ScriptType)
-		assert.Equal(t, result[i].Status, executions[i].Execution.Status)
-		assert.Equal(t, result[i].StartTime, executions[i].Execution.StartTime)
-		assert.Equal(t, result[i].EndTime, executions[i].Execution.EndTime)
+		assert.Equal(t, result[i].Status, executions[i].Result.Status)
+		assert.Equal(t, result[i].StartTime, executions[i].Result.StartTime)
+		assert.Equal(t, result[i].EndTime, executions[i].Result.EndTime)
 	}
 }
 
 func getScriptExecutions() kubtest.ScriptExecutions {
-	ex1 := new(kubtest.Execution).
+	ex1 := new(kubtest.Result).
 		WithContent("content1").
 		WithParams(map[string]string{"p": "v1"})
 
@@ -41,7 +41,7 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
-	ex2 := new(kubtest.Execution).
+	ex2 := new(kubtest.Result).
 		WithContent("content1").
 		WithParams(map[string]string{"p": "v1"})
 

@@ -9,7 +9,7 @@ import (
 
 // ExecuteEvent event passed when watching execution changes
 type ExecuteEvent struct {
-	Execution kubtest.Execution
+	Execution kubtest.Result
 	Error     error
 }
 
@@ -19,11 +19,11 @@ type ExecutorClient interface {
 	Watch(id string) (events chan ExecuteEvent)
 
 	// Get synnchronous request to executor to get kubtestExecution
-	Get(id string) (execution kubtest.Execution, err error)
+	Get(id string) (execution kubtest.Result, err error)
 
 	// Execute starts new external script execution, reads data and returns ID
 	// execution is started asynchronously client can check later for results
-	Execute(options ExecuteOptions) (execution kubtest.Execution, err error)
+	Execute(options ExecuteOptions) (execution kubtest.Result, err error)
 
 	// Abort aborts pending execution, do nothing when there is no pending execution
 	Abort(id string) (err error)

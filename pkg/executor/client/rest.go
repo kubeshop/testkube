@@ -57,7 +57,7 @@ func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
 	return events
 }
 
-func (c RestExecutorClient) Get(id string) (execution kubtest.Execution, err error) {
+func (c RestExecutorClient) Get(id string) (execution kubtest.Result, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.Execution, err err
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results with Get
-func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Execution, err error) {
+func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Result, err error) {
 	request := MapExecutionOptionsToExecutionRequest(options)
 	body, err := json.Marshal(kubtest.ExecutionRequest(request))
 	if err != nil {
@@ -96,7 +96,7 @@ func (c RestExecutorClient) Abort(id string) error {
 	return nil
 }
 
-func (c RestExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubtest.Execution, err error) {
+func (c RestExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubtest.Result, err error) {
 	defer resp.Body.Close()
 
 	bytes, err := ioutil.ReadAll(resp.Body)

@@ -36,7 +36,7 @@ type Worker struct {
 	Log         *zap.SugaredLogger
 }
 
-func (w *Worker) PullExecution() (execution kubtest.Execution, err error) {
+func (w *Worker) PullExecution() (execution kubtest.Result, err error) {
 	execution, err = w.Repository.QueuePull(context.Background())
 	if err != nil {
 		return execution, err
@@ -45,10 +45,10 @@ func (w *Worker) PullExecution() (execution kubtest.Execution, err error) {
 }
 
 // PullExecutions gets executions from queue - returns executions channel
-func (w *Worker) PullExecutions() chan kubtest.Execution {
-	executionChan := make(chan kubtest.Execution, w.BufferSize)
+func (w *Worker) PullExecutions() chan kubtest.Result {
+	executionChan := make(chan kubtest.Result, w.BufferSize)
 
-	go func(executionChan chan kubtest.Execution) {
+	go func(executionChan chan kubtest.Result) {
 		w.Log.Info("Watching queue start")
 		for {
 			execution, err := w.PullExecution()
@@ -69,9 +69,9 @@ func (w *Worker) PullExecutions() chan kubtest.Execution {
 	return executionChan
 }
 
-func (w *Worker) Run(executionChan chan kubtest.Execution) {
+func (w *Worker) Run(executionChan chan kubtest.Result) {
 	for i := 0; i < w.Concurrency; i++ {
-		go func(executionChan chan kubtest.Execution) {
+		go func(executionChan chan kubtest.Result) {
 			ctx := context.Background()
 			for {
 				e := <-executionChan
@@ -90,7 +90,7 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 	}
 }
 
-func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
+func (w *Worker) RunExecution(ctx context.Context, e kubtest.Result) (kubtest.Result, error) {
 	e.Start()
 	l := w.Log.With("executionID", e.Id, "startTime", e.StartTime.String())
 

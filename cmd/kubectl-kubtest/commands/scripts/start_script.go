@@ -37,7 +37,7 @@ func NewStartScriptCmd() *cobra.Command {
 
 			PrintScriptExecutionDetails(scriptExecution)
 
-			execution := scriptExecution.Execution
+			execution := scriptExecution.Result
 
 			switch true {
 
@@ -71,14 +71,14 @@ func NewStartScriptCmd() *cobra.Command {
 					err = render.Watch(scriptExecution, os.Stdout)
 					ui.ExitOnError("watching for changes", err)
 
-					if scriptExecution.Execution.IsCompleted() {
+					if scriptExecution.Result.IsCompleted() {
 						ui.Info("\nGetting results")
 						render.Render(scriptExecution, os.Stdout)
 						ui.ShellCommand(
 							"Use following command to get script execution details",
 							"kubectl kubtest scripts execution "+scriptExecution.Id,
 						)
-						ui.Warn("Script execution completed in", scriptExecution.Execution.Duration().String())
+						ui.Warn("Script execution completed in", scriptExecution.Result.Duration().String())
 						return
 					}
 				}

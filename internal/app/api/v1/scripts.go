@@ -173,7 +173,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// set execution from one created
-		scriptExecution.Execution = &execution
+		scriptExecution.Result = &execution
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
 		}
@@ -192,13 +192,13 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s kubtestAPI) ExecutionListener(ctx context.Context, se kubtest.ScriptExecution, executor client.ExecutorClient) {
-	for event := range executor.Watch(se.Execution.Id) {
+func (s kubtestAPI) ExecutionListener(ctx context.Context, se kubtest.Execution, executor client.ExecutorClient) {
+	for event := range executor.Watch(se.Result.Id) {
 		e := event.Execution
 		l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
 		l.Infow("got execution event", "event", e)
-		if event.Error != nil || e.Status != se.Execution.Status || e.Result.Output != se.Execution.Result.Output {
-			l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
+		if event.Error != nil || e.Status != se.Result.Status || e.Result.Output != se.Result.Result.Output {
+			l.Infow("watch - saving script execution", "oldStatus", se.Result.Status, "newStatus", e.Status, "result", e.Result)
 			l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
 
 			err := s.Repository.UpdateExecution(ctx, se.Id, e)
@@ -208,7 +208,7 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, se kubtest.ScriptExec
 		}
 	}
 
-	s.Log.Infow("watch execution completed", "executionID", se.Id, "status", se.Execution.Status)
+	s.Log.Infow("watch execution completed", "executionID", se.Id, "status", se.Result.Status)
 }
 
 // ListExecutions returns array of available script executions
@@ -220,7 +220,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 		l := s.Log.With("script", scriptID, "pager", pager)
 		ctx := c.Context()
 
-		var executions []kubtest.ScriptExecution
+		var executions []kubtest.Execution
 		var err error
 
 		// TODO should we split this to separate endpoint? currently this one handles
@@ -251,7 +251,7 @@ func (s kubtestAPI) GetScriptExecution() fiber.Handler {
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		var scriptExecution kubtest.ScriptExecution
+		var scriptExecution kubtest.Execution
 		var err error
 
 		if scriptID == "-" {
@@ -297,7 +297,7 @@ func (s kubtestAPI) AbortExecution() fiber.Handler {
 	}
 }
 
-func NewScriptExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.ScriptExecution {
+func NewScriptExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.Execution {
 	return kubtest.NewScriptExecution(
 		options.ScriptSpec.Name,
 		options.Request.Name,

@@ -17,17 +17,17 @@ const (
 )
 
 type Renderer interface {
-	Render(result kubtest.ScriptExecution, writer io.Writer) error
-	Watch(result kubtest.ScriptExecution, writer io.Writer) error
+	Render(result kubtest.Execution, writer io.Writer) error
+	Watch(result kubtest.Execution, writer io.Writer) error
 }
 
 type JSONRenderer struct {
 }
 
-func (r JSONRenderer) Render(result kubtest.ScriptExecution, writer io.Writer) error {
+func (r JSONRenderer) Render(result kubtest.Execution, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(result)
 }
-func (r JSONRenderer) Watch(result kubtest.ScriptExecution, writer io.Writer) error {
+func (r JSONRenderer) Watch(result kubtest.Execution, writer io.Writer) error {
 	return r.Render(result, writer)
 }
 
@@ -35,7 +35,7 @@ type GoTemplateRenderer struct {
 	Template string
 }
 
-func (r GoTemplateRenderer) Render(result kubtest.ScriptExecution, writer io.Writer) error {
+func (r GoTemplateRenderer) Render(result kubtest.Execution, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -43,28 +43,28 @@ func (r GoTemplateRenderer) Render(result kubtest.ScriptExecution, writer io.Wri
 
 	return tmpl.Execute(writer, result)
 }
-func (r GoTemplateRenderer) Watch(result kubtest.ScriptExecution, writer io.Writer) error {
+func (r GoTemplateRenderer) Watch(result kubtest.Execution, writer io.Writer) error {
 	return r.Render(result, writer)
 }
 
 type RawRenderer struct {
 }
 
-func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
+func (r RawRenderer) Render(scriptExecution kubtest.Execution, writer io.Writer) error {
 	err := r.renderDetails(scriptExecution, writer)
 	if err != nil {
 		return err
 	}
 
-	if scriptExecution.Execution == nil {
+	if scriptExecution.Result == nil {
 		return fmt.Errorf("invalid script execution, want struct but got nil, please ensure executor returns valid Execution object")
 	}
 
-	if scriptExecution.Execution.Result == nil {
+	if scriptExecution.Result.Result == nil {
 		return fmt.Errorf("invalid execution result, want struct but got nil, please ensure executor returns valid ExecutionResult object")
 	}
 
-	result := scriptExecution.Execution.Result
+	result := scriptExecution.Result.Result
 
 	if result.ErrorMessage != "" {
 		_, err := writer.Write([]byte(result.ErrorMessage + "\n\n"))
@@ -78,20 +78,20 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 	return err
 }
 
-func (r RawRenderer) Watch(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
+func (r RawRenderer) Watch(scriptExecution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
-		scriptExecution.Execution.Status,
-		scriptExecution.Execution.Duration(),
+		scriptExecution.Result.Status,
+		scriptExecution.Result.Duration(),
 	)
 
 	return err
 }
 
-func (r RawRenderer) renderDetails(scriptExecution kubtest.ScriptExecution, writer io.Writer) error {
+func (r RawRenderer) renderDetails(scriptExecution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		scriptExecution.Name,
-		scriptExecution.Execution.Status,
-		scriptExecution.Execution.Duration(),
+		scriptExecution.Result.Status,
+		scriptExecution.Result.Duration(),
 	)
 
 	return err
