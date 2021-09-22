@@ -18,12 +18,12 @@ type ExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`
 	// name of the script
-	ScriptName string `json:"script-name"`
+	ScriptName string `json:"scriptName,omitempty"`
 	// the type of script for this execution
-	ScriptType string           `json:"script-type"`
+	ScriptType string           `json:"scriptType,omitempty"`
 	Status     *ExecutionStatus `json:"status"`
 	// test execution start time
-	StartTime time.Time `json:"start-time"`
+	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time
-	EndTime time.Time `json:"end-time,omitempty"`
+	EndTime time.Time `json:"endTime,omitempty"`
 }

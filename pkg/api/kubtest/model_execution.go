@@ -18,14 +18,14 @@ type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
 	// script metadata content
-	ScriptContent string      `json:"script-content,omitempty"`
+	ScriptContent string      `json:"scriptContent,omitempty"`
 	Repository    *Repository `json:"repository,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
 	Status *ExecutionStatus  `json:"status,omitempty"`
 	Result *ExecutionResult  `json:"result,omitempty"`
 	// test start time
-	StartTime time.Time `json:"start-time,omitempty"`
+	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
-	EndTime time.Time `json:"end-time,omitempty"`
+	EndTime time.Time `json:"endTime,omitempty"`
 }

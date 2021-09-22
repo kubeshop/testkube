@@ -48,7 +48,7 @@ func NewStartScriptCmd() *cobra.Command {
 				ui.Warn("Script execution started")
 
 			case execution.IsSuccesful():
-				fmt.Println(execution.Result.RawOutput)
+				fmt.Println(execution.Result.Output)
 				duration := execution.EndTime.Sub(execution.StartTime)
 				ui.Success("Script execution completed with sucess in " + duration.String())
 

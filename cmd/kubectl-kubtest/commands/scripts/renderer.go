@@ -74,7 +74,7 @@ func (r RawRenderer) Render(scriptExecution kubtest.ScriptExecution, writer io.W
 	}
 
 	// TODO handle output-types
-	_, err = writer.Write([]byte(result.RawOutput))
+	_, err = writer.Write([]byte(result.Output))
 	return err
 }
 

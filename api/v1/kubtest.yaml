@@ -462,19 +462,19 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-name:
+        scriptName:
           type: string
           description: name of the script
-        script-type:
+        scriptType:
           type: string
           description: the type of script for this execution
         status:
           $ref: '#/components/schemas/ExecutionStatus'
-        start-time:
+        startTime:
           type: string
           description: 'test execution start time'
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: 'test execution end time'
           format: date-time
@@ -495,7 +495,7 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-content:
+        scriptContent:
           type: string
           description: script metadata content
         repository:
@@ -512,11 +512,11 @@ components:
           $ref: '#/components/schemas/ExecutionStatus'
         result:
           $ref: '#/components/schemas/ExecutionResult'
-        start-time:
+        startTime:
           type: string
           description: 'test start time'
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: 'test end time'
           format: date-time
@@ -529,24 +529,24 @@ components:
           type: string
           description: script execution status
           enum: [ success, failed ]
-        raw-output:
+        output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
-        raw-output-type:
+        outputType:
           type: string
           description: 'output type depends of reporter used in partucular tool'
           enum:
             - text/plain
             - application/junit+xml
             - application/json
-        error-message:
+        errorMessage:
           type: string
           description: 'error message when status is failed, separate to output as output can be partial in case of error'
-        start-time:
+        startTime:
           type: string
           description: script execution start time
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: script execution start time
           format: date-time
@@ -584,7 +584,7 @@ components:
         status:
           type: string
           enum: [ success, failed ]
-        error-message:
+        errorMessage:
           type: string
           nullable: true
 
@@ -617,7 +617,7 @@ components:
         content:
           type: string
           description: script content as string (content depends from executor)
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 
@@ -689,7 +689,7 @@ components:
           type: string
           description: kubernetes namespace (defaults to 'default')
           example: default
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 

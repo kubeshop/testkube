@@ -20,6 +20,6 @@ type ExecutionRequest struct {
 	// script content as string (content depends from executor)
 	Content string `json:"content,omitempty"`
 	// script content type can be:  - direct content - created from file, - git repo directory checkout in case when test is some kind of project or have more than one file,
-	InputType  string      `json:"input-type,omitempty"`
+	InputType  string      `json:"inputType,omitempty"`
 	Repository *Repository `json:"repository,omitempty"`
 }

@@ -18,15 +18,15 @@ type ExecutionResult struct {
 	// script execution status
 	Status string `json:"status,omitempty"`
 	// RAW Script execution output, depends of reporter used in particular tool
-	RawOutput string `json:"raw-output,omitempty"`
+	Output string `json:"output,omitempty"`
 	// output type depends of reporter used in partucular tool
-	RawOutputType string `json:"raw-output-type,omitempty"`
+	OutputType string `json:"outputType,omitempty"`
 	// error message when status is failed, separate to output as output can be partial in case of error
-	ErrorMessage string `json:"error-message,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 	// script execution start time
-	StartTime time.Time `json:"start-time,omitempty"`
+	StartTime time.Time `json:"startTime,omitempty"`
 	// script execution start time
-	EndTime time.Time `json:"end-time,omitempty"`
+	EndTime time.Time `json:"endTime,omitempty"`
 	// execution steps (for collection of requests)
 	Steps []ExecutionStepResult `json:"steps,omitempty"`
 }

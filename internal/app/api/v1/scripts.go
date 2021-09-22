@@ -182,7 +182,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 			// Watch calls simple Get request to executor in intervals and writes result
 			execution, err = executor.Watch(scriptExecution.Execution.Id, func(e kubtest.Execution) error {
 				// save only if status changed or output changed
-				if e.Status != se.Execution.Status || e.Result.RawOutput != se.Execution.Result.RawOutput {
+				if e.Status != se.Execution.Status || e.Result.Output != se.Execution.Result.Output {
 					l := s.Log.With("executionID", se.Id, "duration", e.Duration().String(), "scriptName", se.ScriptName)
 					l.Infow("watch - saving script execution", "oldStatus", se.Execution.Status, "newStatus", e.Status, "result", e.Result)
 					l.Debugw("watch - saving script execution - debug", "scriptExecution", se)
