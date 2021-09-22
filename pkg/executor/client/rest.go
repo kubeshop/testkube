@@ -33,17 +33,17 @@ type RestExecutorClient struct {
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
 // Worker should set valid state for success or error after script completion
 // TODO add timeout
-func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
-	events = make(chan ExecuteEvent)
+func (c RestExecutorClient) Watch(id string) (events chan ResultEvent) {
+	events = make(chan ResultEvent)
 
 	go func() {
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {
 			execution, err := c.Get(id)
 
-			events <- ExecuteEvent{
-				Execution: execution,
-				Error:     err,
+			events <- ResultEvent{
+				Result: execution,
+				Error:  err,
 			}
 
 			if err != nil || execution.IsCompleted() {
@@ -74,8 +74,8 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.Result, err error)
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results with Get
 func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Result, err error) {
-	request := MapExecutionOptionsToExecutionRequest(options)
-	body, err := json.Marshal(kubtest.ExecutionRequest(request))
+	request := MapExecutionOptionsToStartRequest(options)
+	body, err := json.Marshal(kubtest.ExecutorStartRequest(request))
 	if err != nil {
 		return execution, err
 	}

@@ -123,7 +123,7 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf("v1/scripts/%s/executions", id)
 
-	request := kubtest.ScriptExecutionRequest{
+	request := kubtest.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,

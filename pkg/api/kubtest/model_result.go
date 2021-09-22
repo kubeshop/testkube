@@ -17,11 +17,6 @@ import (
 type Result struct {
 	// execution id
 	Id string `json:"id,omitempty"`
-	// script metadata content
-	ScriptContent string      `json:"scriptContent,omitempty"`
-	Repository    *Repository `json:"repository,omitempty"`
-	// execution params passed to executor
-	Params map[string]string `json:"params,omitempty"`
 	// execution status
 	Status string           `json:"status,omitempty"`
 	Result *ExecutionResult `json:"result,omitempty"`

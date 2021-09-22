@@ -4,7 +4,7 @@ import (
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
-func MapExecutionOptionsToExecutionRequest(options ExecuteOptions) kubtest.ExecutionRequest {
+func MapExecutionOptionsToStartRequest(options ExecuteOptions) kubtest.ExecutorStartRequest {
 	// check if repository exists in cr repository
 	var respository *kubtest.Repository
 	if options.ScriptSpec.Repository != nil {
@@ -17,7 +17,7 @@ func MapExecutionOptionsToExecutionRequest(options ExecuteOptions) kubtest.Execu
 	}
 
 	// pass options to executor client get params from script execution request
-	request := kubtest.ExecutionRequest{
+	request := kubtest.ExecutorStartRequest{
 		Type_:      options.ScriptSpec.Type_,
 		InputType:  options.ScriptSpec.InputType,
 		Content:    options.ScriptSpec.Content,

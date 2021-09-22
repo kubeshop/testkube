@@ -36,7 +36,7 @@ type Worker struct {
 	Log         *zap.SugaredLogger
 }
 
-func (w *Worker) PullExecution() (execution kubtest.Result, err error) {
+func (w *Worker) PullExecution() (execution kubtest.Execution, err error) {
 	execution, err = w.Repository.QueuePull(context.Background())
 	if err != nil {
 		return execution, err
@@ -45,10 +45,10 @@ func (w *Worker) PullExecution() (execution kubtest.Result, err error) {
 }
 
 // PullExecutions gets executions from queue - returns executions channel
-func (w *Worker) PullExecutions() chan kubtest.Result {
-	executionChan := make(chan kubtest.Result, w.BufferSize)
+func (w *Worker) PullExecutions() chan kubtest.Execution {
+	executionChan := make(chan kubtest.Execution, w.BufferSize)
 
-	go func(executionChan chan kubtest.Result) {
+	go func(executionChan chan kubtest.Execution) {
 		w.Log.Info("Watching queue start")
 		for {
 			execution, err := w.PullExecution()
@@ -69,9 +69,9 @@ func (w *Worker) PullExecutions() chan kubtest.Result {
 	return executionChan
 }
 
-func (w *Worker) Run(executionChan chan kubtest.Result) {
+func (w *Worker) Run(executionChan chan kubtest.Execution) {
 	for i := 0; i < w.Concurrency; i++ {
-		go func(executionChan chan kubtest.Result) {
+		go func(executionChan chan kubtest.Execution) {
 			ctx := context.Background()
 			for {
 				e := <-executionChan
@@ -82,7 +82,7 @@ func (w *Worker) Run(executionChan chan kubtest.Result) {
 				if err != nil {
 					l.Errorw("execution error", "error", err, "execution", e)
 				} else {
-					l.Infow("execution completed", "status", e.Status)
+					l.Infow("execution completed", "status", e.Result.Status)
 				}
 
 			}
@@ -90,35 +90,35 @@ func (w *Worker) Run(executionChan chan kubtest.Result) {
 	}
 }
 
-func (w *Worker) RunExecution(ctx context.Context, e kubtest.Result) (kubtest.Result, error) {
-	e.Start()
-	l := w.Log.With("executionID", e.Id, "startTime", e.StartTime.String())
+func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
+	e.Result.Start()
+	l := w.Log.With("executionID", e.Id, "startTime", e.Result.StartTime.String())
 
 	// save start time
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
 
-	l.Infow("script started", "status", e.Status)
+	l.Infow("script started", "status", e.Result.Status)
 	result := w.Runner.Run(e)
 	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
 	e.Result = &result
 
 	var err error
 	if result.ErrorMessage != "" {
-		e.Error()
+		e.Result.Error()
 		err = fmt.Errorf("execution error: %s", result.ErrorMessage)
 	} else {
-		e.Success()
+		e.Result.Success()
 	}
 
-	e.Stop()
+	e.Result.Stop()
 
 	// save end time
 	if werr := w.Repository.Update(ctx, e); werr != nil {
 		return e, werr
 	}
-	l.Infow("script ended", "status", e.Status, "endTime", e.EndTime.String())
+	l.Infow("script ended", "status", e.Result.Status, "endTime", e.Result.EndTime.String())
 
 	return e, err
 }

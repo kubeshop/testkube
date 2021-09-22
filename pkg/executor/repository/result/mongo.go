@@ -27,27 +27,27 @@ type MongoRepository struct {
 	Coll *mongo.Collection
 }
 
-func (r *MongoRepository) Get(ctx context.Context, id string) (result kubtest.Result, err error) {
+func (r *MongoRepository) Get(ctx context.Context, id string) (result kubtest.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) Insert(ctx context.Context, result kubtest.Result) (err error) {
+func (r *MongoRepository) Insert(ctx context.Context, result kubtest.Execution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
 
-func (r *MongoRepository) Update(ctx context.Context, result kubtest.Result) (err error) {
+func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) (err error) {
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
 
-func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Result, err error) {
+func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
 	returnDocument := options.After
 	err = r.Coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"status": kubtest.ExecutionStatusQueued},
-		bson.M{"$set": bson.M{"status": kubtest.ExecutionStatusPending}},
+		bson.M{"status": kubtest.ResultQueued},
+		bson.M{"$set": bson.M{"status": kubtest.ResultPending}},
 		&options.FindOneAndUpdateOptions{ReturnDocument: &returnDocument},
 	).Decode(&result)
 	return

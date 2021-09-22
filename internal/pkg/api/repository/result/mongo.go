@@ -63,7 +63,7 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) 
 	return
 }
 
-func (r *MongoRepository) UpdateExecution(ctx context.Context, id string, execution kubtest.Result) (err error) {
+func (r *MongoRepository) UpdateResult(ctx context.Context, id string, execution kubtest.Result) (err error) {
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"execution": execution}})
 	return
 }

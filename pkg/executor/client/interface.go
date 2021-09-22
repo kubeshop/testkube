@@ -7,16 +7,16 @@ import (
 	"github.com/kubeshop/kubtest/pkg/api/kubtest"
 )
 
-// ExecuteEvent event passed when watching execution changes
-type ExecuteEvent struct {
-	Execution kubtest.Result
-	Error     error
+// ResultEvent event passed when watching execution changes
+type ResultEvent struct {
+	Result kubtest.Result
+	Error  error
 }
 
 // ExecutorClient abstraction to implement new executors
 type ExecutorClient interface {
 	// Watch returns ExecuteEvents stream
-	Watch(id string) (events chan ExecuteEvent)
+	Watch(id string) (events chan ResultEvent)
 
 	// Get synnchronous request to executor to get kubtestExecution
 	Get(id string) (execution kubtest.Result, err error)

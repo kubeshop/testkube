@@ -116,7 +116,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", id)
 
-	request := kubtest.ScriptExecutionRequest{
+	request := kubtest.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,

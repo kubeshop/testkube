@@ -36,7 +36,7 @@ func TestCypressExecutor_StartExecution(t *testing.T) {
 func GetTestExecutor(t *testing.T) Executor {
 	cypressExecutor := NewExecutor(
 		&RepoMock{
-			Object: kubtest.Result{Id: "1"},
+			Object: kubtest.Execution{Id: "1"},
 		},
 		&ExampleRunner{},
 	)
@@ -47,23 +47,23 @@ func GetTestExecutor(t *testing.T) Executor {
 
 // r RepoMock
 type RepoMock struct {
-	Object kubtest.Result
+	Object kubtest.Execution
 	Error  error
 }
 
-func (r *RepoMock) Get(ctx context.Context, id string) (result kubtest.Result, err error) {
+func (r *RepoMock) Get(ctx context.Context, id string) (result kubtest.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) Insert(ctx context.Context, result kubtest.Result) (err error) {
+func (r *RepoMock) Insert(ctx context.Context, result kubtest.Execution) (err error) {
 	return r.Error
 }
 
-func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Result, err error) {
+func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) Update(ctx context.Context, result kubtest.Result) (err error) {
+func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err error) {
 	return r.Error
 }
 
@@ -71,9 +71,9 @@ func (r *RepoMock) Update(ctx context.Context, result kubtest.Result) (err error
 type ExampleRunner struct {
 }
 
-func (r *ExampleRunner) Run(execution kubtest.Result) kubtest.ExecutionResult {
-	return kubtest.ExecutionResult{
-		Status: kubtest.ExecutionStatusSuceess,
+func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.Result {
+	return kubtest.Result{
+		Status: kubtest.ResultSuceess,
 		Output: "exmaple test output",
 	}
 }

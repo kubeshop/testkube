@@ -7,5 +7,5 @@ import (
 // Runner interface to abstract runners implementations
 type Runner interface {
 	// Run takes Execution data and returns execution result
-	Run(execution kubtest.Result) kubtest.ExecutionResult
+	Run(execution kubtest.Execution) kubtest.Result
 }

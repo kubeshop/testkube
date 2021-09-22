@@ -7,56 +7,32 @@ import (
 )
 
 const (
-	// ExecutionStatusCreated status for execution which is requested to queue
-	ExecutionStatusCreated = "created"
-	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
-	ExecutionStatusQueued = "queued"
-	// ExecutionStatusPending status for execution which is taken by worker
-	ExecutionStatusPending = "pending"
-	// ExecutionStatusSuceess execution complete with success
-	ExecutionStatusSuceess = "success"
-	// ExecutionStatusSuceess execution failed
-	ExecutionStatusError = "error"
+	// ResultCreated status for execution which is requested to queue
+	ResultCreated = "created"
+	// ResultQueued status for execution which is added for queue but not get yet by worker
+	ResultQueued = "queued"
+	// ResultPending status for execution which is taken by worker
+	ResultPending = "pending"
+	// ResultSuceess execution complete with success
+	ResultSuceess = "success"
+	// ResultError execution failed
+	ResultError = "error"
 )
 
-func NewExecution() Result {
+func NewResult() Result {
 	return Result{
 		Id:     primitive.NewObjectID().Hex(),
-		Status: ExecutionStatusQueued,
-		Result: &ExecutionResult{Status: ExecutionStatusQueued},
+		Status: ResultQueued,
+		Result: &ExecutionResult{Status: ResultQueued},
 	}
 }
 
-func NewQueuedExecution() Result {
+func NewQueuedResult() Result {
 	return Result{
 		Id:     primitive.NewObjectID().Hex(),
-		Status: ExecutionStatusQueued,
-		Result: &ExecutionResult{Status: ExecutionStatusQueued},
+		Status: ResultQueued,
+		Result: &ExecutionResult{Status: ResultQueued},
 	}
-}
-
-func (e *Result) WithContent(content string) *Result {
-	e.ScriptContent = content
-	return e
-}
-
-func (e *Result) WithRepository(repository *Repository) *Result {
-	e.Repository = repository
-	return e
-}
-
-func (e *Result) WithParams(params map[string]string) *Result {
-	e.Params = params
-	return e
-}
-
-func (e *Result) WithRepositoryData(uri, branch, path string) *Result {
-	e.Repository = &Repository{
-		Uri:    uri,
-		Branch: branch,
-		Path:   path,
-	}
-	return e
 }
 
 func (e *Result) Start() {
@@ -68,11 +44,11 @@ func (e *Result) Stop() {
 }
 
 func (e *Result) Success() {
-	e.Status = ExecutionStatusSuceess
+	e.Status = ResultSuceess
 }
 
 func (e *Result) Error() {
-	e.Status = ExecutionStatusError
+	e.Status = ResultError
 }
 
 func (e *Result) IsCompleted() bool {
@@ -80,19 +56,19 @@ func (e *Result) IsCompleted() bool {
 }
 
 func (e *Result) IsPending() bool {
-	return e.Status == ExecutionStatusPending
+	return e.Status == ResultPending
 }
 
 func (e *Result) IsQueued() bool {
-	return e.Status == ExecutionStatusQueued
+	return e.Status == ResultQueued
 }
 
 func (e *Result) IsSuccesful() bool {
-	return e.Status == ExecutionStatusSuceess
+	return e.Status == ResultSuceess
 }
 
 func (e *Result) IsFailed() bool {
-	return e.Status == ExecutionStatusError
+	return e.Status == ResultError
 }
 
 func (e *Result) Duration() time.Duration {

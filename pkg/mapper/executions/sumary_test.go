@@ -27,10 +27,7 @@ func TestMapToSummary(t *testing.T) {
 }
 
 func getScriptExecutions() kubtest.ScriptExecutions {
-	ex1 := new(kubtest.Result).
-		WithContent("content1").
-		WithParams(map[string]string{"p": "v1"})
-
+	ex1 := new(kubtest.Result)
 	ex1.Start()
 	ex1.Stop()
 
@@ -41,10 +38,7 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
-	ex2 := new(kubtest.Result).
-		WithContent("content1").
-		WithParams(map[string]string{"p": "v1"})
-
+	ex2 := new(kubtest.Result)
 	ex2.Start()
 	ex2.Stop()
 

@@ -212,7 +212,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScriptExecutionRequest'
+              $ref: '#/components/schemas/ExecutionRequest'
       responses:
         201:
           description: successful operation
@@ -371,7 +371,7 @@ components:
           type: string
           format: date-time
 
-    ScriptExecution:
+    Execution:
       type: object
       description: API server script execution
       properties:
@@ -396,6 +396,11 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        scriptContent:
+          type: string
+          description: script metadata content
+        repository:
+          $ref: '#/components/schemas/Repository'
         params:
           type: object
           description: 'execution params passed to executor'
@@ -404,9 +409,9 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        execution:
+        result:
           required: true
-          description: result passed from executor
+          description: result get from executor
           $ref: '#/components/schemas/Result'
 
     ExecutionSummary:
@@ -451,19 +456,6 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        scriptContent:
-          type: string
-          description: script metadata content
-        repository:
-          $ref: '#/components/schemas/Repository'
-        params:
-          type: object
-          description: 'execution params passed to executor'
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
         status:
           type: string
           description: 'execution status'
@@ -538,10 +530,14 @@ components:
     # Requests
     #
 
-    ExecutionRequest:
-      description: scripts execution request body
+    ExecutorStartRequest:
+      description: scripts execution request body when calling new execution request 
       type: object
       properties:
+        id:
+          type: string
+          description: ID of script execution to handle by executor, execution need to be able to return execution info based on this ID
+          example: af7f8afa8bc8ab8ab8a83b8
         type:
           type: string
           description: script type
@@ -574,7 +570,7 @@ components:
           $ref: '#/components/schemas/Repository'
 
     Repository:
-      description: scripts execution request body
+      description: repository representation for tests in git repositories
       type: object
       required:
         - type
@@ -596,7 +592,7 @@ components:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 
-    ScriptExecutionRequest:
+    ExecutionRequest:
       description: scripts execution request body
       type: object
       properties:
