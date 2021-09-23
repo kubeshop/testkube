@@ -12,13 +12,16 @@ import (
 func (e *Executor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubtest.ExecutionRequest
+		var request kubtest.ExecutorStartRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return e.Error(c, http.StatusBadRequest, err)
 		}
 
-		execution := kubtest.NewQueuedExecution()
+		execution := kubtest.ExecutorStartRequestToExecution(request)
+
+		result := kubtest.NewQueuedResult()
+		execution.ExecutionResult = &result
 
 		execution.WithContent(request.Content).
 			WithParams(request.Params)

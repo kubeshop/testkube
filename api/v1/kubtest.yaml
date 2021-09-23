@@ -71,14 +71,14 @@ paths:
         - api
       summary: 'Get script execution by ID'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecutionByID
+      operationId: getExecutionByID
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/ExecutionResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -212,7 +212,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScriptExecutionRequest'
+              $ref: '#/components/schemas/ExecutionRequest'
       responses:
         201:
           description: successful operation
@@ -221,7 +221,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/ExecutionResult'
         400:
           description: 'problem with request body'
           content:
@@ -261,7 +261,7 @@ paths:
         - executions
       summary: 'Get all script executions'
       description: 'Returns array of all available script executions'
-      operationId: listScriptExecutions
+      operationId: listExecutions
       responses:
         200:
           description: successful operation
@@ -301,14 +301,14 @@ paths:
         - executions
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecution
+      operationId: getExecution
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: '#/components/schemas/ExecutionResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -339,7 +339,7 @@ paths:
         - executions
       summary: 'Aborts execution'
       description: 'Aborts execution and returns execution details'
-      operationId: abortScriptExecution
+      operationId: abortExecution
       responses:
         501:
           description: not implemented yet
@@ -348,7 +348,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/ExecutionResult'
 
 components:
   schemas:
@@ -371,7 +371,7 @@ components:
           type: string
           format: date-time
 
-    ScriptExecution:
+    Execution:
       type: object
       description: API server script execution
       properties:
@@ -396,6 +396,11 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        scriptContent:
+          type: string
+          description: script metadata content
+        repository:
+          $ref: '#/components/schemas/Repository'
         params:
           type: object
           description: 'execution params passed to executor'
@@ -404,9 +409,10 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        execution:
+        executionResult:
           required: true
-          $ref: '#/components/schemas/Execution'
+          description: result get from executor
+          $ref: '#/components/schemas/ExecutionResult'
 
     ExecutionSummary:
       description: execution summary
@@ -442,27 +448,10 @@ components:
           description: 'test execution end time'
           format: date-time
 
-    Execution:
+    ExecutionResult:
       description: execution result returned from executor
       type: object
       properties:
-        id:
-          type: string
-          description: execution id
-          format: bson objectId
-        scriptContent:
-          type: string
-          description: script metadata content
-        repository:
-          $ref: '#/components/schemas/Repository'
-        params:
-          type: object
-          description: 'execution params passed to executor'
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
         status:
           type: string
           description: 'execution status'
@@ -471,8 +460,6 @@ components:
             - pending
             - success
             - error
-        result:
-          $ref: '#/components/schemas/ExecutionResult'
         startTime:
           type: string
           description: 'test start time'
@@ -481,15 +468,6 @@ components:
           type: string
           description: 'test end time'
           format: date-time
-
-    ExecutionResult:
-      description: execution result data
-      type: object
-      properties:
-        status:
-          type: string
-          description: script execution status
-          enum: [ success, error ]
         output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
@@ -503,19 +481,12 @@ components:
         errorMessage:
           type: string
           description: 'error message when status is error, separate to output as output can be partial in case of error'
-        startTime:
-          type: string
-          description: script execution start time
-          format: date-time
-        endTime:
-          type: string
-          description: script execution start time
-          format: date-time
         steps:
           type: array
           items:
             $ref: '#/components/schemas/ExecutionStepResult'
           description: execution steps (for collection of requests)
+
 
     ExecutionStepResult:
       description: execution result data
@@ -555,10 +526,14 @@ components:
     # Requests
     #
 
-    ExecutionRequest:
-      description: scripts execution request body
+    ExecutorStartRequest:
+      description: scripts execution request body when calling new execution request 
       type: object
       properties:
+        id:
+          type: string
+          description: ID of script execution to handle by executor, execution need to be able to return execution info based on this ID
+          example: af7f8afa8bc8ab8ab8a83b8
         type:
           type: string
           description: script type
@@ -591,7 +566,7 @@ components:
           $ref: '#/components/schemas/Repository'
 
     Repository:
-      description: scripts execution request body
+      description: repository representation for tests in git repositories
       type: object
       required:
         - type
@@ -613,7 +588,7 @@ components:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 
-    ScriptExecutionRequest:
+    ExecutionRequest:
       description: scripts execution request body
       type: object
       properties:

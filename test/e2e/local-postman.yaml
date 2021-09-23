@@ -9,6 +9,7 @@ metadata:
   name: local-postman-executor
   namespace: default
 spec:
+  executor_type: rest
   types:
   - local-postman/collection
   uri: http://localhost:8082

@@ -38,9 +38,9 @@ func NewScriptsCmd() *cobra.Command {
 	cmd.AddCommand(scripts.NewAbortExecutionCmd())
 	cmd.AddCommand(scripts.NewListScriptsCmd())
 	cmd.AddCommand(scripts.NewStartScriptCmd())
-	cmd.AddCommand(scripts.NewGetScriptExecutionCmd())
-	cmd.AddCommand(scripts.NewWatchScriptExecutionCmd())
-	cmd.AddCommand(scripts.NewListScriptExecutionsCmd())
+	cmd.AddCommand(scripts.NewGetExecutionCmd())
+	cmd.AddCommand(scripts.NewWatchExecutionCmd())
+	cmd.AddCommand(scripts.NewListExecutionsCmd())
 	cmd.AddCommand(scripts.NewCreateScriptsCmd())
 	return cmd
 }

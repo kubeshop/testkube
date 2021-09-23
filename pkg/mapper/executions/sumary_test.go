@@ -9,7 +9,7 @@ import (
 
 func TestMapToSummary(t *testing.T) {
 	// given
-	executions := getScriptExecutions()
+	executions := getExecutions()
 
 	// when
 	result := MapToSummary(executions)
@@ -20,35 +20,29 @@ func TestMapToSummary(t *testing.T) {
 		assert.Equal(t, result[i].Name, executions[i].Name)
 		assert.Equal(t, result[i].ScriptName, executions[i].ScriptName)
 		assert.Equal(t, result[i].ScriptType, executions[i].ScriptType)
-		assert.Equal(t, result[i].Status, executions[i].Execution.Status)
-		assert.Equal(t, result[i].StartTime, executions[i].Execution.StartTime)
-		assert.Equal(t, result[i].EndTime, executions[i].Execution.EndTime)
+		assert.Equal(t, result[i].Status, executions[i].ExecutionResult.Status)
+		assert.Equal(t, result[i].StartTime, executions[i].ExecutionResult.StartTime)
+		assert.Equal(t, result[i].EndTime, executions[i].ExecutionResult.EndTime)
 	}
 }
 
-func getScriptExecutions() kubtest.ScriptExecutions {
-	ex1 := new(kubtest.Execution).
-		WithContent("content1").
-		WithParams(map[string]string{"p": "v1"})
-
+func getExecutions() kubtest.Executions {
+	ex1 := new(kubtest.ExecutionResult)
 	ex1.Start()
 	ex1.Stop()
 
-	execution1 := kubtest.NewScriptExecution(
+	execution1 := kubtest.NewExecution(
 		"script1",
 		"execution1",
 		"test/test",
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
-	ex2 := new(kubtest.Execution).
-		WithContent("content1").
-		WithParams(map[string]string{"p": "v1"})
-
+	ex2 := new(kubtest.ExecutionResult)
 	ex2.Start()
 	ex2.Stop()
 
-	execution2 := kubtest.NewScriptExecution(
+	execution2 := kubtest.NewExecution(
 		"script1",
 		"execution2",
 		"test/test",
@@ -56,7 +50,7 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 		map[string]string{"p": "v2"},
 	)
 
-	return kubtest.ScriptExecutions{
+	return kubtest.Executions{
 		execution1,
 		execution2,
 	}

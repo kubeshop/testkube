@@ -30,23 +30,23 @@ type RestExecutorClient struct {
 	client HTTPClient
 }
 
-// Watch will get valid execution after async Execute, execution will be returned when success or error occurs
+// Watch will get valid execution result after async Execute, execution will be returned when success or error occurs
 // Worker should set valid state for success or error after script completion
 // TODO add timeout
-func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
-	events = make(chan ExecuteEvent)
+func (c RestExecutorClient) Watch(id string) (events chan ResultEvent) {
+	events = make(chan ResultEvent)
 
 	go func() {
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {
-			execution, err := c.Get(id)
+			result, err := c.Get(id)
 
-			events <- ExecuteEvent{
-				Execution: execution,
-				Error:     err,
+			events <- ResultEvent{
+				Result: result,
+				Error:  err,
 			}
 
-			if err != nil || execution.IsCompleted() {
+			if err != nil || result.IsCompleted() {
 				close(events)
 				return
 			}
@@ -57,7 +57,8 @@ func (c RestExecutorClient) Watch(id string) (events chan ExecuteEvent) {
 	return events
 }
 
-func (c RestExecutorClient) Get(id string) (execution kubtest.Execution, err error) {
+func (c RestExecutorClient) Get(id string) (execution kubtest.ExecutionResult, err error) {
+
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -68,14 +69,17 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.Execution, err err
 		return execution, fmt.Errorf("rest-executor/get-execution returned error: %w", err)
 	}
 
-	return c.getExecutionFromResponse(resp)
+	result, err := c.getResultFromResponse(resp)
+	fmt.Printf("executor-rest-client result: %+v\n", result)
+
+	return result, err
 }
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results with Get
-func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Execution, err error) {
-	request := MapExecutionOptionsToExecutionRequest(options)
-	body, err := json.Marshal(kubtest.ExecutionRequest(request))
+func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.ExecutionResult, err error) {
+	request := MapExecutionOptionsToStartRequest(options)
+	body, err := json.Marshal(kubtest.ExecutorStartRequest(request))
 	if err != nil {
 		return execution, err
 	}
@@ -89,30 +93,41 @@ func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.E
 		return execution, fmt.Errorf("rest-executor/execute returned error: %w", err)
 	}
 
-	return c.getExecutionFromResponse(resp)
+	return c.getResultFromResponse(resp)
 }
 
 func (c RestExecutorClient) Abort(id string) error {
 	return nil
 }
 
-func (c RestExecutorClient) getExecutionFromResponse(resp *http.Response) (execution kubtest.Execution, err error) {
+func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result kubtest.ExecutionResult, err error) {
 	defer resp.Body.Close()
+
+	var execution kubtest.Execution
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return execution, fmt.Errorf("can't read response body: %w", err)
+		return result, fmt.Errorf("can't read response body: %w", err)
 	}
 
 	if err = json.Unmarshal(bytes, &execution); err != nil {
 		// if there is strange result try to decode to interface and attach to error
 		var out interface{}
 		if jerr := json.Unmarshal(bytes, &out); jerr != nil {
-			return execution, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
+			return result, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
 		}
-		return execution, fmt.Errorf("JSON decode error: %w, trying to decode response: %+v", err, out)
+		return result, fmt.Errorf("JSON decode error: %w, trying to decode response: %+v", err, out)
 	}
-	return
+
+	if execution.ExecutionResult == nil {
+		var out interface{}
+		if jerr := json.Unmarshal(bytes, &out); jerr != nil {
+			return result, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
+		}
+		fmt.Printf("%+v\n", out)
+	}
+
+	return *execution.ExecutionResult, nil
 }
 
 func (c RestExecutorClient) responseError(resp *http.Response) error {

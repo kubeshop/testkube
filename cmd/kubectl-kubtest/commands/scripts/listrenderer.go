@@ -11,13 +11,13 @@ import (
 )
 
 type ListRenderer interface {
-	Render(list kubtest.ScriptExecutions, writer io.Writer) error
+	Render(list kubtest.Executions, writer io.Writer) error
 }
 
 type JSONListRenderer struct {
 }
 
-func (r JSONListRenderer) Render(list kubtest.ScriptExecutions, writer io.Writer) error {
+func (r JSONListRenderer) Render(list kubtest.Executions, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(list)
 }
 
@@ -25,7 +25,7 @@ type GoTemplateListRenderer struct {
 	Template string
 }
 
-func (r GoTemplateListRenderer) Render(list kubtest.ScriptExecutions, writer io.Writer) error {
+func (r GoTemplateListRenderer) Render(list kubtest.Executions, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (r GoTemplateListRenderer) Render(list kubtest.ScriptExecutions, writer io.
 type RawListRenderer struct {
 }
 
-func (r RawListRenderer) Render(list kubtest.ScriptExecutions, writer io.Writer) error {
+func (r RawListRenderer) Render(list kubtest.Executions, writer io.Writer) error {
 	ui.Table(list, writer)
 	return nil
 }

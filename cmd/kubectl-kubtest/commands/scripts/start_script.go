@@ -32,53 +32,55 @@ func NewStartScriptCmd() *cobra.Command {
 			client, namespace := GetClient(cmd)
 			namespacedName := fmt.Sprintf("%s/%s", namespace, scriptID)
 
-			scriptExecution, err := client.ExecuteScript(scriptID, namespace, name, params)
+			execution, err := client.ExecuteScript(scriptID, namespace, name, params)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
+			fmt.Printf("%+v\n", execution)
+			fmt.Printf("%+v\n", execution.ExecutionResult)
 
-			PrintScriptExecutionDetails(scriptExecution)
+			PrintExecutionDetails(execution)
 
-			execution := scriptExecution.Execution
+			result := execution.ExecutionResult
 
 			switch true {
 
-			case execution.IsQueued():
+			case result.IsQueued():
 				ui.Warn("Script queued for execution")
 
-			case execution.IsPending():
+			case result.IsPending():
 				ui.Warn("Script execution started")
 
-			case execution.IsSuccesful():
-				fmt.Println(execution.Result.Output)
-				duration := execution.EndTime.Sub(execution.StartTime)
+			case result.IsSuccesful():
+				fmt.Println(result.Output)
+				duration := result.EndTime.Sub(result.StartTime)
 				ui.Success("Script execution completed with sucess in " + duration.String())
 
-			case execution.IsFailed():
-				fmt.Println(execution.Result.ErrorMessage)
+			case result.IsFailed():
+				fmt.Println(result.ErrorMessage)
 				ui.Errf("Script execution failed")
 
 			}
 
-			uiShellCommandBlock(scriptExecution.Id)
+			uiShellCommandBlock(execution.Id)
 
 			if watch {
 				ui.Info("Watching for changes")
 				for range time.Tick(time.Second) {
 
-					scriptExecution, err := client.GetExecution("-", scriptExecution.Id)
+					execution, err := client.GetExecution("-", execution.Id)
 					ui.ExitOnError("get script execution details", err)
 
 					render := GetRenderer(cmd)
-					err = render.Watch(scriptExecution, os.Stdout)
+					err = render.Watch(execution, os.Stdout)
 					ui.ExitOnError("watching for changes", err)
 
-					if scriptExecution.Execution.IsCompleted() {
+					if execution.ExecutionResult.IsCompleted() {
 						ui.Info("\nGetting results")
-						render.Render(scriptExecution, os.Stdout)
+						render.Render(execution, os.Stdout)
 						ui.ShellCommand(
 							"Use following command to get script execution details",
-							"kubectl kubtest scripts execution "+scriptExecution.Id,
+							"kubectl kubtest scripts execution "+execution.Id,
 						)
-						ui.Warn("Script execution completed in", scriptExecution.Execution.Duration().String())
+						ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
 						return
 					}
 				}

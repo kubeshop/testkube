@@ -1,38 +1,50 @@
 package kubtest
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const (
-	// ExecutionStatusCreated status for execution which is requested to queue
-	ExecutionStatusCreated = "created"
-	// ExecutionStatusQueued status for execution which is added for queue but not get yet by worker
-	ExecutionStatusQueued = "queued"
-	// ExecutionStatusPending status for execution which is taken by worker
-	ExecutionStatusPending = "pending"
-	// ExecutionStatusSuceess execution complete with success
-	ExecutionStatusSuceess = "success"
-	// ExecutionStatusSuceess execution failed
-	ExecutionStatusError = "error"
-)
-
-func NewExecution() Execution {
+func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	return Execution{
-		Id:     primitive.NewObjectID().Hex(),
-		Status: ExecutionStatusQueued,
-		Result: &ExecutionResult{Status: ExecutionStatusQueued},
+		Id:              id,
+		ExecutionResult: &ExecutionResult{},
+		ScriptName:      scriptName,
+		ScriptType:      scriptType,
 	}
 }
 
-func NewQueuedExecution() Execution {
+func NewExecution(scriptName, name, scriptType string, result ExecutionResult, params map[string]string) Execution {
 	return Execution{
-		Id:     primitive.NewObjectID().Hex(),
-		Status: ExecutionStatusQueued,
-		Result: &ExecutionResult{Status: ExecutionStatusQueued},
+		Id:              primitive.NewObjectID().Hex(),
+		ScriptName:      scriptName,
+		Name:            name,
+		ScriptType:      scriptType,
+		ExecutionResult: &result,
+		Params:          params,
 	}
+}
+
+type Executions []Execution
+
+func (executions Executions) Table() (header []string, output [][]string) {
+	header = []string{"Script", "Type", "Name", "ID", "Status"}
+
+	for _, e := range executions {
+		status := "unknown"
+		if e.ExecutionResult != nil {
+			status = e.ExecutionResult.Status
+		}
+
+		output = append(output, []string{
+			e.ScriptName,
+			e.ScriptType,
+			e.Name,
+			e.Id,
+			status,
+		})
+	}
+
+	return
 }
 
 func (e *Execution) WithContent(content string) *Execution {
@@ -59,54 +71,7 @@ func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
 	return e
 }
 
-func (e *Execution) Start() {
-	e.StartTime = time.Now()
-}
-
-func (e *Execution) Stop() {
-	e.EndTime = time.Now()
-}
-
-func (e *Execution) Success() {
-	e.Status = ExecutionStatusSuceess
-}
-
-func (e *Execution) Error() {
-	e.Status = ExecutionStatusError
-}
-
-func (e *Execution) IsCompleted() bool {
-	return e.IsSuccesful() || e.IsFailed()
-}
-
-func (e *Execution) IsPending() bool {
-	return e.Status == ExecutionStatusPending
-}
-
-func (e *Execution) IsQueued() bool {
-	return e.Status == ExecutionStatusQueued
-}
-
-func (e *Execution) IsSuccesful() bool {
-	return e.Status == ExecutionStatusSuceess
-}
-
-func (e *Execution) IsFailed() bool {
-	return e.Status == ExecutionStatusError
-}
-
-func (e *Execution) Duration() time.Duration {
-
-	end := e.EndTime
-	start := e.StartTime
-
-	if start.UnixNano() <= 0 && end.UnixNano() <= 0 {
-		return time.Duration(0)
-	}
-
-	if end.UnixNano() <= 0 {
-		end = time.Now()
-	}
-
-	return end.Sub(e.StartTime)
+func (e Execution) Err(err error) Execution {
+	e.ExecutionResult.Err(err)
+	return e
 }

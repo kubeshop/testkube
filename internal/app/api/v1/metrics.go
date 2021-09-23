@@ -35,11 +35,11 @@ type Metrics struct {
 	Abort      *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecution(scriptExecution kubtest.ScriptExecution) {
+func (m Metrics) IncExecution(execution kubtest.Execution) {
 	m.Executions.With(map[string]string{
-		"type":   scriptExecution.ScriptType,
-		"name":   scriptExecution.ScriptName,
-		"result": scriptExecution.Execution.Status,
+		"type":   execution.ScriptType,
+		"name":   execution.ScriptName,
+		"result": execution.ExecutionResult.Status,
 	}).Inc()
 }
 

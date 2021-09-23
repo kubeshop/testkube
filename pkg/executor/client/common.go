@@ -17,9 +17,11 @@ const (
 
 type ExecuteOptions struct {
 	ID           string
+	ScriptName   string
 	ScriptSpec   scriptv1.ScriptSpec
+	ExecutorName string
 	ExecutorSpec executorv1.ExecutorSpec
-	Request      kubtest.ScriptExecutionRequest
+	Request      kubtest.ExecutionRequest
 }
 
 func NewExecuteOptions() ExecuteOptions {
