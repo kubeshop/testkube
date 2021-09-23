@@ -43,10 +43,10 @@ func NewWatchExecutionCmd() *cobra.Command {
 				render := GetRenderer(cmd)
 				err = render.Watch(execution, os.Stdout)
 				ui.ExitOnError("watching for changes", err)
-				if execution.Result.IsCompleted() {
+				if execution.ExecutionResult.IsCompleted() {
 					ui.Info("\nGetting results")
 					render.Render(execution, os.Stdout)
-					ui.Warn("Script execution completed in", execution.Result.Duration().String())
+					ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
 					return
 				}
 			}

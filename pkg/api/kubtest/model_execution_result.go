@@ -14,7 +14,7 @@ import (
 )
 
 // execution result returned from executor
-type Result struct {
+type ExecutionResult struct {
 	// execution status
 	Status string `json:"status,omitempty"`
 	// test start time

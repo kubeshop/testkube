@@ -181,7 +181,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// set execution from one created
-		execution.Result = &result
+		execution.ExecutionResult = &result
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
 		}
@@ -207,8 +207,8 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Exe
 		l.Infow("got result event", "result", result)
 
 		// if something changed during execution
-		if event.Error != nil || result.Status != execution.Result.Status || result.Output != execution.Result.Output {
-			l.Infow("watch - saving script execution", "oldStatus", execution.Result.Status, "newStatus", result.Status, "result", result)
+		if event.Error != nil || result.Status != execution.ExecutionResult.Status || result.Output != execution.ExecutionResult.Output {
+			l.Infow("watch - saving script execution", "oldStatus", execution.ExecutionResult.Status, "newStatus", result.Status, "result", result)
 			l.Debugw("watch - saving script execution - debug", "execution", execution)
 
 			err := s.Repository.UpdateResult(ctx, execution.Id, result)
@@ -218,7 +218,7 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Exe
 		}
 	}
 
-	s.Log.Infow("watch execution completed", "executionID", execution.Id, "status", execution.Result.Status)
+	s.Log.Infow("watch execution completed", "executionID", execution.Id, "status", execution.ExecutionResult.Status)
 }
 
 // ListExecutions returns array of available script executions

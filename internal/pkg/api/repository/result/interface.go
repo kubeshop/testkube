@@ -20,5 +20,5 @@ type Repository interface {
 	// Update updates execution result
 	Update(ctx context.Context, result kubtest.Execution) error
 	// UpdateExecution updates result in execution
-	UpdateResult(ctx context.Context, id string, execution kubtest.Result) error
+	UpdateResult(ctx context.Context, id string, execution kubtest.ExecutionResult) error
 }

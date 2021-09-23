@@ -17,55 +17,55 @@ const (
 	ResultError = "error"
 )
 
-func NewResult() Result {
-	return Result{
+func NewResult() ExecutionResult {
+	return ExecutionResult{
 		Status: ResultQueued,
 	}
 }
 
-func NewQueuedResult() Result {
-	return Result{
+func NewQueuedResult() ExecutionResult {
+	return ExecutionResult{
 		Status: ResultQueued,
 	}
 }
 
-func (e *Result) Start() {
+func (e *ExecutionResult) Start() {
 	e.StartTime = time.Now()
 }
 
-func (e *Result) Stop() {
+func (e *ExecutionResult) Stop() {
 	e.EndTime = time.Now()
 }
 
-func (e *Result) Success() {
+func (e *ExecutionResult) Success() {
 	e.Status = ResultSuceess
 }
 
-func (e *Result) Error() {
+func (e *ExecutionResult) Error() {
 	e.Status = ResultError
 }
 
-func (e *Result) IsCompleted() bool {
+func (e *ExecutionResult) IsCompleted() bool {
 	return e.IsSuccesful() || e.IsFailed()
 }
 
-func (e *Result) IsPending() bool {
+func (e *ExecutionResult) IsPending() bool {
 	return e.Status == ResultPending
 }
 
-func (e *Result) IsQueued() bool {
+func (e *ExecutionResult) IsQueued() bool {
 	return e.Status == ResultQueued
 }
 
-func (e *Result) IsSuccesful() bool {
+func (e *ExecutionResult) IsSuccesful() bool {
 	return e.Status == ResultSuceess
 }
 
-func (e *Result) IsFailed() bool {
+func (e *ExecutionResult) IsFailed() bool {
 	return e.Status == ResultError
 }
 
-func (e *Result) Duration() time.Duration {
+func (e *ExecutionResult) Duration() time.Duration {
 
 	end := e.EndTime
 	start := e.StartTime
@@ -80,7 +80,7 @@ func (e *Result) Duration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
-func (r Result) Err(err error) Result {
+func (r ExecutionResult) Err(err error) ExecutionResult {
 	r.ErrorMessage = err.Error()
 	return r
 }

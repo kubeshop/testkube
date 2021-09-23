@@ -63,7 +63,7 @@ func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Execution, err
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) UpdateResult(ctx context.Context, id string, result kubtest.Result) (err error) {
+func (r *RepoMock) UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error) {
 	return r.Error
 }
 
@@ -75,8 +75,8 @@ func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err er
 type ExampleRunner struct {
 }
 
-func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.Result {
-	return kubtest.Result{
+func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
+	return kubtest.ExecutionResult{
 		Status: kubtest.ResultSuceess,
 		Output: "exmaple test output",
 	}

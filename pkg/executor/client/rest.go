@@ -57,7 +57,7 @@ func (c RestExecutorClient) Watch(id string) (events chan ResultEvent) {
 	return events
 }
 
-func (c RestExecutorClient) Get(id string) (execution kubtest.Result, err error) {
+func (c RestExecutorClient) Get(id string) (execution kubtest.ExecutionResult, err error) {
 
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
@@ -77,7 +77,7 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.Result, err error)
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results with Get
-func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.Result, err error) {
+func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.ExecutionResult, err error) {
 	request := MapExecutionOptionsToStartRequest(options)
 	body, err := json.Marshal(kubtest.ExecutorStartRequest(request))
 	if err != nil {
@@ -100,7 +100,7 @@ func (c RestExecutorClient) Abort(id string) error {
 	return nil
 }
 
-func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result kubtest.Result, err error) {
+func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result kubtest.ExecutionResult, err error) {
 	defer resp.Body.Close()
 
 	var execution kubtest.Execution
@@ -118,7 +118,16 @@ func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result k
 		}
 		return result, fmt.Errorf("JSON decode error: %w, trying to decode response: %+v", err, out)
 	}
-	return *execution.Result, nil
+
+	if execution.ExecutionResult == nil {
+		var out interface{}
+		if jerr := json.Unmarshal(bytes, &out); jerr != nil {
+			return result, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
+		}
+		fmt.Printf("%+v\n", out)
+	}
+
+	return *execution.ExecutionResult, nil
 }
 
 func (c RestExecutorClient) responseError(resp *http.Response) error {

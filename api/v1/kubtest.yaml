@@ -78,7 +78,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Result'
+                $ref: '#/components/schemas/ExecutionResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -221,7 +221,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Result'
+                  $ref: '#/components/schemas/ExecutionResult'
         400:
           description: 'problem with request body'
           content:
@@ -308,7 +308,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Result'
+                $ref: '#/components/schemas/ExecutionResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -348,7 +348,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Result'
+                  $ref: '#/components/schemas/ExecutionResult'
 
 components:
   schemas:
@@ -412,7 +412,7 @@ components:
         result:
           required: true
           description: result get from executor
-          $ref: '#/components/schemas/Result'
+          $ref: '#/components/schemas/ExecutionResult'
 
     ExecutionSummary:
       description: execution summary
@@ -448,7 +448,7 @@ components:
           description: 'test execution end time'
           format: date-time
 
-    Result:
+    ExecutionResult:
       description: execution result returned from executor
       type: object
       properties:

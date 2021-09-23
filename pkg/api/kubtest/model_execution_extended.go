@@ -6,21 +6,21 @@ import (
 
 func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	return Execution{
-		Id:         id,
-		Result:     &Result{},
-		ScriptName: scriptName,
-		ScriptType: scriptType,
+		Id:              id,
+		ExecutionResult: &ExecutionResult{},
+		ScriptName:      scriptName,
+		ScriptType:      scriptType,
 	}
 }
 
-func NewExecution(scriptName, name, scriptType string, result Result, params map[string]string) Execution {
+func NewExecution(scriptName, name, scriptType string, result ExecutionResult, params map[string]string) Execution {
 	return Execution{
-		Id:         primitive.NewObjectID().Hex(),
-		ScriptName: scriptName,
-		Name:       name,
-		ScriptType: scriptType,
-		Result:     &result,
-		Params:     params,
+		Id:              primitive.NewObjectID().Hex(),
+		ScriptName:      scriptName,
+		Name:            name,
+		ScriptType:      scriptType,
+		ExecutionResult: &result,
+		Params:          params,
 	}
 }
 
@@ -31,8 +31,8 @@ func (executions Executions) Table() (header []string, output [][]string) {
 
 	for _, e := range executions {
 		status := "unknown"
-		if e.Result != nil {
-			status = e.Result.Status
+		if e.ExecutionResult != nil {
+			status = e.ExecutionResult.Status
 		}
 
 		output = append(output, []string{
@@ -72,6 +72,6 @@ func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
 }
 
 func (e Execution) Err(err error) Execution {
-	e.Result.Err(err)
+	e.ExecutionResult.Err(err)
 	return e
 }

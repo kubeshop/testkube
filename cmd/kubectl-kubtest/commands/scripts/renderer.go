@@ -56,11 +56,11 @@ func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error
 		return err
 	}
 
-	if execution.Result == nil {
+	if execution.ExecutionResult == nil {
 		return fmt.Errorf("invalid script execution, want struct but got nil, please ensure executor returns valid Execution object")
 	}
 
-	result := execution.Result
+	result := execution.ExecutionResult
 
 	if result.ErrorMessage != "" {
 		_, err := writer.Write([]byte(result.ErrorMessage + "\n\n"))
@@ -76,8 +76,8 @@ func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error
 
 func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
-		execution.Result.Status,
-		execution.Result.Duration(),
+		execution.ExecutionResult.Status,
+		execution.ExecutionResult.Duration(),
 	)
 
 	return err
@@ -86,8 +86,8 @@ func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error 
 func (r RawRenderer) renderDetails(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		execution.Name,
-		execution.Result.Status,
-		execution.Result.Duration(),
+		execution.ExecutionResult.Status,
+		execution.ExecutionResult.Duration(),
 	)
 
 	return err

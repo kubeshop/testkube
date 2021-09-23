@@ -82,7 +82,7 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 				if err != nil {
 					l.Errorw("execution error", "error", err, "execution", e)
 				} else {
-					l.Infow("execution completed", "status", e.Result.Status)
+					l.Infow("execution completed", "status", e.ExecutionResult.Status)
 				}
 
 			}
@@ -91,34 +91,34 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 }
 
 func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
-	e.Result.Start()
-	l := w.Log.With("executionID", e.Id, "startTime", e.Result.StartTime.String())
+	e.ExecutionResult.Start()
+	l := w.Log.With("executionID", e.Id, "startTime", e.ExecutionResult.StartTime.String())
 
 	// save start time
-	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.Result); werr != nil {
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
 
-	l.Infow("script started", "status", e.Result.Status)
+	l.Infow("script started", "status", e.ExecutionResult.Status)
 	result := w.Runner.Run(e)
 	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
-	e.Result = &result
+	e.ExecutionResult = &result
 
 	var err error
 	if result.ErrorMessage != "" {
-		e.Result.Error()
+		e.ExecutionResult.Error()
 		err = fmt.Errorf("execution error: %s", result.ErrorMessage)
 	} else {
-		e.Result.Success()
+		e.ExecutionResult.Success()
 	}
 
-	e.Result.Stop()
+	e.ExecutionResult.Stop()
 
 	// save end time
-	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.Result); werr != nil {
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
-	l.Infow("script ended", "status", e.Result.Status, "endTime", e.Result.EndTime.String())
+	l.Infow("script ended", "status", e.ExecutionResult.Status, "endTime", e.ExecutionResult.EndTime.String())
 
 	return e, err
 }

@@ -21,7 +21,7 @@ func (e *Executor) StartExecution() fiber.Handler {
 		execution := kubtest.ExecutorStartRequestToExecution(request)
 
 		result := kubtest.NewQueuedResult()
-		execution.Result = &result
+		execution.ExecutionResult = &result
 
 		execution.WithContent(request.Content).
 			WithParams(request.Params)

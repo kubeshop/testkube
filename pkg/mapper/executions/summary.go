@@ -10,9 +10,9 @@ func MapToSummary(executions []kubtest.Execution) []kubtest.ExecutionSummary {
 			Name:       s.Name,
 			ScriptName: s.ScriptName,
 			ScriptType: s.ScriptType,
-			Status:     s.Result.Status,
-			StartTime:  s.Result.StartTime,
-			EndTime:    s.Result.EndTime,
+			Status:     s.ExecutionResult.Status,
+			StartTime:  s.ExecutionResult.StartTime,
+			EndTime:    s.ExecutionResult.EndTime,
 		}
 	}
 

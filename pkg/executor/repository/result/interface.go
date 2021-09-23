@@ -16,7 +16,7 @@ type Repository interface {
 	// Update updates execution result
 	Update(ctx context.Context, result kubtest.Execution) error
 	//UpdateResult updates only result part of execution
-	UpdateResult(ctx context.Context, id string, result kubtest.Result) (err error)
+	UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error)
 	// QueuePull pulls from queue and locks other clients to read (changes state from queued->pending)
 	QueuePull(ctx context.Context) (kubtest.Execution, error)
 }

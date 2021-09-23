@@ -39,7 +39,7 @@ func (m Metrics) IncExecution(execution kubtest.Execution) {
 	m.Executions.With(map[string]string{
 		"type":   execution.ScriptType,
 		"name":   execution.ScriptName,
-		"result": execution.Result.Status,
+		"result": execution.ExecutionResult.Status,
 	}).Inc()
 }
 

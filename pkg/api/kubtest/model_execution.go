@@ -25,6 +25,6 @@ type Execution struct {
 	ScriptContent string      `json:"scriptContent,omitempty"`
 	Repository    *Repository `json:"repository,omitempty"`
 	// execution params passed to executor
-	Params map[string]string `json:"params,omitempty"`
-	Result *Result           `json:"result,omitempty"`
+	Params          map[string]string `json:"params,omitempty"`
+	ExecutionResult *ExecutionResult  `json:"executionResult,omitempty"`
 }

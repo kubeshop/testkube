@@ -50,14 +50,14 @@ func (c JobExecutorClient) Watch(id string) (events chan ResultEvent) {
 	return events
 }
 
-func (c JobExecutorClient) Get(id string) (execution kubtest.Result, err error) {
+func (c JobExecutorClient) Get(id string) (execution kubtest.ExecutionResult, err error) {
 	// TODO Get Logs ? Update Execution
 	return
 }
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c JobExecutorClient) Execute(options ExecuteOptions) (result kubtest.Result, err error) {
+func (c JobExecutorClient) Execute(options ExecuteOptions) (result kubtest.ExecutionResult, err error) {
 	// TODO move to mapper
 	execution := kubtest.NewExecutionWithID(options.ID, options.ScriptSpec.Type_, options.ScriptSpec.Name)
 	execution.ScriptContent = options.ScriptSpec.Content
