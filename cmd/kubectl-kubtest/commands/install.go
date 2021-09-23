@@ -11,17 +11,16 @@ func init() {
 }
 
 func NewInstallCmd() *cobra.Command {
+	var chart, name, namespace string
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install Helm chart registry in current kubectl context",
 		Long:  `Install can be configured with use of particular `,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			ui.Logo()
+			ui.Verbose = true
 
-			chart := cmd.Flag("chart").Value.String()
-			name := cmd.Flag("name").Value.String()
-			namespace := cmd.Flag("namespace").Value.String()
+			ui.Logo()
 
 			_, err := process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 			ui.ExitOnError("adding kubtest repo", err)
@@ -36,8 +35,9 @@ func NewInstallCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("chart", "kubeshop/kubtest", "chart name")
-	cmd.Flags().String("name", "kubtest", "installation name")
-	cmd.Flags().String("namespace", "default", "namespace where to install")
+	cmd.Flags().StringVar(&chart, "chart", "kubeshop/kubtest", "chart name")
+	cmd.Flags().StringVar(&name, "name", "kubtest", "installation name")
+	cmd.Flags().StringVar(&namespace, "namespace", "default", "namespace where to install")
+
 	return cmd
 }
