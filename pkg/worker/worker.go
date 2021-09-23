@@ -95,7 +95,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	l := w.Log.With("executionID", e.Id, "startTime", e.Result.StartTime.String())
 
 	// save start time
-	if werr := w.Repository.Update(ctx, e); werr != nil {
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.Result); werr != nil {
 		return e, werr
 	}
 
@@ -115,7 +115,7 @@ func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest
 	e.Result.Stop()
 
 	// save end time
-	if werr := w.Repository.Update(ctx, e); werr != nil {
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.Result); werr != nil {
 		return e, werr
 	}
 	l.Infow("script ended", "status", e.Result.Status, "endTime", e.Result.EndTime.String())

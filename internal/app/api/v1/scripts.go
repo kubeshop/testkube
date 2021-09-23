@@ -102,6 +102,8 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 func (s kubtestAPI) GetExecuteOptions(namespace, scriptID string, request kubtest.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+	fmt.Printf("SCRIPT CR %+v\n", scriptCR)
+
 	if err != nil {
 		return options, fmt.Errorf("can't get script custom resource %w", err)
 	}
@@ -113,8 +115,9 @@ func (s kubtestAPI) GetExecuteOptions(namespace, scriptID string, request kubtes
 	}
 
 	return client.ExecuteOptions{
-		ID:           scriptID,
+		ScriptName:   scriptID,
 		ScriptSpec:   scriptCR.Spec,
+		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
 	}, nil
@@ -154,6 +157,11 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 
 		// store execution in storage, can be get from API now
 		execution = NewExecutionFromExecutionOptions(options)
+		options.ID = execution.Id
+
+		fmt.Printf("OPTIONS !!!!!!!! %+v\n", options)
+		fmt.Printf("INSERTING !!!!!!!! %+v\n", execution)
+
 		err = s.Repository.Insert(ctx, execution)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
@@ -193,10 +201,10 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 }
 
 func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Execution, executor client.ExecutorClient) {
-	for event := range executor.Watch(execution.Result.Id) {
+	for event := range executor.Watch(execution.Id) {
 		result := event.Result
 		l := s.Log.With("executionID", execution.Id, "duration", result.Duration().String(), "scriptName", execution.ScriptName)
-		l.Infow("got execution event", "event", result)
+		l.Infow("got result event", "result", result)
 
 		// if something changed during execution
 		if event.Error != nil || result.Status != execution.Result.Status || result.Output != execution.Result.Output {
@@ -300,11 +308,13 @@ func (s kubtestAPI) AbortExecution() fiber.Handler {
 }
 
 func NewExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.Execution {
-	return kubtest.NewExecution(
-		options.ScriptSpec.Name,
+	execution := kubtest.NewExecution(
+		options.ScriptName,
 		options.Request.Name,
 		options.ScriptSpec.Type_,
 		kubtest.NewResult(),
 		options.Request.Params,
 	)
+
+	return execution
 }

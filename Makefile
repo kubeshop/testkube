@@ -59,7 +59,7 @@ test-reload-sanity-script:
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
 test-api-local:
-	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill 
+	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var script_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
 
 # run by newman but on top of port-forwarded cluster service to api-server 
 # e.g. kubectl port-forward svc/kubtest-api-server 8088

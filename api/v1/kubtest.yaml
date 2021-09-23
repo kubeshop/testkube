@@ -452,10 +452,6 @@ components:
       description: execution result returned from executor
       type: object
       properties:
-        id:
-          type: string
-          description: execution id
-          format: bson objectId
         status:
           type: string
           description: 'execution status'

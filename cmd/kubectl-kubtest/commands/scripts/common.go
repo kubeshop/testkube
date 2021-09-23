@@ -19,7 +19,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 func PrintExecutionDetails(execution kubtest.Execution) {
 	ui.Warn("Type          :", execution.ScriptType)
 	ui.Warn("Name          :", execution.ScriptName)
-	ui.Warn("Execution ID  :", execution.Result.Id)
+	ui.Warn("Execution ID  :", execution.Id)
 	ui.Warn("Execution name:", execution.Name)
 	ui.NL()
 }

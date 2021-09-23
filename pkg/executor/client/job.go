@@ -32,14 +32,14 @@ func (c JobExecutorClient) Watch(id string) (events chan ResultEvent) {
 	go func() {
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {
-			execution, err := c.Get(id)
+			result, err := c.Get(id)
 
 			events <- ResultEvent{
-				Result: execution,
+				Result: result,
 				Error:  err,
 			}
 
-			if err != nil || execution.IsCompleted() {
+			if err != nil || result.IsCompleted() {
 				close(events)
 				return
 			}

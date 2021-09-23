@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "1fd733e7-f43f-45c0-a064-a115c1bdba7a",
+		"_postman_id": "15cf5cc0-f7d7-40e5-a366-e413d9c3c363",
 		"name": "Kubtest-Sanity",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -202,7 +202,6 @@
 							"pm.test(\"Check execution is created\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let script = pm.environment.get(\"script_name\")",
-							"    pm.expect(jsonData[\"scriptName\"]).to.eql(script);",
 							"    console.log(\"create response\", jsonData);",
 							"",
 							"    let executionName = jsonData.name ",
@@ -264,7 +263,7 @@
 							"pm.test(\"Check successfull test execution\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    console.log(\"response\", jsonData);",
-							"    let status = jsonData.execution.status;",
+							"    let status = jsonData.result.status;",
 							"    console.log(\"execution status\", status);",
 							"    ",
 							"    pm.expect(status).to.not.eq(\"error\");",
@@ -274,11 +273,10 @@
 							"        return;",
 							"    } ",
 							"",
-							"    pm.expect(jsonData.execution.status).to.eql(\"success\");",
-							"    pm.expect(jsonData[\"scriptName\"]).to.eql(pm.environment.get(\"script_name\"));",
+							"    pm.expect(jsonData.result.status).to.eql(\"success\");",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
-							"    pm.expect(jsonData.execution.result[\"output\"]).contains(\"Health\");",
-							"    pm.expect(jsonData.execution.result[\"output\"]).contains(\"200 OK\");",
+							"    pm.expect(jsonData.result[\"output\"]).contains(\"Health\");",
+							"    pm.expect(jsonData.result[\"output\"]).contains(\"200 OK\");",
 							"",
 							"});"
 						],
@@ -327,6 +325,7 @@
 						"exec": [
 							"pm.test(\"Successfull test execution\", function () {",
 							"    let jsonData = pm.response.json();",
+							"    console.log(jsonData)",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
 							"        if (jsonData[i].name == pm.environment.get(\"execution_name\")) {",
@@ -385,7 +384,6 @@
 							"    let jsonArray = pm.response.json();",
 							"    let jsonData = jsonArray[0];",
 							"",
-							"    pm.expect(jsonData[\"scriptName\"]).to.eql(pm.environment.get(\"script_name\"))",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
 							"});",
 							"",
@@ -441,11 +439,10 @@
 							"pm.test(\"Get execution by id\", function () {",
 							"    console.log(\"response\", pm.response.json());",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.execution.status).to.eql(\"success\");",
-							"    pm.expect(jsonData[\"scriptName\"]).to.eql(pm.environment.get(\"script_name\"));",
+							"    pm.expect(jsonData.result.status).to.eql(\"success\");",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
-							"    pm.expect(jsonData.execution.result[\"output\"]).contains(\"Health\");",
-							"    pm.expect(jsonData.execution.result[\"output\"]).contains(\"200 OK\");",
+							"    pm.expect(jsonData.result[\"output\"]).contains(\"Health\");",
+							"    pm.expect(jsonData.result[\"output\"]).contains(\"200 OK\");",
 							"});"
 						],
 						"type": "text/javascript"

@@ -13,13 +13,13 @@ func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	}
 }
 
-func NewExecution(scriptName, name, scriptType string, execution Result, params map[string]string) Execution {
+func NewExecution(scriptName, name, scriptType string, result Result, params map[string]string) Execution {
 	return Execution{
 		Id:         primitive.NewObjectID().Hex(),
-		Name:       name,
 		ScriptName: scriptName,
-		Result:     &execution,
+		Name:       name,
 		ScriptType: scriptType,
+		Result:     &result,
 		Params:     params,
 	}
 }
@@ -68,5 +68,10 @@ func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
 		Branch: branch,
 		Path:   path,
 	}
+	return e
+}
+
+func (e Execution) Err(err error) Execution {
+	e.Result.Err(err)
 	return e
 }

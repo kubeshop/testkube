@@ -26,5 +26,5 @@ type Execution struct {
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
-	Result *Result           `json:"execution,omitempty"`
+	Result *Result           `json:"result,omitempty"`
 }

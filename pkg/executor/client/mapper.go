@@ -18,6 +18,7 @@ func MapExecutionOptionsToStartRequest(options ExecuteOptions) kubtest.ExecutorS
 
 	// pass options to executor client get params from script execution request
 	request := kubtest.ExecutorStartRequest{
+		Id:         options.ID,
 		Type_:      options.ScriptSpec.Type_,
 		InputType:  options.ScriptSpec.InputType,
 		Content:    options.ScriptSpec.Content,

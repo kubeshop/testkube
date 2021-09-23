@@ -63,6 +63,10 @@ func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Execution, err
 	return r.Object, r.Error
 }
 
+func (r *RepoMock) UpdateResult(ctx context.Context, id string, result kubtest.Result) (err error) {
+	return r.Error
+}
+
 func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err error) {
 	return r.Error
 }

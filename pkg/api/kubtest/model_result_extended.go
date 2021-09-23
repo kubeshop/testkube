@@ -2,8 +2,6 @@ package kubtest
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -21,14 +19,12 @@ const (
 
 func NewResult() Result {
 	return Result{
-		Id:     primitive.NewObjectID().Hex(),
 		Status: ResultQueued,
 	}
 }
 
 func NewQueuedResult() Result {
 	return Result{
-		Id:     primitive.NewObjectID().Hex(),
 		Status: ResultQueued,
 	}
 }

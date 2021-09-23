@@ -42,12 +42,17 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) 
 	return
 }
 
+func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result kubtest.Result) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"result": result}})
+	return
+}
+
 func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
 	returnDocument := options.After
 	err = r.Coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"status": kubtest.ResultQueued},
-		bson.M{"$set": bson.M{"status": kubtest.ResultPending}},
+		bson.M{"result.status": kubtest.ResultQueued},
+		bson.M{"$set": bson.M{"result.status": kubtest.ResultPending}},
 		&options.FindOneAndUpdateOptions{ReturnDocument: &returnDocument},
 	).Decode(&result)
 	return

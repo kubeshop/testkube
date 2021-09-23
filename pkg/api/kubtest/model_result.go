@@ -15,8 +15,6 @@ import (
 
 // execution result returned from executor
 type Result struct {
-	// execution id
-	Id string `json:"id,omitempty"`
 	// execution status
 	Status string `json:"status,omitempty"`
 	// test start time
