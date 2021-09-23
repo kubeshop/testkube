@@ -9,9 +9,9 @@
  */
 package kubtest
 
-// scripts execution request body
+// scripts execution request body when calling new execution request
 type ExecutorStartRequest struct {
-	// Id passed by api server
+	// ID of script execution to handle by executor, execution need to be able to return execution info based on this ID
 	Id string `json:"id,omitempty"`
 	// script type
 	Type_ string `json:"type,omitempty"`

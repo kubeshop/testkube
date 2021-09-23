@@ -21,7 +21,6 @@ type Result struct {
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
 	EndTime time.Time `json:"endTime,omitempty"`
-	// script execution status
 	// RAW Script execution output, depends of reporter used in particular tool
 	Output string `json:"output,omitempty"`
 	// output type depends of reporter used in partucular tool

@@ -9,7 +9,7 @@
  */
 package kubtest
 
-// scripts execution request body
+// repository representation for tests in git repositories
 type Repository struct {
 	// VCS repository type
 	Type_ string `json:"type"`

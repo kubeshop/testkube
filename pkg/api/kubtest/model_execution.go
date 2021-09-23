@@ -18,12 +18,12 @@ type Execution struct {
 	// script type e.g. postman/collection
 	ScriptType string `json:"scriptType,omitempty"`
 	// execution name
+	Name string `json:"name,omitempty"`
+	// execution envs passed to executor
+	Envs map[string]string `json:"envs,omitempty"`
 	// script metadata content
 	ScriptContent string      `json:"scriptContent,omitempty"`
 	Repository    *Repository `json:"repository,omitempty"`
-	Name          string      `json:"name,omitempty"`
-	// execution envs passed to executor
-	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
 	Result *Result           `json:"result,omitempty"`
