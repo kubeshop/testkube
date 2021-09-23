@@ -43,7 +43,7 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) 
 }
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"result": result}})
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
 	return
 }
 
@@ -51,8 +51,8 @@ func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Executi
 	returnDocument := options.After
 	err = r.Coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"result.status": kubtest.ResultQueued},
-		bson.M{"$set": bson.M{"result.status": kubtest.ResultPending}},
+		bson.M{"executionresult.status": kubtest.ResultQueued},
+		bson.M{"$set": bson.M{"executionresult.status": kubtest.ResultPending}},
 		&options.FindOneAndUpdateOptions{ReturnDocument: &returnDocument},
 	).Decode(&result)
 	return
