@@ -18,8 +18,7 @@ type Result struct {
 	// execution id
 	Id string `json:"id,omitempty"`
 	// execution status
-	Status string           `json:"status,omitempty"`
-	Result *ExecutionResult `json:"result,omitempty"`
+	Status string `json:"status,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

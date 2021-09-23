@@ -199,8 +199,8 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Exe
 		l.Infow("got execution event", "event", result)
 
 		// if something changed during execution
-		if event.Error != nil || result.Status != execution.Result.Status || result.Result.Output != execution.Result.Result.Output {
-			l.Infow("watch - saving script execution", "oldStatus", execution.Result.Status, "newStatus", result.Status, "result", result.Result)
+		if event.Error != nil || result.Status != execution.Result.Status || result.Output != execution.Result.Output {
+			l.Infow("watch - saving script execution", "oldStatus", execution.Result.Status, "newStatus", result.Status, "result", result)
 			l.Debugw("watch - saving script execution - debug", "execution", execution)
 
 			err := s.Repository.UpdateResult(ctx, execution.Id, result)

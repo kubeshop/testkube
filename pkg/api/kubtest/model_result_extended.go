@@ -23,7 +23,6 @@ func NewResult() Result {
 	return Result{
 		Id:     primitive.NewObjectID().Hex(),
 		Status: ResultQueued,
-		Result: &ExecutionResult{Status: ResultQueued},
 	}
 }
 
@@ -31,7 +30,6 @@ func NewQueuedResult() Result {
 	return Result{
 		Id:     primitive.NewObjectID().Hex(),
 		Status: ResultQueued,
-		Result: &ExecutionResult{Status: ResultQueued},
 	}
 }
 
