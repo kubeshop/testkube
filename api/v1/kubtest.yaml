@@ -409,7 +409,7 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        result:
+        executionResult:
           required: true
           description: result get from executor
           $ref: '#/components/schemas/ExecutionResult'
