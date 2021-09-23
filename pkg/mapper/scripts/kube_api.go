@@ -7,12 +7,12 @@ import (
 
 func MapScriptListKubeToAPI(crScripts scriptsV1.ScriptList) (scripts []kubtest.Script) {
 	for _, item := range crScripts.Items {
-		scripts = append(scripts, MapScriptKubeToAPI(item))
+		scripts = append(scripts, MapScriptCRToAPI(item))
 	}
 
 	return
 }
-func MapScriptKubeToAPI(crScript scriptsV1.Script) (script kubtest.Script) {
+func MapScriptCRToAPI(crScript scriptsV1.Script) (script kubtest.Script) {
 	script.Name = crScript.Name
 	script.Content = crScript.Spec.Content
 	script.Created = crScript.Status.LastExecution.Time

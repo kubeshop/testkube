@@ -32,7 +32,7 @@ func (s kubtestAPI) GetScript() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		scripts := scriptsMapper.MapScriptKubeToAPI(*crScript)
+		scripts := scriptsMapper.MapScriptCRToAPI(*crScript)
 
 		return c.JSON(scripts)
 	}
