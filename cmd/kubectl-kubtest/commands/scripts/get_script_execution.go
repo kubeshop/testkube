@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGetScriptExecutionCmd() *cobra.Command {
+func NewGetExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execution",
 		Short: "Gets script execution details",

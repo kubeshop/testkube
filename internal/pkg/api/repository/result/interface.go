@@ -13,8 +13,8 @@ type Repository interface {
 	GetByNameAndScript(ctx context.Context, name, script string) (kubtest.Execution, error)
 	// GetNewestExecutions gets top X newest executions
 	GetNewestExecutions(ctx context.Context, limit int) ([]kubtest.Execution, error)
-	// GetScriptExecutions gets executions for given script ID
-	GetScriptExecutions(ctx context.Context, scriptID string) ([]kubtest.Execution, error)
+	// GetExecutions gets executions for given script ID
+	GetExecutions(ctx context.Context, scriptID string) ([]kubtest.Execution, error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result kubtest.Execution) error
 	// Update updates execution result

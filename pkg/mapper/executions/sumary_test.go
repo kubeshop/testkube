@@ -9,7 +9,7 @@ import (
 
 func TestMapToSummary(t *testing.T) {
 	// given
-	executions := getScriptExecutions()
+	executions := getExecutions()
 
 	// when
 	result := MapToSummary(executions)
@@ -26,12 +26,12 @@ func TestMapToSummary(t *testing.T) {
 	}
 }
 
-func getScriptExecutions() kubtest.ScriptExecutions {
+func getExecutions() kubtest.Executions {
 	ex1 := new(kubtest.Result)
 	ex1.Start()
 	ex1.Stop()
 
-	execution1 := kubtest.NewScriptExecution(
+	execution1 := kubtest.NewExecution(
 		"script1",
 		"execution1",
 		"test/test",
@@ -42,7 +42,7 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 	ex2.Start()
 	ex2.Stop()
 
-	execution2 := kubtest.NewScriptExecution(
+	execution2 := kubtest.NewExecution(
 		"script1",
 		"execution2",
 		"test/test",
@@ -50,7 +50,7 @@ func getScriptExecutions() kubtest.ScriptExecutions {
 		map[string]string{"p": "v2"},
 	)
 
-	return kubtest.ScriptExecutions{
+	return kubtest.Executions{
 		execution1,
 		execution2,
 	}

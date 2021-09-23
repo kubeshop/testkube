@@ -47,7 +47,7 @@ func (s kubtestAPI) Init() {
 	executions := s.Routes.Group("/executions")
 
 	executions.Get("/", s.ListExecutions())
-	executions.Get("/:executionID", s.GetScriptExecution())
+	executions.Get("/:executionID", s.GetExecution())
 
 	scripts := s.Routes.Group("/scripts")
 
@@ -59,5 +59,5 @@ func (s kubtestAPI) Init() {
 	scripts.Post("/:id/executions/:executionID/abort", s.AbortExecution())
 
 	scripts.Get("/:id/executions", s.ListExecutions())
-	scripts.Get("/:id/executions/:executionID", s.GetScriptExecution())
+	scripts.Get("/:id/executions/:executionID", s.GetExecution())
 }

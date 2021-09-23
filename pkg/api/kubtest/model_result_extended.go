@@ -86,3 +86,7 @@ func (e *Result) Duration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
+func (r Result) Err(err error) Result {
+	r.ErrorMessage = err.Error()
+	return r
+}

@@ -35,7 +35,7 @@ func NewStartScriptCmd() *cobra.Command {
 			execution, err := client.ExecuteScript(scriptID, namespace, name, params)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
-			PrintScriptExecutionDetails(execution)
+			PrintExecutionDetails(execution)
 
 			result := execution.Result
 

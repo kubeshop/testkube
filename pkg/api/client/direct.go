@@ -73,7 +73,7 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.ScriptExecutions, err error) {
+func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Executions, err error) {
 	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -180,7 +180,7 @@ func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (executi
 	return
 }
 
-func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubtest.ScriptExecutions, err error) {
+func (c DirectScriptsAPI) getExecutionsFromResponse(resp *http.Response) (executions kubtest.Executions, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&executions)

@@ -44,7 +44,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) GetScriptExecutions(ctx context.Context, id string) (result []kubtest.Execution, err error) {
+func (r *MongoRepository) GetExecutions(ctx context.Context, id string) (result []kubtest.Execution, err error) {
 	cursor, err := r.Coll.Find(ctx, bson.M{"scriptname": id})
 	if err != nil {
 		return result, err

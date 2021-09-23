@@ -153,7 +153,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// store execution in storage, can be get from API now
-		execution = NewScriptExecutionFromExecutionOptions(options)
+		execution = NewExecutionFromExecutionOptions(options)
 		err = s.Repository.Insert(ctx, execution)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
@@ -233,7 +233,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 			executions, err = s.Repository.GetNewestExecutions(ctx, pager.Limit)
 		} else {
 			l.Infow("Getting script executions")
-			executions, err = s.Repository.GetScriptExecutions(ctx, scriptID)
+			executions, err = s.Repository.GetExecutions(ctx, scriptID)
 		}
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -246,8 +246,8 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 	}
 }
 
-// GetScriptExecution returns script execution object for given script and execution id
-func (s kubtestAPI) GetScriptExecution() fiber.Handler {
+// GetExecution returns script execution object for given script and execution id
+func (s kubtestAPI) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		scriptID := c.Params("id", "-")
@@ -299,8 +299,8 @@ func (s kubtestAPI) AbortExecution() fiber.Handler {
 	}
 }
 
-func NewScriptExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.Execution {
-	return kubtest.NewScriptExecution(
+func NewExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.Execution {
+	return kubtest.NewExecution(
 		options.ScriptSpec.Name,
 		options.Request.Name,
 		options.ScriptSpec.Type_,

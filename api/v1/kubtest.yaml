@@ -71,7 +71,7 @@ paths:
         - api
       summary: 'Get script execution by ID'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecutionByID
+      operationId: getExecutionByID
       responses:
         200:
           description: successful operation
@@ -261,7 +261,7 @@ paths:
         - executions
       summary: 'Get all script executions'
       description: 'Returns array of all available script executions'
-      operationId: listScriptExecutions
+      operationId: listExecutions
       responses:
         200:
           description: successful operation
@@ -301,7 +301,7 @@ paths:
         - executions
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecution
+      operationId: getExecution
       responses:
         200:
           description: successful operation
@@ -339,7 +339,7 @@ paths:
         - executions
       summary: 'Aborts execution'
       description: 'Aborts execution and returns execution details'
-      operationId: abortScriptExecution
+      operationId: abortExecution
       responses:
         501:
           description: not implemented yet

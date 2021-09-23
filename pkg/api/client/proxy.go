@@ -84,7 +84,7 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution k
 }
 
 // ListExecutions list all executions for given script name
-func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions kubtest.ScriptExecutions, err error) {
+func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Executions, err error) {
 	uri := fmt.Sprintf("v1/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -183,7 +183,7 @@ func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution k
 	return execution, err
 }
 
-func (c ProxyScriptsAPI) getExecutionsFromResponse(resp rest.Result) (executions kubtest.ScriptExecutions, err error) {
+func (c ProxyScriptsAPI) getExecutionsFromResponse(resp rest.Result) (executions kubtest.Executions, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executions, err

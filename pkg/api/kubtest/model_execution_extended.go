@@ -13,7 +13,7 @@ func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	}
 }
 
-func NewScriptExecution(scriptName, name, scriptType string, execution Result, params map[string]string) Execution {
+func NewExecution(scriptName, name, scriptType string, execution Result, params map[string]string) Execution {
 	return Execution{
 		Id:         primitive.NewObjectID().Hex(),
 		Name:       name,
@@ -24,9 +24,9 @@ func NewScriptExecution(scriptName, name, scriptType string, execution Result, p
 	}
 }
 
-type ScriptExecutions []Execution
+type Executions []Execution
 
-func (executions ScriptExecutions) Table() (header []string, output [][]string) {
+func (executions Executions) Table() (header []string, output [][]string) {
 	header = []string{"Script", "Type", "Name", "ID", "Status"}
 
 	for _, e := range executions {

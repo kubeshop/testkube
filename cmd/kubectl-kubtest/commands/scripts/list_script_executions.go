@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewListScriptExecutionsCmd() *cobra.Command {
+func NewListExecutionsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "executions",
 		Short: "List scripts executions",
