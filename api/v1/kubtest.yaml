@@ -32,22 +32,16 @@ paths:
       description: 'Returns array of scripts executions'
       operationId: listExecutions
       parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 100
-          description: the number of executions to get
-          required: false
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ExecutionSummary'
+                $ref: '#/components/schemas/ExecutionsResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -255,6 +249,9 @@ paths:
             type: string
           required: true
           description: ID of the script
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       tags:
         - api
         - scripts
@@ -268,9 +265,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ExecutionSummary'
+                $ref: '#/components/schemas/ExecutionsResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -414,9 +409,29 @@ components:
           description: result get from executor
           $ref: '#/components/schemas/ExecutionResult'
 
+    ExecutionsResult:
+      description: the result for a page of executions
+      type: object
+      required:
+        - totals
+        - results
+      properties:
+        totals:
+          $ref: '#/components/schemas/ExecutionsTotals'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionSummary'
+
     ExecutionSummary:
       description: execution summary
       type: object
+      required:
+        - id
+        - name
+        - scriptName
+        - scriptType
+        - status
       properties:
         id:
           type: string
@@ -432,13 +447,7 @@ components:
           type: string
           description: the type of script for this execution
         status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - error
+          $ref: '#/components/schemas/ExecutionStatus'
         startTime:
           type: string
           description: 'test execution start time'
@@ -448,18 +457,22 @@ components:
           description: 'test execution end time'
           format: date-time
 
+    ExecutionStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - error
+
     ExecutionResult:
       description: execution result returned from executor
       type: object
+      required:
+        - status
       properties:
         status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - error
+          $ref: '#/components/schemas/ExecutionStatus'
         startTime:
           type: string
           description: 'test start time'
@@ -487,10 +500,12 @@ components:
             $ref: '#/components/schemas/ExecutionStepResult'
           description: execution steps (for collection of requests)
 
-
     ExecutionStepResult:
       description: execution result data
       type: object
+      required:
+        - name
+        - status
       properties:
         name:
           type: string
@@ -520,7 +535,31 @@ components:
           type: string
           nullable: true
 
-
+    ExecutionsTotals:
+      type: object
+      description: various execution counters
+      required:
+        - results
+        - passed
+        - failed
+        - queued
+        - pending
+      properties:
+        results:
+          type: integer
+          description: the total number of executions available
+        passed:
+          type: integer
+          description: the total number of passed executions available
+        failed:
+          type: integer
+          description: the total number of failed executions available
+        queued:
+          type: integer
+          description: the total number of queued executions available
+        pending:
+          type: integer
+          description: the total number of running executions available
 
     #
     # Requests
@@ -685,3 +724,32 @@ components:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
           example: http://10.23.23.123:8088/scripts
+
+  #
+  # Parameters
+  #
+
+  parameters:
+    ExecutionsPageSize:
+      in: query
+      name: pageSize
+      schema:
+        type: integer
+        default: 100
+      description: the number of executions to get, setting to 0 will return only totals
+      required: false
+    ExecutionsPageIndex:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 0
+      description: the page index to start at
+      required: false
+    ExecutionsStatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: '#/components/schemas/ExecutionStatus'
+      description: optional status filter
+      required: false

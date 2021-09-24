@@ -16,15 +16,14 @@ import (
 // execution summary
 type ExecutionSummary struct {
 	// execution id
-	Id string `json:"id,omitempty"`
+	Id string `json:"id"`
 	// execution name
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// name of the script
-	ScriptName string `json:"scriptName,omitempty"`
+	ScriptName string `json:"scriptName"`
 	// the type of script for this execution
-	ScriptType string `json:"scriptType,omitempty"`
-	// execution status
-	Status string `json:"status,omitempty"`
+	ScriptType string           `json:"scriptType"`
+	Status     *ExecutionStatus `json:"status"`
 	// test execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time

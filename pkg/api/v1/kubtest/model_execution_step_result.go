@@ -12,9 +12,9 @@ package kubtest
 // execution result data
 type ExecutionStepResult struct {
 	// step name
-	Name     string `json:"name,omitempty"`
+	Name     string `json:"name"`
 	Duration string `json:"duration,omitempty"`
 	// execution step status
-	Status           string            `json:"status,omitempty"`
+	Status           string            `json:"status"`
 	AssertionResults []AssertionResult `json:"assertionResults,omitempty"`
 }

@@ -4,28 +4,15 @@ import (
 	"time"
 )
 
-const (
-	// ResultCreated status for execution which is requested to queue
-	ResultCreated = "created"
-	// ResultQueued status for execution which is added for queue but not get yet by worker
-	ResultQueued = "queued"
-	// ResultPending status for execution which is taken by worker
-	ResultPending = "pending"
-	// ResultSuceess execution complete with success
-	ResultSuceess = "success"
-	// ResultError execution failed
-	ResultError = "error"
-)
-
 func NewResult() ExecutionResult {
 	return ExecutionResult{
-		Status: ResultQueued,
+		Status: StatusPtr(QUEUED_ExecutionStatus),
 	}
 }
 
 func NewQueuedResult() ExecutionResult {
 	return ExecutionResult{
-		Status: ResultQueued,
+		Status: StatusPtr(QUEUED_ExecutionStatus),
 	}
 }
 
@@ -38,11 +25,11 @@ func (e *ExecutionResult) Stop() {
 }
 
 func (e *ExecutionResult) Success() {
-	e.Status = ResultSuceess
+	e.Status = StatusPtr(SUCCESS_ExecutionStatus)
 }
 
 func (e *ExecutionResult) Error() {
-	e.Status = ResultError
+	e.Status = StatusPtr(ERROR__ExecutionStatus)
 }
 
 func (e *ExecutionResult) IsCompleted() bool {
@@ -50,19 +37,19 @@ func (e *ExecutionResult) IsCompleted() bool {
 }
 
 func (e *ExecutionResult) IsPending() bool {
-	return e.Status == ResultPending
+	return *e.Status == PENDING_ExecutionStatus
 }
 
 func (e *ExecutionResult) IsQueued() bool {
-	return e.Status == ResultQueued
+	return *e.Status == QUEUED_ExecutionStatus
 }
 
 func (e *ExecutionResult) IsSuccesful() bool {
-	return e.Status == ResultSuceess
+	return *e.Status == SUCCESS_ExecutionStatus
 }
 
 func (e *ExecutionResult) IsFailed() bool {
-	return e.Status == ResultError
+	return *e.Status == ERROR__ExecutionStatus
 }
 
 func (e *ExecutionResult) Duration() time.Duration {
