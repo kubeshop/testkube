@@ -22,6 +22,21 @@ func ExitOnError(item string, errors ...error) {
 	}
 }
 
+func WarnOnError(item string, errors ...error) {
+	if len(errors) > 0 && hasErrors(errors...) {
+		for _, err := range errors {
+			if err != nil {
+				fmt.Printf("%s %s (error: %s)\n\n", color.LightYellow("⨯"), color.Yellow(item), err)
+				return
+			}
+		}
+	}
+
+	if Verbose {
+		fmt.Printf("%s %s\n", color.Blue("\xE2\x9C\x94"), color.Green(item))
+	}
+}
+
 func hasErrors(errors ...error) bool {
 	if len(errors) > 0 {
 		for _, err := range errors {
