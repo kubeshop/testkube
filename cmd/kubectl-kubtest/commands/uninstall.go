@@ -22,16 +22,16 @@ func NewUninstallCmd() *cobra.Command {
 			ui.Logo()
 
 			_, err := process.Execute("helm", "uninstall", "--namespace", namespace, name)
-			ui.ExitOnError("uninstalling kubtest", err)
+			ui.PrintOnError("uninstalling kubtest", err)
 
 			if removeCRDs {
 				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.kubtest.io", "executors.executor.kubtest.io")
-				ui.ExitOnError("uninstalling CRDs", err)
+				ui.PrintOnError("uninstalling CRDs", err)
 			}
 
-			if isIngressInstalled() {
+			if isChartInstalled(IngressControllerName) {
 				_, err := process.Execute("helm", "uninstall", "--namespace", namespace, IngressControllerName)
-				ui.ExitOnError("uninstalling ingress controller", err)
+				ui.PrintOnError("uninstalling ingress controller", err)
 			}
 		},
 	}
@@ -43,7 +43,7 @@ func NewUninstallCmd() *cobra.Command {
 	return cmd
 }
 
-func isIngressInstalled() bool {
+func isChartInstalled(chart string) bool {
 	output, _ := process.Execute("helm", "list", "--namespace", namespace)
-	return strings.Contains(string(output), IngressControllerName)
+	return strings.Contains(string(output), chart)
 }

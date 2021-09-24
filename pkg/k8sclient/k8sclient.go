@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,14 +21,19 @@ func ConnectToK8s() (*kubernetes.Clientset, error) {
 	var err error
 	var config *rest.Config
 	k8sConfigExists := false
-	cubeConfigPath, _ := filepath.Abs("~/.kube/config")
+	homeDir, _ := os.UserHomeDir()
+	cubeConfigPath := path.Join(homeDir, ".kube/config")
+
 	if _, err := os.Stat(cubeConfigPath); err == nil {
 		k8sConfigExists = true
 	}
-	if cfg, exists := os.LookupEnv("KUBECONFIG"); !exists && !k8sConfigExists {
-		config, err = rest.InClusterConfig()
-	} else {
+
+	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists {
 		config, err = clientcmd.BuildConfigFromFlags("", cfg)
+	} else if k8sConfigExists {
+		config, err = clientcmd.BuildConfigFromFlags("", cubeConfigPath)
+	} else {
+		config, err = rest.InClusterConfig()
 	}
 
 	if err != nil {
@@ -117,4 +122,42 @@ func IsPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.Condi
 		}
 		return false, nil
 	}
+}
+
+// IsPodReady check if the pod in question is running state
+func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if len(pod.Status.ContainerStatuses) == 0 {
+			return false, nil
+		}
+
+		for _, c := range pod.Status.ContainerStatuses {
+			if !c.Ready {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+}
+
+// WaitForPodsReadyForInstance wait for pods to be running with a timeout, return error
+func WaitForPodsReadyForInstance(k8sClient *kubernetes.Clientset, namespace string, instance string, timeout time.Duration) error {
+
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + instance})
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			if err := wait.PollImmediate(time.Second, timeout, IsPodReady(k8sClient, pod.Name, namespace)); err != nil {
+				return err
+			}
+		}
+	}
+	return err
 }
