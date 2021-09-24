@@ -77,7 +77,6 @@ func NewReleaseCmd() *cobra.Command {
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
 				{"kubtest previous version", kubtestVersion},
-				{"-----", "-----"},
 				{appName + " next version", nextAppVersion},
 				{"kubtest next version", nextKubtestVersion},
 			})
