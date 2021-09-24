@@ -27,6 +27,9 @@ func NewInstallCmd() *cobra.Command {
 
 			ui.Logo()
 
+			chart := cmd.Flag("chart").Value.String()
+			name := cmd.Flag("name").Value.String()
+			namespace := cmd.Flag("namespace").Value.String()
 			var err error
 			if installIngress {
 				err = installIngressController(namespace)
@@ -44,7 +47,6 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("executing helm install", err)
 
 			ui.Info("Helm install output", string(out))
-
 			k8sClient, err := k8sclient.ConnectToK8s()
 			if err != nil {
 				ui.Info("Cannot get the ingress info", err.Error())
