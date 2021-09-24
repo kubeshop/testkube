@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/problem"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -59,7 +59,7 @@ type ProxyScriptsAPI struct {
 }
 
 func (c ProxyScriptsAPI) GetScript(id string) (script kubtest.Script, err error) {
-	uri := fmt.Sprintf("v1/scripts/%s", id)
+	uri := c.getURI("/scripts/%s", id)
 	req := c.GetProxy("GET").Suffix(uri)
 
 	resp := req.Do(context.Background())
@@ -72,7 +72,7 @@ func (c ProxyScriptsAPI) GetScript(id string) (script kubtest.Script, err error)
 }
 
 func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution kubtest.Execution, err error) {
-	uri := fmt.Sprintf("v1/scripts/%s/executions/%s", scriptID, executionID)
+	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -85,7 +85,7 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution k
 
 // ListExecutions list all executions for given script name
 func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Executions, err error) {
-	uri := fmt.Sprintf("v1/scripts/%s/executions", scriptID)
+	uri := c.getURI("/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -98,7 +98,7 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Exe
 
 // CreateScript creates new Script Custom Resource
 func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script kubtest.Script, err error) {
-	uri := "/v1/scripts"
+	uri := c.getURI("/scripts")
 
 	request := kubtest.ScriptCreateRequest(options)
 
@@ -121,7 +121,7 @@ func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script kubte
 // Execution is started asynchronously client can check later for results
 func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.Execution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
-	uri := fmt.Sprintf("v1/scripts/%s/executions", id)
+	uri := c.getURI("/scripts/%s/executions", id)
 
 	request := kubtest.ExecutionRequest{
 		Name:      executionName,
@@ -146,8 +146,9 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 
 // GetExecutions list all executions in given script
 func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts, err error) {
+	uri := c.getURI("/scripts")
 	req := c.GetProxy("GET").
-		Suffix("v1/scripts").
+		Suffix(uri).
 		Param("namespace", namespace)
 
 	resp := req.Do(context.Background())
@@ -161,7 +162,7 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts,
 
 // GetExecutions list all executions in given script
 func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
-	uri := fmt.Sprintf("v1/scripts/%s/executions/%s/abort", scriptID, id)
+	uri := c.getURI("/scripts/%s/executions/%s/abort", scriptID, id)
 	req := c.GetProxy("POST").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -253,4 +254,9 @@ func (c ProxyScriptsAPI) GetProxy(requestType string) *rest.Request {
 		SetHeader("Content-Type", "application/json").
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy")
+}
+
+func (c ProxyScriptsAPI) getURI(pathTemplate string, params ...interface{}) string {
+	path := fmt.Sprintf(pathTemplate, params...)
+	return fmt.Sprintf("%s%s", Version, path)
 }

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/problem"
 )
 

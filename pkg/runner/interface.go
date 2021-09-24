@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 // Runner interface to abstract runners implementations

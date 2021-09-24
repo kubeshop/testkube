@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 func MapExecutionOptionsToStartRequest(options ExecuteOptions) kubtest.ExecutorStartRequest {

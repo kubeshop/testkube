@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/problem"
 )
 
@@ -24,7 +24,7 @@ type Config struct {
 var config Config
 
 func init() {
-	envconfig.Process("kubtest_API", &config)
+	envconfig.Process("KUBTEST_API", &config)
 }
 func NewDirectScriptsAPI(uri string) DirectScriptsAPI {
 	return DirectScriptsAPI{
@@ -45,7 +45,7 @@ type DirectScriptsAPI struct {
 }
 
 func (c DirectScriptsAPI) GetScript(id string) (script kubtest.Script, err error) {
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s", id)
+	uri := c.getURI("/scripts/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return script, err
@@ -59,7 +59,8 @@ func (c DirectScriptsAPI) GetScript(id string) (script kubtest.Script, err error
 }
 
 func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution kubtest.Execution, err error) {
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions/%s", scriptID, executionID)
+	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
+
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return execution, err
@@ -74,7 +75,7 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 
 // ListExecutions list all executions for given script name
 func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Executions, err error) {
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", scriptID)
+	uri := c.getURI("/scripts/%s/executions", scriptID)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return executions, err
@@ -89,7 +90,7 @@ func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions kubtest.Ex
 
 // CreateScript creates new Script Custom Resource
 func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script kubtest.Script, err error) {
-	uri := fmt.Sprintf(c.URI + "/v1/scripts")
+	uri := c.getURI("/scripts")
 
 	request := kubtest.ScriptCreateRequest(options)
 
@@ -114,7 +115,7 @@ func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script kubt
 // Execution is started asynchronously client can check later for results
 func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.Execution, err error) {
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions", id)
+	uri := c.getURI("/scripts/%s/executions", id)
 
 	request := kubtest.ExecutionRequest{
 		Name:      executionName,
@@ -141,7 +142,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 
 // GetExecutions list all executions in given script
 func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts, err error) {
-	uri := fmt.Sprintf(c.URI+"/v1/scripts?namespace=%s", namespace)
+	uri := c.getURI("/scripts?namespace=%s", namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return scripts, fmt.Errorf("GET client error: %w", err)
@@ -157,11 +158,9 @@ func (c DirectScriptsAPI) ListScripts(namespace string) (scripts kubtest.Scripts
 }
 
 func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
-	fmt.Println("TADA")
-	uri := fmt.Sprintf(c.URI+"/v1/scripts/%s/executions/%s/abort", scriptID, id)
+	uri := c.getURI("/scripts/%s/executions/%s/abort", scriptID, id)
 	resp, err := c.client.Post(uri, "application/json", nil)
 
-	fmt.Println("DELETE", uri)
 	if err != nil {
 		return err
 	}
@@ -214,4 +213,9 @@ func (c DirectScriptsAPI) responseError(resp *http.Response) error {
 	}
 
 	return nil
+}
+
+func (c DirectScriptsAPI) getURI(pathTemplate string, params ...interface{}) string {
+	path := fmt.Sprintf(pathTemplate, params...)
+	return fmt.Sprintf("%s/%s%s", c.URI, Version, path)
 }

@@ -6,7 +6,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/spf13/cobra"
 )
 

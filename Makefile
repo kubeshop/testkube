@@ -38,10 +38,10 @@ openapi-generate-model: openapi-generate-model-kubtest
 
 openapi-generate-model-kubtest:
 	swagger-codegen generate -i api/v1/kubtest.yaml -l go -o tmp/api/kubtest
-	mv tmp/api/kubtest/model_*.go pkg/api/kubtest
+	mv tmp/api/kubtest/model_*.go pkg/api/v1/kubtest
 	rm -rf tmp
-	find ./pkg/api/kubtest -type f -exec sed -i '' -e "s/package swagger/package kubtest/g" {} \;
-	go fmt pkg/api/kubtest/*.go
+	find ./pkg/api/v1/kubtest -type f -exec sed -i '' -e "s/package swagger/package kubtest/g" {} \;
+	go fmt pkg/api/v1/kubtest/*.go
 	
 
 test: 
