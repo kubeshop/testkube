@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/kubeshop/kubtest/pkg/k8sclient"
 	"github.com/kubeshop/kubtest/pkg/process"
@@ -34,7 +33,7 @@ func NewInstallCmd() *cobra.Command {
 			if installIngress {
 				err = installIngressController(namespace)
 				ui.PrintOnError("installing ingress controller", err)
-				time.Sleep(20 * time.Second)
+				//time.Sleep(20 * time.Second)
 			}
 
 			_, err = process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
@@ -49,7 +48,7 @@ func NewInstallCmd() *cobra.Command {
 			ui.Info("Helm install output", string(out))
 			k8sClient, err := k8sclient.ConnectToK8s()
 			if err != nil {
-				ui.Info("Cannot get the ingress info", err.Error())
+				ui.Info("Cannot connect", err.Error())
 				return
 			}
 
