@@ -124,7 +124,7 @@ func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result k
 		if jerr := json.Unmarshal(bytes, &out); jerr != nil {
 			return result, fmt.Errorf("JSON decode error: %w", fmt.Errorf("%w", jerr))
 		}
-		fmt.Printf("%+v\n", out)
+		return result, fmt.Errorf("no result in execution: %w, trying to decode response: %+v", err, out)
 	}
 
 	return *execution.ExecutionResult, nil
