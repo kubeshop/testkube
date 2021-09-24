@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/kubeshop/kubtest/pkg/k8sclient"
 	"github.com/kubeshop/kubtest/pkg/process"
 	"github.com/kubeshop/kubtest/pkg/ui"
@@ -28,6 +31,7 @@ func NewInstallCmd() *cobra.Command {
 			if installIngress {
 				err = installIngressController(namespace)
 				ui.PrintOnError("installing ingress controller", err)
+				time.Sleep(20 * time.Second)
 			}
 
 			_, err = process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
@@ -36,10 +40,11 @@ func NewInstallCmd() *cobra.Command {
 			_, err = process.Execute("helm", "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
 
-			out, err := process.Execute("helm", "upgrade", "--install", "--namespace", namespace, name, chart)
+			out, err := process.Execute("helm", "install", "--namespace", namespace, name, chart)
 			ui.ExitOnError("executing helm install", err)
 
 			ui.Info("Helm install output", string(out))
+
 			k8sClient, err := k8sclient.ConnectToK8s()
 			if err != nil {
 				ui.Info("Cannot get the ingress info", err.Error())
@@ -47,13 +52,14 @@ func NewInstallCmd() *cobra.Command {
 			}
 
 			//TODO: get automatically the name of the api-server
-			apiServerName := "api-server"
-			ingressAddress, err := k8sclient.GetIngressAddress(k8sClient, apiServerName, namespace)
+			ingressAddress, err := k8sclient.GetIngressAddress(k8sClient, IngressApiServerName, namespace)
 			if err != nil {
 				ui.Info("Cannot get the ingress address", err.Error())
 				return
 			}
-			completeServerApiAddress := "http://dashboard.kubtest.io?apiEndpoint=" + ingressAddress + "/kubtest-dash/v1/executions/"
+
+			// TODO: Add version from constant
+			completeServerApiAddress := fmt.Sprintf("%s%s/%s/v1/executions/", DashboardURI, ingressAddress, DashboardPrefix)
 
 			ui.Info("Kubtest dashboard can be accessed at the address ", completeServerApiAddress)
 
@@ -78,7 +84,7 @@ func installIngressController(namespace string) error {
 		return err
 	}
 
-	_, err = process.Execute("helm", "install", "--namespace", namespace, "kubtest-ing-ctrlr", "ingress-nginx/ingress-nginx")
+	_, err = process.Execute("helm", "install", "--namespace", namespace, IngressControllerName, "ingress-nginx/ingress-nginx")
 	if err != nil {
 		return err
 	}
