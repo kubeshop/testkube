@@ -1,6 +1,6 @@
 package executions
 
-import "github.com/kubeshop/kubtest/pkg/api/kubtest"
+import "github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 
 func MapToSummary(executions []kubtest.Execution) []kubtest.ExecutionSummary {
 	result := make([]kubtest.ExecutionSummary, len(executions))

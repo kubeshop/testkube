@@ -5,7 +5,7 @@ import (
 
 	executorv1 "github.com/kubeshop/kubtest-operator/apis/executor/v1"
 	scriptv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 const (

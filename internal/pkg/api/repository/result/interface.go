@@ -3,7 +3,7 @@ package result
 import (
 	"context"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 type Repository interface {

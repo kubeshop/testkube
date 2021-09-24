@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 type HTTPClient interface {

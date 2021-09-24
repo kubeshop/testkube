@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
 	"github.com/kubeshop/kubtest/pkg/log"
 	"github.com/kubeshop/kubtest/pkg/runner"
