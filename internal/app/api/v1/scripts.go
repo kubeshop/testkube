@@ -159,9 +159,6 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 		execution = NewExecutionFromExecutionOptions(options)
 		options.ID = execution.Id
 
-		fmt.Printf("OPTIONS !!!!!!!! %+v\n", options)
-		fmt.Printf("INSERTING !!!!!!!! %+v\n", execution)
-
 		err = s.Repository.Insert(ctx, execution)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
