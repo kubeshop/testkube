@@ -35,6 +35,8 @@ You should have everything installed 🏅
 
 By default kubtest is installed in `default` namespace but you can change it in manual install if you want.
 
+If you want kubtest to provide the endpoint for the kubest dashboard use `kubectl kubtest install -i` with the `-i` or `--ingress` option, it will setup a ingress-nginx controller for you in a managed cluster(for baremetal clusters this should be set up manually before installing kubtest).
+
 ### Manual kubtest Helm charts installation
 
 [Helm](https://helm.sh) must be installed to use the charts.  

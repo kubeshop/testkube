@@ -5,19 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/kubtest/pkg/k8sclient"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type JobClient struct {
@@ -27,7 +25,7 @@ type JobClient struct {
 }
 
 func NewJobClient() (*JobClient, error) {
-	clientSet, err := connectToK8s()
+	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +47,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		}, err
 	}
 
-	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeBound(c.ClientSet, jobName, c.Namespace)); err != nil {
+	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return kubtest.ExecutionResult{
 			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
@@ -62,7 +60,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 			ErrorMessage: err.Error(),
 		}, err
 	}
-	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
+	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return kubtest.ExecutionResult{
 			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
@@ -138,7 +136,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
 			if pod.Labels["job-name"] == jobName {
-				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					return kubtest.ExecutionResult{
 						Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 						ErrorMessage: err.Error(),
@@ -159,80 +157,6 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
 		Output: result,
 	}, nil
-}
-
-// connectToK8s returns ClientSet
-func connectToK8s() (*kubernetes.Clientset, error) {
-	var err error
-	var config *rest.Config
-	if cfg, exists := os.LookupEnv("KUBECONFIG"); !exists {
-		config, err = rest.InClusterConfig()
-	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", cfg)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
-}
-
-// isPodRunning check if the pod in question is running state
-func isPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		switch pod.Status.Phase {
-		case v1.PodRunning, v1.PodSucceeded:
-			return true, nil
-		case v1.PodFailed:
-			return false, nil
-		}
-		return false, nil
-	}
-}
-
-func isPersistentVolumeBound(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
-		pv, err := c.CoreV1().PersistentVolumes().Get(context.Background(), podName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		switch pv.Status.Phase {
-		case v1.VolumeBound, v1.VolumeAvailable:
-			return true, nil
-		case v1.VolumeFailed:
-			return false, nil
-		}
-		return false, nil
-	}
-}
-
-func isPersistentVolumeClaimBound(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
-		pv, err := c.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), podName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		switch pv.Status.Phase {
-		case v1.ClaimBound:
-			return true, nil
-		case v1.ClaimLost:
-			return false, nil
-		}
-		return false, nil
-	}
 }
 
 func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage string) (string, error) {
