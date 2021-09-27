@@ -31,8 +31,8 @@ func (executions Executions) Table() (header []string, output [][]string) {
 
 	for _, e := range executions {
 		status := "unknown"
-		if e.ExecutionResult != nil {
-			status = e.ExecutionResult.Status
+		if e.ExecutionResult != nil && e.ExecutionResult.Status != nil {
+			status = string(*e.ExecutionResult.Status)
 		}
 
 		output = append(output, []string{

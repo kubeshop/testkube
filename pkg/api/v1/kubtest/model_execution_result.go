@@ -15,8 +15,7 @@ import (
 
 // execution result returned from executor
 type ExecutionResult struct {
-	// execution status
-	Status string `json:"status,omitempty"`
+	Status *ExecutionStatus `json:"status"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

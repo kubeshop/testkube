@@ -76,7 +76,7 @@ func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error
 
 func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
-		execution.ExecutionResult.Status,
+		*execution.ExecutionResult.Status,
 		execution.ExecutionResult.Duration(),
 	)
 
@@ -86,7 +86,7 @@ func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error 
 func (r RawRenderer) renderDetails(execution kubtest.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		execution.Name,
-		execution.ExecutionResult.Status,
+		*execution.ExecutionResult.Status,
 		execution.ExecutionResult.Duration(),
 	)
 

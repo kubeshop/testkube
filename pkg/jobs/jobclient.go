@@ -44,27 +44,27 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 
 	if err := c.CreatePersistentVolume(jobName); err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
 
 	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
 
 	if err := c.CreatePersistentVolumeClaim(jobName); err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
 	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -72,7 +72,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -122,7 +122,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	_, err = jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 	if err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -130,7 +130,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
 		return kubtest.ExecutionResult{
-			Status:       kubtest.ResultError,
+			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -140,7 +140,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 			if pod.Labels["job-name"] == jobName {
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, isPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					return kubtest.ExecutionResult{
-						Status:       kubtest.ResultError,
+						Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 						ErrorMessage: err.Error(),
 					}, err
 				}
@@ -148,7 +148,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 			result, err = c.GetPodLogs(pod.Name, jobName, jobName)
 			if err != nil {
 				return kubtest.ExecutionResult{
-					Status:       kubtest.ResultError,
+					Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 					ErrorMessage: err.Error(),
 				}, err
 			}
@@ -156,7 +156,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	}
 
 	return kubtest.ExecutionResult{
-		Status: kubtest.ResultSuceess,
+		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
 		Output: result,
 	}, nil
 }
@@ -288,12 +288,12 @@ func (c *JobClient) AbortK8sJob(jobName string) *kubtest.ExecutionResult {
 	})
 	if err != nil {
 		return &kubtest.ExecutionResult{
-			Status: kubtest.ResultError,
+			Status: kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
 			Output: err.Error(),
 		}
 	}
 	return &kubtest.ExecutionResult{
-		Status: kubtest.ResultSuceess,
+		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
 	}
 }
 

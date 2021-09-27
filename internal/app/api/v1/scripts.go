@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
 	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/client"
-	executionsMapper "github.com/kubeshop/kubtest/pkg/mapper/executions"
 	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
 
 	"github.com/kubeshop/kubtest/pkg/rand"
@@ -226,31 +226,94 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id", "-")
-		pager := s.GetPager(c)
-		l := s.Log.With("script", scriptID, "pager", pager)
+		pageSize, err := strconv.Atoi(c.Params("pageSize", "100"))
+		if err != nil {
+			pageSize = 100
+		} else if pageSize < 1 || pageSize > 1000 {
+			pageSize = 1000
+		}
+
+		page, err := strconv.Atoi(c.Params("page", "0"))
+		if err != nil {
+			page = 0
+		}
+
+		statusFilter := c.Params("status", "")
+
 		ctx := c.Context()
 
 		var executions []kubtest.Execution
-		var err error
 
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 		if scriptID == "-" {
-			l.Infow("Getting script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(ctx, pager.Limit)
+			s.Log.Infow("Getting script executions (no id passed)")
+			executions, err = s.Repository.GetNewestExecutions(ctx, 10000)
 		} else {
-			l.Infow("Getting script executions")
+			s.Log.Infow("Getting script executions", "id", scriptID)
 			executions, err = s.Repository.GetExecutions(ctx, scriptID)
 		}
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		// convert to summary
-		result := executionsMapper.MapToSummary(executions)
+		results := createListExecutionsResult(executions, pageSize, statusFilter, page)
 
-		return c.JSON(result)
+		return c.JSON(results)
+	}
+}
+
+func createListExecutionsResult(executions []kubtest.Execution, pageSize int, statusFilter string, page int) kubtest.ExecutionsResult {
+	totals := kubtest.ExecutionsTotals{
+		Results: int32(len(executions)),
+		Passed:  0,
+		Failed:  0,
+		Queued:  0,
+		Pending: 0,
+	}
+
+	executionResults := make([]kubtest.ExecutionSummary, pageSize)
+	addedToResultCount := 0
+	filteredCount := 0
+
+	for _, s := range executions {
+
+		switch *s.ExecutionResult.Status {
+		case kubtest.QUEUED_ExecutionStatus:
+			totals.Queued++
+			break
+		case kubtest.SUCCESS_ExecutionStatus:
+			totals.Passed++
+			break
+		case kubtest.ERROR__ExecutionStatus:
+			totals.Failed++
+			break
+		case kubtest.PENDING_ExecutionStatus:
+			totals.Pending++
+			break
+		}
+
+		if addedToResultCount < pageSize && (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter) {
+			if filteredCount == page*pageSize {
+				executionResults[addedToResultCount] = kubtest.ExecutionSummary{
+					Id:         s.Id,
+					ScriptName: s.ScriptName,
+					ScriptType: s.ScriptType,
+					Status:     s.ExecutionResult.Status,
+					StartTime:  s.ExecutionResult.StartTime,
+					EndTime:    s.ExecutionResult.EndTime,
+				}
+				addedToResultCount++
+			} else {
+				filteredCount++
+			}
+		}
+	}
+
+	return kubtest.ExecutionsResult{
+		Totals:  &totals,
+		Results: executionResults[0:addedToResultCount],
 	}
 }
 
