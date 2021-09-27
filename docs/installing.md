@@ -9,7 +9,7 @@ To get Kubtest up and running you will need to
 
 To install on Linux or MacOs run 
 ```sh
-$ curl -sSLf https://get.kubtest.io | sudo bash
+$ curl -sSLf https://kubeshop.github.io/kubtest/install.sh | sudo bash
 ```
 
 For Windows download desired binary from https://github.com/kubeshop/kubtest/releases, unpack the binary and add it to `%PATH%`. 
