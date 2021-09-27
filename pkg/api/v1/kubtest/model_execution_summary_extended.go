@@ -15,7 +15,7 @@ func (executions ExecutionsSummary) Table() (header []string, output [][]string)
 			e.ScriptType,
 			e.Name,
 			e.Id,
-			string(*e.Status),
+			status,
 		})
 	}
 
