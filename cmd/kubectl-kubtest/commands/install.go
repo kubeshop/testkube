@@ -28,7 +28,7 @@ func NewInstallCmd() *cobra.Command {
 			_, err = process.Execute("helm", "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
 
-			out, err := process.Execute("helm", "upgrade", "--install", "--namespace", namespace, name, chart)
+			out, err := process.Execute("helm", "upgrade", "--install", "--create-namespace", "--namespace", namespace, name, chart)
 			ui.ExitOnError("executing helm install", err)
 
 			ui.Info("Helm output", string(out))
