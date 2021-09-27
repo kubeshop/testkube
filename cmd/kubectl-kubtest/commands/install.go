@@ -48,10 +48,12 @@ func NewInstallCmd() *cobra.Command {
 
 			out, err := process.Execute("helm", "upgrade", "--install", "--namespace", namespace, name, chart)
 			ui.ExitOnError("executing helm install", err)
-
 			ui.Info("Helm install output", string(out))
+
 			err = printDashboardAddress(k8sClient, namespace)
-			ui.PrintOnError("getting dashboard address", err)
+			if installIngress {
+				ui.ExitOnError("getting dashboard address", err)
+			}
 		},
 	}
 
@@ -89,11 +91,9 @@ func printDashboardAddress(k8sClient *kubernetes.Clientset, namespace string) er
 	//TODO: get automatically the name of the api-server
 	ingressAddress, err := k8sclient.GetIngressAddress(k8sClient, IngressApiServerName, namespace)
 	if err != nil {
-		ui.Info("cannot get the ingress address", err.Error())
-		return err
+		return fmt.Errorf("cannot get the ingress address %w", err)
 	}
 
-	// TODO: Add version from constant
 	completeServerApiAddress := fmt.Sprintf("%s%s/%s/%s/executions/", DashboardURI, ingressAddress, DashboardPrefix, CurrentApiVersion)
 
 	ui.Info("kubtest dashboard can be accessed at the address ", completeServerApiAddress)
