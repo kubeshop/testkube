@@ -40,33 +40,6 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	var result string
 
-	if err := c.CreatePersistentVolume(jobName); err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
-			ErrorMessage: err.Error(),
-		}, err
-	}
-
-	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
-			ErrorMessage: err.Error(),
-		}, err
-	}
-
-	if err := c.CreatePersistentVolumeClaim(jobName); err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
-			ErrorMessage: err.Error(),
-		}, err
-	}
-	if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPersistentVolumeClaimBound(c.ClientSet, jobName, c.Namespace)); err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
-			ErrorMessage: err.Error(),
-		}, err
-	}
-
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return kubtest.ExecutionResult{
@@ -92,25 +65,9 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 							Image:           image,
 							Command:         []string{"agent", string(jsn)},
 							ImagePullPolicy: v1.PullAlways,
-							VolumeMounts: []v1.VolumeMount{
-								{
-									MountPath: "/artifacts",
-									Name:      jobName,
-								},
-							},
 						},
 					},
 					RestartPolicy: v1.RestartPolicyNever,
-					Volumes: []v1.Volume{
-						{
-							Name: jobName,
-							VolumeSource: v1.VolumeSource{
-								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-									ClaimName: jobName,
-								},
-							},
-						},
-					},
 				},
 			},
 			BackoffLimit: &backOffLimit,
