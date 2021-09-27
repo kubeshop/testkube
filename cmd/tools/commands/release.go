@@ -84,7 +84,7 @@ func NewReleaseCmd() *cobra.Command {
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed", "kubtest:"+nextKubtestVersion)
+			ui.Completed("Release completed", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}

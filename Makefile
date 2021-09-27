@@ -1,5 +1,6 @@
 .PHONY: test cover 
 
+CHART_NAME=api-server
 BIN_DIR ?= $(HOME)/bin
 GITHUB_TOKEN ?= "SET_ME"
 USER ?= $(USER)
@@ -96,7 +97,7 @@ commands-reference:
 	go run cmd/kubectl-kubtest/main.go doc > ./docs/reference.md
 
 prerelease: 
-	go run cmd/tools/main.go release -d
+	go run cmd/tools/main.go release -d -a $(CHART_NAME)
 
 release: 
-	go run cmd/tools/main.go release
+	go run cmd/tools/main.go release -a $(CHART_NAME)

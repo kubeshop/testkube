@@ -23,7 +23,7 @@ func NewInstallCmd() *cobra.Command {
 			ui.Logo()
 
 			_, err := process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
-			ui.ExitOnError("adding kubtest repo", err)
+			ui.WarnOnError("adding kubtest repo", err)
 
 			_, err = process.Execute("helm", "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
