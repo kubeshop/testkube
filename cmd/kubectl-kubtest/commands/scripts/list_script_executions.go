@@ -1,7 +1,6 @@
 package scripts
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/kubeshop/kubtest/pkg/ui"
@@ -24,8 +23,6 @@ func NewListExecutionsCmd() *cobra.Command {
 			client, _ := GetClient(cmd)
 			executions, err := client.ListExecutions(scriptID)
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
-
-			fmt.Printf("%+v\n", executions)
 
 			renderer := GetListRenderer(cmd)
 
