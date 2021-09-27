@@ -56,13 +56,13 @@ kubtest` to see the charts.
 To install the `kubtest` chart:
 
 ```sh
-helm install my-<chart-name> kubtest/kubtest
+helm install my-kubtest kubtest/kubtest
 ```
 
 To uninstall the `kubtest` chart:
 
 ```sh
-helm delete my-<chart-name> kubtest/kubtest
+helm delete my-kubtest kubtest/kubtest
 ```
 
 ### Helm Properties
