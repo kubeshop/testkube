@@ -7,9 +7,12 @@ To get Kubtest up and running you will need to
 
 ## Install the kubectl kubtest plugin
 
-To install `kubectl kubtest` plugin please download [latest release of kubtest](
-https://github.com/kubeshop/kubtest/releases), unpack the binary and put it somewhere in 
-your `$PATH`. 
+To install on Linux or MacOs run 
+```sh
+$ curl -sSLf https://kubeshop.github.io/kubtest/install.sh | sudo bash
+```
+
+For Windows download desired binary from https://github.com/kubeshop/kubtest/releases, unpack the binary and add it to `%PATH%`. 
 
 We have plans to build installers for most popular OS and system distros.
 
@@ -55,13 +58,13 @@ kubtest` to see the charts.
 To install the `kubtest` chart:
 
 ```sh
-helm install my-<chart-name> kubtest/kubtest
+helm install my-kubtest kubtest/kubtest
 ```
 
 To uninstall the `kubtest` chart:
 
 ```sh
-helm delete my-<chart-name> kubtest/kubtest
+helm delete my-kubtest kubtest/kubtest
 ```
 
 ### Helm Properties

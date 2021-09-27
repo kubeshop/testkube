@@ -14,7 +14,7 @@ nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
-  - CLI Reference: reference.md
+  - CLI Reference: cli/kubtest.md
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md
@@ -34,8 +34,8 @@ extra:
       find what they're searching for. With your consent, you're helping us to
       make our documentation better.
 
-plugins:
-  - render_swagger
+# plugins:
+#   - render_swagger
 
 # Extensions
 markdown_extensions:

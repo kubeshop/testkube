@@ -24,7 +24,7 @@ kubtest scripts [flags]
 ### SEE ALSO
 
 * [kubtest](kubtest.md)	 - kubtest entrypoint for plugin
-* [kubtest scripts abort](kubtest_scripts_abort.md)	 - (NOT IMPLEMENTED) Aborts execution of the script
+* [kubtest scripts abort](kubtest_scripts_abort.md)	 - Aborts execution of the script
 * [kubtest scripts create](kubtest_scripts_create.md)	 - Create new script
 * [kubtest scripts execution](kubtest_scripts_execution.md)	 - Gets script execution details
 * [kubtest scripts executions](kubtest_scripts_executions.md)	 - List scripts executions
