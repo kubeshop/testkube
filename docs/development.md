@@ -31,10 +31,15 @@ make dev-install-local-executors
 ```
 
 It'll register Custom Resources for 
-- postman/collection
-- cypress/project
-- curl/test
-script types
+
+- local-postman/collection
+- local-cypress/project
+- local-curl/test
+
+script types. You'll need to create `Script` Custom Resource with type from above to 
+be executed on given executor. 
+
+To summarize: types are only relation between `Script` and `Executor`
 
 ## Intercepting api server on cluster
 
