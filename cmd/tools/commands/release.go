@@ -37,6 +37,7 @@ func NewReleaseCmd() *cobra.Command {
 
 			if !dev {
 				updateVersionInInstallScript("v" + nextAppVersion)
+				ui.Info("Updating install.sh script to version", "v"+nextAppVersion)
 			}
 
 			// Let's checkout helm chart repo and put changes to particular app
@@ -91,7 +92,7 @@ func NewReleaseCmd() *cobra.Command {
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
+			ui.Completed("Release completed - Helm charts: ", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}
@@ -149,9 +150,6 @@ func gitAddCommitAndPush(dir, message string) {
 	_, err := process.ExecuteInDir(dir, "git", "add", "charts/")
 	ui.ExitOnError("adding changes in charts directory (+"+dir+"+)", err)
 
-	_, err = process.ExecuteInDir(dir, "git", "add", "install.sh")
-	ui.ExitOnError("adding changes in install.sh (+"+dir+"+)", err)
-
 	_, err = process.ExecuteInDir(dir, "git", "commit", "-m", message)
 	ui.ExitOnError(message, err)
 
@@ -163,7 +161,7 @@ func updateVersionInInstallScript(version string) {
 	input, err := ioutil.ReadFile("install.sh")
 	ui.ExitOnError("Reading install.sh", err)
 
-	r := regexp.MustCompile(`KUBTEST_VERSION=${KUBTEST_VERSION:-"[^"]+"}`)
+	r := regexp.MustCompile(`KUBTEST_VERSION=\${KUBTEST_VERSION:-"[^"]+"}`)
 	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
 
 	err = ioutil.WriteFile("install.sh", output, 0644)
