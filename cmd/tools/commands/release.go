@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/kubeshop/kubtest/pkg/git"
@@ -31,6 +34,11 @@ func NewReleaseCmd() *cobra.Command {
 			currentAppVersion := getCurrentAppVersion()
 			nextAppVersion := getNextVersion(dev, currentAppVersion, kind)
 			pushVersionTag(nextAppVersion)
+
+			if !dev {
+				err := updateVersionInInstallScript("v" + nextAppVersion)
+				ui.ExitOnError("updating install.sh script with version v"+nextAppVersion, err)
+			}
 
 			// Let's checkout helm chart repo and put changes to particular app
 			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
@@ -147,4 +155,17 @@ func saveChartChanges(dir, message string) {
 
 	_, err = process.ExecuteInDir(dir, "git", "push")
 	ui.ExitOnError("pushing changes", err)
+}
+
+func updateVersionInInstallScript(version string) error {
+	input, err := ioutil.ReadFile("install.sh")
+	if err != nil {
+		return err
+	}
+
+	r := regexp.MustCompile(`KUBTEST_VERSION=${KUBTEST_VERSION:-"[^"]+"}`)
+	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
+
+	return ioutil.WriteFile("install.sh", output, 0644)
+
 }
