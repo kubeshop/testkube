@@ -57,7 +57,7 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving "+appName+" Chart.yaml file", err)
 
-			saveChartChanges(dir, "updating "+appName+" chart version to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
 			// Checkout main kubtest chart and bump main chart with next version
 			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "kubtest", "main")
@@ -80,7 +80,7 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving kubtest Chart.yaml file", err)
 
-			saveChartChanges(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
@@ -146,9 +146,12 @@ func getNextVersion(dev bool, currentVersion string, kind string) (nextVersion s
 
 }
 
-func saveChartChanges(dir, message string) {
+func gitAddCommitAndPush(dir, message string) {
 	_, err := process.ExecuteInDir(dir, "git", "add", "charts/")
 	ui.ExitOnError("adding changes in charts directory (+"+dir+"+)", err)
+
+	_, err = process.ExecuteInDir(dir, "git", "add", "install.sh")
+	ui.ExitOnError("adding changes in install.sh (+"+dir+"+)", err)
 
 	_, err = process.ExecuteInDir(dir, "git", "commit", "-m", message)
 	ui.ExitOnError(message, err)
