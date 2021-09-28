@@ -1,6 +1,6 @@
 echo "Getting kubectl-kubtest plugin"
 #!/bin/sh 
-KUBTEST_VERSION=${KUBTEST_VERSION:-"v0.5.32"} 
+KUBTEST_VERSION=${KUBTEST_VERSION:-"v0.5.33"} 
 
 if [ ! -z "${DEBUG}" ]; 
 then set -x 
