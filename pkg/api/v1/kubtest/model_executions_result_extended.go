@@ -1,11 +1,9 @@
 package kubtest
 
-type ExecutionsSummary []ExecutionSummary
-
-func (executions ExecutionsSummary) Table() (header []string, output [][]string) {
+func (result ExecutionsResult) Table() (header []string, output [][]string) {
 	header = []string{"Script", "Type", "Name", "ID", "Status"}
 
-	for _, e := range executions {
+	for _, e := range result.Results {
 		var status string
 		if e.Status != nil {
 			status = string(*e.Status)

@@ -15,7 +15,7 @@ type HTTPClient interface {
 type Client interface {
 	GetScript(id string) (script kubtest.Script, err error)
 	GetExecution(scriptID, executionID string) (execution kubtest.Execution, err error)
-	ListExecutions(scriptID string) (executions kubtest.ExecutionsSummary, err error)
+	ListExecutions(scriptID string) (executions kubtest.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 	CreateScript(options CreateScriptOptions) (script kubtest.Script, err error)
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution kubtest.Execution, err error)
