@@ -1,6 +1,6 @@
 # Contribution to kubtest 
 
-Thanks for reaching out contribution 🎉
+Thanks for reaching out 🎉
 
 If you're new in Open-source community there is nice guide how to start contributing to projects: 
 https://github.com/firstcontributions/first-contributions

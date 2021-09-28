@@ -16,9 +16,11 @@ kubectl kubtest scripts --help
 After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
 (access to Kubernetes cluster would be also needed)
 
-For now Kubtest only supports  *Postman collections* but we plan to handle more testing tools soon,.
+For now Kubtest only supports  *Postman collections*, *basic CURL execition* and experimental support for *Cypress* - but we plan to handle more testing tools soon,.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
+
+### Creating Postman Collections based tests
 
 ```sh
 kubectl kubtest scripts create --file my_collection_file.json --name my-test-name
@@ -38,86 +40,9 @@ metadata:
   name: my-test-name
 spec:
   # Add fields here
-  id: Some internal ID 
   type: postman/collection
   content: >
-    {
-      "info": {
-        "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
-        "name": "Kubeshop",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-      },
-      "item": [
-        {
-          "name": "Home",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Body matches string\", function () {",
-                  "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://kubeshop.io/",
-              "protocol": "https",
-              "host": [
-                "kubeshop",
-                "io"
-              ],
-              "path": [
-                ""
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Team",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Body matches string\", function () {",
-                  "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://kubeshop.io/our-team",
-              "protocol": "https",
-              "host": [
-                "kubeshop",
-                "io"
-              ],
-              "path": [
-                "our-team"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    }
+    { "info": { "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180", "name": "Kubeshop", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" }, "item": [ { "name": "Home", "event": [ { "listen": "test", "script": { "exec": [ "pm.test(\"Body matches string\", function () {", "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");", "});" ], "type": "text/javascript" } } ], "request": { "method": "GET", "header": [], "url": { "raw": "https://kubeshop.io/", "protocol": "https", "host": [ "kubeshop", "io" ], "path": [ "" ] } }, "response": [] }, { "name": "Team", "event": [ { "listen": "test", "script": { "exec": [ "pm.test(\"Status code is 200\", function () {", "    pm.response.to.have.status(200);", "});", "", "pm.test(\"Body matches string\", function () {", "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");", "});" ], "type": "text/javascript" } } ], "request": { "method": "GET", "header": [], "url": { "raw": "https://kubeshop.io/our-team", "protocol": "https", "host": [ "kubeshop", "io" ], "path": [ "our-team" ] } }, "response": [] } ] }
 EOF
 ```
 
@@ -126,6 +51,26 @@ Where:
 - `content` is exported postman collection in example above. 
 - `name` is unique Sript Custom Resource name. 
 - `type` is `postman/collection` as it runs exported postman collections.
+
+### Creating Cypress tests
+
+Cypress tests are little more complicated to pass - for now we're supporting Git based paths for Cypress projects.
+
+You can create new test with kubectl kubtest plugin: 
+
+```sh
+ kubectl kubtest scripts create --uri https://github.com/kubeshop/kubtest-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
+```
+
+Where: 
+- `uri` is git uri where kubtest will get cypress project
+- `git-branch` is what branch should he checkout (defaults to main)
+- `git-path` is what path of repository should be checked out (kubtest is doing partial git checkout so it'll be fast even for very big monorepos)
+- `name` - is unique Sript Custom Resource name. 
+- `type` - cypress/project - for Cypress based project test structure
+
+For now we're supporting only Cypress test runs, but we plan to fully integrate it.
+
 
 ## Starting new script execution 
 
