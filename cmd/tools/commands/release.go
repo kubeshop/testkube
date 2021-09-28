@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/kubeshop/kubtest/pkg/git"
@@ -32,6 +35,11 @@ func NewReleaseCmd() *cobra.Command {
 			nextAppVersion := getNextVersion(dev, currentAppVersion, kind)
 			pushVersionTag(nextAppVersion)
 
+			if !dev {
+				updateVersionInInstallScript("v" + nextAppVersion)
+				ui.Info("Updating install.sh script to version", "v"+nextAppVersion)
+			}
+
 			// Let's checkout helm chart repo and put changes to particular app
 			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
 			ui.ExitOnError("checking out "+appName+" chart to "+dir, err)
@@ -49,7 +57,7 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving "+appName+" Chart.yaml file", err)
 
-			saveChartChanges(dir, "updating "+appName+" chart version to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
 			// Checkout main kubtest chart and bump main chart with next version
 			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "kubtest", "main")
@@ -72,7 +80,7 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving kubtest Chart.yaml file", err)
 
-			saveChartChanges(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
@@ -84,7 +92,7 @@ func NewReleaseCmd() *cobra.Command {
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
+			ui.Completed("Release completed - Helm charts: ", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}
@@ -138,7 +146,7 @@ func getNextVersion(dev bool, currentVersion string, kind string) (nextVersion s
 
 }
 
-func saveChartChanges(dir, message string) {
+func gitAddCommitAndPush(dir, message string) {
 	_, err := process.ExecuteInDir(dir, "git", "add", "charts/")
 	ui.ExitOnError("adding changes in charts directory (+"+dir+"+)", err)
 
@@ -147,4 +155,25 @@ func saveChartChanges(dir, message string) {
 
 	_, err = process.ExecuteInDir(dir, "git", "push")
 	ui.ExitOnError("pushing changes", err)
+}
+
+func updateVersionInInstallScript(version string) {
+	input, err := ioutil.ReadFile("install.sh")
+	ui.ExitOnError("Reading install.sh", err)
+
+	r := regexp.MustCompile(`KUBTEST_VERSION=\${KUBTEST_VERSION:-"[^"]+"}`)
+	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
+
+	err = ioutil.WriteFile("install.sh", output, 0644)
+	ui.ExitOnError("Writing install.sh", err)
+
+	_, err = process.Execute("git", "add", "install.sh")
+	ui.ExitOnError("Adding changes in install.sh", err)
+
+	message := "Updating install script to version " + version
+	_, err = process.Execute("git", "commit", "-m", message)
+	ui.ExitOnError(message, err)
+
+	_, err = process.Execute("git", "push")
+	ui.ExitOnError("Pushing changes", err)
 }
