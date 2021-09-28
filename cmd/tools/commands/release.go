@@ -158,17 +158,19 @@ func gitAddCommitAndPush(dir, message string) {
 }
 
 func updateVersionInInstallScript(version string) {
-	input, err := ioutil.ReadFile("install.sh")
-	ui.ExitOnError("Reading install.sh", err)
+	path := "docs/install.sh"
+	input, err := ioutil.ReadFile(path)
+
+	ui.ExitOnError("Reading "+path, err)
 
 	r := regexp.MustCompile(`KUBTEST_VERSION=\${KUBTEST_VERSION:-"[^"]+"}`)
 	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
 
-	err = ioutil.WriteFile("install.sh", output, 0644)
-	ui.ExitOnError("Writing install.sh", err)
+	err = ioutil.WriteFile(path, output, 0644)
+	ui.ExitOnError("Writing "+path, err)
 
-	_, err = process.Execute("git", "add", "install.sh")
-	ui.ExitOnError("Adding changes in install.sh", err)
+	_, err = process.Execute("git", "add", path)
+	ui.ExitOnError("Adding changes in "+path, err)
 
 	message := "Updating install script to version " + version
 	_, err = process.Execute("git", "commit", "-m", message)
