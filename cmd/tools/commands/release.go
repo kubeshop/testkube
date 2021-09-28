@@ -36,8 +36,7 @@ func NewReleaseCmd() *cobra.Command {
 			pushVersionTag(nextAppVersion)
 
 			if !dev {
-				err := updateVersionInInstallScript("v" + nextAppVersion)
-				ui.ExitOnError("updating install.sh script with version v"+nextAppVersion, err)
+				updateVersionInInstallScript("v" + nextAppVersion)
 			}
 
 			// Let's checkout helm chart repo and put changes to particular app
@@ -160,15 +159,23 @@ func gitAddCommitAndPush(dir, message string) {
 	ui.ExitOnError("pushing changes", err)
 }
 
-func updateVersionInInstallScript(version string) error {
+func updateVersionInInstallScript(version string) {
 	input, err := ioutil.ReadFile("install.sh")
-	if err != nil {
-		return err
-	}
+	ui.ExitOnError("Reading install.sh", err)
 
 	r := regexp.MustCompile(`KUBTEST_VERSION=${KUBTEST_VERSION:-"[^"]+"}`)
 	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
 
-	return ioutil.WriteFile("install.sh", output, 0644)
+	err = ioutil.WriteFile("install.sh", output, 0644)
+	ui.ExitOnError("Writing install.sh", err)
 
+	_, err = process.Execute("git", "add", "install.sh")
+	ui.ExitOnError("Adding changes in install.sh", err)
+
+	message := "Updating install script to version " + version
+	_, err = process.Execute("git", "commit", "-m", message)
+	ui.ExitOnError(message, err)
+
+	_, err = process.Execute("git", "push")
+	ui.ExitOnError("Pushing changes", err)
 }
