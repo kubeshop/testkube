@@ -36,8 +36,8 @@ func NewReleaseCmd() *cobra.Command {
 			pushVersionTag(nextAppVersion)
 
 			if !dev {
-				updateVersionInInstallScript("v" + nextAppVersion)
-				ui.Info("Updating install.sh script to version", "v"+nextAppVersion)
+				updateVersionInInstallScript(nextAppVersion)
+				ui.Info("Updating install.sh script to version", nextAppVersion)
 			}
 
 			// Let's checkout helm chart repo and put changes to particular app
