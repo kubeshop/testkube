@@ -2,29 +2,36 @@
 
 ## Running with CRDs only on kubernetes cluster
 
-The minimial compoenent which must be deployed on kubernetes cluster is kubtest-operator with project CRDs
+The minimial compoenent which must be deployed on your local kubernetes cluster is kubtest-operator with project CRDs (https://github.com/kubeshop/kubtest-operator)
+
+Checkout this project and run: 
+```sh
+make install 
+```
+to install CRD's in your local cluster
+
 
 ## Running on local machine
 
-api-server need postman-executor (until we apply custom executors and operator for executors), 
-so those two need to be started to play with api-server
+Next critical component is API (https://github.com/kubeshop/kubtest) and some executor you can build your
+own tests executor or use one from Kubtest. 
 
-api-server and postman-executor need MongoDB 
+First let's run local API server:
 
-You can start mongo with:
 ```sh
-make run-mongo-dev
+make run-mongo-dev run-api-server
 ```
 
-You can start Postman executor and api server with: 
+Next goto executor (https://github.com/kubeshop/kubtest-executor-postman) and run it 
+(Postman executor is also MongoDB based so it'll use database run in API server step):
+
 ```sh
 make run-executor
-make run-api-server
 ```
 
 ### Installing local executors
 
-You can development executors by running 
+You can install development executors by running 
 
 ```sh
 make dev-install-local-executors
@@ -36,10 +43,16 @@ It'll register Custom Resources for
 - local-cypress/project
 - local-curl/test
 
-script types. You'll need to create `Script` Custom Resource with type from above to 
-be executed on given executor. 
+script types. 
 
-To summarize: types are only relation between `Script` and `Executor`
+You'll need to create `Script` Custom Resource with type from above to 
+be executed on given executor. e.g. 
+
+```sh
+kubectl kubtest scripts create --file my_collection_file.json --name my-test-name --type local-postman/collection
+```
+
+To summarize: `type` is the single relation between `Script` and `Executor`
 
 ## Intercepting api server on cluster
 
@@ -48,7 +61,10 @@ with use of [Telepresence](https://telepresence.io).
 
 Simply intercept API server with local instance
 
-You can start API Server with telepresence mode (executor pointed to in-cluster executor) with: 
+You can start API Server with telepresence mode with: 
+
 ```
 make run-api-server-telepresence
 ```
+
+and create/run test scripts pointed to in-cluster executors.
