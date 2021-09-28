@@ -16,15 +16,7 @@ For Windows download desired binary from https://github.com/kubeshop/kubtest/rel
 
 We have plans to build installers for most popular OS and system distros.
 
-#### MacOS 
-
-To run kubectl-kubtest you need to remove quarantine flags from file
-
-```sh
-xattr -d com.apple.quarantine kubectl-kubtest
-```
-
-## Install kubtest components in your cluster
+## Install `kubtest` components in your cluster
 
 The kubtest kubectl plugin provides an install command to install kubtest in your cluster. Internally 
 this uses Helm and so you will need to have recent `helm` command installed on your system.
@@ -39,6 +31,17 @@ You should have everything installed 🏅
 By default kubtest is installed in `default` namespace but you can change it in manual install if you want.
 
 If you want kubtest to provide the endpoint for the kubest dashboard use `kubectl kubtest install -i` with the `-i` or `--ingress` option, it will setup a ingress-nginx controller for you in a managed cluster(for baremetal clusters this should be set up manually before installing kubtest).
+
+## Uninstall `kubtest`
+
+You can uninstall Kubtest using uninstall command integrated into kubtest plugin. 
+
+```
+kubectl kubtest uninstall [--remove-crds]
+```
+
+Optionally you can use `--remove-crds` flag which clean all installed Custom Resource Definitions installed by Kubtest.
+
 
 ### Manual kubtest Helm charts installation
 
