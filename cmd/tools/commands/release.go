@@ -159,6 +159,12 @@ func gitAddCommitAndPush(dir, message string) {
 
 func updateVersionInInstallScript(version string) {
 	path := "docs/install.sh"
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		ui.Info(path + " doeasn't exists, skipping")
+		return
+	}
+
 	input, err := ioutil.ReadFile(path)
 
 	ui.ExitOnError("Reading "+path, err)
