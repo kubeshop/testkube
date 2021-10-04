@@ -37,26 +37,14 @@ func (p *Executors) Get(scriptType string) (client ExecutorClient, err error) {
 	cached, exists := p.Clients.Load(scriptType)
 
 	if !exists {
-
 		// get executor from kubernetes CRs
 		executorCR, err := p.ExecutorsCRClient.GetByType(scriptType)
 		if err != nil {
 			return client, fmt.Errorf("can't get executor spec: %w", err)
 		}
-		spec := executorCR.Spec
 
 		// get executor based on type
-		var executor ExecutorClient
-
-		switch spec.ExecutorType {
-		case ExecutorTypeRest:
-			executor, err = p.GetOpenAPIExecutor(spec.URI)
-		case ExecutorTypeJob:
-			executor, err = p.GetJobExecutor(scriptType)
-		default:
-			err = fmt.Errorf("can't handle runner type '%s' for script type '%s'", spec.ExecutorType, scriptType)
-		}
-
+		executor, err := p.GetByType(scriptType, executorCR.Spec)
 		if err != nil {
 			return client, err
 		}
@@ -69,6 +57,20 @@ func (p *Executors) Get(scriptType string) (client ExecutorClient, err error) {
 	return
 }
 
+func (e *Executors) GetByType(scriptType string, spec v1.ExecutorSpec) (executor ExecutorClient, err error) {
+	// get executor based on type
+	switch spec.ExecutorType {
+	case ExecutorTypeRest:
+		executor, err = e.GetOpenAPIExecutor(spec.URI)
+	case ExecutorTypeJob:
+		executor, err = e.GetJobExecutor()
+	default:
+		err = fmt.Errorf("can't handle runner type '%s' for script type '%s'", spec.ExecutorType, scriptType)
+	}
+
+	return
+}
+
 func (p *Executors) GetOpenAPIExecutor(uri string) (executor RestExecutorClient, err error) {
 	return NewRestExecutorClient(RestExecutorConfig{
 		URI: uri,
@@ -76,6 +78,6 @@ func (p *Executors) GetOpenAPIExecutor(uri string) (executor RestExecutorClient,
 
 }
 
-func (p *Executors) GetJobExecutor(scriptType string) (executor ExecutorClient, err error) {
+func (p *Executors) GetJobExecutor() (executor ExecutorClient, err error) {
 	return NewJobExecutorClient()
 }
