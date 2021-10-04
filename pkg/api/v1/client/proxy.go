@@ -14,7 +14,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-func GetClientSet() (clientset *kubernetes.Clientset, err error) {
+func GetClientSet() (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
 		return clientset, err
@@ -29,7 +29,7 @@ func GetClientSet() (clientset *kubernetes.Clientset, err error) {
 	return kubernetes.NewForConfig(restcfg)
 }
 
-func NewProxyScriptsAPI(client *kubernetes.Clientset, config ProxyConfig) ProxyScriptsAPI {
+func NewProxyScriptsAPI(client kubernetes.Interface, config ProxyConfig) ProxyScriptsAPI {
 	return ProxyScriptsAPI{
 		client: client,
 		config: config,
@@ -54,7 +54,7 @@ type ProxyConfig struct {
 }
 
 type ProxyScriptsAPI struct {
-	client *kubernetes.Clientset
+	client kubernetes.Interface
 	config ProxyConfig
 }
 

@@ -1,47 +1,77 @@
 package client
 
 import (
-	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/flowcontrol"
 )
 
-func TestProxy(t *testing.T) {
+type Rest struct {
+}
 
-	t.Skip("Implement me please :)")
-	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	if err != nil {
-		panic(err.Error())
-	}
-	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
-		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-	clientset, err := kubernetes.NewForConfig(restcfg)
+func (r *Rest) GetRateLimiter() flowcontrol.RateLimiter {
+	return flowcontrol.NewFakeAlwaysRateLimiter()
+}
+func (r *Rest) Verb(verb string) *rest.Request {
+	return &rest.Request{}
+}
+func (r *Rest) Post() *rest.Request {
+	return &rest.Request{}
 
-	req := clientset.CoreV1().RESTClient().Get().
-		Namespace("default").
-		Resource("services").
-		Name("api-server-chart:8088").
-		SubResource("proxy").
-		// The server URL path, without leading "/" goes here...
-		Suffix("v1/scripts").Param("namespace", "default")
+}
+func (r *Rest) Put() *rest.Request {
+	return &rest.Request{}
 
-	res := req.Do(context.Background())
+}
+func (r *Rest) Patch(pt types.PatchType) *rest.Request {
+	return &rest.Request{}
 
-	if err != nil {
-		panic(err.Error())
-	}
-	rawbody, err := res.Raw()
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Print(string(rawbody))
+}
+func (r *Rest) Get() *rest.Request {
+	return &rest.Request{}
 
-	t.Fail()
+}
+func (r *Rest) Delete() *rest.Request {
+	return &rest.Request{}
+
+}
+func (r *Rest) APIVersion() schema.GroupVersion {
+	return schema.GroupVersion{Group: "api", Version: "v1"}
+}
+
+func TestDefaultDirectScriptsAPI(t *testing.T) {
+
+	k8sClient := fake.NewSimpleClientset()
+	// can't override REST client to change requested URI
+	// k8sClient.CoreV1().RESTClient()
+	config := NewProxyConfig("default")
+	client := NewProxyScriptsAPI(k8sClient, config)
+
+	t.Run("Execute script with given ID", func(t *testing.T) {
+		// given
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"id":"1", "executionResult":{"status": "success", "output":"execution completed"}}`)
+		}))
+		defer srv.Close()
+
+		// when
+		execution, err := client.ExecuteScript("test", "default", "some name", map[string]string{})
+
+		// then
+		assert.Equal(t, "1", execution.Id)
+		assert.Equal(t, kubtest.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
+		assert.Equal(t, "execution completed", execution.ExecutionResult.Output)
+		assert.NoError(t, err)
+	})
 
 }
