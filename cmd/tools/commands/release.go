@@ -1,10 +1,7 @@
 package commands
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/kubeshop/kubtest/pkg/git"
@@ -34,11 +31,6 @@ func NewReleaseCmd() *cobra.Command {
 			currentAppVersion := getCurrentAppVersion()
 			nextAppVersion := getNextVersion(dev, currentAppVersion, kind)
 			pushVersionTag(nextAppVersion)
-
-			if !dev {
-				updateVersionInInstallScript(nextAppVersion)
-				ui.Info("Updating install.sh script to version", nextAppVersion)
-			}
 
 			// Let's checkout helm chart repo and put changes to particular app
 			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
@@ -155,33 +147,4 @@ func gitAddCommitAndPush(dir, message string) {
 
 	_, err = process.ExecuteInDir(dir, "git", "push")
 	ui.ExitOnError("pushing changes", err)
-}
-
-func updateVersionInInstallScript(version string) {
-	path := "docs/install.sh"
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		ui.Info(path + " doeasn't exists, skipping")
-		return
-	}
-
-	input, err := ioutil.ReadFile(path)
-
-	ui.ExitOnError("Reading "+path, err)
-
-	r := regexp.MustCompile(`KUBTEST_VERSION=\${KUBTEST_VERSION:-"[^"]+"}`)
-	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`KUBTEST_VERSION=${KUBTEST_VERSION:-"%s"}`, version)))
-
-	err = ioutil.WriteFile(path, output, 0644)
-	ui.ExitOnError("Writing "+path, err)
-
-	_, err = process.Execute("git", "add", path)
-	ui.ExitOnError("Adding changes in "+path, err)
-
-	message := "Updating install script to version " + version
-	_, err = process.Execute("git", "commit", "-m", message)
-	ui.ExitOnError(message, err)
-
-	_, err = process.Execute("git", "push")
-	ui.ExitOnError("Pushing changes", err)
 }
