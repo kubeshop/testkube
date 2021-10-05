@@ -1,6 +1,5 @@
 echo "Getting kubectl-kubtest plugin"
 #!/bin/sh 
-KUBTEST_VERSION=${KUBTEST_VERSION:-"0.5.39"} 
 
 if [ ! -z "${DEBUG}" ]; 
 then set -x 
@@ -21,7 +20,14 @@ _detect_arch() {
 } 
 _download_url() { 
         local arch="$(_detect_arch)" 
-        echo "https://github.com/kubeshop/kubtest/releases/download/v${KUBTEST_VERSION}/kubtest_${KUBTEST_VERSION}_$(uname)_$arch.tar.gz" 
+        if [ -z "$KUBTEST_VERSION" ]
+        then
+                local versions=`(curl -s https://api.github.com/repos/kubeshop/kubtest/releases/latest 2>/dev/null |  jq -r .assets[].browser_download_url)`
+                echo '%s\n' "${versions[@]}" | grep "$(uname)_$(_detect_arch)"
+
+        else   
+                echo "https://github.com/kubeshop/kubtest/releases/download/v${KUBTEST_VERSION}/kubtest_${KUBTEST_VERSION}_$(uname)_$arch.tar.gz" 
+        fi
 }
 echo "Downloading kubtest from URL: $(_download_url)" 
 curl -sSLf $(_download_url) > kubtest.tar.gz 
@@ -29,3 +35,4 @@ tar -xzf kubtest.tar.gz kubectl-kubtest
 rm kubtest.tar.gz
 mv kubectl-kubtest /usr/local/bin/kubectl-kubtest
 echo "kubectl-kubtest installed in /usr/local/bin/kubectl-kubtest"
+
