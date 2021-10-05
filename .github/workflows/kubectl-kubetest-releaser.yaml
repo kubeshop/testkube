@@ -7,27 +7,28 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  release_creation:
-    name: Prepares Release on GitHub
-    runs-on: ubuntu-latest
-    outputs:
-      id: ${{ steps.main_step.outputs.id }}
-    steps:
-      - name: Create Release
-        id: main_step
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: kubtest CLI ${{ github.ref }}
-          body: |
-            Changes in this Release
-            - Releasing new version of the kubtest CLI for Kubectl.
-          draft: false
-          prerelease: false
 
-  build_and_upload:
+  # release_creation:
+  #   name: Prepares Release on GitHub
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     id: ${{ steps.main_step.outputs.id }}
+  #   steps:
+  #     - name: Create Release
+  #       id: main_step
+  #       uses: actions/create-release@latest
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+  #       with:
+  #         tag_name: ${{ github.ref }}
+  #         release_name: kubtest CLI ${{ github.ref }}
+  #         body: |
+  #           Changes in this Release
+  #           - Releasing new version of the kubtest CLI for Kubectl.
+  #         draft: false
+  #         prerelease: false
+
+  release:
     name: Create and upload release-artifacts
     needs: [release_creation]
     runs-on: ubuntu-latest
@@ -42,7 +43,7 @@ jobs:
         name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
       -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
