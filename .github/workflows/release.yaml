@@ -30,7 +30,7 @@ jobs:
 
   release:
     name: Create and upload release-artifacts
-    needs: [release_creation]
+    # needs: [release_creation]
     runs-on: ubuntu-latest
 
     steps:

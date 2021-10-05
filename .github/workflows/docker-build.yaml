@@ -1,4 +1,4 @@
-name: Docker images building and pushing
+t tagname: Docker images building and pushing
 on:
   push:
     tags: 
