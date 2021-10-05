@@ -1,0 +1,15 @@
+apiVersion: executor.kubtest.io/v1
+kind: Executor
+metadata:
+  annotations:
+    meta.helm.sh/release-name: kubtest
+    meta.helm.sh/release-namespace: default
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: local-postman-executor
+  namespace: default
+spec:
+  executor_type: rest
+  types:
+  - local-postman/collection
+  uri: http://localhost:8082

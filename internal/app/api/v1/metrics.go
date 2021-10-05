@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -35,11 +35,11 @@ type Metrics struct {
 	Abort      *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecution(scriptExecution kubtest.ScriptExecution) {
+func (m Metrics) IncExecution(execution kubtest.Execution) {
 	m.Executions.With(map[string]string{
-		"type":   scriptExecution.ScriptType,
-		"name":   scriptExecution.ScriptName,
-		"result": scriptExecution.Execution.Status,
+		"type":   execution.ScriptType,
+		"name":   execution.ScriptName,
+		"result": string(*execution.ExecutionResult.Status),
 	}).Inc()
 }
 

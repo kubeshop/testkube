@@ -6,19 +6,22 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 )
 
 func (e *Executor) StartExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubtest.ExecutionRequest
+		var request kubtest.ExecutorStartRequest
 		err := json.Unmarshal(c.Body(), &request)
 		if err != nil {
 			return e.Error(c, http.StatusBadRequest, err)
 		}
 
-		execution := kubtest.NewExecution()
+		execution := kubtest.ExecutorStartRequestToExecution(request)
+
+		result := kubtest.NewQueuedResult()
+		execution.ExecutionResult = &result
 
 		execution.WithContent(request.Content).
 			WithParams(request.Params)

@@ -16,6 +16,7 @@ var (
 )
 
 func init() {
+	RootCmd.AddCommand(NewReleaseCmd())
 	RootCmd.AddCommand(NewVersionBumpCmd())
 }
 

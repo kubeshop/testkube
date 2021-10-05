@@ -1,6 +1,6 @@
 ## kubtest scripts abort
 
-(NOT IMPLEMENTED) Aborts execution of the script
+Aborts execution of the script
 
 ```
 kubtest scripts abort [flags]

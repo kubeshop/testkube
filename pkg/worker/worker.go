@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
 	"github.com/kubeshop/kubtest/pkg/log"
 	"github.com/kubeshop/kubtest/pkg/runner"
@@ -82,7 +82,7 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 				if err != nil {
 					l.Errorw("execution error", "error", err, "execution", e)
 				} else {
-					l.Infow("execution completed", "status", e.Status)
+					l.Infow("execution completed", "status", e.ExecutionResult.Status)
 				}
 
 			}
@@ -91,31 +91,34 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 }
 
 func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
-	e.Start()
+	e.ExecutionResult.Start()
+	l := w.Log.With("executionID", e.Id, "startTime", e.ExecutionResult.StartTime.String())
 
 	// save start time
-	if werr := w.Repository.Update(ctx, e); werr != nil {
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
-	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
 
+	l.Infow("script started", "status", e.ExecutionResult.Status)
 	result := w.Runner.Run(e)
-	e.Result = &result
+	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
+	e.ExecutionResult = &result
 
 	var err error
 	if result.ErrorMessage != "" {
-		e.Error()
+		e.ExecutionResult.Error()
 		err = fmt.Errorf("execution error: %s", result.ErrorMessage)
 	} else {
-		e.Success()
+		e.ExecutionResult.Success()
 	}
 
-	e.Stop()
-	// we want always write even if there is error
-	if werr := w.Repository.Update(ctx, e); werr != nil {
+	e.ExecutionResult.Stop()
+
+	// save end time
+	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
-	w.Log.Info("updating execution", "executionID", e.Id, "startTime", e.StartTime.String())
+	l.Infow("script ended", "status", e.ExecutionResult.Status, "endTime", e.ExecutionResult.EndTime.String())
 
 	return e, err
 }

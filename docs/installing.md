@@ -7,21 +7,16 @@ To get Kubtest up and running you will need to
 
 ## Install the kubectl kubtest plugin
 
-To install `kubectl kubtest` plugin please download [latest release of kubtest](
-https://github.com/kubeshop/kubtest/releases), unpack the binary and put it somewhere in 
-your `$PATH`. 
+To install on Linux or MacOs run 
+```sh
+$ curl -sSLf https://kubeshop.github.io/kubtest/install.sh | sudo bash
+```
+
+For Windows download desired binary from https://github.com/kubeshop/kubtest/releases, unpack the binary and add it to `%PATH%`. 
 
 We have plans to build installers for most popular OS and system distros.
 
-#### MacOS 
-
-To run kubectl-kubtest you need to remove quarantine flags from file
-
-```sh
-xattr -d com.apple.quarantine kubectl-kubtest
-```
-
-## Install kubtest components in your cluster
+## Install `kubtest` components in your cluster
 
 The kubtest kubectl plugin provides an install command to install kubtest in your cluster. Internally 
 this uses Helm and so you will need to have recent `helm` command installed on your system.
@@ -34,6 +29,19 @@ kubectl kubtest install
 You should have everything installed 🏅
 
 By default kubtest is installed in `default` namespace but you can change it in manual install if you want.
+
+If you want kubtest to provide the endpoint for the kubest dashboard use `kubectl kubtest install -i` with the `-i` or `--ingress` option, it will setup a ingress-nginx controller for you in a managed cluster(for baremetal clusters this should be set up manually before installing kubtest).
+
+## Uninstall `kubtest`
+
+You can uninstall Kubtest using uninstall command integrated into kubtest plugin. 
+
+```
+kubectl kubtest uninstall [--remove-crds]
+```
+
+Optionally you can use `--remove-crds` flag which clean all installed Custom Resource Definitions installed by Kubtest.
+
 
 ### Manual kubtest Helm charts installation
 
@@ -53,13 +61,13 @@ kubtest` to see the charts.
 To install the `kubtest` chart:
 
 ```sh
-helm install my-<chart-name> kubtest/kubtest
+helm install my-kubtest kubtest/kubtest
 ```
 
 To uninstall the `kubtest` chart:
 
 ```sh
-helm delete my-<chart-name> kubtest/kubtest
+helm delete my-kubtest kubtest/kubtest
 ```
 
 ### Helm Properties

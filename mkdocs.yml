@@ -23,6 +23,7 @@ nav:
       - Creating your own: custom-executor.md
   - CLI Reference: reference.md
   - The Kubtest Dashboard: dashboard.md
+  - CLI Reference: cli/kubtest.md
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md

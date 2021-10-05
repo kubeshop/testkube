@@ -3,9 +3,10 @@ package result
 import (
 	"context"
 
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const CollectionName = "executions"
@@ -41,7 +42,18 @@ func (r *MongoRepository) Update(ctx context.Context, result kubtest.Execution) 
 	return
 }
 
+func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
+	return
+}
+
 func (r *MongoRepository) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
-	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"status": kubtest.ExecutionStatusQueued}, bson.M{"$set": bson.M{"status": kubtest.ExecutionStatusPending}}).Decode(&result)
+	returnDocument := options.After
+	err = r.Coll.FindOneAndUpdate(
+		ctx,
+		bson.M{"executionresult.status": kubtest.QUEUED_ExecutionStatus},
+		bson.M{"$set": bson.M{"executionresult.status": kubtest.PENDING_ExecutionStatus}},
+		&options.FindOneAndUpdateOptions{ReturnDocument: &returnDocument},
+	).Decode(&result)
 	return
 }

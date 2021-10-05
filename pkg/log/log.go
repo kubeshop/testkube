@@ -8,6 +8,7 @@ import (
 // New returns new logger instance
 func New() *zap.SugaredLogger {
 	logger, _ := zap.NewProduction()
+
 	return logger.Sugar()
 }
 

@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	apiClient "github.com/kubeshop/kubtest/pkg/api/client"
-	"github.com/kubeshop/kubtest/pkg/api/kubtest"
+	apiClient "github.com/kubeshop/kubtest/pkg/api/v1/client"
+	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
 	"github.com/kubeshop/kubtest/pkg/ui"
 	"github.com/spf13/cobra"
 )

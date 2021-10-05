@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewWatchScriptExecutionCmd() *cobra.Command {
+func NewWatchExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "watch",
 		Short: "Watch until script execution is in complete state",
@@ -31,17 +31,25 @@ func NewWatchScriptExecutionCmd() *cobra.Command {
 
 			client, _ := GetClient(cmd)
 
+			execution, err := client.GetExecution(scriptID, executionID)
+			ui.ExitOnError("get script execution details", err)
+
+			PrintExecutionDetails(execution)
+
+			ui.Info("Watching for changes")
 			for range time.Tick(time.Second) {
-				scriptExecution, err := client.GetExecution(scriptID, executionID)
-				ui.ExitOnError("getting API for script completion", err)
+				execution, err := client.GetExecution(scriptID, executionID)
+				ui.ExitOnError("get script execution details", err)
 				render := GetRenderer(cmd)
-				err = render.Render(scriptExecution, os.Stdout)
-				ui.ExitOnError("rendering", err)
-				if scriptExecution.Execution.IsCompleted() {
+				err = render.Watch(execution, os.Stdout)
+				ui.ExitOnError("watching for changes", err)
+				if execution.ExecutionResult.IsCompleted() {
+					ui.Info("\nGetting results")
+					render.Render(execution, os.Stdout)
+					ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
 					return
 				}
 			}
-
 		},
 	}
 }

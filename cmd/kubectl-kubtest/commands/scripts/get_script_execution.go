@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGetScriptExecutionCmd() *cobra.Command {
+func NewGetExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execution",
 		Short: "Gets script execution details",
@@ -29,11 +29,11 @@ func NewGetScriptExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
-			scriptExecution, err := client.GetExecution(scriptID, executionID)
+			execution, err := client.GetExecution(scriptID, executionID)
 			ui.ExitOnError("getting script execution: "+scriptID+"/"+executionID, err)
 
 			render := GetRenderer(cmd)
-			err = render.Render(scriptExecution, os.Stdout)
+			err = render.Render(execution, os.Stdout)
 			ui.ExitOnError("rendering", err)
 		},
 	}

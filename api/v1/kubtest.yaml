@@ -17,8 +17,6 @@ externalDocs:
 tags:
   - name: api
     description: 'Kubtest API operations'
-  - name: executor
-    description: 'Executor operations'
   - name: scripts
     description: 'Script operations'
   - name: executions
@@ -34,22 +32,16 @@ paths:
       description: 'Returns array of scripts executions'
       operationId: listExecutions
       parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 100
-          description: the number of executions to get
-          required: false
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ExecutionSummary'
+                $ref: '#/components/schemas/ExecutionsResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -71,9 +63,9 @@ paths:
       tags:
         - executions
         - api
-      summary: 'Get script execution'
+      summary: 'Get script execution by ID'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecutionByID
+      operationId: getExecutionByID
       responses:
         200:
           description: successful operation
@@ -120,7 +112,7 @@ paths:
         - scripts
         - api
       summary: 'create new script'
-      description: 'filters will be added later'
+      description: 'create new script based on script content or git based data'
       operationId: createScript
       requestBody:
         description: script details body
@@ -214,7 +206,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScriptExecutionRequest'
+              $ref: '#/components/schemas/ExecutionRequest'
       responses:
         201:
           description: successful operation
@@ -223,7 +215,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/ExecutionResult'
         400:
           description: 'problem with request body'
           content:
@@ -257,22 +249,23 @@ paths:
             type: string
           required: true
           description: ID of the script
+        - $ref: '#/components/parameters/ExecutionsPageSize'
+        - $ref: '#/components/parameters/ExecutionsPageIndex'
+        - $ref: '#/components/parameters/ExecutionsStatusFilter'
       tags:
         - api
         - scripts
         - executions
       summary: 'Get all script executions'
       description: 'Returns array of all available script executions'
-      operationId: listScriptExecutions
+      operationId: listExecutions
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ExecutionSummary'
+                $ref: '#/components/schemas/ExecutionsResult'
         500:
           description: 'problem with getting script executions from storage'
           content:
@@ -303,7 +296,7 @@ paths:
         - executions
       summary: 'Get script execution'
       description: 'Returns execution with given executionID'
-      operationId: getScriptExecution
+      operationId: getExecution
       responses:
         200:
           description: successful operation
@@ -341,7 +334,7 @@ paths:
         - executions
       summary: 'Aborts execution'
       description: 'Aborts execution and returns execution details'
-      operationId: abortScriptExecution
+      operationId: abortExecution
       responses:
         501:
           description: not implemented yet
@@ -350,7 +343,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/Execution'
+                  $ref: '#/components/schemas/ExecutionResult'
 
 components:
   schemas:
@@ -373,7 +366,7 @@ components:
           type: string
           format: date-time
 
-    ScriptExecution:
+    Execution:
       type: object
       description: API server script execution
       properties:
@@ -381,10 +374,10 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        script-name:
+        scriptName:
           type: string
           description: unique script name (CRD Script name)
-        script-type:
+        scriptType:
           type: string
           description: script type e.g. postman/collection
         name:
@@ -398,57 +391,7 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        params:
-          type: object
-          description: 'execution params passed to executor'
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
-        execution:
-          $ref: '#/components/schemas/Execution'
-
-    ExecutionSummary:
-      description: execution summary
-      type: object
-      properties:
-        id:
-          type: string
-          description: execution id
-          format: bson objectId
-        script-name:
-          type: string
-          description: name of the script
-        script-type:
-          type: string
-          description: the type of script for this execution
-        status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - failed
-        start-time:
-          type: string
-          description: 'test execution start time'
-          format: date-time
-        end-time:
-          type: string
-          description: 'test execution end time'
-          format: date-time
-
-    Execution:
-      description: execution result returned from executor
-      type: object
-      properties:
-        id:
-          type: string
-          description: execution id
-          format: bson objectId
-        script-content:
+        scriptContent:
           type: string
           description: script metadata content
         repository:
@@ -461,54 +404,96 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        status:
-          type: string
-          description: 'execution status'
-          enum:
-            - queued
-            - pending
-            - success
-            - failed
-        result:
+        executionResult:
+          required: true
+          description: result get from executor
           $ref: '#/components/schemas/ExecutionResult'
-        start-time:
+
+    ExecutionsResult:
+      description: the result for a page of executions
+      type: object
+      required:
+        - totals
+        - results
+      properties:
+        totals:
+          $ref: '#/components/schemas/ExecutionsTotals'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionSummary'
+
+    ExecutionSummary:
+      description: execution summary
+      type: object
+      required:
+        - id
+        - name
+        - scriptName
+        - scriptType
+        - status
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        name:
+          type: string
+          description: execution name
+        scriptName:
+          type: string
+          description: name of the script
+        scriptType:
+          type: string
+          description: the type of script for this execution
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        startTime:
+          type: string
+          description: 'test execution start time'
+          format: date-time
+        endTime:
+          type: string
+          description: 'test execution end time'
+          format: date-time
+
+    ExecutionStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - error
+
+    ExecutionResult:
+      description: execution result returned from executor
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        startTime:
           type: string
           description: 'test start time'
           format: date-time
-        end-time:
+        endTime:
           type: string
           description: 'test end time'
           format: date-time
-
-    ExecutionResult:
-      description: execution result data
-      type: object
-      properties:
-        status:
-          type: string
-          description: script execution status
-          enum: [ success, failed ]
-        raw-output:
+        output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'
-        raw-output-type:
+        outputType:
           type: string
           description: 'output type depends of reporter used in partucular tool'
           enum:
             - text/plain
             - application/junit+xml
             - application/json
-        error-message:
+        errorMessage:
           type: string
-          description: 'error message when status is failed, separate to output as output can be partial in case of error'
-        start-time:
-          type: string
-          description: script execution start time
-          format: date-time
-        end-time:
-          type: string
-          description: script execution start time
-          format: date-time
+          description: 'error message when status is error, separate to output as output can be partial in case of error'
         steps:
           type: array
           items:
@@ -518,6 +503,9 @@ components:
     ExecutionStepResult:
       description: execution result data
       type: object
+      required:
+        - name
+        - status
       properties:
         name:
           type: string
@@ -528,7 +516,7 @@ components:
         status:
           type: string
           description: execution step status
-          enum: [ success, failed ]
+          enum: [ success, error ]
         assertionResults:
           type: array
           items:
@@ -542,21 +530,49 @@ components:
           type: string
         status:
           type: string
-          enum: [ success, failed ]
-        error-message:
+          enum: [ success, error ]
+        errorMessage:
           type: string
           nullable: true
 
-
+    ExecutionsTotals:
+      type: object
+      description: various execution counters
+      required:
+        - results
+        - passed
+        - failed
+        - queued
+        - pending
+      properties:
+        results:
+          type: integer
+          description: the total number of executions available
+        passed:
+          type: integer
+          description: the total number of passed executions available
+        failed:
+          type: integer
+          description: the total number of failed executions available
+        queued:
+          type: integer
+          description: the total number of queued executions available
+        pending:
+          type: integer
+          description: the total number of running executions available
 
     #
     # Requests
     #
 
-    ExecutionRequest:
-      description: scripts execution request body
+    ExecutorStartRequest:
+      description: scripts execution request body when calling new execution request 
       type: object
       properties:
+        id:
+          type: string
+          description: ID of script execution to handle by executor, execution need to be able to return execution info based on this ID
+          example: af7f8afa8bc8ab8ab8a83b8
         type:
           type: string
           description: script type
@@ -576,12 +592,12 @@ components:
         content:
           type: string
           description: script content as string (content depends from executor)
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 
             - direct content - created from file,
-            - git repo directory checkout in case when test is some kind of project or have more than one file,
+            - git repository with path, will be checked out, useful when test have more than one file or complicated directory structure,
           enum:
             - content
             - git
@@ -589,7 +605,7 @@ components:
           $ref: '#/components/schemas/Repository'
 
     Repository:
-      description: scripts execution request body
+      description: repository representation for tests in git repositories
       type: object
       required:
         - type
@@ -611,7 +627,7 @@ components:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 
-    ScriptExecutionRequest:
+    ExecutionRequest:
       description: scripts execution request body
       type: object
       properties:
@@ -638,7 +654,7 @@ components:
       properties:
         name:
           type: string
-          description: script name - Custom Resource name - must be unique
+          description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
           example: kubeshop-homepage-test
         type:
           type: string
@@ -648,7 +664,7 @@ components:
           type: string
           description: kubernetes namespace (defaults to 'default')
           example: default
-        input-type:
+        inputType:
           type: string
           description: >
             script content type can be: 
@@ -680,8 +696,6 @@ components:
                   "response": []
                 }
 
-
-
     #
     # Errors
     #
@@ -693,7 +707,7 @@ components:
         type:
           type: string
           description: Type contains a URI that identifies the problem type. This URI will,
-          example: http://kubeshop.io/kubtest/problems/invalid-script-name
+          example: http://kubeshop.io/kubtest/problems/invalidscriptname
         title:
           type: string
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
@@ -710,3 +724,32 @@ components:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
           example: http://10.23.23.123:8088/scripts
+
+  #
+  # Parameters
+  #
+
+  parameters:
+    ExecutionsPageSize:
+      in: query
+      name: pageSize
+      schema:
+        type: integer
+        default: 100
+      description: the number of executions to get, setting to 0 will return only totals
+      required: false
+    ExecutionsPageIndex:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 0
+      description: the page index to start at
+      required: false
+    ExecutionsStatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: '#/components/schemas/ExecutionStatus'
+      description: optional status filter
+      required: false

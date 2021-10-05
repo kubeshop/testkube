@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewListScriptExecutionsCmd() *cobra.Command {
+func NewListExecutionsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "executions",
 		Short: "List scripts executions",
@@ -25,6 +25,7 @@ func NewListScriptExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
 			renderer := GetListRenderer(cmd)
+
 			err = renderer.Render(executions, os.Stdout)
 			ui.ExitOnError("rendering", err)
 		},
