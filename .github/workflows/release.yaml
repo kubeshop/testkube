@@ -1,4 +1,4 @@
-name: Release kubtest CLI for Kubectl.
+name: Release kubectl-kubtest
 
 on:
   push:
