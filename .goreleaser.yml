@@ -1,17 +1,10 @@
-# This is an example .goreleaser.yml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
 builds:
   - 
     main: ./cmd/kubectl-kubtest
     binary: kubectl-kubtest
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{ .Tag }}-{{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=kubtest-ci
     env:
       - CGO_ENABLED=0
     goos:
@@ -20,18 +13,31 @@ builds:
       - darwin
 archives:
   - replacements:
-      darwin: Darwin
+      darwin: macOS
       linux: Linux
       windows: Windows
       386: i386
       amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+release:
+  # Create a thread in the General category in the repo's discussion tab.
+  discussion_category_name: General
+
+  # Tags that have the format v1.0.0-rc1 will mark the release as a pre-release (i.e. not ready for production)
+  # Other tags will be marked as ready for production
+  prerelease: auto
+# brews:
+#   -
+#     tap:
+#       owner: kubeshop
+#       name: kubtest
+#     description: Test your services in Kubernetes cluster with ease.
+#     homepage: https://kubtest.io
+#     license: "MIT"
