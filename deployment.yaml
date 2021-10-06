@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-executor-deployment
+  labels:
+    app: curl-executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl-executor
+  template:
+    metadata:
+      labels:
+        app: curl-executor
+    spec:
+      containers:
+      - name: executor
+        image: YOUR_USER/kubtest-executor-curl:latest
+        env:
+        - name: EXECUTOR_PORT
+          value: "8083"
+        ports:
+        - containerPort: 8083
+        resources:
+          limits:
+            cpu: 300m
+            ephemeral-storage: 1Gi
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            ephemeral-storage: 1Gi
+            memory: 100Mi
+

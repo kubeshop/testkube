@@ -6,13 +6,21 @@ In order to be able to run tests using some new tools for which there is no exec
 
 ### Setup repository
 
-- Fork from [kubetest-executor-template](https://github.com/kubeshop/kubtest-executor-template).
+- Create new rpository from template [kubetest-executor-template](https://github.com/kubeshop/kubtest-executor-template).
 - Clone the newly created repo.
-- Rename the go module from kubetest-executor-template to the new name & run `go mod tidy`.
+- Rename the go module from `kubetest-executor-template` in whole project to the new name & run `go mod tidy`.
 
 ### Implement Runner Components
 
-[Kubtest](https://github.com/kubeshop/kubtest) provides the components to help implement a new executor and only the explicit runner needs to be implemented.
+[Kubtest](https://github.com/kubeshop/kubtest) provides the components to help implement a new executor and only the explicit runner needs to be implemented but you're not forced to use it - just implement OpenAPI Spec for executor 
+and you're good.
+In this example for sake of simplicity we'll use `kubtest` components to implement executor they help us with:
+- Defining basic HTTP Rest based server skeleton
+- Creating job queue - our tests will be run in async mode
+- Running runners - this is the only part which need to be implmented when using `kubtest` components.
+
+
+To implement new executor we should do following thigs: 
 
 - Define an input format for the tests.
   In order to communicate effectivele with executor we need to define a format on how to structure the tests. And bellow is an example for the curl based tests.
@@ -34,16 +42,17 @@ It will be stored in the `content` field of the request body and the request bod
 ```json
 {
     "type": "curl/test",
-    "name": "test1",
+    "name": "some-custom-execution-name",
     "content": "{\"command\": [\"curl\", \"https://reqbin.com/echo/get/json\", \"-H\", \"'Accept: application/json'\"],\"expected_status\":200,\"expected_body\":\"{\\\"success\\\":\\\"true\\\"}\"}"
 }
 ```
 
-There is also the field `params` field in the request that can be used to pass some aditional key value pairs to the runner.
+There is also the field `params` field in the request that can be used to pass some aditional key value pairs to the runner. You need to implement them by your own - they are often used in runners to pass additional variables to test.
 
 - Create execution storage repository.
   There is a storage repository `result.MongoRepository` provided implemented using mongo DB but there is the possibility to provide a new storage type.
-  The repository needs to implement the interface bellow, it can use inmemory storage,a database or whatever fits the needs. This is only used for execution scheduling, the final results will be centralized by the api.
+  The repository needs to implement the interface bellow, it can use inmemory storage,a database or whatever fits the needs. This is only used for execution scheduling, the final results will be centralized by the api. You can also use 
+  built-in repository (for now we're handling mongo repository only)
 
 ```go
 type Repository interface {
@@ -60,9 +69,17 @@ type Repository interface {
 
 - Prepare docker for the type of the executor.
   In this step the docker should be configured to make sure that the runner has all dependencies installed and ready to use. 
-  In the case of the [kubtest-executor-curl-example](https://github.com/kubeshop/kubtest-executor-curl-example) only installing curl was needed.
+  In the case of the [kubtest-executor-curl](https://github.com/kubeshop/kubtest-executor-curl) only installing curl was needed.
 
 ```docker
+FROM golang:1.17
+WORKDIR /build
+COPY . .
+ENV GONOSUMDB=github.com/kubeshop/* 
+ENV CGO_ENABLED=0 
+ENV GOOS=linux
+RUN cd cmd/executor;go build -o /app -mod mod -a .
+
 FROM alpine
 RUN apk --no-cache add ca-certificates && \
     apk --no-cache add curl
@@ -139,3 +156,70 @@ func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
     }
 }
 ```
+
+When everything is completed you'll need to build and deploy your runner into Kubernetes cluster. 
+
+```
+docker build -t YOUR_USER/kubtest-executor-curl . 
+docker push YOUR_USER/kubtest-executor-curl
+```
+
+and define some deployment: 
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-executor-deployment
+  labels:
+    app: curl-executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl-executor
+  template:
+    metadata:
+      labels:
+        app: curl-executor
+    spec:
+      containers:
+      - name: executor
+        image: YOUR_USER/kubtest-executor-curl:latest
+        env:
+        - name: EXECUTOR_PORT
+          value: "8083"
+        ports:
+        - containerPort: 8083
+        resources:
+          limits:
+            cpu: 300m
+            ephemeral-storage: 1Gi
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            ephemeral-storage: 1Gi
+            memory: 100Mi
+```
+
+(You should tune deployment for production use)
+
+Last thing which need to be done is to create binding for your executor to some type 
+We've defined `curl/test` type above so let's bind this type so kubtest would be aware of it. 
+To do this we need to create new Executor Custom Resource
+
+
+```
+apiVersion: executor.kubtest.io/v1
+kind: Executor
+metadata:
+  annotations:
+    meta.helm.sh/release-name: kubtest
+    meta.helm.sh/release-namespace: default
+  name: curl-executor
+spec:
+  executor_type: rest
+  types:
+  - curl/test
+  uri: http://kubtest-curl-executor:8086
+```
+

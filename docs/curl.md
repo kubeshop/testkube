@@ -28,8 +28,6 @@ Create the test by running `kubectl kubtest scripts create --file curl-test.json
 Check if it was created using command `kubectl kubtest scripts list` it will output something like:
 
 ```
-✔ setting up client type
-✔ getting all scripts in namespace default
        NAME       |        TYPE         
 +-----------------+--------------------+
   curl-test      | curl/test  
@@ -46,8 +44,6 @@ Test can be run using `kubectl kubtest scripts start curl-test` which gives the 
                                  /kʌb tɛst/ by Kubeshop
 
 
-✔ setting up client type
-✔ starting script execution default/curl-tes-1
 Script queued for execution
 
 Use following command to get script execution details:
@@ -60,8 +56,6 @@ $ kubectl kubtest scripts watch 613a2d7056499e6e3d5b9c3e
 As in the output is stated results can be checked using `kubectl kubtest scripts execution 613a2d7056499e6e3d5b9c3e` where the id of the execution is unique for each execution, make sure that the right id is used. Output of that should look something like:
 
 ```
-✔ setting up client type
-✔ getting script execution: -/613a2d7056499e6e3d5b9c3e
 Name: painfully-super-colt,Status: success,Duration: 534ms
 
 HTTP/2 200 
@@ -81,7 +75,6 @@ cf-ray: 68c193af1f706571-LHR
 alt-svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400, h3-28=":443"; ma=86400, h3-27=":443"; ma=86400
 
 {"success":"true"}
-✔ rendering
 ```
 
 where there is a generated name for the execution, the status, duration and the output of the curl command. 
