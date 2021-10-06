@@ -23,7 +23,7 @@ In this example for sake of simplicity we'll use `kubtest` components to impleme
 To implement new executor we should do following: 
 
 - Define the input format for tests.
-  In order to communicate effectivele with executor we need to define a format on how to structure the tests. And bellow is an example for the curl based tests.
+  In order to communicate effectively with executor we need to define a format on how to structure the tests. And bellow is an example for the curl based tests.
 
 ```json
 {
