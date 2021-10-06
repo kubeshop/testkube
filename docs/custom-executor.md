@@ -157,6 +157,8 @@ func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
 }
 ```
 
+### Deploying your executor
+
 When everything is completed you'll need to build and deploy your runner into Kubernetes cluster. 
 
 ```
@@ -203,10 +205,11 @@ spec:
 
 (You should tune deployment for production use)
 
+### Add Executor to Kubtest
+
 Last thing which need to be done is to create binding for your executor to some type 
 We've defined `curl/test` type above so let's bind this type so kubtest would be aware of it. 
 To do this we need to create new Executor Custom Resource
-
 
 ```
 apiVersion: executor.kubtest.io/v1
