@@ -90,7 +90,7 @@ ENTRYPOINT ["/bin/app"]
 ```
 
 - Create new runner.
-  Runner should contain the logic to run the test and to verify the expectations based on the interface from bellow.
+  The runner should contain logic to run tests and to verify expectations based on the interface from bellow.
 
 ```go
 // Runner interface to abstract runners implementations
