@@ -4,6 +4,9 @@ Kubtest is able to make simple runs of Cypress tests. As Cypress is organised in
 
 To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - https://docs.cypress.io/guides/dashboard/projects)
 
+
+## Creating new test 
+
 Let's assume we've created one in https://github.com/kubeshop/kubtest-executor-cypress/tree/main/examples 
 which contains really simple test which checks if some string exists on web site, we'll also check 
 if env parameter exists - to show how to pass additional parameters into test.
@@ -21,6 +24,8 @@ describe('The Home Page', () => {
 })
 ```
 
+## Creating `kubtest` test script
+
 Now we need to create Kubtest test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
 ```sh 
@@ -33,6 +38,8 @@ kubectl get scripts
 NAME                  AGE
 kubeshop-cypress      51s
 ```
+
+## Starting test 
 
 Now we can start our test
 
@@ -253,5 +260,6 @@ $ kubectl kubtest scripts execution 615d5372b046f8fbd3d955d2
 Script execution completed in 1m45.405939s
 ```
 
+## Summary
 
-Our first test completed successfully! 
+Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with Kubtest!
