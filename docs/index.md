@@ -34,6 +34,10 @@ Kubtest attempts to:
 - Centralize all test results in a consistent format for "actionable QA analytics"
 - Provide a modular architecture for adding new types of test scripts and executors
 
+Check out our Intro video:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-5jlrPetK7E" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to set up Kubtest and 
 run your first tests!
 

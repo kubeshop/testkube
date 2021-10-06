@@ -50,7 +50,7 @@ Script created! Now we can run as many times as we want
 
 ## Running test
 
-```
+```sh
 kubectl kubtest scripts run api-incluster-test
 
 ██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████ 
