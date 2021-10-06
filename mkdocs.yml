@@ -21,10 +21,10 @@ nav:
       - Running: scripts-running.md
       - Getting results: scripts-getting-results.md
   - Executors:
-      - Postman Collections: postman.md
-      - Cypress Tests: cypress.md
-      - Curl Commands: curl.md
-      - Creating your own: custom-executor.md
+      - Postman Collections: executor-postman.md
+      - Cypress Tests: executor-cypress.md
+      - Curl Commands: executor-curl.md
+      - Creating your own: executor-custom.md
   - CLI Reference:
       - Overview:  cli/kubtest.md
       - Install Cmd: cli/kubtest_install.md
