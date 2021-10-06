@@ -16,6 +16,10 @@ nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
+  - Managing test scripts:
+      - Creating: scripts-creating.md
+      - Running: scripts-running.md
+      - Getting results: scripts-getting-results.md
   - Executors:
       - Postman Collections: postman.md
       - Cypress Tests: cypress.md
