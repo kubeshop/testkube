@@ -20,7 +20,7 @@ In this example for sake of simplicity we'll use `kubtest` components to impleme
 - Running runners - this is the only part which need to be implmented when using `kubtest` components.
 
 
-To implement new executor we should do following thigs: 
+To implement new executor we should do following: 
 
 - Define an input format for the tests.
   In order to communicate effectivele with executor we need to define a format on how to structure the tests. And bellow is an example for the curl based tests.
