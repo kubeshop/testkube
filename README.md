@@ -59,7 +59,7 @@ Don't hesitate to say hi to the team and ask questions on our [Discord server](h
 
 Is available at [https://kubeshop.github.io/kubtest](https://kubeshop.github.io/kubtest)
 
-## Contribution to project
+## Contributing
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
