@@ -47,11 +47,11 @@ The output will be stored in the `content` field of the request body and the req
 }
 ```
 
-There is also the field `params` field in the request that can be used to pass some aditional key value pairs to the runner. You need to implement them by your own - they are often used in runners to pass additional variables to test.
+There is also the field `params` field in the request that can be used to pass some aditional key value pairs to the runner. You need to implement them on your own - they are often used in runners to pass additional variables to test.
 
 - Create execution storage repository.
   There is a storage repository `result.MongoRepository` provided implemented using mongo DB but there is the possibility to provide a new storage type.
-  The repository needs to implement the interface bellow, it can use inmemory storage,a database or whatever fits the needs. This is only used for execution scheduling, the final results will be centralized by the api. You can also use 
+  The repository needs to implement the interface bellow, it can use inmemory storage, database or whatever fits your needs. This is only used for execution scheduling, the final results will be centralized by the api. You can also use 
   built-in repository (for now  support only mongo repository)
 
 ```go
