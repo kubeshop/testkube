@@ -52,7 +52,7 @@ There is also the field `params` field in the request that can be used to pass s
 - Create execution storage repository.
   There is a storage repository `result.MongoRepository` provided implemented using mongo DB but there is the possibility to provide a new storage type.
   The repository needs to implement the interface bellow, it can use inmemory storage,a database or whatever fits the needs. This is only used for execution scheduling, the final results will be centralized by the api. You can also use 
-  built-in repository (for now we're handling mongo repository only)
+  built-in repository (for now  support only mongo repository)
 
 ```go
 type Repository interface {
