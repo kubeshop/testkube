@@ -39,7 +39,7 @@ Main Kubtest components are:
 Kubtest attempts to:
 
 - Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
-- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc. - 
+- Make it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. - 
   in your clusters, without having to wrap them in docker-images or providing network access
 - Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralize all test results in a consistent format for "actionable QA analytics"
