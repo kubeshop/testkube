@@ -37,7 +37,7 @@ If you want kubtest to provide the endpoint for the kubest dashboard use `kubect
 
 Dashboard will bring you web-based UI for managing and seeing all the tests and its results via web-browser.
 ### Enabling dashboard
-In order to enable dashbaord please provide Helm's set value as follow during installation:
+In order to enable dashboard please provide Helm's set value as follow during installation:
 ```
 helm install kubtest kubeshop/kubtest --set kubtest-dashboard.enabled="true"
 ```
@@ -76,15 +76,21 @@ spec:
   tls:
   - hosts:
     - demo.kubtest.io
-    secretName: kubtest-demo-cert-secret # to be created by ytour certificate manager within k8s cluster.
+    secretName: kubtest-demo-cert-secret # to be created by your certificate manager within k8s cluster.
 ```
 If you don't need TLS enabled just omit TLS configuration part. 
 
-> Dashbaord talks to api-server via endpoint. Hence api-server will hvae to have DNS as well.
+> Though we highly discourage working in non-safe environment whcih is exposed without usage of TLS-based connection. Please do so only in private internal environemnt for testing or development purposes only.
+
+> Dashbaord talks to api-server via endpoint. Hence api-server will hvae to have DNS as well. 
 
 Please note that you can install ingress for dashboard together with api-server ingress with the usage of Helm chart as well:
 ```
 helm install kubtest kubeshop/kubtest --set kubtest-dashboard.enabled="true" --set kubtest-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true"
+```
+If you need to specify some specific to your ingress annotations, you can use Helm "--set" option to pass needed annotations. E.G.:
+```
+helm install kubtest kubeshop/kubtest --set kubtest-dashboard.enabled="true" --set kubtest-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true" --set api-server.ingress.annotations.kubernetes\\.io/ingress\\.class="anything_needed"
 ```
 ## Uninstall `kubtest`
 
