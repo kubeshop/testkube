@@ -69,7 +69,7 @@ type Repository interface {
 
 - Prepare docker for the type of the executor.
   In this step Dockerfile should be configured to make sure that the runner has all dependencies installed and ready to use. 
-  In the case of the [kubtest-executor-curl](https://github.com/kubeshop/kubtest-executor-curl) only installing curl was needed.
+  In case of the [kubtest-executor-curl](https://github.com/kubeshop/kubtest-executor-curl) only curl was required.
 
 ```docker
 FROM golang:1.17
