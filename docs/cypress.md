@@ -67,7 +67,7 @@ or watch script execution until complete:
 $ kubectl kubtest scripts watch 615d5265b046f8fbd3d955d0
 ```
 
-
+## Getting execution results
 
 Let's watch our script execution 
 
@@ -162,6 +162,8 @@ output:
 Script execution completed in 1m17s
 
 ```
+
+## Adding parameters
 
 We can see that our test was failed because of  `AssertionError: expected undefined to equal 'testvalue'` 
 

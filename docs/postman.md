@@ -19,7 +19,7 @@ curl http://kubtest-api-server:8088/health
 200 OK 
 ```
 
-## Create new postman test
+## Create new Postman test
 
 First we need to create postman collection and export it as json 
 
@@ -77,6 +77,7 @@ $ kubectl kubtest scripts watch 615d6398b046f8fbd3d955d4
 
 (keep in mind that you can also name your runs, if no name is passed Kubtest will autogenerate name)
 
+## Getting test results
 
 Now we can watch/get script execution details: 
 
