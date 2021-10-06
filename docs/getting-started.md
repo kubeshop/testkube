@@ -135,12 +135,6 @@ kubectl kubtest scripts executions SCRIPT_NAME
 +------------+--------------------+--------------------------+---------------------------+----------+
 ```
 
-## [TODO] Aborting already started script execution - NOT IMPLEMENTED
-```shell
-$ kubectl kubtest scripts abort SOME_EXECUTION_ID
-Script "SCRIPTNAME" Execution aborted
-```
-
 ## Changing output format
 
 For lists and details you can use different output format (`--output` flag) for now we're supporting following formats:

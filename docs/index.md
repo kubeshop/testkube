@@ -10,7 +10,7 @@
 
 Welcome to Kubtest - your somewhat opinionated and friendly Kubernetes testing framework!
 
-Kubetest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
+Kubtest decouples test artefacts and execution from CI/CD tooling; tests are meant to be part of your
 clusters state and can be executed as needed:
 
 - Manually via kubectl cli
@@ -28,11 +28,15 @@ Main Kubtest components are:
 Kubtest attempts to:
 
 - Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
-- Make it easy to run any kind of tests - functional, load/performance, security, compliance, etc. - in your clusters,
-  without having to wrap them in docker-images or providing network access
+- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc. -
+  in your clusters, without having to wrap them in docker-images or providing network access
 - Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralize all test results in a consistent format for "actionable QA analytics"
 - Provide a modular architecture for adding new types of test scripts and executors
+
+Check out our Intro video:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-5jlrPetK7E" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to set up Kubtest and 
 run your first tests!
