@@ -37,7 +37,7 @@ To implement new executor we should do following:
 }
 ```
 
-It will be stored in the `content` field of the request body and the request body will look like:
+The output will be stored in the `content` field of the request body and the request body will look like:
 
 ```json
 {
