@@ -24,7 +24,7 @@ type Config struct {
 var config Config
 
 func init() {
-	envconfig.Process("KUBTEST_API", &config)
+	envconfig.Process("TESTKUBE_API", &config)
 }
 func NewDirectScriptsAPI(uri string) DirectScriptsAPI {
 	return DirectScriptsAPI{
