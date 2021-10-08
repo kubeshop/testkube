@@ -67,7 +67,7 @@ func (e *ExecutionResult) Duration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
-func (r *ExecutionResult) Err(err error) *ExecutionResult {
+func (r *ExecutionResult) Err(err error) ExecutionResult {
 	r.ErrorMessage = err.Error()
-	return r
+	return *r
 }
