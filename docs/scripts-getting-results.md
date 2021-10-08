@@ -9,12 +9,12 @@ After each run TestKube informs you that you can get results later of given scri
 ```sh
 kubectl testkube scripts run api-incluster-test
 
-██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████ 
-██  ██  ██    ██ ██   ██    ██    ██      ██         ██    
-█████   ██    ██ ██████     ██    █████   ███████    ██    
-██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
-██   ██  ██████  ██████     ██    ███████ ███████    ██    
-                                 /kʌb tɛst/ by Kubeshop
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+                                           /tɛst kjub/ by Kubeshop
 
 
 Type          : postman/collection

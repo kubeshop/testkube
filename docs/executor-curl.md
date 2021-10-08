@@ -36,13 +36,12 @@ Check if it was created using command `kubectl testkube scripts list` it will ou
 Test can be run using `kubectl testkube scripts start curl-test` which gives the output:
 
 ```
-██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████ 
-██  ██  ██    ██ ██   ██    ██    ██      ██         ██    
-█████   ██    ██ ██████     ██    █████   ███████    ██    
-██  ██  ██    ██ ██   ██    ██    ██           ██    ██    
-██   ██  ██████  ██████     ██    ███████ ███████    ██    
-                                 /kʌb tɛst/ by Kubeshop
-
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+                                           /tɛst kjub/ by Kubeshop
 
 Script queued for execution
 
