@@ -1,6 +1,6 @@
 package main
 
-import "github.com/kubeshop/kubtest/cmd/tools/commands"
+import "github.com/kubeshop/testkube/cmd/tools/commands"
 
 var (
 	commit  string

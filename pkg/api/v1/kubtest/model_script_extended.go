@@ -1,4 +1,4 @@
-package kubtest
+package testkube
 
 type Scripts []Script
 

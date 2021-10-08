@@ -3,9 +3,9 @@ package client
 import (
 	"time"
 
-	executorv1 "github.com/kubeshop/kubtest-operator/apis/executor/v1"
-	scriptv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	scriptv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const (
@@ -21,7 +21,7 @@ type ExecuteOptions struct {
 	ScriptSpec   scriptv1.ScriptSpec
 	ExecutorName string
 	ExecutorSpec executorv1.ExecutorSpec
-	Request      kubtest.ExecutionRequest
+	Request      testkube.ExecutionRequest
 }
 
 func NewExecuteOptions() ExecuteOptions {

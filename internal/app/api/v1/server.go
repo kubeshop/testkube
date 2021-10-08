@@ -2,14 +2,14 @@ package v1
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
-	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
-	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubtest/pkg/executor/client"
-	"github.com/kubeshop/kubtest/pkg/server"
+	executorscr "github.com/kubeshop/testkube-operator/client/executors"
+	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
+	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/server"
 )
 
-func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient) kubtestAPI {
+func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient) testkubeAPI {
 
 	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
@@ -19,7 +19,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	var executorClientConfig client.RestExecutorConfig
 	envconfig.Process("POSTMANEXECUTOR", &executorClientConfig)
 
-	s := kubtestAPI{
+	s := testkubeAPI{
 		HTTPServer:      server.NewServer(httpConfig),
 		Repository:      repository,
 		ScriptsClient:   scriptsClient,
@@ -32,7 +32,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	return s
 }
 
-type kubtestAPI struct {
+type testkubeAPI struct {
 	server.HTTPServer
 	Repository      result.Repository
 	Executors       client.Executors
@@ -41,7 +41,7 @@ type kubtestAPI struct {
 	Metrics         Metrics
 }
 
-func (s kubtestAPI) Init() {
+func (s testkubeAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 
 	executions := s.Routes.Group("/executions")

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
-	"github.com/kubeshop/kubtest/pkg/log"
-	"github.com/kubeshop/kubtest/pkg/runner"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/repository/result"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/runner"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 )
@@ -36,7 +36,7 @@ type Worker struct {
 	Log         *zap.SugaredLogger
 }
 
-func (w *Worker) PullExecution() (execution kubtest.Execution, err error) {
+func (w *Worker) PullExecution() (execution testkube.Execution, err error) {
 	execution, err = w.Repository.QueuePull(context.Background())
 	if err != nil {
 		return execution, err
@@ -45,10 +45,10 @@ func (w *Worker) PullExecution() (execution kubtest.Execution, err error) {
 }
 
 // PullExecutions gets executions from queue - returns executions channel
-func (w *Worker) PullExecutions() chan kubtest.Execution {
-	executionChan := make(chan kubtest.Execution, w.BufferSize)
+func (w *Worker) PullExecutions() chan testkube.Execution {
+	executionChan := make(chan testkube.Execution, w.BufferSize)
 
-	go func(executionChan chan kubtest.Execution) {
+	go func(executionChan chan testkube.Execution) {
 		w.Log.Info("Watching queue start")
 		for {
 			execution, err := w.PullExecution()
@@ -69,9 +69,9 @@ func (w *Worker) PullExecutions() chan kubtest.Execution {
 	return executionChan
 }
 
-func (w *Worker) Run(executionChan chan kubtest.Execution) {
+func (w *Worker) Run(executionChan chan testkube.Execution) {
 	for i := 0; i < w.Concurrency; i++ {
-		go func(executionChan chan kubtest.Execution) {
+		go func(executionChan chan testkube.Execution) {
 			ctx := context.Background()
 			for {
 				e := <-executionChan
@@ -90,7 +90,7 @@ func (w *Worker) Run(executionChan chan kubtest.Execution) {
 	}
 }
 
-func (w *Worker) RunExecution(ctx context.Context, e kubtest.Execution) (kubtest.Execution, error) {
+func (w *Worker) RunExecution(ctx context.Context, e testkube.Execution) (testkube.Execution, error) {
 	e.ExecutionResult.Start()
 	l := w.Log.With("executionID", e.Id, "startTime", e.ExecutionResult.StartTime.String())
 

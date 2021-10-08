@@ -1,13 +1,13 @@
 package commands
 
 import (
-	apiclient "github.com/kubeshop/kubtest/pkg/api/v1/client"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
 const (
-	IngressApiServerName  string = "kubtest-api-server"
-	DashboardURI          string = "http://dashboard.kubtest.io?apiEndpoint="
-	DashboardPrefix       string = "kubtest-dash"
-	IngressControllerName string = "kubtest-ing-ctrlr"
+	IngressApiServerName  string = "testkube-api-server"
+	DashboardURI          string = "http://dashboard.testkube.io?apiEndpoint="
+	DashboardPrefix       string = "testkube-dash"
+	IngressControllerName string = "testkube-ing-ctrlr"
 	CurrentApiVersion     string = apiclient.Version
 )

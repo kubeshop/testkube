@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/problem"
 )
 
 type RestExecutorConfig struct {
@@ -57,7 +57,7 @@ func (c RestExecutorClient) Watch(id string) (events chan ResultEvent) {
 	return events
 }
 
-func (c RestExecutorClient) Get(id string) (execution kubtest.ExecutionResult, err error) {
+func (c RestExecutorClient) Get(id string) (execution testkube.ExecutionResult, err error) {
 
 	uri := fmt.Sprintf(c.URI+"/v1/executions/%s", id)
 	resp, err := c.client.Get(uri)
@@ -77,9 +77,9 @@ func (c RestExecutorClient) Get(id string) (execution kubtest.ExecutionResult, e
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results with Get
-func (c RestExecutorClient) Execute(options ExecuteOptions) (execution kubtest.ExecutionResult, err error) {
+func (c RestExecutorClient) Execute(options ExecuteOptions) (execution testkube.ExecutionResult, err error) {
 	request := MapExecutionOptionsToStartRequest(options)
-	body, err := json.Marshal(kubtest.ExecutorStartRequest(request))
+	body, err := json.Marshal(testkube.ExecutorStartRequest(request))
 	if err != nil {
 		return execution, err
 	}
@@ -100,10 +100,10 @@ func (c RestExecutorClient) Abort(id string) error {
 	return nil
 }
 
-func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result kubtest.ExecutionResult, err error) {
+func (c RestExecutorClient) getResultFromResponse(resp *http.Response) (result testkube.ExecutionResult, err error) {
 	defer resp.Body.Close()
 
-	var execution kubtest.Execution
+	var execution testkube.Execution
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

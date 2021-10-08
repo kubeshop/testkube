@@ -1,4 +1,4 @@
-echo "Getting kubectl-kubtest plugin"
+echo "Getting kubectl-testkube plugin"
 #!/bin/sh 
 
 if [ ! -z "${DEBUG}" ]; 
@@ -23,17 +23,17 @@ _download_url() {
         local arch="$(_detect_arch)" 
         if [ -z "$KUBTEST_VERSION" ]
         then
-                local version=`curl -s https://api.github.com/repos/kubeshop/kubtest/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
-                echo "https://github.com/kubeshop/kubtest/releases/download/${version}/kubtest_${version:1}_$(uname)_$arch.tar.gz"       
+                local version=`curl -s https://api.github.com/repos/kubeshop/testkube/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
+                echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:1}_$(uname)_$arch.tar.gz"       
         else   
-                echo "https://github.com/kubeshop/kubtest/releases/download/v${KUBTEST_VERSION}/kubtest_${KUBTEST_VERSION}_$(uname)_$arch.tar.gz" 
+                echo "https://github.com/kubeshop/testkube/releases/download/v${KUBTEST_VERSION}/testkube_${KUBTEST_VERSION}_$(uname)_$arch.tar.gz" 
         fi
 }
 
-echo "Downloading kubtest from URL: $(_download_url)" 
-curl -sSLf $(_download_url) > kubtest.tar.gz 
-tar -xzf kubtest.tar.gz kubectl-kubtest 
-rm kubtest.tar.gz
-mv kubectl-kubtest /usr/local/bin/kubectl-kubtest
-echo "kubectl-kubtest installed in /usr/local/bin/kubectl-kubtest"
+echo "Downloading testkube from URL: $(_download_url)" 
+curl -sSLf $(_download_url) > testkube.tar.gz 
+tar -xzf testkube.tar.gz kubectl-testkube 
+rm testkube.tar.gz
+mv kubectl-testkube /usr/local/bin/kubectl-testkube
+echo "kubectl-testkube installed in /usr/local/bin/kubectl-testkube"
 

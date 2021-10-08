@@ -3,8 +3,8 @@ before:
     - go mod tidy
 builds:
   - 
-    main: ./cmd/kubectl-kubtest
-    binary: kubectl-kubtest
+    main: ./cmd/kubectl-testkube
+    binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
     goos:
@@ -37,7 +37,7 @@ release:
 #   -
 #     tap:
 #       owner: kubeshop
-#       name: kubtest
+#       name: testkube
 #     description: Test your services in Kubernetes cluster with ease.
-#     homepage: https://kubtest.io
+#     homepage: https://testkube.io
 #     license: "MIT"

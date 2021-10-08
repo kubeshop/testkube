@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,14 +36,14 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest.Execution) (kubtest.ExecutionResult, error) {
+func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkube.Execution) (testkube.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	var result string
 
 	jsn, err := json.Marshal(execution)
 	if err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+		return testkube.ExecutionResult{
+			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -76,16 +76,16 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 
 	_, err = jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 	if err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+		return testkube.ExecutionResult{
+			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
 
 	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
-		return kubtest.ExecutionResult{
-			Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+		return testkube.ExecutionResult{
+			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -94,24 +94,24 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution kubtest
 		if pod.Status.Phase != v1.PodRunning {
 			if pod.Labels["job-name"] == jobName {
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-					return kubtest.ExecutionResult{
-						Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+					return testkube.ExecutionResult{
+						Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 						ErrorMessage: err.Error(),
 					}, err
 				}
 			}
 			result, err = c.GetPodLogs(pod.Name, jobName, jobName)
 			if err != nil {
-				return kubtest.ExecutionResult{
-					Status:       kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+				return testkube.ExecutionResult{
+					Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 					ErrorMessage: err.Error(),
 				}, err
 			}
 		}
 	}
 
-	return kubtest.ExecutionResult{
-		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
+	return testkube.ExecutionResult{
+		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
 		Output: result,
 	}, nil
 }
@@ -159,7 +159,7 @@ func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage 
 	return toReturn, nil
 }
 
-func (c *JobClient) AbortK8sJob(jobName string) *kubtest.ExecutionResult {
+func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 	var zero int64 = 0
 	bg := metav1.DeletePropagationBackground
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -168,13 +168,13 @@ func (c *JobClient) AbortK8sJob(jobName string) *kubtest.ExecutionResult {
 		PropagationPolicy:  &bg,
 	})
 	if err != nil {
-		return &kubtest.ExecutionResult{
-			Status: kubtest.StatusPtr(kubtest.ERROR__ExecutionStatus),
+		return &testkube.ExecutionResult{
+			Status: testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			Output: err.Error(),
 		}
 	}
-	return &kubtest.ExecutionResult{
-		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
+	return &testkube.ExecutionResult{
+		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
 	}
 }
 

@@ -1,14 +1,14 @@
 package client
 
 import (
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapExecutionOptionsToStartRequest(options ExecuteOptions) kubtest.ExecutorStartRequest {
+func MapExecutionOptionsToStartRequest(options ExecuteOptions) testkube.ExecutorStartRequest {
 	// check if repository exists in cr repository
-	var respository *kubtest.Repository
+	var respository *testkube.Repository
 	if options.ScriptSpec.Repository != nil {
-		respository = &kubtest.Repository{
+		respository = &testkube.Repository{
 			Type_:  "git",
 			Uri:    options.ScriptSpec.Repository.Uri,
 			Branch: options.ScriptSpec.Repository.Branch,
@@ -17,7 +17,7 @@ func MapExecutionOptionsToStartRequest(options ExecuteOptions) kubtest.ExecutorS
 	}
 
 	// pass options to executor client get params from script execution request
-	request := kubtest.ExecutorStartRequest{
+	request := testkube.ExecutorStartRequest{
 		Id:         options.ID,
 		Type_:      options.ScriptSpec.Type_,
 		InputType:  options.ScriptSpec.InputType,

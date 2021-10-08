@@ -1,4 +1,4 @@
-## kubtest completion fish
+## testkube completion fish
 
 generate the autocompletion script for fish
 
@@ -8,16 +8,16 @@ generate the autocompletion script for fish
 Generate the autocompletion script for the fish shell.
 
 To load completions in your current shell session:
-$ kubtest completion fish | source
+$ testkube completion fish | source
 
 To load completions for every new session, execute once:
-$ kubtest completion fish > ~/.config/fish/completions/kubtest.fish
+$ testkube completion fish > ~/.config/fish/completions/testkube.fish
 
 You will need to start a new shell for this setup to take effect.
 
 
 ```
-kubtest completion fish [flags]
+testkube completion fish [flags]
 ```
 
 ### Options
@@ -29,5 +29,5 @@ kubtest completion fish [flags]
 
 ### SEE ALSO
 
-* [kubtest completion](kubtest_completion.md)	 - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
 

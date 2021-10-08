@@ -107,7 +107,7 @@
 							"console.log(links);",
 							"",
 							"for(i in links) {",
-							"    pm.sendRequest('https://kubeshop.github.io/kubtest/'+links[i], function (err, response) {",
+							"    pm.sendRequest('https://kubeshop.github.io/testkube/'+links[i], function (err, response) {",
 							"        setTimeout(function(){ ",
 							"            console.log($('h1', response.text()).text());",
 							"        }, 31000);",
@@ -124,7 +124,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://kubeshop.github.io/kubtest/",
+					"raw": "https://kubeshop.github.io/testkube/",
 					"protocol": "https",
 					"host": [
 						"kubeshop",
@@ -132,7 +132,7 @@
 						"io"
 					],
 					"path": [
-						"kubtest",
+						"testkube",
 						""
 					]
 				}

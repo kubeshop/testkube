@@ -34,7 +34,7 @@ jobs:
         id: meta_api_server
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/kubtest-api-server
+          images: kubeshop/testkube-api-server
           tags: |
             type=ref,event=branch
             type=ref,event=pr

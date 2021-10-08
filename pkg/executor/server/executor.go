@@ -2,10 +2,10 @@ package server
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubtest/pkg/executor/repository/result"
-	"github.com/kubeshop/kubtest/pkg/runner"
-	"github.com/kubeshop/kubtest/pkg/server"
-	"github.com/kubeshop/kubtest/pkg/worker"
+	"github.com/kubeshop/testkube/pkg/executor/repository/result"
+	"github.com/kubeshop/testkube/pkg/runner"
+	"github.com/kubeshop/testkube/pkg/server"
+	"github.com/kubeshop/testkube/pkg/worker"
 )
 
 // ConcurrentExecutions per node
@@ -36,7 +36,7 @@ func (e *Executor) Init() *Executor {
 
 	executions := e.Routes.Group("/executions")
 
-	// add standard start/get handlers from kubtest executor server library
+	// add standard start/get handlers from testkube executor server library
 	// they will push and get from worker queue storage
 	executions.Post("/", e.StartExecution())
 	executions.Get("/:id", e.GetExecution())

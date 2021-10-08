@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 package main
@@ -10,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/rand"
-	"github.com/kubeshop/kubtest/test/e2e/kubtest"
+	"github.com/kubeshop/testkube/pkg/rand"
+	"github.com/kubeshop/testkube/test/e2e/testkube"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +33,7 @@ func TestMain(m *testing.M) {
 }
 func TestE2E(t *testing.T) {
 	a := require.New(t)
-	test := kubtest.NewKubtest(namespace)
+	test := testkube.NewTestKube(namespace)
 	scriptName := fmt.Sprintf("script-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 
@@ -125,7 +126,7 @@ func sleep(t *testing.T, d time.Duration) {
 }
 
 func GetExecutionID(out []byte) string {
-	r := regexp.MustCompile("kubectl kubtest scripts execution test ([0-9a-zA-Z]+)")
+	r := regexp.MustCompile("kubectl testkube scripts execution test ([0-9a-zA-Z]+)")
 	matches := r.FindStringSubmatch(string(out))
 	if len(matches) == 2 {
 		return matches[1]

@@ -6,7 +6,7 @@ import (
 )
 
 func ReaderToTmpfile(input io.Reader) (path string, err error) {
-	tmpfile, err := ioutil.TempFile("", "kubtest-tmp")
+	tmpfile, err := ioutil.TempFile("", "testkube-tmp")
 	path = tmpfile.Name()
 	if _, err := io.Copy(tmpfile, input); err != nil {
 		return path, err
@@ -20,6 +20,6 @@ func ReaderToTmpfile(input io.Reader) (path string, err error) {
 }
 
 func Name() string {
-	tmpfile, _ := ioutil.TempFile("", "kubtest-tmp")
+	tmpfile, _ := ioutil.TempFile("", "testkube-tmp")
 	return tmpfile.Name()
 }

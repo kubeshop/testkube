@@ -2,7 +2,7 @@
 
 ## Running with CRDs only on kubernetes cluster
 
-The minimial compoenent which must be deployed on your local kubernetes cluster is kubtest-operator with project CRDs (https://github.com/kubeshop/kubtest-operator)
+The minimial compoenent which must be deployed on your local kubernetes cluster is testkube-operator with project CRDs (https://github.com/kubeshop/testkube-operator)
 
 Checkout this project and run: 
 ```sh
@@ -13,8 +13,8 @@ to install CRD's in your local cluster
 
 ## Running on local machine
 
-Next critical component is API (https://github.com/kubeshop/kubtest) and some executor you can build your
-own tests executor or use one from Kubtest. 
+Next critical component is API (https://github.com/kubeshop/testkube) and some executor you can build your
+own tests executor or use one from TestKube. 
 
 First let's run local API server:
 
@@ -22,7 +22,7 @@ First let's run local API server:
 make run-mongo-dev run-api-server
 ```
 
-Next goto executor (https://github.com/kubeshop/kubtest-executor-postman) and run it 
+Next goto executor (https://github.com/kubeshop/testkube-executor-postman) and run it 
 (Postman executor is also MongoDB based so it'll use database run in API server step):
 
 ```sh
@@ -49,7 +49,7 @@ You'll need to create `Script` Custom Resource with type from above to
 be executed on given executor. e.g. 
 
 ```sh
-kubectl kubtest scripts create --file my_collection_file.json --name my-test-name --type local-postman/collection
+kubectl testkube scripts create --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
 To summarize: `type` is the single relation between `Script` and `Executor`

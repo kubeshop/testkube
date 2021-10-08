@@ -1,4 +1,4 @@
-package kubtest
+package testkube
 
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"

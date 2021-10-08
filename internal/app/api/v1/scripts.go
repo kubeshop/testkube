@@ -7,19 +7,19 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	scriptsv1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/executor/client"
-	scriptsMapper "github.com/kubeshop/kubtest/pkg/mapper/scripts"
+	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/client"
+	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
 
-	"github.com/kubeshop/kubtest/pkg/rand"
+	"github.com/kubeshop/testkube/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ListScripts for getting list of all available scripts
-func (s kubtestAPI) GetScript() fiber.Handler {
+func (s testkubeAPI) GetScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "default")
@@ -39,7 +39,7 @@ func (s kubtestAPI) GetScript() fiber.Handler {
 }
 
 // ListScripts for getting list of all available scripts
-func (s kubtestAPI) ListScripts() fiber.Handler {
+func (s testkubeAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "default")
 		crScripts, err := s.ScriptsClient.List(namespace)
@@ -54,10 +54,10 @@ func (s kubtestAPI) ListScripts() fiber.Handler {
 }
 
 // CreateScript creates new script CR based on script content
-func (s kubtestAPI) CreateScript() fiber.Handler {
+func (s testkubeAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request kubtest.ScriptCreateRequest
+		var request testkube.ScriptCreateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -99,7 +99,7 @@ func (s kubtestAPI) CreateScript() fiber.Handler {
 	}
 }
 
-func (s kubtestAPI) GetExecuteOptions(namespace, scriptID string, request kubtest.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
 	fmt.Printf("SCRIPT CR %+v\n", scriptCR)
@@ -124,11 +124,11 @@ func (s kubtestAPI) GetExecuteOptions(namespace, scriptID string, request kubtes
 }
 
 // ExecuteScript calls particular executor based on execution request content and type
-func (s kubtestAPI) ExecuteScript() fiber.Handler {
+func (s testkubeAPI) ExecuteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
-		var request kubtest.ExecutionRequest
+		var request testkube.ExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
@@ -197,7 +197,7 @@ func (s kubtestAPI) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Execution, executor client.ExecutorClient) {
+func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.Execution, executor client.ExecutorClient) {
 	for event := range executor.Watch(execution.Id) {
 		result := event.Result
 		l := s.Log.With("executionID", execution.Id, "duration", result.Duration().String(), "scriptName", execution.ScriptName)
@@ -219,7 +219,7 @@ func (s kubtestAPI) ExecutionListener(ctx context.Context, execution kubtest.Exe
 }
 
 // ListExecutions returns array of available script executions
-func (s kubtestAPI) ListExecutions() fiber.Handler {
+func (s testkubeAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id", "-")
@@ -239,7 +239,7 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 
 		ctx := c.Context()
 
-		var executions []kubtest.Execution
+		var executions []testkube.Execution
 
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
@@ -261,8 +261,8 @@ func (s kubtestAPI) ListExecutions() fiber.Handler {
 	}
 }
 
-func createListExecutionsResult(executions []kubtest.Execution, pageSize int, statusFilter string, page int) kubtest.ExecutionsResult {
-	totals := kubtest.ExecutionsTotals{
+func createListExecutionsResult(executions []testkube.Execution, pageSize int, statusFilter string, page int) testkube.ExecutionsResult {
+	totals := testkube.ExecutionsTotals{
 		Results: int32(len(executions)),
 		Passed:  0,
 		Failed:  0,
@@ -270,30 +270,30 @@ func createListExecutionsResult(executions []kubtest.Execution, pageSize int, st
 		Pending: 0,
 	}
 
-	executionResults := make([]kubtest.ExecutionSummary, pageSize)
+	executionResults := make([]testkube.ExecutionSummary, pageSize)
 	addedToResultCount := 0
 	filteredCount := 0
 
 	for _, s := range executions {
 
 		switch *s.ExecutionResult.Status {
-		case kubtest.QUEUED_ExecutionStatus:
+		case testkube.QUEUED_ExecutionStatus:
 			totals.Queued++
 			break
-		case kubtest.SUCCESS_ExecutionStatus:
+		case testkube.SUCCESS_ExecutionStatus:
 			totals.Passed++
 			break
-		case kubtest.ERROR__ExecutionStatus:
+		case testkube.ERROR__ExecutionStatus:
 			totals.Failed++
 			break
-		case kubtest.PENDING_ExecutionStatus:
+		case testkube.PENDING_ExecutionStatus:
 			totals.Pending++
 			break
 		}
 
 		if addedToResultCount < pageSize && (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter) {
 			if filteredCount == page*pageSize {
-				executionResults[addedToResultCount] = kubtest.ExecutionSummary{
+				executionResults[addedToResultCount] = testkube.ExecutionSummary{
 					Id:         s.Id,
 					ScriptName: s.ScriptName,
 					ScriptType: s.ScriptType,
@@ -308,20 +308,20 @@ func createListExecutionsResult(executions []kubtest.Execution, pageSize int, st
 		}
 	}
 
-	return kubtest.ExecutionsResult{
+	return testkube.ExecutionsResult{
 		Totals:  &totals,
 		Results: executionResults[0:addedToResultCount],
 	}
 }
 
 // GetExecution returns script execution object for given script and execution id
-func (s kubtestAPI) GetExecution() fiber.Handler {
+func (s testkubeAPI) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		scriptID := c.Params("id", "-")
 		executionID := c.Params("executionID")
 
-		var execution kubtest.Execution
+		var execution testkube.Execution
 		var err error
 
 		if scriptID == "-" {
@@ -348,7 +348,7 @@ func (s kubtestAPI) GetExecution() fiber.Handler {
 	}
 }
 
-func (s kubtestAPI) AbortExecution() fiber.Handler {
+func (s testkubeAPI) AbortExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
@@ -367,12 +367,12 @@ func (s kubtestAPI) AbortExecution() fiber.Handler {
 	}
 }
 
-func NewExecutionFromExecutionOptions(options client.ExecuteOptions) kubtest.Execution {
-	execution := kubtest.NewExecution(
+func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
+	execution := testkube.NewExecution(
 		options.ScriptName,
 		options.Request.Name,
 		options.ScriptSpec.Type_,
-		kubtest.NewResult(),
+		testkube.NewResult(),
 		options.Request.Params,
 	)
 

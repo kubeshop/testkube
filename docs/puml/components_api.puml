@@ -19,11 +19,11 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Component diagram for kubtest API
+title Component diagram for testkube API
 
-Person_Ext(kubectl, "Engineers kubectl", "kubectl kubtest client")
-System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubtest", "jenkins")
-System_Ext(web, "WebUI", "Single Page app for managing kubtest", "html5")
+Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
 System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 System_Ext(logs, "Logs", "Logs aggregator", "file_alt")
 

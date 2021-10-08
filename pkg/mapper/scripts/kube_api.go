@@ -1,18 +1,18 @@
 package scripts
 
 import (
-	scriptsV1 "github.com/kubeshop/kubtest-operator/apis/script/v1"
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	scriptsV1 "github.com/kubeshop/testkube-operator/apis/script/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapScriptListKubeToAPI(crScripts scriptsV1.ScriptList) (scripts []kubtest.Script) {
+func MapScriptListKubeToAPI(crScripts scriptsV1.ScriptList) (scripts []testkube.Script) {
 	for _, item := range crScripts.Items {
 		scripts = append(scripts, MapScriptCRToAPI(item))
 	}
 
 	return
 }
-func MapScriptCRToAPI(crScript scriptsV1.Script) (script kubtest.Script) {
+func MapScriptCRToAPI(crScript scriptsV1.Script) (script testkube.Script) {
 	script.Name = crScript.Name
 	script.Content = crScript.Spec.Content
 	script.Created = crScript.Status.LastExecution.Time

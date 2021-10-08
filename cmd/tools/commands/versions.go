@@ -3,9 +3,9 @@ package commands
 import (
 	"strings"
 
-	"github.com/kubeshop/kubtest/pkg/process"
-	"github.com/kubeshop/kubtest/pkg/ui"
-	"github.com/kubeshop/kubtest/pkg/version"
+	"github.com/kubeshop/testkube/pkg/process"
+	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/spf13/cobra"
 )
 

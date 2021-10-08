@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,7 +70,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 
 		// then
 		assert.Equal(t, "1", execution.Id)
-		assert.Equal(t, kubtest.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
+		assert.Equal(t, testkube.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
 		assert.Equal(t, "execution completed", execution.ExecutionResult.Output)
 		assert.NoError(t, err)
 	})

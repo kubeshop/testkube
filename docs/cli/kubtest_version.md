@@ -1,4 +1,4 @@
-## kubtest version
+## testkube version
 
 Shows version and build info
 
@@ -7,7 +7,7 @@ Shows version and build info
 Shows version and build info
 
 ```
-kubtest version [flags]
+testkube version [flags]
 ```
 
 ### Options
@@ -18,5 +18,5 @@ kubtest version [flags]
 
 ### SEE ALSO
 
-* [kubtest](kubtest.md)	 - kubtest entrypoint for plugin
+* [testkube](testkube.md)	 - testkube entrypoint for plugin
 

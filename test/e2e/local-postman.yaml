@@ -1,8 +1,8 @@
-apiVersion: executor.kubtest.io/v1
+apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   annotations:
-    meta.helm.sh/release-name: kubtest
+    meta.helm.sh/release-name: testkube
     meta.helm.sh/release-namespace: default
   labels:
     app.kubernetes.io/managed-by: Helm

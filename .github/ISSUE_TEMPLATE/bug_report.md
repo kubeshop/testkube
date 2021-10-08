@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve Kubtest
+about: Create a report to help us improve TestKube
 title: ''
 labels: 'bug 🐛'
 assignees: ''
@@ -20,7 +20,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Version / Cluster**
-- Which kubtest version? 
+- Which testkube version? 
 - What Kubernetes cluster? (e.g. GKE, EKS, Openshift etc, local KinD, local Minikube)
 - What Kubernetes version?
 

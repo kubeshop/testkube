@@ -1,13 +1,13 @@
-## kubtest doc
+## testkube doc
 
-Generate docs for kubectl kubtest
+Generate docs for kubectl testkube
 
 ### Synopsis
 
-Generate docs for kubectl kubtest
+Generate docs for kubectl testkube
 
 ```
-kubtest doc [flags]
+testkube doc [flags]
 ```
 
 ### Options
@@ -18,5 +18,5 @@ kubtest doc [flags]
 
 ### SEE ALSO
 
-* [kubtest](kubtest.md)	 - kubtest entrypoint for plugin
+* [testkube](testkube.md)	 - testkube entrypoint for plugin
 

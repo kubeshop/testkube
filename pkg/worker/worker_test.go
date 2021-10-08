@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,10 +16,10 @@ func TestWorker_Run(t *testing.T) {
 		repo := &RepositoryMock{}
 		worker := NewWorker(repo, runner)
 
-		execution := kubtest.NewExecutionWithID("1", "test", "execution-1")
-		execution.ExecutionResult = &kubtest.ExecutionResult{}
+		execution := testkube.NewExecutionWithID("1", "test", "execution-1")
+		execution.ExecutionResult = &testkube.ExecutionResult{}
 
-		executionChan := make(chan kubtest.Execution, 2)
+		executionChan := make(chan testkube.Execution, 2)
 		executionChan <- execution
 
 		worker.Run(executionChan)
@@ -33,12 +33,12 @@ func TestWorker_RunExecution(t *testing.T) {
 		repo := &RepositoryMock{}
 		worker := NewWorker(repo, runner)
 
-		execution := kubtest.NewExecutionWithID("1", "test", "execution-1")
-		execution.ExecutionResult = &kubtest.ExecutionResult{}
+		execution := testkube.NewExecutionWithID("1", "test", "execution-1")
+		execution.ExecutionResult = &testkube.ExecutionResult{}
 
 		result, err := worker.RunExecution(context.Background(), execution)
 		assert.NoError(t, err)
-		assert.Equal(t, *result.ExecutionResult.Status, kubtest.SUCCESS_ExecutionStatus)
+		assert.Equal(t, *result.ExecutionResult.Status, testkube.SUCCESS_ExecutionStatus)
 	})
 
 	t.Run("runner error", func(t *testing.T) {
@@ -47,12 +47,12 @@ func TestWorker_RunExecution(t *testing.T) {
 		repo := &RepositoryMock{}
 		worker := NewWorker(repo, runner)
 
-		execution := kubtest.NewExecutionWithID("1", "test", "execution-1")
-		execution.ExecutionResult = &kubtest.ExecutionResult{}
+		execution := testkube.NewExecutionWithID("1", "test", "execution-1")
+		execution.ExecutionResult = &testkube.ExecutionResult{}
 
 		result, err := worker.RunExecution(context.Background(), execution)
 		assert.Error(t, err)
-		assert.Equal(t, *result.ExecutionResult.Status, kubtest.ERROR__ExecutionStatus)
+		assert.Equal(t, *result.ExecutionResult.Status, testkube.ERROR__ExecutionStatus)
 	})
 }
 
@@ -62,9 +62,9 @@ type RunnerMock struct {
 	T      *testing.T
 }
 
-func (r RunnerMock) Run(execution kubtest.Execution) kubtest.ExecutionResult {
+func (r RunnerMock) Run(execution testkube.Execution) testkube.ExecutionResult {
 	result := *execution.ExecutionResult
-	status := kubtest.SUCCESS_ExecutionStatus
+	status := testkube.SUCCESS_ExecutionStatus
 	result.Status = &status
 	if r.Error != nil {
 		result.Err(r.Error)
@@ -73,38 +73,38 @@ func (r RunnerMock) Run(execution kubtest.Execution) kubtest.ExecutionResult {
 }
 
 type RepositoryMock struct {
-	Result    kubtest.Execution
+	Result    testkube.Execution
 	CallCount int
 	Error     error
 }
 
 // Get gets execution result by id
-func (r *RepositoryMock) Get(ctx context.Context, id string) (kubtest.Execution, error) {
+func (r *RepositoryMock) Get(ctx context.Context, id string) (testkube.Execution, error) {
 	r.CallCount++
 	return r.Result, r.Error
 }
 
 // Insert inserts new execution result
-func (r *RepositoryMock) Insert(ctx context.Context, result kubtest.Execution) error {
+func (r *RepositoryMock) Insert(ctx context.Context, result testkube.Execution) error {
 	r.CallCount++
 	return r.Error
 }
 
 // Update updates execution result
-func (r *RepositoryMock) Update(ctx context.Context, result kubtest.Execution) error {
+func (r *RepositoryMock) Update(ctx context.Context, result testkube.Execution) error {
 	r.CallCount++
 	return r.Error
 }
 
 //UpdateResult updates only result part of execution
-func (r *RepositoryMock) UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error) {
+func (r *RepositoryMock) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
 	r.CallCount++
 	return r.Error
 
 }
 
 // QueuePull pulls from queue and locks other clients to read (changes state from queued->pending)
-func (r *RepositoryMock) QueuePull(ctx context.Context) (kubtest.Execution, error) {
+func (r *RepositoryMock) QueuePull(ctx context.Context) (testkube.Execution, error) {
 	r.CallCount++
 	return r.Result, r.Error
 }

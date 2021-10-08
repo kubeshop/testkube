@@ -12,9 +12,9 @@
 
 LAYOUT_WITH_LEGEND()
 
-Person_Ext(kubectl, "Engineers kubectl", "kubectl kubtest client")
-System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with kubtest", "jenkins")
-System_Ext(web, "WebUI", "Single Page app for managing kubtest", "html5")
+Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
 
 Boundary(kubernetes, "kubnernetes cluster") {
 	System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
@@ -30,8 +30,8 @@ Boundary(kubernetes, "kubnernetes cluster") {
 		System_Ext(executor1, "Executor 1", "Tests executor", "kubernetes")
 	}
 
-	Boundary(kubtest, "kubtest") {
-		Container(api, "kubtest API", "golang", "Orchestrate incoming test runs", "go")
+	Boundary(testkube, "testkube") {
+		Container(api, "testkube API", "golang", "Orchestrate incoming test runs", "go")
 		Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
 		ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
 	}

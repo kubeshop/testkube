@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	v1 "github.com/kubeshop/kubtest-operator/apis/executor/v1"
-	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
+	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 )
 
 func NewExecutors(client *executorscr.ExecutorsClient) Executors {

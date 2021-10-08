@@ -1,9 +1,9 @@
-site_name: Kubtest
+site_name: TestKube
 site_description: 'Your Kubernetes Testing Friend'
-site_author: 'Kubeshop kubtest Team'
+site_author: 'Kubeshop testkube Team'
 docs_dir: docs/
-repo_name: 'kubeshop/kubtest'
-repo_url: 'https://github.com/kubeshop/kubtest'
+repo_name: 'kubeshop/testkube'
+repo_url: 'https://github.com/kubeshop/testkube'
 edit_uri: blob/main/docs/
 
 theme:
@@ -26,11 +26,11 @@ nav:
       - Curl Commands: executor-curl.md
       - Creating your own: executor-custom.md
   - CLI Reference:
-      - Overview:  cli/kubtest.md
-      - Install Cmd: cli/kubtest_install.md
-      - Scripts Cmd: cli/kubtest_scripts.md
-      - Completion Cmd: cli/kubtest_completion.md
-      - Version Cmd: cli/kubtest_version.md
+      - Overview:  cli/testkube.md
+      - Install Cmd: cli/testkube_install.md
+      - Scripts Cmd: cli/testkube_scripts.md
+      - Completion Cmd: cli/testkube_completion.md
+      - Version Cmd: cli/testkube_version.md
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md

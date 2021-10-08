@@ -6,7 +6,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/spf13/cobra"
 )
 
@@ -17,17 +17,17 @@ const (
 )
 
 type Renderer interface {
-	Render(result kubtest.Execution, writer io.Writer) error
-	Watch(result kubtest.Execution, writer io.Writer) error
+	Render(result testkube.Execution, writer io.Writer) error
+	Watch(result testkube.Execution, writer io.Writer) error
 }
 
 type JSONRenderer struct {
 }
 
-func (r JSONRenderer) Render(result kubtest.Execution, writer io.Writer) error {
+func (r JSONRenderer) Render(result testkube.Execution, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(result)
 }
-func (r JSONRenderer) Watch(result kubtest.Execution, writer io.Writer) error {
+func (r JSONRenderer) Watch(result testkube.Execution, writer io.Writer) error {
 	return r.Render(result, writer)
 }
 
@@ -35,7 +35,7 @@ type GoTemplateRenderer struct {
 	Template string
 }
 
-func (r GoTemplateRenderer) Render(result kubtest.Execution, writer io.Writer) error {
+func (r GoTemplateRenderer) Render(result testkube.Execution, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -43,14 +43,14 @@ func (r GoTemplateRenderer) Render(result kubtest.Execution, writer io.Writer) e
 
 	return tmpl.Execute(writer, result)
 }
-func (r GoTemplateRenderer) Watch(result kubtest.Execution, writer io.Writer) error {
+func (r GoTemplateRenderer) Watch(result testkube.Execution, writer io.Writer) error {
 	return r.Render(result, writer)
 }
 
 type RawRenderer struct {
 }
 
-func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error {
+func (r RawRenderer) Render(execution testkube.Execution, writer io.Writer) error {
 	err := r.renderDetails(execution, writer)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (r RawRenderer) Render(execution kubtest.Execution, writer io.Writer) error
 	return err
 }
 
-func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error {
+func (r RawRenderer) Watch(execution testkube.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
 		*execution.ExecutionResult.Status,
 		execution.ExecutionResult.Duration(),
@@ -83,7 +83,7 @@ func (r RawRenderer) Watch(execution kubtest.Execution, writer io.Writer) error 
 	return err
 }
 
-func (r RawRenderer) renderDetails(execution kubtest.Execution, writer io.Writer) error {
+func (r RawRenderer) renderDetails(execution testkube.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		execution.Name,
 		*execution.ExecutionResult.Status,

@@ -1,4 +1,4 @@
-package kubtest
+package testkube
 
 // scripts execution request body
 func ExecutorStartRequestToExecution(request ExecutorStartRequest) Execution {

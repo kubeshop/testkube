@@ -1,4 +1,4 @@
-## kubtest completion zsh
+## testkube completion zsh
 
 generate the autocompletion script for zsh
 
@@ -14,15 +14,15 @@ $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
 To load completions for every new session, execute once:
 # Linux:
-$ kubtest completion zsh > "${fpath[1]}/_kubtest"
+$ testkube completion zsh > "${fpath[1]}/_testkube"
 # macOS:
-$ kubtest completion zsh > /usr/local/share/zsh/site-functions/_kubtest
+$ testkube completion zsh > /usr/local/share/zsh/site-functions/_testkube
 
 You will need to start a new shell for this setup to take effect.
 
 
 ```
-kubtest completion zsh [flags]
+testkube completion zsh [flags]
 ```
 
 ### Options
@@ -34,5 +34,5 @@ kubtest completion zsh [flags]
 
 ### SEE ALSO
 
-* [kubtest completion](kubtest_completion.md)	 - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
 

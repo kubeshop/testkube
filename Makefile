@@ -12,37 +12,37 @@ run-api-server:
 	APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-api-server-telepresence: 
-	API_MONGO_DSN=mongodb://kubtest-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
+	API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
 	docker run --name mongodb -p 27017:27017 --rm mongo
 
 
-build: build-api-server build-kubtest-bin
+build: build-api-server build-testkube-bin
 
 build-api-server:
 	go build -o $(BIN_DIR)/api-server cmd/api-server/main.go 
 
-build-kubtest-bin: 
-	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-kubtest" cmd/kubectl-kubtest/main.go
+build-testkube-bin: 
+	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
 
 docker-build-api-server:
 	docker build -t api-server -f build/api-server/Dockerfile .
 
 dev-install-local-executors:
-	kubectl apply -f https://raw.githubusercontent.com/kubeshop/kubtest-operator/main/config/samples/executor_v1_executor.yaml
+	kubectl apply -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
 
-openapi-generate-model: openapi-generate-model-kubtest 
+openapi-generate-model: openapi-generate-model-testkube 
 
-openapi-generate-model-kubtest:
-	swagger-codegen generate -i api/v1/kubtest.yaml -l go -o tmp/api/kubtest
-	mv tmp/api/kubtest/model_*.go pkg/api/v1/kubtest
+openapi-generate-model-testkube:
+	swagger-codegen generate -i api/v1/testkube.yaml -l go -o tmp/api/testkube
+	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube
 	rm -rf tmp
-	find ./pkg/api/v1/kubtest -type f -exec sed -i '' -e "s/package swagger/package kubtest/g" {} \;
-	go fmt pkg/api/v1/kubtest/*.go
+	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
+	go fmt pkg/api/v1/testkube/*.go
 	
 
 test: 
@@ -56,20 +56,20 @@ test-e2e-namespace:
 
 test-reload-sanity-script:
 	kubectl delete script sanity || true
-	kubectl kubtest scripts create -f test/e2e/Kubtest-Sanity.postman_collection.json --name sanity
+	kubectl testkube scripts create -f test/e2e/TestKube-Sanity.postman_collection.json --name sanity
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
 test-api-local:
-	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var script_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
+	newman run test/e2e/TestKube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=local-postman/collection  --env-var api_uri=http://localhost:8088 --env-var script_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
 
 # run by newman but on top of port-forwarded cluster service to api-server 
-# e.g. kubectl port-forward svc/kubtest-api-server 8088
+# e.g. kubectl port-forward svc/testkube-api-server 8088
 test-api-port-forwarded:
-	newman run test/e2e/Kubtest-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var script_api_uri=http://kubtest-api-server:8088 --verbose
+	newman run test/e2e/TestKube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var script_api_uri=http://testkube-api-server:8088 --verbose
 
-# run script by kubtest plugin
+# run script by testkube plugin
 test-api-on-cluster: 
-	kubectl kubtest scripts start sanity -f -p api_uri=http://kubtest-api-server:8088 -p script_api_uri=http://kubtest-api-server:8088 -p script_type=postman/collection -p script_name=fill-me -p execution_name=fill-me
+	kubectl testkube scripts start sanity -f -p api_uri=http://testkube-api-server:8088 -p script_api_uri=http://testkube-api-server:8088 -p script_type=postman/collection -p script_name=fill-me -p execution_name=fill-me
 
 
 cover: 
@@ -94,7 +94,7 @@ version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
 commands-reference: 
-	go run cmd/kubectl-kubtest/main.go doc > ./docs/reference.md
+	go run cmd/kubectl-testkube/main.go doc > ./docs/reference.md
 
 prerelease: 
 	go run cmd/tools/main.go release -d -a $(CHART_NAME)

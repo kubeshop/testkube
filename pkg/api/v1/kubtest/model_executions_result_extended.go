@@ -1,4 +1,4 @@
-package kubtest
+package testkube
 
 func (result ExecutionsResult) Table() (header []string, output [][]string) {
 	header = []string{"Script", "Type", "Name", "ID", "Status"}

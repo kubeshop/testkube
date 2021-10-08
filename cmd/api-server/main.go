@@ -5,18 +5,18 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/kubtest-operator/client"
-	executorscr "github.com/kubeshop/kubtest-operator/client/executors"
-	scriptscr "github.com/kubeshop/kubtest-operator/client/scripts"
-	v1API "github.com/kubeshop/kubtest/internal/app/api/v1"
-	"github.com/kubeshop/kubtest/internal/pkg/api/repository/result"
-	"github.com/kubeshop/kubtest/internal/pkg/api/repository/storage"
-	"github.com/kubeshop/kubtest/pkg/ui"
+	"github.com/kubeshop/testkube-operator/client"
+	executorscr "github.com/kubeshop/testkube-operator/client/executors"
+	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
+	v1API "github.com/kubeshop/testkube/internal/app/api/v1"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type MongoConfig struct {
 	DSN string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	DB  string `envconfig:"API_MONGO_DB" default:"kubtest"`
+	DB  string `envconfig:"API_MONGO_DB" default:"testkube"`
 }
 
 var Config MongoConfig
