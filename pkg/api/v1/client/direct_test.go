@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,7 +28,7 @@ func TestScriptsAPI(t *testing.T) {
 
 		// then
 		assert.Equal(t, "1", execution.Id)
-		assert.Equal(t, kubtest.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
+		assert.Equal(t, testkube.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
 		assert.Equal(t, "execution completed", execution.ExecutionResult.Output)
 		assert.NoError(t, err)
 	})
@@ -50,7 +50,7 @@ func TestScriptsAPI(t *testing.T) {
 
 		// then
 		assert.Equal(t, "1", execution.Id)
-		assert.Equal(t, kubtest.ERROR__ExecutionStatus, *execution.ExecutionResult.Status)
+		assert.Equal(t, testkube.ERROR__ExecutionStatus, *execution.ExecutionResult.Status)
 		assert.NoError(t, err)
 	})
 

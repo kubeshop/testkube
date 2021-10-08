@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kubeshop/kubtest/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +24,9 @@ func init() {
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "kubtest",
-	Short: "kubtest entrypoint for plugin",
-	Long:  `kubtest`,
+	Use:   "testkube",
+	Short: "testkube entrypoint for plugin",
+	Long:  `testkube`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
 		cmd.Usage()

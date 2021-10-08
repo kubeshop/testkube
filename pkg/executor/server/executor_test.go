@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestCypressExecutor_StartExecution(t *testing.T) {
 		req := httptest.NewRequest(
 			"POST",
 			"/v1/executions/",
-			strings.NewReader(`{"type": "cypress/collection", "metadata": "{\"info\":{\"name\":\"kubtestExampleCollection\"}}"}`),
+			strings.NewReader(`{"type": "cypress/collection", "metadata": "{\"info\":{\"name\":\"testkubeExampleCollection\"}}"}`),
 		)
 
 		// when
@@ -36,7 +36,7 @@ func TestCypressExecutor_StartExecution(t *testing.T) {
 func GetTestExecutor(t *testing.T) Executor {
 	cypressExecutor := NewExecutor(
 		&RepoMock{
-			Object: kubtest.Execution{Id: "1"},
+			Object: testkube.Execution{Id: "1"},
 		},
 		&ExampleRunner{},
 	)
@@ -47,27 +47,27 @@ func GetTestExecutor(t *testing.T) Executor {
 
 // r RepoMock
 type RepoMock struct {
-	Object kubtest.Execution
+	Object testkube.Execution
 	Error  error
 }
 
-func (r *RepoMock) Get(ctx context.Context, id string) (result kubtest.Execution, err error) {
+func (r *RepoMock) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) Insert(ctx context.Context, result kubtest.Execution) (err error) {
+func (r *RepoMock) Insert(ctx context.Context, result testkube.Execution) (err error) {
 	return r.Error
 }
 
-func (r *RepoMock) QueuePull(ctx context.Context) (result kubtest.Execution, err error) {
+func (r *RepoMock) QueuePull(ctx context.Context) (result testkube.Execution, err error) {
 	return r.Object, r.Error
 }
 
-func (r *RepoMock) UpdateResult(ctx context.Context, id string, result kubtest.ExecutionResult) (err error) {
+func (r *RepoMock) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
 	return r.Error
 }
 
-func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err error) {
+func (r *RepoMock) Update(ctx context.Context, result testkube.Execution) (err error) {
 	return r.Error
 }
 
@@ -75,9 +75,9 @@ func (r *RepoMock) Update(ctx context.Context, result kubtest.Execution) (err er
 type ExampleRunner struct {
 }
 
-func (r *ExampleRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
-	return kubtest.ExecutionResult{
-		Status: kubtest.StatusPtr(kubtest.SUCCESS_ExecutionStatus),
+func (r *ExampleRunner) Run(execution testkube.Execution) testkube.ExecutionResult {
+	return testkube.ExecutionResult{
+		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
 		Output: "exmaple test output",
 	}
 }

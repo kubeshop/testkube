@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "15cf5cc0-f7d7-40e5-a366-e413d9c3c363",
-		"name": "Kubtest-Sanity",
+		"name": "TestKube-Sanity",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [

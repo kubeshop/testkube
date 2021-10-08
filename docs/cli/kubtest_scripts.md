@@ -1,4 +1,4 @@
-## kubtest scripts
+## testkube scripts
 
 Scripts management commands
 
@@ -7,13 +7,13 @@ Scripts management commands
 All available scripts and scripts executions commands
 
 ```
-kubtest scripts [flags]
+testkube scripts [flags]
 ```
 
 ### Options
 
 ```
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -h, --help                 help for scripts
   -s, --namespace string     kubernetes namespace (default "default")
@@ -23,12 +23,12 @@ kubtest scripts [flags]
 
 ### SEE ALSO
 
-* [kubtest](kubtest.md)	 - kubtest entrypoint for plugin
-* [kubtest scripts abort](kubtest_scripts_abort.md)	 - Aborts execution of the script
-* [kubtest scripts create](kubtest_scripts_create.md)	 - Create new script
-* [kubtest scripts execution](kubtest_scripts_execution.md)	 - Gets script execution details
-* [kubtest scripts executions](kubtest_scripts_executions.md)	 - List scripts executions
-* [kubtest scripts list](kubtest_scripts_list.md)	 - Get all available scripts
-* [kubtest scripts start](kubtest_scripts_start.md)	 - Starts new script
-* [kubtest scripts watch](kubtest_scripts_watch.md)	 - Watch until script execution is in complete state
+* [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [testkube scripts abort](testkube_scripts_abort.md)	 - Aborts execution of the script
+* [testkube scripts create](testkube_scripts_create.md)	 - Create new script
+* [testkube scripts execution](testkube_scripts_execution.md)	 - Gets script execution details
+* [testkube scripts executions](testkube_scripts_executions.md)	 - List scripts executions
+* [testkube scripts list](testkube_scripts_list.md)	 - Get all available scripts
+* [testkube scripts start](testkube_scripts_start.md)	 - Starts new script
+* [testkube scripts watch](testkube_scripts_watch.md)	 - Watch until script execution is in complete state
 

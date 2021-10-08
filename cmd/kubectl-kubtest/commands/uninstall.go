@@ -3,8 +3,8 @@ package commands
 import (
 	"strings"
 
-	"github.com/kubeshop/kubtest/pkg/process"
-	"github.com/kubeshop/kubtest/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/process"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -22,10 +22,10 @@ func NewUninstallCmd() *cobra.Command {
 			ui.Logo()
 
 			_, err := process.Execute("helm", "uninstall", "--namespace", namespace, name)
-			ui.PrintOnError("uninstalling kubtest", err)
+			ui.PrintOnError("uninstalling testkube", err)
 
 			if removeCRDs {
-				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.kubtest.io", "executors.executor.kubtest.io")
+				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.testkube.io", "executors.executor.testkube.io")
 				ui.PrintOnError("uninstalling CRDs", err)
 			}
 
@@ -36,7 +36,7 @@ func NewUninstallCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "kubtest", "installation name")
+	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&namespace, "namespace", "default", "namespace where to install")
 	cmd.Flags().BoolVar(&removeCRDs, "remove-crds", false, "wipe out Executors and Scripts CRDs")
 

@@ -1,26 +1,26 @@
-## kubtest
+## testkube
 
-kubtest entrypoint for plugin
+testkube entrypoint for plugin
 
 ### Synopsis
 
-kubtest
+testkube
 
 ```
-kubtest [flags]
+testkube [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for kubtest
+  -h, --help   help for testkube
 ```
 
 ### SEE ALSO
 
-* [kubtest completion](kubtest_completion.md)	 - generate the autocompletion script for the specified shell
-* [kubtest doc](kubtest_doc.md)	 - Generate docs for kubectl kubtest
-* [kubtest install](kubtest_install.md)	 - Install Helm chart registry in current kubectl context
-* [kubtest scripts](kubtest_scripts.md)	 - Scripts management commands
-* [kubtest version](kubtest_version.md)	 - Shows version and build info
+* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
+* [testkube doc](testkube_doc.md)	 - Generate docs for kubectl testkube
+* [testkube install](testkube_install.md)	 - Install Helm chart registry in current kubectl context
+* [testkube scripts](testkube_scripts.md)	 - Scripts management commands
+* [testkube version](testkube_version.md)	 - Shows version and build info
 

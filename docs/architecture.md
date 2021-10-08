@@ -8,11 +8,11 @@ Diagrams was made with use of C4 diagram technique
 
 ### System Context 
 
-![kubtest system context diagram](img/system_context.png)
+![testkube system context diagram](img/system_context.png)
 
 ### Containers
 
-![kubtest container diagram](img/containers.png)
+![testkube container diagram](img/containers.png)
 
 ### Components
 

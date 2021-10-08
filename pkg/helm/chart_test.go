@@ -9,8 +9,8 @@ import (
 
 var chartContent = []byte(`
 apiVersion: v2
-name: kubtest
-description: A Helm chart for kubtest.
+name: testkube
+description: A Helm chart for testkube.
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -28,7 +28,7 @@ type: application
 version: 0.5.17 
 
 dependencies:
-  - name: kubtest-operator
+  - name: testkube-operator
     version: "0.5.7"
     repository: "https://kubeshop.github.io/helm-charts"
 

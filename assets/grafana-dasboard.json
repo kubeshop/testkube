@@ -133,7 +133,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "kubtest_executions_count{result=\"success\"}",
+          "expr": "testkube_executions_count{result=\"success\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
@@ -222,7 +222,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "kubtest_executions_count{result=\"error\"}",
+          "expr": "testkube_executions_count{result=\"error\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
@@ -289,7 +289,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "kubtest_scripts_creation_count{}",
+          "expr": "testkube_scripts_creation_count{}",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -320,7 +320,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Kubtest",
+  "title": "TestKube",
   "uid": "jMtrP3nnz",
   "version": 2
 }

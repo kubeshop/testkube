@@ -1,23 +1,23 @@
 # Creating your own Executor
 
-In order to be able to run tests using some new tools for which there is no executor, there is possibility to create a custom executor from the [kubetest-executor-template](https://github.com/kubeshop/kubtest-executor-template).
+In order to be able to run tests using some new tools for which there is no executor, there is possibility to create a custom executor from the [kubetest-executor-template](https://github.com/kubeshop/testkube-executor-template).
 
 ## Steps for creating executor
 
 ### Setup repository
 
-- Create new rpository from template [kubetest-executor-template](https://github.com/kubeshop/kubtest-executor-template).
+- Create new rpository from template [kubetest-executor-template](https://github.com/kubeshop/testkube-executor-template).
 - Clone the newly created repo.
 - Rename the go module from `kubetest-executor-template` in whole project to the new name & run `go mod tidy`.
 
 ### Implement Runner Components
 
-[Kubtest](https://github.com/kubeshop/kubtest) provides the components to help implement a new executor and only the explicit runner needs to be implemented but you're not forced to use it - just implement OpenAPI Spec for executor 
+[TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new executor and only the explicit runner needs to be implemented but you're not forced to use it - just implement OpenAPI Spec for executor 
 and you're good.
-In this example for sake of simplicity we'll use `kubtest` components to implement executor they help us with:
+In this example for sake of simplicity we'll use `testkube` components to implement executor they help us with:
 - Defining basic HTTP Rest based server skeleton
 - Creating job queue - our tests will be run in async mode
-- Running runners - this is the only part which need to be implmented when using `kubtest` components.
+- Running runners - this is the only part which need to be implmented when using `testkube` components.
 
 
 To implement new executor we should do following: 
@@ -57,19 +57,19 @@ There is also the field `params` field in the request that can be used to pass s
 ```go
 type Repository interface {
     // Get gets execution result by id
-    Get(ctx context.Context, id string) (kubtest.Execution, error)
+    Get(ctx context.Context, id string) (testkube.Execution, error)
     // Insert inserts new execution result
-    Insert(ctx context.Context, result kubtest.Execution) error
+    Insert(ctx context.Context, result testkube.Execution) error
     // Update updates execution result
-    Update(ctx context.Context, result kubtest.Execution) error
+    Update(ctx context.Context, result testkube.Execution) error
     // QueuePull pulls from queue and locks other clients to read (changes state from queued->pending)
-    QueuePull(ctx context.Context) (kubtest.Execution, error)
+    QueuePull(ctx context.Context) (testkube.Execution, error)
 }
 ```
 
 - Prepare docker for the type of the executor.
   In this step Dockerfile should be configured to make sure that the runner has all dependencies installed and ready to use. 
-  In case of the [kubtest-executor-curl](https://github.com/kubeshop/kubtest-executor-curl) only curl was required.
+  In case of the [testkube-executor-curl](https://github.com/kubeshop/testkube-executor-curl) only curl was required.
 
 ```docker
 FROM golang:1.17
@@ -96,7 +96,7 @@ ENTRYPOINT ["/bin/app"]
 // Runner interface to abstract runners implementations
 type Runner interface {
     // Run takes Execution data and returns execution result
-    Run(execution kubtest.Execution) kubtest.ExecutionResult
+    Run(execution testkube.Execution) testkube.ExecutionResult
 }
 ```
 
@@ -113,12 +113,12 @@ type CurlRunnerInput struct {
   And bellow is the business logic for the curl executor and it executes the curl command given as input, takes the output, tests the expectations and returns the result.
 
 ```go
-func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
+func (r *CurlRunner) Run(execution testkube.Execution) testkube.ExecutionResult {
     var runnerInput CurlRunnerInput
     err := json.Unmarshal([]byte(execution.ScriptContent), &runnerInput)
     if err != nil {
-        return kubtest.ExecutionResult{
-            Status: kubtest.ExecutionStatusError,
+        return testkube.ExecutionResult{
+            Status: testkube.ExecutionStatusError,
         }
     }
     command := runnerInput.Command[0]
@@ -126,8 +126,8 @@ func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
     output, err := process.Execute(command, runnerInput.Command...)
     if err != nil {
         r.Log.Errorf("Error occured when running a command %s", err)
-        return kubtest.ExecutionResult{
-            Status:       kubtest.ExecutionStatusError,
+        return testkube.ExecutionResult{
+            Status:       testkube.ExecutionStatusError,
             ErrorMessage: fmt.Sprintf("Error occured when running a command %s", err),
         }
     }
@@ -135,23 +135,23 @@ func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
     outputString := string(output)
     responseStatus := getResponseCode(outputString)
     if responseStatus != runnerInput.ExpectedStatus {
-        return kubtest.ExecutionResult{
-            Status:       kubtest.ExecutionStatusError,
+        return testkube.ExecutionResult{
+            Status:       testkube.ExecutionStatusError,
             RawOutput:    outputString,
             ErrorMessage: fmt.Sprintf("Response statut don't match expected %d got %d", runnerInput.ExpectedStatus, responseStatus),
         }
     }
 
     if !strings.Contains(outputString, runnerInput.ExpectedBody) {
-        return kubtest.ExecutionResult{
-            Status:       kubtest.ExecutionStatusError,
+        return testkube.ExecutionResult{
+            Status:       testkube.ExecutionStatusError,
             RawOutput:    outputString,
             ErrorMessage: fmt.Sprintf("Response doesn't contain body: %s", runnerInput.ExpectedBody),
         }
     }
 
-    return kubtest.ExecutionResult{
-        Status:    kubtest.ExecutionStatusSuceess,
+    return testkube.ExecutionResult{
+        Status:    testkube.ExecutionStatusSuceess,
         RawOutput: outputString,
     }
 }
@@ -162,8 +162,8 @@ func (r *CurlRunner) Run(execution kubtest.Execution) kubtest.ExecutionResult {
 When everything is completed you'll need to build and deploy your runner into Kubernetes cluster. 
 
 ```
-docker build -t YOUR_USER/kubtest-executor-curl . 
-docker push YOUR_USER/kubtest-executor-curl
+docker build -t YOUR_USER/testkube-executor-curl . 
+docker push YOUR_USER/testkube-executor-curl
 ```
 
 and define some deployment: 
@@ -186,7 +186,7 @@ spec:
     spec:
       containers:
       - name: executor
-        image: YOUR_USER/kubtest-executor-curl:latest
+        image: YOUR_USER/testkube-executor-curl:latest
         env:
         - name: EXECUTOR_PORT
           value: "8083"
@@ -205,24 +205,24 @@ spec:
 
 (You should tune deployment for production use)
 
-### Add Executor to Kubtest
+### Add Executor to TestKube
 
 Last thing which needs to be done is to create binding for your executor to some type 
-We've defined `curl/test` type above so let's bind this type so kubtest would be aware of it. 
+We've defined `curl/test` type above so let's bind this type so testkube would be aware of it. 
 To do this we need to create new Executor Custom Resource
 
 ```
-apiVersion: executor.kubtest.io/v1
+apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   annotations:
-    meta.helm.sh/release-name: kubtest
+    meta.helm.sh/release-name: testkube
     meta.helm.sh/release-namespace: default
   name: curl-executor
 spec:
   executor_type: rest
   types:
   - curl/test
-  uri: http://kubtest-curl-executor:8086
+  uri: http://testkube-curl-executor:8086
 ```
 

@@ -8,8 +8,8 @@ import (
 func NewDocsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doc",
-		Short: "Generate docs for kubectl kubtest",
-		Long:  `Generate docs for kubectl kubtest`,
+		Short: "Generate docs for kubectl testkube",
+		Long:  `Generate docs for kubectl testkube`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
 			root.DisableAutoGenTag = true

@@ -1,10 +1,10 @@
-# Reference for 'kubectl kubtest` plugin
+# Reference for 'kubectl testkube` plugin
 
-The Kubtest kubectl plugin provides commands for installation, script-related tasks, code-completion, etc.
+The TestKube kubectl plugin provides commands for installation, script-related tasks, code-completion, etc.
 
 ## `install` command
 
-Installs Kubtest in your active cluster.
+Installs TestKube in your active cluster.
 
 ```shell
 
@@ -12,8 +12,8 @@ Usage:
    install [flags]
 
 Flags:
-      --chart string       chart name (default "kubeshop/kubtest")
-      --name string        installation name (default "kubtest")
+      --chart string       chart name (default "kubeshop/testkube")
+      --name string        installation name (default "testkube")
       --namespace string   namespace where to install (default "default")
 ```
 
@@ -36,7 +36,7 @@ Available Commands:
   start       Starts new script
 
 Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -53,7 +53,7 @@ Usage:
    scripts abort [flags]
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -76,7 +76,7 @@ Flags:
   -t, --type string        script type (defaults to postman-collection) (default "postman/collection")
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -92,7 +92,7 @@ Usage:
    scripts execution [flags]
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -107,7 +107,7 @@ Usage:
    scripts executions [flags]
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -126,7 +126,7 @@ Flags:
   -s, --namespace string   kubernetes namespace from where scripts should be listed (default "default")
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -146,7 +146,7 @@ Flags:
   -p, --param stringToString   execution envs passed to executor (default [])
 
 Global Flags:
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
@@ -154,7 +154,7 @@ Global Flags:
 
 ## `version` command
 
-Shows Kubtest version and build info
+Shows TestKube version and build info
 
 ```shell
 Usage:
@@ -303,7 +303,7 @@ Flags:
 
 ## `doc` command
 
-Generate docs for kubectl kubtest
+Generate docs for kubectl testkube
 
 ```shell
 Usage:

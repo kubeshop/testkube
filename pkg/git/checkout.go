@@ -6,13 +6,13 @@ package git
 import (
 	"io/ioutil"
 
-	"github.com/kubeshop/kubtest/pkg/process"
+	"github.com/kubeshop/testkube/pkg/process"
 )
 
 // Partial checkout will checkout only given directory from Git repository
 func PartialCheckout(uri, path, branch string) (outputDir string, err error) {
 
-	tmpDir, err := ioutil.TempDir("", "kubtest-scripts")
+	tmpDir, err := ioutil.TempDir("", "testkube-scripts")
 	if err != nil {
 		return tmpDir, err
 	}

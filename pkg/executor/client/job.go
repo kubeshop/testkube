@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/jobs"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/jobs"
 )
 
 func NewJobExecutorClient() (client JobExecutorClient, err error) {
@@ -50,18 +50,18 @@ func (c JobExecutorClient) Watch(id string) (events chan ResultEvent) {
 	return events
 }
 
-func (c JobExecutorClient) Get(id string) (execution kubtest.ExecutionResult, err error) {
+func (c JobExecutorClient) Get(id string) (execution testkube.ExecutionResult, err error) {
 	// TODO Get Logs ? Update Execution
 	return
 }
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c JobExecutorClient) Execute(options ExecuteOptions) (result kubtest.ExecutionResult, err error) {
+func (c JobExecutorClient) Execute(options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	// TODO move to mapper
-	execution := kubtest.NewExecutionWithID(options.ID, options.ScriptSpec.Type_, options.ScriptSpec.Name)
+	execution := testkube.NewExecutionWithID(options.ID, options.ScriptSpec.Type_, options.ScriptSpec.Name)
 	execution.ScriptContent = options.ScriptSpec.Content
-	execution.Repository = (*kubtest.Repository)(options.ScriptSpec.Repository)
+	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)
 	execution.Params = options.Request.Params
 
 	return c.Client.LaunchK8sJob(options.ID, options.ExecutorSpec.Image, execution)

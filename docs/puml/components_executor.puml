@@ -40,7 +40,7 @@ Container_Boundary(executor, "Postman collections executor") {
     Rel(workers, newman, "Runs script on newman", "Queue")
 }
 
-Person_Ext(engineer, "Engineer", "kubectl kubtest script start SOME_SCRIPT_NAME")
+Person_Ext(engineer, "Engineer", "kubectl testkube script start SOME_SCRIPT_NAME")
 
 Rel(engineer, api, "Runs test", "cli")
 Rel(metricsMiddleware, metrics, "Aggregate metrics", "HTTP")

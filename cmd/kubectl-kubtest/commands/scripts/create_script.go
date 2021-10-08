@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	apiClient "github.com/kubeshop/kubtest/pkg/api/v1/client"
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
-	"github.com/kubeshop/kubtest/pkg/ui"
+	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -50,9 +50,9 @@ func NewCreateScriptsCmd() *cobra.Command {
 				ui.Failf("Empty script content. Please pass some script content to create script")
 			}
 
-			var repository *kubtest.Repository
+			var repository *testkube.Repository
 			if uri != "" && gitBranch != "" {
-				repository = &kubtest.Repository{
+				repository = &testkube.Repository{
 					Type_:  "git",
 					Uri:    uri,
 					Branch: gitBranch,

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/kubtest/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +76,7 @@ func NewStartScriptCmd() *cobra.Command {
 						render.Render(execution, os.Stdout)
 						ui.ShellCommand(
 							"Use following command to get script execution details",
-							"kubectl kubtest scripts execution "+execution.Id,
+							"kubectl testkube scripts execution "+execution.Id,
 						)
 						ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
 						return
@@ -98,11 +98,11 @@ func NewStartScriptCmd() *cobra.Command {
 func uiShellCommandBlock(id string) {
 	ui.ShellCommand(
 		"Use following command to get script execution details",
-		"kubectl kubtest scripts execution "+id,
+		"kubectl testkube scripts execution "+id,
 	)
 	ui.ShellCommand(
 		"or watch script execution until complete",
-		"kubectl kubtest scripts watch "+id,
+		"kubectl testkube scripts watch "+id,
 	)
 	ui.NL()
 

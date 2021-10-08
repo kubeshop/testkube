@@ -1,4 +1,4 @@
-## kubtest completion powershell
+## testkube completion powershell
 
 generate the autocompletion script for powershell
 
@@ -8,14 +8,14 @@ generate the autocompletion script for powershell
 Generate the autocompletion script for powershell.
 
 To load completions in your current shell session:
-PS C:\> kubtest completion powershell | Out-String | Invoke-Expression
+PS C:\> testkube completion powershell | Out-String | Invoke-Expression
 
 To load completions for every new session, add the output of the above command
 to your powershell profile.
 
 
 ```
-kubtest completion powershell [flags]
+testkube completion powershell [flags]
 ```
 
 ### Options
@@ -27,5 +27,5 @@ kubtest completion powershell [flags]
 
 ### SEE ALSO
 
-* [kubtest completion](kubtest_completion.md)	 - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
 

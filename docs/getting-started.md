@@ -1,14 +1,14 @@
 # Getting Started 
 
-Please follow [install steps](/docs/installing.md) for kubtest installation
+Please follow [install steps](/docs/installing.md) for testkube installation
 
 ## Getting help 
 
 ```sh
-kubectl kubtest --help 
+kubectl testkube --help 
 
 # or for scripts runs
-kubectl kubtest scripts --help 
+kubectl testkube scripts --help 
 ```
 
 ## Defining tests
@@ -16,25 +16,25 @@ kubectl kubtest scripts --help
 After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
 (access to Kubernetes cluster would be also needed)
 
-For now Kubtest only supports  *Postman collections*, *basic CURL execition* and experimental support for *Cypress* - but we plan to handle more testing tools soon,.
+For now TestKube only supports  *Postman collections*, *basic CURL execition* and experimental support for *Cypress* - but we plan to handle more testing tools soon,.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
 ### Creating Postman Collections based tests
 
 ```sh
-kubectl kubtest scripts create --file my_collection_file.json --name my-test-name
+kubectl testkube scripts create --file my_collection_file.json --name my-test-name
 
 #or 
-cat my_collection_file.json | kubectl kubtest scripts create --name my-test-name
+cat my_collection_file.json | kubectl testkube scripts create --name my-test-name
 ```
 
 You can also create new scripts with `kubectl apply -f ...`, 
-which is equivalent to running `kubectl kubtest create` command e.g.:
+which is equivalent to running `kubectl testkube create` command e.g.:
 
 ```yaml
 cat <<EOF | kubectl apply -f -
-apiVersion: tests.kubtest.io/v1
+apiVersion: tests.testkube.io/v1
 kind: Script
 metadata:
   name: my-test-name
@@ -56,16 +56,16 @@ Where:
 
 Cypress tests are little more complicated to pass - for now we're supporting Git based paths for Cypress projects.
 
-You can create new test with kubectl kubtest plugin: 
+You can create new test with kubectl testkube plugin: 
 
 ```sh
- kubectl kubtest scripts create --uri https://github.com/kubeshop/kubtest-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
+ kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
 ```
 
 Where: 
-- `uri` is git uri where kubtest will get cypress project
+- `uri` is git uri where testkube will get cypress project
 - `git-branch` is what branch should he checkout (defaults to main)
-- `git-path` is what path of repository should be checked out (kubtest is doing partial git checkout so it'll be fast even for very big monorepos)
+- `git-path` is what path of repository should be checked out (testkube is doing partial git checkout so it'll be fast even for very big monorepos)
 - `name` - is unique Sript Custom Resource name. 
 - `type` - cypress/project - for Cypress based project test structure
 
@@ -76,15 +76,15 @@ For now we're supporting only Cypress test runs, but we plan to fully integrate 
 
 When our script is defined as CR we can now run it: 
 ```shell
-$ kubectl kubtest scripts start my-test-name 
+$ kubectl testkube scripts start my-test-name 
 
 ... some script run data ...
 
 Use following command to get script execution details:
-$ kubectl kubtest scripts execution 611b6da38cd74034e7c9d408
+$ kubectl testkube scripts execution 611b6da38cd74034e7c9d408
 
 or watch for completition with
-$ kubectl kubtest scripts watch 611b6da38cd74034e7c9d408
+$ kubectl testkube scripts watch 611b6da38cd74034e7c9d408
 
 ```
 
@@ -93,7 +93,7 @@ After script completed with success or error you can go back to script details b
 scripts execution command:
 
 ```sh
-kubectl kubtest scripts execution 6103a45b7e18c4ea04883866
+kubectl testkube scripts execution 6103a45b7e18c4ea04883866
 
 ....
 some execution details
@@ -104,7 +104,7 @@ some execution details
 To run script execution you'll need to know script name
 
 ```shell
-$ kubectl kubtest scripts list
+$ kubectl testkube scripts list
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
@@ -121,7 +121,7 @@ $ kubectl kubtest scripts list
 ## Getting available executions
 
 ```shell
-kubectl kubtest scripts executions SCRIPT_NAME
+kubectl testkube scripts executions SCRIPT_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |

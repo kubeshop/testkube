@@ -1,4 +1,4 @@
-## kubtest install
+## testkube install
 
 Install Helm chart registry in current kubectl context
 
@@ -7,19 +7,19 @@ Install Helm chart registry in current kubectl context
 Install can be configured with use of particular 
 
 ```
-kubtest install [flags]
+testkube install [flags]
 ```
 
 ### Options
 
 ```
-      --chart string       chart name (default "kubeshop/kubtest")
+      --chart string       chart name (default "kubeshop/testkube")
   -h, --help               help for install
-      --name string        installation name (default "kubtest")
+      --name string        installation name (default "testkube")
       --namespace string   namespace where to install (default "default")
 ```
 
 ### SEE ALSO
 
-* [kubtest](kubtest.md)	 - kubtest entrypoint for plugin
+* [testkube](testkube.md)	 - testkube entrypoint for plugin
 

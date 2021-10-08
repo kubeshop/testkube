@@ -1,22 +1,22 @@
 openapi: 3.0.1
 
 info:
-  title: Kubtest API
-  description: 'Kubtest provides a Kubernetes-native framework for test definition, execution and results'
+  title: TestKube API
+  description: 'TestKube provides a Kubernetes-native framework for test definition, execution and results'
   contact:
-    email: kubtest@kubshop.io
+    email: testkube@kubeshop.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   version: 1.0.0
 
 externalDocs:
-  description: 'Find out more about kubtest'
-  url: http://kubtest.io
+  description: 'Find out more about testkube'
+  url: http://testkube.io
 
 tags:
   - name: api
-    description: 'Kubtest API operations'
+    description: 'TestKube API operations'
   - name: scripts
     description: 'Script operations'
   - name: executions
@@ -707,7 +707,7 @@ components:
         type:
           type: string
           description: Type contains a URI that identifies the problem type. This URI will,
-          example: http://kubeshop.io/kubtest/problems/invalidscriptname
+          example: http://kubeshop.io/testkube/problems/invalidscriptname
         title:
           type: string
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.

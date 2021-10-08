@@ -1,4 +1,4 @@
-## kubtest scripts start
+## testkube scripts start
 
 Starts new script
 
@@ -7,7 +7,7 @@ Starts new script
 Starts new script based on Script Custom Resource name, returns results to console
 
 ```
-kubtest scripts start [flags]
+testkube scripts start [flags]
 ```
 
 ### Options
@@ -22,7 +22,7 @@ kubtest scripts start [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --client string        Client used for connecting to kubtest API one of proxy|direct (default "proxy")
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "default")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
@@ -31,5 +31,5 @@ kubtest scripts start [flags]
 
 ### SEE ALSO
 
-* [kubtest scripts](kubtest_scripts.md)	 - Scripts management commands
+* [testkube scripts](testkube_scripts.md)	 - Scripts management commands
 

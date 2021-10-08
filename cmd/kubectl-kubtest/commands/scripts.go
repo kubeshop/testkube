@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/kubeshop/kubtest/cmd/kubectl-kubtest/commands/scripts"
-	"github.com/kubeshop/kubtest/pkg/ui"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	"github.com/kubeshop/testkube/pkg/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -27,7 +27,7 @@ func NewScriptsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to kubtest API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "default", "kubernetes namespace")
 

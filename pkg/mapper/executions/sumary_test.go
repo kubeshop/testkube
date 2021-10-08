@@ -3,7 +3,7 @@ package executions
 import (
 	"testing"
 
-	"github.com/kubeshop/kubtest/pkg/api/v1/kubtest"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,23 +26,23 @@ func TestMapToSummary(t *testing.T) {
 	}
 }
 
-func getExecutions() kubtest.Executions {
-	ex1 := new(kubtest.ExecutionResult)
+func getExecutions() testkube.Executions {
+	ex1 := new(testkube.ExecutionResult)
 	ex1.Start()
 	ex1.Stop()
 
-	execution1 := kubtest.NewExecution(
+	execution1 := testkube.NewExecution(
 		"script1",
 		"execution1",
 		"test/test",
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
-	ex2 := new(kubtest.ExecutionResult)
+	ex2 := new(testkube.ExecutionResult)
 	ex2.Start()
 	ex2.Stop()
 
-	execution2 := kubtest.NewExecution(
+	execution2 := testkube.NewExecution(
 		"script1",
 		"execution2",
 		"test/test",
@@ -50,7 +50,7 @@ func getExecutions() kubtest.Executions {
 		map[string]string{"p": "v2"},
 	)
 
-	return kubtest.Executions{
+	return testkube.Executions{
 		execution1,
 		execution2,
 	}

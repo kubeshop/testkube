@@ -4,11 +4,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubeshop/kubtest/pkg/git"
-	"github.com/kubeshop/kubtest/pkg/helm"
-	"github.com/kubeshop/kubtest/pkg/process"
-	"github.com/kubeshop/kubtest/pkg/ui"
-	"github.com/kubeshop/kubtest/pkg/version"
+	"github.com/kubeshop/testkube/pkg/git"
+	"github.com/kubeshop/testkube/pkg/helm"
+	"github.com/kubeshop/testkube/pkg/process"
+	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -51,40 +51,40 @@ func NewReleaseCmd() *cobra.Command {
 
 			gitAddCommitAndPush(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
-			// Checkout main kubtest chart and bump main chart with next version
-			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "kubtest", "main")
-			ui.ExitOnError("checking out kubtest chart to "+dir, err)
+			// Checkout main testkube chart and bump main chart with next version
+			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "testkube", "main")
+			ui.ExitOnError("checking out testkube chart to "+dir, err)
 
 			chart, path, err = helm.GetChart(dir)
 			ui.ExitOnError("getting chart path", err)
 
-			kubtestVersion := helm.GetVersion(chart)
-			nextKubtestVersion := getNextVersion(dev, kubtestVersion, version.Patch)
-			ui.Info("Generated new kubtest version", nextKubtestVersion)
+			testkubeVersion := helm.GetVersion(chart)
+			nextTestKubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
+			ui.Info("Generated new testkube version", nextTestKubeVersion)
 
-			// bump main kubtest chart version
-			helm.SaveString(&chart, "version", nextKubtestVersion)
-			helm.SaveString(&chart, "appVersion", nextKubtestVersion)
+			// bump main testkube chart version
+			helm.SaveString(&chart, "version", nextTestKubeVersion)
+			helm.SaveString(&chart, "appVersion", nextTestKubeVersion)
 
 			// set app dependency version
 			helm.UpdateDependencyVersion(chart, appName, nextAppVersion)
 
 			err = helm.Write(path, chart)
-			ui.ExitOnError("saving kubtest Chart.yaml file", err)
+			ui.ExitOnError("saving testkube Chart.yaml file", err)
 
-			gitAddCommitAndPush(dir, "updating kubtest to "+nextKubtestVersion+" and "+appName+" to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating testkube to "+nextTestKubeVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
-				{"kubtest previous version", kubtestVersion},
+				{"testkube previous version", testkubeVersion},
 				{appName + " next version", nextAppVersion},
-				{"kubtest next version", nextKubtestVersion},
+				{"testkube next version", nextTestKubeVersion},
 			})
 
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed - Helm charts: ", "kubtest:"+nextKubtestVersion, appName+":"+nextAppVersion)
+			ui.Completed("Release completed - Helm charts: ", "testkube:"+nextTestKubeVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}

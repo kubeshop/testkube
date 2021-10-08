@@ -1,21 +1,21 @@
 # Cypress Tests
 
-Kubtest is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented). 
+TestKube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented). 
 
 To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - https://docs.cypress.io/guides/dashboard/projects)
 
 
 ## Creating new test 
 
-Let's assume we've created one in https://github.com/kubeshop/kubtest-executor-cypress/tree/main/examples 
+Let's assume we've created one in https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples 
 which contains really simple test which checks if some string exists on web site, we'll also check 
 if env parameter exists - to show how to pass additional parameters into test.
 
-https://github.com/kubeshop/kubtest-executor-cypress/blob/main/examples/cypress/integration/simple-test.js
+https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js
 ```js
 describe('The Home Page', () => {
   it('successfully loads', () => {
-    cy.visit('https://kubtest.io') 
+    cy.visit('https://testkube.io') 
 
     expect(Cypress.env('testparam')).to.equal('testvalue')
 
@@ -24,12 +24,12 @@ describe('The Home Page', () => {
 })
 ```
 
-## Creating `kubtest` test script
+## Creating `testkube` test script
 
-Now we need to create Kubtest test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
+Now we need to create TestKube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
 ```sh 
-kubectl kubtest scripts create --uri https://github.com/kubeshop/kubtest-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 We can check that script is created with:
@@ -44,7 +44,7 @@ kubeshop-cypress      51s
 Now we can start our test
 
 ```
-kubectl kubtest scripts start kubeshop-cypress
+kubectl testkube scripts start kubeshop-cypress
 
 ██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████
 ██  ██  ██    ██ ██   ██    ██    ██      ██         ██
@@ -61,10 +61,10 @@ Execution name: wildly-popular-worm
 
 Script queued for execution
 Use following command to get script execution details:
-$ kubectl kubtest scripts execution 615d5265b046f8fbd3d955d0
+$ kubectl testkube scripts execution 615d5265b046f8fbd3d955d0
 
 or watch script execution until complete:
-$ kubectl kubtest scripts watch 615d5265b046f8fbd3d955d0
+$ kubectl testkube scripts watch 615d5265b046f8fbd3d955d0
 ```
 
 ## Getting execution results
@@ -72,7 +72,7 @@ $ kubectl kubtest scripts watch 615d5265b046f8fbd3d955d0
 Let's watch our script execution 
 
 ```
-kubectl kubtest scripts watch 615d43d3b046f8fbd3d955ca
+kubectl testkube scripts watch 615d43d3b046f8fbd3d955ca
 
 Type          : cypress/project
 Name          : cypress-example
@@ -134,7 +134,7 @@ output:
 
   (Screenshots)
 
-  -  /tmp/kubtest-scripts1127226423/repo/examples/cypress/screenshots/simple-test.js/     (1280x720)
+  -  /tmp/testkube-scripts1127226423/repo/examples/cypress/screenshots/simple-test.js/     (1280x720)
      The Home Page -- successfully loads (failed).png
 
 
@@ -142,7 +142,7 @@ output:
 
   -  Started processing:  Compressing to 32 CRF
     Compression progress:  35%
-  -  Finished processing: /tmp/kubtest-scripts1127226423/repo/examples/cypress/videos   (19 seconds)
+  -  Finished processing: /tmp/testkube-scripts1127226423/repo/examples/cypress/videos   (19 seconds)
                           /simple-test.js.mp4
 
 
@@ -172,7 +172,7 @@ We forgot to add test param - let's fix that! In our test we assume that param w
 We can also add `-f` flag to follow execution (watch for changes) - for now we're only looking for test completion but in future we'll pipe test output in real time (ongoing features)
 
 ```
-kubectl kubtest scripts start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
 
 ██   ██ ██    ██ ██████  ████████ ███████ ███████ ████████
 ██  ██  ██    ██ ██   ██    ██    ██      ██         ██
@@ -189,10 +189,10 @@ Execution name: nominally-able-glider
 
 Script queued for execution
 Use following command to get script execution details:
-$ kubectl kubtest scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
 
 or watch script execution until complete:
-$ kubectl kubtest scripts watch 615d5372b046f8fbd3d955d2
+$ kubectl testkube scripts watch 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -240,7 +240,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   -  Started processing:  Compressing to 32 CRF
     Compression progress:  39%
     Compression progress:  81%
-  -  Finished processing: /tmp/kubtest-scripts531364188/repo/examples/cypress/videos/   (30 seconds)
+  -  Finished processing: /tmp/testkube-scripts531364188/repo/examples/cypress/videos/   (30 seconds)
                           simple-test.js.mp4
 
     Compression progress:  100%
@@ -257,11 +257,11 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use following command to get script execution details:
-$ kubectl kubtest scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s
 ```
 
 ## Summary
 
-Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with Kubtest!
+Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with TestKube!
