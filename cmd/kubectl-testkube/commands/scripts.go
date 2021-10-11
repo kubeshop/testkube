@@ -29,7 +29,7 @@ func NewScriptsCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
-	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "default", "kubernetes namespace")
+	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
 	// output renderer flags
 	cmd.PersistentFlags().StringP("output", "o", "raw", "output typoe one of raw|json|go ")

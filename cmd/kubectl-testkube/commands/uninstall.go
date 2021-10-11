@@ -30,7 +30,7 @@ func NewUninstallCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
-	cmd.Flags().StringVar(&namespace, "namespace", "default", "namespace where to install")
+	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().BoolVar(&removeCRDs, "remove-crds", false, "wipe out Executors and Scripts CRDs")
 
 	return cmd

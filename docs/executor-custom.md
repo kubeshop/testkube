@@ -217,7 +217,7 @@ kind: Executor
 metadata:
   annotations:
     meta.helm.sh/release-name: testkube
-    meta.helm.sh/release-namespace: default
+    meta.helm.sh/release-namespace: testkube
   name: curl-executor
 spec:
   executor_type: rest

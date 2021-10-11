@@ -637,8 +637,8 @@ components:
           example: testing with 1000 users
         namespace:
           type: string
-          description: script kubernetes namespace ("default" when not set)
-          example: default
+          description: script kubernetes namespace ("testkube" when not set)
+          example: testkube
         params:
           type: object
           description: 'execution params passed to executor'
@@ -662,8 +662,8 @@ components:
           example: postman/collection
         namespace:
           type: string
-          description: kubernetes namespace (defaults to 'default')
-          example: default
+          description: kubernetes namespace (defaults to 'testkube')
+          example: testkube
         inputType:
           type: string
           description: >

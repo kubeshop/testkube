@@ -24,7 +24,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		execution, err := client.ExecuteScript("test", "default", "some name", map[string]string{})
+		execution, err := client.ExecuteScript("test", "testkube", "some name", map[string]string{})
 
 		// then
 		assert.Equal(t, "1", execution.Id)
@@ -116,7 +116,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		scripts, err := client.ListScripts("default")
+		scripts, err := client.ListScripts("testkube")
 
 		// then
 		assert.NoError(t, err)

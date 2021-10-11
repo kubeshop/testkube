@@ -54,7 +54,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 	k8sClient := fake.NewSimpleClientset()
 	// can't override REST client to change requested URI
 	// k8sClient.CoreV1().RESTCli nt()
-	config := NewProxyConfig("default")
+	config := NewProxyConfig("testkube")
 	client := NewProxyScriptsAPI(k8sClient, config)
 
 	t.Run("Execute script with given ID", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 		defer srv.Close()
 
 		// when
-		execution, err := client.ExecuteScript("test", "default", "some name", map[string]string{})
+		execution, err := client.ExecuteScript("test", "testkube", "some name", map[string]string{})
 
 		// then
 		assert.Equal(t, "1", execution.Id)

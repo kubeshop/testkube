@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var namespace = "default"
+var namespace = "testkube"
 
 func init() {
 	if ns, ok := os.LookupEnv("NAMESPACE"); ok {

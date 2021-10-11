@@ -38,6 +38,6 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&chart, "chart", "kubeshop/testkube", "chart name")
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
-	cmd.Flags().StringVar(&namespace, "namespace", "default", "namespace where to install")
+	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
 	return cmd
 }

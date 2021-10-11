@@ -16,7 +16,7 @@ testkube install [flags]
       --chart string       chart name (default "kubeshop/testkube")
   -h, --help               help for install
       --name string        installation name (default "testkube")
-      --namespace string   namespace where to install (default "default")
+      --namespace string   namespace where to install (default "testkube")
 ```
 
 ### SEE ALSO
