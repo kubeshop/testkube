@@ -295,6 +295,7 @@ func createListExecutionsResult(executions []testkube.Execution, pageSize int, s
 			if filteredCount == page*pageSize {
 				executionResults[addedToResultCount] = testkube.ExecutionSummary{
 					Id:         s.Id,
+					Name:       s.Name,
 					ScriptName: s.ScriptName,
 					ScriptType: s.ScriptType,
 					Status:     s.ExecutionResult.Status,

@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "15cf5cc0-f7d7-40e5-a366-e413d9c3c363",
+		"_postman_id": "dfc3423d-1ee1-4403-bee9-9e93caadb45c",
 		"name": "TestKube-Sanity",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -324,8 +324,10 @@
 					"script": {
 						"exec": [
 							"pm.test(\"Successfull test execution\", function () {",
-							"    let jsonData = pm.response.json();",
-							"    console.log(jsonData)",
+							"    let json = pm.response.json();",
+							"    jsonData = json.results;",
+							"",
+							"    console.log(\"results\", jsonData);",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
 							"        if (jsonData[i].name == pm.environment.get(\"execution_name\")) {",
@@ -382,7 +384,7 @@
 							"pm.test(\"Most recent execution is that one recently run\", function () {",
 							"    console.log(\"response\", pm.response.json());",
 							"    let jsonArray = pm.response.json();",
-							"    let jsonData = jsonArray[0];",
+							"    let jsonData = jsonArray.results[0];",
 							"",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
 							"});",
