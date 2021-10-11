@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"strings"
-
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -28,11 +26,6 @@ func NewUninstallCmd() *cobra.Command {
 				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.testkube.io", "executors.executor.testkube.io")
 				ui.PrintOnError("uninstalling CRDs", err)
 			}
-
-			if isChartInstalled(IngressControllerName) {
-				_, err := process.Execute("helm", "uninstall", "--namespace", namespace, IngressControllerName)
-				ui.PrintOnError("uninstalling ingress controller", err)
-			}
 		},
 	}
 
@@ -41,9 +34,4 @@ func NewUninstallCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&removeCRDs, "remove-crds", false, "wipe out Executors and Scripts CRDs")
 
 	return cmd
-}
-
-func isChartInstalled(chart string) bool {
-	output, _ := process.Execute("helm", "list", "--namespace", namespace)
-	return strings.Contains(string(output), chart)
 }
