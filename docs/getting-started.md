@@ -64,7 +64,7 @@ You can create new test with kubectl testkube plugin:
 
 Where: 
 - `uri` is git uri where testkube will get cypress project
-- `git-branch` is what branch should he checkout (testkubes to main)
+- `git-branch` is what branch should he checkout (default - main branch will be used)
 - `git-path` is what path of repository should be checked out (testkube is doing partial git checkout so it'll be fast even for very big monorepos)
 - `name` - is unique Sript Custom Resource name. 
 - `type` - cypress/project - for Cypress based project test structure
