@@ -104,7 +104,7 @@ func GetRenderer(cmd *cobra.Command) Renderer {
 	case OutputGoTemplate:
 		template := cmd.Flag("go-template").Value.String()
 		return GoTemplateRenderer{Template: template}
-	testkube:
+	default:
 		return RawRenderer{}
 	}
 }
