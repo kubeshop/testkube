@@ -29,7 +29,7 @@ kubectl testkube install
 
 You should have everything installed 🏅
 
-By testkube testkube is installed in `testkube` namespace but you can change it in manual install if you want.
+By default testkube is installed in `testkube` namespace but you can change it in manual install if you want.
 
 If you want testkube to provide the endpoint for the kubest dashboard use `kubectl testkube install -i` with the `-i` or `--ingress` option, it will setup a ingress-nginx controller for you in a managed cluster(for baremetal clusters this should be set up manually before installing testkube).
 
