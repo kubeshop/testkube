@@ -76,15 +76,15 @@ For now we're supporting only Cypress test runs, but we plan to fully integrate 
 
 When our script is defined as CR we can now run it: 
 ```shell
-$ kubectl testkube scripts start my-test-name 
+kubectl testkube scripts start my-test-name 
 
 ... some script run data ...
 
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 611b6da38cd74034e7c9d408
+kubectl testkube scripts execution 611b6da38cd74034e7c9d408
 
 or watch for completition with
-$ kubectl testkube scripts watch 611b6da38cd74034e7c9d408
+kubectl testkube scripts watch 611b6da38cd74034e7c9d408
 
 ```
 
@@ -104,7 +104,7 @@ some execution details
 To run script execution you'll need to know script name
 
 ```shell
-$ kubectl testkube scripts list
+kubectl testkube scripts list
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
