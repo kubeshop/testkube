@@ -62,7 +62,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"name\": \"{{script_name}}\",\n    \"type\": \"{{script_type}}\",\n    \"namespace\": \"default\",\n    \"content\": \"{\\r\\n\\t\\\"info\\\": {\\r\\n\\t\\t\\\"_postman_id\\\": \\\"3d9a6be2-bd3e-4cf7-89ca-354103aab4a7\\\",\\r\\n\\t\\t\\\"name\\\": \\\"KubTest\\\",\\r\\n\\t\\t\\\"schema\\\": \\\"https:\\/\\/schema.getpostman.com\\/json\\/collection\\/v2.1.0\\/collection.json\\\"\\r\\n\\t},\\r\\n\\t\\\"item\\\": [\\r\\n\\t\\t{\\r\\n\\t\\t\\t\\\"name\\\": \\\"Health\\\",\\r\\n\\t\\t\\t\\\"event\\\": [\\r\\n\\t\\t\\t\\t{\\r\\n\\t\\t\\t\\t\\t\\\"listen\\\": \\\"test\\\",\\r\\n\\t\\t\\t\\t\\t\\\"script\\\": {\\r\\n\\t\\t\\t\\t\\t\\t\\\"exec\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"pm.test(\\\\\\\"Status code is 200\\\\\\\", function () {\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"    pm.response.to.have.status(200);\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"});\\\"\\r\\n\\t\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"text\\/javascript\\\"\\r\\n\\t\\t\\t\\t\\t}\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t],\\r\\n\\t\\t\\t\\\"request\\\": {\\r\\n\\t\\t\\t\\t\\\"method\\\": \\\"GET\\\",\\r\\n\\t\\t\\t\\t\\\"header\\\": [],\\r\\n\\t\\t\\t\\t\\\"url\\\": {\\r\\n\\t\\t\\t\\t\\t\\\"raw\\\": \\\"{{script_api_uri}}\\/health\\\",\\r\\n\\t\\t\\t\\t\\t\\\"host\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"{{script_api_uri}}\\\"\\r\\n\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\\"path\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"health\\\"\\r\\n\\t\\t\\t\\t\\t]\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t},\\r\\n\\t\\t\\t\\\"response\\\": []\\r\\n\\t\\t}\\r\\n\\t]\\r\\n}\"\n}",
+					"raw": "{\n    \"name\": \"{{script_name}}\",\n    \"type\": \"{{script_type}}\",\n    \"namespace\": \"testkube\",\n    \"content\": \"{\\r\\n\\t\\\"info\\\": {\\r\\n\\t\\t\\\"_postman_id\\\": \\\"3d9a6be2-bd3e-4cf7-89ca-354103aab4a7\\\",\\r\\n\\t\\t\\\"name\\\": \\\"testkube\\\",\\r\\n\\t\\t\\\"schema\\\": \\\"https:\\/\\/schema.getpostman.com\\/json\\/collection\\/v2.1.0\\/collection.json\\\"\\r\\n\\t},\\r\\n\\t\\\"item\\\": [\\r\\n\\t\\t{\\r\\n\\t\\t\\t\\\"name\\\": \\\"Health\\\",\\r\\n\\t\\t\\t\\\"event\\\": [\\r\\n\\t\\t\\t\\t{\\r\\n\\t\\t\\t\\t\\t\\\"listen\\\": \\\"test\\\",\\r\\n\\t\\t\\t\\t\\t\\\"script\\\": {\\r\\n\\t\\t\\t\\t\\t\\t\\\"exec\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"pm.test(\\\\\\\"Status code is 200\\\\\\\", function () {\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"    pm.response.to.have.status(200);\\\",\\r\\n\\t\\t\\t\\t\\t\\t\\t\\\"});\\\"\\r\\n\\t\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"text\\/javascript\\\"\\r\\n\\t\\t\\t\\t\\t}\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t],\\r\\n\\t\\t\\t\\\"request\\\": {\\r\\n\\t\\t\\t\\t\\\"method\\\": \\\"GET\\\",\\r\\n\\t\\t\\t\\t\\\"header\\\": [],\\r\\n\\t\\t\\t\\t\\\"url\\\": {\\r\\n\\t\\t\\t\\t\\t\\\"raw\\\": \\\"{{script_api_uri}}\\/health\\\",\\r\\n\\t\\t\\t\\t\\t\\\"host\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"{{script_api_uri}}\\\"\\r\\n\\t\\t\\t\\t\\t],\\r\\n\\t\\t\\t\\t\\t\\\"path\\\": [\\r\\n\\t\\t\\t\\t\\t\\t\\\"health\\\"\\r\\n\\t\\t\\t\\t\\t]\\r\\n\\t\\t\\t\\t}\\r\\n\\t\\t\\t},\\r\\n\\t\\t\\t\\\"response\\\": []\\r\\n\\t\\t}\\r\\n\\t]\\r\\n}\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -230,7 +230,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"namespace\":\"default\"}",
+					"raw": "{\"namespace\":\"testkube\"}",
 					"options": {
 						"raw": {
 							"language": "json"

@@ -16,7 +16,7 @@ testkube scripts [flags]
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -h, --help                 help for scripts
-  -s, --namespace string     kubernetes namespace (default "default")
+  -s, --namespace string     kubernetes namespace (default "testkube")
   -o, --output string        output typoe one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```

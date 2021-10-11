@@ -32,7 +32,7 @@ func NewJobClient() (*JobClient, error) {
 
 	return &JobClient{
 		ClientSet: clientSet,
-		Namespace: "default",
+		Namespace: "testkube",
 	}, nil
 }
 

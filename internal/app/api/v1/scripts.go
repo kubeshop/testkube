@@ -22,7 +22,7 @@ import (
 func (s testkubeAPI) GetScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "default")
+		namespace := c.Query("namespace", "testkube")
 		crScript, err := s.ScriptsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -41,7 +41,7 @@ func (s testkubeAPI) GetScript() fiber.Handler {
 // ListScripts for getting list of all available scripts
 func (s testkubeAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "default")
+		namespace := c.Query("namespace", "testkube")
 		crScripts, err := s.ScriptsClient.List(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)

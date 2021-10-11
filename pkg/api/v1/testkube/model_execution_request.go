@@ -13,7 +13,7 @@ package testkube
 type ExecutionRequest struct {
 	// script execution custom name
 	Name string `json:"name,omitempty"`
-	// script kubernetes namespace (\"default\" when not set)
+	// script kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`

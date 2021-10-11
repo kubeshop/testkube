@@ -12,13 +12,13 @@ func TestGetClient(t *testing.T) {
 	t.Run("get proxy client", func(t *testing.T) {
 		t.Skip("This one needs kubernetes config to work")
 
-		client, err := GetClient(ClientProxy, "default")
+		client, err := GetClient(ClientProxy, "testkube")
 		assert.NoError(t, err)
 		assert.Equal(t, "client.ProxyScriptsAPI", fmt.Sprintf("%T", client))
 	})
 
 	t.Run("get direct client", func(t *testing.T) {
-		client, err := GetClient(ClientDirect, "default")
+		client, err := GetClient(ClientDirect, "testkube")
 		assert.NoError(t, err)
 		assert.Equal(t, "client.DirectScriptsAPI", fmt.Sprintf("%T", client))
 	})
