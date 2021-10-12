@@ -43,12 +43,12 @@ jobs:
           # Editing api-server Chart, and App versions:
           sed -i "s/^version: .*$/version: $version_full/" ./charts/api-server/Chart.yaml
           sed -i "s/^appVersion: .*$/appVersion: $version_full/" ./charts/api-server/Chart.yaml
-          echo "\nChecking changes made to Chart.yaml of api-server\n"
+          echo -e "\nChecking changes made to Chart.yaml of api-server\n"
           cat ./charts/api-server/Chart.yaml
 
           # Editing Docker tag image:
           sed -i "s/tag:.*$/tag: \"$version_full\"/" ./charts/api-server/values.yaml
-          echo "\nChecking changes made to Docker image:\n"
+          echo -e "\nChecking changes made to Docker image:\n"
           grep -i "tag" ./charts/api-server/values.yaml
 
           # Commiting and pushing changes:
@@ -58,8 +58,8 @@ jobs:
           git remote -v
 
           # git push origin main
-          git push --set-upstream https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
+          git push --set-upstream https://fog1985:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
 
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.HELM_CHARTS_UPDATE }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
