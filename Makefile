@@ -30,7 +30,7 @@ docker-build-api-server:
 	docker build -t api-server -f build/api-server/Dockerfile .
 
 dev-install-local-executors:
-	kubectl apply -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
+	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
 
 install-swagger-codegen-mac: 
 	brew install swagger-codegen
