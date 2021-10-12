@@ -47,7 +47,7 @@ jobs:
           cat ./charts/api-server/Chart.yaml
 
           # Editing Docker tag image:
-          sed -i "s/tag:.*$/tag: \"$version_full_bumped\"/" ./charts/api-server/values.yaml
+          sed -i "s/tag:.*$/tag: \"$version_full\"/" ./charts/api-server/values.yaml
           echo "Checking..."
           grep -i "tag" ./charts/api-server/values.yaml
 
