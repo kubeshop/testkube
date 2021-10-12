@@ -52,8 +52,8 @@ jobs:
           grep -i "tag" ./charts/api-server/values.yaml
 
           # Editing TestKube dependency Chart.yaml for api-server:
-          sed -i "/name: api-server/{n;s/^.*version.*/  version: $version_full_bumped/}" ./charts/testkube/Chart.yaml
-          echo -e "Checking if testkube's Chart.yaml dependencie has been updated:"
+          sed -i "/name: api-server/{n;s/^.*version.*/  version: $version_full/}" ./charts/testkube/Chart.yaml
+          echo -e "\nChecking if testkube's Chart.yaml dependencie has been updated:\n"
           grep -iE -A 1 "name: api-server" ./charts/testkube/Chart.yaml
 
           # Commiting and pushing changes:
