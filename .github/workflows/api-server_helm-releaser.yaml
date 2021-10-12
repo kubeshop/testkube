@@ -1,0 +1,66 @@
+name: Docker images
+
+on:
+  push:
+    tags: 
+      # - "v[0-9]+.[0-9]+.[0-9]+"
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "vTesting[0-9]+.[0-9]+.[0-9]+"
+      - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+
+jobs:
+  releasing_helm_chart_api_server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: getting Tag name pushed.
+        uses: actions/checkout@v2
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+
+      - name: Editing helm-release repo with version based on a Tag pushed.
+        run: |
+          git clone https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts
+
+          cd helm-charts
+          git config user.name "exu"
+          git config user.email "exu@kubeshop.io"
+          
+          # Getting api-server chart version based on the pushed TAG:
+          version_full=$(echo $RELEASE_VERSION | sed 's/^v//')
+          echo "Version recieved: $version_full"
+
+          # Not sure if we need it in a future. Will just leave here for the time being:
+          # version_major=$(echo $version_full | awk -F\. '{print $1}')
+          # version_minor=$(echo $version_full | awk -F\. '{print $2}')
+          # version_patch=$(echo $version_full | awk -F\. '{print $3}')
+
+          # Incrementing helm charts patch version by one:
+          # version_patch=$(expr $version_patch + 1)
+
+          # New full version:
+          # version_full_bumped=$version_major.$version_minor.$version_patch
+          # echo "New version is: $version_full_bumped"
+
+          # Editing api-server Chart, and App versions:
+          sed -i "s/^version: .*$/version: $version_full/" ./charts/api-server/Chart.yaml
+          sed -i "s/^appVersion: .*$/appVersion: $version_full/" ./charts/api-server/Chart.yaml
+          echo "Checking..."
+          cat ./charts/api-server/Chart.yaml
+
+          # Editing Docker tag image:
+          sed -i "s/tag:.*$/tag: \"$version_full_bumped\"/" ./charts/api-server/values.yaml
+          echo "Checking..."
+          grep -i "tag" ./charts/api-server/values.yaml
+
+          # Commiting and pushing changes:
+          # git add -A
+          # git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+
+          # git remote -v
+
+          # # git push origin main
+          # git push --set-upstream https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
