@@ -3,10 +3,10 @@ name: Docker images
 on:
   push:
     tags: 
-      # - "v[0-9]+.[0-9]+.[0-9]+"
-      # - "v[0-9]+.[0-9]+.[0-9]+-*"
-      - "vTesting[0-9]+.[0-9]+.[0-9]+"
-      - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
   releasing_helm_chart_api_server:
@@ -58,7 +58,7 @@ jobs:
 
           # Commiting and pushing changes:
           git add -A
-          git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+          git commit -m "Tag: $version_full; Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
 
           git remote -v
 
