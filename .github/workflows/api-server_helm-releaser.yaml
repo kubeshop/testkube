@@ -51,14 +51,19 @@ jobs:
           echo -e "\nChecking changes made to Docker image:\n"
           grep -i "tag" ./charts/api-server/values.yaml
 
+          # Editing TestKube dependency Chart.yaml for api-server:
+          sed -i "/name: api-server/{n;s/^.*version.*/  version: $version_full_bumped/}" ./charts/testkube/Chart.yaml
+          echo -e "Checking if testkube's Chart.yaml dependencie has been updated:"
+          grep -iE -A 1 "name: api-server" ./charts/testkube/Chart.yaml
+
           # Commiting and pushing changes:
-          git add -A
-          git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+          # git add -A
+          # git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
 
-          git remote -v
+          # git remote -v
 
-          # git push origin main
-          git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
+          # # git push origin main
+          # git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
 
         env:
           HELM_CHARTS_UPDATE: ${{ secrets.HELM_CHARTS_UPDATE }}
