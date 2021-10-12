@@ -19,14 +19,26 @@ _detect_arch() {
      esac 
 }
 
+_detect_os(){
+    case $(uname) in 
+    Linux) echo "Linux" 
+    ;; 
+    Darwin) echo "macOS" 
+    ;; 
+    Windows) echo "Windows" 
+    ;; 
+     esac    
+}
+
 _download_url() { 
         local arch="$(_detect_arch)" 
+        local os="$(_detect_os)"
         if [ -z "$TESTKUBE_VERSION" ]
         then
                 local version=`curl -s https://api.github.com/repos/kubeshop/testkube/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
-                echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:1}_$(uname)_$arch.tar.gz"       
+                echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:1}_${os}_$arch.tar.gz"       
         else   
-                echo "https://github.com/kubeshop/testkube/releases/download/v${TESTKUBE_VERSION}/testkube_${TESTKUBE_VERSION}_$(uname)_$arch.tar.gz" 
+                echo "https://github.com/kubeshop/testkube/releases/download/v${TESTKUBE_VERSION}/testkube_${TESTKUBE_VERSION}_${os}_$arch.tar.gz" 
         fi
 }
 
