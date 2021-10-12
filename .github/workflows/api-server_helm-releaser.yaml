@@ -57,13 +57,13 @@ jobs:
           grep -iE -A 1 "name: api-server" ./charts/testkube/Chart.yaml
 
           # Commiting and pushing changes:
-          # git add -A
-          # git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+          git add -A
+          git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
 
-          # git remote -v
+          git remote -v
 
-          # # git push origin main
-          # git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
+          # git push origin main
+          git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
 
         env:
           HELM_CHARTS_UPDATE: ${{ secrets.HELM_CHARTS_UPDATE }}
