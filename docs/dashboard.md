@@ -13,8 +13,7 @@ It can be achieved installing TestKube using helm charts located at github.com/k
 Add repo to helm
 
 ```sh
-helm repo add kubeshop https://kubeshop.github.io/helm-charts && 
-helm repo updated
+helm repo add kubeshop https://kubeshop.github.io/helm-charts && helm repo update
 ```
 
 Exposing something to the outside world will need an ingress-controller, by default TestKube is using ingress-nginx, any other ingress can be used but this will need advanced configuration(a values file for guidance can be found [here](https://github.com/kubeshop/helm-charts/blob/39f73098630b333ba66db137e7fc016c39d92876/testkube/charts/testkube/values-demo.yaml)).
