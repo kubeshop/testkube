@@ -18,7 +18,7 @@ jobs:
 
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
-          git clone https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts
+          git clone https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts
 
           cd helm-charts
           git config user.name "exu"
@@ -58,8 +58,8 @@ jobs:
           git remote -v
 
           # git push origin main
-          git push --set-upstream https://fog1985:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
+          git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
 
         env:
-          GITHUB_TOKEN: ${{ secrets.HELM_CHARTS_UPDATE }}
+          HELM_CHARTS_UPDATE: ${{ secrets.HELM_CHARTS_UPDATE }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
