@@ -43,12 +43,12 @@ jobs:
           # Editing api-server Chart, and App versions:
           sed -i "s/^version: .*$/version: $version_full/" ./charts/api-server/Chart.yaml
           sed -i "s/^appVersion: .*$/appVersion: $version_full/" ./charts/api-server/Chart.yaml
-          echo "Checking..."
+          echo "\nChecking changes made to Chart.yaml of api-server\n"
           cat ./charts/api-server/Chart.yaml
 
           # Editing Docker tag image:
           sed -i "s/tag:.*$/tag: \"$version_full\"/" ./charts/api-server/values.yaml
-          echo "Checking..."
+          echo "\nChecking changes made to Docker image:\n"
           grep -i "tag" ./charts/api-server/values.yaml
 
           # Commiting and pushing changes:
