@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
-        uses: actions/checkout@v2
         id: vars
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
 
