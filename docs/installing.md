@@ -32,66 +32,6 @@ You should have everything installed 🏅
 By default testkube is installed in `testkube` namespace but you can change it in manual install if you want.
 
 If you want testkube to provide the endpoint for the kubest dashboard use `kubectl testkube install -i` with the `-i` or `--ingress` option, it will setup a ingress-nginx controller for you in a managed cluster(for baremetal clusters this should be set up manually before installing testkube).
-
-## TestKube's Dashboard Ingress Configuration
-
-Dashboard will bring you web-based UI for managing and seeing all the tests and its results via web-browser.
-### Enabling dashboard
-In order to enable dashboard please provide Helm's set value as follow during installation:
-```
-helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true"
-```
-By default it's disabled
-### configuration for the nginx-based ingress controller with the cert-manager pointed at Let'sencrypt. 
-```
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    acme.cert-manager.io/http01-edit-in-place: "true"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    kubernetes.io/ingress.class: nginx
-    kubernetes.io/ingress.global-static-ip-name: testkube-demo
-    meta.helm.sh/release-name: testkube-demo
-    meta.helm.sh/release-namespace: testkube-demo
-    nginx.ingress.kubernetes.io/cors-allow-credentials: "false"
-    nginx.ingress.kubernetes.io/cors-allow-methods: GET
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  name: testkube-dashboard-testkube-demo
-  namespace: testkube-demo
-spec:
-  rules:
-  - host: your.domain.name
-    http:
-      paths:
-      - backend:
-          service:
-            name: testkube-dashboard
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
-  tls:
-  - hosts:
-    - demo.testkube.io
-    secretName: testkube-demo-cert-secret # to be created by your certificate manager within k8s cluster.
-```
-If you don't need TLS enabled just omit TLS configuration part. 
-
-> Though we highly discourage working in non-safe environment whcih is exposed without usage of TLS-based connection. Please do so only in private internal environemnt for testing or development purposes only.
-
-> Dashbaord talks to api-server via endpoint. Hence api-server will hvae to have DNS as well. 
-
-Please note that you can install ingress for dashboard together with api-server ingress with the usage of Helm chart as well:
-```
-helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true"
-```
-If you need to specify some specific to your ingress annotations, you can use Helm "--set" option to pass needed annotations. E.G.:
-```
-helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true" --set api-server.ingress.annotations.kubernetes\\.io/ingress\\.class="anything_needed"
-```
 ## Uninstall `testkube`
 
 You can uninstall TestKube using uninstall command integrated into testkube plugin. 
