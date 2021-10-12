@@ -52,13 +52,13 @@ jobs:
           grep -i "tag" ./charts/api-server/values.yaml
 
           # Commiting and pushing changes:
-          # git add -A
-          # git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+          git add -A
+          git commit -m "Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
 
-          # git remote -v
+          git remote -v
 
-          # # git push origin main
-          # git push --set-upstream https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
+          # git push origin main
+          git push --set-upstream https://exu:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
