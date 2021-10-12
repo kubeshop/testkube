@@ -276,19 +276,22 @@ func createListExecutionsResult(executions []testkube.Execution, pageSize int, s
 
 	for _, s := range executions {
 
+		// TODO move it to mapper with valid error handling
+		// it could kill api server with panic in case of empty
+		// Execution result - for now omit failed result
+		if s.ExecutionResult == nil || s.ExecutionResult.Status == nil {
+			continue
+		}
+
 		switch *s.ExecutionResult.Status {
 		case testkube.QUEUED_ExecutionStatus:
 			totals.Queued++
-			break
 		case testkube.SUCCESS_ExecutionStatus:
 			totals.Passed++
-			break
 		case testkube.ERROR__ExecutionStatus:
 			totals.Failed++
-			break
 		case testkube.PENDING_ExecutionStatus:
 			totals.Pending++
-			break
 		}
 
 		if addedToResultCount < pageSize && (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter) {
