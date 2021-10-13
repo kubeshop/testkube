@@ -3,10 +3,10 @@ name: api-server-helm-releaser
 on:
   push:
     tags: 
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
-      # - "vTesting[0-9]+.[0-9]+.[0-9]+"
-      # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+      # - "v[0-9]+.[0-9]+.[0-9]+"
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "vTesting[0-9]+.[0-9]+.[0-9]+"
+      - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
   releasing_helm_chart_api_server:
@@ -19,60 +19,15 @@ jobs:
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
-
-          # Setting up Git configuration:
-          cd helm-charts
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
           
-          # Getting api-server chart version based on the pushed TAG:
-          version_full=$(echo $RELEASE_VERSION | sed 's/^v//')
-          echo "Version recieved: $version_full"
+          # Calling chart releaser script by passing needed folder name:
+          # E.G. in order to relase api-server": ./chart_releaser.sh --helm-chart-folder api-server
+          
+          export GH_PUSH_TOKEN
+          export RELEASE_VERSION
 
-          # Getting TestKube main chart version:
-          tk_version_full=$(grep -iE "^version:" ./charts/testkube/Chart.yaml | awk '{print $NF}')
-
-          # Bumping TestKube version by one:
-          tk_version_major=$(echo $tk_version_full | awk -F\. '{print $1}')
-          tk_version_minor=$(echo $tk_version_full | awk -F\. '{print $2}')
-          tk_version_patch=$(echo $tk_version_full | awk -F\. '{print $3}')
-
-          # Incrementing testKube helm charts patch version by one:
-          tk_version_patch=$(expr $tk_version_patch + 1)
-
-          # New TestKube full version:
-          tk_version_full_bumped=$tk_version_major.$tk_version_minor.$tk_version_patch
-          echo "New main TestKube's chart version is: $tk_version_full_bumped"
-
-          # Editing api-server Chart, and App versions:
-          sed -i "s/^version: .*$/version: $version_full/" ./charts/api-server/Chart.yaml
-          sed -i "s/^appVersion: .*$/appVersion: $version_full/" ./charts/api-server/Chart.yaml
-          echo -e "\nChecking changes made to Chart.yaml of api-server\n"
-          cat ./charts/api-server/Chart.yaml
-
-          # Editing Docker tag image for api-server:
-          sed -i "s/tag:.*$/tag: \"$version_full\"/" ./charts/api-server/values.yaml
-          echo -e "\nChecking changes made to Docker image:\n"
-          grep -i "tag" ./charts/api-server/values.yaml
-
-          # Editing TestKube's main chart version:
-          sed -i "s/^version:.*/version: $tk_version_full_bumped/" ./charts/testkube/Chart.yaml
-          echo -e "\nChecking if testkube's main Chart.yaml version has been updated:\n"
-          grep -iE "^version" ./charts/testkube/Chart.yaml
-
-          # Editing TestKube dependency Chart.yaml for api-server:
-          sed -i "/name: api-server/{n;s/^.*version.*/  version: $version_full/}" ./charts/testkube/Chart.yaml
-          echo -e "\nChecking if testkube's Chart.yaml dependencie has been updated:\n"
-          grep -iE -A 1 "name: api-server" ./charts/testkube/Chart.yaml
-
-          # Commiting and pushing changes:
-          git add -A
-          git commit -m "Tag: $version_full; Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
-
-          git remote -v
-
-          # git push origin main
-          git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts main
+          cd helm-charts/scripts
+          ./chart_releaser.sh --helm-chart-folder api-server
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
