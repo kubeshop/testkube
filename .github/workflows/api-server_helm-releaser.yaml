@@ -18,15 +18,18 @@ jobs:
 
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
-          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          git clone --branch tarask/refactor/helm_release_script https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase api-server": ./chart_releaser.sh --helm-chart-folder api-server
           
           export GH_PUSH_TOKEN
           export RELEASE_VERSION
+          
+          ls -al ./
+          ls -al ./helm-charts/
 
-          cd helm-charts/scripts
+          cd ./helm-charts/scripts
           ./chart_releaser.sh --helm-chart-folder api-server
 
         env:
