@@ -18,11 +18,12 @@ jobs:
 
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
-          git clone https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts
+          git clone https://kubeshop-bot:$GITHUB_TOKEN@github.com/kubeshop/helm-charts
 
+          # Setting up Git configuration:
           cd helm-charts
-          git config user.name "ci/cd-github-bot"
-          git config user.email "github-bot@kubeshop.io"
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
           
           # Getting api-server chart version based on the pushed TAG:
           version_full=$(echo $RELEASE_VERSION | sed 's/^v//')
@@ -71,8 +72,8 @@ jobs:
           # git remote -v
 
           # # git push origin main
-          # git push --set-upstream https://fog1985:$HELM_CHARTS_UPDATE@github.com/kubeshop/helm-charts main
+          # git push --set-upstream https://kubeshop-bot:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
 
         env:
-          HELM_CHARTS_UPDATE: ${{ secrets.HELM_CHARTS_UPDATE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
