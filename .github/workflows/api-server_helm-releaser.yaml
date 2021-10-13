@@ -3,10 +3,10 @@ name: api-server-helm-releaser
 on:
   push:
     tags: 
-      # - "v[0-9]+.[0-9]+.[0-9]+"
-      # - "v[0-9]+.[0-9]+.[0-9]+-*"
-      - "vTesting[0-9]+.[0-9]+.[0-9]+"
-      - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
   releasing_helm_chart_api_server:
@@ -21,18 +21,17 @@ jobs:
 
           # Setting up Git:
             
-          git clone --branch tarask/refactor/helm_release_script https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
           
           # Calling chart releaser script by passing needed folder name:
-          # E.G. in order to relase api-server": ./chart_releaser.sh --helm-chart-folder api-server
+          # E.G. in order to relase api-server": 
+          # -->> ./chart_releaser.sh --helm-chart-folder api-server
           
           export GH_PUSH_TOKEN
           export RELEASE_VERSION
-          
-          ls -al ./
 
           cd ./scripts
           ./chart_releaser.sh --helm-chart-folder api-server
