@@ -21,9 +21,10 @@ jobs:
 
           # Setting up Git:
             
+          git clone --branch tarask/refactor/helm_release_script https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
-          git clone --branch tarask/refactor/helm_release_script https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase api-server": ./chart_releaser.sh --helm-chart-folder api-server
@@ -32,9 +33,8 @@ jobs:
           export RELEASE_VERSION
           
           ls -al ./
-          ls -al ./helm-charts/
 
-          cd ./helm-charts/scripts
+          cd ./scripts
           ./chart_releaser.sh --helm-chart-folder api-server
 
         env:
