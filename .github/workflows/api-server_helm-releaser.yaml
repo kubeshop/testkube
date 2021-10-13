@@ -18,6 +18,11 @@ jobs:
 
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
+
+          # Setting up Git:
+            
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
           git clone --branch tarask/refactor/helm_release_script https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           
           # Calling chart releaser script by passing needed folder name:
