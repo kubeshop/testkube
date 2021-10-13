@@ -237,6 +237,8 @@ func (s testkubeAPI) ListExecutions() fiber.Handler {
 
 		statusFilter := c.Params("status", "")
 
+		dFilter := NewDateFilter(c.Params("startDate", ""), c.Params("endDate", ""))
+
 		ctx := c.Context()
 
 		var executions []testkube.Execution
@@ -255,13 +257,13 @@ func (s testkubeAPI) ListExecutions() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		results := createListExecutionsResult(executions, pageSize, statusFilter, page)
+		results := createListExecutionsResult(executions, statusFilter, dFilter, page, pageSize)
 
 		return c.JSON(results)
 	}
 }
 
-func createListExecutionsResult(executions []testkube.Execution, pageSize int, statusFilter string, page int) testkube.ExecutionsResult {
+func createListExecutionsResult(executions []testkube.Execution, statusFilter string, dFilter DateFilter, page int, pageSize int) testkube.ExecutionsResult {
 	totals := testkube.ExecutionsTotals{
 		Results: int32(len(executions)),
 		Passed:  0,
@@ -294,7 +296,10 @@ func createListExecutionsResult(executions []testkube.Execution, pageSize int, s
 			totals.Pending++
 		}
 
-		if addedToResultCount < pageSize && (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter) {
+		isPassingStatusFilter := (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter)
+		if addedToResultCount < pageSize &&
+			isPassingStatusFilter &&
+			dFilter.IsPassing(s.ExecutionResult.StartTime) {
 			if filteredCount == page*pageSize {
 				executionResults[addedToResultCount] = testkube.ExecutionSummary{
 					Id:         s.Id,
