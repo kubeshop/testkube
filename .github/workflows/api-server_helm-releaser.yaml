@@ -29,12 +29,12 @@ jobs:
           echo "Version recieved: $version_full"
 
           # Getting TestKube main chart version:
-          tk_version_full=
+          tk_version_full=$(grep -iE "^version:" ./charts/testkube/Chart.yaml | awk '{print $NF}')
 
           # Bumping TestKube version by one:
-          # tk_version_major=$(echo $tk_version_full | awk -F\. '{print $1}')
-          # tk_version_minor=$(echo $tk_version_full | awk -F\. '{print $2}')
-          # tk_version_patch=$(echo $tk_version_full | awk -F\. '{print $3}')
+          tk_version_major=$(echo $tk_version_full | awk -F\. '{print $1}')
+          tk_version_minor=$(echo $tk_version_full | awk -F\. '{print $2}')
+          tk_version_patch=$(echo $tk_version_full | awk -F\. '{print $3}')
 
           # Incrementing testKube helm charts patch version by one:
           tk_version_patch=$(expr $tk_version_patch + 1)
@@ -55,7 +55,7 @@ jobs:
           grep -i "tag" ./charts/api-server/values.yaml
 
           # Editing TestKube's main chart version:
-          sed -i "s/^version:.*/version: $tk_version_full_bumped/" ./charts/testkube/Chart.yam
+          sed -i "s/^version:.*/version: $tk_version_full_bumped/" ./charts/testkube/Chart.yaml
           echo -e "\nChecking if testkube's main Chart.yaml version has been updated:\n"
           grep -iE -A 1 "^version" ./charts/testkube/Chart.yaml
 
