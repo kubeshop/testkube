@@ -223,21 +223,21 @@ func (s testkubeAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		scriptID := c.Params("id", "-")
-		pageSize, err := strconv.Atoi(c.Params("pageSize", "100"))
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "100"))
 		if err != nil {
 			pageSize = 100
 		} else if pageSize < 1 || pageSize > 1000 {
 			pageSize = 1000
 		}
 
-		page, err := strconv.Atoi(c.Params("page", "0"))
+		page, err := strconv.Atoi(c.Query("page", "0"))
 		if err != nil {
 			page = 0
 		}
 
-		statusFilter := c.Params("status", "")
+		statusFilter := c.Query("status", "")
 
-		dFilter := NewDateFilter(c.Params("startDate", ""), c.Params("endDate", ""))
+		dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 
 		ctx := c.Context()
 
