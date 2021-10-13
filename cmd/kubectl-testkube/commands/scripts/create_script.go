@@ -41,6 +41,10 @@ func NewCreateScriptsCmd() *cobra.Command {
 
 			client, namespace := GetClient(cmd)
 
+			if executorType == "" {
+				ui.Failf("Please pass valid executor type")
+			}
+
 			script, _ := client.GetScript(name)
 			if name == script.Name {
 				ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
@@ -77,7 +81,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
 
 	// TODO - type should be autodetected
-	cmd.Flags().StringVarP(&executorType, "type", "t", "postman/collection", "script type (defaults to postman-collection)")
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")

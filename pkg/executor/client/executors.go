@@ -30,6 +30,16 @@ func (p *Executors) GetExecutorSpec(scriptType string) (spec v1.ExecutorSpec, er
 	return
 }
 
+// ListTypes lists registered executors types
+func (p *Executors) ListTypes() (types []string, err error) {
+	list, err := p.ExecutorsCRClient.List(p.Namespace)
+	for _, e := range list.Items {
+		types = append(types, e.Spec.Types...)
+	}
+
+	return
+}
+
 // Get gets executor based on type with a basic map.Sync cache
 // TODO there is no handling of CR change
 func (p *Executors) Get(scriptType string) (client ExecutorClient, err error) {

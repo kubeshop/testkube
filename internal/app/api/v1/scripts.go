@@ -76,6 +76,11 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 			}
 		}
 
+		if request.Type_ == "" {
+			return s.Error(c, http.StatusBadGateway, err)
+
+		}
+
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      request.Name,
