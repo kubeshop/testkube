@@ -42,7 +42,7 @@ jobs:
 
           # New TestKube full version:
           tk_version_full_bumped=$tk_version_major.$tk_version_minor.$tk_version_patch
-          echo "New version is: $tk_version_full_bumped"
+          echo "New main TestKube's chart version is: $tk_version_full_bumped"
 
           # Editing api-server Chart, and App versions:
           sed -i "s/^version: .*$/version: $version_full/" ./charts/api-server/Chart.yaml
@@ -58,21 +58,21 @@ jobs:
           # Editing TestKube's main chart version:
           sed -i "s/^version:.*/version: $tk_version_full_bumped/" ./charts/testkube/Chart.yaml
           echo -e "\nChecking if testkube's main Chart.yaml version has been updated:\n"
-          grep -iE -A 1 "^version" ./charts/testkube/Chart.yaml
+          grep -iE "^version" ./charts/testkube/Chart.yaml
 
           # Editing TestKube dependency Chart.yaml for api-server:
           sed -i "/name: api-server/{n;s/^.*version.*/  version: $version_full/}" ./charts/testkube/Chart.yaml
           echo -e "\nChecking if testkube's Chart.yaml dependencie has been updated:\n"
           grep -iE -A 1 "name: api-server" ./charts/testkube/Chart.yaml
 
-          # # Commiting and pushing changes:
-          # git add -A
-          # git commit -m "Tag: $version_full; Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
+          # Commiting and pushing changes:
+          git add -A
+          git commit -m "Tag: $version_full; Api-server CI/CD. Bumped helm chart, app and docker image tag versions."
 
-          # git remote -v
+          git remote -v
 
-          # # git push origin main
-          # git push --set-upstream https://kubeshop-bot:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
+          # git push origin main
+          git push --set-upstream https://kubeshop-bot:$GITHUB_TOKEN@github.com/kubeshop/helm-charts main
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
