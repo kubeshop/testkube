@@ -1,6 +1,6 @@
 # Getting Started 
 
-Please follow [install steps](/docs/installing.md) for testkube installation
+Please follow [install steps](/docs/installing.md) for TestKube installation
 
 ## Getting help 
 

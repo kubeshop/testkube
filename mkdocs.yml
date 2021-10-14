@@ -29,7 +29,6 @@ nav:
       - Overview:  cli/testkube.md
       - Install Cmd: cli/testkube_install.md
       - Scripts Cmd: cli/testkube_scripts.md
-      - Completion Cmd: cli/testkube_completion.md
       - Dashboard Cmd: cli/testkube_dashboard.md
       - Version Cmd: cli/testkube_version.md
   - Dashboard: dashboard.md
