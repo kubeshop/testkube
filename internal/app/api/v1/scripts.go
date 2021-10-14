@@ -172,7 +172,9 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 
 		// call executor rest or job based and update execution object after queueing execution
 		s.Log.Infow("calling executor with options", "options", options)
+
 		result, err := executor.Execute(options)
+
 		if uerr := s.Repository.UpdateResult(ctx, execution.Id, result); uerr != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
 		}

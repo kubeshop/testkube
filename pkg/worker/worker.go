@@ -92,8 +92,8 @@ func (w *Worker) Run(executionChan chan testkube.Execution) {
 
 func (w *Worker) RunExecution(ctx context.Context, e testkube.Execution) (testkube.Execution, error) {
 	startTime := time.Now()
-	l := w.Log.With("executionID", e.Id, "startTime", startTime.String())
-
+	l := w.Log.With("executionID", e.Id)
+	e.ExecutionResult.StartTime = startTime
 	// save start time
 	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
@@ -102,6 +102,7 @@ func (w *Worker) RunExecution(ctx context.Context, e testkube.Execution) (testku
 	l.Infow("script started", "status", e.ExecutionResult.Status)
 	result := w.Runner.Run(e)
 	result.StartTime = startTime
+	result.EndTime = time.Now()
 	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
 	e.ExecutionResult = &result
 
@@ -113,13 +114,11 @@ func (w *Worker) RunExecution(ctx context.Context, e testkube.Execution) (testku
 		e.ExecutionResult.Success()
 	}
 
-	e.ExecutionResult.Stop()
-
 	// save end time
 	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
-	l.Infow("script ended", "status", e.ExecutionResult.Status, "endTime", e.ExecutionResult.EndTime.String())
+	l.Infow("script ended", "status", e.ExecutionResult.Status, "startTime", e.ExecutionResult.StartTime.String(), "endTime", e.ExecutionResult.EndTime.String())
 
 	return e, err
 }
