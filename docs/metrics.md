@@ -13,7 +13,7 @@ currently exposes the following metrics:
 If yout don't have installed Prometheus operator please follow [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/) first 
 
 Next you'll need to add `ServiceMonitor` custom resource to your cluster which will scrape metrics from our
-testkube API server.
+TestKube API server.
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -31,7 +31,7 @@ spec:
       app.kubernetes.io/name: api-server
 ```
 
-If you're installing testkube manually by our Helm chart you can pass `prometheus.enabled` value to install 
+If you're installing TestKube manually by our Helm chart you can pass `prometheus.enabled` value to install 
 command: 
 
 

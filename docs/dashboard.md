@@ -1,10 +1,23 @@
 # TestKube Dashboard
 
-Dashboard is the web-based UI for managing and showing all the tests and its results via web-browser. It can be accessed at dashboard.testkube.io but it needs the access to the results endpoint of the installed testkube in order to show the results. Dashboard can be opened using command ```sh kubectl testkube dashboard``` and it uses port forwarding for accessing the results endpoint (see more [here](cli/testkube_dashboard.md)).
+The TestKube Dashboard provides a simple web-based UI for monitoring TestKube test-results via a web-browser. 
+
+![img.png](img/dashboard.png)
+
+It can be accessed at [https://dashboard.testkube.io](https://dashboard.testkube.io) which will prompt for the
+results endpoint of your TestKube installation in order to show your results (see below on how to find that). Once
+you have the results endpoint you can append it to the above URL (as an apiEndpoint parameter) for a direct link to 
+the dashboard with your results, i.e. 
+
+`https://dashboard.testkube.io/?apiEndpoint=...`
+
+Alternatively, the dashboard can be opened on your local machine using command ```sh kubectl testkube dashboard``` which 
+will uses port forwarding for accessing your local results endpoint (see more [here](cli/testkube_dashboard.md)).
+
 To have permanent access to the results from testkube instance there are 2 options:
 
-* Expose the results endpoint using an ingress and use it in the dashboard at dashboard.testkube.io.
-* Install the dashboard together with the testkube.
+* Expose the results endpoint using an Ingress controller and use it in the dashboard at dashboard.testkube.io.
+* Install the dashboard together with TestKube.
 
 It can be achieved installing TestKube using helm charts located at github.com/kubeshop/helm-charts.
 
@@ -25,6 +38,8 @@ helm install testkube kubeshop/testkube --set api-server.ingress.enabled="true"
 ```
 
 by default the results are using the path ```/results``` so the results will be accessible at ```ingress_host/results/```
+
+The ingress configuration used is available int the [TestKube Helm Repo]()
 
 ## Installing dashboard
 
