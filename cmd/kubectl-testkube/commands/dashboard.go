@@ -22,7 +22,7 @@ func NewDashboardCmd() *cobra.Command {
 
 			dashboardAddress := fmt.Sprintf("%slocalhost:%d", DashboardURI, ApiServerPort)
 			ui.Success("The dashboard is accessible here:", dashboardAddress)
-			ui.Success("Port forwarding is started to make possible accessing the test result, in order to stop it hit Ctrl+C")
+			ui.Success("Port forwarding is started for the test results endpoint, hit Ctrl+C to stop")
 			openCmd, err := getOpenCommand()
 			if err == nil {
 				_, err = process.Execute(openCmd, dashboardAddress)
@@ -36,7 +36,7 @@ func NewDashboardCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "s", "default", "namespace where the testkube is installed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "s", "testkube", "namespace where the testkube is installed")
 	return cmd
 }
 
