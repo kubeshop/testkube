@@ -36,7 +36,7 @@ func NewDashboardCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "s", "default", "namespace where the testkube is installed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "s", "testkube", "namespace where the testkube is installed")
 	return cmd
 }
 
