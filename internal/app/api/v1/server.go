@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
@@ -45,7 +46,7 @@ func (s testkubeAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 
 	executions := s.Routes.Group("/executions")
-
+	executions.Use(cors.New())
 	executions.Get("/", s.ListExecutions())
 	executions.Get("/:executionID", s.GetExecution())
 
