@@ -15,7 +15,7 @@ type ScriptCreateRequest struct {
 	Name string `json:"name,omitempty"`
 	// script type - what executor type should be used during test execution
 	Type_ string `json:"type,omitempty"`
-	// kubernetes namespace (defaults to 'default')
+	// kubernetes namespace (defaults to 'testkube')
 	Namespace string `json:"namespace,omitempty"`
 	// script content type can be:  - direct content - created from file,  - git repo directory checkout in case when test is some kind of project or have more than one file,
 	InputType  string      `json:"inputType,omitempty"`
