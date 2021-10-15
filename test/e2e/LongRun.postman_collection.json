@@ -12,7 +12,9 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							""
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -22,11 +24,14 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://kubeshop.io",
+					"raw": "https://kubeshop.io/",
 					"protocol": "https",
 					"host": [
 						"kubeshop",
 						"io"
+					],
+					"path": [
+						""
 					]
 				}
 			},
@@ -44,6 +49,10 @@
 							"let team = [];",
 							"$('.bio-title').each(function(i,e) {",
 							"   team.push($(e).text());",
+							"});",
+							"",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
 							"});",
 							"",
 							"pm.environment.set(\"team\", team);"
@@ -103,16 +112,18 @@
 							"const $ = cheerio.load(pm.response.text());",
 							"",
 							"const links = []",
-							"$('.md-nav__link').each((i,e) => links.push($(e).attr('href')));",
+							"$('.md-nav__link').each((i,e) => { if($(e).attr('href'))links.push($(e).attr('href'))});",
 							"console.log(links);",
 							"",
 							"for(i in links) {",
-							"    pm.sendRequest('https://kubeshop.github.io/testkube/'+links[i], function (err, response) {",
-							"        setTimeout(function(){ ",
-							"            console.log($('h1', response.text()).text());",
-							"        }, 31000);",
+							"    pm.test(\"Testing \" + links[i] + \" page\", function () {",
+							"        pm.sendRequest('https://kubeshop.github.io/testkube/'+links[i], function (err, response) {",
+							"            setTimeout(function(){ ",
+							"                console.log(links[i] +\" response: \" + $('h1', response.text()).text());",
+							"            }, 31000);",
+							"            pm.expect(response.code).to.eq(200);",
+							"        });",
 							"    });",
-							"",
 							"}",
 							""
 						],
