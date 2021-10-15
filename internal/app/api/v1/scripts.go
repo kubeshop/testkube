@@ -287,22 +287,22 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			continue
 		}
 
-		switch *s.ExecutionResult.Status {
-		case testkube.QUEUED_ExecutionStatus:
-			totals.Queued++
-		case testkube.SUCCESS_ExecutionStatus:
-			totals.Passed++
-		case testkube.ERROR__ExecutionStatus:
-			totals.Failed++
-		case testkube.PENDING_ExecutionStatus:
-			totals.Pending++
-		}
-
 		isPassingStatusFilter := (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter)
 		if addedToResultCount < pageSize &&
 			isPassingStatusFilter &&
 			dFilter.IsPassing(s.ExecutionResult.StartTime) {
 			if filteredCount == page*pageSize {
+				switch *s.ExecutionResult.Status {
+				case testkube.QUEUED_ExecutionStatus:
+					totals.Queued++
+				case testkube.SUCCESS_ExecutionStatus:
+					totals.Passed++
+				case testkube.ERROR__ExecutionStatus:
+					totals.Failed++
+				case testkube.PENDING_ExecutionStatus:
+					totals.Pending++
+				}
+
 				executionResults[addedToResultCount] = testkube.ExecutionSummary{
 					Id:         s.Id,
 					Name:       s.Name,
@@ -313,6 +313,7 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 					EndTime:    s.ExecutionResult.EndTime,
 				}
 				addedToResultCount++
+
 			} else {
 				filteredCount++
 			}
