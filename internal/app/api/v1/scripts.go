@@ -274,6 +274,14 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 		Pending: 0,
 	}
 
+	filterTotals := testkube.ExecutionsTotals{
+		Results: int32(len(executions)),
+		Passed:  0,
+		Failed:  0,
+		Queued:  0,
+		Pending: 0,
+	}
+
 	executionResults := make([]testkube.ExecutionSummary, pageSize)
 	addedToResultCount := 0
 	filteredCount := 0
@@ -303,6 +311,18 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			isPassingStatusFilter &&
 			dFilter.IsPassing(s.ExecutionResult.StartTime) {
 			if filteredCount == page*pageSize {
+
+				switch *s.ExecutionResult.Status {
+				case testkube.QUEUED_ExecutionStatus:
+					filterTotals.Queued++
+				case testkube.SUCCESS_ExecutionStatus:
+					filterTotals.Passed++
+				case testkube.ERROR__ExecutionStatus:
+					filterTotals.Failed++
+				case testkube.PENDING_ExecutionStatus:
+					filterTotals.Pending++
+				}
+
 				executionResults[addedToResultCount] = testkube.ExecutionSummary{
 					Id:         s.Id,
 					Name:       s.Name,
@@ -320,8 +340,9 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 	}
 
 	return testkube.ExecutionsResult{
-		Totals:  &totals,
-		Results: executionResults[0:addedToResultCount],
+		Totals:   &totals,
+		Filtered: &filterTotals,
+		Results:  executionResults[0:addedToResultCount],
 	}
 }
 

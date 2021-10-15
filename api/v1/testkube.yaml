@@ -253,6 +253,7 @@ paths:
         - $ref: '#/components/parameters/ExecutionsPageSize'
         - $ref: '#/components/parameters/ExecutionsPageIndex'
         - $ref: '#/components/parameters/ExecutionsStatusFilter'
+        - $ref: '#/components/parameters/ExecutionsDateFilter'
       tags:
         - api
         - scripts
@@ -418,6 +419,8 @@ components:
         - results
       properties:
         totals:
+          $ref: '#/components/schemas/ExecutionsTotals'
+        filtered:
           $ref: '#/components/schemas/ExecutionsTotals'
         results:
           type: array
