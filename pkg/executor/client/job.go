@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/jobs"
 )
 
-func NewJobExecutorClient() (client JobExecutorClient, err error) {
+func NewJobExecutorClient(repo result.Repository) (client JobExecutorClient, err error) {
 	jobClient, err := jobs.NewJobClient()
 	if err != nil {
 		return client, fmt.Errorf("can't get k8s jobs client: %w", err)
@@ -20,7 +21,8 @@ func NewJobExecutorClient() (client JobExecutorClient, err error) {
 }
 
 type JobExecutorClient struct {
-	Client *jobs.JobClient
+	Client     *jobs.JobClient
+	Repository result.Repository
 }
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
@@ -64,7 +66,7 @@ func (c JobExecutorClient) Execute(options ExecuteOptions) (result testkube.Exec
 	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)
 	execution.Params = options.Request.Params
 
-	return c.Client.LaunchK8sJob(options.ID, options.ExecutorSpec.Image, execution)
+	return c.Client.LaunchK8sJob( options.ExecutorSpec.Image, c.Repository, execution)
 }
 
 func (c JobExecutorClient) Abort(id string) error {

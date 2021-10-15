@@ -6,11 +6,13 @@ import (
 
 	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 )
 
-func NewExecutors(client *executorscr.ExecutorsClient) Executors {
+func NewExecutors(client *executorscr.ExecutorsClient, repo result.Repository) Executors {
 	return Executors{
 		ExecutorsCRClient: client,
+		Repository:        repo,
 	}
 }
 
@@ -19,6 +21,7 @@ type Executors struct {
 	ExecutorsCRClient *executorscr.ExecutorsClient
 	Namespace         string
 	Clients           sync.Map
+	Repository        result.Repository
 }
 
 func (p *Executors) GetExecutorSpec(scriptType string) (spec v1.ExecutorSpec, err error) {
@@ -79,5 +82,5 @@ func (p *Executors) GetOpenAPIExecutor(uri string) (executor RestExecutorClient,
 }
 
 func (p *Executors) GetJobExecutor() (executor ExecutorClient, err error) {
-	return NewJobExecutorClient()
+	return NewJobExecutorClient(p.Repository)
 }

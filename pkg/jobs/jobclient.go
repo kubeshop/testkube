@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	batchv1 "k8s.io/api/batch/v1"
@@ -19,9 +20,10 @@ import (
 )
 
 type JobClient struct {
-	ClientSet *kubernetes.Clientset
-	Namespace string
-	Cmd       string
+	ClientSet  *kubernetes.Clientset
+	Repository result.Repository
+	Namespace  string
+	Cmd        string
 }
 
 func NewJobClient() (*JobClient, error) {
@@ -36,7 +38,7 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkube.Execution) (testkube.ExecutionResult, error) {
+func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (testkube.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	var result string
 
@@ -52,7 +54,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 	var backOffLimit int32 = 2
 	jobSpec := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
+			Name:      execution.Id,
 			Namespace: c.Namespace,
 		},
 		Spec: batchv1.JobSpec{
@@ -61,7 +63,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:            jobName,
+							Name:            execution.Id,
 							Image:           image,
 							Command:         []string{"agent", string(jsn)},
 							ImagePullPolicy: v1.PullAlways,
@@ -82,7 +84,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 		}, err
 	}
 
-	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + execution.Id})
 	if err != nil {
 		return testkube.ExecutionResult{
 			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -92,7 +94,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
-			if pod.Labels["job-name"] == jobName {
+			if pod.Labels["job-name"] == execution.Id {
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					return testkube.ExecutionResult{
 						Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -100,7 +102,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 					}, err
 				}
 			}
-			result, err = c.GetPodLogs(pod.Name, jobName, jobName)
+			result, err = c.GetPodLogs(pod.Name, execution, repo)
 			if err != nil {
 				return testkube.ExecutionResult{
 					Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -116,7 +118,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 	}, nil
 }
 
-func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage string) (string, error) {
+func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, repo result.Repository) (string, error) {
 	count := int64(100)
 	var toReturn string
 	var message string
@@ -149,11 +151,12 @@ func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage 
 		}
 
 		message = string(buf[:numBytes])
-		if strings.Contains(message, fmt.Sprintf("$$$%s$$$", endMessage)) {
+		if strings.Contains(message, fmt.Sprintf("$$$%s$$$", execution.Id)) {
 			message = ""
 			break
 		} else {
 			toReturn += message
+			repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
 		}
 	}
 	return toReturn, nil

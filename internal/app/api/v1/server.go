@@ -25,7 +25,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 		ScriptsClient:   scriptsClient,
 		ExecutorsClient: executorsClient,
 		Metrics:         NewMetrics(),
-		Executors:       client.NewExecutors(executorsClient),
+		Executors:       client.NewExecutors(executorsClient, repository),
 	}
 
 	s.Init()
