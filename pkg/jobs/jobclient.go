@@ -50,7 +50,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		}, err
 	}
 
-	var TTLSecondsAfterFinished int32 = 1
+	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 	jobSpec := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -156,6 +156,7 @@ func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, rep
 			break
 		} else {
 			toReturn += message
+			execution.ExecutionResult.Output = toReturn
 			repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
 		}
 	}
