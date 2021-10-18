@@ -14,13 +14,13 @@ import (
 )
 
 const EmptyQueueWaitTime = 2 * time.Second
-const WorkerQueueBufferSize = 10000
+const Concurrency = 4
 
 // NewWorker returns new worker instance with data repository and runner
 func NewWorker(resultsRepository result.Repository, runner runner.Runner) Worker {
 	return Worker{
-		Concurrency: 4,
-		BufferSize:  WorkerQueueBufferSize,
+		Concurrency: Concurrency,
+		BufferSize:  Concurrency,
 		Repository:  resultsRepository,
 		// TODO implement runner for new executor
 		Runner: runner,
