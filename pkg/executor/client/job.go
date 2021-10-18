@@ -33,6 +33,9 @@ type JobExecutorClient struct {
 func (c JobExecutorClient) Watch(id string) (events chan ResultEvent) {
 	events = make(chan ResultEvent)
 
+	result, _ := c.Get(id)
+	fmt.Println("$$$$$$$$$$4", result)
+
 	go func() {
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {

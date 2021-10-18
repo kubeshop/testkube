@@ -40,6 +40,7 @@ func NewJobClient() (*JobClient, error) {
 
 func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (testkube.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	var result string
 
 	jsn, err := json.Marshal(execution)
@@ -83,15 +84,14 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 			ErrorMessage: err.Error(),
 		}, err
 	}
-
-	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + execution.Id})
+	time.Sleep(50 * time.Millisecond) // let it propagate
+	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + execution.Id})
 	if err != nil {
 		return testkube.ExecutionResult{
 			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
-
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
 			if pod.Labels["job-name"] == execution.Id {
@@ -157,7 +157,11 @@ func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, rep
 		} else {
 			toReturn += message
 			execution.ExecutionResult.Output = toReturn
-			repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
+			err := repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
 		}
 	}
 	return toReturn, nil
