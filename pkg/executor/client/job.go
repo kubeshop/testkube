@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,7 +17,8 @@ func NewJobExecutorClient(repo result.Repository) (client JobExecutorClient, err
 	}
 
 	return JobExecutorClient{
-		Client: jobClient,
+		Client:     jobClient,
+		Repository: repo,
 	}, nil
 }
 
@@ -54,7 +56,11 @@ func (c JobExecutorClient) Watch(id string) (events chan ResultEvent) {
 
 func (c JobExecutorClient) Get(id string) (execution testkube.ExecutionResult, err error) {
 	// TODO Get Logs ? Update Execution
-	return
+	exec, err := c.Repository.Get(context.Background(), id)
+	if err != nil {
+		return testkube.ExecutionResult{}, err
+	}
+	return *exec.ExecutionResult, nil
 }
 
 // Execute starts new external script execution, reads data and returns ID
@@ -66,7 +72,7 @@ func (c JobExecutorClient) Execute(options ExecuteOptions) (result testkube.Exec
 	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)
 	execution.Params = options.Request.Params
 
-	return c.Client.LaunchK8sJob( options.ExecutorSpec.Image, c.Repository, execution)
+	return c.Client.LaunchK8sJob(options.ExecutorSpec.Image, c.Repository, execution)
 }
 
 func (c JobExecutorClient) Abort(id string) error {
