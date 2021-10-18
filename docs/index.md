@@ -22,8 +22,9 @@ Main TestKube components are:
 - kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
 - CRDs Operator - watch TestKube CR, handles changes communicates with API Server
-- Executors - runs tests defined for specific runner
+- Executors - run tests defined for specific runner, currently available for [Postman](executor-postman.md), [Cypress](executor-cypress.md) and [Curl](executor-curl.md)
 - Results DB - for centralized test results mgmt
+- A simple browser-based [Dashboard](dashboard.md) for monitoring test results
 
 TestKube attempts to:
 

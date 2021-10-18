@@ -14,7 +14,9 @@ the dashboard with your results, i.e.
 Alternatively, the dashboard can be opened on your local machine using command ```sh kubectl testkube dashboard``` which 
 will uses port forwarding for accessing your local results endpoint (see more [here](cli/testkube_dashboard.md)).
 
-To have permanent access to the results from testkube instance there are 2 options:
+## Dashboard results endpoint
+
+To expose the results endpoint currently needed by the dashboard there are 2 options:
 
 * Expose the results endpoint using an Ingress controller and use it in the dashboard at dashboard.testkube.io.
 * Install the dashboard together with TestKube.
