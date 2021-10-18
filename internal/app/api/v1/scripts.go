@@ -275,7 +275,7 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 	}
 
 	filterTotals := testkube.ExecutionsTotals{
-		Results: int32(len(executions)),
+		Results: 0,
 		Passed:  0,
 		Failed:  0,
 		Queued:  0,
@@ -307,34 +307,37 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 		}
 
 		isPassingStatusFilter := (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter)
-		if addedToResultCount < pageSize &&
-			isPassingStatusFilter &&
-			dFilter.IsPassing(s.ExecutionResult.StartTime) {
-			if filteredCount == page*pageSize {
+		isPassingDateFilter := dFilter.IsPassing(s.ExecutionResult.StartTime)
 
-				switch *s.ExecutionResult.Status {
-				case testkube.QUEUED_ExecutionStatus:
-					filterTotals.Queued++
-				case testkube.SUCCESS_ExecutionStatus:
-					filterTotals.Passed++
-				case testkube.ERROR__ExecutionStatus:
-					filterTotals.Failed++
-				case testkube.PENDING_ExecutionStatus:
-					filterTotals.Pending++
-				}
+		if isPassingDateFilter && isPassingStatusFilter {
+			filterTotals.Results++
 
-				executionResults[addedToResultCount] = testkube.ExecutionSummary{
-					Id:         s.Id,
-					Name:       s.Name,
-					ScriptName: s.ScriptName,
-					ScriptType: s.ScriptType,
-					Status:     s.ExecutionResult.Status,
-					StartTime:  s.ExecutionResult.StartTime,
-					EndTime:    s.ExecutionResult.EndTime,
+			switch *s.ExecutionResult.Status {
+			case testkube.QUEUED_ExecutionStatus:
+				filterTotals.Queued++
+			case testkube.SUCCESS_ExecutionStatus:
+				filterTotals.Passed++
+			case testkube.ERROR__ExecutionStatus:
+				filterTotals.Failed++
+			case testkube.PENDING_ExecutionStatus:
+				filterTotals.Pending++
+			}
+
+			if addedToResultCount < pageSize {
+				if filteredCount == page*pageSize {
+					executionResults[addedToResultCount] = testkube.ExecutionSummary{
+						Id:         s.Id,
+						Name:       s.Name,
+						ScriptName: s.ScriptName,
+						ScriptType: s.ScriptType,
+						Status:     s.ExecutionResult.Status,
+						StartTime:  s.ExecutionResult.StartTime,
+						EndTime:    s.ExecutionResult.EndTime,
+					}
+					addedToResultCount++
+				} else {
+					filteredCount++
 				}
-				addedToResultCount++
-			} else {
-				filteredCount++
 			}
 		}
 	}
