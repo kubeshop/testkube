@@ -4,7 +4,11 @@ WORKDIR /build
 COPY . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-RUN cd cmd/api-server;go build -o /app -mod mod -a .
+
+ARG VERSION 
+ARG COMMIT 
+
+RUN cd cmd/api-server;go build -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT" -o /app -mod mod -a .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates libssl1.1

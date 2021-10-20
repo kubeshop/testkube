@@ -41,6 +41,14 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+      - 
+        name: Get tag version
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+      - 
+        name: Get tag version
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
 
       - 
         name: Build API Server
@@ -50,7 +58,10 @@ jobs:
             build/api-server/docker-bake.hcl
             ${{ steps.meta_api_server.outputs.bake-file }}
           targets: build
-          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          set: |
+            build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+            build.args.VERSION=${{ steps.vars.outputs.tag }}
+            build.args.COMMIT=${{ github.sha }}
           push: true
 
 
