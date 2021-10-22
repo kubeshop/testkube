@@ -6,6 +6,7 @@ import (
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/test/script/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -66,6 +67,15 @@ func NewCreateScriptsCmd() *cobra.Command {
 				Content:    string(content),
 				Namespace:  namespace,
 				Repository: repository,
+			}
+
+			// try to detect type if none passed
+			if executorType == "" {
+				d := detector.NewDefaultDetector()
+				if ok, detectedType := d.Detect(options); ok {
+					ui.Info("Detected test script type", detectedType)
+					executorType = detectedType
+				}
 			}
 
 			script, err = client.CreateScript(options)
