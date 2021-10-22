@@ -81,7 +81,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
-			ui.Success("Script created", script.Name)
+			ui.Success("Script created", name)
 		},
 	}
 
@@ -89,7 +89,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
 
 	// TODO - type should be autodetected
-	cmd.Flags().StringVarP(&executorType, "type", "t", "postman/collection", "script type (defaults to postman-collection)")
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
