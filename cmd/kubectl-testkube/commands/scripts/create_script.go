@@ -60,13 +60,15 @@ func NewCreateScriptsCmd() *cobra.Command {
 				}
 			}
 
-			script, err = client.CreateScript(apiClient.CreateScriptOptions{
+			options := apiClient.CreateScriptOptions{
 				Name:       name,
 				Type_:      executorType,
 				Content:    string(content),
 				Namespace:  namespace,
 				Repository: repository,
-			})
+			}
+
+			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
 			ui.Success("Script created", script.Name)
