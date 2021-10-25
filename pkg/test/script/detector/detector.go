@@ -17,13 +17,12 @@ func (d *Detector) Add(adapter Adapter) {
 	d.Adapters = append(d.Adapters, adapter)
 }
 
-func (d *Detector) Detect(options client.CreateScriptOptions) (bool, string) {
+func (d *Detector) Detect(options client.CreateScriptOptions) (name string, found bool) {
 	for _, adapter := range d.Adapters {
-
-		if ok, name := adapter.Is(options); ok {
-			return ok, name
+		if name, found := adapter.Is(options); found {
+			return name, found
 		}
 	}
 
-	return false, ""
+	return
 }

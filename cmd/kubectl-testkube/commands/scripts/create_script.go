@@ -72,7 +72,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 			// try to detect type if none passed
 			if executorType == "" {
 				d := detector.NewDefaultDetector()
-				if ok, detectedType := d.Detect(options); ok {
+				if detectedType, ok := d.Detect(options); ok {
 					ui.Info("Detected test script type", detectedType)
 					executorType = detectedType
 				}

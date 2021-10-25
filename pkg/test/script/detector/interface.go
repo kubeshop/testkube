@@ -5,5 +5,5 @@ import (
 )
 
 type Adapter interface {
-	Is(apiClient.CreateScriptOptions) (bool, string)
+	Is(options apiClient.CreateScriptOptions) (string, bool)
 }

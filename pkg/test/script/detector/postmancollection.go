@@ -9,7 +9,7 @@ import (
 type PostmanCollectionAdapter struct {
 }
 
-func (d PostmanCollectionAdapter) Is(options apiClient.CreateScriptOptions) (ok bool, name string) {
+func (d PostmanCollectionAdapter) Is(options apiClient.CreateScriptOptions) (name string, ok bool) {
 	var data map[string]interface{}
 
 	err := json.Unmarshal([]byte(options.Content), &data)
@@ -19,7 +19,7 @@ func (d PostmanCollectionAdapter) Is(options apiClient.CreateScriptOptions) (ok 
 
 	if info, ok := data["info"]; ok {
 		if id, ok := info.(map[string]interface{})["_postman_id"]; ok && id != "" {
-			return true, "postman/collection"
+			return "postman/collection", true
 		}
 	}
 
