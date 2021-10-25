@@ -85,7 +85,7 @@ jobs:
 Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
 
 
-If you wish to automate CI/CD part of TestKube release for example you can use `Helm` blocks as follow:
+If you wish to automate CI/CD part of TestKube's Helm release you can use `Helm` blocks as follow:
 
 ```sh
 ...
