@@ -88,7 +88,6 @@ func NewCreateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique script name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
 
-	// TODO - type should be autodetected
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
