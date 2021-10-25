@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	pods "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type JobClient struct {
@@ -84,8 +85,8 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 			ErrorMessage: err.Error(),
 		}, err
 	}
-	time.Sleep(50 * time.Millisecond) // let it propagate
-	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + execution.Id})
+
+	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 5)
 	if err != nil {
 		return testkube.ExecutionResult{
 			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -116,6 +117,21 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
 		Output: result,
 	}, nil
+}
+
+func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, retryNr, retryCount int) (*v1.PodList, error) {
+	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+	if err != nil {
+		return nil, err
+	}
+	if retryNr == retryCount {
+		return nil, fmt.Errorf("retry count exceeeded")
+	}
+	if len(pods.Items) == 0 {
+		time.Sleep(time.Duration(retryNr * 50 * int(time.Millisecond))) // increase backoff timeout
+		return c.GetJobPods(podsClient, jobName, retryNr+1, retryCount)
+	}
+	return pods, nil
 }
 
 func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, repo result.Repository) (string, error) {
