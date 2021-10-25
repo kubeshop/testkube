@@ -13,7 +13,7 @@ func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	}
 }
 
-func NewExecution(scriptName, name, scriptType string, result ExecutionResult, params map[string]string) Execution {
+func NewExecution(scriptName, name, scriptType, scriptContent string, result ExecutionResult, params map[string]string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
 		ScriptName:      scriptName,
@@ -21,6 +21,7 @@ func NewExecution(scriptName, name, scriptType string, result ExecutionResult, p
 		ScriptType:      scriptType,
 		ExecutionResult: &result,
 		Params:          params,
+		ScriptContent:   scriptContent,
 	}
 }
 

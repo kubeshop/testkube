@@ -159,9 +159,6 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 		execution = NewExecutionFromExecutionOptions(options)
 		options.ID = execution.Id
 
-		execution.ScriptContent = options.ScriptSpec.Content
-		execution.Params = options.Request.Params
-
 		err = s.Repository.Insert(ctx, execution)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
@@ -384,6 +381,7 @@ func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.ScriptName,
 		options.Request.Name,
 		options.ScriptSpec.Type_,
+		options.ScriptSpec.Content,
 		testkube.NewResult(),
 		options.Request.Params,
 	)
