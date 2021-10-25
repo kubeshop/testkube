@@ -1,6 +1,6 @@
 # Configuring your GH actions for the access to GKE
 
-To get set up access to a GKE from GH actions please visit official documentation fomr GH: https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine
+To get set up access to a GKE from GH actions please visit official documentation from GH: https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine
 
 1. Create SA (service account)
 2. Save it into GH's secrets of the repository
