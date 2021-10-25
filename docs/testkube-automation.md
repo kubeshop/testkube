@@ -4,7 +4,7 @@ In order to automate TestKube runs the main and the only thing which is required
 As TestKube uses your K8S context and access settings in order to interact with the cluster and test scripts etc. 
 
 In the next few sections we will go through the process of TestKube and Helm (for TestKube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
-# Configuring your GH actions for the access to GKE
+## Configuring your GH actions for the access to GKE
 
 To get set up access to a GKE from GH actions please visit official documentation from GH: https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine
 
@@ -24,7 +24,7 @@ To install on Linux or MacOs run
 
 Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
 
-## Full example of working GH actions workflow with slack notifications and TestKube Helm chart usage. Can be easily re-used with minimal modifications upon your needs.
+## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs.
 
 To install on Linux or MacOs run 
 ```sh
@@ -77,6 +77,18 @@ jobs:
           location: ${{ env.GKE_ZONE_DEV }}
           credentials: ${{ secrets.GKE_SA_KEY }}
 
+      # Run TestKube script on a GKE cluster
+      - name: Deploy
+        run: |-
+          kubectl testkube scripts run SCRIPT_NAME
+```
+Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
+
+
+If you wish to automate CI/CD part of TestKube release for example you can use `Helm` blocks as follow:
+
+```sh
+...
       - name: Install Helm
         uses: azure/setup-helm@v1
         with:
@@ -86,42 +98,10 @@ jobs:
         run: |
           helm repo add helm-charts https://kubeshop.github.io/helm-charts
           helm repo add bitnami https://charts.bitnami.com/bitnami
-
-      # Deploy/Upgrade the TtestKube release to the GKE cluster
+      
+      # Run Helm delpoy/upgrade of the TestKube release on a GKE cluster
       - name: Deploy
         run: |-
           helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
-
-  notify_slack_if_deploy_dev_succeeds:
-    runs-on: ubuntu-latest
-    needs: deploy-to-testkube-dev-gke
-    steps:
-    - name: Slack Notification if the helm release deployment to DEV GKS succeeded.
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_CHANNEL: testkube-logs
-        SLACK_COLOR: ${{ needs.deploy-to-testkube-dev-gke.result }} # or a specific color like 'good' or '#ff00ff'
-        SLACK_ICON: https://github.com/rtCamp.png?size=48
-        SLACK_TITLE: Helm chart release successfully deployed into ${{ secrets.GKE_CLUSTER_NAME_DEV }} GKE :party_blob:!
-        SLACK_USERNAME: GitHub
-        SLACK_LINK_NAMES: true
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_FOOTER: "Kubeshop --> TestKube"
-
-  notify_slack_if_deploy_dev_failed:
-    runs-on: ubuntu-latest
-    needs: deploy-to-testkube-dev-gke
-    if: always() && (needs.deploy-to-testkube-dev-gke.result == 'failure')
-    steps:
-    - name: Slack Notification if the helm release deployment to DEV GKS failed.
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_CHANNEL: testkube-logs
-        SLACK_COLOR: ${{ needs.deploy-to-testkube-dev-gke.result }} # or a specific color like 'good' or '#ff00ff'
-        SLACK_ICON: https://github.com/rtCamp.png?size=48
-        SLACK_TITLE: Helm chart release failed to deploy into ${{ secrets.GKE_CLUSTER_NAME_DEV }} GKE! :boom:!
-        SLACK_USERNAME: GitHub
-        SLACK_LINK_NAMES: true
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_FOOTER: "Kubeshop --> TestKube"
+...
 ```
