@@ -1,4 +1,4 @@
-# Integrating with the CI/CD
+# Integrating with CI/CD
 In order to automate TestKube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer. 
 
 As TestKube uses your K8S context and access settings in order to interact with the cluster and test scripts etc. 
