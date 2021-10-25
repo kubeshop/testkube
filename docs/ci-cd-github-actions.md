@@ -13,7 +13,7 @@ To install on Linux or MacOs run
       # Deploy into configured GKE cluster:
       - name: Deploy
         run: |-
-          helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace --values ./charts/testkube/values-demo.yaml
+          helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
 ```
 
 Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
@@ -84,7 +84,7 @@ jobs:
       # Deploy/Upgrade the TtestKube release to the GKE cluster
       - name: Deploy
         run: |-
-          helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace --values ./charts/testkube/values-demo.yaml
+          helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
 
   notify_slack_if_deploy_dev_succeeds:
     runs-on: ubuntu-latest
