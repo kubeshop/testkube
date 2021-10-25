@@ -2,14 +2,14 @@
 
 CHART_NAME=api-server
 BIN_DIR ?= $(HOME)/bin
-GITHUB_TOKEN ?= "SET_ME"
 USER ?= $(USER)
-NAMESPACE ?= "kt1"
+NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
+VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
 
 run-api-server: 
-	APISERVER_PORT=8088 go run cmd/api-server/main.go
+	APISERVER_PORT=8088 go run  -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
 
 run-api-server-telepresence: 
 	API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go

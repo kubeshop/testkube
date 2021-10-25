@@ -565,6 +565,21 @@ components:
           type: integer
           description: the total number of running executions available
 
+    ServerInfo:
+      type: object
+      description: Server information with build version, build commit etc.
+      required:
+        - version
+      properties:
+        version:
+          type: string
+          description: build version
+        commit:
+          type: string
+          description: build commit
+
+
+
     #
     # Requests
     #

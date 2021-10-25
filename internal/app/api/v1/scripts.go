@@ -16,6 +16,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kubeshop/testkube/internal/pkg/api"
 )
 
 // ListScripts for getting list of all available scripts
@@ -399,6 +401,15 @@ func (s testkubeAPI) AbortExecution() fiber.Handler {
 		}
 
 		return executor.Abort(id)
+	}
+}
+
+func (s testkubeAPI) Info() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(testkube.ServerInfo{
+			Commit:  api.Commit,
+			Version: api.Version,
+		})
 	}
 }
 
