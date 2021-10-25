@@ -30,6 +30,7 @@ nav:
       - Install Cmd: cli/testkube_install.md
       - Scripts Cmd: cli/testkube_scripts.md
       - Dashboard Cmd: cli/testkube_dashboard.md
+  - CI/CD on GitHub Actions: ci-cd-github-actions.md
   - Dashboard: dashboard.md
   - Metrics: metrics.md
   - Architecture: architecture.md
