@@ -253,7 +253,8 @@ paths:
         - $ref: '#/components/parameters/ExecutionsPageSize'
         - $ref: '#/components/parameters/ExecutionsPageIndex'
         - $ref: '#/components/parameters/ExecutionsStatusFilter'
-        - $ref: '#/components/parameters/ExecutionsDateFilter'
+        - $ref: '#/components/parameters/ExecutionsStartDateFilter'
+        - $ref: '#/components/parameters/ExecutionsEndDateFilter'
       tags:
         - api
         - scripts
@@ -772,18 +773,19 @@ components:
         $ref: '#/components/schemas/ExecutionStatus'
       description: optional status filter
       required: false
-    ExecutionsDateFilter:
-      - in: query
-        name: startDate
-        schema:
-          type: string
-          format: date
-        required: false
-        description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
-      - in: query
-        name: endDate
-        schema:
-          type: string
-          format: date
-        required: false
-        description: endDate for filtering
+    ExecutionsStartDateFilter:
+      in: query
+      name: startDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
+    ExecutionsEndDateFilter:
+      in: query
+      name: endDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: endDate for filtering
