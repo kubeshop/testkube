@@ -20,7 +20,7 @@ type Client interface {
 	CreateScript(options CreateScriptOptions) (script testkube.Script, err error)
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error)
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
-	GetServerInfo(namespace string) (scripts testkube.ServerInfo, err error)
+	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

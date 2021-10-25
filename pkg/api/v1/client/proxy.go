@@ -173,7 +173,7 @@ func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
-func (c ProxyScriptsAPI) GetServerInfo(namespace string) (info testkube.ServerInfo, err error) {
+func (c ProxyScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.getURI("/info")
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())

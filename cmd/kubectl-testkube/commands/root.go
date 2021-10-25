@@ -39,11 +39,11 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
 
+		// version validation
+		// if client version is less than server version show warning
 		client, _ := scripts.GetClient(cmd)
-		info, err := client.GetServerInfo(namespace)
+		info, err := client.GetServerInfo()
 		ui.ExitOnError("getting server info in namespace"+namespace, err)
-		ui.Info("server version", info.Version)
-		ui.Info("client version", Version)
 
 		serverVersion, err := semver.NewVersion(info.Version)
 		if err != nil {
@@ -58,7 +58,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if clientVersion.LessThan(serverVersion) {
-			ui.Warn(fmt.Sprintf("You're using old version of kubectl testkube plugin (%s) - please upgrade to %s", clientVersion.String(), serverVersion.String()))
+			ui.Warn(fmt.Sprintf("You're using old version of kubectl testkube plugin (%s) - please upgrade to ", clientVersion.String()), serverVersion.String())
 		}
 	},
 }
