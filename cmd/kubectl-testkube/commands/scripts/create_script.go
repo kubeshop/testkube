@@ -6,6 +6,7 @@ import (
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/test/script/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -60,24 +61,34 @@ func NewCreateScriptsCmd() *cobra.Command {
 				}
 			}
 
-			script, err = client.CreateScript(apiClient.CreateScriptOptions{
+			options := apiClient.CreateScriptOptions{
 				Name:       name,
 				Type_:      executorType,
 				Content:    string(content),
 				Namespace:  namespace,
 				Repository: repository,
-			})
+			}
+
+			// try to detect type if none passed
+			if executorType == "" {
+				d := detector.NewDefaultDetector()
+				if detectedType, ok := d.Detect(options); ok {
+					ui.Info("Detected test script type", detectedType)
+					executorType = detectedType
+				}
+			}
+
+			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
-			ui.Success("Script created", script.Name)
+			ui.Success("Script created", name)
 		},
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique script name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
 
-	// TODO - type should be autodetected
-	cmd.Flags().StringVarP(&executorType, "type", "t", "postman/collection", "script type (defaults to postman-collection)")
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
