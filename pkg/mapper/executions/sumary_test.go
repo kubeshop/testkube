@@ -35,6 +35,7 @@ func getExecutions() testkube.Executions {
 		"script1",
 		"execution1",
 		"test/test",
+		"",
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
@@ -46,6 +47,7 @@ func getExecutions() testkube.Executions {
 		"script1",
 		"execution2",
 		"test/test",
+		"",
 		*ex2,
 		map[string]string{"p": "v2"},
 	)
