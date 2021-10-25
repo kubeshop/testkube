@@ -46,11 +46,6 @@ jobs:
         id: vars
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       - 
-        name: Get tag version
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-
-      - 
         name: Build API Server
         uses: docker/bake-action@v1
         with:

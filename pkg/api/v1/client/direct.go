@@ -172,6 +172,18 @@ func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
+func (c DirectScriptsAPI) GetServerInfo(namespace string) (info testkube.ServerInfo, err error) {
+	uri := c.getURI("/info")
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return info, err
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&info)
+
+	return
+}
+
 func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution testkube.Execution, err error) {
 	defer resp.Body.Close()
 

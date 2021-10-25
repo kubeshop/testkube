@@ -173,6 +173,25 @@ func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
+func (c ProxyScriptsAPI) GetServerInfo(namespace string) (info testkube.ServerInfo, err error) {
+	uri := c.getURI("/info")
+	req := c.GetProxy("GET").Suffix(uri)
+	resp := req.Do(context.Background())
+	if resp.Error() != nil {
+		return info, resp.Error()
+	}
+
+	bytes, err := resp.Raw()
+	if err != nil {
+		return info, err
+	}
+
+	err = json.Unmarshal(bytes, &info)
+
+	return
+
+}
+
 func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution testkube.Execution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {

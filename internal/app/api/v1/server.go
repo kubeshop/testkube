@@ -45,8 +45,11 @@ type testkubeAPI struct {
 func (s testkubeAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 
+	s.Routes.Get("/info", s.Info())
+
 	executions := s.Routes.Group("/executions")
 	executions.Use(cors.New())
+
 	executions.Get("/", s.ListExecutions())
 	executions.Get("/:executionID", s.GetExecution())
 
