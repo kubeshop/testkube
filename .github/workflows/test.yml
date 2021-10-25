@@ -19,5 +19,11 @@ jobs:
       with:
         go-version: 1.17
 
-    - name: Test
+    - name: Unit test
       run: go test -v ./...
+
+    # Runs a single command using the runners shell
+    - name: openapi-check
+      uses: vaibhav-jain/spectral-action/@v2.6
+      with:
+        file_path: api/testkube.yaml
