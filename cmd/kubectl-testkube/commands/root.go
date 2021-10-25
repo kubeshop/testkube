@@ -58,7 +58,10 @@ var RootCmd = &cobra.Command{
 		}
 
 		if clientVersion.LessThan(serverVersion) {
-			ui.Warn(fmt.Sprintf("You're using old version of kubectl testkube plugin (%s) - please upgrade to ", clientVersion.String()), serverVersion.String())
+			ui.Warn("Your TestKube API version is newer than your `kubectl testkube` plugin")
+			ui.Info("Testkube API version", serverVersion.String())
+			ui.Info("Testkube kubectl plugin client", clientVersion.String())
+			ui.Info("It's recommended to upgrade client to version close to API server version")
 		}
 	},
 }
