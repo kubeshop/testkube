@@ -33,4 +33,4 @@ jobs:
       uses: nwestfall/openapi-action@v1.0.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        file: api/testkube.yaml
+        file: api/v1/testkube.yaml
