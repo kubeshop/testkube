@@ -22,8 +22,15 @@ jobs:
     - name: Unit test
       run: go test -v ./...
 
-    # Runs a single command using the runners shell
-    - name: openapi-check
-      uses: vaibhav-jain/spectral-action/@v2.6
+    # Don't work exits with error 
+    # No ruleset has been found. Please provide a ruleset using the --ruleset CLI argument, or make sure your ruleset file matches .?spectral.(js|ya?ml|json)
+    # - name: openapi-check
+    #   uses: vaibhav-jain/spectral-action/@v2.6
+    #   with:
+    #     file_path: api/testkube.yaml
+
+    - name: OpenAPI Lint Checks
+      uses: nwestfall/openapi-action@v1.0.1
       with:
-        file_path: api/testkube.yaml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        file: api/testkube.yaml
