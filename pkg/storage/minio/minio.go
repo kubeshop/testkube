@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/kubeshop/kubtest/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
