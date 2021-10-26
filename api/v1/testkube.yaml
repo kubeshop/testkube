@@ -860,46 +860,29 @@ components:
           type: string
           description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
           example: kubeshop-homepage-test
-        type:
+        executor_type:
+          description: ExecutorType one of "rest" for rest openapi based executors
+            or "job" which will be default runners for testkube soon
           type: string
-          description: script type - what executor type should be used during test execution
-          example: postman/collection
-        namespace:
+        image:
+          description: Image for kube-job
           type: string
-          description: kubernetes namespace (defaults to 'testkube')
-          example: testkube
-        inputType:
+        types:
+          description: Types defines what types can be handled by executor e.g.
+            "postman/collection", ":curl/command" etc
+          items:
+            type: string
+          type: array
+        uri:
+          description: URI for rest based executors
           type: string
-          description: >
-            script content type can be: 
-            - direct content - created from file, 
-            - git repo directory checkout in case when test is some kind of project or have more than one file, 
-          enum:
-            - content
-            - git
-        repository:
-          $ref: '#/components/schemas/Repository'
-        content:
+        volume_mount_path:
+          description: VolumeMountPath - where should PV be monted inside job
+            pod for e.g. artifacts
           type: string
-          description: script content - executor specific e.g. fo postman-collections executor
-          example: >
-            {
-              "info": {
-                "_postman_id": "57ad6291-5b8f-4b2d-b24d-d2d2ce8785bb",
-                "name": "SimpleKubeshop",
-                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-              },
-              "item": [
-                {
-                  "name": "Homepage",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": null
-                  },
-                  "response": []
-                }
-
+        volume_quantity:
+          description: VolumeQuantity for kube-job PersistentVolume
+          type: string
 
     # Copied from CRD spec 
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml

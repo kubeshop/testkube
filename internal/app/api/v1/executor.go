@@ -1,9 +1,23 @@
 package v1
 
 import (
+	"net/http"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+func (s testkubeAPI) CreateExecutor() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request testkube.ExecutorCreateRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.JSON(request)
+	}
+}
 
 func (s testkubeAPI) ListExecutors() fiber.Handler {
 	return func(c *fiber.Ctx) error {

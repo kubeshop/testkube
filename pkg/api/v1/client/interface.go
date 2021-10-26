@@ -21,8 +21,16 @@ type Client interface {
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error)
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
+
+	CreateExecutor(executor testkube.ExecutorDetails) (err error)
+	GetExecutor() (executor testkube.ExecutorDetails, err error)
+	ListExecutors() (executor []testkube.ExecutorDetails, err error)
+	DeleteExecutor() (executor []testkube.ExecutorDetails, err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct
 type CreateScriptOptions testkube.ScriptCreateRequest
+
+// CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
+type CreateExecutorOptions testkube.ExecutorCreateRequest
