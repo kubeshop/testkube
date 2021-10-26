@@ -14,7 +14,9 @@ func NewVersionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := scripts.GetClient(cmd)
 			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info in namespace", err)
+			if err != nil {
+				info.Version = info.Version + " " + err.Error()
+			}
 
 			ui.Logo()
 			ui.Info("Client Version", Version)

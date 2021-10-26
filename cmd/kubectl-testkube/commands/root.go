@@ -6,6 +6,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -42,31 +43,45 @@ var RootCmd = &cobra.Command{
 		// version validation
 		// if client version is less than server version show warning
 		client, _ := scripts.GetClient(cmd)
-		info, err := client.GetServerInfo()
-		ui.ExitOnError("getting server info in namespace"+namespace, err)
 
-		serverVersion, err := semver.NewVersion(info.Version)
+		err := ValidateVersions(client)
 		if err != nil {
-			ui.PrintOnError("parsing server version: "+info.Version, err)
-			return
-		}
-
-		clientVersion, err := semver.NewVersion(Version)
-		if err != nil {
-			ui.PrintOnError("parsing client version: "+Version, err)
-			return
-		}
-
-		if clientVersion.LessThan(serverVersion) {
-			ui.Warn("Your TestKube API version is newer than your `kubectl testkube` plugin")
-			ui.Info("Testkube API version", serverVersion.String())
-			ui.Info("Testkube kubectl plugin client", clientVersion.String())
-			ui.Info("It's recommended to upgrade client to version close to API server version")
+			ui.Warn(err.Error())
 		}
 	},
 }
 
+func ValidateVersions(c apiclient.Client) error {
+	info, err := c.GetServerInfo()
+	if err != nil {
+		return fmt.Errorf("getting server info: %w", err)
+	}
+
+	serverVersion, err := semver.NewVersion(info.Version)
+	if err != nil {
+		return fmt.Errorf("parsing server version - %s: %w", info.Version, err)
+	}
+
+	clientVersion, err := semver.NewVersion(Version)
+	if err != nil {
+		return fmt.Errorf("parsing client version - %s: %w", Version, err)
+	}
+
+	if clientVersion.LessThan(serverVersion) {
+		ui.Warn("Your TestKube API version is newer than your `kubectl testkube` plugin")
+		ui.Info("Testkube API version", serverVersion.String())
+		ui.Info("Testkube kubectl plugin client", clientVersion.String())
+		ui.Info("It's recommended to upgrade client to version close to API server version")
+	}
+
+	return nil
+}
+
 func Execute() {
+	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
+
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
