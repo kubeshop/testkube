@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
-	"github.com/kubeshop/kubtest/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -106,7 +107,9 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		fileName = objectStat.Name()
 	}
 
-	n, err := c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})	if err != nil {
+	n, err := c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+
+	if err != nil {
 		return err
 	}
 
