@@ -47,6 +47,12 @@ func (s testkubeAPI) Init() {
 
 	s.Routes.Get("/info", s.Info())
 
+	executors := s.Routes.Group("/executors")
+
+	executors.Get("/", s.ListExecutors())
+	executors.Get("/:name", s.GetExecutor())
+	executors.Delete("/:name", s.DeleteExecutor())
+
 	executions := s.Routes.Group("/executions")
 	executions.Use(cors.New())
 

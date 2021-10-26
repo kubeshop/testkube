@@ -11,6 +11,8 @@ package testkube
 
 // Executor details with Executor data and additional information like list of executions
 type ExecutorDetails struct {
+	// Executor name
+	Name       string            `json:"name,omitempty"`
 	Executor   *Executor         `json:"executor,omitempty"`
 	Executions *ExecutionsResult `json:"executions,omitempty"`
 }

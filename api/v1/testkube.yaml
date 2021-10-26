@@ -936,6 +936,9 @@ components:
       description: Executor details with Executor data and additional information like list of executions
       type: object
       properties:
+        name: 
+          description: Executor name
+          type: string
         executor:
           $ref: '#/components/schemas/Executor'
         executions:
