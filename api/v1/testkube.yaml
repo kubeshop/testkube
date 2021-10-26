@@ -35,7 +35,8 @@ paths:
         - $ref: '#/components/parameters/ExecutionsPageSize'
         - $ref: '#/components/parameters/ExecutionsPageIndex'
         - $ref: '#/components/parameters/ExecutionsStatusFilter'
-        - $ref: '#/components/parameters/ExecutionsDateFilter'
+        - $ref: '#/components/parameters/ExecutionsStartDateFilter'
+        - $ref: '#/components/parameters/ExecutionsEndDateFilter'
       responses:
         200:
           description: successful operation
@@ -347,6 +348,140 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/ExecutionResult'
+
+
+  /executors:
+    get:
+      tags:
+        - execcutor
+        - api
+      summary: 'List executors'
+      description: 'List executors available in cluster'
+      operationId: listExecutors
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Executor'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+    post:
+      tags:
+        - scripts
+        - api
+      summary: 'create new executor'
+      description: 'create new executor based on params passed in request'
+      operationId: createScript
+      requestBody:
+        description: executor request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutorCreateRequest'
+      responses:
+        200:
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutorDetails'
+        400:
+          description: 'problem with executor definition - probably some bad input occurs (invalid JSON body or similar)'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+  /executors/{name}:
+    delete: 
+      parameters:
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: Executor CRD name
+      tags:
+        - api
+        - executor
+      summary: 'Delete executor' 
+      description: 'Deletes executor by its name'
+      operationId: deleteExecutor
+      responses:
+        204:
+          description: executor deleted successfuly 
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
+    get:
+      parameters:
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: Executor CRD name
+      tags:
+        - api
+        - executor
+      summary: 'Get executor details'
+      description: 'Returns executors data with executions passed to executor'
+      operationId: getExecutor
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/ExecutorDetails'
+        502:
+          description: 'problem with communicating with kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        500:
+          description: 'problem with getting executor data'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
 
 components:
   schemas:
@@ -716,7 +851,99 @@ components:
                   "response": []
                 }
 
-    #
+
+    ExecutorCreateRequest:
+      description: executor create request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
+          example: kubeshop-homepage-test
+        type:
+          type: string
+          description: script type - what executor type should be used during test execution
+          example: postman/collection
+        namespace:
+          type: string
+          description: kubernetes namespace (defaults to 'testkube')
+          example: testkube
+        inputType:
+          type: string
+          description: >
+            script content type can be: 
+            - direct content - created from file, 
+            - git repo directory checkout in case when test is some kind of project or have more than one file, 
+          enum:
+            - content
+            - git
+        repository:
+          $ref: '#/components/schemas/Repository'
+        content:
+          type: string
+          description: script content - executor specific e.g. fo postman-collections executor
+          example: >
+            {
+              "info": {
+                "_postman_id": "57ad6291-5b8f-4b2d-b24d-d2d2ce8785bb",
+                "name": "SimpleKubeshop",
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+              },
+              "item": [
+                {
+                  "name": "Homepage",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": null
+                  },
+                  "response": []
+                }
+
+
+    # Copied from CRD spec 
+    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
+    # TODO we need to sync those in some nice way
+    Executor: 
+      description: CRD based executor data
+      type: object
+      properties:
+        executor_type:
+          description: ExecutorType one of "rest" for rest openapi based executors
+            or "job" which will be default runners for testkube soon
+          type: string
+        image:
+          description: Image for kube-job
+          type: string
+        types:
+          description: Types defines what types can be handled by executor e.g.
+            "postman/collection", ":curl/command" etc
+          items:
+            type: string
+          type: array
+        uri:
+          description: URI for rest based executors
+          type: string
+        volume_mount_path:
+          description: VolumeMountPath - where should PV be monted inside job
+            pod for e.g. artifacts
+          type: string
+        volume_quantity:
+          description: VolumeQuantity for kube-job PersistentVolume
+          type: string
+
+    ExecutorDetails: 
+      description: Executor details with Executor data and additional information like list of executions
+      type: object
+      properties:
+        executor:
+          $ref: '#/components/schemas/Executor'
+        executions:
+          $ref: '#/components/schemas/ExecutionsResult'
+
+
+
+    # 
     # Errors
     #
 
