@@ -431,6 +431,12 @@ paths:
             type: string
           required: true
           description: Executor CRD name
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          required: true
+          description: CRD namespace
       tags:
         - api
         - executor
