@@ -353,7 +353,7 @@ paths:
   /executors:
     get:
       tags:
-        - execcutor
+        - executor
         - api
       summary: 'List executors'
       description: 'List executors available in cluster'
@@ -388,7 +388,7 @@ paths:
         - api
       summary: 'create new executor'
       description: 'create new executor based on params passed in request'
-      operationId: createScript
+      operationId: createExecutor
       requestBody:
         description: executor request body data
         required: true
