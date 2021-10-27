@@ -15,6 +15,14 @@ See each sub-command's help for details on how to use the generated script.
   -h, --help   help for completion
 ```
 
+### Options inherited from parent commands
+
+```
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string   kubernetes namespace (default "testkube")
+  -v, --verbose            should I show additional debug messages
+```
+
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - testkube entrypoint for plugin

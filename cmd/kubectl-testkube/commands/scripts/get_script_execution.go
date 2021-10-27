@@ -32,7 +32,7 @@ func NewGetExecutionCmd() *cobra.Command {
 			execution, err := client.GetExecution(scriptID, executionID)
 			ui.ExitOnError("getting script execution: "+scriptID+"/"+executionID, err)
 
-			render := GetRenderer(cmd)
+			render := GetExecutionRenderer(cmd)
 			err = render.Render(execution, os.Stdout)
 			ui.ExitOnError("rendering", err)
 		},

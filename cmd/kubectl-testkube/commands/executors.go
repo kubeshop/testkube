@@ -1,21 +1,20 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
-
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/spf13/cobra"
 )
 
-var (
-	client    string
-	verbose   bool
-	namespace string
-)
+func NewExecutorsCmd() *cobra.Command {
+	var (
+		client    string
+		verbose   bool
+		namespace string
+	)
 
-func NewScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "scripts",
-		Short: "Scripts management commands",
+		Use:   "executors",
+		Short: "Executor management commands",
 		Long:  `All available scripts and scripts executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
@@ -30,12 +29,10 @@ func NewScriptsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringP("output", "o", "raw", "output type one of raw|json|go ")
 	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
-	cmd.AddCommand(scripts.NewAbortExecutionCmd())
-	cmd.AddCommand(scripts.NewListScriptsCmd())
-	cmd.AddCommand(scripts.NewStartScriptCmd())
-	cmd.AddCommand(scripts.NewGetExecutionCmd())
-	cmd.AddCommand(scripts.NewWatchExecutionCmd())
-	cmd.AddCommand(scripts.NewListExecutionsCmd())
-	cmd.AddCommand(scripts.NewCreateScriptsCmd())
+	cmd.AddCommand(executors.NewCreateExecutorCmd())
+	cmd.AddCommand(executors.NewGetExecutorCmd())
+	cmd.AddCommand(executors.NewListExecutorCmd())
+	cmd.AddCommand(executors.NewDeleteExecutorCmd())
+
 	return cmd
 }

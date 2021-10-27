@@ -1,4 +1,4 @@
-package scripts
+package executors
 
 const (
 	OutputGoTemplate = "go"

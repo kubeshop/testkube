@@ -10,22 +10,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ListRenderer interface {
+type ExecutionsListRenderer interface {
 	Render(list testkube.ExecutionsResult, writer io.Writer) error
 }
 
-type JSONListRenderer struct {
+type ExecutionsJSONListRenderer struct {
 }
 
-func (r JSONListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
+func (r ExecutionsJSONListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(list)
 }
 
-type GoTemplateListRenderer struct {
+type ExecutionsGoTemplateListRenderer struct {
 	Template string
 }
 
-func (r GoTemplateListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
+func (r ExecutionsGoTemplateListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -42,26 +42,26 @@ func (r GoTemplateListRenderer) Render(list testkube.ExecutionsResult, writer io
 	return nil
 }
 
-type RawListRenderer struct {
+type ExecutionsRawListRenderer struct {
 }
 
-func (r RawListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
+func (r ExecutionsRawListRenderer) Render(list testkube.ExecutionsResult, writer io.Writer) error {
 	ui.Table(list, writer)
 	return nil
 }
 
-func GetListRenderer(cmd *cobra.Command) ListRenderer {
+func GetExecutionsListRenderer(cmd *cobra.Command) ExecutionsListRenderer {
 	output := cmd.Flag("output").Value.String()
 
 	switch output {
 	case OutputRAW:
-		return RawListRenderer{}
+		return ExecutionsRawListRenderer{}
 	case OutputJSON:
-		return JSONListRenderer{}
+		return ExecutionsJSONListRenderer{}
 	case OutputGoTemplate:
 		template := cmd.Flag("go-template").Value.String()
-		return GoTemplateListRenderer{Template: template}
+		return ExecutionsGoTemplateListRenderer{Template: template}
 	default:
-		return RawListRenderer{}
+		return ExecutionsRawListRenderer{}
 	}
 }

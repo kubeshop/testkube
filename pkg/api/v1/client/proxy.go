@@ -58,6 +58,8 @@ type ProxyScriptsAPI struct {
 	config ProxyConfig
 }
 
+// scripts and executions -----------------------------------------------------------------------------
+
 func (c ProxyScriptsAPI) GetScript(id string) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts/%s", id)
 	req := c.GetProxy("GET").Suffix(uri)
@@ -172,6 +174,27 @@ func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 
 	return nil
 }
+
+// executor --------------------------------------------------------------------------------
+
+func (c ProxyScriptsAPI) CreateExecutor(executor CreateExecutorOptions) (err error) {
+	return
+}
+
+func (c ProxyScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
+	return
+}
+
+func (c ProxyScriptsAPI) ListExecutors() (executor []testkube.ExecutorDetails, err error) {
+	return
+
+}
+
+func (c ProxyScriptsAPI) DeleteExecutor(name string) (err error) {
+	return
+}
+
+// maintenance --------------------------------------------------------------------------------
 
 func (c ProxyScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.getURI("/info")

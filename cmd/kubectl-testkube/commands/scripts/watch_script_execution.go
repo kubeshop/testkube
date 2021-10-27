@@ -40,7 +40,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 			for range time.Tick(time.Second) {
 				execution, err := client.GetExecution(scriptID, executionID)
 				ui.ExitOnError("get script execution details", err)
-				render := GetRenderer(cmd)
+				render := GetExecutionRenderer(cmd)
 				err = render.Watch(execution, os.Stdout)
 				ui.ExitOnError("watching for changes", err)
 				if execution.ExecutionResult.IsCompleted() {

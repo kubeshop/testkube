@@ -44,6 +44,8 @@ type DirectScriptsAPI struct {
 	client HTTPClient
 }
 
+// scripts and executions -----------------------------------------------------------------------------
+
 func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts/%s", id)
 	resp, err := c.client.Get(uri)
@@ -140,12 +142,12 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	return c.getExecutionFromResponse(resp)
 }
 
-// GetExecutions list all executions in given script
+// ListScripts list all scripts in given namespace
 func (c DirectScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
 	uri := c.getURI("/scripts?namespace=%s", namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
-		return scripts, fmt.Errorf("GET client error: %w", err)
+		return scripts, fmt.Errorf("client.Get error: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -172,6 +174,83 @@ func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
+// executor --------------------------------------------------------------------------------
+
+func (c DirectScriptsAPI) CreateExecutor(options CreateExecutorOptions) (err error) {
+	uri := c.getURI("/executors")
+
+	request := testkube.ExecutorCreateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/create-executor returned error: %w", err)
+	}
+
+	return nil
+}
+
+func (c DirectScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
+	uri := c.getURI("/executors/%s", name)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return executor, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return executor, fmt.Errorf("api/get-script returned error: %w", err)
+	}
+
+	return c.getExecutorDetailsFromResponse(resp)
+
+}
+
+func (c DirectScriptsAPI) ListExecutors() (executors []testkube.ExecutorDetails, err error) {
+	uri := c.getURI("/executors?namespace=%s", "testkube")
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return executors, fmt.Errorf("client.Get error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return executors, fmt.Errorf("api/list-exeutors returned error: %w", err)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&executors)
+	return
+
+}
+
+func (c DirectScriptsAPI) DeleteExecutor(name string) (err error) {
+	uri := c.getURI("/executors/%s?namespace=%s", name, "testkube")
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	if err != nil {
+		return fmt.Errorf("prepare request error: %w", err)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client.Do error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/list-exeutors returned error: %w", err)
+	}
+
+	return
+}
+
+// maintenance --------------------------------------------------------------------------------------------
+
 func (c DirectScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.getURI("/info")
 	resp, err := c.client.Get(uri)
@@ -183,6 +262,8 @@ func (c DirectScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) 
 
 	return
 }
+
+// helper funcs --------------------------------------------------------------------------------
 
 func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution testkube.Execution, err error) {
 	defer resp.Body.Close()
@@ -203,6 +284,13 @@ func (c DirectScriptsAPI) getScriptFromResponse(resp *http.Response) (script tes
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&script)
+	return
+}
+
+func (c DirectScriptsAPI) getExecutorDetailsFromResponse(resp *http.Response) (executor testkube.ExecutorDetails, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&executor)
 	return
 }
 
