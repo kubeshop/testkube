@@ -358,6 +358,13 @@ paths:
       summary: 'List executors'
       description: 'List executors available in cluster'
       operationId: listExecutors
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: integer
+          description: kubernetes namespace
+          required: false
       responses:
         200:
           description: 'successful operation'
@@ -450,6 +457,12 @@ paths:
             type: string
           required: true
           description: Executor CRD name
+        - in: query
+          name: namespace
+          schema:
+            type: integer
+          description: kubernetes namespace
+          required: false
       tags:
         - api
         - executor
@@ -860,6 +873,10 @@ components:
           type: string
           description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
           example: kubeshop-homepage-test
+        namespace:
+          type: string
+          description: Kubernetes namespace
+          example: testkube
         executor_type:
           description: ExecutorType one of "rest" for rest openapi based executors
             or "job" which will be default runners for testkube soon

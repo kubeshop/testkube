@@ -22,10 +22,10 @@ type Client interface {
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 
-	CreateExecutor(executor testkube.ExecutorDetails) (err error)
+	CreateExecutor(executor CreateExecutorOptions) (err error)
 	GetExecutor() (executor testkube.ExecutorDetails, err error)
 	ListExecutors() (executor []testkube.ExecutorDetails, err error)
-	DeleteExecutor() (executor []testkube.ExecutorDetails, err error)
+	DeleteExecutor() (err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

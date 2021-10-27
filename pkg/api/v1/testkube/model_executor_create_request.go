@@ -13,6 +13,8 @@ package testkube
 type ExecutorCreateRequest struct {
 	// script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
 	Name string `json:"name,omitempty"`
+	// Kubernetes namespace
+	Namespace string `json:"namespace,omitempty"`
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
 	ExecutorType string `json:"executor_type,omitempty"`
 	// Image for kube-job

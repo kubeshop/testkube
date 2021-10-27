@@ -44,6 +44,8 @@ type DirectScriptsAPI struct {
 	client HTTPClient
 }
 
+// scripts and executions -----------------------------------------------------------------------------
+
 func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts/%s", id)
 	resp, err := c.client.Get(uri)
@@ -172,6 +174,27 @@ func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
 	return nil
 }
 
+// executor --------------------------------------------------------------------------------
+
+func (c DirectScriptsAPI) CreateExecutor(executor CreateExecutorOptions) (err error) {
+	return
+}
+
+func (c DirectScriptsAPI) GetExecutor() (executor testkube.ExecutorDetails, err error) {
+	return
+}
+
+func (c DirectScriptsAPI) ListExecutors() (executor []testkube.ExecutorDetails, err error) {
+	return
+
+}
+
+func (c DirectScriptsAPI) DeleteExecutor() (err error) {
+	return
+}
+
+// maintenance --------------------------------------------------------------------------------------------
+
 func (c DirectScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.getURI("/info")
 	resp, err := c.client.Get(uri)
@@ -183,6 +206,8 @@ func (c DirectScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) 
 
 	return
 }
+
+// helper funcs --------------------------------------------------------------------------------
 
 func (c DirectScriptsAPI) getExecutionFromResponse(resp *http.Response) (execution testkube.Execution, err error) {
 	defer resp.Body.Close()
