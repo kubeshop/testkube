@@ -108,7 +108,6 @@ func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testk
 	}
 
 	// get executor from kubernetes CRs
-	fmt.Println("scriptCR.Spec.Type_", scriptCR.Spec.Type_)
 	executorCR, err := s.ExecutorsClient.GetByType(scriptCR.Spec.Type_)
 	if err != nil {
 		return options, fmt.Errorf("can't get executor spec: %w", err)
