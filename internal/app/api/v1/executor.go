@@ -62,7 +62,14 @@ func (s testkubeAPI) GetExecutor() fiber.Handler {
 
 func (s testkubeAPI) DeleteExecutor() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		_ = c.Params("name")
+		name := c.Params("name")
+		ns := c.Query("namespace", "testkube")
+
+		err := s.ExecutorsClient.Delete(name, ns)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
 		c.Context().SetStatusCode(204)
 		return nil
 	}

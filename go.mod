@@ -2,7 +2,7 @@ module github.com/kubeshop/testkube
 
 go 1.16
 
-// replace github.com/kubeshop/testkube-operator v0.1.3 => ../testkube-operator
+// replace github.com/kubeshop/testkube-operator v0.2.1 => ../testkube-operator
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -11,7 +11,7 @@ require (
 	github.com/gofiber/adaptor/v2 v2.1.7
 	github.com/gofiber/fiber/v2 v2.14.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v0.2.0
+	github.com/kubeshop/testkube-operator v0.2.1
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
 	github.com/prometheus/client_golang v1.11.0

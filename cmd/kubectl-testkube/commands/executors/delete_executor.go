@@ -1,8 +1,6 @@
 package executors
 
 import (
-	"os"
-
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -15,18 +13,23 @@ func NewDeleteExecutorCmd() *cobra.Command {
 		Short: "Gets executordetails",
 		Long:  `Gets executor, you can change output format`,
 		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 1 {
+				name = args[0]
+			}
+
+			if name == "" {
+				ui.Failf("Please pass executor name")
+			}
 
 			client, _ := GetClient(cmd)
-			executor, err := client.GetExecutor(name)
-			ui.ExitOnError("getting script executor: "+name, err)
 
-			render := GetExecutorRenderer(cmd)
-			err = render.Render(executor, os.Stdout)
-			ui.ExitOnError("rendering", err)
+			err := client.DeleteExecutor(name)
+			ui.ExitOnError("deleting executor: "+name, err)
+			ui.Success("Executor deleted")
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "unique executor name - mandatory")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "unique executor name, you can also pass it as first argument")
 
 	return cmd
 }
