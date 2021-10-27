@@ -18,7 +18,7 @@ testkube scripts create [flags]
       --git-path string     if repository is big we need to define additional path to directory/file to checkout partially
   -h, --help                help for create
   -n, --name string         unique script name - mandatory
-  -t, --type string         script type (defaults to postman-collection) (default "postman/collection")
+  -t, --type string         script type (defaults to postman-collection)
       --uri string          if resource need to be loaded from URI
 ```
 

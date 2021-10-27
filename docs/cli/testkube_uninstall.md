@@ -1,19 +1,21 @@
-## testkube doc
+## testkube uninstall
 
-Generate docs for kubectl testkube
+Uninstall Helm chart registry in current kubectl context
 
 ### Synopsis
 
-Generate docs for kubectl testkube
+Uninstall Helm chart registry in current kubectl context
 
 ```
-testkube doc [flags]
+testkube uninstall [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doc
+  -h, --help          help for uninstall
+      --name string   installation name (default "testkube")
+      --remove-crds   wipe out Executors and Scripts CRDs
 ```
 
 ### Options inherited from parent commands

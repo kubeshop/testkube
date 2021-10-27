@@ -13,10 +13,17 @@ testkube install [flags]
 ### Options
 
 ```
-      --chart string       chart name (default "kubeshop/testkube")
-  -h, --help               help for install
-      --name string        installation name (default "testkube")
-      --namespace string   namespace where to install (default "testkube")
+      --chart string   chart name (default "kubeshop/testkube")
+  -h, --help           help for install
+      --name string    installation name (default "testkube")
+```
+
+### Options inherited from parent commands
+
+```
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string   kubernetes namespace (default "testkube")
+  -v, --verbose            should I show additional debug messages
 ```
 
 ### SEE ALSO

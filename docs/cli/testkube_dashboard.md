@@ -1,9 +1,30 @@
 ## testkube dashboard
 
-Opens the port forwarding to the results endpoint and starts the browser with the dashboard url(if the OS supports opening the browser from terminal).
+Open testkube dashboard
+
+### Synopsis
+
+Open testkube dashboard
+
+```
+testkube dashboard [flags]
+```
 
 ### Options
 
-```sh
-  -s, --namespace string     kubernetes namespace (default "testkube")
 ```
+  -h, --help   help for dashboard
+```
+
+### Options inherited from parent commands
+
+```
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string   kubernetes namespace (default "testkube")
+  -v, --verbose            should I show additional debug messages
+```
+
+### SEE ALSO
+
+* [testkube](testkube.md)	 - testkube entrypoint for plugin
+

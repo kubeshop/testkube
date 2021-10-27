@@ -32,6 +32,14 @@ testkube completion zsh [flags]
       --no-descriptions   disable completion descriptions
 ```
 
+### Options inherited from parent commands
+
+```
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string   kubernetes namespace (default "testkube")
+  -v, --verbose            should I show additional debug messages
+```
+
 ### SEE ALSO
 
 * [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
