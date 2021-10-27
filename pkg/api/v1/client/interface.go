@@ -10,6 +10,7 @@ import (
 type HTTPClient interface {
 	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
 	Get(url string) (resp *http.Response, err error)
+	Do(req *http.Request) (resp *http.Response, err error)
 }
 
 type Client interface {
@@ -23,9 +24,9 @@ type Client interface {
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 
 	CreateExecutor(executor CreateExecutorOptions) (err error)
-	GetExecutor() (executor testkube.ExecutorDetails, err error)
-	ListExecutors() (executor []testkube.ExecutorDetails, err error)
-	DeleteExecutor() (err error)
+	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
+	ListExecutors() (executors []testkube.ExecutorDetails, err error)
+	DeleteExecutor(name string) (err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

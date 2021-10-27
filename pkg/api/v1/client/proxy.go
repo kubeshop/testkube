@@ -181,7 +181,7 @@ func (c ProxyScriptsAPI) CreateExecutor(executor CreateExecutorOptions) (err err
 	return
 }
 
-func (c ProxyScriptsAPI) GetExecutor() (executor testkube.ExecutorDetails, err error) {
+func (c ProxyScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
 	return
 }
 
@@ -190,7 +190,7 @@ func (c ProxyScriptsAPI) ListExecutors() (executor []testkube.ExecutorDetails, e
 
 }
 
-func (c ProxyScriptsAPI) DeleteExecutor() (err error) {
+func (c ProxyScriptsAPI) DeleteExecutor(name string) (err error) {
 	return
 }
 
