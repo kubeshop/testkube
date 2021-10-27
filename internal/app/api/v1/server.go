@@ -49,6 +49,7 @@ func (s testkubeAPI) Init() {
 
 	executors := s.Routes.Group("/executors")
 
+	executors.Post("/", s.CreateExecutor())
 	executors.Get("/", s.ListExecutors())
 	executors.Get("/:name", s.GetExecutor())
 	executors.Delete("/:name", s.DeleteExecutor())

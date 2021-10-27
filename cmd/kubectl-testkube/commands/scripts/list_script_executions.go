@@ -24,7 +24,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			executions, err := client.ListExecutions(scriptID)
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
-			renderer := GetListRenderer(cmd)
+			renderer := GetExecutionsListRenderer(cmd)
 
 			err = renderer.Render(executions, os.Stdout)
 			ui.ExitOnError("rendering", err)

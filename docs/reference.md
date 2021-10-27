@@ -38,7 +38,7 @@ Available Commands:
 Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 
 Use " scripts [command] --help" for more information about a command.
@@ -55,7 +55,7 @@ Usage:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 
@@ -78,7 +78,7 @@ Flags:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 
@@ -94,7 +94,7 @@ Usage:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 
@@ -109,7 +109,7 @@ Usage:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 
@@ -128,7 +128,7 @@ Flags:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 
@@ -148,7 +148,7 @@ Flags:
 Global Flags:
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -o, --output string        output typoe one of raw|json|go  (default "raw")
+  -o, --output string        output type one of raw|json|go  (default "raw")
   -v, --verbose              should I show additional debug messages
 ```
 

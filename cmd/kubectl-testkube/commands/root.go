@@ -25,6 +25,7 @@ func init() {
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
+	RootCmd.AddCommand(NewExecutorsCmd())
 }
 
 var RootCmd = &cobra.Command{

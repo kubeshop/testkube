@@ -67,7 +67,7 @@ func NewStartScriptCmd() *cobra.Command {
 					execution, err := client.GetExecution("-", execution.Id)
 					ui.ExitOnError("get script execution details", err)
 
-					render := GetRenderer(cmd)
+					render := GetExecutionRenderer(cmd)
 					err = render.Watch(execution, os.Stdout)
 					ui.ExitOnError("watching for changes", err)
 
