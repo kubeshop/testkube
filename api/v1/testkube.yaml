@@ -887,7 +887,7 @@ components:
           type: string
           description: Kubernetes namespace
           example: testkube
-        executor_type:
+        executorType:
           description: ExecutorType one of "rest" for rest openapi based executors
             or "job" which will be default runners for testkube soon
           type: string
@@ -918,7 +918,7 @@ components:
       description: CRD based executor data
       type: object
       properties:
-        executor_type:
+        executorType:
           description: ExecutorType one of "rest" for rest openapi based executors
             or "job" which will be default runners for testkube soon
           type: string
