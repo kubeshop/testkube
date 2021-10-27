@@ -104,7 +104,6 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
-	fmt.Printf("SCRIPT CR %+v\n", scriptCR)
 
 	if err != nil {
 		return options, fmt.Errorf("can't get script custom resource %w", err)
@@ -418,6 +417,7 @@ func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.ScriptName,
 		options.Request.Name,
 		options.ScriptSpec.Type_,
+		options.ScriptSpec.Content,
 		testkube.NewResult(),
 		options.Request.Params,
 	)

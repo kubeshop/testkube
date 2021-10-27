@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	batchv1 "k8s.io/api/batch/v1"
@@ -16,12 +17,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	pods "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type JobClient struct {
-	ClientSet *kubernetes.Clientset
-	Namespace string
-	Cmd       string
+	ClientSet  *kubernetes.Clientset
+	Repository result.Repository
+	Namespace  string
+	Cmd        string
 }
 
 func NewJobClient() (*JobClient, error) {
@@ -36,8 +39,9 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkube.Execution) (testkube.ExecutionResult, error) {
+func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (testkube.ExecutionResult, error) {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	var result string
 
 	jsn, err := json.Marshal(execution)
@@ -48,11 +52,11 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 		}, err
 	}
 
-	var TTLSecondsAfterFinished int32 = 1
+	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 	jobSpec := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
+			Name:      execution.Id,
 			Namespace: c.Namespace,
 		},
 		Spec: batchv1.JobSpec{
@@ -61,7 +65,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:            jobName,
+							Name:            execution.Id,
 							Image:           image,
 							Command:         []string{"agent", string(jsn)},
 							ImagePullPolicy: v1.PullAlways,
@@ -82,17 +86,16 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 		}, err
 	}
 
-	pods, err := c.ClientSet.CoreV1().Pods(c.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 5)
 	if err != nil {
 		return testkube.ExecutionResult{
 			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
 			ErrorMessage: err.Error(),
 		}, err
 	}
-
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
-			if pod.Labels["job-name"] == jobName {
+			if pod.Labels["job-name"] == execution.Id {
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.IsPodRunning(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					return testkube.ExecutionResult{
 						Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -100,7 +103,7 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 					}, err
 				}
 			}
-			result, err = c.GetPodLogs(pod.Name, jobName, jobName)
+			result, err = c.GetPodLogs(pod.Name, execution, repo)
 			if err != nil {
 				return testkube.ExecutionResult{
 					Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
@@ -116,7 +119,22 @@ func (c *JobClient) LaunchK8sJob(jobName string, image string, execution testkub
 	}, nil
 }
 
-func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage string) (string, error) {
+func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, retryNr, retryCount int) (*v1.PodList, error) {
+	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+	if err != nil {
+		return nil, err
+	}
+	if retryNr == retryCount {
+		return nil, fmt.Errorf("retry count exceeeded")
+	}
+	if len(pods.Items) == 0 {
+		time.Sleep(time.Duration(retryNr * 50 * int(time.Millisecond))) // increase backoff timeout
+		return c.GetJobPods(podsClient, jobName, retryNr+1, retryCount)
+	}
+	return pods, nil
+}
+
+func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, repo result.Repository) (string, error) {
 	count := int64(100)
 	var toReturn string
 	var message string
@@ -149,11 +167,17 @@ func (c *JobClient) GetPodLogs(podName string, containerName string, endMessage 
 		}
 
 		message = string(buf[:numBytes])
-		if strings.Contains(message, fmt.Sprintf("$$$%s$$$", endMessage)) {
+		if strings.Contains(message, fmt.Sprintf("$$$%s$$$", execution.Id)) {
 			message = ""
 			break
 		} else {
 			toReturn += message
+			execution.ExecutionResult.Output = toReturn
+			err := repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
 		}
 	}
 	return toReturn, nil
