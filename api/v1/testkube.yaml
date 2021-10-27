@@ -874,10 +874,14 @@ components:
     ExecutorCreateRequest:
       description: executor create request body
       type: object
+      required:
+        - name
+        - namespace
+        - types
       properties:
         name:
           type: string
-          description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
+          description: executor name
           example: kubeshop-homepage-test
         namespace:
           type: string
