@@ -11,20 +11,20 @@ package testkube
 
 // executor create request body
 type ExecutorCreateRequest struct {
-	// script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
-	Name string `json:"name,omitempty"`
-	// Kubernetes namespace
-	Namespace string `json:"namespace,omitempty"`
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
-	ExecutorType string `json:"executor_type,omitempty"`
+	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
 	Image string `json:"image,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
-	Types []string `json:"types,omitempty"`
+	Types []string `json:"types"`
 	// URI for rest based executors
 	Uri string `json:"uri,omitempty"`
 	// VolumeMountPath - where should PV be monted inside job pod for e.g. artifacts
-	VolumeMountPath string `json:"volume_mount_path,omitempty"`
+	VolumeMountPath string `json:"volumeMountPath,omitempty"`
 	// VolumeQuantity for kube-job PersistentVolume
-	VolumeQuantity string `json:"volume_quantity,omitempty"`
+	VolumeQuantity string `json:"volumeQuantity,omitempty"`
+	// executor name
+	Name string `json:"name"`
+	// Kubernetes namespace
+	Namespace string `json:"namespace"`
 }

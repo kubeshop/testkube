@@ -12,7 +12,7 @@ package testkube
 // CRD based executor data
 type Executor struct {
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
-	ExecutorType string `json:"executor_type,omitempty"`
+	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
 	Image string `json:"image,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
@@ -20,7 +20,7 @@ type Executor struct {
 	// URI for rest based executors
 	Uri string `json:"uri,omitempty"`
 	// VolumeMountPath - where should PV be monted inside job pod for e.g. artifacts
-	VolumeMountPath string `json:"volume_mount_path,omitempty"`
+	VolumeMountPath string `json:"volumeMountPath,omitempty"`
 	// VolumeQuantity for kube-job PersistentVolume
-	VolumeQuantity string `json:"volume_quantity,omitempty"`
+	VolumeQuantity string `json:"volumeQuantity,omitempty"`
 }

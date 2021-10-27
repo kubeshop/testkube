@@ -878,38 +878,21 @@ components:
         - name
         - namespace
         - types
-      properties:
-        name:
-          type: string
-          description: executor name
-          example: kubeshop-homepage-test
-        namespace:
-          type: string
-          description: Kubernetes namespace
-          example: testkube
-        executorType:
-          description: ExecutorType one of "rest" for rest openapi based executors
-            or "job" which will be default runners for testkube soon
-          type: string
-        image:
-          description: Image for kube-job
-          type: string
-        types:
-          description: Types defines what types can be handled by executor e.g.
-            "postman/collection", ":curl/command" etc
-          items:
-            type: string
-          type: array
-        uri:
-          description: URI for rest based executors
-          type: string
-        volume_mount_path:
-          description: VolumeMountPath - where should PV be monted inside job
-            pod for e.g. artifacts
-          type: string
-        volume_quantity:
-          description: VolumeQuantity for kube-job PersistentVolume
-          type: string
+      allOf:     # Combines the BasicErrorModel and the inline model
+        - $ref: '#/components/schemas/Executor'
+        - type: object
+          required:
+            - rootCause
+          properties:
+            name:
+              type: string
+              description: executor name
+              example: kubeshop-homepage-test
+            namespace:
+              type: string
+              description: Kubernetes namespace
+              example: testkube
+
 
     # Copied from CRD spec 
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
@@ -934,11 +917,11 @@ components:
         uri:
           description: URI for rest based executors
           type: string
-        volume_mount_path:
+        volumeMountPath:
           description: VolumeMountPath - where should PV be monted inside job
             pod for e.g. artifacts
           type: string
-        volume_quantity:
+        volumeQuantity:
           description: VolumeQuantity for kube-job PersistentVolume
           type: string
 
