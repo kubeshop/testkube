@@ -124,6 +124,23 @@ func IsPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.Condi
 	}
 }
 
+func HasPodSucceeded(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded:
+			return true, nil
+		case corev1.PodFailed:
+			return false, nil
+		}
+		return false, nil
+	}
+}
+
 // IsPodReady check if the pod in question is running state
 func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
