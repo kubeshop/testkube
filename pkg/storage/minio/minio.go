@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -135,5 +136,33 @@ func (c *Client) DownloadFile(bucket, file string) error {
 		}
 	}
 
+	return nil
+}
+
+func (c *Client) ScrapeArtefacts(id, directory string) error {
+	client := c
+	err := client.CreateBucket(id) // create bucket name it by execution ID
+	if err != nil {
+		return fmt.Errorf("failed to create a bucket %s: %w", id, err)
+	}
+	err = filepath.Walk(directory,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				fmt.Println(path, info.Size())
+				err = client.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		return err
+	}
 	return nil
 }
