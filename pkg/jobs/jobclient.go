@@ -99,7 +99,6 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning {
-			fmt.Println("HERE 102")
 			go func() {
 				if pod.Labels["job-name"] == execution.Id {
 					if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
@@ -129,7 +128,6 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 			}()
 		}
 	}
-	fmt.Println("HERE 132")
 
 	return testkube.ExecutionResult{
 		Status: testkube.StatusPtr(testkube.PENDING_ExecutionStatus),
