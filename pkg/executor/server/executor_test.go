@@ -75,9 +75,9 @@ func (r *RepoMock) Update(ctx context.Context, result testkube.Execution) (err e
 type ExampleRunner struct {
 }
 
-func (r *ExampleRunner) Run(execution testkube.Execution) testkube.ExecutionResult {
+func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
 	return testkube.ExecutionResult{
 		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
 		Output: "exmaple test output",
-	}
+	}, nil
 }
