@@ -57,19 +57,20 @@ func TestWorker_RunExecution(t *testing.T) {
 }
 
 type RunnerMock struct {
-	Error  error
-	Result string
-	T      *testing.T
+	Error       error
+	ErrorResult error
+	Result      string
+	T           *testing.T
 }
 
-func (r RunnerMock) Run(execution testkube.Execution) testkube.ExecutionResult {
+func (r RunnerMock) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
 	result := *execution.ExecutionResult
 	status := testkube.SUCCESS_ExecutionStatus
 	result.Status = &status
-	if r.Error != nil {
+	if r.ErrorResult != nil {
 		result.Err(r.Error)
 	}
-	return result
+	return result, r.Error
 }
 
 type RepositoryMock struct {

@@ -98,18 +98,20 @@ func (w *Worker) RunExecution(ctx context.Context, e testkube.Execution) (testku
 	if werr := w.Repository.UpdateResult(ctx, e.Id, *e.ExecutionResult); werr != nil {
 		return e, werr
 	}
+	var err error
 
 	l.Infow("script started", "status", e.ExecutionResult.Status)
-	result := w.Runner.Run(e)
+	result, err := w.Runner.Run(e)
 	result.StartTime = startTime
 	result.EndTime = time.Now()
 	l.Infow("got result from runner", "result", result, "runner", fmt.Sprintf("%T", w.Runner))
 	e.ExecutionResult = &result
 
-	var err error
 	if result.ErrorMessage != "" {
 		e.ExecutionResult.Error()
 		err = fmt.Errorf("execution error: %s", result.ErrorMessage)
+	} else if err != nil {
+		e.ExecutionResult.Error()
 	} else {
 		e.ExecutionResult.Success()
 	}
