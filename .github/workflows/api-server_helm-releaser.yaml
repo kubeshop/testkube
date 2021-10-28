@@ -4,7 +4,9 @@ on:
   push:
     tags: 
       - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      # TODO we need to handle prerelease versions in separate prerelease helm charts
+      #      disabling it for now
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
       # - "vTesting[0-9]+.[0-9]+.[0-9]+"
       # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
