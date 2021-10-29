@@ -28,17 +28,14 @@ func TestJSONWrapWritter(t *testing.T) {
 		json.Unmarshal(lines[0], &output)
 		assert.Equal(t, line1, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type)
-		assert.Equal(t, false, output.Error)
 
 		json.Unmarshal(lines[1], &output)
 		assert.Equal(t, line2, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type)
-		assert.Equal(t, false, output.Error)
 
 		json.Unmarshal(lines[2], &output)
 		assert.Equal(t, line3, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type)
-		assert.Equal(t, false, output.Error)
 
 	})
 
