@@ -8,19 +8,14 @@ import (
 
 func NewJSONWrapWriter(writer io.Writer) *JSONWrapWriter {
 	return &JSONWrapWriter{
-		writer: writer,
+		encoder: json.NewEncoder(writer),
 	}
 }
 
 type JSONWrapWriter struct {
-	writer io.Writer
+	encoder *json.Encoder
 }
 
-func (e JSONWrapWriter) Write(p []byte) (int, error) {
-	output, err := json.Marshal(NewOutputLine(p))
-	if err != nil {
-		return 0, err
-	}
-
-	return e.writer.Write(output)
+func (w *JSONWrapWriter) Write(p []byte) (int, error) {
+	return len(p), w.encoder.Encode(NewOutputLine(p))
 }
