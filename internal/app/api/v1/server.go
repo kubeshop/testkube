@@ -63,8 +63,11 @@ func (s testkubeAPI) Init() {
 	scripts := s.Routes.Group("/scripts")
 
 	scripts.Get("/", s.ListScripts())
-	scripts.Get("/:id", s.GetScript())
 	scripts.Post("/", s.CreateScript())
+	scripts.Delete("/", s.DeleteScripts())
+
+	scripts.Get("/:id", s.GetScript())
+	scripts.Delete("/:id", s.DeleteScript())
 
 	scripts.Post("/:id/executions", s.ExecuteScript())
 	scripts.Post("/:id/executions/:executionID/abort", s.AbortExecution())
