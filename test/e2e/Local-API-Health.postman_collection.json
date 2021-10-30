@@ -1,0 +1,42 @@
+{
+	"info": {
+		"_postman_id": "97b67bfb-c1ca-4572-af46-06cab8f68998",
+		"name": "Local-API-Health",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8088/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": []
+}
