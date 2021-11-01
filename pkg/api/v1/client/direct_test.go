@@ -104,6 +104,78 @@ func TestScriptsAPI(t *testing.T) {
 		assert.Equal(t, "postman/collection", response.Type_)
 	})
 
+	t.Run("Delete script positive flow", func(t *testing.T) {
+		// given
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		client := NewDefaultDirectScriptsAPI()
+		client.URI = srv.URL
+
+		// when
+		err := client.DeleteScript("t1", "testkube")
+
+		// then
+		assert.NoError(t, err)
+	})
+
+	t.Run("Delete script fails", func(t *testing.T) {
+		// given
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer srv.Close()
+
+		client := NewDefaultDirectScriptsAPI()
+		client.URI = srv.URL
+
+		// when
+		err := client.DeleteScript("t1", "testkube")
+
+		// then
+		assert.Error(t, err)
+	})
+
+	t.Run("Delete all scripts positive flow", func(t *testing.T) {
+		// given
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		client := NewDefaultDirectScriptsAPI()
+		client.URI = srv.URL
+
+		// when
+		err := client.DeleteScripts("testkube")
+
+		// then
+		assert.NoError(t, err)
+	})
+
+	t.Run("Delete all scripts fails", func(t *testing.T) {
+		// given
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer srv.Close()
+
+		client := NewDefaultDirectScriptsAPI()
+		client.URI = srv.URL
+
+		// when
+		err := client.DeleteScripts("testkube")
+
+		// then
+		assert.Error(t, err)
+	})
+
 	t.Run("List scripts", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
