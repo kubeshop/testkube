@@ -26,7 +26,7 @@ func NewDeleteScriptsCmd() *cobra.Command {
 			}
 			ui.ExitOnError(message, err)
 
-			ui.Success("Succesfull deleted", name)
+			ui.Success("Succesfully deleted", name)
 		},
 	}
 
