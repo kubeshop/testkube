@@ -34,7 +34,7 @@ func Run(r runner.Runner, args []string) {
 		os.Exit(1)
 	}
 
-	output.PrintEvent("running postman/collection from testkube.Execution", string(script))
+	output.PrintEvent("running testkube.Execution", string(script))
 	e := testkube.Execution{}
 
 	err = json.Unmarshal(script, &e)
