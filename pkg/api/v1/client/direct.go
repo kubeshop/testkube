@@ -92,12 +92,12 @@ func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions testkube.E
 
 func (c DirectScriptsAPI) DeleteScripts(namespace string) error {
 	uri := c.getURI("/scripts?namespace=%s", namespace)
-	return c.makeDeleteRequest(uri)
+	return c.makeDeleteRequest(uri, true)
 }
 
 func (c DirectScriptsAPI) DeleteScript(name string, namespace string) error {
 	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
-	return c.makeDeleteRequest(uri)
+	return c.makeDeleteRequest(uri, true)
 }
 
 // CreateScript creates new Script Custom Resource
@@ -170,15 +170,11 @@ func (c DirectScriptsAPI) ListScripts(namespace string) (scripts testkube.Script
 }
 
 func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
-	uri := c.getURI("/scripts/%s/executions/%s/abort", scriptID, id)
-	resp, err := c.client.Post(uri, "application/json", nil)
+	uri := c.getURI("/scripts/%s/executions/%s", scriptID, id)
+	err := c.makeDeleteRequest(uri, false)
 
 	if err != nil {
-		return err
-	}
-
-	if err := c.responseError(resp); err != nil {
-		return fmt.Errorf("api/get-script returned error: %w", err)
+		return fmt.Errorf("api/abort-script returned error: %w", err)
 	}
 
 	return nil
@@ -330,7 +326,7 @@ func (c DirectScriptsAPI) getURI(pathTemplate string, params ...interface{}) str
 	return fmt.Sprintf("%s/%s%s", c.URI, Version, path)
 }
 
-func (c DirectScriptsAPI) makeDeleteRequest(uri string) error {
+func (c DirectScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) error {
 	req, err := http.NewRequest("DELETE", uri, nil)
 	if err != nil {
 		return err
@@ -342,7 +338,11 @@ func (c DirectScriptsAPI) makeDeleteRequest(uri string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusNoContent {
+	if err := c.responseError(resp); err != nil {
+		return err
+	}
+
+	if isContentExpected && resp.StatusCode != http.StatusNoContent {
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err

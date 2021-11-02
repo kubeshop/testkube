@@ -359,9 +359,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
-
-  /scripts/{id}/executions/{executionID}/abort:
-    post:
+    delete:
       parameters:
         - in: path
           name: id
@@ -391,8 +389,7 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/ExecutionResult'
-
-
+                  
   /executors:
     get:
       tags:
