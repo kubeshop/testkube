@@ -23,7 +23,3 @@ Diagrams was made with use of C4 diagram technique
 #### Operator
 
 TODO  add diagram for operator
-
-#### Executor
-
-![Postman-Executor](img/components_executor.png)
