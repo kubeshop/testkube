@@ -90,6 +90,16 @@ func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions testkube.E
 	return c.getExecutionsFromResponse(resp)
 }
 
+func (c DirectScriptsAPI) DeleteScripts(namespace string) error {
+	uri := c.getURI("/scripts?namespace=%s", namespace)
+	return c.makeDeleteRequest(uri)
+}
+
+func (c DirectScriptsAPI) DeleteScript(name string, namespace string) error {
+	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
+	return c.makeDeleteRequest(uri)
+}
+
 // CreateScript creates new Script Custom Resource
 func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts")
@@ -318,4 +328,28 @@ func (c DirectScriptsAPI) responseError(resp *http.Response) error {
 func (c DirectScriptsAPI) getURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s/%s%s", c.URI, Version, path)
+}
+
+func (c DirectScriptsAPI) makeDeleteRequest(uri string) error {
+	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Request returned error: %s", respBody)
+	}
+
+	return nil
 }

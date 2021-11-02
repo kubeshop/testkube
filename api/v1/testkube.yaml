@@ -148,6 +148,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Problem'
+    delete:
+      tags:
+        - scripts
+        - api
+      summary: 'delete scripts'
+      description: 'deletes all the scripts'
+      operationId: deleteScripts
+      responses:
+        204:
+          description: 'no content'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   /scripts/{id}:
     get:
@@ -171,6 +189,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Script'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+    delete:
+      tags:
+        - scripts
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+      summary: 'delete script'
+      description: 'deletes a script'
+      operationId: deleteScript
+      responses:
+        204:
+          description: 'no content'
         502:
           description: 'problem with read information from kubernetes cluster'
           content:

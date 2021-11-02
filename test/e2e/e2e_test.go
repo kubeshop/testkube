@@ -110,6 +110,20 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Body matches string")
 	})
 
+	t.Run("delete script", func(t *testing.T) {
+		// given
+		out, err := test.DeleteScript(scriptName)
+		a.NoError(err)
+		a.Contains(string(out), "Succesfully deleted")
+
+		// when
+		out, err = test.List()
+		a.NoError(err)
+
+		// then
+		a.NotContains(string(out), scriptName)
+	})
+
 	sleep(t, time.Second)
 
 	// t.Run("cleaning helm release", func(t *testing.T) {

@@ -101,6 +101,41 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 	}
 }
 
+// DeleteScript for deleting a script with id
+func (s testkubeAPI) DeleteScript() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		err := s.ScriptsClient.Delete(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+}
+
+// DeleteScripts for deleting all scripts
+func (s testkubeAPI) DeleteScripts() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		namespace := c.Query("namespace", "testkube")
+		err := s.ScriptsClient.DeleteAll(namespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+}
+
 func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)

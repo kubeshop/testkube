@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -96,6 +97,16 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions testkube.Ex
 	}
 
 	return c.getExecutionsFromResponse(resp)
+}
+
+func (c ProxyScriptsAPI) DeleteScripts(namespace string) error {
+	uri := c.getURI("/scripts?namespace=%s", namespace)
+	return c.makeDeleteRequest(uri)
+}
+
+func (c ProxyScriptsAPI) DeleteScript(name string, namespace string) error {
+	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
+	return c.makeDeleteRequest(uri)
 }
 
 // CreateScript creates new Script Custom Resource
@@ -215,6 +226,15 @@ func (c ProxyScriptsAPI) GetServerInfo() (info testkube.ServerInfo, err error) {
 
 }
 
+func (c ProxyScriptsAPI) GetProxy(requestType string) *rest.Request {
+	return c.client.CoreV1().RESTClient().Verb(requestType).
+		Namespace(c.config.Namespace).
+		Resource("services").
+		SetHeader("Content-Type", "application/json").
+		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
+		SubResource("proxy")
+}
+
 func (c ProxyScriptsAPI) getExecutionFromResponse(resp rest.Result) (execution testkube.Execution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
@@ -289,16 +309,29 @@ func (c ProxyScriptsAPI) responseError(resp rest.Result) error {
 	return nil
 }
 
-func (c ProxyScriptsAPI) GetProxy(requestType string) *rest.Request {
-	return c.client.CoreV1().RESTClient().Verb(requestType).
-		Namespace(c.config.Namespace).
-		Resource("services").
-		SetHeader("Content-Type", "application/json").
-		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
-		SubResource("proxy")
-}
-
 func (c ProxyScriptsAPI) getURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s%s", Version, path)
+}
+
+func (c ProxyScriptsAPI) makeDeleteRequest(uri string) error {
+
+	req := c.GetProxy("DELETE").Suffix(uri)
+	resp := req.Do(context.Background())
+
+	if resp.Error() != nil {
+		return resp.Error()
+	}
+
+	var code int
+	resp.StatusCode(&code)
+	if code != http.StatusNoContent {
+		respBody, err := resp.Raw()
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("Request returned error: %s", respBody)
+	}
+
+	return nil
 }

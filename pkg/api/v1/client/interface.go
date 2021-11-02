@@ -19,6 +19,8 @@ type Client interface {
 	ListExecutions(scriptID string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 	CreateScript(options CreateScriptOptions) (script testkube.Script, err error)
+	DeleteScript(name string, namespace string) error
+	DeleteScripts(namespace string) error
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error)
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
