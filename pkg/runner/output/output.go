@@ -30,21 +30,22 @@ func NewOutputLine(content []byte) Output {
 func NewOutputError(err error) Output {
 	return Output{
 		Type:    TypeError,
-		Content: string(err.Error()),
+		Message: string(err.Error()),
 	}
 }
 
 func NewOutputResult(result testkube.ExecutionResult) Output {
 	return Output{
-		Type:    TypeResult,
-		Content: result,
+		Type:   TypeResult,
+		Result: result,
 	}
 }
 
 type Output struct {
-	Type    string      `json:"type,omitempty"`
-	Message string      `json:"message,omitempty"`
-	Content interface{} `json:"content,omitempty"`
+	Type    string                   `json:"type,omitempty"`
+	Message string                   `json:"message,omitempty"`
+	Content interface{}              `json:"content,omitempty"`
+	Result  testkube.ExecutionResult `json:"result,omitempty"`
 }
 
 func PrintError(err error) {

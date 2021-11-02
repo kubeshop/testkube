@@ -48,7 +48,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return testkube.ExecutionResult{
-			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+			Status:       testkube.ExecutionStatusError,
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -82,7 +82,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	_, err = jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 	if err != nil {
 		return testkube.ExecutionResult{
-			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+			Status:       testkube.ExecutionStatusError,
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -90,7 +90,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 5)
 	if err != nil {
 		return testkube.ExecutionResult{
-			Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+			Status:       testkube.ExecutionStatusError,
 			ErrorMessage: err.Error(),
 		}, err
 	}
@@ -103,7 +103,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 				if pod.Labels["job-name"] == execution.Id {
 					if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 						execResult = testkube.ExecutionResult{
-							Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+							Status:       testkube.ExecutionStatusError,
 							ErrorMessage: err.Error(),
 						}
 
@@ -114,7 +114,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 				result, err = c.GetPodLogs(pod.Name, execution, repo, false)
 				if err != nil {
 					execResult = testkube.ExecutionResult{
-						Status:       testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+						Status:       testkube.ExecutionStatusError,
 						ErrorMessage: err.Error(),
 					}
 					repo.UpdateResult(context.TODO(), execution.Id, execResult)
@@ -218,7 +218,7 @@ func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 	})
 	if err != nil {
 		return &testkube.ExecutionResult{
-			Status: testkube.StatusPtr(testkube.ERROR__ExecutionStatus),
+			Status: testkube.ExecutionStatusError,
 			Output: err.Error(),
 		}
 	}
