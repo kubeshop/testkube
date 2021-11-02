@@ -1,8 +1,17 @@
 package client
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+type HTTPClient interface {
+	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
+	Get(url string) (resp *http.Response, err error)
+	Do(req *http.Request) (resp *http.Response, err error)
+}
 
 type Client interface {
 	GetScript(id string) (script testkube.Script, err error)

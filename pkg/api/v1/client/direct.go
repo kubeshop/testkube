@@ -41,7 +41,7 @@ func NewDefaultDirectScriptsAPI() DirectScriptsAPI {
 
 type DirectScriptsAPI struct {
 	URI    string
-	client *http.Client
+	client HTTPClient
 }
 
 // scripts and executions -----------------------------------------------------------------------------
