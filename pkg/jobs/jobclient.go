@@ -121,7 +121,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 					return
 				}
 				execResult = testkube.ExecutionResult{
-					Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
+					Status: testkube.ExecutionStatusSuccess,
 					Output: result,
 				}
 				repo.UpdateResult(context.TODO(), execution.Id, execResult)
@@ -130,7 +130,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	}
 
 	return testkube.ExecutionResult{
-		Status: testkube.StatusPtr(testkube.PENDING_ExecutionStatus),
+		Status: testkube.ExecutionStatusPending,
 		Output: result,
 	}, nil
 }
@@ -223,7 +223,7 @@ func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 		}
 	}
 	return &testkube.ExecutionResult{
-		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
+		Status: testkube.ExecutionStatusSuccess,
 	}
 }
 
