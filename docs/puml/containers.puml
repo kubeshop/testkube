@@ -12,9 +12,11 @@
 
 LAYOUT_WITH_LEGEND()
 
-Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
-System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
-System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+Boundary(ext, "external systems") {
+	Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+	System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+	System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+}
 
 Boundary(kubernetes, "kubnernetes cluster") {
 	System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
@@ -24,10 +26,11 @@ Boundary(kubernetes, "kubnernetes cluster") {
 		System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
 	}
 
-	Boundary(executors, "Executors") {
-		System_Ext(executorn, "Executor n ", "Tests executor", "kubernetes")
-		System_Ext(executor2, "Executor 2 ", "Tests executor", "kubernetes")
-		System_Ext(executor1, "Executor 1", "Tests executor", "kubernetes")
+	Boundary(executors, "Jobs of any kind, implements testkube runner ") {
+		System_Ext(executorn, "Executor job n", "postman/collection", "kubernetes")
+		System_Ext(executor3, "Executor job 3", "cypress/project", "kubernetes")
+		System_Ext(executor2, "Executor job 2", "postman/collection", "kubernetes")
+		System_Ext(executor1, "Executor job 1", "curl/test", "kubernetes")
 	}
 
 	Boundary(testkube, "testkube") {
@@ -38,9 +41,14 @@ Boundary(kubernetes, "kubnernetes cluster") {
 
 	System_Ext(sut, "SUT", "System Under Test", "html5")
 
-	Rel(api, db, "stores results")
-	Rel(api, executor1, "calls execution")
 	Rel(executor1, sut, "Runs tests")
+	Rel(executor2, sut, "Runs tests")
+	Rel(executor3, sut, "Runs tests")
+	Rel(executorn, sut, "Runs tests")
+
+	Rel(api, db, "stores results")
+	Rel(api, executor1, "schedules executions as Kuberntetes jobs")
+
 	Rel(api, metrics, "Stores test runs metrics")
 }
 

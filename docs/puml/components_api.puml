@@ -14,9 +14,6 @@
 !include FONTAWESOME/file_alt.puml
 
 
-
-
-
 LAYOUT_WITH_LEGEND()
 
 title Component diagram for testkube API
@@ -30,7 +27,7 @@ System_Ext(logs, "Logs", "Logs aggregator", "file_alt")
 
 Container_Boundary(api, "API Application") {
     Component(apiServer, "API REST Server", "OpenAPI v3 REST server", "Listens for commands to execute", "go")
-    Component(executorClient, "HTTP Executor", "OpenAPI v3 REST", "Orchestrates executor runs to valid registered executor", "go")
+    Component(executorClient, "Kubernetes Jobs scheduler", "kubernetes client", "Orchestrates runs to valid registered executor", "go")
     Component(metricsMiddleware, "Metrics endpoints middleware", "Prometheus HTTP endpoints", "Provides Prometheus enpoints with metrics, technical and business", "go")
 	ComponentDb(db, "MongoDB", "Storage", "Stores execution results, can be external", "mongodb")
 
@@ -40,12 +37,14 @@ Container_Boundary(api, "API Application") {
 }
 
 
-Container_Boundary(executors, "Executors") {
-    Component(postmanExecutor, "Postman Collections Executor", "OpenAPI v3 REST server", "Executes exported postman collections", "go")
-    Component(curlExecutor, "Example curl executor", "OpenAPI v3 REST server", "Executes curl commands", "go")
+Container_Boundary(executors, "Test runners") {
+    Component(postmanExecutor, "Postman Collections Job", "Kubernetes Job", "Executes exported postman collections", "go")
+    Component(cypressExecutor, "Cypress Projects Job", "Kubernetes Job", "Executes exported postman collections", "go")
+    Component(curlExecutor, "CURL executor", "Kubernetes Job", "Executes curl commands", "go")
 
+	Rel(executorClient, cypressExecutor, "executes cypress based scripts")
 	Rel(executorClient, postmanExecutor, "executes postman collections scripts")
-	Rel(executorClient, curlExecutor, "executes example curl scripts")
+	Rel(executorClient, curlExecutor, "executes curl scripts")
 
 }
 
