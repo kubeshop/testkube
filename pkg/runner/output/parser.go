@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -64,10 +63,5 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	return
-
+	return result, logs, scanner.Err()
 }
