@@ -4,13 +4,13 @@ import (
 	"time"
 )
 
-func NewResult() ExecutionResult {
+func NewPendingExecutionResult() ExecutionResult {
 	return ExecutionResult{
-		Status: StatusPtr(QUEUED_ExecutionStatus),
+		Status: StatusPtr(PENDING_ExecutionStatus),
 	}
 }
 
-func NewQueuedResult() ExecutionResult {
+func NewQueuedExecutionResult() ExecutionResult {
 	return ExecutionResult{
 		Status: StatusPtr(QUEUED_ExecutionStatus),
 	}

@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/runner/output"
+	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,6 +28,7 @@ type JobClient struct {
 	Repository result.Repository
 	Namespace  string
 	Cmd        string
+	Log        *zap.SugaredLogger
 }
 
 func NewJobClient() (*JobClient, error) {
@@ -37,102 +40,68 @@ func NewJobClient() (*JobClient, error) {
 	return &JobClient{
 		ClientSet: clientSet,
 		Namespace: "testkube",
+		Log:       log.DefaultLogger,
 	}, nil
 }
 
-func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (testkube.ExecutionResult, error) {
+func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	var result string
+	ctx := context.Background()
 
 	jsn, err := json.Marshal(execution)
 	if err != nil {
-		return testkube.ExecutionResult{
-			Status:       testkube.ExecutionStatusError,
-			ErrorMessage: err.Error(),
-		}, err
+		return result.Err(err), err
 	}
 
-	var TTLSecondsAfterFinished int32 = 180
-	var backOffLimit int32 = 2
-	jobSpec := &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      execution.Id,
-			Namespace: c.Namespace,
-		},
-		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Name:            execution.Id,
-							Image:           image,
-							Command:         []string{"agent", string(jsn)},
-							ImagePullPolicy: v1.PullAlways,
-						},
-					},
-					RestartPolicy: v1.RestartPolicyNever,
-				},
-			},
-			BackoffLimit: &backOffLimit,
-		},
-	}
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn))
 
-	_, err = jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
+	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
-		return testkube.ExecutionResult{
-			Status:       testkube.ExecutionStatusError,
-			ErrorMessage: err.Error(),
-		}, err
+		return result.Err(err), err
 	}
 
 	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 5)
 	if err != nil {
-		return testkube.ExecutionResult{
-			Status:       testkube.ExecutionStatusError,
-			ErrorMessage: err.Error(),
-		}, err
+		return result.Err(err), err
 	}
 
-	execResult := testkube.ExecutionResult{}
-
+	// get job pod and
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning {
+		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+			// async wait for complete status or error
 			go func() {
-				if pod.Labels["job-name"] == execution.Id {
-					if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-						execResult = testkube.ExecutionResult{
-							Status:       testkube.ExecutionStatusError,
-							ErrorMessage: err.Error(),
-						}
-
-						repo.UpdateResult(context.TODO(), execution.Id, execResult)
-						return
-					}
-				}
-				result, err = c.GetPodLogs(pod.Name, execution, repo, false)
-				if err != nil {
-					execResult = testkube.ExecutionResult{
-						Status:       testkube.ExecutionStatusError,
-						ErrorMessage: err.Error(),
-					}
-					repo.UpdateResult(context.TODO(), execution.Id, execResult)
+				// wait for complete
+				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+					c.Log.Errorw("poll immediate error", "error", err)
+					repo.UpdateResult(ctx, execution.Id, result.Err(err))
 					return
 				}
-				execResult = testkube.ExecutionResult{
-					Status: testkube.ExecutionStatusSuccess,
-					Output: result,
+
+				var logs []byte
+				logs, err = c.GetPodLogs(pod.Name)
+				if err != nil {
+					c.Log.Errorw("get pod logs error", "error", err)
+					repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					return
 				}
-				repo.UpdateResult(context.TODO(), execution.Id, execResult)
+
+				// parse job ouput log (JSON stream)
+				result, _, err := output.ParseRunnerOutput(logs)
+				if err != nil {
+					c.Log.Errorw("parse ouput error", "error", err)
+					repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					return
+				}
+
+				c.Log.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+				repo.UpdateResult(ctx, execution.Id, result)
 			}()
 		}
 	}
 
-	return testkube.ExecutionResult{
-		Status: testkube.ExecutionStatusPending,
-		Output: result,
-	}, nil
+	return testkube.NewPendingExecutionResult(), nil
 }
 
 func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, retryNr, retryCount int) (*v1.PodList, error) {
@@ -150,62 +119,100 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 	return pods, nil
 }
 
-func (c *JobClient) GetPodLogs(podName string, execution testkube.Execution, repo result.Repository, tail bool) (string, error) {
+// TailJobLogs - locates logs for job pod(s)
+func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
+	ctx := context.Background()
+	pods, err := c.GetJobPods(podsClient, id, 1, 5)
+	if err != nil {
+		return logs, err
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == id {
+			c.Log.Infow("Waiting for pod to be ready")
+			if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				c.Log.Errorw("poll immediate error when tailing logs", "error", err)
+				return
+			}
+			c.Log.Infow("Tailing pod logs")
+			return c.TailPodLogs(ctx, pod.Name)
+		}
+	}
+
+	return
+}
+
+func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
 	count := int64(100)
-	var toReturn string
-	var message string
+
 	podLogOptions := v1.PodLogOptions{
-		Follow:    tail,
+		Follow:    false,
 		TailLines: &count,
 	}
 
 	podLogRequest := c.ClientSet.CoreV1().
 		Pods(c.Namespace).
 		GetLogs(podName, &podLogOptions)
+
 	stream, err := podLogRequest.Stream(context.TODO())
 	if err != nil {
-		return "", err
+		return logs, err
 	}
 
 	defer stream.Close()
 
-	if tail {
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, stream)
+	if err != nil {
+		return logs, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan []byte, err error) {
+	logs = make(chan []byte)
+	count := int64(1)
+
+	podLogOptions := v1.PodLogOptions{
+		Follow:    true,
+		TailLines: &count,
+	}
+
+	podLogRequest := c.ClientSet.CoreV1().
+		Pods(c.Namespace).
+		GetLogs(podName, &podLogOptions)
+
+	stream, err := podLogRequest.Stream(ctx)
+	if err != nil {
+		return logs, err
+	}
+
+	go func() {
+		defer stream.Close()
+		defer close(logs)
+
 		for {
-			buf := make([]byte, 2000)
+			// TODO is it bulletprof for huge messages ?
+			// we need to parse output.Output struct
+			buf := make([]byte, 20000)
 			numBytes, err := stream.Read(buf)
-			if numBytes == 0 {
+			if numBytes == 0 || err == io.EOF {
 				break
-			}
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return "", err
 			}
 
-			message = string(buf[:numBytes])
-			if strings.Contains(message, fmt.Sprintf("$$$%s$$$", execution.Id)) {
-				message = ""
-				break
-			} else {
-				toReturn += message
-				execution.ExecutionResult.Output = toReturn
-				err := repo.UpdateResult(context.Background(), execution.Id, *execution.ExecutionResult)
-				if err != nil {
-					fmt.Println(err)
-					break
-				}
+			if err != nil {
+				c.Log.Errorw("error when tailing logs stream", "error", err)
+				return
 			}
+
+			fmt.Printf("-----------------%+v\n", string(buf[:numBytes]))
+
+			logs <- buf[:numBytes]
 		}
-	} else {
-		buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, stream)
-		if err != nil {
-			return "", err
-		}
-		toReturn = buf.String()
-	}
-	return toReturn, nil
+	}()
+	return
 }
 
 func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
@@ -280,4 +287,34 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 		return err
 	}
 	return nil
+}
+
+func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
+	var TTLSecondsAfterFinished int32 = 180
+	var backOffLimit int32 = 2
+
+	return &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      id,
+			Namespace: namespace,
+		},
+		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name:            id,
+							Image:           image,
+							Command:         []string{"/bin/runner", jsn},
+							ImagePullPolicy: v1.PullAlways,
+						},
+					},
+					RestartPolicy: v1.RestartPolicyNever,
+				},
+			},
+			BackoffLimit: &backOffLimit,
+		},
+	}
+
 }

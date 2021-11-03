@@ -16,17 +16,18 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
-	// TODO remove it when executor CRD will be fully implemented
-	var executorClientConfig client.RestExecutorConfig
-	envconfig.Process("POSTMANEXECUTOR", &executorClientConfig)
+	executor, err := client.NewJobExecutor(repository)
+	if err != nil {
+		panic(err)
+	}
 
 	s := testkubeAPI{
 		HTTPServer:      server.NewServer(httpConfig),
 		Repository:      repository,
+		Executor:        executor,
 		ScriptsClient:   scriptsClient,
 		ExecutorsClient: executorsClient,
 		Metrics:         NewMetrics(),
-		Executors:       client.NewExecutors(executorsClient, repository),
 	}
 
 	s.Init()
@@ -36,7 +37,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 type testkubeAPI struct {
 	server.HTTPServer
 	Repository      result.Repository
-	Executors       client.Executors
+	Executor        client.Executor
 	ScriptsClient   *scriptscr.ScriptsClient
 	ExecutorsClient *executorscr.ExecutorsClient
 	Metrics         Metrics
