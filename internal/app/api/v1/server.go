@@ -70,8 +70,8 @@ func (s testkubeAPI) Init() {
 	scripts.Delete("/:id", s.DeleteScript())
 
 	scripts.Post("/:id/executions", s.ExecuteScript())
-	scripts.Post("/:id/executions/:executionID/abort", s.AbortExecution())
 
 	scripts.Get("/:id/executions", s.ListExecutions())
 	scripts.Get("/:id/executions/:executionID", s.GetExecution())
+	scripts.Delete("/:id/executions/:executionID", s.AbortExecution())
 }

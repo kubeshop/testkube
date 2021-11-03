@@ -101,12 +101,12 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions testkube.Ex
 
 func (c ProxyScriptsAPI) DeleteScripts(namespace string) error {
 	uri := c.getURI("/scripts?namespace=%s", namespace)
-	return c.makeDeleteRequest(uri)
+	return c.makeDeleteRequest(uri, true)
 }
 
 func (c ProxyScriptsAPI) DeleteScript(name string, namespace string) error {
 	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
-	return c.makeDeleteRequest(uri)
+	return c.makeDeleteRequest(uri, true)
 }
 
 // CreateScript creates new Script Custom Resource
@@ -175,15 +175,8 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts
 
 // GetExecutions list all executions in given script
 func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
-	uri := c.getURI("/scripts/%s/executions/%s/abort", scriptID, id)
-	req := c.GetProxy("POST").Suffix(uri)
-	resp := req.Do(context.Background())
-
-	if err := c.responseError(resp); err != nil {
-		return err
-	}
-
-	return nil
+	uri := c.getURI("/scripts/%s/executions/%s", scriptID, id)
+	return c.makeDeleteRequest(uri, false)
 }
 
 // executor --------------------------------------------------------------------------------
@@ -314,7 +307,7 @@ func (c ProxyScriptsAPI) getURI(pathTemplate string, params ...interface{}) stri
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c ProxyScriptsAPI) makeDeleteRequest(uri string) error {
+func (c ProxyScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) error {
 
 	req := c.GetProxy("DELETE").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -323,14 +316,20 @@ func (c ProxyScriptsAPI) makeDeleteRequest(uri string) error {
 		return resp.Error()
 	}
 
-	var code int
-	resp.StatusCode(&code)
-	if code != http.StatusNoContent {
-		respBody, err := resp.Raw()
-		if err != nil {
-			return err
+	if err := c.responseError(resp); err != nil {
+		return err
+	}
+
+	if isContentExpected {
+		var code int
+		resp.StatusCode(&code)
+		if code != http.StatusNoContent {
+			respBody, err := resp.Raw()
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("Request returned error: %s", respBody)
 		}
-		return fmt.Errorf("Request returned error: %s", respBody)
 	}
 
 	return nil
