@@ -199,6 +199,7 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan 
 			buf := make([]byte, 20000)
 			numBytes, err := stream.Read(buf)
 			if numBytes == 0 || err == io.EOF {
+				c.Log.Debug("no more logs", "error", err)
 				break
 			}
 
@@ -206,8 +207,6 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan 
 				c.Log.Errorw("error when tailing logs stream", "error", err)
 				return
 			}
-
-			fmt.Printf("-----------------%+v\n", string(buf[:numBytes]))
 
 			logs <- buf[:numBytes]
 		}
