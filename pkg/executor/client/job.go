@@ -36,11 +36,6 @@ func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
 	events = make(chan ResultEvent)
 
 	go func() {
-		c.Logs(id)
-	}()
-
-	go func() {
-		// TODO c.Client.TailPodLogs(id)
 		ticker := time.NewTicker(WatchInterval)
 		for range ticker.C {
 			result, err := c.Get(id)
