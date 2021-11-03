@@ -424,3 +424,31 @@ func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 
 	return execution
 }
+
+// GetArtifacts returns list of files in the given bucket
+func (s testkubeAPI) ListArtifacts() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		executionID := c.Params("executionID")
+
+		files, err := s.Storage.ListFiles(executionID)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		return c.JSON(files)
+	}
+}
+
+func (s testkubeAPI) GetArtifact() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		executionID := c.Params("executionID")
+		fileName := c.Params("filename")
+
+		file, err := s.Storage.DownloadFile(executionID, fileName)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		return c.JSON(file)
+	}
+}

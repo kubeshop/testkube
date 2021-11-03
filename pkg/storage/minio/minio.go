@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -77,14 +78,14 @@ func (c *Client) ListBuckets() ([]string, error) {
 	return toReturn, nil
 }
 
-func (c *Client) ListFiles(bucket string) ([]string, error) {
-	toReturn := []string{}
+func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
+	toReturn := []testkube.Artifact{}
 	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{}) {
 		if obj.Err != nil {
 			fmt.Println(obj.Err)
 			return nil, obj.Err
 		}
-		toReturn = append(toReturn, obj.Key)
+		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
 	}
 
 	return toReturn, nil
@@ -118,25 +119,15 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	return nil
 }
 
-func (c *Client) DownloadFile(bucket, file string) error {
+func (c *Client) DownloadFile(bucket, file string) ([]byte, error) {
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return err
-	}
-	defer reader.Close()
-	if localFile, err := os.Create(file); err != nil {
-		return err
-	} else {
-		if stat, err := reader.Stat(); err != nil {
-			return err
-		} else {
-			if _, err := io.CopyN(localFile, reader, stat.Size); err != nil {
-				return err
-			}
-		}
+		return nil, err
 	}
 
-	return nil
+	defer reader.Close()
+
+	return io.ReadAll(reader)
 }
 
 func (c *Client) ScrapeArtefacts(id, directory string) error {
