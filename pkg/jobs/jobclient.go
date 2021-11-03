@@ -44,6 +44,8 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
+// LaunchK8sJob launches new job and run executor of given type
+// TODO consider moving storage based operation up in hierarchy
 func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -72,6 +74,11 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func() {
+				// save stop time
+				defer func() {
+					execution.Stop()
+					repo.EndExecution(ctx, execution.Id, execution.EndTime)
+				}()
 				// wait for complete
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					c.Log.Errorw("poll immediate error", "error", err)
@@ -130,12 +137,12 @@ func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == id {
-			c.Log.Infow("Waiting for pod to be ready")
+			c.Log.Debug("Waiting for pod to be ready")
 			if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				c.Log.Errorw("poll immediate error when tailing logs", "error", err)
 				return
 			}
-			c.Log.Infow("Tailing pod logs")
+			c.Log.Debug("Tailing pod logs")
 			return c.TailPodLogs(ctx, pod.Name)
 		}
 	}

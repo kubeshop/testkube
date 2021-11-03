@@ -1,6 +1,8 @@
 package testkube
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -75,4 +77,26 @@ func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
 func (e Execution) Err(err error) Execution {
 	e.ExecutionResult.Err(err)
 	return e
+}
+func (e *Execution) Start() {
+	e.StartTime = time.Now()
+}
+
+func (e *Execution) Stop() {
+	e.EndTime = time.Now()
+}
+func (e *Execution) Duration() time.Duration {
+
+	end := e.EndTime
+	start := e.StartTime
+
+	if start.UnixNano() <= 0 && end.UnixNano() <= 0 {
+		return time.Duration(0)
+	}
+
+	if end.UnixNano() <= 0 {
+		end = time.Now()
+	}
+
+	return end.Sub(e.StartTime)
 }

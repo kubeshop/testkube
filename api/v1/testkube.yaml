@@ -604,6 +604,14 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        startTime:
+          type: string
+          description: 'test start time'
+          format: date-time
+        endTime:
+          type: string
+          description: 'test end time'
+          format: date-time
         executionResult:
           required: true
           description: result get from executor
@@ -675,14 +683,6 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ExecutionStatus'
-        startTime:
-          type: string
-          description: 'test start time'
-          format: date-time
-        endTime:
-          type: string
-          description: 'test end time'
-          format: date-time
         output:
           type: string
           description: 'RAW Script execution output, depends of reporter used in particular tool'

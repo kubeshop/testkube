@@ -202,6 +202,12 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 
 		// call executor rest or job based and update execution object after queueing execution
 		s.Log.Infow("calling executor with options", "options", options.Request)
+		execution.Start()
+		err = s.Repository.StartExecution(ctx, execution.Id, execution.StartTime)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
+		}
+
 		result, err := s.Executor.Execute(execution, options)
 
 		if uerr := s.Repository.UpdateResult(ctx, execution.Id, result); uerr != nil {
@@ -305,16 +311,16 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 	addedToResultCount := 0
 	filteredCount := 0
 
-	for _, s := range executions {
+	for _, execution := range executions {
 
 		// TODO move it to mapper with valid error handling
 		// it could kill api server with panic in case of empty
 		// Execution result - for now omit failed result
-		if s.ExecutionResult == nil || s.ExecutionResult.Status == nil {
+		if execution.ExecutionResult == nil || execution.ExecutionResult.Status == nil {
 			continue
 		}
 
-		switch *s.ExecutionResult.Status {
+		switch *execution.ExecutionResult.Status {
 		case testkube.QUEUED_ExecutionStatus:
 			totals.Queued++
 		case testkube.SUCCESS_ExecutionStatus:
@@ -325,13 +331,13 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			totals.Pending++
 		}
 
-		isPassingStatusFilter := (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter)
-		isPassingDateFilter := dFilter.IsPassing(s.ExecutionResult.StartTime)
+		isPassingStatusFilter := (statusFilter == "" || string(*execution.ExecutionResult.Status) == statusFilter)
+		isPassingDateFilter := dFilter.IsPassing(execution.StartTime)
 
 		if isPassingDateFilter && isPassingStatusFilter {
 			filterTotals.Results++
 
-			switch *s.ExecutionResult.Status {
+			switch *execution.ExecutionResult.Status {
 			case testkube.QUEUED_ExecutionStatus:
 				filterTotals.Queued++
 			case testkube.SUCCESS_ExecutionStatus:
@@ -345,13 +351,13 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			if addedToResultCount < pageSize {
 				if filteredCount == page*pageSize {
 					executionResults[addedToResultCount] = testkube.ExecutionSummary{
-						Id:         s.Id,
-						Name:       s.Name,
-						ScriptName: s.ScriptName,
-						ScriptType: s.ScriptType,
-						Status:     s.ExecutionResult.Status,
-						StartTime:  s.ExecutionResult.StartTime,
-						EndTime:    s.ExecutionResult.EndTime,
+						Id:         execution.Id,
+						Name:       execution.Name,
+						ScriptName: execution.ScriptName,
+						ScriptType: execution.ScriptType,
+						Status:     execution.ExecutionResult.Status,
+						StartTime:  execution.StartTime,
+						EndTime:    execution.EndTime,
 					}
 					addedToResultCount++
 				} else {
