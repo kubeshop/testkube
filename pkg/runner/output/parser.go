@@ -48,6 +48,9 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 
 		switch log.Type {
 		case TypeResult:
+			if log.Result == nil {
+				return result, logs, fmt.Errorf("got result output, but result content is nil")
+			}
 			result = *log.Result
 
 		case TypeError:
