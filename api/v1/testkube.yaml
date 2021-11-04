@@ -2,7 +2,7 @@ openapi: 3.0.1
 
 info:
   title: TestKube API
-  description: 'TestKube provides a Kubernetes-native framework for test definition, execution and results'
+  description: "TestKube provides a Kubernetes-native framework for test definition, execution and results"
   contact:
     email: testkube@kubeshop.io
   license:
@@ -11,16 +11,16 @@ info:
   version: 1.0.0
 
 externalDocs:
-  description: 'Find out more about testkube'
+  description: "Find out more about testkube"
   url: http://testkube.io
 
 tags:
   - name: api
-    description: 'TestKube API operations'
+    description: "TestKube API operations"
   - name: scripts
-    description: 'Script operations'
+    description: "Script operations"
   - name: executions
-    description: 'Execution operations'
+    description: "Execution operations"
 
 paths:
   /executions:
@@ -28,30 +28,30 @@ paths:
       tags:
         - executions
         - api
-      summary: 'Get all script executions'
-      description: 'Returns array of scripts executions'
+      summary: "Get all script executions"
+      description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
-        - $ref: '#/components/parameters/ExecutionsPageSize'
-        - $ref: '#/components/parameters/ExecutionsPageIndex'
-        - $ref: '#/components/parameters/ExecutionsStatusFilter'
-        - $ref: '#/components/parameters/ExecutionsStartDateFilter'
-        - $ref: '#/components/parameters/ExecutionsEndDateFilter'
+        - $ref: "#/components/parameters/ExecutionsPageSize"
+        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
+        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExecutionsResult'
+                $ref: "#/components/schemas/ExecutionsResult"
         500:
-          description: 'problem with getting script executions from storage'
+          description: "problem with getting script executions from storage"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /executions/{executionID}:
     get:
@@ -65,8 +65,8 @@ paths:
       tags:
         - executions
         - api
-      summary: 'Get script execution by ID'
-      description: 'Returns execution with given executionID'
+      summary: "Get script execution by ID"
+      description: "Returns execution with given executionID"
       operationId: getExecutionByID
       responses:
         200:
@@ -74,47 +74,114 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: "#/components/schemas/Execution"
         500:
-          description: 'problem with getting script executions from storage'
+          description: "problem with getting script executions from storage"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
+
+  /executions/{id}/artifacts:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
+      tags:
+        - artifacts
+        - executions
+        - api
+      summary: "Get execution's artifacts by ID"
+      description: "Returns artifacts of the given executionID"
+      operationId: getExecutionArtifacts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Artifact"
+        500:
+          description: "problem with getting execution's artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /executions/{id}/artifacts/{filename}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
+        - in: path # minio/[bucket_exec_id]/cypress/video/somevideo.avi
+          name: filename
+          schema:
+            type: string
+          required: true
+          description: name of the file in the bucket
+      operationId: downloadFile
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: "problem with getting artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 
   /scripts:
     get:
       tags:
         - scripts
         - api
-      summary: 'List scripts'
-      description: 'filters will be added later'
+      summary: "List scripts"
+      description: "filters will be added later"
       operationId: listScripts
       responses:
         200:
-          description: 'successful operation'
+          description: "successful operation"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Script'
+                  $ref: "#/components/schemas/Script"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     post:
       tags:
         - scripts
         - api
-      summary: 'create new script'
-      description: 'create new script based on script content or git based data'
+      summary: "create new script"
+      description: "create new script based on script content or git based data"
       operationId: createScript
       requestBody:
         description: script details body
@@ -122,26 +189,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScriptCreateRequest'
+              $ref: "#/components/schemas/ScriptCreateRequest"
       responses:
         200:
-          description: 'successful operation'
+          description: "successful operation"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Script'
+                  $ref: "#/components/schemas/Script"
         400:
-          description: 'problem with script definition - probably some bad input occurs (invalid JSON body or similar)'
+          description: "problem with script definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: 'problem with communicating with kubernetes cluster'
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -179,18 +246,18 @@ paths:
             type: string
           required: true
           description: ID of the script
-      summary: 'Get script'
-      description: 'Gets the specified script'
+      summary: "Get script"
+      description: "Gets the specified script"
       operationId: getScript
       responses:
         200:
-          description: 'successful operation'
+          description: "successful operation"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Script'
+                $ref: "#/components/schemas/Script"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -242,8 +309,8 @@ paths:
         - api
         - scripts
         - executions
-      summary: 'Starts new script execution'
-      description: 'New script execution returns new execution details on successful execution start'
+      summary: "Starts new script execution"
+      description: "New script execution returns new execution details on successful execution start"
       operationId: executeScript
       requestBody:
         description: body passed to configure execution
@@ -251,7 +318,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExecutionRequest'
+              $ref: "#/components/schemas/ExecutionRequest"
       responses:
         201:
           description: successful operation
@@ -260,31 +327,31 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/ExecutionResult'
+                  $ref: "#/components/schemas/ExecutionResult"
         400:
-          description: 'problem with request body'
+          description: "problem with request body"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: 'problem with communicating with kubernetes cluster'
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
         500:
-          description: 'problem with script execution'
+          description: "problem with script execution"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
     get:
       parameters:
@@ -294,17 +361,17 @@ paths:
             type: string
           required: true
           description: ID of the script
-        - $ref: '#/components/parameters/ExecutionsPageSize'
-        - $ref: '#/components/parameters/ExecutionsPageIndex'
-        - $ref: '#/components/parameters/ExecutionsStatusFilter'
-        - $ref: '#/components/parameters/ExecutionsStartDateFilter'
-        - $ref: '#/components/parameters/ExecutionsEndDateFilter'
+        - $ref: "#/components/parameters/ExecutionsPageSize"
+        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
+        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
       tags:
         - api
         - scripts
         - executions
-      summary: 'Get all script executions'
-      description: 'Returns array of all available script executions'
+      summary: "Get all script executions"
+      description: "Returns array of all available script executions"
       operationId: listExecutions
       responses:
         200:
@@ -312,15 +379,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExecutionsResult'
+                $ref: "#/components/schemas/ExecutionsResult"
         500:
-          description: 'problem with getting script executions from storage'
+          description: "problem with getting script executions from storage"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /scripts/{id}/executions/{executionID}:
     get:
@@ -341,8 +408,8 @@ paths:
         - api
         - scripts
         - executions
-      summary: 'Get script execution'
-      description: 'Returns execution with given executionID'
+      summary: "Get script execution"
+      description: "Returns execution with given executionID"
       operationId: getExecution
       responses:
         200:
@@ -350,9 +417,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution'
+                $ref: "#/components/schemas/Execution"
         500:
-          description: 'problem with getting script executions from storage'
+          description: "problem with getting script executions from storage"
           content:
             application/problem+json:
               schema:
@@ -377,8 +444,8 @@ paths:
         - api
         - scripts
         - executions
-      summary: 'Aborts execution'
-      description: 'Aborts execution and returns execution details'
+      summary: "Aborts execution"
+      description: "Aborts execution and returns execution details"
       operationId: abortExecution
       responses:
         501:
@@ -389,14 +456,13 @@ paths:
                 type: object
                 items:
                   $ref: '#/components/schemas/ExecutionResult'
-                  
   /executors:
     get:
       tags:
         - executor
         - api
-      summary: 'List executors'
-      description: 'List executors available in cluster'
+      summary: "List executors"
+      description: "List executors available in cluster"
       operationId: listExecutors
       parameters:
         - in: query
@@ -407,27 +473,27 @@ paths:
           required: false
       responses:
         200:
-          description: 'successful operation'
+          description: "successful operation"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Executor'
+                  $ref: "#/components/schemas/Executor"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     post:
       tags:
         - scripts
         - api
-      summary: 'create new executor'
-      description: 'create new executor based on params passed in request'
+      summary: "create new executor"
+      description: "create new executor based on params passed in request"
       operationId: createExecutor
       requestBody:
         description: executor request body data
@@ -435,35 +501,35 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExecutorCreateRequest'
+              $ref: "#/components/schemas/ExecutorCreateRequest"
       responses:
         200:
-          description: 'successful operation'
+          description: "successful operation"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExecutorDetails'
+                  $ref: "#/components/schemas/ExecutorDetails"
         400:
-          description: 'problem with executor definition - probably some bad input occurs (invalid JSON body or similar)'
+          description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: 'problem with communicating with kubernetes cluster'
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /executors/{name}:
-    delete: 
+    delete:
       parameters:
         - in: path
           name: name
@@ -480,20 +546,20 @@ paths:
       tags:
         - api
         - executor
-      summary: 'Delete executor' 
-      description: 'Deletes executor by its name'
+      summary: "Delete executor"
+      description: "Deletes executor by its name"
       operationId: deleteExecutor
       responses:
         204:
-          description: executor deleted successfuly 
+          description: executor deleted successfuly
         502:
-          description: 'problem with communicating with kubernetes cluster'
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
     get:
       parameters:
@@ -512,8 +578,8 @@ paths:
       tags:
         - api
         - executor
-      summary: 'Get executor details'
-      description: 'Returns executors data with executions passed to executor'
+      summary: "Get executor details"
+      description: "Returns executors data with executions passed to executor"
       operationId: getExecutor
       responses:
         200:
@@ -523,28 +589,26 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/ExecutorDetails'
+                  $ref: "#/components/schemas/ExecutorDetails"
         502:
-          description: 'problem with communicating with kubernetes cluster'
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
         500:
-          description: 'problem with getting executor data'
+          description: "problem with getting executor data"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
-
+                  $ref: "#/components/schemas/Problem"
 
 components:
   schemas:
-
     Script:
       type: object
       properties:
@@ -579,10 +643,10 @@ components:
           description: script type e.g. postman/collection
         name:
           type: string
-          description: 'execution name'
+          description: "execution name"
         envs:
           type: object
-          description: 'execution envs passed to executor'
+          description: "execution envs passed to executor"
           additionalProperties:
             type: string
           example:
@@ -592,10 +656,10 @@ components:
           type: string
           description: script metadata content
         repository:
-          $ref: '#/components/schemas/Repository'
+          $ref: "#/components/schemas/Repository"
         params:
           type: object
-          description: 'execution params passed to executor'
+          description: "execution params passed to executor"
           additionalProperties:
             type: string
           example:
@@ -612,8 +676,18 @@ components:
         executionResult:
           required: true
           description: result get from executor
-          $ref: '#/components/schemas/ExecutionResult'
+          $ref: "#/components/schemas/ExecutionResult"
 
+    Artifact:
+      type: object
+      description: API server artifact
+      properties:
+        name:
+          type: string # https://api-server/exec_id/subdirectory/file_name
+          description: artifact file path
+        size:
+          type: integer
+          description: file size in bytes
     ExecutionsResult:
       description: the result for a page of executions
       type: object
@@ -622,13 +696,13 @@ components:
         - results
       properties:
         totals:
-          $ref: '#/components/schemas/ExecutionsTotals'
+          $ref: "#/components/schemas/ExecutionsTotals"
         filtered:
-          $ref: '#/components/schemas/ExecutionsTotals'
+          $ref: "#/components/schemas/ExecutionsTotals"
         results:
           type: array
           items:
-            $ref: '#/components/schemas/ExecutionSummary'
+            $ref: "#/components/schemas/ExecutionSummary"
 
     ExecutionSummary:
       description: execution summary
@@ -654,14 +728,14 @@ components:
           type: string
           description: the type of script for this execution
         status:
-          $ref: '#/components/schemas/ExecutionStatus'
+          $ref: "#/components/schemas/ExecutionStatus"
         startTime:
           type: string
-          description: 'test execution start time'
+          description: "test execution start time"
           format: date-time
         endTime:
           type: string
-          description: 'test execution end time'
+          description: "test execution end time"
           format: date-time
 
     ExecutionStatus:
@@ -682,21 +756,21 @@ components:
           $ref: '#/components/schemas/ExecutionStatus'
         output:
           type: string
-          description: 'RAW Script execution output, depends of reporter used in particular tool'
+          description: "RAW Script execution output, depends of reporter used in particular tool"
         outputType:
           type: string
-          description: 'output type depends of reporter used in partucular tool'
+          description: "output type depends of reporter used in partucular tool"
           enum:
             - text/plain
             - application/junit+xml
             - application/json
         errorMessage:
           type: string
-          description: 'error message when status is error, separate to output as output can be partial in case of error'
+          description: "error message when status is error, separate to output as output can be partial in case of error"
         steps:
           type: array
           items:
-            $ref: '#/components/schemas/ExecutionStepResult'
+            $ref: "#/components/schemas/ExecutionStepResult"
           description: execution steps (for collection of requests)
 
     ExecutionStepResult:
@@ -715,11 +789,11 @@ components:
         status:
           type: string
           description: execution step status
-          enum: [ success, error ]
+          enum: [success, error]
         assertionResults:
           type: array
           items:
-            $ref: '#/components/schemas/AssertionResult'
+            $ref: "#/components/schemas/AssertionResult"
 
     AssertionResult:
       description: execution result data
@@ -729,7 +803,7 @@ components:
           type: string
         status:
           type: string
-          enum: [ success, error ]
+          enum: [success, error]
         errorMessage:
           type: string
           nullable: true
@@ -773,14 +847,12 @@ components:
           type: string
           description: build commit
 
-
-
     #
     # Requests
     #
 
     ExecutorStartRequest:
-      description: scripts execution request body when calling new execution request 
+      description: scripts execution request body when calling new execution request
       type: object
       properties:
         id:
@@ -797,7 +869,7 @@ components:
           example: testing with 1000 users
         params:
           type: object
-          description: 'execution params passed to executor'
+          description: "execution params passed to executor"
           additionalProperties:
             type: string
           example:
@@ -816,7 +888,7 @@ components:
             - content
             - git
         repository:
-          $ref: '#/components/schemas/Repository'
+          $ref: "#/components/schemas/Repository"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -855,7 +927,7 @@ components:
           example: testkube
         params:
           type: object
-          description: 'execution params passed to executor'
+          description: "execution params passed to executor"
           additionalProperties:
             type: string
           example:
@@ -883,12 +955,12 @@ components:
           description: >
             script content type can be: 
             - direct content - created from file, 
-            - git repo directory checkout in case when test is some kind of project or have more than one file, 
+            - git repo directory checkout in case when test is some kind of project or have more than one file,
           enum:
             - content
             - git
         repository:
-          $ref: '#/components/schemas/Repository'
+          $ref: "#/components/schemas/Repository"
         content:
           type: string
           description: script content - executor specific e.g. fo postman-collections executor
@@ -910,7 +982,6 @@ components:
                   "response": []
                 }
 
-
     ExecutorCreateRequest:
       description: executor create request body
       type: object
@@ -918,8 +989,8 @@ components:
         - name
         - namespace
         - types
-      allOf:     # Combines the BasicErrorModel and the inline model
-        - $ref: '#/components/schemas/Executor'
+      allOf: # Combines the BasicErrorModel and the inline model
+        - $ref: "#/components/schemas/Executor"
         - type: object
           required:
             - rootCause
@@ -933,16 +1004,16 @@ components:
               description: Kubernetes namespace
               example: testkube
 
-
-    # Copied from CRD spec 
+    # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
     # TODO we need to sync those in some nice way
-    Executor: 
+    Executor:
       description: CRD based executor data
       type: object
       properties:
         executorType:
-          description: ExecutorType one of "rest" for rest openapi based executors
+          description:
+            ExecutorType one of "rest" for rest openapi based executors
             or "job" which will be default runners for testkube soon
           type: string
         image:
@@ -965,21 +1036,19 @@ components:
           description: VolumeQuantity for kube-job PersistentVolume
           type: string
 
-    ExecutorDetails: 
+    ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
       type: object
       properties:
-        name: 
+        name:
           description: Executor name
           type: string
         executor:
-          $ref: '#/components/schemas/Executor'
+          $ref: "#/components/schemas/Executor"
         executions:
-          $ref: '#/components/schemas/ExecutionsResult'
+          $ref: "#/components/schemas/ExecutionsResult"
 
-
-
-    # 
+    #
     # Errors
     #
 
@@ -1033,7 +1102,7 @@ components:
       in: query
       name: status
       schema:
-        $ref: '#/components/schemas/ExecutionStatus'
+        $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter
       required: false
     ExecutionsStartDateFilter:
