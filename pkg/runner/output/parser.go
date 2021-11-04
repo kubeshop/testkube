@@ -48,7 +48,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 
 		switch log.Type {
 		case TypeResult:
-			result = log.Result
+			result = *log.Result
 
 		case TypeError:
 			result = testkube.ExecutionResult{ErrorMessage: log.Message}

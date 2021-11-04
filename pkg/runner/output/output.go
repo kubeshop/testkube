@@ -37,15 +37,15 @@ func NewOutputError(err error) Output {
 func NewOutputResult(result testkube.ExecutionResult) Output {
 	return Output{
 		Type:   TypeResult,
-		Result: result,
+		Result: &result,
 	}
 }
 
 type Output struct {
-	Type    string                   `json:"type,omitempty"`
-	Message string                   `json:"message,omitempty"`
-	Content interface{}              `json:"content,omitempty"`
-	Result  testkube.ExecutionResult `json:"result,omitempty"`
+	Type    string                    `json:"type,omitempty"`
+	Message string                    `json:"message,omitempty"`
+	Content interface{}               `json:"content,omitempty"`
+	Result  *testkube.ExecutionResult `json:"result,omitempty"`
 }
 
 func PrintError(err error) {
