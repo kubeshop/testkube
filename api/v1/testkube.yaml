@@ -138,9 +138,10 @@ paths:
         200:
           description: successful operation
           content:
-            application/json:
+            application/octet-stream:
               schema:
-                $ref: "#/components/schemas/Artifact"
+                type: string
+                format: binary
         500:
           description: "problem with getting script executions from storage"
           content:
