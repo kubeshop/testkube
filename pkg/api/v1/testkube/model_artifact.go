@@ -9,15 +9,10 @@
  */
 package testkube
 
-import (
-	"os"
-)
-
 // API server artifact
 type Artifact struct {
 	// artifact file path
 	Name string `json:"name,omitempty"`
 	// file size in bytes
-	Size int32     `json:"size,omitempty"`
-	Data **os.File `json:"data,omitempty"`
+	Size int32 `json:"size,omitempty"`
 }

@@ -640,10 +640,6 @@ components:
         size:
           type: integer
           description: file size in bytes
-        data:
-          type: string
-          format: binary
-
     ExecutionsResult:
       description: the result for a page of executions
       type: object
