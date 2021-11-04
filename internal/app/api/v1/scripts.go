@@ -445,10 +445,11 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
 
-		file, err := s.Storage.DownloadFile(executionID, fileName)
+		file, size, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
-		return c.JSON(file)
+
+		return c.SendStream(file, int(size))
 	}
 }

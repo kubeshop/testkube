@@ -119,15 +119,16 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	return nil
 }
 
-func (c *Client) DownloadFile(bucket, file string) ([]byte, error) {
+func (c *Client) DownloadFile(bucket, file string) (io.Reader, int64, error) {
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	defer reader.Close()
+	objectStat, err := reader.Stat()
 
-	return io.ReadAll(reader)
+	return reader, objectStat.Size, nil
 }
 
 func (c *Client) ScrapeArtefacts(id, directory string) error {

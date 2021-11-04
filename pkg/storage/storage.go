@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"io"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -10,5 +12,5 @@ type Client interface {
 	ListBuckets() ([]string, error)
 	ListFiles(bucket string) ([]testkube.Artifact, error)
 	SaveFile(bucket, filePath string) error
-	DownloadFile(bucket, file string) ([]byte, error)
+	DownloadFile(bucket, file string) (io.Reader, int64, error)
 }
