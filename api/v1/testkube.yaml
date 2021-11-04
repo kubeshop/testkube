@@ -98,7 +98,7 @@ paths:
         - executions
         - api
       summary: "Get execution's artifacts by ID"
-      description: "Returns arifacts of the given executionID"
+      description: "Returns artifacts of the given executionID"
       operationId: getExecutionArtifacts
       responses:
         200:
@@ -143,7 +143,7 @@ paths:
                 type: string
                 format: binary
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting artifacts from storage"
           content:
             application/problem+json:
               schema:
