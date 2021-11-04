@@ -200,30 +200,29 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
 		}
 
-		// get executor
-		executor, err := s.Executors.Get(options.ScriptSpec.Type_)
+		// call executor rest or job based and update execution object after queueing execution
+		s.Log.Infow("calling executor with options", "options", options.Request)
+		execution.Start()
+		err = s.Repository.StartExecution(ctx, execution.Id, execution.StartTime)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
 		}
 
-		// call executor rest or job based and update execution object after queueing execution
-		s.Log.Infow("calling executor with options", "options", options)
-
-		result, err := executor.Execute(options)
+		result, err := s.Executor.Execute(execution, options)
 
 		if uerr := s.Repository.UpdateResult(ctx, execution.Id, result); uerr != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
 		}
 
-		// set execution from one created
+		// set execution result to one created
 		execution.ExecutionResult = &result
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
 		}
 
 		// watch for changes run listener in async mode
-		s.Log.Infow("running execution of script", "execution", execution, "request", request)
-		go s.ExecutionListener(ctx, execution, executor)
+		s.Log.Infow("running execution of script", "executionId", execution.Id, "request", request)
+		go s.ExecutionListener(ctx, execution, s.Executor)
 
 		// metrics increase
 		s.Metrics.IncExecution(execution)
@@ -235,25 +234,15 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.Execution, executor client.ExecutorClient) {
-	for event := range executor.Watch(execution.Id) {
-		result := event.Result
-		l := s.Log.With("executionID", execution.Id, "duration", result.Duration().String(), "scriptName", execution.ScriptName)
-		l.Infow("got result event", "result", result)
-
-		// if something changed during execution
-		if event.Error != nil || result.Status != execution.ExecutionResult.Status || result.Output != execution.ExecutionResult.Output {
-			l.Infow("watch - saving script execution", "oldStatus", execution.ExecutionResult.Status, "newStatus", result.Status, "result", result)
-			l.Debugw("watch - saving script execution - debug", "execution", execution)
-
-			err := s.Repository.UpdateResult(ctx, execution.Id, result)
-			if err != nil {
-				s.Log.Errorw("update execution error", err.Error())
-			}
-		}
+func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.Execution, executor client.Executor) {
+	logs, err := executor.Logs(execution.Id)
+	if err != nil {
+		s.Log.Errorw("getting logs error", "error", err)
+		return
 	}
-
-	s.Log.Infow("watch execution completed", "executionID", execution.Id, "status", execution.ExecutionResult.Status)
+	for out := range logs {
+		fmt.Printf("%v\n", out)
+	}
 }
 
 // ListExecutions returns array of available script executions
@@ -322,16 +311,16 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 	addedToResultCount := 0
 	filteredCount := 0
 
-	for _, s := range executions {
+	for _, execution := range executions {
 
 		// TODO move it to mapper with valid error handling
 		// it could kill api server with panic in case of empty
 		// Execution result - for now omit failed result
-		if s.ExecutionResult == nil || s.ExecutionResult.Status == nil {
+		if execution.ExecutionResult == nil || execution.ExecutionResult.Status == nil {
 			continue
 		}
 
-		switch *s.ExecutionResult.Status {
+		switch *execution.ExecutionResult.Status {
 		case testkube.QUEUED_ExecutionStatus:
 			totals.Queued++
 		case testkube.SUCCESS_ExecutionStatus:
@@ -342,13 +331,13 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			totals.Pending++
 		}
 
-		isPassingStatusFilter := (statusFilter == "" || string(*s.ExecutionResult.Status) == statusFilter)
-		isPassingDateFilter := dFilter.IsPassing(s.ExecutionResult.StartTime)
+		isPassingStatusFilter := (statusFilter == "" || string(*execution.ExecutionResult.Status) == statusFilter)
+		isPassingDateFilter := dFilter.IsPassing(execution.StartTime)
 
 		if isPassingDateFilter && isPassingStatusFilter {
 			filterTotals.Results++
 
-			switch *s.ExecutionResult.Status {
+			switch *execution.ExecutionResult.Status {
 			case testkube.QUEUED_ExecutionStatus:
 				filterTotals.Queued++
 			case testkube.SUCCESS_ExecutionStatus:
@@ -362,13 +351,13 @@ func createListExecutionsResult(executions []testkube.Execution, statusFilter st
 			if addedToResultCount < pageSize {
 				if filteredCount == page*pageSize {
 					executionResults[addedToResultCount] = testkube.ExecutionSummary{
-						Id:         s.Id,
-						Name:       s.Name,
-						ScriptName: s.ScriptName,
-						ScriptType: s.ScriptType,
-						Status:     s.ExecutionResult.Status,
-						StartTime:  s.ExecutionResult.StartTime,
-						EndTime:    s.ExecutionResult.EndTime,
+						Id:         execution.Id,
+						Name:       execution.Name,
+						ScriptName: execution.ScriptName,
+						ScriptType: execution.ScriptType,
+						Status:     execution.ExecutionResult.Status,
+						StartTime:  execution.StartTime,
+						EndTime:    execution.EndTime,
 					}
 					addedToResultCount++
 				} else {
@@ -413,7 +402,8 @@ func (s testkubeAPI) GetExecution() fiber.Handler {
 			}
 		}
 
-		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID, "execution", execution)
+		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID)
+		s.Log.Debugw("get script execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
 	}
@@ -422,19 +412,7 @@ func (s testkubeAPI) GetExecution() fiber.Handler {
 func (s testkubeAPI) AbortExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
-
-		// get script execution by id to get executor type
-		execution, err := s.Repository.Get(c.Context(), id)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get execution id:%s, error:%w", id, err))
-		}
-
-		executor, err := s.Executors.Get(execution.ScriptType)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get executor: %w", err))
-		}
-
-		return executor.Abort(id)
+		return s.Executor.Abort(id)
 	}
 }
 
@@ -453,9 +431,11 @@ func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Name,
 		options.ScriptSpec.Type_,
 		options.ScriptSpec.Content,
-		testkube.NewResult(),
+		testkube.NewQueuedExecutionResult(),
 		options.Request.Params,
 	)
+
+	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)
 
 	return execution
 }

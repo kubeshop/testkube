@@ -21,15 +21,13 @@ func TestMapToSummary(t *testing.T) {
 		assert.Equal(t, result[i].ScriptName, executions[i].ScriptName)
 		assert.Equal(t, result[i].ScriptType, executions[i].ScriptType)
 		assert.Equal(t, result[i].Status, executions[i].ExecutionResult.Status)
-		assert.Equal(t, result[i].StartTime, executions[i].ExecutionResult.StartTime)
-		assert.Equal(t, result[i].EndTime, executions[i].ExecutionResult.EndTime)
+		assert.Equal(t, result[i].StartTime, executions[i].StartTime)
+		assert.Equal(t, result[i].EndTime, executions[i].EndTime)
 	}
 }
 
 func getExecutions() testkube.Executions {
 	ex1 := new(testkube.ExecutionResult)
-	ex1.Start()
-	ex1.Stop()
 
 	execution1 := testkube.NewExecution(
 		"script1",
@@ -39,9 +37,9 @@ func getExecutions() testkube.Executions {
 		*ex1,
 		map[string]string{"p": "v1"},
 	)
+	execution1.Start()
+	execution1.Stop()
 	ex2 := new(testkube.ExecutionResult)
-	ex2.Start()
-	ex2.Stop()
 
 	execution2 := testkube.NewExecution(
 		"script1",
@@ -51,6 +49,8 @@ func getExecutions() testkube.Executions {
 		*ex2,
 		map[string]string{"p": "v2"},
 	)
+	execution2.Start()
+	execution2.Stop()
 
 	return testkube.Executions{
 		execution1,

@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
@@ -65,5 +66,17 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
+	return
+}
+
+// StartExecution updates execution start time
+func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTime time.Time) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"starttime": startTime}})
+	return
+}
+
+// EndExecution updates execution end time
+func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime time.Time) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"endtime": endTime}})
 	return
 }
