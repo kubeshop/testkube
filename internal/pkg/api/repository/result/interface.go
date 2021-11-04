@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -21,4 +22,8 @@ type Repository interface {
 	Update(ctx context.Context, result testkube.Execution) error
 	// UpdateExecution updates result in execution
 	UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error
+	// StartExecution updates execution start time
+	StartExecution(ctx context.Context, id string, startTime time.Time) error
+	// EndExecution updates execution end time
+	EndExecution(ctx context.Context, id string, endTime time.Time) error
 }

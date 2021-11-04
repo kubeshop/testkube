@@ -46,7 +46,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 				if execution.ExecutionResult.IsCompleted() {
 					ui.Info("\nGetting results")
 					render.Render(execution, os.Stdout)
-					ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
+					ui.Warn("Script execution completed in", execution.Duration().String())
 					return
 				}
 			}

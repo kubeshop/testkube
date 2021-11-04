@@ -20,13 +20,18 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
+	executor, err := client.NewJobExecutor(repository)
+	if err != nil {
+		panic(err)
+	}
+
 	s := testkubeAPI{
 		HTTPServer:      server.NewServer(httpConfig),
 		Repository:      repository,
+		Executor:        executor,
 		ScriptsClient:   scriptsClient,
 		ExecutorsClient: executorsClient,
 		Metrics:         NewMetrics(),
-		Executors:       client.NewExecutors(executorsClient, repository),
 	}
 
 	s.Init()
@@ -36,7 +41,7 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 type testkubeAPI struct {
 	server.HTTPServer
 	Repository      result.Repository
-	Executors       client.Executors
+	Executor        client.Executor
 	ScriptsClient   *scriptscr.ScriptsClient
 	ExecutorsClient *executorscr.ExecutorsClient
 	Metrics         Metrics
@@ -73,12 +78,15 @@ func (s testkubeAPI) Init() {
 	scripts := s.Routes.Group("/scripts")
 
 	scripts.Get("/", s.ListScripts())
-	scripts.Get("/:id", s.GetScript())
 	scripts.Post("/", s.CreateScript())
+	scripts.Delete("/", s.DeleteScripts())
+
+	scripts.Get("/:id", s.GetScript())
+	scripts.Delete("/:id", s.DeleteScript())
 
 	scripts.Post("/:id/executions", s.ExecuteScript())
-	scripts.Post("/:id/executions/:executionID/abort", s.AbortExecution())
 
 	scripts.Get("/:id/executions", s.ListExecutions())
 	scripts.Get("/:id/executions/:executionID", s.GetExecution())
+	scripts.Delete("/:id/executions/:executionID", s.AbortExecution())
 }

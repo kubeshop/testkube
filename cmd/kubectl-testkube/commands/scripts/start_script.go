@@ -49,7 +49,7 @@ func NewStartScriptCmd() *cobra.Command {
 
 			case result.IsSuccesful():
 				fmt.Println(result.Output)
-				duration := result.EndTime.Sub(result.StartTime)
+				duration := execution.EndTime.Sub(execution.StartTime)
 				ui.Success("Script execution completed with sucess in " + duration.String())
 
 			case result.IsFailed():
@@ -78,7 +78,7 @@ func NewStartScriptCmd() *cobra.Command {
 							"Use following command to get script execution details",
 							"kubectl testkube scripts execution "+execution.Id,
 						)
-						ui.Warn("Script execution completed in", execution.ExecutionResult.Duration().String())
+						ui.Warn("Script execution completed in", execution.Duration().String())
 						return
 					}
 				}

@@ -11,8 +11,8 @@ func MapToSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
 			ScriptName: s.ScriptName,
 			ScriptType: s.ScriptType,
 			Status:     s.ExecutionResult.Status,
-			StartTime:  s.ExecutionResult.StartTime,
-			EndTime:    s.ExecutionResult.EndTime,
+			StartTime:  s.StartTime,
+			EndTime:    s.EndTime,
 		}
 	}
 

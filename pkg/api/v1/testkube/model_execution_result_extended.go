@@ -1,27 +1,15 @@
 package testkube
 
-import (
-	"time"
-)
-
-func NewResult() ExecutionResult {
+func NewPendingExecutionResult() ExecutionResult {
 	return ExecutionResult{
-		Status: StatusPtr(QUEUED_ExecutionStatus),
+		Status: StatusPtr(PENDING_ExecutionStatus),
 	}
 }
 
-func NewQueuedResult() ExecutionResult {
+func NewQueuedExecutionResult() ExecutionResult {
 	return ExecutionResult{
 		Status: StatusPtr(QUEUED_ExecutionStatus),
 	}
-}
-
-func (e *ExecutionResult) Start() {
-	e.StartTime = time.Now()
-}
-
-func (e *ExecutionResult) Stop() {
-	e.EndTime = time.Now()
 }
 
 func (e *ExecutionResult) Success() {
@@ -52,21 +40,6 @@ func (e *ExecutionResult) IsFailed() bool {
 	return *e.Status == ERROR__ExecutionStatus
 }
 
-func (e *ExecutionResult) Duration() time.Duration {
-
-	end := e.EndTime
-	start := e.StartTime
-
-	if start.UnixNano() <= 0 && end.UnixNano() <= 0 {
-		return time.Duration(0)
-	}
-
-	if end.UnixNano() <= 0 {
-		end = time.Now()
-	}
-
-	return end.Sub(e.StartTime)
-}
 func (r *ExecutionResult) Err(err error) ExecutionResult {
 	r.ErrorMessage = err.Error()
 	return *r

@@ -214,7 +214,25 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"
+                  $ref: '#/components/schemas/Problem'
+    delete:
+      tags:
+        - scripts
+        - api
+      summary: 'delete scripts'
+      description: 'deletes all the scripts'
+      operationId: deleteScripts
+      responses:
+        204:
+          description: 'no content'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   /scripts/{id}:
     get:
@@ -245,7 +263,32 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"
+                  $ref: '#/components/schemas/Problem'
+    delete:
+      tags:
+        - scripts
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script
+      summary: 'delete script'
+      description: 'deletes a script'
+      operationId: deleteScript
+      responses:
+        204:
+          description: 'no content'
+        502:
+          description: 'problem with read information from kubernetes cluster'
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
 
   /scripts/{id}/executions:
     post:
@@ -382,10 +425,8 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"
-
-  /scripts/{id}/executions/{executionID}/abort:
-    post:
+                  $ref: '#/components/schemas/Problem'
+    delete:
       parameters:
         - in: path
           name: id
@@ -414,8 +455,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: "#/components/schemas/ExecutionResult"
-
+                  $ref: '#/components/schemas/ExecutionResult'
   /executors:
     get:
       tags:
@@ -625,6 +665,14 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        startTime:
+          type: string
+          description: 'test start time'
+          format: date-time
+        endTime:
+          type: string
+          description: 'test end time'
+          format: date-time
         executionResult:
           required: true
           description: result get from executor
@@ -705,15 +753,7 @@ components:
         - status
       properties:
         status:
-          $ref: "#/components/schemas/ExecutionStatus"
-        startTime:
-          type: string
-          description: "test start time"
-          format: date-time
-        endTime:
-          type: string
-          description: "test end time"
-          format: date-time
+          $ref: '#/components/schemas/ExecutionStatus'
         output:
           type: string
           description: "RAW Script execution output, depends of reporter used in particular tool"

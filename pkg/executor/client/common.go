@@ -10,9 +10,6 @@ import (
 
 const (
 	WatchInterval = time.Second
-
-	ExecutorTypeRest = "rest"
-	ExecutorTypeJob  = "job"
 )
 
 type ExecuteOptions struct {
