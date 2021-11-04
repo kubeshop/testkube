@@ -55,7 +55,6 @@ func NewStartScriptCmd() *cobra.Command {
 			case result.IsFailed():
 				fmt.Println(result.ErrorMessage)
 				ui.Errf("Script execution failed")
-
 			}
 
 			uiShellCommandBlock(execution.Id)
@@ -79,12 +78,19 @@ func NewStartScriptCmd() *cobra.Command {
 							"kubectl testkube scripts execution "+execution.Id,
 						)
 						ui.Warn("Script execution completed in", execution.Duration().String())
+
+						if execution.ExecutionResult.IsFailed() {
+							os.Exit(1)
+						}
 						return
 					}
 				}
 
 			}
 
+			if execution.ExecutionResult.IsFailed() {
+				os.Exit(1)
+			}
 		},
 	}
 
