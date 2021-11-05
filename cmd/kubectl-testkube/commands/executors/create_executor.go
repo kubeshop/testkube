@@ -39,7 +39,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 				VolumeQuantity:  volumeQuantity,
 			}
 
-			err = client.CreateExecutor(options)
+			_, err = client.CreateExecutor(options)
 			ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)
 
 			ui.Success("Executor created", name)
