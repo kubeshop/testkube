@@ -30,11 +30,12 @@ func (dFilter DateFilter) IsPassing(date time.Time) bool {
 	if !dFilter.IsStartValid {
 		return true
 	}
-	if dFilter.Start.Before(date) {
+	oneDay := 24 * time.Hour
+	if dFilter.Start.Before(date) || dFilter.Start.Equal(date.Truncate(oneDay)) {
 		if !dFilter.IsEndValid {
 			return true
 		}
-		if dFilter.End.After(date) {
+		if dFilter.End.After(date) || dFilter.End.Equal(date.Truncate(oneDay)) {
 			return true
 		}
 	}

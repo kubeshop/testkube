@@ -34,3 +34,11 @@ func TestIsPassingDateFilterWhenStartIsValidAndEndValidThenOnlyDatesBetweenAreVa
 	assertion.False(dFilter.IsPassing(time.Now().AddDate(0, 0, -15)), "Date filter should fail any value before start date")
 	assertion.False(dFilter.IsPassing(time.Now()), "Date filter should fail any value after start date")
 }
+
+func TestIsPassingDateFilterWhenStartAndEndDateAreTheSameThenValidateForSameDate(t *testing.T) {
+	assertion := require.New(t)
+	now := time.Now().Format(DateFormatISO8601)
+	dFilter := NewDateFilter(now, now)
+	assertion.True(dFilter.IsPassing(time.Now()), "Date filter should pass any date if it is the same as start or end")
+	assertion.False(dFilter.IsPassing(time.Now().AddDate(5, 5, 20)), "Date filter should not pass any value if it is not between the start and end")
+}
