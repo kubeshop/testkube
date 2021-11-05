@@ -25,9 +25,9 @@ type Client interface {
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 
-	CreateExecutor(executor CreateExecutorOptions) (err error)
+	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors() (executors []testkube.ExecutorDetails, err error)
+	ListExecutors() (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
 }
 

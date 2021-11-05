@@ -182,26 +182,26 @@ func (c DirectScriptsAPI) AbortExecution(scriptID, id string) error {
 
 // executor --------------------------------------------------------------------------------
 
-func (c DirectScriptsAPI) CreateExecutor(options CreateExecutorOptions) (err error) {
+func (c DirectScriptsAPI) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors")
 
 	request := testkube.ExecutorCreateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return err
+		return executor, err
 	}
 
 	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
 	if err != nil {
-		return err
+		return executor, err
 	}
 
 	if err := c.responseError(resp); err != nil {
-		return fmt.Errorf("api/create-executor returned error: %w", err)
+		return executor, fmt.Errorf("api/create-executor returned error: %w", err)
 	}
 
-	return nil
+	return c.getExecutorDetailsFromResponse(resp)
 }
 
 func (c DirectScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
@@ -219,7 +219,7 @@ func (c DirectScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDe
 
 }
 
-func (c DirectScriptsAPI) ListExecutors() (executors []testkube.ExecutorDetails, err error) {
+func (c DirectScriptsAPI) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors?namespace=%s", "testkube")
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -348,7 +348,7 @@ func (c DirectScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) 
 			return err
 		}
 
-		return fmt.Errorf("Request returned error: %s", respBody)
+		return fmt.Errorf("request returned error: %s", respBody)
 	}
 
 	return nil
