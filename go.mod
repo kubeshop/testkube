@@ -7,6 +7,7 @@ go 1.16
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
+	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/gofiber/adaptor/v2 v2.1.7
 	github.com/gofiber/fiber/v2 v2.14.0
@@ -16,8 +17,11 @@ require (
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
 	github.com/prometheus/client_golang v1.11.0
+	github.com/segmentio/analytics-go v3.1.0+incompatible // indirect
+	github.com/segmentio/backo-go v0.0.0-20200129164019-23eae7c10bd3 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
+	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	go.mongodb.org/mongo-driver v1.5.4
 	go.uber.org/zap v1.17.0
 	gopkg.in/yaml.v2 v2.4.0
