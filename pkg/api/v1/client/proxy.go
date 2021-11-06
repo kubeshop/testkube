@@ -181,21 +181,56 @@ func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 
 // executor --------------------------------------------------------------------------------
 
-func (c ProxyScriptsAPI) CreateExecutor(executor CreateExecutorOptions) (err error) {
-	return
+func (c ProxyScriptsAPI) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
+	uri := c.getURI("/executors")
+
+	request := testkube.ExecutorCreateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executor, err
+	}
+
+	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executor, fmt.Errorf("api/create-script returned error: %w", err)
+	}
+
+	return c.getExecutorDetailsFromResponse(resp)
 }
 
 func (c ProxyScriptsAPI) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
-	return
+	uri := c.getURI("/executors/%s", name)
+	req := c.GetProxy("GET").Suffix(uri)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executor, fmt.Errorf("api/get-executor returned error: %w", err)
+	}
+
+	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c ProxyScriptsAPI) ListExecutors() (executor []testkube.ExecutorDetails, err error) {
-	return
+func (c ProxyScriptsAPI) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
+	uri := c.getURI("/executors")
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", "testkube")
 
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executors, fmt.Errorf("api/list-executors returned error: %w", err)
+	}
+
+	return c.getExecutorsDetailsFromResponse(resp)
 }
 
 func (c ProxyScriptsAPI) DeleteExecutor(name string) (err error) {
-	return
+	uri := c.getURI("/executors/%s", name)
+	return c.makeDeleteRequest(uri, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -261,6 +296,17 @@ func (c ProxyScriptsAPI) getScriptsFromResponse(resp rest.Result) (scripts testk
 	return scripts, err
 }
 
+func (c ProxyScriptsAPI) getExecutorsDetailsFromResponse(resp rest.Result) (executors testkube.ExecutorsDetails, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executors, err
+	}
+
+	err = json.Unmarshal(bytes, &executors)
+
+	return executors, err
+}
+
 func (c ProxyScriptsAPI) getScriptFromResponse(resp rest.Result) (script testkube.Script, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
@@ -271,6 +317,18 @@ func (c ProxyScriptsAPI) getScriptFromResponse(resp rest.Result) (script testkub
 
 	return script, err
 }
+
+func (c ProxyScriptsAPI) getExecutorDetailsFromResponse(resp rest.Result) (executor testkube.ExecutorDetails, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executor, err
+	}
+
+	err = json.Unmarshal(bytes, &executor)
+
+	return executor, err
+}
+
 func (c ProxyScriptsAPI) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
 	bytes, respErr := resp.Raw()
 
@@ -328,7 +386,7 @@ func (c ProxyScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) e
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("Request returned error: %s", respBody)
+			return fmt.Errorf("request returned error: %s", respBody)
 		}
 	}
 
