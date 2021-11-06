@@ -78,6 +78,10 @@ func NewCreateScriptsCmd() *cobra.Command {
 				}
 			}
 
+			if executorType == "" {
+				ui.Failf("Can't detect executor type by passed file content, please pass valid --type flag")
+			}
+
 			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
