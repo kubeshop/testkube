@@ -89,14 +89,7 @@ Helm defaults used in the `testkube` chart:
 | api-server.service.type | yes | "NodePort" |
 | api-server.service.port | yes | 8088 |
 | api-server.mongoDSN | yes | "mongodb://testkube-mongodb:27017" |
-| api-server.postmanExecutorURI | yes | "http://testkube-postman-executor:8082" |
-| postman-executor.image.repository | yes | "kubeshop/testkube-postman-executor" |
-| postman-executor.image.pullPolicy | yes | "Always" |
-| postman-executor.image.tag | yes | "latest" |
-| postman-executor.service.type | yes | "NodePort" |
-| postman-executor.service.port | yes | 8082 |
-| postman-executor.mongoDSN | yes | "mongodb://testkube-mongodb:27017" |
-| postman-executor.apiServerURI | yes | "http://testkube-api-server:8088" |
+| api-server.telemetryDisabled | yes | false |
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
