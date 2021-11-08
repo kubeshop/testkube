@@ -2,7 +2,7 @@
 
 To improve the end-user experience TestKube collects anonymous data about usage and sends it to us.
 
-Telemetry collects and scrambles infromation about the host when the API server is bootstrapped for the first time. 
+Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
 
 The collected data looks like this.
 ```
