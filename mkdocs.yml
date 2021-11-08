@@ -1,9 +1,9 @@
 site_name: TestKube
-site_description: 'Your Kubernetes Testing Friend'
-site_author: 'Kubeshop testkube Team'
+site_description: "Your Kubernetes Testing Friend"
+site_author: "Kubeshop testkube Team"
 docs_dir: docs/
-repo_name: 'kubeshop/testkube'
-repo_url: 'https://github.com/kubeshop/testkube'
+repo_name: "kubeshop/testkube"
+repo_url: "https://github.com/kubeshop/testkube"
 edit_uri: blob/main/docs/
 
 theme:
@@ -26,7 +26,7 @@ nav:
       - Curl Commands: executor-curl.md
       - Creating your own: executor-custom.md
   - CLI Reference:
-      - Overview:  cli/testkube.md
+      - Overview: cli/testkube.md
       - Install Cmd: cli/testkube_install.md
       - Scripts Cmd: cli/testkube_scripts.md
       - Dashboard Cmd: cli/testkube_dashboard.md
@@ -37,6 +37,7 @@ nav:
   - Contributing: contributing.md
   - Development: development.md
   - OpenAPI definition: openapi.md
+  - Telemetry: telemetry.md
 
 extra:
   analytics:
@@ -61,4 +62,3 @@ markdown_extensions:
   - pymdownx.inlinehilite
 
 copyright: Copyright &copy; 2021 <a href="https://kubeshop.io">Kubeshop</a>
-

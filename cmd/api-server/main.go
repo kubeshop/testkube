@@ -28,9 +28,7 @@ func init() {
 
 func main() {
 
-	if _, telemetryNotEnabled := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); !telemetryNotEnabled {
-		telemetry.CollectAnonymousInfo()
-	}
+	telemetry.CollectAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
 

@@ -15,23 +15,25 @@ var telemetryToken = ""
 const heartbeatEvent = "testkube-heartbeat"
 
 func CollectAnonymousInfo() {
-	client := analytics.New(telemetryToken)
-	client.Enqueue(analytics.Track{
-		AnonymousId: machineID(),
-		Event:       heartbeatEvent,
-		MessageId:   time.Now().String(),
-	})
+	if _, telemetryNotEnabled := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); !telemetryNotEnabled {
+		client := analytics.New(telemetryToken)
+		client.Enqueue(analytics.Track{
+			AnonymousId: machineID(),
+			Event:       heartbeatEvent,
+			Timestamp:   time.Now(),
+		})
 
-	client.Close()
+		client.Close()
+	}
 }
 
 func machineID() string {
-	id, _ := Generate()
+	id, _ := generate()
 	return id
 }
 
 // Generate returns protected id for the current machine
-func Generate() (string, error) {
+func generate() (string, error) {
 	id, err := machineid.ProtectedID("testkube")
 	if err != nil {
 		return fromHostname()
