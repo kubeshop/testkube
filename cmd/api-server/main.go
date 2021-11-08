@@ -11,6 +11,7 @@ import (
 	v1API "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -26,6 +27,8 @@ func init() {
 }
 
 func main() {
+
+	telemetry.CollectAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
 

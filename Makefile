@@ -7,6 +7,7 @@ NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=$(TELEMETRY_TOKEN)
 
 run-api-server: 
 	APISERVER_PORT=8088 go run  -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
@@ -21,7 +22,7 @@ run-mongo-dev:
 build: build-api-server build-testkube-bin
 
 build-api-server:
-	go build -o $(BIN_DIR)/api-server cmd/api-server/main.go 
+	go build -o $(BIN_DIR)/api-server -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
 build-testkube-bin: 
 	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
