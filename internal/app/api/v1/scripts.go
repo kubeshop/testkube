@@ -217,7 +217,7 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 		// set execution result to one created
 		execution.ExecutionResult = &result
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w, called with options %+v", err, options))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w", err), options)
 		}
 
 		// watch for changes run listener in async mode

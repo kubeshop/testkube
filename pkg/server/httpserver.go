@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -43,11 +45,19 @@ func (s *HTTPServer) Init() {
 }
 
 // Error writes rfc-7807 json problem to response
-func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error) error {
+func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error, context ...interface{}) error {
 	c.Status(status)
 	c.Response().Header.Set("Content-Type", "application/problem+json")
 	s.Log.Errorw(err.Error(), "status", status)
-	return c.JSON(problem.New(status, err.Error()))
+	errStr := err.Error()
+	if len(context) > 0 {
+		b, err := json.Marshal(context[0])
+		if err == nil {
+			errStr += ", context: " + string(b)
+		}
+	}
+	pr := problem.New(status, errStr)
+	return c.JSON(pr)
 }
 
 // Run starts listening for incoming connetions
