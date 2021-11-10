@@ -15,6 +15,9 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
+// check in compile time if interface is implemented
+var _ Client = (*ProxyScriptsAPI)(nil)
+
 func GetClientSet() (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
@@ -391,4 +394,33 @@ func (c ProxyScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) e
 	}
 
 	return nil
+}
+
+func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.getURI("/executions/%s/artifacts", executionID)
+	req := c.GetProxy("GET").
+		Suffix(uri)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return artifacts, fmt.Errorf("api/list-scripts returned error: %w", err)
+	}
+
+	return c.getArtifactsFromResponse(resp)
+
+}
+func (c ProxyScriptsAPI) DownloadFile(executionID, fileName string) (artifact string, err error) {
+	return "", nil
+}
+
+func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return artifacts, err
+	}
+
+	err = json.Unmarshal(bytes, &artifacts)
+
+	return artifacts, err
 }

@@ -3,10 +3,8 @@ package minio
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -82,9 +80,9 @@ func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	toReturn := []testkube.Artifact{}
 	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{}) {
 		if obj.Err != nil {
-			fmt.Println(obj.Err)
 			return nil, obj.Err
 		}
+
 		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
 	}
 
@@ -102,12 +100,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		return err
 	}
 
-	var fileName string
-	if strings.Contains(filePath, "/") {
-		fileName = filePath
-	} else {
-		fileName = objectStat.Name()
-	}
+	fileName := objectStat.Name()
 
 	n, err := c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 
@@ -119,16 +112,13 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	return nil
 }
 
-func (c *Client) DownloadFile(bucket, file string) (io.Reader, int64, error) {
+func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	defer reader.Close()
-	objectStat, err := reader.Stat()
-
-	return reader, objectStat.Size, nil
+	return reader, nil
 }
 
 func (c *Client) ScrapeArtefacts(id, directory string) error {
@@ -144,13 +134,15 @@ func (c *Client) ScrapeArtefacts(id, directory string) error {
 			}
 
 			if !info.IsDir() {
-				fmt.Println(path, info.Size())
+				// if strings.Contains(path, "/") {
+				// 	pth := strings.Split(path, "/")
+				// 	path = pth[0]
+				// }
 				err = client.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 				if err != nil {
 					return err
 				}
 			}
-
 			return nil
 		})
 	if err != nil {
