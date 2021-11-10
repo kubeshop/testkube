@@ -7,15 +7,31 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// TODO: Adjust when it gets too small.
+const PageDefaultLimit int = 1000
+
+type Filter interface {
+	ScriptName() string
+	ScriptNameDefined() bool
+	StartDate() time.Time
+	StartDateDefined() bool
+	EndDate() time.Time
+	EndDateDefined() bool
+	Status() testkube.ExecutionStatus
+	StatusDefined() bool
+	Page() int
+	PageSize() int
+}
+
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
-	// GetByName gets execution result by name
+	// GetByNameAndScript gets execution result by name
 	GetByNameAndScript(ctx context.Context, name, script string) (testkube.Execution, error)
-	// GetNewestExecutions gets top X newest executions
-	GetNewestExecutions(ctx context.Context, limit int) ([]testkube.Execution, error)
-	// GetExecutions gets executions for given script ID
-	GetExecutions(ctx context.Context, scriptID string) ([]testkube.Execution, error)
+	// GetExecutions gets executions using a filter, use filter with no data for all
+	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
+	// GetExecutionTotals gets the statistics on number of executions using a filter, use filter with no data for all
+	GetExecutionTotals(ctx context.Context, filter Filter) (result testkube.ExecutionsTotals, err error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.Execution) error
 	// Update updates execution result

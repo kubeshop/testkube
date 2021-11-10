@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 )
 
 // ListScripts for getting list of all available scripts
@@ -249,129 +250,87 @@ func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.E
 func (s testkubeAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		scriptID := c.Params("id", "-")
-		pageSize, err := strconv.Atoi(c.Query("pageSize", "100"))
-		if err != nil {
-			pageSize = 100
-		} else if pageSize < 1 || pageSize > 1000 {
-			pageSize = 1000
-		}
-
-		page, err := strconv.Atoi(c.Query("page", "0"))
-		if err != nil {
-			page = 0
-		}
-
-		statusFilter := c.Query("status", "")
-
-		dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
-
-		ctx := c.Context()
-
-		var executions []testkube.Execution
-
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
-		if scriptID == "-" {
-			s.Log.Infow("Getting script executions (no id passed)")
-			executions, err = s.Repository.GetNewestExecutions(ctx, 10000)
-		} else {
-			s.Log.Infow("Getting script executions", "id", scriptID)
-			executions, err = s.Repository.GetExecutions(ctx, scriptID)
-		}
+
+		filter := getFilterFromRequest(c)
+
+		executions, err := s.Repository.GetExecutions(c.Context(), filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		results := createListExecutionsResult(executions, statusFilter, dFilter, page, pageSize)
+		executionTotals, err := s.Repository.GetExecutionTotals(c.Context(), result.NewExecutionsFilter())
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		filteredTotals, err := s.Repository.GetExecutionTotals(c.Context(), filter)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		results := testkube.ExecutionsResult{
+			Totals:   &executionTotals,
+			Filtered: &filteredTotals,
+			Results:  convertToExecutionSummary(executions),
+		}
 
 		return c.JSON(results)
 	}
 }
 
-func createListExecutionsResult(executions []testkube.Execution, statusFilter string, dFilter DateFilter, page int, pageSize int) testkube.ExecutionsResult {
-	totals := testkube.ExecutionsTotals{
-		Results: int32(len(executions)),
-		Passed:  0,
-		Failed:  0,
-		Queued:  0,
-		Pending: 0,
+func getFilterFromRequest(c *fiber.Ctx) result.Filter {
+
+	filter := result.NewExecutionsFilter()
+	scriptName := c.Params("id", "")
+	if scriptName != "" {
+		filter = filter.WithScriptName(scriptName)
 	}
 
-	filterTotals := testkube.ExecutionsTotals{
-		Results: 0,
-		Passed:  0,
-		Failed:  0,
-		Queued:  0,
-		Pending: 0,
+	page, err := strconv.Atoi(c.Query("page", "-"))
+	if err == nil {
+		filter = filter.WithPage(page)
 	}
 
-	executionResults := make([]testkube.ExecutionSummary, pageSize)
-	addedToResultCount := 0
-	filteredCount := 0
+	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
+	if err == nil {
+		filter = filter.WithPageSize(pageSize)
+	}
 
-	for _, execution := range executions {
+	status := c.Query("status", "")
+	if status != "" {
+		filter = filter.WithStatus(testkube.ExecutionStatus(status))
+	}
 
-		// TODO move it to mapper with valid error handling
-		// it could kill api server with panic in case of empty
-		// Execution result - for now omit failed result
-		if execution.ExecutionResult == nil || execution.ExecutionResult.Status == nil {
-			continue
-		}
+	dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	if dFilter.IsStartValid {
+		filter = filter.WithStartDate(dFilter.Start)
+	}
 
-		switch *execution.ExecutionResult.Status {
-		case testkube.QUEUED_ExecutionStatus:
-			totals.Queued++
-		case testkube.SUCCESS_ExecutionStatus:
-			totals.Passed++
-		case testkube.ERROR__ExecutionStatus:
-			totals.Failed++
-		case testkube.PENDING_ExecutionStatus:
-			totals.Pending++
-		}
+	if dFilter.IsEndValid {
+		filter = filter.WithEndDate(dFilter.End)
+	}
 
-		isPassingStatusFilter := (statusFilter == "" || string(*execution.ExecutionResult.Status) == statusFilter)
-		isPassingDateFilter := dFilter.IsPassing(execution.StartTime)
+	return filter
+}
 
-		if isPassingDateFilter && isPassingStatusFilter {
-			filterTotals.Results++
+func convertToExecutionSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
+	result := make([]testkube.ExecutionSummary, len(executions))
 
-			switch *execution.ExecutionResult.Status {
-			case testkube.QUEUED_ExecutionStatus:
-				filterTotals.Queued++
-			case testkube.SUCCESS_ExecutionStatus:
-				filterTotals.Passed++
-			case testkube.ERROR__ExecutionStatus:
-				filterTotals.Failed++
-			case testkube.PENDING_ExecutionStatus:
-				filterTotals.Pending++
-			}
-
-			if addedToResultCount < pageSize {
-				if filteredCount == page*pageSize {
-					executionResults[addedToResultCount] = testkube.ExecutionSummary{
-						Id:         execution.Id,
-						Name:       execution.Name,
-						ScriptName: execution.ScriptName,
-						ScriptType: execution.ScriptType,
-						Status:     execution.ExecutionResult.Status,
-						StartTime:  execution.StartTime,
-						EndTime:    execution.EndTime,
-					}
-					addedToResultCount++
-				} else {
-					filteredCount++
-				}
-			}
+	for i, execution := range executions {
+		result[i] = testkube.ExecutionSummary{
+			Id:         execution.Id,
+			Name:       execution.Name,
+			ScriptName: execution.ScriptName,
+			ScriptType: execution.ScriptType,
+			Status:     execution.ExecutionResult.Status,
+			StartTime:  execution.StartTime,
+			EndTime:    execution.EndTime,
 		}
 	}
 
-	return testkube.ExecutionsResult{
-		Totals:   &totals,
-		Filtered: &filterTotals,
-		Results:  executionResults[0:addedToResultCount],
-	}
+	return result
 }
 
 // GetExecution returns script execution object for given script and execution id
