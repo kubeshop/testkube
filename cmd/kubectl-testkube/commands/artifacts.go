@@ -12,6 +12,7 @@ import (
 var (
 	executionID string
 	filename    string
+	destination string
 )
 
 func NewArtifactsCmd() *cobra.Command {
@@ -22,6 +23,24 @@ func NewArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+
+	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
+	// cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
+
+	cmd.AddCommand(NewListArtifactsCmd())
+	cmd.AddCommand(NewDownloadArtifactsCmd())
+	// output renderer flags
+	return cmd
+}
+
+func NewListArtifactsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List artifacts of the given execution ID",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if executionID == "" {
 				cmd.SilenceUsage = true
@@ -32,16 +51,47 @@ func NewArtifactsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			client, _ := scripts.GetClient(cmd)
-			if filename == "" {
-				artifacts, err := client.GetExecutionArtifacts(executionID)
-				if err != nil {
-					return err
-				}
-				ui.Table(artifacts, os.Stdout)
-				return nil
+			// if filename == "" {
+			artifacts, err := client.GetExecutionArtifacts(executionID)
+			if err != nil {
+				return err
+			}
+			ui.Table(artifacts, os.Stdout)
+			return nil
+		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+
+	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
+	// cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
+
+	// output renderer flags
+	return cmd
+}
+
+func NewDownloadArtifactsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "download",
+		Short: "download artifact",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if executionID == "" {
+				cmd.SilenceUsage = true
+				return fmt.Errorf("execution-id is a required parameter")
 			}
 
-			if f, err := client.DownloadFile(executionID, filename); err != nil {
+			if filename == "" {
+				cmd.SilenceUsage = true
+				return fmt.Errorf("fileName is a required parameter")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			client, _ := scripts.GetClient(cmd)
+
+			if f, err := client.DownloadFile(executionID, filename, destination); err != nil {
 				cmd.SilenceUsage = true
 				return err
 			} else {
@@ -57,6 +107,7 @@ func NewArtifactsCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
+	cmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "name of the file")
 
 	// output renderer flags
 	return cmd

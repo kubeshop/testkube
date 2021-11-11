@@ -31,7 +31,7 @@ type Client interface {
 	DeleteExecutor(name string) (err error)
 
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
-	DownloadFile(executionID, fileName string) (artifact string, err error)
+	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

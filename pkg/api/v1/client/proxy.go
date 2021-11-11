@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -167,8 +168,6 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
-	fmt.Println("URI", uri)
-	fmt.Println("REQ", req)
 
 	resp := req.Do(context.Background())
 
@@ -403,8 +402,6 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 	uri := c.getURI("/executions/%s/artifacts", executionID)
 	req := c.GetProxy("GET").
 		Suffix(uri)
-	fmt.Println("URI", uri)
-	fmt.Println("REQ", req)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
@@ -414,7 +411,7 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 	return c.getArtifactsFromResponse(resp)
 
 }
-func (c ProxyScriptsAPI) DownloadFile(executionID, fileName string) (artifact string, err error) {
+func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
 	req := c.GetProxy("GET").
 		Suffix(uri)
@@ -430,9 +427,9 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName string) (artifact st
 	}
 
 	if len(bytes) > 0 {
-
-		os.WriteFile(fileName, bytes, 0644)
-		return fileName, nil
+		path := filepath.Join(destination, fileName)
+		os.WriteFile(path, bytes, 0644)
+		return path, nil
 	}
 
 	return "", fmt.Errorf("file %s not found", fileName)

@@ -102,13 +102,12 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 
 	fileName := objectStat.Name()
 
-	n, err := c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("uploaded %q of size %d\n", filePath, n.Size)
 	return nil
 }
 
@@ -134,10 +133,6 @@ func (c *Client) ScrapeArtefacts(id, directory string) error {
 			}
 
 			if !info.IsDir() {
-				// if strings.Contains(path, "/") {
-				// 	pth := strings.Split(path, "/")
-				// 	path = pth[0]
-				// }
 				err = client.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 				if err != nil {
 					return err

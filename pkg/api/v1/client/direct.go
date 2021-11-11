@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -382,7 +383,7 @@ func (c DirectScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts t
 	return c.getArtifactsFromResponse(resp)
 }
 
-func (c DirectScriptsAPI) DownloadFile(executionID, fileName string) (artifact string, err error) {
+func (c DirectScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -390,7 +391,8 @@ func (c DirectScriptsAPI) DownloadFile(executionID, fileName string) (artifact s
 	}
 
 	defer resp.Body.Close()
-	f, _ := os.Create(fileName)
+
+	f, _ := os.Create(filepath.Join(destination, fileName))
 
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return artifact, err
