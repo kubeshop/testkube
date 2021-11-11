@@ -30,7 +30,7 @@ func NewArtifactsCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			cmd.SilenceUsage = true
 			client, _ := scripts.GetClient(cmd)
 			if filename == "" {
 				artifacts, err := client.GetExecutionArtifacts(executionID)

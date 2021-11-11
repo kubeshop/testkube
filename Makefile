@@ -28,7 +28,7 @@ build-testkube-bin:
 	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
 
 docker-build-api-server:
-	docker build -t api-server -f build/api-server/Dockerfile .
+	docker build -t jasmingacic/api-server -f build/api-server/Dockerfile .
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml

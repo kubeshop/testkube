@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -166,6 +167,8 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
+	fmt.Println("URI", uri)
+	fmt.Println("REQ", req)
 
 	resp := req.Do(context.Background())
 
@@ -400,18 +403,40 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 	uri := c.getURI("/executions/%s/artifacts", executionID)
 	req := c.GetProxy("GET").
 		Suffix(uri)
-
+	fmt.Println("URI", uri)
+	fmt.Println("REQ", req)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return artifacts, fmt.Errorf("api/list-scripts returned error: %w", err)
+		return artifacts, fmt.Errorf("api/list-artifacts returned error: %w", err)
 	}
 
 	return c.getArtifactsFromResponse(resp)
 
 }
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName string) (artifact string, err error) {
-	return "", nil
+	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
+	req := c.GetProxy("GET").
+		Suffix(uri)
+
+	resp := req.Do(context.Background())
+	if err := c.responseError(resp); err != nil {
+		return artifact, fmt.Errorf("api/list-scripts returned error: %w", err)
+	}
+
+	bytes, err := resp.Raw()
+	if err != nil {
+		return "", err
+	}
+
+	if len(bytes) > 0 {
+
+		os.WriteFile(fileName, bytes, 0644)
+		return fileName, nil
+	}
+
+	return "", fmt.Errorf("file %s not found", fileName)
+
 }
 
 func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {

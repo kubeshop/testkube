@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
@@ -15,7 +16,14 @@ var telemetryToken = ""
 const heartbeatEvent = "testkube-heartbeat"
 
 func CollectAnonymousInfo() {
-	if _, telemetryNotEnabled := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); !telemetryNotEnabled {
+
+	var isDisabled bool
+
+	if val, ok := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); ok {
+		isDisabled, _ = strconv.ParseBool(val)
+	}
+
+	if isDisabled {
 		client := analytics.New(telemetryToken)
 		client.Enqueue(analytics.Track{
 			AnonymousId: machineID(),
