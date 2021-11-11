@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/runner/output"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -157,7 +158,7 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c ProxyScriptsAPI) Logs(id string) (logs chan string, err error) {
+func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 	// uri := c.getURI("/executions/%s/logs", id)
 
 	// resp, err := c.client.Get(uri)

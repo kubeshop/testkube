@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 const (
@@ -152,10 +154,50 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c DirectScriptsAPI) Logs(id string) (logs chan string, err error) {
-	// uri := c.getURI("/executions/%s/logs", id)
+// Logs reads logs from API SSE endpoint asynchronously
+func (c DirectScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
+	logs = make(chan output.Output, 1000)
+	uri := c.getURI("/executions/%s/logs", id)
 
-	// resp, err := c.client.Get(uri)
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return logs, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return logs, err
+	}
+
+	go func() {
+		defer close(logs)
+		br := bufio.NewReader(resp.Body)
+		defer resp.Body.Close()
+
+		prefix := []byte("data: ")
+		scanner := bufio.NewScanner(br)
+
+		for scanner.Scan() {
+			chunk := bytes.Replace(scanner.Bytes(), prefix, []byte{}, 1)
+
+			// ignore lines which are not JSON objects
+			if len(chunk) < 2 || chunk[0] != '{' {
+				continue
+			}
+
+			// convert to output.Output object
+			out := output.Output{}
+			err := json.Unmarshal(chunk, &out)
+			if err != nil {
+				fmt.Printf("Unmarshal chunk error: %+v\n", err)
+				continue
+			}
+
+			logs <- out
+		}
+
+	}()
 
 	return
 }

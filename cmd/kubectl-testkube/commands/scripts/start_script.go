@@ -61,7 +61,14 @@ func NewStartScriptCmd() *cobra.Command {
 
 			if watch {
 				ui.Info("Watching for changes")
-				
+
+				logs, err := client.Logs(execution.Id)
+				ui.ExitOnError("getting logs from exxcutor", err)
+
+				for l := range logs {
+					ui.LogLine(l.String())
+				}
+
 				for range time.Tick(time.Second) {
 
 					execution, err := client.GetExecution("-", execution.Id)
@@ -112,7 +119,5 @@ func uiShellCommandBlock(id string) {
 		"kubectl testkube scripts watch "+id,
 	)
 
-	ui.ShellCommand("curl", fmt.Sprintf("curl http://localhost:8088/v1/executions/%s/logs", id))
 	ui.NL()
-
 }
