@@ -29,7 +29,6 @@ func NewArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
-	// cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
 
 	cmd.AddCommand(NewListArtifactsCmd())
 	cmd.AddCommand(NewDownloadArtifactsCmd())
@@ -65,7 +64,6 @@ func NewListArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
-	// cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
 
 	// output renderer flags
 	return cmd
