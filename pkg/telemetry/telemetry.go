@@ -23,7 +23,7 @@ func CollectAnonymousInfo() {
 		isDisabled, _ = strconv.ParseBool(val)
 	}
 
-	if isDisabled {
+	if !isDisabled {
 		client := analytics.New(telemetryToken)
 		client.Enqueue(analytics.Track{
 			AnonymousId: machineID(),
