@@ -64,16 +64,22 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 }
 
 // Logs returns job logs
+// TODO too many goroutines - need to be simplified
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
-	out = make(chan output.Output)
+	out = make(chan output.Output, 10000)
 	logs, err := c.Client.TailJobLogs(id)
-	for l := range logs {
-		output, err := output.GetLogEntry(l)
-		if err != nil {
-			return out, err
+
+	go func() {
+		defer close(out)
+		for l := range logs {
+			output, err := output.GetLogEntry(l)
+			if err != nil {
+				return
+			}
+			out <- output
 		}
-		out <- output
-	}
+	}()
+
 	return
 }
 

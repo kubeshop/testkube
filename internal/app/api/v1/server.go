@@ -73,6 +73,7 @@ func (s testkubeAPI) Init() {
 	executions.Get("/", s.ListExecutions())
 	executions.Get("/:executionID", s.GetExecution())
 	executions.Get("/:executionID/artifacts", s.ListArtifacts())
+	executions.Get("/:executionID/logs", s.ExecutionLogs())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifact())
 
 	scripts := s.Routes.Group("/scripts")

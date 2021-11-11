@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +13,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/valyala/fasthttp"
 
 	"github.com/kubeshop/testkube/pkg/rand"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -235,6 +239,7 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 }
 
 func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.Execution, executor client.Executor) {
+	return
 	logs, err := executor.Logs(execution.Id)
 	if err != nil {
 		s.Log.Errorw("getting logs error", "error", err)
@@ -242,6 +247,56 @@ func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.E
 	}
 	for out := range logs {
 		fmt.Printf("%v\n", out)
+	}
+}
+
+func (s testkubeAPI) ExecutionLogs() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+
+		s.Log.Infow("getting logs", "executionID", executionID)
+
+		ctx := c.Context()
+
+		ctx.SetContentType("text/event-stream")
+		ctx.Response.Header.Set("Cache-Control", "no-cache")
+		ctx.Response.Header.Set("Connection", "keep-alive")
+		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			s.Log.Infow("starting stream writer")
+
+			fmt.Fprintf(w, `data: {"message": "getting logs for execution %s"}`, executionID)
+			fmt.Fprintf(w, "\n\n")
+			w.Flush()
+			enc := json.NewEncoder(w)
+
+			// get logs from job executor pods
+			s.Log.Infow("getting logs")
+			var logs chan output.Output
+			var err error
+
+			logs, err = s.Executor.Logs(executionID)
+			s.Log.Infow("waiting for jobs channel", "channelSize", len(logs))
+			if err != nil {
+				fmt.Fprintf(w, `data: {"error": "%s"}\n\n`, err.Error())
+				s.Log.Errorw("getting logs error", "error", err)
+				w.Flush()
+				return
+			}
+
+			// loop through pods log lines - it's blocking channel
+			// and pass single log output as sse data chunk
+			for out := range logs {
+				s.Log.Infow("got log", "out", out)
+				fmt.Fprintf(w, "data: ")
+				enc.Encode(out)
+				fmt.Fprintf(w, "\n\n")
+				w.Flush()
+			}
+		}))
+
+		return nil
 	}
 }
 

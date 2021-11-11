@@ -157,6 +157,14 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	return c.getExecutionFromResponse(resp)
 }
 
+func (c ProxyScriptsAPI) Logs(id string) (logs chan string, err error) {
+	// uri := c.getURI("/executions/%s/logs", id)
+
+	// resp, err := c.client.Get(uri)
+
+	return
+}
+
 // GetExecutions list all executions in given script
 func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
 	uri := c.getURI("/scripts")

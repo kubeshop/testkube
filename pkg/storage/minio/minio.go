@@ -115,6 +115,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		return err
 	}
 
+	// TODO introduce logger instead of printf!
 	fmt.Printf("uploaded %q of size %d\n", filePath, n.Size)
 	return nil
 }

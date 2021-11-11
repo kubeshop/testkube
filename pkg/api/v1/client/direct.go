@@ -152,6 +152,14 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	return c.getExecutionFromResponse(resp)
 }
 
+func (c DirectScriptsAPI) Logs(id string) (logs chan string, err error) {
+	// uri := c.getURI("/executions/%s/logs", id)
+
+	// resp, err := c.client.Get(uri)
+
+	return
+}
+
 // ListScripts list all scripts in given namespace
 func (c DirectScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
 	uri := c.getURI("/scripts?namespace=%s", namespace)

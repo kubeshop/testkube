@@ -48,6 +48,22 @@ type Output struct {
 	Result  testkube.ExecutionResult `json:"result,omitempty"`
 }
 
+func (out Output) String() string {
+	switch out.Type {
+	case TypeError:
+		return out.Message
+	case TypeLogLine:
+		return fmt.Sprintf("%v", out.Content)
+	case TypeResult:
+		b, _ := json.Marshal(out.Result)
+		return string(b)
+	case TypeLogEvent:
+		return fmt.Sprintf("%s: %v", out.Message, out.Content)
+	}
+
+	return ""
+}
+
 func PrintError(err error) {
 	out, _ := json.Marshal(NewOutputError(err))
 	fmt.Printf("%s\n", out)
