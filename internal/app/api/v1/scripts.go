@@ -266,7 +266,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 			s.Log.Infow("starting stream writer")
 
-			fmt.Fprintf(w, `data: {"message": "getting logs for execution %s"}`, executionID)
+			fmt.Fprintf(w, `data: {"type": "event", "message": "getting logs for execution %s"}`, executionID)
 			fmt.Fprintf(w, "\n\n")
 			w.Flush()
 			enc := json.NewEncoder(w)
@@ -279,7 +279,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 			logs, err = s.Executor.Logs(executionID)
 			s.Log.Infow("waiting for jobs channel", "channelSize", len(logs))
 			if err != nil {
-				fmt.Fprintf(w, `data: {"error": "%s"}\n\n`, err.Error())
+				fmt.Fprintf(w, `data: {"type": "error","message": "%s"}\n\n`, err.Error())
 				s.Log.Errorw("getting logs error", "error", err)
 				w.Flush()
 				return

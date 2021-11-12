@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -172,31 +171,9 @@ func (c DirectScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 
 	go func() {
 		defer close(logs)
-		br := bufio.NewReader(resp.Body)
 		defer resp.Body.Close()
 
-		prefix := []byte("data: ")
-		scanner := bufio.NewScanner(br)
-
-		for scanner.Scan() {
-			chunk := bytes.Replace(scanner.Bytes(), prefix, []byte{}, 1)
-
-			// ignore lines which are not JSON objects
-			if len(chunk) < 2 || chunk[0] != '{' {
-				continue
-			}
-
-			// convert to output.Output object
-			out := output.Output{}
-			err := json.Unmarshal(chunk, &out)
-			if err != nil {
-				fmt.Printf("Unmarshal chunk error: %+v\n", err)
-				continue
-			}
-
-			logs <- out
-		}
-
+		StreamToLogsChannel(resp.Body, logs)
 	}()
 
 	return
