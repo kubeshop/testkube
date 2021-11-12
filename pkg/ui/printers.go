@@ -38,6 +38,10 @@ func Warn(message string, subMessages ...string) {
 	fmt.Println()
 }
 
+func LogLine(message string) {
+	fmt.Printf(" %s", color.DarkGray(message))
+}
+
 func Info(message string, subMessages ...string) {
 	fmt.Printf("%s", color.DarkGray(message))
 	for _, sub := range subMessages {

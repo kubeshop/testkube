@@ -137,12 +137,14 @@ func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == id {
-			c.Log.Debug("Waiting for pod to be ready")
+			c.Log.Debugw("Waiting for pod to be ready", "pod", pod.Name)
 			if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				c.Log.Errorw("poll immediate error when tailing logs", "error", err)
 				return
 			}
 			c.Log.Debug("Tailing pod logs")
+			return c.TailPodLogs(ctx, pod.Name)
+		} else if pod.Status.Phase == v1.PodRunning {
 			return c.TailPodLogs(ctx, pod.Name)
 		}
 	}
@@ -179,7 +181,7 @@ func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
 }
 
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan []byte, err error) {
-	logs = make(chan []byte)
+	logs = make(chan []byte, 10000)
 	count := int64(1)
 
 	podLogOptions := v1.PodLogOptions{

@@ -22,6 +22,7 @@ require (
 	github.com/segmentio/backo-go v0.0.0-20200129164019-23eae7c10bd3 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
+	github.com/valyala/fasthttp v1.26.0
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	go.mongodb.org/mongo-driver v1.5.4
 	go.uber.org/zap v1.17.0

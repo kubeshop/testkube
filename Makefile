@@ -9,11 +9,14 @@ COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=$(TELEMETRY_TOKEN)
 
-run-api-server: 
-	APISERVER_PORT=8088 go run  -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
+run-api: 
+	DEBUG=1 APISERVER_PORT=8088 go run -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
 
-run-api-server-telepresence: 
-	API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
+run-api-race-detector: 
+	DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
+
+run-api-telepresence: 
+	DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
 	docker run --name mongodb -p 27017:27017 --rm mongo
@@ -27,8 +30,8 @@ build-api-server:
 build-testkube-bin: 
 	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
 
-docker-build-api-server:
-	docker build -t jasmingacic/api-server -f build/api-server/Dockerfile .
+docker-build-api:
+	docker build -t api-server -f build/api-server/Dockerfile .
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml

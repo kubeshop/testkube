@@ -61,15 +61,25 @@ testkube` to see the charts.
 To install the `testkube` chart:
 
 ```sh
-helm install my-testkube testkube/testkube
+helm install --create-namespace my-testkube testkube/testkube
+```
+Please note that by default it will be looking for the   `testkube` namespace to be installed into. And if doesn't find it the namespace will be created for you.
+
+If you wish to install it into a different namespace please use following command instead:
+```sh
+helm install --namespace namespace_name my-testkube testkube/testkube
 ```
 
-To uninstall the `testkube` chart:
+
+To uninstall the `testkube` chart if it was installed into default namespace:
 
 ```sh
 helm delete my-testkube testkube/testkube
 ```
-
+And from different than `testkube` namespace:
+```sh
+helm delete --namespace namespace_name my-testkube testkube/testkube
+```
 ### Helm Properties
 
 Helm defaults used in the `testkube` chart:

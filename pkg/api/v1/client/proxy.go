@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/runner/output"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -160,6 +161,25 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	}
 
 	return c.getExecutionFromResponse(resp)
+}
+
+func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
+	logs = make(chan output.Output)
+	uri := c.getURI("/executions/%s/logs", id)
+
+	resp, err := c.GetProxy("GET").
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+
+	go func() {
+		defer close(logs)
+		defer resp.Close()
+
+		StreamToLogsChannel(resp, logs)
+	}()
+
+	return
 }
 
 // GetExecutions list all executions in given script

@@ -31,7 +31,7 @@ func NewVersionBumpCmd() *cobra.Command {
 				nextVersion, err = version.NextPrerelease(currentVersion)
 			case dev && !version.IsPrerelease(currentVersion):
 				nextVersion, err = version.Next(currentVersion, version.Patch)
-				nextVersion = nextVersion + "-beta1"
+				nextVersion = nextVersion + "-beta001"
 			default:
 				nextVersion, err = version.Next(currentVersion, kind)
 			}
