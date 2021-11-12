@@ -88,7 +88,6 @@ func NewDownloadArtifactsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			client, _ := scripts.GetClient(cmd)
-
 			if f, err := client.DownloadFile(executionID, filename, destination); err != nil {
 				cmd.SilenceUsage = true
 				return err

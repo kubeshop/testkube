@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
+	"net/url"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -508,6 +506,7 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
+
 		return c.JSON(files)
 	}
 }
@@ -516,26 +515,16 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
-
+		unescaped, err := url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 		defer file.Close()
-		tmpfile, err := ioutil.TempFile("", "testkube")
-		if err != nil {
-			return err
-		}
-		defer tmpfile.Close()
 
-		obj, _ := file.Stat()
-
-		if _, err := io.CopyN(tmpfile, file, obj.Size); err != nil {
-			return err
-		}
-
-		defer os.Remove(tmpfile.Name())
-
-		return c.SendFile(tmpfile.Name(), true)
+		return c.SendStream(file)
 	}
 }

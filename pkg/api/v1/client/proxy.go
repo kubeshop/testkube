@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -433,27 +434,27 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 }
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
-	req := c.GetProxy("GET").
-		Suffix(uri)
+	req, err := c.GetProxy("GET").
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
 
-	resp := req.Do(context.Background())
-	if err := c.responseError(resp); err != nil {
-		return artifact, fmt.Errorf("api/list-scripts returned error: %w", err)
-	}
-
-	bytes, err := resp.Raw()
+	defer req.Close()
 	if err != nil {
 		return "", err
 	}
 
-	if len(bytes) > 0 {
-		path := filepath.Join(destination, fileName)
-		os.WriteFile(path, bytes, 0644)
-		return path, nil
+	path := filepath.Join(destination, fileName)
+	split := strings.Split(fileName, "/")
+
+	f, err := os.Create(split[len(split)-1])
+
+	if _, err := f.ReadFrom(req); err != nil {
+		return "", err
 	}
 
-	return "", fmt.Errorf("file %s not found", fileName)
-
+	defer f.Close()
+	return path, nil
 }
 
 func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -78,11 +79,11 @@ func (c *Client) ListBuckets() ([]string, error) {
 
 func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	toReturn := []testkube.Artifact{}
-	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{}) {
+
+	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{Recursive: true}) {
 		if obj.Err != nil {
 			return nil, obj.Err
 		}
-
 		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
 	}
 
@@ -99,11 +100,14 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	if err != nil {
 		return err
 	}
-
-	fileName := objectStat.Name()
+	var fileName string
+	if strings.Contains(filePath, "/") {
+		fileName = filePath
+	} else {
+		fileName = objectStat.Name()
+	}
 
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
-
 	if err != nil {
 		return err
 	}
