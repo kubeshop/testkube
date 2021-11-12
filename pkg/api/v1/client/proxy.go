@@ -1,6 +1,8 @@
 package client
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -159,9 +161,43 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 }
 
 func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
-	// uri := c.getURI("/executions/%s/logs", id)
+	uri := c.getURI("/executions/%s/logs", id)
 
-	// resp, err := c.client.Get(uri)
+	resp, err := c.GetProxy("GET").
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+
+	go func() {
+
+		defer close(logs)
+		defer resp.Close()
+
+		br := bufio.NewReader(resp)
+
+		prefix := []byte("data: ")
+		scanner := bufio.NewScanner(br)
+
+		for scanner.Scan() {
+			chunk := bytes.Replace(scanner.Bytes(), prefix, []byte{}, 1)
+
+			// ignore lines which are not JSON objects
+			if len(chunk) < 2 || chunk[0] != '{' {
+				continue
+			}
+
+			// convert to output.Output object
+			out := output.Output{}
+			err := json.Unmarshal(chunk, &out)
+			if err != nil {
+				fmt.Printf("Unmarshal chunk error: %+v\n", err)
+				continue
+			}
+
+			logs <- out
+		}
+
+	}()
 
 	return
 }
