@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"os/exec"
+
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -23,13 +25,16 @@ func NewInstallCmd() *cobra.Command {
 			ui.Logo()
 			var err error
 
-			_, err = process.Execute("helm", "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
+			helmPath, err := exec.LookPath("helm")
+			ui.ExitOnError("checking helm installation path", err)
+
+			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 			ui.WarnOnError("adding testkube repo", err)
 
-			_, err = process.Execute("helm", "repo", "update")
+			_, err = process.Execute(helmPath, "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
 
-			out, err := process.Execute("helm", "upgrade", "--install", "--create-namespace", "--namespace", namespace, name, chart)
+			out, err := process.Execute(helmPath, "upgrade", "--install", "--create-namespace", "--namespace", namespace, name, chart)
 			ui.ExitOnError("executing helm install", err)
 			ui.Info("Helm install output", string(out))
 
