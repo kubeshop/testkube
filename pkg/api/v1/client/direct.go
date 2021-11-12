@@ -11,6 +11,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 const (
@@ -150,6 +151,32 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	}
 
 	return c.getExecutionFromResponse(resp)
+}
+
+// Logs reads logs from API SSE endpoint asynchronously
+func (c DirectScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
+	logs = make(chan output.Output, 1000)
+	uri := c.getURI("/executions/%s/logs", id)
+
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return logs, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return logs, err
+	}
+
+	go func() {
+		defer close(logs)
+		defer resp.Body.Close()
+
+		StreamToLogsChannel(resp.Body, logs)
+	}()
+
+	return
 }
 
 // ListScripts list all scripts in given namespace

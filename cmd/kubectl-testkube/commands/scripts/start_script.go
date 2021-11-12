@@ -61,6 +61,14 @@ func NewStartScriptCmd() *cobra.Command {
 
 			if watch {
 				ui.Info("Watching for changes")
+
+				logs, err := client.Logs(execution.Id)
+				ui.ExitOnError("getting logs from exxcutor", err)
+
+				for l := range logs {
+					ui.LogLine(l.String())
+				}
+
 				for range time.Tick(time.Second) {
 
 					execution, err := client.GetExecution("-", execution.Id)
@@ -110,6 +118,6 @@ func uiShellCommandBlock(id string) {
 		"or watch script execution until complete",
 		"kubectl testkube scripts watch "+id,
 	)
-	ui.NL()
 
+	ui.NL()
 }

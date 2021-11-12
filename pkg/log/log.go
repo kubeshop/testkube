@@ -1,15 +1,31 @@
 package log
 
 import (
+	"log"
+	"os"
+
 	"go.uber.org/zap"
 )
 
 // TODO introduce interface for zap
 // New returns new logger instance
 func New() *zap.SugaredLogger {
-	logger, _ := zap.NewProduction()
+	atomicLevel := zap.NewAtomicLevel()
 
-	return logger.Sugar()
+	atomicLevel.SetLevel(zap.InfoLevel)
+	if val, exists := os.LookupEnv("DEBUG"); exists && val != "" {
+		atomicLevel.SetLevel(zap.DebugLevel)
+	}
+
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Level = atomicLevel
+
+	z, err := zapCfg.Build()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	logger := z.Sugar()
+	return logger
 }
 
 // DefaultLogger initialized default logger
