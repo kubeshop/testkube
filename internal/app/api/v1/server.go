@@ -50,7 +50,7 @@ type testkubeAPI struct {
 
 func (s testkubeAPI) Init() {
 	var err error
-	_, minioSSL := os.LookupEnv("MINIO_SSL")
+	_, minioSSL := os.LookupEnv("STORAGE_SSL")
 	s.Storage, err = minio.NewClient(os.Getenv("STORAGE_ENDPOINT"), os.Getenv("STORAGE_ACCESSKEYID"), os.Getenv("STORAGE_SECRETACCESSKEY"), os.Getenv("STORAGE_LOCATION"), os.Getenv("STORAGE_TOKEN"), minioSSL)
 	if err != nil {
 		s.Log.Warnf("error occured while instantiating storage provider:", err)
