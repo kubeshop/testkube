@@ -48,7 +48,6 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
 	query, opts := composeQueryAndOpts(filter)
 	cursor, err := r.Coll.Find(ctx, query, opts)
-
 	if err != nil {
 		return
 	}
@@ -59,34 +58,57 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter Filter) (result testkube.ExecutionsTotals, err error) {
 
 	query, _ := composeQueryAndOpts(filter)
-	query["scriptType"] = bson.M{"$exists": true}
 	total, err := r.Coll.CountDocuments(ctx, query)
 	if err != nil {
-		return
+		return result, err
 	}
 	result.Results = int32(total)
 
-	query["executionResult"] = bson.M{"status": testkube.QUEUED_ExecutionStatus}
-	queued, err := r.Coll.CountDocuments(ctx, query)
-	if err != nil {
-		return
-	}
-	result.Queued = int32(queued)
+	if status, ok := query["executionresult.status"]; ok {
+		count, err := r.Coll.CountDocuments(ctx, query)
+		if err != nil {
+			return result, err
+		}
+		switch status {
+		case testkube.QUEUED_ExecutionStatus:
+			result.Queued = int32(count)
+		case testkube.PENDING_ExecutionStatus:
+			result.Pending = int32(count)
+		case testkube.SUCCESS_ExecutionStatus:
+			result.Passed = int32(count)
+		case testkube.ERROR__ExecutionStatus:
+			result.Failed = int32(count)
+		}
+	} else {
+		query["executionresult.status"] = testkube.ExecutionStatusQueued
+		queued, err := r.Coll.CountDocuments(ctx, query)
+		if err != nil {
+			return result, err
+		}
+		result.Queued = int32(queued)
 
-	query["executionResult"] = bson.M{"status": testkube.PENDING_ExecutionStatus}
-	pending, err := r.Coll.CountDocuments(ctx, query)
-	if err != nil {
-		return
-	}
-	result.Pending = int32(pending)
+		query["executionresult.status"] = testkube.ExecutionStatusPending
+		pending, err := r.Coll.CountDocuments(ctx, query)
+		if err != nil {
+			return result, err
+		}
+		result.Pending = int32(pending)
 
-	query["executionResult"] = bson.M{"status": testkube.ERROR__ExecutionStatus}
-	failed, err := r.Coll.CountDocuments(ctx, query)
-	if err != nil {
-		return
+		query["executionresult.status"] = testkube.ExecutionStatusSuccess
+		passed, err := r.Coll.CountDocuments(ctx, query)
+		if err != nil {
+			return result, err
+		}
+		result.Passed = int32(passed)
+
+		query["executionresult.status"] = testkube.ExecutionStatusError
+		failed, err := r.Coll.CountDocuments(ctx, query)
+		if err != nil {
+			return result, err
+		}
+		result.Failed = int32(failed)
 	}
-	result.Failed = int32(failed)
-	return
+	return result, err
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
@@ -135,11 +157,11 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if len(startTimeQuery) > 0 {
-		query["startTime"] = startTimeQuery
+		query["starttime"] = startTimeQuery
 	}
 
 	if filter.StatusDefined() {
-		query["executionResult"] = bson.M{"status": filter.Status()}
+		query["executionresult.status"] = filter.Status()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))

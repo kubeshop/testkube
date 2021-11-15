@@ -344,11 +344,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
-		filter = filter.WithStartDate(dFilter.Start)
+		filter = filter.WithStartDate(&dFilter.Start)
 	}
 
 	if dFilter.IsEndValid {
-		filter = filter.WithEndDate(dFilter.End)
+		filter = filter.WithEndDate(&dFilter.End)
 	}
 
 	return filter
