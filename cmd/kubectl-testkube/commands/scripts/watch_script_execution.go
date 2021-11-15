@@ -11,7 +11,7 @@ import (
 func NewWatchExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "watch",
-		Short: "Watch until script execution is in complete state",
+		Short: "Watch logs output from executor pod",
 		Long:  `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -31,12 +31,8 @@ func NewWatchExecutionCmd() *cobra.Command {
 
 			client, _ := GetClient(cmd)
 
-			execution, err := client.GetExecution(scriptID, executionID)
-			ui.ExitOnError("get script execution details", err)
+			watchLogs(executionID, client)
 
-			PrintExecutionDetails(execution)
-
-			ui.Info("Watching for changes")
 			for range time.Tick(time.Second) {
 				execution, err := client.GetExecution(scriptID, executionID)
 				ui.ExitOnError("get script execution details", err)
@@ -44,7 +40,6 @@ func NewWatchExecutionCmd() *cobra.Command {
 				err = render.Watch(execution, os.Stdout)
 				ui.ExitOnError("watching for changes", err)
 				if execution.ExecutionResult.IsCompleted() {
-					ui.Info("\nGetting results")
 					render.Render(execution, os.Stdout)
 					ui.Warn("Script execution completed in", execution.Duration().String())
 					return
