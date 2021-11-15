@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -320,6 +321,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 							Image:           image,
 							Command:         []string{"/bin/runner", jsn},
 							ImagePullPolicy: v1.PullAlways,
+							Env:             envVars,
 						},
 					},
 					RestartPolicy: v1.RestartPolicyNever,
@@ -329,4 +331,35 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 		},
 	}
 
+}
+
+var envVars = []v1.EnvVar{
+	{
+		Name:  "RUNNER_ENDPOINT",
+		Value: os.Getenv("STORAGE_ENDPOINT"),
+	},
+	{
+		Name:  "RUNNER_ACCESSKEYID",
+		Value: os.Getenv("STORAGE_ACCESSKEYID"),
+	},
+	{
+		Name:  "RUNNER_SECRETACCESSKEY",
+		Value: os.Getenv("STORAGE_SECRETACCESSKEY"),
+	},
+	{
+		Name:  "RUNNER_LOCATION",
+		Value: os.Getenv("STORAGE_LOCATION"),
+	},
+	{
+		Name:  "RUNNER_TOKEN",
+		Value: os.Getenv("STORAGE_TOKEN"),
+	},
+	{
+		Name:  "RUNNER_SSL",
+		Value: os.Getenv("STORAGE_SSL"),
+	},
+	{
+		Name:  "RUNNER_SCRAPPERENABLED",
+		Value: os.Getenv("SCRAPPERENABLED"),
+	},
 }
