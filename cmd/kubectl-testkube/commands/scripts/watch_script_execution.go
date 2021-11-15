@@ -42,7 +42,6 @@ func NewWatchExecutionCmd() *cobra.Command {
 				if execution.ExecutionResult.IsCompleted() {
 					render.Render(execution, os.Stdout)
 					ui.Warn("Script execution completed in", execution.Duration().String())
-					printExecutionDetails(execution)
 					return
 				}
 			}
