@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -15,6 +18,9 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
+
+// check in compile time if interface is implemented
+var _ Client = (*ProxyScriptsAPI)(nil)
 
 func GetClientSet() (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
@@ -411,4 +417,53 @@ func (c ProxyScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) e
 	}
 
 	return nil
+}
+
+func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.getURI("/executions/%s/artifacts", executionID)
+	req := c.GetProxy("GET").
+		Suffix(uri)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return artifacts, fmt.Errorf("api/list-artifacts returned error: %w", err)
+	}
+
+	return c.getArtifactsFromResponse(resp)
+
+}
+func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
+	req, err := c.GetProxy("GET").
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+
+	defer req.Close()
+	if err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(destination, fileName)
+	split := strings.Split(fileName, "/")
+
+	f, err := os.Create(split[len(split)-1])
+
+	if _, err := f.ReadFrom(req); err != nil {
+		return "", err
+	}
+
+	defer f.Close()
+	return path, nil
+}
+
+func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return artifacts, err
+	}
+
+	err = json.Unmarshal(bytes, &artifacts)
+
+	return artifacts, err
 }

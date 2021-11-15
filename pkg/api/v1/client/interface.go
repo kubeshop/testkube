@@ -32,7 +32,10 @@ type Client interface {
 	ListExecutors() (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
 
-	GetServerInfo() (scripts testkube.ServerInfo, err error)
+	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
+	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
+
+  GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

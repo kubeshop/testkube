@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -17,6 +22,9 @@ import (
 const (
 	ClientHTTPTimeout = time.Minute
 )
+
+// check in compile time if interface is implemented
+var _ Client = (*DirectScriptsAPI)(nil)
 
 type Config struct {
 	URI string `default:"http://localhost:8088"`
@@ -327,6 +335,14 @@ func (c DirectScriptsAPI) getExecutorDetailsFromResponse(resp *http.Response) (e
 	return
 }
 
+func (c DirectScriptsAPI) getArtifactsFromResponse(resp *http.Response) (artifacts []testkube.Artifact, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&artifacts)
+
+	return
+}
+
 func (c DirectScriptsAPI) responseError(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		var pr problem.Problem
@@ -379,4 +395,44 @@ func (c DirectScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) 
 	}
 
 	return nil
+}
+
+// ListExecutions list all executions for given script name
+func (c DirectScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.getURI("/executions/%s/artifacts", executionID)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return artifacts, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return artifacts, fmt.Errorf("api/list-artifacts returned error: %w", err)
+	}
+
+	return c.getArtifactsFromResponse(resp)
+}
+
+func (c DirectScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return artifact, err
+	}
+
+	defer resp.Body.Close()
+
+	split := strings.Split(fileName, "/")
+	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
+	if err != nil {
+		return artifact, err
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return artifact, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return artifact, fmt.Errorf("api/download-file returned error: %w", err)
+	}
+
+	return f.Name(), nil
 }

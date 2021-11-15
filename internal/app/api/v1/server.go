@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"os"
-
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
@@ -46,12 +44,24 @@ type testkubeAPI struct {
 	ExecutorsClient *executorscr.ExecutorsClient
 	Metrics         Metrics
 	Storage         storage.Client
+	storageParams   storageParams
+}
+
+type storageParams struct {
+	SSL             bool
+	Endpoint        string
+	AccessKeyId     string
+	SecretAccessKey string
+	Location        string
+	Token           string
 }
 
 func (s testkubeAPI) Init() {
 	var err error
-	_, minioSSL := os.LookupEnv("MINIO_SSL")
-	s.Storage, err = minio.NewClient(os.Getenv("STORAGE_ENDPOINT"), os.Getenv("STORAGE_ACCESSKEYID"), os.Getenv("STORAGE_SECRETACCESSKEY"), os.Getenv("STORAGE_LOCATION"), os.Getenv("STORAGE_TOKEN"), minioSSL)
+
+	envconfig.Process("STORAGE", &s.storageParams)
+
+	s.Storage, err = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 	if err != nil {
 		s.Log.Warnf("error occured while instantiating storage provider:", err)
 	}
