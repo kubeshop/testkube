@@ -107,7 +107,7 @@ Helm defaults used in the `testkube` chart:
 | api-server.storage.endpoint | yes | localhost:9000 |
 | api-server.storage.accessKeyId | yes | minio |
 | api-server.storage.accessKey | yes | minio123 |
-| api-server.storage.scrapperDisabled | yes | false |
+| api-server.storage.scrapperEnabled | yes | false |
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
