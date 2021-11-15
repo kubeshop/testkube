@@ -118,7 +118,7 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 		return nil, err
 	}
 	if retryNr == retryCount {
-		return nil, fmt.Errorf("retry count exceeeded")
+		return nil, fmt.Errorf("retry count exceeeded, there are no active pods with given id=%s", jobName)
 	}
 	if len(pods.Items) == 0 {
 		time.Sleep(time.Duration(retryNr * 50 * int(time.Millisecond))) // increase backoff timeout
@@ -132,7 +132,10 @@ func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
 	pods, err := c.GetJobPods(podsClient, id, 1, 5)
+	logs = make(chan []byte)
+
 	if err != nil {
+		close(logs)
 		return logs, err
 	}
 
@@ -141,7 +144,8 @@ func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
 			c.Log.Debugw("Waiting for pod to be ready", "pod", pod.Name)
 			if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				c.Log.Errorw("poll immediate error when tailing logs", "error", err)
-				return
+				close(logs)
+				return logs, err
 			}
 			c.Log.Debug("Tailing pod logs")
 			return c.TailPodLogs(ctx, pod.Name)

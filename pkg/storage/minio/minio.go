@@ -3,7 +3,6 @@ package minio
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,9 +79,9 @@ func (c *Client) ListBuckets() ([]string, error) {
 
 func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	toReturn := []testkube.Artifact{}
-	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{}) {
+
+	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{Recursive: true}) {
 		if obj.Err != nil {
-			fmt.Println(obj.Err)
 			return nil, obj.Err
 		}
 		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
@@ -101,7 +100,6 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	if err != nil {
 		return err
 	}
-
 	var fileName string
 	if strings.Contains(filePath, "/") {
 		fileName = filePath
@@ -109,27 +107,21 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		fileName = objectStat.Name()
 	}
 
-	n, err := c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
-
+	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return err
 	}
 
-	// TODO introduce logger instead of printf!
-	fmt.Printf("uploaded %q of size %d\n", filePath, n.Size)
 	return nil
 }
 
-func (c *Client) DownloadFile(bucket, file string) (io.Reader, int64, error) {
+func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	defer reader.Close()
-	objectStat, err := reader.Stat()
-
-	return reader, objectStat.Size, nil
+	return reader, nil
 }
 
 func (c *Client) ScrapeArtefacts(id, directory string) error {
@@ -145,13 +137,11 @@ func (c *Client) ScrapeArtefacts(id, directory string) error {
 			}
 
 			if !info.IsDir() {
-				fmt.Println(path, info.Size())
 				err = client.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 				if err != nil {
 					return err
 				}
 			}
-
 			return nil
 		})
 	if err != nil {

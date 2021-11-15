@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -254,7 +255,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
-		s.Log.Infow("getting logs", "executionID", executionID)
+		s.Log.Debug("getting logs", "executionID", executionID)
 
 		ctx := c.Context()
 
@@ -264,20 +265,17 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
 
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			s.Log.Infow("starting stream writer")
-
-			fmt.Fprintf(w, `data: {"type": "event", "message": "getting logs for execution %s"}`, executionID)
-			fmt.Fprintf(w, "\n\n")
+			s.Log.Debug("starting stream writer")
 			w.Flush()
 			enc := json.NewEncoder(w)
 
 			// get logs from job executor pods
-			s.Log.Infow("getting logs")
+			s.Log.Debug("getting logs")
 			var logs chan output.Output
 			var err error
 
 			logs, err = s.Executor.Logs(executionID)
-			s.Log.Infow("waiting for jobs channel", "channelSize", len(logs))
+			s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 			if err != nil {
 				fmt.Fprintf(w, `data: {"type": "error","message": "%s"}\n\n`, err.Error())
 				s.Log.Errorw("getting logs error", "error", err)
@@ -288,7 +286,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 			// loop through pods log lines - it's blocking channel
 			// and pass single log output as sse data chunk
 			for out := range logs {
-				s.Log.Infow("got log", "out", out)
+				s.Log.Debugw("got log", "out", out)
 				fmt.Fprintf(w, "data: ")
 				enc.Encode(out)
 				fmt.Fprintf(w, "\n\n")
@@ -505,21 +503,25 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
+
 		return c.JSON(files)
 	}
 }
 
 func (s testkubeAPI) GetArtifact() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
-
-		file, size, err := s.Storage.DownloadFile(executionID, fileName)
+		unescaped, err := url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
+		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
+		defer file.Close()
 
-		return c.SendStream(file, int(size))
+		return c.SendStream(file)
 	}
 }
