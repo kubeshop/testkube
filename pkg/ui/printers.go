@@ -39,7 +39,7 @@ func Warn(message string, subMessages ...string) {
 }
 
 func LogLine(message string) {
-	fmt.Printf(" %s", color.DarkGray(message))
+	fmt.Printf("%s\n", color.DarkGray(message))
 }
 
 func Info(message string, subMessages ...string) {

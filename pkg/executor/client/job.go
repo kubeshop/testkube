@@ -68,6 +68,9 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output, 10000)
 	logs, err := c.Client.TailJobLogs(id)
+	if err != nil {
+		return out, err
+	}
 
 	go func() {
 		defer close(out)

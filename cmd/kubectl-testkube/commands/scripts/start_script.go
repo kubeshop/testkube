@@ -5,9 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +36,7 @@ func NewStartScriptCmd() *cobra.Command {
 			execution, err := client.ExecuteScript(scriptID, namespace, name, params)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
-			PrintExecutionDetails(execution)
+			printExecutionDetails(execution)
 
 			uiPrintStatus(execution)
 			uiShellCommandBlock(execution.Id)
@@ -54,24 +52,6 @@ func NewStartScriptCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watch, "watch", "f", false, "watch for changes after start")
 
 	return cmd
-}
-
-func watchLogs(id string, client client.Client) {
-	ui.Info("Watching for changes")
-
-	logs, err := client.Logs(id)
-	ui.ExitOnError("getting logs from exxcutor", err)
-
-	for l := range logs {
-		switch l.Type {
-		case output.TypeResult:
-			ui.Info("Execution completed", l.Result.Output)
-		default:
-			ui.LogLine(l.String())
-		}
-	}
-
-	uiShellCommandBlock(id)
 }
 
 func uiPrintStatus(execution testkube.Execution) {
