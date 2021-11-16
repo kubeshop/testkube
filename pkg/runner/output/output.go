@@ -12,53 +12,50 @@ const TypeLogLine = "line"
 const TypeError = "error"
 const TypeResult = "result"
 
-func NewOutputEvent(message string, content interface{}) Output {
+func NewOutputEvent(message string) Output {
 	return Output{
-		Type:    TypeLogEvent,
+		Type_:   TypeLogEvent,
 		Message: message,
-		Content: content,
 	}
 }
 
 func NewOutputLine(content []byte) Output {
 	return Output{
-		Type:    TypeLogLine,
-		Content: string(content),
+		Type_:   TypeLogLine,
+		Message: string(content),
 	}
 }
 
 func NewOutputError(err error) Output {
 	return Output{
-		Type:    TypeError,
+		Type_:   TypeError,
 		Message: string(err.Error()),
 	}
 }
 
 func NewOutputResult(result testkube.ExecutionResult) Output {
 	return Output{
-		Type:   TypeResult,
-		Result: result,
+		Type_:  TypeResult,
+		Result: &result,
 	}
 }
 
-type Output struct {
-	Type    string                   `json:"type,omitempty"`
-	Message string                   `json:"message,omitempty"`
-	Content interface{}              `json:"content,omitempty"`
-	Result  testkube.ExecutionResult `json:"result,omitempty"`
-}
+// type Output struct {
+// 	Type    string                   `json:"type,omitempty"`
+// 	Message string                   `json:"message,omitempty"`
+// 	Content interface{}              `json:"content,omitempty"`
+// 	Result  testkube.ExecutionResult `json:"result,omitempty"`
+// }
+
+type Output testkube.ExecutorOutput
 
 func (out Output) String() string {
-	switch out.Type {
-	case TypeError:
+	switch out.Type_ {
+	case TypeError, TypeLogLine, TypeLogEvent:
 		return out.Message
-	case TypeLogLine:
-		return fmt.Sprintf("%v", out.Content)
 	case TypeResult:
 		b, _ := json.Marshal(out.Result)
 		return string(b)
-	case TypeLogEvent:
-		return fmt.Sprintf("%s: %v", out.Message, out.Content)
 	}
 
 	return ""
@@ -80,6 +77,6 @@ func PrintResult(result testkube.ExecutionResult) {
 }
 
 func PrintEvent(message string, obj ...interface{}) {
-	out, _ := json.Marshal(NewOutputEvent(message, obj))
+	out, _ := json.Marshal(NewOutputEvent(message))
 	fmt.Printf("%s\n", out)
 }

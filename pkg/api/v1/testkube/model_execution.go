@@ -25,6 +25,8 @@ type Execution struct {
 	Name string `json:"name,omitempty"`
 	// execution envs passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
+	// additional flags passed to executor binary
+	Flags map[string]string `json:"flags,omitempty"`
 	// script metadata content
 	ScriptContent string      `json:"scriptContent,omitempty"`
 	Repository    *Repository `json:"repository,omitempty"`
