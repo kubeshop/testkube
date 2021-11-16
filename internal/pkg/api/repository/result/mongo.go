@@ -45,12 +45,47 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, id string) (result []testkube.Execution, err error) {
-	cursor, err := r.Coll.Find(ctx, bson.M{"scriptname": id})
+func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
+	query, opts := composeQueryAndOpts(filter)
+	cursor, err := r.Coll.Find(ctx, query, opts)
+
 	if err != nil {
-		return result, err
+		return
 	}
-	cursor.All(ctx, &result)
+	err = cursor.All(ctx, &result)
+	return
+}
+
+func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter Filter) (result testkube.ExecutionsTotals, err error) {
+
+	query, _ := composeQueryAndOpts(filter)
+	query["scriptType"] = bson.M{"$exists": true}
+	total, err := r.Coll.CountDocuments(ctx, query)
+	if err != nil {
+		return
+	}
+	result.Results = int32(total)
+
+	query["executionResult"] = bson.M{"status": testkube.QUEUED_ExecutionStatus}
+	queued, err := r.Coll.CountDocuments(ctx, query)
+	if err != nil {
+		return
+	}
+	result.Queued = int32(queued)
+
+	query["executionResult"] = bson.M{"status": testkube.PENDING_ExecutionStatus}
+	pending, err := r.Coll.CountDocuments(ctx, query)
+	if err != nil {
+		return
+	}
+	result.Pending = int32(pending)
+
+	query["executionResult"] = bson.M{"status": testkube.ERROR__ExecutionStatus}
+	failed, err := r.Coll.CountDocuments(ctx, query)
+	if err != nil {
+		return
+	}
+	result.Failed = int32(failed)
 	return
 }
 
@@ -79,4 +114,36 @@ func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTi
 func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime time.Time) (err error) {
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"endtime": endTime}})
 	return
+}
+
+func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+
+	query := bson.M{}
+	opts := options.Find()
+	startTimeQuery := bson.M{}
+
+	if filter.ScriptNameDefined() {
+		query["scriptname"] = filter.ScriptName()
+	}
+
+	if filter.StartDateDefined() {
+		startTimeQuery["$gte"] = filter.StartDate()
+	}
+
+	if filter.EndDateDefined() {
+		startTimeQuery["$lte"] = filter.EndDate()
+	}
+
+	if len(startTimeQuery) > 0 {
+		query["startTime"] = startTimeQuery
+	}
+
+	if filter.StatusDefined() {
+		query["executionResult"] = bson.M{"status": filter.Status()}
+	}
+
+	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
+	opts.SetLimit(int64(filter.PageSize()))
+
+	return query, opts
 }
