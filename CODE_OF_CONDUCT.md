@@ -1,4 +1,4 @@
-# testkube (by Kubeshop) Community Code of Conduct
+# TestKube (by Kubeshop) Community Code of Conduct
 
 testkube follows the CNCF Code of Conduct. The text of the CNCF CoC is replicated below. If you notice that this is out of date, please file an issue.
 
