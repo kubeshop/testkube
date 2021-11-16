@@ -34,7 +34,6 @@ func Run(r runner.Runner, args []string) {
 		os.Exit(1)
 	}
 
-	output.PrintEvent("running testkube.Execution", string(script))
 	e := testkube.Execution{}
 
 	err = json.Unmarshal(script, &e)
@@ -42,6 +41,8 @@ func Run(r runner.Runner, args []string) {
 		output.PrintError(err)
 		os.Exit(1)
 	}
+
+	output.PrintEvent("running test script", e.Id)
 
 	result, err := r.Run(e)
 	if err != nil {

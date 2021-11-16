@@ -70,6 +70,6 @@ func PrintResult(result testkube.ExecutionResult) {
 }
 
 func PrintEvent(message string, obj ...interface{}) {
-	out, _ := json.Marshal(NewOutputEvent(message))
+	out, _ := json.Marshal(NewOutputEvent(fmt.Sprintf("%s %v", message, obj)))
 	fmt.Printf("%s\n", out)
 }
