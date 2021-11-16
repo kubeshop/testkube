@@ -26,8 +26,8 @@
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:zoom="0.77104608"
-     inkscape:cx="363.79149"
-     inkscape:cy="614.10079"
+     inkscape:cx="361.19761"
+     inkscape:cy="933.14787"
      inkscape:window-width="1386"
      inkscape:window-height="847"
      inkscape:window-x="0"
@@ -132,32 +132,32 @@
        data-name="Layer 2"
        transform="matrix(0.17483348,0,0,0.17483348,34.499968,196.55047)"
        inkscape:export-filename="/Users/exu/code/kube/testkube/assets/logo-dark-text-full.png"
-       inkscape:export-xdpi="40.351295"
-       inkscape:export-ydpi="40.351295">
+       inkscape:export-xdpi="80.655266"
+       inkscape:export-ydpi="80.655266">
       <text
          class="cls-1"
          transform="translate(214.02,132.59)"
          id="text37-0-3"
-         style="fill:#333333">TE<tspan
+         style="fill:#808080">TE<tspan
    class="cls-2"
    x="160.92"
    y="0"
    id="tspan29-3-4"
-   style="fill:#333333">S</tspan><tspan
+   style="fill:#808080">S</tspan><tspan
    x="243.72"
    y="0"
    id="tspan31-9-0"
-   style="fill:#333333">T</tspan><tspan
+   style="fill:#808080">T</tspan><tspan
    class="cls-3"
    x="324.60001"
    y="0"
    id="tspan33-8-6"
-   style="fill:#333333">K</tspan><tspan
+   style="fill:#808080">K</tspan><tspan
    class="cls-4"
    x="409.67999"
    y="0"
    id="tspan35-6-0"
-   style="fill:#333333">UBE</tspan></text>
+   style="fill:#808080">UBE</tspan></text>
       <path
          class="cls-5"
          d="m 155.63,73.91 a 5.87,5.87 0 0 0 -1.8,-4.26 L 84.11,1.65 83.92,1.48 V 1.34 h -0.21 a 5.94,5.94 0 0 0 -7.66,0.12 l -74,64.36 A 6,6 0 0 0 0,70.4 L 0.35,96 v 0 l 0.14,9.78 a 7.93,7.93 0 0 0 2.37,5.55 l 67.79,66.43 a 7.9,7.9 0 0 0 1.43,1.1 v 0.08 h 0.14 a 7.9,7.9 0 0 0 9.24,-0.92 L 153,114.34 a 7.89,7.89 0 0 0 2.65,-5.91 V 89 89 Z m -79.36,65.17 a 7.88,7.88 0 0 1 -5.53,-2.25 L 22.39,89.56 75.67,42.08 a 6,6 0 0 1 8.11,0.17 l 50,48.53 -52.25,46.31 a 7.92,7.92 0 0 1 -5.26,1.99 z M 76.74,10.2 76.36,34 A 13,13 0 0 0 71,36.82 l -53.66,47.8 -3.66,-3.57 a 7.75,7.75 0 0 0 -5.48,-2.28 9.1,9.1 0 0 0 -1,0.08 l -0.11,-8 z M 7.32,90.78 7.27,86.72 a 0.74,0.74 0 0 1 0.2,-0.6 1.11,1.11 0 0 1 0.73,-0.3 0.74,0.74 0 0 1 0.56,0.26 l 3.31,3.24 -4.71,4.19 z m 0.47,15.5 a 0.87,0.87 0 0 1 -0.26,-0.61 v -3.92 a 5.82,5.82 0 0 0 2.79,-1.4 l 6.84,-6.1 48.7,47.61 a 14.92,14.92 0 0 0 6.64,3.76 l -0.26,23.77 z m 140.49,2.8 -69.06,61.48 0.27,-24.8 a 14.94,14.94 0 0 0 6.71,-3.4 l 52.64,-46.66 6.67,6.48 a 5.92,5.92 0 0 0 3.06,1.6 v 4.65 a 0.88,0.88 0 0 1 -0.29,0.65 z"
@@ -165,13 +165,13 @@
          style="fill:#564bfb;fill-opacity:1" />
       <text
          xml:space="preserve"
-         style="font-style:normal;font-weight:normal;font-size:28.2491px;line-height:1.25;font-family:sans-serif;fill:#333333;fill-opacity:1;stroke:none;stroke-width:1.51334"
+         style="font-style:normal;font-weight:normal;font-size:28.2491px;line-height:1.25;font-family:sans-serif;fill:#808080;fill-opacity:1;stroke:none;stroke-width:1.51334"
          x="558.01959"
          y="174.75819"
          id="text5003"><tspan
            sodipodi:role="line"
            id="tspan5001"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.2491px;font-family:Rubik;-inkscape-font-specification:Rubik;fill:#333333;stroke-width:1.51334"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.2491px;font-family:Rubik;-inkscape-font-specification:Rubik;fill:#808080;stroke-width:1.51334"
            x="558.01959"
            y="174.75819">/tɛst kjub/ by Kubeshop</tspan></text>
     </g>
@@ -180,8 +180,8 @@
        data-name="Layer 2"
        transform="matrix(0.17483348,0,0,0.17483348,33.934732,239.55658)"
        inkscape:export-filename="/Users/exu/code/kube/testkube/assets/logo-white-text-full.png"
-       inkscape:export-xdpi="40.351295"
-       inkscape:export-ydpi="40.351295">
+       inkscape:export-xdpi="80.655228"
+       inkscape:export-ydpi="80.655228">
       <text
          class="cls-1"
          transform="translate(214.02,132.59)"
