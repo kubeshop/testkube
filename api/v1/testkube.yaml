@@ -646,7 +646,23 @@ components:
           description: "execution name"
         envs:
           type: object
-          description: "execution envs passed to executor"
+          description: "environment variables passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            record: "true"
+            prefix: "some-"
+        args:
+          type: array
+          description: "additional arguments/flags passed to executor binary"
+          additionalProperties:
+            type: string
+          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
+          items:
+            type: string
+        params:
+          type: object
+          description: "execution params passed to executor converted to vars for usage in tests"
           additionalProperties:
             type: string
           example:
@@ -657,14 +673,6 @@ components:
           description: script metadata content
         repository:
           $ref: "#/components/schemas/Repository"
-        params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
         startTime:
           type: string
           description: 'test start time'
@@ -688,6 +696,7 @@ components:
         size:
           type: integer
           description: file size in bytes
+
     ExecutionsResult:
       description: the result for a page of executions
       type: object
@@ -1047,6 +1056,30 @@ components:
           $ref: "#/components/schemas/Executor"
         executions:
           $ref: "#/components/schemas/ExecutionsResult"
+
+
+    ExecutorOutput:
+      description: CRD based executor data
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: One of possible output types
+          enum:
+            - error
+            - log
+            - event
+            - result
+        content:
+          type: string
+          description: Message/event data passed from executor (like log lines etc)
+          example: 
+        result:
+          description: Execution result when job is finished
+          $ref: "#/components/schemas/ExecutionResult"
+
 
     #
     # Errors

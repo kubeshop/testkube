@@ -2,7 +2,6 @@ package v1
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -228,7 +227,6 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 
 		// watch for changes run listener in async mode
 		s.Log.Infow("running execution of script", "executionId", execution.Id, "request", request)
-		go s.ExecutionListener(ctx, execution, s.Executor)
 
 		// metrics increase
 		s.Metrics.IncExecution(execution)
@@ -237,18 +235,6 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 		}
 
 		return c.JSON(execution)
-	}
-}
-
-func (s testkubeAPI) ExecutionListener(ctx context.Context, execution testkube.Execution, executor client.Executor) {
-	return
-	logs, err := executor.Logs(execution.Id)
-	if err != nil {
-		s.Log.Errorw("getting logs error", "error", err)
-		return
-	}
-	for out := range logs {
-		fmt.Printf("%v\n", out)
 	}
 }
 
