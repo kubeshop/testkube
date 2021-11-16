@@ -33,9 +33,9 @@ func watchLogs(id string, client client.Client) {
 	ui.ExitOnError("getting logs from executor", err)
 
 	for l := range logs {
-		switch l.Type {
+		switch l.Type_ {
 		case output.TypeError:
-			ui.Warn(l.Message)
+			ui.Warn(l.Content)
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:

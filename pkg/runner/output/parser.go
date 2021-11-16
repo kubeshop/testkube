@@ -22,9 +22,9 @@ func GetExecutionResult(b []byte) (is bool, result testkube.ExecutionResult) {
 
 // ParseRunnerOutput try to parse possible runner output which is some bunch
 // of json stream like
-// {"type": "line", "content": "runner execution started  ------------"}
-// {"type": "line", "content": "GET /results"}
-// {"type": "result", "content": {"id": "2323", "output": "-----"}}
+// {"type": "line", "message": "runner execution started  ------------"}
+// {"type": "line", "message": "GET /results"}
+// {"type": "result", "result": {"id": "2323", "output": "-----"}}
 func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 
@@ -46,19 +46,17 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 			continue
 		}
 
-		switch log.Type {
+		switch log.Type_ {
 		case TypeResult:
-			result = log.Result
+			if log.Result != nil {
+				result = *log.Result
+			}
 
 		case TypeError:
-			result = testkube.ExecutionResult{ErrorMessage: log.Message}
+			result = testkube.ExecutionResult{ErrorMessage: log.Content}
 
-		case TypeLogLine:
-			if l, ok := log.Content.(string); ok {
-				logs = append(logs, l)
-			}
-		case TypeLogEvent:
-			logs = append(logs, log.Message)
+		case TypeLogEvent, TypeLogLine:
+			logs = append(logs, log.Content)
 		}
 
 	}

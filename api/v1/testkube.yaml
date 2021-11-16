@@ -646,33 +646,33 @@ components:
           description: "execution name"
         envs:
           type: object
-          description: "execution envs passed to executor"
+          description: "environment variables passed to executor"
           additionalProperties:
             type: string
           example:
             record: "true"
             prefix: "some-"
-        flags:
-          type: object
-          description: "additional flags passed to executor binary"
+        args:
+          type: array
+          description: "additional arguments/flags passed to executor binary"
           additionalProperties:
             type: string
-          example:
-            concurrency: "2"
-            some: "other-param"
-        scriptContent:
-          type: string
-          description: script metadata content
-        repository:
-          $ref: "#/components/schemas/Repository"
+          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
+          items:
+            type: string
         params:
           type: object
-          description: "execution params passed to executor"
+          description: "execution params passed to executor converted to vars for usage in tests"
           additionalProperties:
             type: string
           example:
             users: "3"
             prefix: "some-"
+        scriptContent:
+          type: string
+          description: script metadata content
+        repository:
+          $ref: "#/components/schemas/Repository"
         startTime:
           type: string
           description: 'test start time'
@@ -696,6 +696,7 @@ components:
         size:
           type: integer
           description: file size in bytes
+
     ExecutionsResult:
       description: the result for a page of executions
       type: object
@@ -1071,11 +1072,12 @@ components:
             - log
             - event
             - result
-        message:
+        content:
           type: string
-          description: output message
+          description: Message/event data passed from executor (like log lines etc)
           example: 
         result:
+          description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
 
 

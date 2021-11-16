@@ -15,21 +15,21 @@ const TypeResult = "result"
 func NewOutputEvent(message string) Output {
 	return Output{
 		Type_:   TypeLogEvent,
-		Message: message,
+		Content: message,
 	}
 }
 
 func NewOutputLine(content []byte) Output {
 	return Output{
 		Type_:   TypeLogLine,
-		Message: string(content),
+		Content: string(content),
 	}
 }
 
 func NewOutputError(err error) Output {
 	return Output{
 		Type_:   TypeError,
-		Message: string(err.Error()),
+		Content: string(err.Error()),
 	}
 }
 
@@ -40,19 +40,12 @@ func NewOutputResult(result testkube.ExecutionResult) Output {
 	}
 }
 
-// type Output struct {
-// 	Type    string                   `json:"type,omitempty"`
-// 	Message string                   `json:"message,omitempty"`
-// 	Content interface{}              `json:"content,omitempty"`
-// 	Result  testkube.ExecutionResult `json:"result,omitempty"`
-// }
-
 type Output testkube.ExecutorOutput
 
 func (out Output) String() string {
 	switch out.Type_ {
 	case TypeError, TypeLogLine, TypeLogEvent:
-		return out.Message
+		return out.Content
 	case TypeResult:
 		b, _ := json.Marshal(out.Result)
 		return string(b)

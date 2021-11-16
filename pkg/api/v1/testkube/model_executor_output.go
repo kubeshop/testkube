@@ -13,7 +13,7 @@ package testkube
 type ExecutorOutput struct {
 	// One of possible output types
 	Type_ string `json:"type"`
-	// output message
-	Message string           `json:"message,omitempty"`
+	// Message/event data passed from executor (like log lines etc)
+	Content string           `json:"content,omitempty"`
 	Result  *ExecutionResult `json:"result,omitempty"`
 }

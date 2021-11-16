@@ -41,6 +41,7 @@ func (e *ExecutionResult) IsFailed() bool {
 }
 
 func (r *ExecutionResult) Err(err error) ExecutionResult {
+	r.Status = ExecutionStatusError
 	r.ErrorMessage = err.Error()
 	return *r
 }
