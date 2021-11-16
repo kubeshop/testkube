@@ -1,12 +1,4 @@
-```
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-```
+![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 
 Welcome to TestKube - your somewhat opinionated and friendly Kubernetes testing framework!
 

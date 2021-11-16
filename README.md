@@ -1,11 +1,5 @@
-```
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-```
+![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
+
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
 
