@@ -58,7 +58,8 @@ jobs:
             build.args.VERSION=${{ steps.vars.outputs.tag }}
             build.args.COMMIT=${{ github.sha }}
           push: true
-
+        env:
+          TELEMETRY_TOKEN: "{{ secrets.TELEMETRY_TOKEN }}"
 
 
 
