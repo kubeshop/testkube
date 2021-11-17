@@ -1,6 +1,6 @@
 # Running TestKube test scripts
 
-Test scripts are stored in Kubernetes cluster a Custom resources. We can run them as manu times as we want and get results with use of kubectl testkube plugin or with API.
+Test scripts are stored in Kubernetes cluster a Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with API.
 
 ## Running
 
