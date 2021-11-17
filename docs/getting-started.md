@@ -22,35 +22,93 @@ If you don't want to create Custom Resources "by hand" we have a little helper f
 
 ### Creating Postman Collections based tests
 
-```sh
-kubectl testkube scripts create --file my_collection_file.json --name my-test-name
+Fist let's create Postman collection:
 
-#or 
-cat my_collection_file.json | kubectl testkube scripts create --name my-test-name
-```
-
-You can also create new scripts with `kubectl apply -f ...`, 
-which is equivalent to running `kubectl testkube create` command e.g.:
-
-```yaml
-cat <<EOF | kubectl apply -f -
-apiVersion: tests.testkube.io/v1
-kind: Script
-metadata:
-  name: my-test-name
-spec:
-  # Add fields here
-  type: postman/collection
-  content: >
-    { "info": { "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180", "name": "Kubeshop", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" }, "item": [ { "name": "Home", "event": [ { "listen": "test", "script": { "exec": [ "pm.test(\"Body matches string\", function () {", "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");", "});" ], "type": "text/javascript" } } ], "request": { "method": "GET", "header": [], "url": { "raw": "https://kubeshop.io/", "protocol": "https", "host": [ "kubeshop", "io" ], "path": [ "" ] } }, "response": [] }, { "name": "Team", "event": [ { "listen": "test", "script": { "exec": [ "pm.test(\"Status code is 200\", function () {", "    pm.response.to.have.status(200);", "});", "", "pm.test(\"Body matches string\", function () {", "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");", "});" ], "type": "text/javascript" } } ], "request": { "method": "GET", "header": [], "url": { "raw": "https://kubeshop.io/our-team", "protocol": "https", "host": [ "kubeshop", "io" ], "path": [ "our-team" ] } }, "response": [] } ] }
+```bash
+cat <<EOF > my_postman_collection.json
+{
+    "info": {
+        "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
+        "name": "Kubeshop",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Home",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Body matches string\", function () {",
+                            "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "https://kubeshop.io/",
+                    "protocol": "https",
+                    "host": [
+                        "kubeshop",
+                        "io"
+                    ],
+                    "path": [
+                        ""
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Team",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Status code is 200\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "",
+                            "pm.test(\"Body matches string\", function () {",
+                            "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "https://kubeshop.io/our-team",
+                    "protocol": "https",
+                    "host": [
+                        "kubeshop",
+                        "io"
+                    ],
+                    "path": [
+                        "our-team"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}
 EOF
 ```
 
-Where:
-
-- `content` is exported postman collection in example above. 
-- `name` is unique Sript Custom Resource name. 
-- `type` is `postman/collection` as it runs exported postman collections.
+```sh
+kubectl testkube scripts create --file my_collection_file.json --type "postman/collection" --name my-test-name 
+```
 
 ### Creating Cypress tests
 

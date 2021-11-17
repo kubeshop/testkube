@@ -2,7 +2,7 @@
 
 Test scripts are single executor oriented tests. Script can have different types, which depends what executors are installed in your cluster. 
 
-TestKubes includes `postman/collection`, `cypress/project` and `curl/test` script types which are auto registered during testkube install by default. 
+TestKubes includes `postman/collection`, `cypress/project` and `curl/test` script types which are auto registered during testkube install by default. // provide examples for cypress and  curl
 
 As TestKube was designed with flexibility in mind - you can add your own executor which will handle additional script types. 
 
@@ -18,11 +18,91 @@ Scripts can be currently created from two sources:
 
 ### Create your first script from file (Postman Collection test)
 
-Let's assume you have exported Postman collection which want to test some internal service inside Kuberntertes cluster
-We've saved it into `~/Downloads/API-Health.postman_collection.json` 
+Create script json file:
+```bash
+cat <<EOF > my_postman_collection.json
+{
+    "info": {
+        "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
+        "name": "Kubeshop",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Home",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Body matches string\", function () {",
+                            "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "https://kubeshop.io/",
+                    "protocol": "https",
+                    "host": [
+                        "kubeshop",
+                        "io"
+                    ],
+                    "path": [
+                        ""
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Team",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Status code is 200\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "",
+                            "pm.test(\"Body matches string\", function () {",
+                            "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "https://kubeshop.io/our-team",
+                    "protocol": "https",
+                    "host": [
+                        "kubeshop",
+                        "io"
+                    ],
+                    "path": [
+                        "our-team"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}
+EOF
+```
 
 ```sh
-kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
+$ kubectl testkube scripts create --name test --file my_postman_collection.json --type postman/collection 
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -32,39 +112,109 @@ kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API
                                            /tɛst kjub/ by Kubeshop
 
 
-Script created  🥇
+Script created test 🥇
 ```
 
 Script created! Now we can run as many times as we want. 
 
-We can check how TestKube stores this test internally by getting its details: 
+Let's see what has been created:
 
 ```sh
-kubectl get scripts api-incluster-test -oyaml
+$ kubectl get scripts -n testkube
+NAME   AGE
+test   32s
+```
 
+```sh
+$ kubectl get scripts -n testkube test -o yaml
 apiVersion: tests.testkube.io/v1
 kind: Script
 metadata:
-  creationTimestamp: "2021-10-06T08:49:14Z"
+  creationTimestamp: "2021-11-17T12:26:32Z"
   generation: 1
-  name: api-incluster-test
-  namespace: default
-  resourceVersion: "31613607"
-  uid: c1ba1129-95ba-49bc-8e94-2c18ae7854f7
+  name: test
+  namespace: testkube
+  resourceVersion: "224612"
+  uid: c622ef0b-f279-4804-ba76-98c5856fc375
 spec:
-  content: "{\n\t\"info\": {\n\t\t\"_postman_id\": \"4a2719c2-4ff0-4400-8d57-431e6e565ba4\",\n\t\t\"name\":
-    \"API-Health\",\n\t\t\"schema\": \"https://schema.getpostman.com/json/collection/v2.1.0/collection.json\"\n\t},\n\t\"item\":
-    [\n\t\t{\n\t\t\t\"name\": \"Health\",\n\t\t\t\"event\": [\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
-    \"test\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"pm.test(\\\"Status
-    code is 200\\\", function () {\",\n\t\t\t\t\t\t\t\"    pm.response.to.have.status(200);\",\n\t\t\t\t\t\t\t\"});\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\":
-    \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"request\": {\n\t\t\t\t\"method\":
-    \"GET\",\n\t\t\t\t\"header\": [],\n\t\t\t\t\"url\": {\n\t\t\t\t\t\"raw\": \"http://testkube-api-server:8088/health\",\n\t\t\t\t\t\"protocol\":
-    \"http\",\n\t\t\t\t\t\"host\": [\n\t\t\t\t\t\t\"testkube-api-server\"\n\t\t\t\t\t],\n\t\t\t\t\t\"port\":
-    \"8088\",\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t\"health\"\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"response\":
-    []\n\t\t}\n\t],\n\t\"event\": [\n\t\t{\n\t\t\t\"listen\": \"prerequest\",\n\t\t\t\"script\":
-    {\n\t\t\t\t\"type\": \"text/javascript\",\n\t\t\t\t\"exec\": [\n\t\t\t\t\t\"\"\n\t\t\t\t]\n\t\t\t}\n\t\t},\n\t\t{\n\t\t\t\"listen\":
-    \"test\",\n\t\t\t\"script\": {\n\t\t\t\t\"type\": \"text/javascript\",\n\t\t\t\t\"exec\":
-    [\n\t\t\t\t\t\"\"\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t]\n}"
+  content: |
+    {
+        "info": {
+            "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
+            "name": "Kubeshop",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        },
+        "item": [
+            {
+                "name": "Home",
+                "event": [
+                    {
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "pm.test(\"Body matches string\", function () {",
+                                "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
+                                "});"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }
+                ],
+                "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                        "raw": "https://kubeshop.io/",
+                        "protocol": "https",
+                        "host": [
+                            "kubeshop",
+                            "io"
+                        ],
+                        "path": [
+                            ""
+                        ]
+                    }
+                },
+                "response": []
+            },
+            {
+                "name": "Team",
+                "event": [
+                    {
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "pm.test(\"Status code is 200\", function () {",
+                                "    pm.response.to.have.status(200);",
+                                "});",
+                                "",
+                                "pm.test(\"Body matches string\", function () {",
+                                "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
+                                "});"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }
+                ],
+                "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                        "raw": "https://kubeshop.io/our-team",
+                        "protocol": "https",
+                        "host": [
+                            "kubeshop",
+                            "io"
+                        ],
+                        "path": [
+                            "our-team"
+                        ]
+                    }
+                },
+                "response": []
+            }
+        ]
+    }
   type: postman/collection
 ```
 
@@ -83,18 +233,32 @@ Where `examples` is test directory in `https://github.com/kubeshop/testkube-exec
 Now we can create our Cypress based script
 
 ```sh
-kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+$ kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+                                           /tɛst kjub/ by Kubeshop
+
+
+Script created kubeshop-cypress 🥇
 ```
 
 Let's check how created testkube test script is defined on cluster: 
 
 ```sh
-kubectl get scripts kubeshop-cypress -oyaml
+$ kubectl get scripts -n testkube kubeshop-cypress -o yaml
 apiVersion: tests.testkube.io/v1
 kind: Script
 metadata:
+  creationTimestamp: "2021-11-17T12:29:32Z"
+  generation: 1
   name: kubeshop-cypress
-  namespace: default
+  namespace: testkube
+  resourceVersion: "225162"
+  uid: f0d856aa-04fc-4238-bb4c-156ff82b4741
 spec:
   repository:
     branch: main
