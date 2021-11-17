@@ -33,11 +33,13 @@ release:
   # Tags that have the format v1.0.0-rc1 will mark the release as a pre-release (i.e. not ready for production)
   # Other tags will be marked as ready for production
   prerelease: auto
-# brews:
-#   -
-#     tap:
-#       owner: kubeshop
-#       name: testkube
-#     description: Test your services in Kubernetes cluster with ease.
-#     homepage: https://testkube.io
-#     license: "MIT"
+
+brews:
+  -
+    tap:
+      owner: kubeshop
+      name: homebrew
+    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+    homepage: https://testkube.io
+    license: "MIT"
+
