@@ -62,7 +62,7 @@ replicaset.apps/testkube-api-server-5478577b5b   1         1         1       64s
 replicaset.apps/testkube-mongodb-5d95f44fdd      1         1         1       64s
 ```
 
-By default testkube is installed in `testkube` namespace.
+By default testkube is installed in the `testkube` namespace.
 
 ### Manual testkube Helm charts installation
 
