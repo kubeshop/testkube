@@ -42,6 +42,25 @@ Above command will install following components in your Kubernetes cluster:
 4. MongoDB
 5. Minio - optional
 
+You can confirm it by running:
+```
+$ kubectl get all -n testkube
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/testkube-api-server-5478577b5b-jnnv6   1/1     Running   0          64s
+pod/testkube-mongodb-5d95f44fdd-8wkwh      1/1     Running   0          64s
+
+NAME                          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+service/testkube-mongodb      ClusterIP   10.43.192.11   <none>        27017/TCP        64s
+service/testkube-api-server   NodePort    10.43.32.229   <none>        8088:31868/TCP   64s
+
+NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/testkube-api-server   1/1     1            1           64s
+deployment.apps/testkube-mongodb      1/1     1            1           64s
+
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/testkube-api-server-5478577b5b   1         1         1       64s
+replicaset.apps/testkube-mongodb-5d95f44fdd      1         1         1       64s
+```
 
 By default testkube is installed in `testkube` namespace.
 
