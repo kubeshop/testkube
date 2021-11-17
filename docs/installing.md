@@ -19,7 +19,7 @@ If you don't like automatic scripts you can always use manuall install:
 
 1. Download binary with version of your choice (recent one is recommended)
 2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz)
-3. Move it to location in the PATH for example `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`
+3. Move it to a location in the PATH. For example `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`
 
 For Windows download desired binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
 
