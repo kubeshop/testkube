@@ -9,8 +9,12 @@ edit_uri: blob/main/docs/
 theme:
   name: material
   locale: en
+  logo: img/logo.png
   features:
     - navigation.expand
+
+extra_css:
+  - css/extra.css
 
 nav:
   - Welcome: index.md
