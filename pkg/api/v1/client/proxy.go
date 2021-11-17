@@ -107,13 +107,16 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions testkube.Ex
 }
 
 func (c ProxyScriptsAPI) DeleteScripts(namespace string) error {
-	uri := c.getURI("/scripts?namespace=%s", namespace)
-	return c.makeDeleteRequest(uri, true)
+	uri := c.getURI("/scripts")
+	return c.makeDeleteRequest(uri, namespace, true)
 }
 
 func (c ProxyScriptsAPI) DeleteScript(name string, namespace string) error {
-	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
-	return c.makeDeleteRequest(uri, true)
+	if name == "" {
+		return fmt.Errorf("script name '%s' is not valid.", name)
+	}
+	uri := c.getURI("/scripts/%s", name)
+	return c.makeDeleteRequest(uri, namespace, true)
 }
 
 // CreateScript creates new Script Custom Resource
@@ -202,7 +205,7 @@ func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts
 // GetExecutions list all executions in given script
 func (c ProxyScriptsAPI) AbortExecution(scriptID, id string) error {
 	uri := c.getURI("/scripts/%s/executions/%s", scriptID, id)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
 // executor --------------------------------------------------------------------------------
@@ -256,7 +259,7 @@ func (c ProxyScriptsAPI) ListExecutors() (executors testkube.ExecutorsDetails, e
 
 func (c ProxyScriptsAPI) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s", name)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -391,9 +394,11 @@ func (c ProxyScriptsAPI) getURI(pathTemplate string, params ...interface{}) stri
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c ProxyScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) error {
+func (c ProxyScriptsAPI) makeDeleteRequest(uri string, namespace string, isContentExpected bool) error {
 
-	req := c.GetProxy("DELETE").Suffix(uri)
+	req := c.GetProxy("DELETE").
+		Suffix(uri).
+		Param("namespace", namespace)
 	resp := req.Do(context.Background())
 
 	if resp.Error() != nil {

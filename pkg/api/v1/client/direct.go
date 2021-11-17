@@ -105,6 +105,9 @@ func (c DirectScriptsAPI) DeleteScripts(namespace string) error {
 }
 
 func (c DirectScriptsAPI) DeleteScript(name string, namespace string) error {
+	if name == "" {
+		return fmt.Errorf("script name '%s' is not valid.", name)
+	}
 	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
 	return c.makeDeleteRequest(uri, true)
 }
