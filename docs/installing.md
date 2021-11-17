@@ -23,7 +23,7 @@ If you don't like automatic scripts you can always use manuall install:
 
 For Windows, download the binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
 
-We have plans to build installers for most popular OS and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
+We have plans to build installers for the most popular Operating Systems and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
 
 ## Install `testkube` components in your cluster
 
