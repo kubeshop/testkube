@@ -38,7 +38,7 @@ brews:
   -
     tap:
       owner: kubeshop
-      name: homebrew
+      name: homebrew-testkube
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
