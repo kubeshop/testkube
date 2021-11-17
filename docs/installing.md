@@ -8,12 +8,23 @@ To get TestKube up and running you will need to
 
 ## Install the kubectl testkube plugin
 
+### Installing on MacOS 
+
+We're building Homebew tap for each release, so you can easily install TestKube with Homebrew.
+
+```sh
+brew tap kubeshop/homebrew-testkube
+brew install kubeshop/testkube
+```
+
+### Installing on Linux or MaxOS with install script
+
 To install on Linux or MacOs run 
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
 
-## Alternative installation method (manual)
+### Alternative installation method (manual)
 
 If you don't like automatic scripts you can always use manuall install:
 
