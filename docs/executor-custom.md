@@ -111,8 +111,8 @@ echo "http://google.pl" | kubectl testkube scripts create --name example-google-
 kubectl testkube scripts run example-google-test
 ```
 
-
-
+That's all for the most basic executor example, you can look our internal projects for more examples 
+and details how it's implemented:
 
 ## Resources
 
