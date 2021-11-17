@@ -22,7 +22,7 @@ If you don't want to create Custom Resources "by hand" we have a little helper f
 
 ### Creating Postman Collections based tests
 
-Fist let's create Postman collection:
+First, let's create a Postman collection:
 
 ```bash
 cat <<EOF > my_postman_collection.json
