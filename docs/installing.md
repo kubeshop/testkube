@@ -131,7 +131,7 @@ https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
 
 ## Uninstall `testkube`
 
-You can uninstall TestKube using uninstall command integrated into testkube plugin. 
+You can uninstall TestKube using the uninstall command integrated into the testkube plugin. 
 
 ```
 kubectl testkube uninstall [--remove-crds]
