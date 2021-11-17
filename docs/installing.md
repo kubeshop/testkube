@@ -21,7 +21,7 @@ If you don't like automatic scripts you can always use manuall install:
 2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz)
 3. Move it to a location in the PATH. For example `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`
 
-For Windows download desired binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
+For Windows, download the binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
 
 We have plans to build installers for most popular OS and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
 
