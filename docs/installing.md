@@ -137,4 +137,4 @@ You can uninstall TestKube using the uninstall command integrated into the testk
 kubectl testkube uninstall [--remove-crds]
 ```
 
-Optionally you can use `--remove-crds` flag which clean all installed Custom Resource Definitions installed by TestKube.
+Optionally you can use the `--remove-crds` flag which will clean all installed Custom Resource Definitions installed by TestKube.
