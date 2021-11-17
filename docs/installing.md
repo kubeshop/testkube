@@ -34,7 +34,7 @@ Run
 kubectl testkube install
 ```
 
-Above command will install following components in your Kubernetes cluster:
+The above command will install the following components in your Kubernetes cluster:
 
 1. Testkube API
 2. `testkube` namespace
