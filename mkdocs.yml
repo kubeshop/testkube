@@ -10,6 +10,7 @@ theme:
   name: material
   locale: en
   logo: img/logo.png
+  favicon: img/favicon.ico
   features:
     - navigation.expand
 
