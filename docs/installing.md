@@ -12,15 +12,18 @@ To install on Linux or MacOs run
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
-Alternative install:
 
-1. Download binary of your choice
+## Alternative installation method (manual)
+
+If you don't like automatic scripts you can always use manuall install:
+
+1. Download binary with version of your choice (recent one is recommended)
 2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz)
 3. Move it to location in the PATH for example `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`
 
 For Windows download desired binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
 
-We have plans to build installers for most popular OS and system distros.
+We have plans to build installers for most popular OS and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
 
 ## Install `testkube` components in your cluster
 

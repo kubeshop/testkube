@@ -1,8 +1,18 @@
 # Creating your own Executor
 
+Executors are programs which are encanpsulated in docker containers. 
+
+Only one restriction is that they need to implement communication interface:
+
+- INPUT : get JSON (`testube.Execution`) OpenAPI based document, 
+- OUTPUT : stream of json output lines (`testkube.ExecutorOutput`) - each output line is simply wrapped in this JSON, like in structured logging idea. 
+
+
 In order to be able to run tests using some new tools for which there is no executor, there is possibility to create a custom executor from the [kubetest-executor-template](https://github.com/kubeshop/testkube-executor-template).
 
 ## Steps for creating executor
+
+You can check full example implementation here: https://github.com/exu/testkube-executor-example
 
 ### Setup repository
 
@@ -12,217 +22,104 @@ In order to be able to run tests using some new tools for which there is no exec
 
 ### Implement Runner Components
 
-[TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new executor and only the explicit runner needs to be implemented but you're not forced to use it - just implement OpenAPI Spec for executor 
-and you're good.
-In this example for sake of simplicity we'll use `testkube` components to implement executor they help us with:
-- Defining basic HTTP Rest based server skeleton
-- Creating job queue - our tests will be run in async mode
-- Running runners - this is the only part which need to be implmented when using `testkube` components.
+[TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
 
 
-To implement new executor we should do following: 
+Let's try to create new test runner which test if given URI call is successfull (`status code == 200`)
 
-- Define the input format for tests.
-  In order to communicate effectively with executor we need to define a format on how to structure the tests. And bellow is an example for the curl based tests.
-
-```json
-{
-    "command": ["curl",
-        "https://reqbin.com/echo/get/json",
-        "-H",
-        "'Accept: application/json'"
-    ],
-    "expected_status": 200,
-    "expected_body": "{\"success\":\"true\"}"
-}
-```
-
-The output will be stored in the `content` field of the request body and the request body will look like:
-
-```json
-{
-    "type": "curl/test",
-    "name": "some-custom-execution-name",
-    "content": "{\"command\": [\"curl\", \"https://reqbin.com/echo/get/json\", \"-H\", \"'Accept: application/json'\"],\"expected_status\":200,\"expected_body\":\"{\\\"success\\\":\\\"true\\\"}\"}"
-}
-```
-
-There is also the field `params` field in the request that can be used to pass some aditional key value pairs to the runner. You need to implement them on your own - they are often used in runners to pass additional variables to test.
-
-- Create execution storage repository.
-  There is a storage repository `result.MongoRepository` provided implemented using mongo DB but there is the possibility to provide a new storage type.
-  The repository needs to implement the interface bellow, it can use inmemory storage, database or whatever fits your needs. This is only used for execution scheduling, the final results will be centralized by the api. You can also use 
-  built-in repository (for now  support only mongo repository)
+To create new runner we should implement `testkube.Runner` interface first
 
 ```go
-type Repository interface {
-    // Get gets execution result by id
-    Get(ctx context.Context, id string) (testkube.Execution, error)
-    // Insert inserts new execution result
-    Insert(ctx context.Context, result testkube.Execution) error
-    // Update updates execution result
-    Update(ctx context.Context, result testkube.Execution) error
-    // QueuePull pulls from queue and locks other clients to read (changes state from queued->pending)
-    QueuePull(ctx context.Context) (testkube.Execution, error)
-}
-```
-
-- Prepare docker for the type of the executor.
-  In this step Dockerfile should be configured to make sure that the runner has all dependencies installed and ready to use. 
-  In case of the [testkube-executor-curl](https://github.com/kubeshop/testkube-executor-curl) only curl was required.
-
-```docker
-FROM golang:1.17
-WORKDIR /build
-COPY . .
-ENV GONOSUMDB=github.com/kubeshop/* 
-ENV CGO_ENABLED=0 
-ENV GOOS=linux
-RUN cd cmd/executor;go build -o /app -mod mod -a .
-
-FROM alpine
-RUN apk --no-cache add ca-certificates && \
-    apk --no-cache add curl
-WORKDIR /root/
-COPY --from=0 /app /bin/app
-EXPOSE 8083
-ENTRYPOINT ["/bin/app"]
-```
-
-- Create new runner.
-  The runner should contain logic to run tests and to verify expectations based on the interface from bellow.
-
-```go
-// Runner interface to abstract runners implementations
 type Runner interface {
-    // Run takes Execution data and returns execution result
-    Run(execution testkube.Execution) testkube.ExecutionResult
+	// Run takes Execution data and returns execution result
+	Run(execution testkube.Execution) (result testkube.ExecutionResult, err error)
 }
 ```
 
-  For the curl executor provide the struct that matches the exact structure of the test input format which runner will take as the input(described above).
+As we can see we'll get `Execution` in input - this object is managed by testkube API and will be passed 
+to your executor - it'll have information about execution id and content which should be run on top of your runner. Example runner is defined in our template - so if you'll use it only thing which need to be done is implementing Run method (you can rename ExampleRunner to whatever you want)
 
 ```go
-type CurlRunnerInput struct {
-    Command        []string `json:"command"`
-    ExpectedStatus int      `json:"expected_status"`
-    ExpectedBody   string   `json:"expected_body"`
+// ExampleRunner for template - change me to some valid runner
+type ExampleRunner struct {
+}
+
+func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
+	return testkube.ExecutionResult{
+		Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
+		Output: "exmaple test output",
+	}, nil
 }
 ```
 
-  And bellow is the business logic for the curl executor and it executes the curl command given as input, takes the output, tests the expectations and returns the result.
+Runner need to return `ExecutionResult` or `error` (in case of runner can't run tests), ExecutionResult 
+could have different statuses (look at OpenAPI spec for details) - we'll focus on `success` and `error`
+
+Let's assume that user will create test which content will be simply URI to test.
+
+
+
+
+
+
 
 ```go
-func (r *CurlRunner) Run(execution testkube.Execution) testkube.ExecutionResult {
-    var runnerInput CurlRunnerInput
-    err := json.Unmarshal([]byte(execution.ScriptContent), &runnerInput)
-    if err != nil {
-        return testkube.ExecutionResult{
-            Status: testkube.ExecutionStatusError,
-        }
-    }
-    command := runnerInput.Command[0]
-    runnerInput.Command[0] = CurlAdditionalFlags
-    output, err := process.Execute(command, runnerInput.Command...)
-    if err != nil {
-        r.Log.Errorf("Error occured when running a command %s", err)
-        return testkube.ExecutionResult{
-            Status:       testkube.ExecutionStatusError,
-            ErrorMessage: fmt.Sprintf("Error occured when running a command %s", err),
-        }
-    }
+func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 
-    outputString := string(output)
-    responseStatus := getResponseCode(outputString)
-    if responseStatus != runnerInput.ExpectedStatus {
-        return testkube.ExecutionResult{
-            Status:       testkube.ExecutionStatusError,
-            RawOutput:    outputString,
-            ErrorMessage: fmt.Sprintf("Response statut don't match expected %d got %d", runnerInput.ExpectedStatus, responseStatus),
-        }
-    }
-
-    if !strings.Contains(outputString, runnerInput.ExpectedBody) {
-        return testkube.ExecutionResult{
-            Status:       testkube.ExecutionStatusError,
-            RawOutput:    outputString,
-            ErrorMessage: fmt.Sprintf("Response doesn't contain body: %s", runnerInput.ExpectedBody),
-        }
-    }
-
-    return testkube.ExecutionResult{
-        Status:    testkube.ExecutionStatusSuceess,
-        RawOutput: outputString,
-    }
 }
 ```
 
 ### Deploying your executor
 
+
 When everything is completed you'll need to build and deploy your runner into Kubernetes cluster. 
 
 ```
-docker build -t YOUR_USER/testkube-executor-curl . 
-docker push YOUR_USER/testkube-executor-curl
+docker build -t YOUR_USER/testkube-executor-example . 
+docker push YOUR_USER/testkube-executor-example
 ```
 
-and define some deployment: 
-```
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: curl-executor-deployment
-  labels:
-    app: curl-executor
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: curl-executor
-  template:
-    metadata:
-      labels:
-        app: curl-executor
-    spec:
-      containers:
-      - name: executor
-        image: YOUR_USER/testkube-executor-curl:latest
-        env:
-        - name: EXECUTOR_PORT
-          value: "8083"
-        ports:
-        - containerPort: 8083
-        resources:
-          limits:
-            cpu: 300m
-            ephemeral-storage: 1Gi
-            memory: 200Mi
-          requests:
-            cpu: 100m
-            ephemeral-storage: 1Gi
-            memory: 100Mi
-```
+When docker containers are finally here we're ready to register our executor: 
+Create yaml file with definition: (`executor.yaml`)
 
-(You should tune deployment for production use)
-
-### Add Executor to TestKube
-
-Last thing which needs to be done is to create binding for your executor to some type 
-We've defined `curl/test` type above so let's bind this type so testkube would be aware of it. 
-To do this we need to create new Executor Custom Resource
-
-```
+```yaml
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
-  annotations:
-    meta.helm.sh/release-name: testkube
-    meta.helm.sh/release-namespace: testkube
-  name: curl-executor
+  name: example-executor
+  namespace: testkube
 spec:
-  executor_type: rest
+  executor_type: job
+  image: kubeshop/testkube-example-executor:0.0.1 # pass your repository and tag
   types:
-  - curl/test
-  uri: http://testkube-curl-executor:8086
+  - example/test
+  volume_mount_path: /mnt/artifacts-storage
+  volume_quantity: 10Gix
 ```
 
+and apply it on your cluster: 
+```sh
+kubectl apply -f executor.yaml
+```
+
+Now we're ready to create and run your custom scripts by passing URI as script content
+
+```sh
+# create 
+echo "http://google.pl" | kubectl testkube scripts create --name example-google-test --type example/test 
+# and run it in testkube
+kubectl testkube scripts run example-google-test
+```
+
+That's all for the most basic executor example, you can look our internal projects for more examples 
+and details how it's implemented:
+
+## Resources
+
+Resources: 
+- [OpenaAPI spec details](https://kubeshop.github.io/testkube/openapi/)
+- [Spec in YAML file](https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml)
+
+Go based resources for input and output objects:
+- input: [`testkube.Execution`](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_execution.go)
+- output line: [`testkube.ExecutorOutput`](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_executor_output.go)
