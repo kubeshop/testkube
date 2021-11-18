@@ -65,7 +65,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 5)
+	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 10)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -121,7 +121,7 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 		return nil, fmt.Errorf("retry count exceeeded, there are no active pods with given id=%s", jobName)
 	}
 	if len(pods.Items) == 0 {
-		time.Sleep(time.Duration(retryNr * 50 * int(time.Millisecond))) // increase backoff timeout
+		time.Sleep(time.Duration(retryNr * 500 * int(time.Millisecond))) // increase backoff timeout
 		return c.GetJobPods(podsClient, jobName, retryNr+1, retryCount)
 	}
 	return pods, nil
@@ -131,7 +131,7 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
-	pods, err := c.GetJobPods(podsClient, id, 1, 5)
+	pods, err := c.GetJobPods(podsClient, id, 1, 10)
 	logs = make(chan []byte)
 
 	if err != nil {
