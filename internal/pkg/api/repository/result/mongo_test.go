@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -217,7 +218,7 @@ func getRepository() (*MongoRepository, error) {
 func (repository *MongoRepository) insertExecutionResult(scriptName string, execStatus testkube.ExecutionStatus, startTime time.Time) error {
 	return repository.Insert(context.Background(),
 		testkube.Execution{
-			Id:              "dummyID",
+			Id:              rand.Name(),
 			ScriptName:      scriptName,
 			Name:            "dummyName",
 			ScriptType:      "test/curl",
