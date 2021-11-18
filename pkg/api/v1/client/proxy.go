@@ -459,7 +459,7 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string)
 	}
 
 	defer f.Close()
-	return path, nil
+	return path, err
 }
 
 func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
