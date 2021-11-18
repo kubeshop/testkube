@@ -322,8 +322,8 @@ func (s testkubeAPI) ListExecutions() fiber.Handler {
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
-	scriptName := c.Params("id", "")
-	if scriptName != "" {
+	scriptName := c.Params("id", "-")
+	if scriptName != "-" {
 		filter = filter.WithScriptName(scriptName)
 	}
 
@@ -337,8 +337,8 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithPageSize(pageSize)
 	}
 
-	status := c.Query("status", "")
-	if status != "" {
+	status := c.Query("status", "-")
+	if status != "-" {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 
