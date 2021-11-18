@@ -443,7 +443,6 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
-
 		files, err := s.Storage.ListFiles(executionID)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -461,6 +460,7 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 		if err == nil {
 			fileName = unescaped
 		}
+
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)

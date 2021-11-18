@@ -25,25 +25,29 @@ type Client struct {
 	minioclient     *minio.Client
 }
 
-func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) (*Client, error) {
+func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Client {
 	c := &Client{
 		location:        location,
 		accessKeyID:     accessKeyID,
 		secretAccessKey: secretAccessKey,
 		token:           token,
 		ssl:             ssl,
+		Endpoint:        endpoint,
 	}
 
-	mclient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, token),
-		Secure: ssl,
+	return c
+}
+
+func (c *Client) Connect() error {
+	mclient, err := minio.New(c.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token),
+		Secure: c.ssl,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	c.minioclient = mclient
-
-	return c, nil
+	return err
 }
 
 func (c *Client) CreateBucket(bucket string) error {
@@ -78,6 +82,9 @@ func (c *Client) ListBuckets() ([]string, error) {
 }
 
 func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
 	toReturn := []testkube.Artifact{}
 
 	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{Recursive: true}) {
@@ -91,6 +98,9 @@ func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 }
 
 func (c *Client) SaveFile(bucket, filePath string) error {
+	if err := c.Connect(); err != nil {
+		return err
+	}
 	object, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -116,6 +126,10 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 }
 
 func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
+
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
@@ -125,8 +139,11 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 }
 
 func (c *Client) ScrapeArtefacts(id, directory string) error {
-	client := c
-	err := client.CreateBucket(id) // create bucket name it by execution ID
+	if err := c.Connect(); err != nil {
+		return err
+	}
+
+	err := c.CreateBucket(id) // create bucket name it by execution ID
 	if err != nil {
 		return fmt.Errorf("failed to create a bucket %s: %w", id, err)
 	}
@@ -137,7 +154,7 @@ func (c *Client) ScrapeArtefacts(id, directory string) error {
 			}
 
 			if !info.IsDir() {
-				err = client.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
+				err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 				if err != nil {
 					return err
 				}

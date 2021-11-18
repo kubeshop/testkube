@@ -443,11 +443,11 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string)
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
 		Stream(context.Background())
-
-	defer req.Close()
 	if err != nil {
 		return "", err
 	}
+
+	defer req.Close()
 
 	path := filepath.Join(destination, fileName)
 	split := strings.Split(fileName, "/")
@@ -459,7 +459,7 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string)
 	}
 
 	defer f.Close()
-	return path, nil
+	return path, err
 }
 
 func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
