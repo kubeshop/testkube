@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -444,9 +443,6 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
-		if s.Storage == nil || reflect.ValueOf(s.Storage).IsNil() {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Storage interface not configured."))
-		}
 		files, err := s.Storage.ListFiles(executionID)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -464,9 +460,7 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 		if err == nil {
 			fileName = unescaped
 		}
-		if s.Storage == nil || reflect.ValueOf(s.Storage).IsNil() {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Storage interface not configured."))
-		}
+
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)

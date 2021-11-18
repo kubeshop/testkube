@@ -423,12 +423,15 @@ func (c DirectScriptsAPI) DownloadFile(executionID, fileName, destination string
 	}
 
 	defer resp.Body.Close()
-
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("error: %d", resp.StatusCode)
+	}
 	split := strings.Split(fileName, "/")
 	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
 	if err != nil {
 		return artifact, err
 	}
+
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return artifact, err
 	}

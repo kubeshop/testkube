@@ -57,14 +57,9 @@ type storageParams struct {
 }
 
 func (s testkubeAPI) Init() {
-	var err error
-
 	envconfig.Process("STORAGE", &s.storageParams)
 
-	s.Storage, err = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
-	if err != nil {
-		s.Log.Warnf("error occured while instantiating storage provider:", err)
-	}
+	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 
 	s.Routes.Static("/api-docs", "./api/v1")
 

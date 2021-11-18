@@ -88,7 +88,8 @@ func NewDownloadArtifactsCmd() *cobra.Command {
 			client, _ := scripts.GetClient(cmd)
 			if f, err := client.DownloadFile(executionID, filename, destination); err != nil {
 				cmd.SilenceUsage = true
-				
+				return err
+
 			} else {
 				fmt.Printf("File %s downloaded.\n", f)
 			}
