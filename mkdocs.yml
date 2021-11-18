@@ -42,6 +42,7 @@ nav:
   - Development: development.md
   - OpenAPI definition: openapi.md
   - Telemetry: telemetry.md
+  - Storage: artifacts-storage.md
 
 extra:
   analytics:

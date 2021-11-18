@@ -105,26 +105,26 @@ helm delete --namespace namespace_name my-testkube testkube/testkube
 
 Helm defaults used in the `testkube` chart:
 
-| Parameter                          | Is optional | Default                            |
-| ---------------------------------- | ----------- | ---------------------------------- |
-| mongodb.auth.enabled               | yes         | false                              |
-| mongodb.service.port               | yes         | "27017"                            |
-| mongodb.service.portNmae           | yes         | "mongodb"                          |
-| mongodb.service.nodePort           | yes         | true                               |
-| mongodb.service.clusterIP          | yes         | ""                                 |
-| mongodb.nameOverride               | yes         | "mongodb"                          |
-| mongodb.fullnameOverride           | yes         | "testkube-mongodb"                 |
-| api-server.image.repository        | yes         | "kubeshop/testkube-api-server"     |
-| api-server.image.pullPolicy        | yes         | "Always"                           |
-| api-server.image.tag               | yes         | "latest"                           |
-| api-server.service.type            | yes         | "NodePort"                         |
-| api-server.service.port            | yes         | 8088                               |
-| api-server.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017" |
-| api-server.telemetryDisabled       | yes         | false                              |
-| api-server.storage.endpoint        | yes         | localhost:9000                     |
-| api-server.storage.accessKeyId     | yes         | minio                              |
-| api-server.storage.accessKey       | yes         | minio123                           |
-| api-server.storage.scrapperEnabled | yes         | false                              |
+| Parameter                          | Is optional | Default                              |
+| ---------------------------------- | ----------- | ------------------------------------ |
+| mongodb.auth.enabled               | yes         | false                                |
+| mongodb.service.port               | yes         | "27017"                              |
+| mongodb.service.portNmae           | yes         | "mongodb"                            |
+| mongodb.service.nodePort           | yes         | true                                 |
+| mongodb.service.clusterIP          | yes         | ""                                   |
+| mongodb.nameOverride               | yes         | "mongodb"                            |
+| mongodb.fullnameOverride           | yes         | "testkube-mongodb"                   |
+| api-server.image.repository        | yes         | "kubeshop/testkube-api-server"       |
+| api-server.image.pullPolicy        | yes         | "Always"                             |
+| api-server.image.tag               | yes         | "latest"                             |
+| api-server.service.type            | yes         | "NodePort"                           |
+| api-server.service.port            | yes         | 8088                                 |
+| api-server.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
+| api-server.telemetryDisabled       | yes         | false                                |
+| api-server.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 |
+| api-server.storage.accessKeyId     | yes         | minio                                |
+| api-server.storage.accessKey       | yes         | minio123                             |
+| api-server.storage.scrapperEnabled | yes         | true                                 |
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters

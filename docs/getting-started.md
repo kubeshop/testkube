@@ -22,7 +22,7 @@ If you don't want to create Custom Resources "by hand" we have a little helper f
 
 ### Creating Postman Collections based tests
 
-First, let's create a Postman collection:
+Fist let's create Postman collection:
 
 ```bash
 cat <<EOF > my_postman_collection.json
@@ -109,7 +109,7 @@ EOF
 ```sh
 kubectl testkube scripts create --file my_collection_file.json --type "postman/collection" --name my-test-name 
 ```
-
+**Note**: this is just an example of how it works for details you can visit [Postman documentation](executor-postman.md)
 ### Creating Cypress tests
 
 Cypress tests are little more complicated to pass - for now we're supporting Git based paths for Cypress projects.
