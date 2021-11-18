@@ -50,11 +50,9 @@ func NewListArtifactsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			client, _ := scripts.GetClient(cmd)
-			// if filename == "" {
 			artifacts, err := client.GetExecutionArtifacts(executionID)
-			if err != nil {
-				return err
-			}
+			ui.ExitOnError("getting artifacts ", err)
+
 			ui.Table(artifacts, os.Stdout)
 			return nil
 		},
@@ -91,6 +89,7 @@ func NewDownloadArtifactsCmd() *cobra.Command {
 			if f, err := client.DownloadFile(executionID, filename, destination); err != nil {
 				cmd.SilenceUsage = true
 				return err
+
 			} else {
 				fmt.Printf("File %s downloaded.\n", f)
 			}

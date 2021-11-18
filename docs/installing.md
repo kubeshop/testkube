@@ -8,12 +8,29 @@ To get TestKube up and running you will need to
 
 ## Install the kubectl testkube plugin
 
+### Installing on MacOS 
+
+We're building Homebew tap for each release, so you can easily install TestKube with Homebrew.
+
+```sh
+brew tap kubeshop/homebrew-testkube
+brew install kubeshop/testkube
+```
+
+If you want to upgrade testkube please run following command
+```
+brew update 
+brew upgrade testkube
+```
+
+### Installing on Linux or MaxOS with install script
+
 To install on Linux or MacOs run 
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
 
-## Alternative installation method (manual)
+### Alternative installation method (manual)
 
 If you don't like automatic scripts you can always use manuall install:
 
@@ -125,6 +142,7 @@ Helm defaults used in the `testkube` chart:
 | api-server.storage.accessKeyId     | yes         | minio                                |
 | api-server.storage.accessKey       | yes         | minio123                             |
 | api-server.storage.scrapperEnabled | yes         | true                                 |
+
 
 >For more configuration parameters of `MongoDB` chart please look here:
 https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters

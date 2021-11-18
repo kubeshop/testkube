@@ -105,6 +105,9 @@ func (c DirectScriptsAPI) DeleteScripts(namespace string) error {
 }
 
 func (c DirectScriptsAPI) DeleteScript(name string, namespace string) error {
+	if name == "" {
+		return fmt.Errorf("script name '%s' is not valid.", name)
+	}
 	uri := c.getURI("/scripts/%s?namespace=%s", name, namespace)
 	return c.makeDeleteRequest(uri, true)
 }
@@ -420,12 +423,15 @@ func (c DirectScriptsAPI) DownloadFile(executionID, fileName, destination string
 	}
 
 	defer resp.Body.Close()
-
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("error: %d", resp.StatusCode)
+	}
 	split := strings.Split(fileName, "/")
 	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
 	if err != nil {
 		return artifact, err
 	}
+
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return artifact, err
 	}

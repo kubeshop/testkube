@@ -322,8 +322,8 @@ func (s testkubeAPI) ListExecutions() fiber.Handler {
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
-	scriptName := c.Params("id", "")
-	if scriptName != "" {
+	scriptName := c.Params("id", "-")
+	if scriptName != "-" {
 		filter = filter.WithScriptName(scriptName)
 	}
 
@@ -337,8 +337,8 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithPageSize(pageSize)
 	}
 
-	status := c.Query("status", "")
-	if status != "" {
+	status := c.Query("status", "-")
+	if status != "-" {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 
@@ -443,7 +443,6 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
-
 		files, err := s.Storage.ListFiles(executionID)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -461,6 +460,7 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 		if err == nil {
 			fileName = unescaped
 		}
+
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)

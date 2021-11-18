@@ -75,7 +75,7 @@ func (f filter) EndDate() time.Time {
 }
 
 func (f filter) StatusDefined() bool {
-	return f.endDate != nil
+	return f.status != nil
 }
 
 func (f filter) Status() testkube.ExecutionStatus {
