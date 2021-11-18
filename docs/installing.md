@@ -119,7 +119,7 @@ Helm defaults used in the `testkube` chart:
 | api-server.service.port | yes | 8088 |
 | api-server.mongoDSN | yes | "mongodb://testkube-mongodb:27017" |
 | api-server.telemetryDisabled | yes | false |
-| api-server.storage.endpoint | yes | localhost:9000 |
+| api-server.storage.endpoint_port | yes | 9000 |
 | api-server.storage.accessKeyId | yes | minio |
 | api-server.storage.accessKey | yes | minio123 |
 | api-server.storage.scrapperEnabled | yes | false |
