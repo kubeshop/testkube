@@ -17,6 +17,12 @@ brew tap kubeshop/homebrew-testkube
 brew install kubeshop/testkube
 ```
 
+If you want to upgrade testkube please run following command
+```
+brew update 
+brew upgrade testkube
+```
+
 ### Installing on Linux or MaxOS with install script
 
 To install on Linux or MacOs run 
