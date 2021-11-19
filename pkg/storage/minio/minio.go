@@ -135,6 +135,11 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 		return nil, err
 	}
 
+	_, err = reader.Stat()
+	if err != nil {
+		return reader, err
+	}
+
 	return reader, nil
 }
 
