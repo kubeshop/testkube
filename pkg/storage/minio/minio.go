@@ -119,7 +119,6 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		fileName = objectStat.Name()
 	}
 
-	fmt.Println(fileName)
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return err
