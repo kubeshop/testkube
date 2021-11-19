@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 )
 
@@ -342,7 +343,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 
-	dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
 		filter = filter.WithStartDate(dFilter.Start)
 	}
