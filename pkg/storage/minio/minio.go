@@ -138,7 +138,7 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	return reader, nil
 }
 
-func (c *Client) ScrapeArtefacts(id, directory string) error {
+func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	if err := c.Connect(); err != nil {
 		return err
 	}
@@ -147,22 +147,25 @@ func (c *Client) ScrapeArtefacts(id, directory string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create a bucket %s: %w", id, err)
 	}
-	err = filepath.Walk(directory,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
 
-			if !info.IsDir() {
-				err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
+	for _, directory := range directories {
+		err = filepath.Walk(directory,
+			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
-			}
-			return nil
-		})
-	if err != nil {
-		return err
+
+				if !info.IsDir() {
+					err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
