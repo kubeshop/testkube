@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -438,6 +437,7 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 	return c.getArtifactsFromResponse(resp)
 
 }
+
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	req, err := c.GetProxy("GET").
@@ -450,17 +450,14 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string)
 
 	defer req.Close()
 
-	path := filepath.Join(destination, fileName)
-	split := strings.Split(fileName, "/")
-
-	f, err := os.Create(split[len(split)-1])
+	f, err := os.Create(filepath.Base(fileName))
 
 	if _, err := f.ReadFrom(req); err != nil {
 		return "", err
 	}
 
 	defer f.Close()
-	return path, err
+	return f.Name(), err
 }
 
 func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
