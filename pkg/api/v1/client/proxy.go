@@ -450,7 +450,10 @@ func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string)
 
 	defer req.Close()
 
-	f, err := os.Create(filepath.Base(fileName))
+	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))
+	if err != nil {
+		return "", err
+	}
 
 	if _, err := f.ReadFrom(req); err != nil {
 		return "", err
