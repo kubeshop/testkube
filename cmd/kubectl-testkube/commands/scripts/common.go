@@ -1,7 +1,9 @@
 package scripts
 
 import (
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -56,6 +58,23 @@ func watchLogs(id string, client client.Client) {
 	}
 
 	ui.NL()
+
+	// TODO watch for success | error status - in case of connection error on logs watch need fix in 0.8
+	for range time.Tick(time.Second) {
+		execution, err := client.GetExecution("-", id)
+		ui.ExitOnError("get script execution details", err)
+
+		fmt.Print(".")
+
+		if execution.ExecutionResult.IsCompleted() {
+			fmt.Println()
+
+			uiShellCommandBlock(id)
+
+			ui.Warn("Script execution completed in", execution.Duration().String())
+			return
+		}
+	}
 
 	uiShellCommandBlock(id)
 }
