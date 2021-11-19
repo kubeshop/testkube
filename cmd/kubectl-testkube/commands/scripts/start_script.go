@@ -42,8 +42,6 @@ func NewStartScriptCmd() *cobra.Command {
 
 			printExecutionDetails(execution)
 
-			uiShellCommandBlock(execution.Id)
-
 			if watchEnabled {
 				watchLogs(execution.Id, client)
 			}
@@ -52,7 +50,12 @@ func NewStartScriptCmd() *cobra.Command {
 				downloadArtifacts(execution.Id, downloadDir, client)
 			}
 
+			execution, err = client.GetExecution("-", execution.Id)
+			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+
 			uiPrintStatus(execution)
+
+			uiShellCommandBlock(execution.Id)
 		},
 	}
 
