@@ -2,6 +2,7 @@ package scripts
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -32,6 +33,9 @@ func printExecutionDetails(execution testkube.Execution) {
 func downloadArtifacts(id, dir string, client client.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
+
+	err = os.MkdirAll(dir, os.ModePerm)
+	ui.ExitOnError("creating dir "+dir, err)
 
 	for _, artifact := range artifacts {
 		f, err := client.DownloadFile(id, artifact.Name, dir)
