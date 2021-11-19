@@ -40,6 +40,7 @@ func downloadArtifacts(id, dir string, client client.Client) {
 	for _, artifact := range artifacts {
 		f, err := client.DownloadFile(id, artifact.Name, dir)
 		ui.ExitOnError("downloading file: "+f, err)
+		ui.Info("- downloading file " + f)
 	}
 }
 
