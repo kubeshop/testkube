@@ -8,7 +8,7 @@ ENV GOOS=linux
 ARG VERSION 
 ARG COMMIT 
 
-RUN cd cmd/api-server;go build -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT" -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=$({ secrets.TELEMETRY_TOKEN }) -o /app -mod mod -a .
+RUN cd cmd/api-server;go build -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT" -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=${{ secrets.TELEMETRY_TOKEN }} -o /app -mod mod -a .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates libssl1.1
