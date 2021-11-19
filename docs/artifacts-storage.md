@@ -2,7 +2,7 @@
 
 Testkube supports test artifacts collection. 
 
-Currently only Cypress executor job is producing test artifacts. Executor will scrape the files and store them in [Minio](https://min.io/).  The executor will create a bucket named by execution ID and collect all files that are stored in Cypress artifacts location `Cypress/`
+Currently, only the Cypress executor job produces test artifacts. The executor will scrape the files and store them in [Minio](https://min.io/).  The executor will create a bucket named by execution ID and collect all files that are stored in the Cypress artifacts location `Cypress/`
 
 Available configuration parameters in helm charts:
 
