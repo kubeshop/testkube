@@ -59,7 +59,7 @@ jobs:
             build.args.COMMIT=${{ github.sha }}
           push: true
         env:
-          TELEMETRY_TOKEN: "{{ secrets.TELEMETRY_TOKEN }}"
+          TELEMETRY_TOKEN: "${{ secrets.TELEMETRY_TOKEN }}"
 
 
 
