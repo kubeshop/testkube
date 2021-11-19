@@ -110,13 +110,23 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	if err != nil {
 		return err
 	}
+
 	var fileName string
 	if strings.Contains(filePath, "/") {
-		fileName = filePath
+		// fileName = filePath
+
+		// strip the filename if the path is longer than 3 subdirectories /dir/sub1/sub2/ -> /sub1/sub2
+		split := strings.Split(filePath, "/")
+		length := len(split)
+		if length > 2 {
+			fileName = filepath.Join(split[length-2], split[length-1])
+		}
+
 	} else {
 		fileName = objectStat.Name()
 	}
 
+	fmt.Println(fileName)
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return err

@@ -13,6 +13,7 @@ require (
 	github.com/go-ini/ini v1.64.0 // indirect
 	github.com/gofiber/adaptor/v2 v2.1.14
 	github.com/gofiber/fiber/v2 v2.22.0
+	github.com/gofrs/uuid v4.1.0+incompatible // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v0.6.0
 	github.com/minio/minio-go v6.0.14+incompatible // indirect
