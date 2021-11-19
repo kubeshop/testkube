@@ -22,14 +22,13 @@ nav:
   - Installation: installing.md
   - Getting Started: getting-started.md
   - Managing test scripts:
-      - Creating: scripts-creating.md
-      - Running: scripts-running.md
-      - Getting results: scripts-getting-results.md
-  - Executors:
       - Postman Collections: executor-postman.md
       - Cypress Tests: executor-cypress.md
       - Curl Commands: executor-curl.md
-      - Creating your own: executor-custom.md
+      - Running: scripts-running.md
+      - Getting results: scripts-getting-results.md
+  - Executors:
+      - Creating custom executor: executor-custom.md
   - CLI Reference:
       - Overview: cli/testkube.md
       - Install Cmd: cli/testkube_install.md
@@ -43,6 +42,7 @@ nav:
   - Development: development.md
   - OpenAPI definition: openapi.md
   - Telemetry: telemetry.md
+  - Storage: artifacts-storage.md
 
 extra:
   analytics:
