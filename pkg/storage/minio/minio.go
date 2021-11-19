@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -113,15 +114,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 
 	var fileName string
 	if strings.Contains(filePath, "/") {
-		// fileName = filePath
-
-		// strip the filename if the path is longer than 3 subdirectories /dir/sub1/sub2/ -> /sub1/sub2
-		split := strings.Split(filePath, "/")
-		length := len(split)
-		if length > 2 {
-			fileName = filepath.Join(split[length-2], split[length-1])
-		}
-
+		_, fileName = path.Split("/")
 	} else {
 		fileName = objectStat.Name()
 	}
