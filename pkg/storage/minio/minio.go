@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -110,13 +111,15 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	if err != nil {
 		return err
 	}
+
 	var fileName string
 	if strings.Contains(filePath, "/") {
-		fileName = filePath
+		_, fileName = path.Split("/")
 	} else {
 		fileName = objectStat.Name()
 	}
 
+	fmt.Println(fileName)
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return err
