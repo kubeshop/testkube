@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -28,6 +29,26 @@ func CollectAnonymousInfo() {
 		client.Enqueue(analytics.Track{
 			AnonymousId: machineID(),
 			Event:       heartbeatEvent,
+			Timestamp:   time.Now(),
+		})
+
+		client.Close()
+	}
+}
+
+func CollectAnonymousCmdInfo(command string) {
+
+	var isDisabled bool
+
+	if val, ok := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); ok {
+		isDisabled, _ = strconv.ParseBool(val)
+	}
+
+	if !isDisabled {
+		client := analytics.New(telemetryToken)
+		client.Enqueue(analytics.Track{
+			AnonymousId: machineID(),
+			Event:       filepath.Join(heartbeatEvent, command),
 			Timestamp:   time.Now(),
 		})
 
