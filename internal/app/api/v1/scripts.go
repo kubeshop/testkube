@@ -457,10 +457,19 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
+
+		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
 		unescaped, err := url.QueryUnescape(fileName)
 		if err == nil {
 			fileName = unescaped
 		}
+
+		unescaped, err = url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
+
+		//// quickfix end
 
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
