@@ -20,6 +20,3 @@ Diagrams was made with use of C4 diagram technique
 
 ![API](img/components_api.png)
 
-#### Operator
-
-TODO  add diagram for operator
