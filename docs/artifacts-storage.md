@@ -18,7 +18,7 @@ Available configuration parameters in helm charts:
 | api-server.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacst  |
 
 
-The API Server is accepting following environment variables:
+The API Server accepts the following environment variables:
 
 ```
 STORAGE_ENDPOINT
