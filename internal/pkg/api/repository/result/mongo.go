@@ -166,6 +166,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
+	opts.SetSort(bson.D{{"starttime", -1}})
 
 	return query, opts
 }
