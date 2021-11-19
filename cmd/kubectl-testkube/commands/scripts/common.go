@@ -1,6 +1,8 @@
 package scripts
 
 import (
+	"path/filepath"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/runner/output"
@@ -24,6 +26,16 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.Warn("Execution ID  :", execution.Id)
 	ui.Warn("Execution name:", execution.Name)
 	ui.NL()
+}
+
+func downloadArtifacts(id, dir string, client client.Client) {
+	artifacts, err := client.GetExecutionArtifacts(id)
+	ui.ExitOnError("getting artifacts ", err)
+
+	for _, artifact := range artifacts {
+		f, err := client.DownloadFile(id, artifact.Name, filepath.Join(dir, filepath.Base(artifact.Name)))
+		ui.ExitOnError("downloading file: "+f, err)
+	}
 }
 
 func watchLogs(id string, client client.Client) {
