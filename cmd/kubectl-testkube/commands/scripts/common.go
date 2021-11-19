@@ -2,7 +2,6 @@ package scripts
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -35,7 +34,7 @@ func downloadArtifacts(id, dir string, client client.Client) {
 	ui.ExitOnError("getting artifacts ", err)
 
 	for _, artifact := range artifacts {
-		f, err := client.DownloadFile(id, artifact.Name, filepath.Join(dir, filepath.Base(artifact.Name)))
+		f, err := client.DownloadFile(id, artifact.Name, dir)
 		ui.ExitOnError("downloading file: "+f, err)
 	}
 }
