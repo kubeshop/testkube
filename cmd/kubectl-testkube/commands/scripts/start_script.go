@@ -42,7 +42,6 @@ func NewStartScriptCmd() *cobra.Command {
 
 			printExecutionDetails(execution)
 
-			uiPrintStatus(execution)
 			uiShellCommandBlock(execution.Id)
 
 			if watchEnabled {
@@ -52,6 +51,8 @@ func NewStartScriptCmd() *cobra.Command {
 			if downloadArtifactsEnabled {
 				downloadArtifacts(execution.Id, downloadDir, client)
 			}
+
+			uiPrintStatus(execution)
 		},
 	}
 

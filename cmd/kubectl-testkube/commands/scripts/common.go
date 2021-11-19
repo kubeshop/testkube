@@ -75,7 +75,6 @@ func watchLogs(id string, client client.Client) {
 
 			uiShellCommandBlock(id)
 
-			ui.Warn("Script execution completed in", execution.Duration().String())
 			return
 		}
 	}
