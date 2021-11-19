@@ -439,6 +439,7 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 }
 
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+	// TODO consider use Query param for filename
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	req, err := c.GetProxy("GET").
 		Suffix(uri).
