@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
@@ -101,16 +102,19 @@ func TestFilters(t *testing.T) {
 		assert.Equal(int32(3), totals.Pending)
 	})
 
+	dateFilter := datefilter.NewDateFilter(oneDayAgo.Format(datefilter.DateFormatISO8601), "")
+	assert.True(dateFilter.IsStartValid)
+
 	t.Run("filter with startDate should return only executions after that day", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStartDate(oneDayAgo))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStartDate(dateFilter.Start))
 		assert.NoError(err)
 		assert.Len(executions, 14)
-		assert.True(executions[0].StartTime.After(oneDayAgo) || executions[0].StartTime.Equal(oneDayAgo))
+		assert.True(executions[0].StartTime.After(dateFilter.Start) || executions[0].StartTime.Equal(dateFilter.Start))
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithStartDate(oneDayAgo))
+		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithStartDate(dateFilter.Start))
 
 		assert.NoError(err)
 		assert.Equal(int32(14), totals.Results)
@@ -119,24 +123,27 @@ func TestFilters(t *testing.T) {
 		assert.Equal(int32(2), totals.Queued)
 		assert.Equal(int32(2), totals.Pending)
 	})
+
+	dateFilter = datefilter.NewDateFilter("", oneDayAgo.Format(datefilter.DateFormatISO8601))
+	assert.True(dateFilter.IsEndValid)
 
 	t.Run("filter with endDate should return only executions before that day", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithEndDate(oneDayAgo))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithEndDate(dateFilter.End))
 		assert.NoError(err)
-		assert.Len(executions, 14)
-		assert.True(executions[0].StartTime.Before(oneDayAgo) || executions[0].StartTime.Equal(oneDayAgo))
+		assert.Len(executions, 7)
+		assert.True(executions[0].StartTime.Before(dateFilter.End) || executions[0].StartTime.Equal(dateFilter.End))
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results before this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithEndDate(oneDayAgo))
+		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithEndDate(dateFilter.End))
 
 		assert.NoError(err)
-		assert.Equal(int32(14), totals.Results)
-		assert.Equal(int32(8), totals.Failed)
-		assert.Equal(int32(2), totals.Passed)
-		assert.Equal(int32(2), totals.Queued)
-		assert.Equal(int32(2), totals.Pending)
+		assert.Equal(int32(7), totals.Results)
+		assert.Equal(int32(4), totals.Failed)
+		assert.Equal(int32(1), totals.Passed)
+		assert.Equal(int32(1), totals.Queued)
+		assert.Equal(int32(1), totals.Pending)
 	})
 
 	t.Run("filter with script name that doesn't exist should return 0 results", func(t *testing.T) {
@@ -207,6 +214,12 @@ func TestFilters(t *testing.T) {
 		assert.Equal(int32(1), totals.Pending)
 	})
 
+	t.Run("scripts should be sorted with most recent first", func(t *testing.T) {
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter())
+		assert.NoError(err)
+		assert.NotEmpty(executions)
+		assert.True(executions[0].StartTime.After(executions[len(executions)-1].StartTime), "executions are not sorted with the most recent first")
+	})
 }
 
 func getRepository() (*MongoRepository, error) {

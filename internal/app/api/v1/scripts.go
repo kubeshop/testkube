@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 )
 
@@ -342,7 +343,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 
-	dFilter := NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
 		filter = filter.WithStartDate(dFilter.Start)
 	}
@@ -456,10 +457,19 @@ func (s testkubeAPI) GetArtifact() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
+
+		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
 		unescaped, err := url.QueryUnescape(fileName)
 		if err == nil {
 			fileName = unescaped
 		}
+
+		unescaped, err = url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
+
+		//// quickfix end
 
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
