@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -175,6 +176,17 @@ func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
 		Stream(context.Background())
+
+	b := make([]byte, 1000)
+	for {
+		n, err := resp.Read(b)
+		fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
+		fmt.Printf("b[:n] = %q\n", b[:n])
+		if err == io.EOF {
+			break
+		}
+
+	}
 
 	go func() {
 		defer close(logs)
