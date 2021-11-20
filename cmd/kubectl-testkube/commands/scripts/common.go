@@ -31,7 +31,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func downloadArtifacts(id, dir string, client client.Client) {
+func DownloadArtifacts(id, dir string, client client.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -39,12 +39,12 @@ func downloadArtifacts(id, dir string, client client.Client) {
 	ui.ExitOnError("creating dir "+dir, err)
 
 	if len(artifacts) > 0 {
-		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)))
+		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
 	for _, artifact := range artifacts {
 		f, err := client.DownloadFile(id, artifact.Name, dir)
 		ui.ExitOnError("downloading file: "+f, err)
-		ui.Info("- downloading file " + f)
+		ui.Warn(" - downloading file ", f)
 	}
 
 	ui.NL()

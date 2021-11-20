@@ -52,7 +52,7 @@ func NewStartScriptCmd() *cobra.Command {
 			uiPrintStatus(execution)
 
 			if downloadArtifactsEnabled {
-				downloadArtifacts(execution.Id, downloadDir, client)
+				DownloadArtifacts(execution.Id, downloadDir, client)
 			}
 
 			uiShellCommandBlock(execution.Id)
