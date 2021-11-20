@@ -46,14 +46,14 @@ func NewStartScriptCmd() *cobra.Command {
 				watchLogs(execution.Id, client)
 			}
 
-			if downloadArtifactsEnabled {
-				downloadArtifacts(execution.Id, downloadDir, client)
-			}
-
 			execution, err = client.GetExecution("-", execution.Id)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintStatus(execution)
+
+			if downloadArtifactsEnabled {
+				downloadArtifacts(execution.Id, downloadDir, client)
+			}
 
 			uiShellCommandBlock(execution.Id)
 		},
@@ -88,6 +88,8 @@ func uiPrintStatus(execution testkube.Execution) {
 		ui.Errf("Script execution failed")
 		os.Exit(1)
 	}
+
+	ui.NL()
 }
 
 func uiShellCommandBlock(id string) {

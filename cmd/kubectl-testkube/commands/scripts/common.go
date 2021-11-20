@@ -28,6 +28,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.Warn("Execution ID  :", execution.Id)
 	ui.Warn("Execution name:", execution.Name)
 	ui.NL()
+	ui.NL()
 }
 
 func downloadArtifacts(id, dir string, client client.Client) {
@@ -37,11 +38,17 @@ func downloadArtifacts(id, dir string, client client.Client) {
 	err = os.MkdirAll(dir, os.ModePerm)
 	ui.ExitOnError("creating dir "+dir, err)
 
+	if len(artifacts) > 0 {
+		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)))
+	}
 	for _, artifact := range artifacts {
 		f, err := client.DownloadFile(id, artifact.Name, dir)
 		ui.ExitOnError("downloading file: "+f, err)
 		ui.Info("- downloading file " + f)
 	}
+
+	ui.NL()
+	ui.NL()
 }
 
 func watchLogs(id string, client client.Client) {
