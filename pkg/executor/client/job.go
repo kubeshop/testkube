@@ -67,8 +67,9 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 // TODO too many goroutines - need to be simplified
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
-	logs, err := c.Client.TailJobLogs(id)
-	if err != nil {
+	logs := make(chan []byte)
+
+	if err := c.Client.TailJobLogs(id, logs); err != nil {
 		return out, err
 	}
 
@@ -78,11 +79,11 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 			close(out)
 		}()
 		for l := range logs {
-			output, err := output.GetLogEntry(l)
+			entry, err := output.GetLogEntry(l)
 			if err != nil {
 				return
 			}
-			out <- output
+			out <- entry
 		}
 	}()
 
