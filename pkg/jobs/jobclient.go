@@ -186,7 +186,7 @@ func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
 }
 
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan []byte, err error) {
-	logs = make(chan []byte, 10000)
+	logs = make(chan []byte)
 	count := int64(1)
 
 	podLogOptions := v1.PodLogOptions{

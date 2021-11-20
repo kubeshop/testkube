@@ -166,7 +166,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 
 // Logs reads logs from API SSE endpoint asynchronously
 func (c DirectScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
-	logs = make(chan output.Output, 1000)
+	logs = make(chan output.Output)
 	uri := c.getURI("/executions/%s/logs", id)
 
 	req, err := http.NewRequest("GET", uri, nil)
