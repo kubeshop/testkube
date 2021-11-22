@@ -10,7 +10,7 @@ TestKube is able to run curl commands as tests, there are 2 possibilities to val
     "-H",
     "'Accept: application/json'"
   ],
-  "expected_status": 200,
+  "expected_status": "200",
   "expected_body": "{\"success\":\"true\"}"
 }
 ```
