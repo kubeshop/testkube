@@ -18,6 +18,10 @@ func StreamToLogsChannel(resp io.Reader, logs chan output.Output) {
 
 	scanner := bufio.NewScanner(resp)
 
+	// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
 	for scanner.Scan() {
 		chunk := trimDataChunk(scanner.Bytes())
 

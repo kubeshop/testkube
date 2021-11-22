@@ -208,6 +208,11 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan [
 		defer close(logs)
 
 		scanner := bufio.NewScanner(stream)
+
+		// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
+		buf := make([]byte, 0, 64*1024)
+		scanner.Buffer(buf, 1024*1024)
+
 		for scanner.Scan() {
 			c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", podName)
 			logs <- scanner.Bytes()
