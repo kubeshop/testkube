@@ -74,11 +74,11 @@ func NewCreateScriptsCmd() *cobra.Command {
 				d := detector.NewDefaultDetector()
 				if detectedType, ok := d.Detect(options); ok {
 					ui.Info("Detected test script type", detectedType)
-					executorType = detectedType
+					options.Type_ = detectedType
 				}
 			}
 
-			if executorType == "" {
+			if options.Type_ == "" {
 				ui.Failf("Can't detect executor type by passed file content, please pass valid --type flag")
 			}
 
