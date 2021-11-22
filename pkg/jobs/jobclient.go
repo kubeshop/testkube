@@ -216,24 +216,6 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan [
 		if scanner.Err() != nil {
 			c.Log.Errorw("scanner error", "error", scanner.Err())
 		}
-
-		// for {
-		// 	// TODO is it bulletprof for huge messages ?
-		// 	// we need to parse output.Output struct
-		// 	buf := make([]byte, 20000)
-		// 	numBytes, err := stream.Read(buf)
-		// 	if numBytes == 0 || err == io.EOF {
-		// 		c.Log.Debug("no more logs", "error", err)
-		// 		break
-		// 	}
-
-		// 	if err != nil {
-		// 		c.Log.Errorw("error when tailing logs stream", "error", err)
-		// 		return
-		// 	}
-
-		// 	logs <- buf[:numBytes]
-		// }
 	}()
 	return
 }
