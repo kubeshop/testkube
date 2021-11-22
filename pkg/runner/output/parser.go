@@ -28,6 +28,10 @@ func GetExecutionResult(b []byte) (is bool, result testkube.ExecutionResult) {
 func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 
+	// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
 	// try to locate execution result should be the last one
 	// but there could be some buffers or go routines used so go through whole
 	// array too
