@@ -8,7 +8,9 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/jobs"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/runner/output"
+	"go.uber.org/zap"
 )
 
 func NewJobExecutor(repo result.Repository) (client JobExecutor, err error) {
@@ -20,12 +22,14 @@ func NewJobExecutor(repo result.Repository) (client JobExecutor, err error) {
 	return JobExecutor{
 		Client:     jobClient,
 		Repository: repo,
+		Log:        log.DefaultLogger,
 	}, nil
 }
 
 type JobExecutor struct {
 	Client     *jobs.JobClient
 	Repository result.Repository
+	Log        *zap.SugaredLogger
 }
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
@@ -66,20 +70,24 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 // Logs returns job logs
 // TODO too many goroutines - need to be simplified
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
-	out = make(chan output.Output, 10000)
-	logs, err := c.Client.TailJobLogs(id)
-	if err != nil {
+	out = make(chan output.Output)
+	logs := make(chan []byte)
+
+	if err := c.Client.TailJobLogs(id, logs); err != nil {
 		return out, err
 	}
 
 	go func() {
-		defer close(out)
+		defer func() {
+			c.Log.Debug("closing JobExecutor.Logs out log")
+			close(out)
+		}()
 		for l := range logs {
-			output, err := output.GetLogEntry(l)
+			entry, err := output.GetLogEntry(l)
 			if err != nil {
 				return
 			}
-			out <- output
+			out <- entry
 		}
 	}()
 

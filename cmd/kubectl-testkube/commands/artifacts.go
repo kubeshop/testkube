@@ -13,6 +13,7 @@ var (
 	executionID string
 	filename    string
 	destination string
+	downloadDir string
 )
 
 func NewArtifactsCmd() *cobra.Command {
@@ -31,7 +32,8 @@ func NewArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 
 	cmd.AddCommand(NewListArtifactsCmd())
-	cmd.AddCommand(NewDownloadArtifactsCmd())
+	cmd.AddCommand(NewDownloadSingleArtifactsCmd())
+	cmd.AddCommand(NewDownloadAllArtifactsCmd())
 	// output renderer flags
 	return cmd
 }
@@ -67,9 +69,9 @@ func NewListArtifactsCmd() *cobra.Command {
 	return cmd
 }
 
-func NewDownloadArtifactsCmd() *cobra.Command {
+func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "download",
+		Use:   "download-one",
 		Short: "download artifact",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if executionID == "" {
@@ -104,6 +106,35 @@ func NewDownloadArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
 	cmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "name of the file")
+
+	// output renderer flags
+	return cmd
+}
+
+func NewDownloadAllArtifactsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "download",
+		Short: "download artifact",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if executionID == "" {
+				cmd.SilenceUsage = true
+				return fmt.Errorf("execution-id is a required parameter")
+			}
+
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, _ := scripts.GetClient(cmd)
+			scripts.DownloadArtifacts(executionID, downloadDir, client)
+			return nil
+		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+
+	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
+	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 
 	// output renderer flags
 	return cmd

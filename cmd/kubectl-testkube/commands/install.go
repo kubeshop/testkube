@@ -15,9 +15,10 @@ func init() {
 func NewInstallCmd() *cobra.Command {
 	var chart, name, namespace string
 	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "Install Helm chart registry in current kubectl context",
-		Long:  `Install can be configured with use of particular `,
+		Use:     "install",
+		Short:   "Install Helm chart registry in current kubectl context",
+		Long:    `Install can be configured with use of particular `,
+		Aliases: []string{"update", "upgrade"},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			ui.Verbose = true

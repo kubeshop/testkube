@@ -265,6 +265,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 			logs, err = s.Executor.Logs(executionID)
 			s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 			if err != nil {
+				// TODO convert to some library for common output
 				fmt.Fprintf(w, `data: {"type": "error","message": "%s"}\n\n`, err.Error())
 				s.Log.Errorw("getting logs error", "error", err)
 				w.Flush()
@@ -277,7 +278,8 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 				s.Log.Debugw("got log", "out", out)
 				fmt.Fprintf(w, "data: ")
 				enc.Encode(out)
-				fmt.Fprintf(w, "\n\n")
+				// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+				fmt.Fprintf(w, "\n")
 				w.Flush()
 			}
 		}))

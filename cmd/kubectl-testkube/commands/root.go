@@ -76,6 +76,7 @@ func ValidateVersions(c apiclient.Client) error {
 		ui.Info("Testkube API version", serverVersion.String())
 		ui.Info("Testkube kubectl plugin client", clientVersion.String())
 		ui.Info("It's recommended to upgrade client to version close to API server version")
+		ui.NL()
 	}
 
 	return nil

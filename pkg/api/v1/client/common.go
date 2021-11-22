@@ -44,7 +44,5 @@ func trimDataChunk(in []byte) []byte {
 	chunk := bytes.Replace(in, prefix, []byte{}, 1)
 	chunk = bytes.Replace(chunk, postfix, []byte{}, 1)
 
-	// chunk = chunk[:len(chunk)-4]
-
 	return chunk
 }

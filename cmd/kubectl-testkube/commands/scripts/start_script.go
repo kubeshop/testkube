@@ -52,7 +52,7 @@ func NewStartScriptCmd() *cobra.Command {
 			uiPrintStatus(execution)
 
 			if downloadArtifactsEnabled {
-				downloadArtifacts(execution.Id, downloadDir, client)
+				DownloadArtifacts(execution.Id, downloadDir, client)
 			}
 
 			uiShellCommandBlock(execution.Id)
@@ -63,7 +63,7 @@ func NewStartScriptCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&params, "param", "p", map[string]string{}, "execution envs passed to executor")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVar(&downloadArtifactsEnabled, "download-artifacts", true, "downlaod artifacts automatically")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
 
 	return cmd
 }

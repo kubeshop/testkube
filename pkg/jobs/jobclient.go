@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -128,29 +129,30 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 }
 
 // TailJobLogs - locates logs for job pod(s)
-func (c *JobClient) TailJobLogs(id string) (logs chan []byte, err error) {
+func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
 	pods, err := c.GetJobPods(podsClient, id, 1, 10)
-	logs = make(chan []byte)
 
 	if err != nil {
 		close(logs)
-		return logs, err
+		return err
 	}
 
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == id {
-			c.Log.Debugw("Waiting for pod to be ready", "pod", pod.Name)
-			if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-				c.Log.Errorw("poll immediate error when tailing logs", "error", err)
-				close(logs)
-				return logs, err
+		if pod.Labels["job-name"] == id {
+			if pod.Status.Phase != v1.PodRunning {
+				c.Log.Debugw("Waiting for pod to be ready", "pod", pod.Name)
+				if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+					c.Log.Errorw("poll immediate error when tailing logs", "error", err)
+					close(logs)
+					return err
+				}
+				c.Log.Debug("Tailing pod logs")
+				return c.TailPodLogs(ctx, pod.Name, logs)
+			} else if pod.Status.Phase == v1.PodRunning {
+				return c.TailPodLogs(ctx, pod.Name, logs)
 			}
-			c.Log.Debug("Tailing pod logs")
-			return c.TailPodLogs(ctx, pod.Name)
-		} else if pod.Status.Phase == v1.PodRunning {
-			return c.TailPodLogs(ctx, pod.Name)
 		}
 	}
 
@@ -185,8 +187,7 @@ func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
 	return buf.Bytes(), nil
 }
 
-func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan []byte, err error) {
-	logs = make(chan []byte, 10000)
+func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
 	count := int64(1)
 
 	podLogOptions := v1.PodLogOptions{
@@ -200,29 +201,20 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string) (logs chan 
 
 	stream, err := podLogRequest.Stream(ctx)
 	if err != nil {
-		return logs, err
+		return err
 	}
 
 	go func() {
-		defer stream.Close()
 		defer close(logs)
 
-		for {
-			// TODO is it bulletprof for huge messages ?
-			// we need to parse output.Output struct
-			buf := make([]byte, 20000)
-			numBytes, err := stream.Read(buf)
-			if numBytes == 0 || err == io.EOF {
-				c.Log.Debug("no more logs", "error", err)
-				break
-			}
+		scanner := bufio.NewScanner(stream)
+		for scanner.Scan() {
+			c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", podName)
+			logs <- scanner.Bytes()
+		}
 
-			if err != nil {
-				c.Log.Errorw("error when tailing logs stream", "error", err)
-				return
-			}
-
-			logs <- buf[:numBytes]
+		if scanner.Err() != nil {
+			c.Log.Errorw("scanner error", "error", scanner.Err())
 		}
 	}()
 	return
