@@ -107,7 +107,7 @@ EOF
 ```
 
 ```sh
-kubectl testkube scripts create --file my_collection_file.json --type "postman/collection" --name my-test-name 
+kubectl testkube scripts create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
 ```
 **Note**: this is just an example of how it works. For further details you can visit [Postman documentation](executor-postman.md)
 ### Creating Cypress tests
