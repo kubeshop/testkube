@@ -5,13 +5,13 @@ Test scripts are stored in Kubernetes cluster a Custom resources. We can run the
 ## Running
 
 Running scripts looks the same for any type of script
-Let's assume we've previously created script with name `api-incluster-test` 
+Let's assume we've previously created script with name `api-incluster-test`
 
+### Standard run comnand
 
-### Standard run comnand 
+The simplest run command looks like below:
 
-The simplest run command looks like below: 
-```sh 
+```sh
 kubectl testkube scripts run api-incluster-test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
@@ -36,11 +36,10 @@ $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 
 ```
 
-TestKube will inform us about possible commands to get scripts: 
-- `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details 
+TestKube will inform us about possible commands to get scripts:
+
+- `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details
 - `kubectl testkube scripts watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when script is completed and is good for long running scripts to lock your terminal until script execution completes)
-
-
 
 ## Run with watch for changes
 
@@ -114,17 +113,16 @@ Script execution completed in 595ms
 
 As we can see command will wait until script execution completes with error or success
 
-
 ### Passing params
 
-
-For some 'real world' tests you need to pass some configuration variables to be able to run them on different environments or with different test configuration. 
+For some 'real world' tests you need to pass some configuration variables to be able to run them on different environments or with different test configuration.
 
 Let's assume that our example Cypress test need `testparam` parameter with value `testvalue`
 
 To pass it use `-p` param (If you need to pass more params simply pass multiple `-p` flags)
 
-```
+```sh
+
 kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
@@ -215,9 +213,6 @@ $ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
 Script execution completed in 1m45.405939s
 ```
 
-
 ## Summary
 
 As we can see running scripts in Kubernetes cluster is really easy with use of TestKube kubectl plugin!
-
-
