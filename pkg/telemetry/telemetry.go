@@ -3,6 +3,7 @@ package telemetry
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,8 +44,9 @@ func CollectAnonymousCmdInfo(command string) {
 	if val, ok := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); ok {
 		isDisabled, _ = strconv.ParseBool(val)
 	}
-
+	fmt.Println("CollectAnonymousCmdInfo TELEMETRY", isDisabled)
 	if !isDisabled {
+		fmt.Println("TELEMETRY", isDisabled, telemetryToken)
 		client := analytics.New(telemetryToken)
 		client.Enqueue(analytics.Track{
 			AnonymousId: machineID(),
@@ -52,7 +54,10 @@ func CollectAnonymousCmdInfo(command string) {
 			Timestamp:   time.Now(),
 		})
 
-		client.Close()
+		err := client.Close()
+		if err != nil {
+			fmt.Println("ERR", err)
+		}
 	}
 }
 
