@@ -43,7 +43,6 @@ func CollectAnonymousCmdInfo(command string) {
 	if val, ok := os.LookupEnv("TESTKUBE_TELEMETRY_DISABLED"); ok {
 		isDisabled, _ = strconv.ParseBool(val)
 	}
-
 	if !isDisabled {
 		client := analytics.New(telemetryToken)
 		client.Enqueue(analytics.Track{
