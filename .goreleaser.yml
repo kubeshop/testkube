@@ -12,7 +12,7 @@ builds:
       - windows
       - darwin
     ldflags:
-      - -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=${{ secrets.TELEMETRY_TOKEN }}
+      - -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=${{ TELEMETRY_TOKEN }}
 archives:
   - replacements:
       darwin: macOS
