@@ -16,7 +16,7 @@ type HTTPClient interface {
 
 type Client interface {
 	GetExecution(scriptID, executionID string) (execution testkube.Execution, err error)
-	ListExecutions(scriptID string) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
 	GetScript(id string) (script testkube.Script, err error)
@@ -35,7 +35,7 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
-  GetServerInfo() (scripts testkube.ServerInfo, err error)
+	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
 
 // CreateScriptOptions - is mapping for now to OpenAPI schema for creating request

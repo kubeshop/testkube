@@ -14,14 +14,16 @@ func NewListExecutionsCmd() *cobra.Command {
 		Long:  `Getting list of execution for given script name or recent executions if there is no script name passed`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var scriptID string
+			limit := 10
 			if len(args) == 0 {
 				scriptID = "-"
 			} else if len(args) > 0 {
 				scriptID = args[0]
+				limit = 0
 			}
 
 			client, _ := GetClient(cmd)
-			executions, err := client.ListExecutions(scriptID)
+			executions, err := client.ListExecutions(scriptID, limit)
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
 			renderer := GetExecutionsListRenderer(cmd)

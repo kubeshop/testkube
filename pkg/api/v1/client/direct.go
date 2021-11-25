@@ -85,9 +85,10 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectScriptsAPI) ListExecutions(scriptID string) (executions testkube.ExecutionsResult, err error) {
-	uri := c.getURI("/scripts/%s/executions", scriptID)
+func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error) {
+	uri := c.getURI("/scripts/%s/executions?pageSize=%d", scriptID, limit)
 	resp, err := c.client.Get(uri)
+
 	if err != nil {
 		return executions, err
 	}

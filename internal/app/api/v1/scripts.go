@@ -336,7 +336,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
-	if err == nil {
+	if err == nil && pageSize != 0 {
 		filter = filter.WithPageSize(pageSize)
 	}
 
