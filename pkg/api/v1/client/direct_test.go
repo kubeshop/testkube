@@ -66,7 +66,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		response, err := client.ListExecutions("test")
+		response, err := client.ListExecutions("test", 0)
 
 		// then
 		assert.Equal(t, int32(2), response.Totals.Results)

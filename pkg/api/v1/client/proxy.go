@@ -94,9 +94,12 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution t
 }
 
 // ListExecutions list all executions for given script name
-func (c ProxyScriptsAPI) ListExecutions(scriptID string) (executions testkube.ExecutionsResult, err error) {
+func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error) {
 	uri := c.getURI("/scripts/%s/executions", scriptID)
-	req := c.GetProxy("GET").Suffix(uri)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("pageSize", fmt.Sprintf("%d", limit))
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {

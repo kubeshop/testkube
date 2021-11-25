@@ -41,7 +41,7 @@ helm install testkube kubeshop/testkube --set api-server.ingress.enabled="true"
 
 by default the results are using the path ```/results``` so the results will be accessible at ```ingress_host/results/```
 
-The ingress configuration used is available int the [TestKube Helm Repo]()
+The ingress configuration used is available int the [TestKube Helm Repo](https://github.com/kubeshop/helm-charts)
 
 ## Installing dashboard
 
