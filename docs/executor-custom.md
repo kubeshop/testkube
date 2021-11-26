@@ -1,6 +1,6 @@
 # Creating your own Executor
 
-Executors are programs which are encanpsulated in docker containers. 
+Executors are programs which are encapsulated in docker containers. 
 
 Only one restriction is that they need to implement communication interface:
 
@@ -8,7 +8,7 @@ Only one restriction is that they need to implement communication interface:
 - OUTPUT : stream of json output lines (`testkube.ExecutorOutput`) - each output line is simply wrapped in this JSON, like in structured logging idea. 
 
 
-In order to be able to run tests using some new tools for which there is no executor, there is possibility to create a custom executor from the [kubetest-executor-template](https://github.com/kubeshop/testkube-executor-template).
+In order to be able to run tests using some new tools for which there is no executor, it is possible to create a custom executor from the [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
 
 ## Steps for creating executor
 
@@ -16,14 +16,13 @@ You can check full example implementation here: https://github.com/exu/testkube-
 
 ### Setup repository
 
-- Create new rpository from template [kubetest-executor-template](https://github.com/kubeshop/testkube-executor-template).
+- Create new rpository from template [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
 - Clone the newly created repo.
-- Rename the go module from `kubetest-executor-template` in whole project to the new name & run `go mod tidy`.
+- Rename the go module from `testkube-executor-template` in whole project to the new name & run `go mod tidy`.
 
 ### Implement Runner Components
 
 [TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
-
 
 Let's try to create new test runner which test if given URI call is successfull (`status code == 200`)
 
@@ -56,12 +55,6 @@ Runner need to return `ExecutionResult` or `error` (in case of runner can't run 
 could have different statuses (look at OpenAPI spec for details) - we'll focus on `success` and `error`
 
 Let's assume that user will create test which content will be simply URI to test.
-
-
-
-
-
-
 
 ```go
 func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
