@@ -12,6 +12,10 @@ builds:
       - windows
       - darwin
     ldflags:
+      - -s -w -X main.version={{.Version}} 
+      - -X main.commit={{.Commit}} 
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
       - -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken={{.Env.TELEMETRY_TOKEN}}
 archives:
   - replacements:
