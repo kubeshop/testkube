@@ -571,6 +571,35 @@ spec:
           tags:
           - executions
           - api
+      /executions/:
+        get:
+          description: Returns array of scripts executions
+          operationId: listExecutionsA
+          parameters:
+          - $ref: '#/components/parameters/ExecutionsPageSize'
+          - $ref: '#/components/parameters/ExecutionsPageIndex'
+          - $ref: '#/components/parameters/ExecutionsStatusFilter'
+          - $ref: '#/components/parameters/ExecutionsStartDateFilter'
+          - $ref: '#/components/parameters/ExecutionsEndDateFilter'
+          responses:
+            "200":
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ExecutionsResult'
+              description: successful operation
+            "500":
+              content:
+                application/problem+json:
+                  schema:
+                    items:
+                      $ref: '#/components/schemas/Problem'
+                    type: array
+              description: problem with getting script executions from storage
+          summary: Get all script executions
+          tags:
+          - executions
+          - api
       /executions/{executionID}:
         get:
           description: Returns execution with given executionID
