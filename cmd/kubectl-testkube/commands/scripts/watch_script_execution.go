@@ -20,8 +20,17 @@ func NewWatchExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
+			execution, err := client.GetExecution("", executionID)
+			if err != nil {
 
-			watchLogs(executionID, client)
+				ui.Failf("execution result retrievel failed with err %s", err)
+			}
+
+			if execution.ExecutionResult.IsCompleted() {
+				ui.Completed("execution is already finished")
+			} else {
+				watchLogs(executionID, client)
+			}
 
 		},
 	}
