@@ -3,7 +3,6 @@ apiVersion: gateway.kusk.io/v1alpha1
 kind: API
 metadata:
   name: testkube
-  namespace: default
 spec:
   spec: |
     components:
