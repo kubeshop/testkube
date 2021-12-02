@@ -7,7 +7,7 @@ import (
 const (
 	ApiServerName         string = "testkube-api-server"
 	ApiServerPort         int    = 8088
-	DashboardURI          string = "http://dashboard.testkube.io?apiEndpoint="
+	DashboardURI          string = "http://demo.testkube.io?apiEndpoint="
 	IngressControllerName string = "testkube-ing-ctrlr"
 	CurrentApiVersion     string = apiclient.Version
 )
