@@ -4,17 +4,18 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"os"
-	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/segmentio/analytics-go"
 )
 
-var telemetryToken = ""
+var telemetryToken = "bVivKDpZOXkFL9zV97smKsEdCtiaLCuA"
 
 const heartbeatEvent = "testkube-heartbeat"
+const cliEvent = "testkube-cli"
 
 func CollectAnonymousInfo() {
 
@@ -36,7 +37,7 @@ func CollectAnonymousInfo() {
 	}
 }
 
-func CollectAnonymousCmdInfo(command string) {
+func CollectAnonymousCmdInfo() {
 
 	var isDisabled bool
 
@@ -45,9 +46,11 @@ func CollectAnonymousCmdInfo(command string) {
 	}
 	if !isDisabled {
 		client := analytics.New(telemetryToken)
+
 		client.Enqueue(analytics.Track{
 			AnonymousId: machineID(),
-			Event:       filepath.Join(heartbeatEvent, command),
+			Event:       cliEvent,
+			MessageId:   strings.Join(os.Args, " "),
 			Timestamp:   time.Now(),
 		})
 

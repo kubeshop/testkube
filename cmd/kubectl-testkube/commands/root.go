@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
@@ -43,7 +42,7 @@ var RootCmd = &cobra.Command{
 
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
-		telemetry.CollectAnonymousCmdInfo(strings.Join(args, " "))
+		telemetry.CollectAnonymousCmdInfo()
 		// version validation
 		// if client version is less than server version show warning
 		client, _ := scripts.GetClient(cmd)
