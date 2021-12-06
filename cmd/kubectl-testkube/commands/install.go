@@ -8,9 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-
-}
+var (
+	noDashboard bool
+	noMinio     bool
+)
 
 func NewInstallCmd() *cobra.Command {
 	var chart, name, namespace string
@@ -35,15 +36,28 @@ func NewInstallCmd() *cobra.Command {
 			_, err = process.Execute(helmPath, "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
 
-			out, err := process.Execute(helmPath, "upgrade", "--install", "--create-namespace", "--namespace", namespace, name, chart)
+			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
+			if !noDashboard {
+				command = append(command, "--set", "api-server.minio.enabled=true")
+			}
+			if !noMinio {
+				command = append(command, "--set", "testkube-dashboard.enabled=true")
+			}
+			command = append(command, name, chart)
+
+			out, err := process.Execute(helmPath, command...)
+
 			ui.ExitOnError("executing helm install", err)
 			ui.Info("Helm install output", string(out))
-
 		},
 	}
 
 	cmd.Flags().StringVar(&chart, "chart", "kubeshop/testkube", "chart name")
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
+
+	cmd.Flags().BoolVar(&noMinio, "no-minio", false, "don't install MinIO")
+	cmd.Flags().BoolVar(&noDashboard, "no-dashboard", false, "don't install dashboard")
+
 	return cmd
 }
