@@ -12,7 +12,7 @@ import (
 	"github.com/segmentio/analytics-go"
 )
 
-var telemetryToken = "bVivKDpZOXkFL9zV97smKsEdCtiaLCuA"
+var telemetryToken = ""
 
 const heartbeatEvent = "testkube-heartbeat"
 const cliEvent = "testkube-cli"
