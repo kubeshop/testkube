@@ -1,14 +1,14 @@
-# Installation 
+# Installation
 
 To get TestKube up and running you will need to
 
 1. Install the kubectl testkube plugin
-2. Install TestKube in your cluster 
+2. Install TestKube in your cluster
 3. Configure TestKube's Dashboard UI Ingress for your ingress-controller if needed.
 
 ## Install the kubectl testkube plugin
 
-### Installing on MacOS 
+### Installing on MacOS
 
 We're building Homebew tap for each release, so you can easily install TestKube with Homebrew.
 
@@ -18,14 +18,16 @@ brew install kubeshop/testkube
 ```
 
 If you want to upgrade testkube please run following command
-```
+
+```sh
 brew update 
 brew upgrade testkube
 ```
 
-### Installing on Linux or MaxOS with install script
+### Installing on Linux or MacOS with install script
 
-To install on Linux or MacOs run 
+To install on Linux or MacOs run
+
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
@@ -38,15 +40,16 @@ If you don't like automatic scripts you can always use manuall install:
 2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz)
 3. Move it to a location in the PATH. For example `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`
 
-For Windows, download the binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`. 
+For Windows, download the binary from [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`.
 
 We have plans to build installers for the most popular Operating Systems and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
 
 ## Install `testkube` components in your cluster
 
-The testkube kubectl plugin provides an install command to install testkube in your cluster. 
+The testkube kubectl plugin provides an install command to install testkube in your cluster.
 
-Run 
+Run
+
 ```shell
 kubectl testkube install
 ```
@@ -55,7 +58,7 @@ The above command will install the following components in your Kubernetes clust
 
 1. Testkube API
 2. `testkube` namespace
-3. CRD for scripts 
+3. CRD for scripts
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
@@ -110,23 +113,27 @@ To install the `testkube` chart:
 ```sh
 helm install --create-namespace my-testkube testkube/testkube
 ```
+
 Please note that by default it will be looking for the   `testkube` namespace to be installed into. And if doesn't find it the namespace will be created for you.
 
 If you wish to install it into a different namespace please use following command instead:
+
 ```sh
 helm install --namespace namespace_name my-testkube testkube/testkube
 ```
-
 
 To uninstall the `testkube` chart if it was installed into default namespace:
 
 ```sh
 helm delete my-testkube testkube/testkube
 ```
+
 And from different than `testkube` namespace:
+
 ```sh
 helm delete --namespace namespace_name my-testkube testkube/testkube
 ```
+
 ### Helm Properties
 
 Helm defaults used in the `testkube` chart:
@@ -152,15 +159,14 @@ Helm defaults used in the `testkube` chart:
 | api-server.storage.accessKey       | yes         | minio123                             |
 | api-server.storage.scrapperEnabled | yes         | true                                 |
 
-
 >For more configuration parameters of `MongoDB` chart please look here:
-https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
+<https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
 ## Uninstall `testkube`
 
-You can uninstall TestKube using the uninstall command integrated into the testkube plugin. 
+You can uninstall TestKube using the uninstall command integrated into the testkube plugin.
 
-```
+```sh
 kubectl testkube uninstall [--remove-crds]
 ```
 
