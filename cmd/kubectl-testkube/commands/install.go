@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/kubeshop/testkube/pkg/process"
@@ -37,12 +38,8 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("updating helm repositories", err)
 
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
-			if !noDashboard {
-				command = append(command, "--set", "api-server.minio.enabled=true")
-			}
-			if !noMinio {
-				command = append(command, "--set", "testkube-dashboard.enabled=true")
-			}
+			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noDashboard))
+			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noMinio))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
