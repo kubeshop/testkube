@@ -5,7 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 func NewGetScriptsCmd() *cobra.Command {
