@@ -123,10 +123,10 @@ func (c ProxyScriptsAPI) DeleteScript(name string, namespace string) error {
 }
 
 // CreateScript creates new Script Custom Resource
-func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script testkube.Script, err error) {
+func (c ProxyScriptsAPI) CreateScript(options UpsertScriptOptions) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts")
 
-	request := testkube.ScriptCreateRequest(options)
+	request := testkube.ScriptUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -138,6 +138,27 @@ func (c ProxyScriptsAPI) CreateScript(options CreateScriptOptions) (script testk
 
 	if err := c.responseError(resp); err != nil {
 		return script, fmt.Errorf("api/create-script returned error: %w", err)
+	}
+
+	return c.getScriptFromResponse(resp)
+}
+
+// UpdateScript creates new Script Custom Resource
+func (c ProxyScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error) {
+	uri := c.getURI("/scripts/%s", options.Name)
+
+	request := testkube.ScriptUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return script, err
+	}
+
+	req := c.GetProxy("PATCH").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/udpate-script returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)

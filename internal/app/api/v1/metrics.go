@@ -16,6 +16,11 @@ var creationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 
+var updatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_scripts_updates_count",
+	Help: "The total number of scripts created by type events",
+}, []string{"type", "result"})
+
 var abortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_scripts_abort_count",
 	Help: "The total number of scripts created by type events",
@@ -25,6 +30,7 @@ func NewMetrics() Metrics {
 	return Metrics{
 		Executions: executionCount,
 		Creations:  creationCount,
+		Updates:    updatesCount,
 		Abort:      abortCount,
 	}
 }
@@ -32,6 +38,7 @@ func NewMetrics() Metrics {
 type Metrics struct {
 	Executions *prometheus.CounterVec
 	Creations  *prometheus.CounterVec
+	Updates    *prometheus.CounterVec
 	Abort      *prometheus.CounterVec
 }
 
@@ -40,6 +47,18 @@ func (m Metrics) IncExecution(execution testkube.Execution) {
 		"type":   execution.ScriptType,
 		"name":   execution.ScriptName,
 		"result": string(*execution.ExecutionResult.Status),
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateScript(scriptType string, err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.Updates.With(map[string]string{
+		"type":   scriptType,
+		"result": result,
 	}).Inc()
 }
 

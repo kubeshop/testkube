@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net"
 	"os"
 
@@ -22,7 +23,11 @@ type MongoConfig struct {
 
 var Config MongoConfig
 
+var verbose = flag.Bool("v", false, "enable verbosity level")
+
 func init() {
+	flag.Parse()
+	ui.Verbose = *verbose
 	envconfig.Process("mongo", &Config)
 }
 
@@ -41,7 +46,8 @@ func main() {
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
 	ui.ExitOnError("Getting mongo database", err)
 
-	kubeClient := client.GetClient()
+	kubeClient, err := client.GetClient()
+	ui.ExitOnError("Getting kubernetes client", err)
 
 	scriptsClient := scriptscr.NewClient(kubeClient)
 

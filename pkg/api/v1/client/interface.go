@@ -20,7 +20,8 @@ type Client interface {
 	AbortExecution(script string, id string) error
 
 	GetScript(id string) (script testkube.Script, err error)
-	CreateScript(options CreateScriptOptions) (script testkube.Script, err error)
+	CreateScript(options UpsertScriptOptions) (script testkube.Script, err error)
+	UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error)
 	DeleteScript(name string, namespace string) error
 	DeleteScripts(namespace string) error
 	ListScripts(namespace string) (scripts testkube.Scripts, err error)
@@ -38,9 +39,9 @@ type Client interface {
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
 
-// CreateScriptOptions - is mapping for now to OpenAPI schema for creating request
+// UpsertScriptOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct
-type CreateScriptOptions testkube.ScriptCreateRequest
+type UpsertScriptOptions testkube.ScriptUpsertRequest
 
 // CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
 type CreateExecutorOptions testkube.ExecutorCreateRequest

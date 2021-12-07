@@ -9,7 +9,7 @@ import (
 type CurlTestAdapter struct {
 }
 
-func (d CurlTestAdapter) Is(options apiClient.CreateScriptOptions) (name string, ok bool) {
+func (d CurlTestAdapter) Is(options apiClient.UpsertScriptOptions) (name string, ok bool) {
 	var data map[string]interface{}
 
 	err := json.Unmarshal([]byte(options.Content), &data)

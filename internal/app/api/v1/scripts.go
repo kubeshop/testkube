@@ -65,7 +65,7 @@ func (s testkubeAPI) ListScripts() fiber.Handler {
 func (s testkubeAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request testkube.ScriptCreateRequest
+		var request testkube.ScriptUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -86,8 +86,9 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      request.Name,
-				Namespace: request.Namespace,
+				Name:            request.Name,
+				Namespace:       request.Namespace,
+				ResourceVersion: "1",
 			},
 			Spec: scriptsv1.ScriptSpec{
 				Type_:      request.Type_,
@@ -98,6 +99,54 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 		})
 
 		s.Metrics.IncCreateScript(script.Spec.Type_, err)
+
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(script)
+	}
+}
+
+// UpdateScript creates new script CR based on script content
+func (s testkubeAPI) UpdateScript() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		var request testkube.ScriptUpsertRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		s.Log.Infow("updating script", "request", request)
+
+		var repository *scriptsv1.Repository
+
+		if request.Repository != nil {
+			repository = &scriptsv1.Repository{
+				Type_:  "git",
+				Uri:    request.Repository.Uri,
+				Branch: request.Repository.Branch,
+				Path:   request.Repository.Path,
+			}
+		}
+
+		// we need to get resouece first and load its metadata.ResourceVersion
+		script, err := s.ScriptsClient.Get(request.Namespace, request.Name)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		script.Spec = scriptsv1.ScriptSpec{
+			Type_:      request.Type_,
+			InputType:  request.InputType,
+			Content:    request.Content,
+			Repository: repository,
+		}
+
+		script, err = s.ScriptsClient.Update(script)
+
+		s.Metrics.IncUpdateScript(script.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
