@@ -22,11 +22,12 @@ nav:
   - Installation: installing.md
   - Getting Started: getting-started.md
   - Managing test scripts:
+      - Creating: scripts-creating.md
+      - Running: scripts-running.md
+      - Getting results: scripts-getting-results.md
       - Postman Collections: executor-postman.md
       - Cypress Tests: executor-cypress.md
       - Curl Commands: executor-curl.md
-      - Running: scripts-running.md
-      - Getting results: scripts-getting-results.md
   - Executors:
       - Creating custom executor: executor-custom.md
   - CLI Reference:
