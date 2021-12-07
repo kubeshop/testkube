@@ -1155,6 +1155,14 @@ components:
   #
 
   parameters:
+    ExecutionTextSearch:
+      in: query
+      name: textSearch
+      schema:
+        type: string
+        default: ""
+      description: text to search in name and script name
+      required: false
     ExecutionsPageSize:
       in: query
       name: pageSize
