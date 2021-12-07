@@ -9,28 +9,10 @@
  */
 package testkube
 
-import (
-	"strconv"
-)
-
 // API server artifact
 type Artifact struct {
 	// artifact file path
 	Name string `json:"name,omitempty"`
 	// file size in bytes
 	Size int32 `json:"size,omitempty"`
-}
-
-type Artifacts []Artifact
-
-func (artifacts Artifacts) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Size (KB)"}
-	for _, e := range artifacts {
-		output = append(output, []string{
-			e.Name,
-			strconv.FormatInt(int64(e.Size), 10),
-		})
-	}
-
-	return
 }

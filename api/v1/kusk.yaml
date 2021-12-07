@@ -466,7 +466,7 @@ spec:
               - postman/collection
               type: string
           type: object
-        ScriptCreateRequest:
+        criptUpsertRequest:
           description: scripts create request body
           properties:
             content:
@@ -891,7 +891,7 @@ spec:
             content:
               application/json:
                 schema:
-                  $ref: '#/components/schemas/ScriptCreateRequest'
+                  $ref: '#/components/schemas/criptUpsertRequest'
             description: script details body
             required: true
           responses:

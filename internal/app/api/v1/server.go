@@ -85,6 +85,7 @@ func (s testkubeAPI) Init() {
 
 	scripts.Get("/", s.ListScripts())
 	scripts.Post("/", s.CreateScript())
+	scripts.Patch("/:id", s.UpdateScript())
 	scripts.Delete("/", s.DeleteScripts())
 
 	scripts.Get("/:id", s.GetScript())

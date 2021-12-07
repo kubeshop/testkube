@@ -17,7 +17,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 
 	t.Run("Is return true when valid content", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
-		name, is := detector.Is(client.CreateScriptOptions{
+		name, is := detector.Is(client.UpsertScriptOptions{
 			Content: exampleValidContent,
 		})
 
@@ -27,7 +27,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 
 	t.Run("Is return false in case of invalid JSON content", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
-		name, is := detector.Is(client.CreateScriptOptions{
+		name, is := detector.Is(client.UpsertScriptOptions{
 			Content: exampleInvalidContent,
 		})
 
@@ -38,7 +38,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 
 	t.Run("Is return false in case of content which is not JSON ", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
-		name, is := detector.Is(client.CreateScriptOptions{
+		name, is := detector.Is(client.UpsertScriptOptions{
 			Content: exampleInvalidJSONContent,
 		})
 

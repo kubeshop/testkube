@@ -91,7 +91,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		response, err := client.CreateScript(CreateScriptOptions{
+		response, err := client.CreateScript(UpsertScriptOptions{
 			Content: "{}",
 			Name:    "t1",
 			Type_:   "postman/collection",

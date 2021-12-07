@@ -10,7 +10,7 @@
 package testkube
 
 // scripts create request body
-type ScriptCreateRequest struct {
+type ScriptUpsertRequest struct {
 	// script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
 	Name string `json:"name,omitempty"`
 	// script type - what executor type should be used during test execution

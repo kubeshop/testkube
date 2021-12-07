@@ -15,7 +15,7 @@ func TestDetector(t *testing.T) {
 		detector.Add(CurlTestAdapter{})
 		detector.Add(PostmanCollectionAdapter{})
 
-		name, found := detector.Detect(client.CreateScriptOptions{
+		name, found := detector.Detect(client.UpsertScriptOptions{
 			Content: exampleValidContent,
 		})
 

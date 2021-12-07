@@ -11,8 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCreateScriptsCmd() *cobra.Command {
-
+func NewUpdateScriptsCmd() *cobra.Command {
 	var (
 		name         string
 		file         string
@@ -21,10 +20,11 @@ func NewCreateScriptsCmd() *cobra.Command {
 		gitBranch    string
 		gitPath      string
 	)
+
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create new script",
-		Long:  `Create new Script Custom Resource, `,
+		Use:   "update",
+		Short: "Update script",
+		Long:  `Update Script Custom Resource, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
@@ -43,8 +43,8 @@ func NewCreateScriptsCmd() *cobra.Command {
 			client, namespace := GetClient(cmd)
 
 			script, _ := client.GetScript(name)
-			if name == script.Name {
-				ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
+			if name != script.Name {
+				ui.Failf("Script with name '%s' not exists in namespace %s", name, namespace)
 			}
 
 			if len(content) == 0 && len(uri) == 0 {
@@ -82,10 +82,10 @@ func NewCreateScriptsCmd() *cobra.Command {
 				ui.Failf("Can't detect executor type by passed file content, please pass valid --type flag")
 			}
 
-			script, err = client.CreateScript(options)
-			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
+			script, err = client.UpdateScript(options)
+			ui.ExitOnError("updating script "+name+" in namespace "+namespace, err)
 
-			ui.Success("Script created", name)
+			ui.Success("Script updated", name)
 		},
 	}
 

@@ -12,14 +12,15 @@ import (
 
 const WatchInterval = 2 * time.Second
 
-var (
-	watchEnabled             bool
-	params                   map[string]string
-	downloadArtifactsEnabled bool
-	downloadDir              string
-)
-
 func NewStartScriptCmd() *cobra.Command {
+	var (
+		name                     string
+		watchEnabled             bool
+		params                   map[string]string
+		downloadArtifactsEnabled bool
+		downloadDir              string
+	)
+
 	cmd := &cobra.Command{
 		Use:     "start",
 		Aliases: []string{"run"},

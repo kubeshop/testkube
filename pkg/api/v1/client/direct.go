@@ -114,10 +114,10 @@ func (c DirectScriptsAPI) DeleteScript(name string, namespace string) error {
 }
 
 // CreateScript creates new Script Custom Resource
-func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script testkube.Script, err error) {
+func (c DirectScriptsAPI) CreateScript(options UpsertScriptOptions) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts")
 
-	request := testkube.ScriptCreateRequest(options)
+	request := testkube.ScriptUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -131,6 +131,35 @@ func (c DirectScriptsAPI) CreateScript(options CreateScriptOptions) (script test
 
 	if err := c.responseError(resp); err != nil {
 		return script, fmt.Errorf("api/create-script returned error: %w", err)
+	}
+
+	return c.getScriptFromResponse(resp)
+}
+
+// UpdateScript creates new Script Custom Resource
+func (c DirectScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error) {
+	uri := c.getURI("/scripts/%s", options.Name)
+
+	request := testkube.ScriptUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return script, err
+	}
+
+	req, err := http.NewRequest("PATCH", uri, bytes.NewReader(body))
+	req.Header.Add("Content-type", "application/json")
+	if err != nil {
+		return script, fmt.Errorf("prepare request error: %w", err)
+	}
+	resp, err := c.client.Do(req)
+
+	if err != nil {
+		return script, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/update-script returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)

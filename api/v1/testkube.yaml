@@ -189,7 +189,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ScriptCreateRequest"
+              $ref: "#/components/schemas/ScriptUpsertRequest"
       responses:
         200:
           description: "successful operation"
@@ -235,6 +235,46 @@ paths:
                   $ref: '#/components/schemas/Problem'
 
   /scripts/{id}:
+    patch:
+      tags:
+        - scripts
+        - api
+      summary: "update script"
+      description: "update script based on script content or git based data"
+      operationId: updateScript
+      requestBody:
+        description: script details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScriptUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Script"
+        400:
+          description: "problem with script definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+
     get:
       tags:
         - scripts
@@ -943,7 +983,7 @@ components:
             users: "3"
             prefix: "some-"
 
-    ScriptCreateRequest:
+    ScriptUpsertRequest:
       description: scripts create request body
       type: object
       properties:
