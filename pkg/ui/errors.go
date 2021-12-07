@@ -3,8 +3,6 @@ package ui
 import (
 	"fmt"
 	"os"
-
-	"github.com/bclicn/color"
 )
 
 func ExitOnError(item string, errors ...error) {
@@ -19,7 +17,7 @@ func printAndExit(item string, exitOnError bool, errors ...error) {
 	if len(errors) > 0 && hasErrors(errors...) {
 		for _, err := range errors {
 			if err != nil {
-				fmt.Printf("%s %s (error: %s)\n\n", color.LightRed("⨯"), color.Red(item), err)
+				fmt.Printf("%s %s (error: %s)\n\n", LightRed("⨯"), Red(item), err)
 				if exitOnError {
 					os.Exit(1)
 				}
@@ -28,7 +26,7 @@ func printAndExit(item string, exitOnError bool, errors ...error) {
 	}
 
 	if Verbose {
-		fmt.Printf("%s %s\n", color.Blue("\xE2\x9C\x94"), color.Green(item))
+		fmt.Printf("%s %s\n", Blue("\xE2\x9C\x94"), Green(item))
 	}
 }
 
@@ -36,14 +34,14 @@ func WarnOnError(item string, errors ...error) {
 	if len(errors) > 0 && hasErrors(errors...) {
 		for _, err := range errors {
 			if err != nil {
-				fmt.Printf("%s %s (error: %s)\n\n", color.LightYellow("⨯"), color.Yellow(item), err)
+				fmt.Printf("%s %s (error: %s)\n\n", LightYellow("⨯"), Yellow(item), err)
 				return
 			}
 		}
 	}
 
 	if Verbose {
-		fmt.Printf("%s %s\n", color.Blue("\xE2\x9C\x94"), color.Green(item))
+		fmt.Printf("%s %s\n", Blue("\xE2\x9C\x94"), Green(item))
 	}
 }
 

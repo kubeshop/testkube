@@ -6,12 +6,12 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/bclicn/color v0.0.0-20180711051946-108f2023dc84
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/gofiber/adaptor/v2 v2.1.14
 	github.com/gofiber/fiber/v2 v2.22.0
+	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v0.6.4
 	github.com/minio/minio-go/v7 v7.0.14
