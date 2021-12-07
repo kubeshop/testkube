@@ -21,6 +21,8 @@ type Filter interface {
 	StatusDefined() bool
 	Page() int
 	PageSize() int
+	TextSearchDefined() bool
+	TextSearch() string
 }
 
 type Repository interface {

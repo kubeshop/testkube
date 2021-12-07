@@ -13,6 +13,7 @@ type filter struct {
 	status     *testkube.ExecutionStatus
 	page       int
 	pageSize   int
+	textSearch string
 }
 
 func NewExecutionsFilter() *filter {
@@ -47,6 +48,11 @@ func (f *filter) WithPage(page int) *filter {
 
 func (f *filter) WithPageSize(pageSize int) *filter {
 	f.pageSize = pageSize
+	return f
+}
+
+func (f *filter) WithTextSearch(textSearch string) *filter {
+	f.textSearch = textSearch
 	return f
 }
 
@@ -88,4 +94,12 @@ func (f filter) Page() int {
 
 func (f filter) PageSize() int {
 	return f.pageSize
+}
+
+func (f filter) TextSearchDefined() bool {
+	return f.textSearch != ""
+}
+
+func (f filter) TextSearch() string {
+	return f.textSearch
 }

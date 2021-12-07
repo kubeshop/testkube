@@ -379,6 +379,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithScriptName(scriptName)
 	}
 
+	textSearch := c.Query("textSearch", "")
+	if textSearch != "" {
+		filter = filter.WithTextSearch(textSearch)
+	}
+
 	page, err := strconv.Atoi(c.Query("page", "-"))
 	if err == nil {
 		filter = filter.WithPage(page)

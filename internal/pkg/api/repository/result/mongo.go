@@ -144,6 +144,13 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	opts := options.Find()
 	startTimeQuery := bson.M{}
 
+	if filter.TextSearchDefined() {
+		query["$or"] = bson.A{
+			bson.M{"scriptname": filter.TextSearch()},
+			bson.M{"name": filter.TextSearch()},
+		}
+	}
+
 	if filter.ScriptNameDefined() {
 		query["scriptname"] = filter.ScriptName()
 	}
