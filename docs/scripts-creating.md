@@ -18,91 +18,17 @@ Scripts can be currently created from two sources:
 
 ### Create your first script from file (Postman Collection test)
 
-Create script json file:
-```bash
-cat <<EOF > my_postman_collection.json
-{
-    "info": {
-        "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
-        "name": "Kubeshop",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "item": [
-        {
-            "name": "Home",
-            "event": [
-                {
-                    "listen": "test",
-                    "script": {
-                        "exec": [
-                            "pm.test(\"Body matches string\", function () {",
-                            "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
-                            "});"
-                        ],
-                        "type": "text/javascript"
-                    }
-                }
-            ],
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "https://kubeshop.io/",
-                    "protocol": "https",
-                    "host": [
-                        "kubeshop",
-                        "io"
-                    ],
-                    "path": [
-                        ""
-                    ]
-                }
-            },
-            "response": []
-        },
-        {
-            "name": "Team",
-            "event": [
-                {
-                    "listen": "test",
-                    "script": {
-                        "exec": [
-                            "pm.test(\"Status code is 200\", function () {",
-                            "    pm.response.to.have.status(200);",
-                            "});",
-                            "",
-                            "pm.test(\"Body matches string\", function () {",
-                            "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
-                            "});"
-                        ],
-                        "type": "text/javascript"
-                    }
-                }
-            ],
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "https://kubeshop.io/our-team",
-                    "protocol": "https",
-                    "host": [
-                        "kubeshop",
-                        "io"
-                    ],
-                    "path": [
-                        "our-team"
-                    ]
-                }
-            },
-            "response": []
-        }
-    ]
-}
-EOF
-```
+To create your first postman collection in TestKube you'll first need to export your collection into a file
+
+Right click on your collection name
+![create postman colletion step 1](img/script-create-1.png)
+Click "Export" button 
+![create postman colletion step 2](img/script-create-1.png)
+Save in convinient location (We're using `~/Downloads/TODO.postman_collection.json` path)
+![create postman colletion step 3](img/script-create-1.png)
 
 ```sh
-$ kubectl testkube scripts create --name test --file my_postman_collection.json --type postman/collection 
+$ kubectl testkube scripts create --file ~/Downloads/TODO.postman_collection.json --name test 
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -112,10 +38,37 @@ $ kubectl testkube scripts create --name test --file my_postman_collection.json 
                                            /tɛst kjub/ by Kubeshop
 
 
+Detected test script type postman/collection
 Script created test 🥇
 ```
 
 Script created! Now we can run as many times as we want. 
+
+
+### Updating scripts
+
+If you need to update your script after change in Postman just re-export it to file and run update command: 
+
+```sh
+$ kubectl testkube scripts update --file ~/Downloads/TODO.postman_collection.json --name test 
+
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+                                           /tɛst kjub/ by Kubeshop
+
+
+Detected test script type postman/collection
+Script updated test 🥇
+```
+
+Testkube will override all script settings and content with `update` method.
+
+
+### Checking scripts content:
+
 
 Let's see what has been created:
 
@@ -130,91 +83,55 @@ $ kubectl get scripts -n testkube test -o yaml
 apiVersion: tests.testkube.io/v1
 kind: Script
 metadata:
-  creationTimestamp: "2021-11-17T12:26:32Z"
+  creationTimestamp: "2021-12-07T10:33:11Z"
   generation: 1
   name: test
   namespace: testkube
-  resourceVersion: "224612"
-  uid: c622ef0b-f279-4804-ba76-98c5856fc375
+  resourceVersion: "2553046"
+  uid: afa071c4-533d-4112-afae-7c6f40f03750
 spec:
-  content: |
-    {
-        "info": {
-            "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
-            "name": "Kubeshop",
-            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-        },
-        "item": [
-            {
-                "name": "Home",
-                "event": [
-                    {
-                        "listen": "test",
-                        "script": {
-                            "exec": [
-                                "pm.test(\"Body matches string\", function () {",
-                                "    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
-                                "});"
-                            ],
-                            "type": "text/javascript"
-                        }
-                    }
-                ],
-                "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                        "raw": "https://kubeshop.io/",
-                        "protocol": "https",
-                        "host": [
-                            "kubeshop",
-                            "io"
-                        ],
-                        "path": [
-                            ""
-                        ]
-                    }
-                },
-                "response": []
-            },
-            {
-                "name": "Team",
-                "event": [
-                    {
-                        "listen": "test",
-                        "script": {
-                            "exec": [
-                                "pm.test(\"Status code is 200\", function () {",
-                                "    pm.response.to.have.status(200);",
-                                "});",
-                                "",
-                                "pm.test(\"Body matches string\", function () {",
-                                "    pm.expect(pm.response.text()).to.include(\"Jacek Wysocki\");",
-                                "});"
-                            ],
-                            "type": "text/javascript"
-                        }
-                    }
-                ],
-                "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                        "raw": "https://kubeshop.io/our-team",
-                        "protocol": "https",
-                        "host": [
-                            "kubeshop",
-                            "io"
-                        ],
-                        "path": [
-                            "our-team"
-                        ]
-                    }
-                },
-                "response": []
-            }
-        ]
-    }
+  content: "{\n\t\"info\": {\n\t\t\"_postman_id\": \"b40de9fe-9201-4b03-8ca2-3064d9027dd6\",\n\t\t\"name\":
+    \"TODO\",\n\t\t\"schema\": \"https://schema.getpostman.com/json/collection/v2.1.0/collection.json\"\n\t},\n\t\"item\":
+    [\n\t\t{\n\t\t\t\"name\": \"Create TODO\",\n\t\t\t\"event\": [\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
+    \"test\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"pm.test(\\\"Status
+    code is 201 CREATED\\\", function () {\",\n\t\t\t\t\t\t\t\"    pm.response.to.have.status(201);\",\n\t\t\t\t\t\t\t\"});\",\n\t\t\t\t\t\t\t\"\",\n\t\t\t\t\t\t\t\"\",\n\t\t\t\t\t\t\t\"pm.test(\\\"Check
+    if todo item craeted successfully\\\", function() {\",\n\t\t\t\t\t\t\t\"    var
+    json = pm.response.json();\",\n\t\t\t\t\t\t\t\"    pm.environment.set(\\\"item\\\",
+    json.url);\",\n\t\t\t\t\t\t\t\"    pm.sendRequest(json.url, function (err, response)
+    {\",\n\t\t\t\t\t\t\t\"        var json = pm.response.json();\",\n\t\t\t\t\t\t\t\"
+    \       pm.expect(json.title).to.eq(\\\"Create video for conference\\\");\",\n\t\t\t\t\t\t\t\"\",\n\t\t\t\t\t\t\t\"
+    \   });\",\n\t\t\t\t\t\t\t\"    console.log(\\\"creating\\\", pm.environment.get(\\\"item\\\"))\",\n\t\t\t\t\t\t\t\"})\",\n\t\t\t\t\t\t\t\"\",\n\t\t\t\t\t\t\t\"\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\":
+    \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
+    \"prerequest\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\":
+    \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"protocolProfileBehavior\":
+    {\n\t\t\t\t\"disabledSystemHeaders\": {}\n\t\t\t},\n\t\t\t\"request\": {\n\t\t\t\t\"method\":
+    \"POST\",\n\t\t\t\t\"header\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\"key\": \"Content-Type\",\n\t\t\t\t\t\t\"value\":
+    \"application/json\",\n\t\t\t\t\t\t\"type\": \"text\"\n\t\t\t\t\t}\n\t\t\t\t],\n\t\t\t\t\"body\":
+    {\n\t\t\t\t\t\"mode\": \"raw\",\n\t\t\t\t\t\"raw\": \"{\\\"title\\\":\\\"Create
+    video for conference\\\",\\\"order\\\":1,\\\"completed\\\":false}\"\n\t\t\t\t},\n\t\t\t\t\"url\":
+    {\n\t\t\t\t\t\"raw\": \"{{uri}}\",\n\t\t\t\t\t\"host\": [\n\t\t\t\t\t\t\"{{uri}}\"\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"response\":
+    []\n\t\t},\n\t\t{\n\t\t\t\"name\": \"Complete TODO item\",\n\t\t\t\"event\": [\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
+    \"prerequest\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"console.log(\\\"completing\\\",
+    pm.environment.get(\\\"item\\\"))\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\": \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"request\":
+    {\n\t\t\t\t\"method\": \"PATCH\",\n\t\t\t\t\"header\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\"key\":
+    \"Content-Type\",\n\t\t\t\t\t\t\"value\": \"application/json\",\n\t\t\t\t\t\t\"type\":
+    \"text\"\n\t\t\t\t\t}\n\t\t\t\t],\n\t\t\t\t\"body\": {\n\t\t\t\t\t\"mode\": \"raw\",\n\t\t\t\t\t\"raw\":
+    \"{\\\"completed\\\": true}\"\n\t\t\t\t},\n\t\t\t\t\"url\": {\n\t\t\t\t\t\"raw\":
+    \"{{item}}\",\n\t\t\t\t\t\"host\": [\n\t\t\t\t\t\t\"{{item}}\"\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"response\":
+    []\n\t\t},\n\t\t{\n\t\t\t\"name\": \"Delete TODO item\",\n\t\t\t\"event\": [\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
+    \"prerequest\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"console.log(\\\"deleting\\\",
+    pm.environment.get(\\\"item\\\"))\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\": \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"listen\":
+    \"test\",\n\t\t\t\t\t\"script\": {\n\t\t\t\t\t\t\"exec\": [\n\t\t\t\t\t\t\t\"pm.test(\\\"Status
+    code is 204 no content\\\", function () {\",\n\t\t\t\t\t\t\t\"    pm.response.to.have.status(204);\",\n\t\t\t\t\t\t\t\"});\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"type\":
+    \"text/javascript\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"request\": {\n\t\t\t\t\"method\":
+    \"DELETE\",\n\t\t\t\t\"header\": [],\n\t\t\t\t\"url\": {\n\t\t\t\t\t\"raw\": \"{{item}}\",\n\t\t\t\t\t\"host\":
+    [\n\t\t\t\t\t\t\"{{item}}\"\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"response\":
+    []\n\t\t}\n\t],\n\t\"event\": [\n\t\t{\n\t\t\t\"listen\": \"prerequest\",\n\t\t\t\"script\":
+    {\n\t\t\t\t\"type\": \"text/javascript\",\n\t\t\t\t\"exec\": [\n\t\t\t\t\t\"\"\n\t\t\t\t]\n\t\t\t}\n\t\t},\n\t\t{\n\t\t\t\"listen\":
+    \"test\",\n\t\t\t\"script\": {\n\t\t\t\t\"type\": \"text/javascript\",\n\t\t\t\t\"exec\":
+    [\n\t\t\t\t\t\"\"\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t],\n\t\"variable\": [\n\t\t{\n\t\t\t\"key\":
+    \"uri\",\n\t\t\t\"value\": \"http://localhost:8080/todos\"\n\t\t},\n\t\t{\n\t\t\t\"key\":
+    \"item\",\n\t\t\t\"value\": null\n\t\t}\n\t]\n}"
   type: postman/collection
 ```
 
@@ -230,7 +147,7 @@ Let's assume that some Cypress project is created in some git repository - Let's
 
 Where `examples` is test directory in `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
 
-Now we can create our Cypress based script
+Now we can create our Cypress based script (in git based scripts we need to pass script type)
 
 ```sh
 $ kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
