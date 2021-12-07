@@ -271,6 +271,11 @@ content: |-
 We can see that script resource was created with Postman collection JSON content. 
 
 
+You can also check scripts with standard `kubectl` comman which will list Scripts Custom Resource 
+```
+$ kubectl get scripts -ntestkube test -oyaml
+```
+
 
 ### Create script from git
 
