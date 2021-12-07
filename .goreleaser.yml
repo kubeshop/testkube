@@ -48,4 +48,6 @@ brews:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
-
+snapcrafts:
+  - 
+    summary: testkube
