@@ -1,0 +1,44 @@
+@startuml "objects-dependencies"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/html5.puml
+!include FONTAWESOME/check_double.puml
+!include FONTAWESOME/check.puml
+!include FONTAWESOME/clipboard_list.puml
+!include FONTAWESOME/file_code.puml
+
+LAYOUT_AS_SKETCH()
+
+Boundary(ext, "Test execution") {
+
+	System(test1, "Test 1", "Test defined with scripts attached", "clipboard_list")
+
+	System(script1, "Script 1", "script content", "file_code")
+	System(script2, "Script 2", "script content", "file_code")
+
+	System(test1Execution1, "Test 1 Execution 1", "Test RUN - knows about what scripts was executed and stores executions references", "check_double")
+	System(test1Execution2, "Test 1 Execution 2", "Test RUN - knows about what scripts was executed and stores executions references", "check_double")
+
+	System(test1script1Execution1, "Test 1 Script 1 Execution 1", "Script RUN - results", "check")
+	System(test1script2Execution1, "Test 1 Script 2 Execution 1", "Script RUN - results", "check")
+	System(test1script1Execution2, "Test 1 Script 1 Execution 2", "Script RUN - results", "check")
+	System(test1script2Execution2, "Test 1 Script 2 Execution 2", "Script RUN - results", "check")
+
+	Rel(script1, test1, "Script is one of test steps")
+	Rel(script2, test1, "Script is one of test steps")
+
+	Rel(test1, test1Execution1, "Execute test")
+	Rel(test1, test1Execution2, "Execute test")
+
+	Rel_U(test1script1Execution1, test1Execution1, "is part of")
+	Rel_U(test1script2Execution1, test1Execution1, "is part of")
+
+	Rel_U(test1script1Execution2, test1Execution2, "is part of")
+	Rel_U(test1script2Execution2, test1Execution2, "is part of")
+
+}
+
+@enduml
