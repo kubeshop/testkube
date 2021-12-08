@@ -41,4 +41,18 @@ Boundary(ext, "Test execution") {
 
 }
 
+Boundary(grids, "Views on dashboard and relations") {
+
+	System(testgrid, "Tests List", "Test 1\nTest 2", "clipboard_list")
+	System(scriptsgrid, "Scripts List", "Script 1\nScript 2\nScript 3", "clipboard_list")
+	System(executionsgrid, "Executions List", "Execution 1\nExecution 2\n\nlists script or test scripts executions", "check_double")
+	System(testsexecutionsgrid, "Tests Executions List", "Test 1 Execution 1\nTest 1 Execution 2\n\nlists script or test scripts executions", "check")
+
+
+	Rel(testgrid, scriptsgrid, "Click on 'show scripts' in 'Test 1' row will filter scripts which are part of 'Test 1'")
+	Rel(scriptsgrid, executionsgrid, "Click on 'show executions' in 'Script 1' will show executions of that script")
+	Rel(testgrid, testsexecutionsgrid, "Click on 'show executions' in 'Test 1' row will show given test scripts executions")
+	Rel(testsexecutionsgrid, executionsgrid, "Click on 'show executions' will show scripts executions of given test executions (list of executions of test scripts in given test run)")
+}
+
 @enduml
