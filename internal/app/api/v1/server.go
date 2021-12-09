@@ -82,6 +82,7 @@ func (s testkubeAPI) Init() {
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifact())
 
 	scripts := s.Routes.Group("/scripts")
+	scripts.Use(cors.New())
 
 	scripts.Get("/", s.ListScripts())
 	scripts.Post("/", s.CreateScript())
