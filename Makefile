@@ -42,7 +42,7 @@ install-swagger-codegen-mac:
 openapi-generate-model: openapi-generate-model-testkube 
 
 # we need to remove model_test_step to mimic inheritance 
-# look at 
+# look at https://github.com/swagger-api/swagger-codegen/issues/11292
 openapi-generate-model-testkube:
 	swagger-codegen generate -i api/v1/testkube.yaml -l go -o tmp/api/testkube
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube
