@@ -10,7 +10,8 @@
 package testkube
 
 type Test struct {
-	Before *TestStep `json:"before,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Before      *TestStep `json:"before,omitempty"`
 	// Steps to run
 	Steps   []TestStep `json:"steps,omitempty"`
 	After   *TestStep  `json:"after,omitempty"`

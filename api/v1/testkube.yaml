@@ -731,6 +731,8 @@ components:
     Test:
       type: object
       properties:
+        description: 
+          type: string
         before:
           $ref: "#/components/schemas/TestStep"
           description: Run this step before whole suite
@@ -767,7 +769,7 @@ components:
               type: string
             name:
               type: string
-            stopOnFailure:
+            stopTestOnFailure:
               type: boolean
               default: true
 
@@ -778,10 +780,10 @@ components:
           required:
             - duration 
           properties:
-            delay:
+            duration:
               type: integer
               default: 0 
-              description: delay in milliseconds
+              description: delay duration in milliseconds
         
           
     TestExecution:
