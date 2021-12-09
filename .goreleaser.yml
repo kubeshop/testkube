@@ -2,8 +2,7 @@ before:
   hooks:
     - go mod tidy
 builds:
-  - 
-    main: ./cmd/kubectl-testkube
+  - main: ./cmd/kubectl-testkube
     binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
@@ -12,8 +11,8 @@ builds:
       - windows
       - darwin
     ldflags:
-      - -s -w -X main.version={{.Version}} 
-      - -X main.commit={{.Commit}} 
+      - -s -w -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
       - -X main.builtBy=goreleaser
       - -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken={{.Env.TELEMETRY_TOKEN}}
@@ -25,13 +24,13 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
 release:
   # Create a thread in the General category in the repo's discussion tab.
   discussion_category_name: General
@@ -41,13 +40,20 @@ release:
   prerelease: auto
 
 brews:
-  -
-    tap:
+  - tap:
       owner: kubeshop
       name: homebrew-testkube
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
 snapcrafts:
+  - name: snap-testkube
+    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+    license: "MIT"
+nfpms:
   - 
-    summary: testkube
+    maintainer: TestKube team 
+    license: "MIT"
+    formats:
+      - deb
+
