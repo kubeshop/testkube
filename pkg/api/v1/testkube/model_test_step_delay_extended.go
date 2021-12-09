@@ -9,7 +9,10 @@
  */
 package testkube
 
-type TestStep struct {
-	// step name (in case of script it'll be script name)
-	Name string `json:"name"`
+import (
+	"fmt"
+)
+
+func (s TestStepDelay) FullName() string {
+	return fmt.Sprintf("Delay %dms", s.Delay)
 }
