@@ -62,6 +62,7 @@ func (s testkubeAPI) Init() {
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 
 	s.Routes.Static("/api-docs", "./api/v1")
+	s.Routes.Use(cors.New())
 
 	s.Routes.Get("/info", s.Info())
 
@@ -73,7 +74,6 @@ func (s testkubeAPI) Init() {
 	executors.Delete("/:name", s.DeleteExecutor())
 
 	executions := s.Routes.Group("/executions")
-	executions.Use(cors.New())
 
 	executions.Get("/", s.ListExecutions())
 	executions.Get("/:executionID", s.GetExecution())
