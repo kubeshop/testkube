@@ -4,7 +4,9 @@ on:
   push:
     tags: 
       - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      # need to be disabled because it overrides brew 
+      # we must create separate (beta) brew tap and allow to build it
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
 
