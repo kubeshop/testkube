@@ -96,4 +96,10 @@ func (s testkubeAPI) Init() {
 	scripts.Get("/:id/executions", s.ListExecutions())
 	scripts.Get("/:id/executions/:executionID", s.GetExecution())
 	scripts.Delete("/:id/executions/:executionID", s.AbortExecution())
+
+	tests := s.Routes.Group("/scripts")
+
+	tests.Get("/", s.ListTests())
+	tests.Get("/:id", s.GetTest())
+
 }
