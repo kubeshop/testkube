@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -117,9 +118,9 @@ spec:
 
 func SanitizeName(path string) string {
 	path = strings.TrimSuffix(path, ".json")
-	path = strings.Replace(path, "/", "-", -1)
-	path = strings.Replace(path, "_", "-", -1)
-	path = strings.Replace(path, ".", "-", -1)
+
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+	path = reg.ReplaceAllString(path, "-")
 
 	if len(path) > 63 {
 		return path[:63]
