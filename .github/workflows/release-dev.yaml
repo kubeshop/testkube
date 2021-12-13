@@ -1,9 +1,9 @@
-name: Release kubectl-testkube
+name: Release kubectl-testkube dev
 
 on:
   push:
     tags: 
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
 
@@ -49,7 +49,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist
+          args: release --rm-dist -f .goreleaser-dev.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           TELEMETRY_TOKEN: ${{ secrets.TELEMETRY_TOKEN }}
