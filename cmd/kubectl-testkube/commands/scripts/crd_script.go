@@ -100,7 +100,7 @@ spec:
 		return "", ErrTypeNotDetected
 	}
 
-	t := template.Must(template.New("sccript").Parse(tpl))
+	t := template.Must(template.New("script").Parse(tpl))
 	b := bytes.NewBuffer([]byte{})
 	err = t.Execute(b, Script{
 		Name:      SanitizePath(path),
