@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	"github.com/kubeshop/testkube/pkg/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -21,6 +22,16 @@ func NewScriptsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// version validation
+			// if client version is less than server version show warning
+			client, _ := scripts.GetClient(cmd)
+
+			err := ValidateVersions(client)
+			if err != nil {
+				ui.Warn(err.Error())
+			}
+		},
 	}
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
@@ -39,7 +50,6 @@ func NewScriptsCmd() *cobra.Command {
 	cmd.AddCommand(scripts.NewWatchExecutionCmd())
 	cmd.AddCommand(scripts.NewListExecutionsCmd())
 	cmd.AddCommand(scripts.NewCreateScriptsCmd())
-	cmd.AddCommand(scripts.NewCRDScriptsCmd())
 	cmd.AddCommand(scripts.NewUpdateScriptsCmd())
 	cmd.AddCommand(scripts.NewDeleteScriptsCmd())
 	return cmd

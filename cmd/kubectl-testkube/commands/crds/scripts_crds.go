@@ -1,4 +1,4 @@
-package scripts
+package crds
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 
 func NewCRDScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "crd",
+		Use:   "scripts",
 		Short: "Generate scripts CRD file based on directory",
 		Long:  `Generate scripts manifest based on directory (e.g. for ArgoCD sync based on scripts files)`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -31,10 +31,6 @@ func NewCRDScriptsCmd() *cobra.Command {
 			firstEntry := true
 
 			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-				if !firstEntry {
-					fmt.Printf("\n\n---\n\n")
-				}
-				firstEntry = false
 
 				if err != nil {
 					return nil
@@ -48,6 +44,11 @@ func NewCRDScriptsCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+
+				if !firstEntry {
+					fmt.Printf("\n\n---\n\n")
+				}
+				firstEntry = false
 
 				fmt.Print(yaml)
 
