@@ -40,6 +40,17 @@ func LogLine(message string) {
 	fmt.Printf("%s\n", DarkGray(message))
 }
 
+func Debug(message string, subMessages ...string) {
+	if !Verbose {
+		return
+	}
+	fmt.Printf("%s", DarkGray(message))
+	for _, sub := range subMessages {
+		fmt.Printf(" %s", LightGray(sub))
+	}
+	fmt.Println()
+}
+
 func Info(message string, subMessages ...string) {
 	fmt.Printf("%s", DarkGray(message))
 	for _, sub := range subMessages {
