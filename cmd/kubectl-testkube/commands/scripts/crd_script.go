@@ -21,8 +21,6 @@ func NewCRDScriptsCmd() *cobra.Command {
 		Short: "Generate scripts CRD file based on directory",
 		Long:  `Generate scripts manifest based on directory (e.g. for ArgoCD sync based on scripts files)`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-
 			var err error
 
 			if len(args) == 0 {
