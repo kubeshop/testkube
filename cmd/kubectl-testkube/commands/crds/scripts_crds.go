@@ -47,7 +47,7 @@ func NewCRDScriptsCmd() *cobra.Command {
 				}
 
 				if !firstEntry {
-					fmt.Printf("\n\n---\n\n")
+					fmt.Printf("\n---\n")
 				}
 				firstEntry = false
 
@@ -86,7 +86,7 @@ metadata:
 spec:
   content: {{ .Content }}
   type: {{ .Type }}
-	`
+`
 
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -109,7 +109,7 @@ spec:
 	err = t.Execute(b, Script{
 		Name:      SanitizeName(name),
 		Namespace: namespace,
-		Content:   fmt.Sprintf("%q", string(content)),
+		Content:   fmt.Sprintf("%q", strings.TrimSpace(string(content))),
 		Type:      scriptType,
 	})
 
