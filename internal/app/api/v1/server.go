@@ -40,6 +40,7 @@ type testkubeAPI struct {
 	server.HTTPServer
 	Repository      result.Repository
 	Executor        client.Executor
+	TestsClient     *scriptscr.ScriptsClient
 	ScriptsClient   *scriptscr.ScriptsClient
 	ExecutorsClient *executorscr.ExecutorsClient
 	Metrics         Metrics
