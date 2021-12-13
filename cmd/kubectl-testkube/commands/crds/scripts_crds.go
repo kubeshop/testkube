@@ -16,8 +16,6 @@ import (
 )
 
 func NewCRDScriptsCmd() *cobra.Command {
-	var useFoldersInName bool
-
 	cmd := &cobra.Command{
 		Use:   "scripts",
 		Short: "Generate scripts CRD file based on directory",
@@ -42,7 +40,7 @@ func NewCRDScriptsCmd() *cobra.Command {
 				}
 
 				ns, _ := cmd.Flags().GetString("namespace")
-				yaml, err := GenerateCRD(ns, path, useFoldersInName)
+				yaml, err := GenerateCRD(ns, path)
 				if err != nil {
 					return err
 				}
@@ -62,8 +60,6 @@ func NewCRDScriptsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&useFoldersInName, "use-folders-in-name", "", true, "command will generate name from full relative path to file")
-
 	return cmd
 }
 
@@ -78,7 +74,7 @@ type Script struct {
 
 // TODO find a way to use internal objects as YAML
 // GenerateCRD generates CRDs based on directory of test files
-func GenerateCRD(namespace, path string, useFoldersInName bool) (string, error) {
+func GenerateCRD(namespace, path string) (string, error) {
 	var scriptType string
 
 	tpl := `apiVersion: tests.testkube.io/v1
@@ -105,14 +101,12 @@ spec:
 		return "", ErrTypeNotDetected
 	}
 
-	if !useFoldersInName {
-		path = filepath.Base(path)
-	}
+	name := filepath.Base(path)
 
 	t := template.Must(template.New("script").Parse(tpl))
 	b := bytes.NewBuffer([]byte{})
 	err = t.Execute(b, Script{
-		Name:      SanitizePath(path),
+		Name:      SanitizeName(name),
 		Namespace: namespace,
 		Content:   fmt.Sprintf("%q", string(content)),
 		Type:      scriptType,
@@ -121,11 +115,15 @@ spec:
 	return b.String(), err
 }
 
-func SanitizePath(path string) string {
+func SanitizeName(path string) string {
 	path = strings.TrimSuffix(path, ".json")
 	path = strings.Replace(path, "/", "-", -1)
 	path = strings.Replace(path, "_", "-", -1)
 	path = strings.Replace(path, ".", "-", -1)
+
+	if len(path) > 63 {
+		return path[:63]
+	}
 
 	return path
 }
