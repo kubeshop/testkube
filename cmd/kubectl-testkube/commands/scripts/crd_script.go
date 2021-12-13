@@ -82,7 +82,7 @@ metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
 spec:
-  content: "{{ .Content }}"
+  content: {{ .Content }}
   type: {{ .Type }}
 	`
 
