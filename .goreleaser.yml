@@ -51,9 +51,8 @@ snapcrafts:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     license: "MIT"
 nfpms:
-  - 
-    maintainer: TestKube team 
+  - maintainer: TestKube team
     license: "MIT"
     formats:
       - deb
-
+    summary: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
