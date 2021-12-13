@@ -119,8 +119,11 @@ spec:
 func SanitizeName(path string) string {
 	path = strings.TrimSuffix(path, ".json")
 
-	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
 	path = reg.ReplaceAllString(path, "-")
+	path = strings.TrimLeft(path, "-")
+	path = strings.TrimRight(path, "-")
+	path = strings.ToLower(path)
 
 	if len(path) > 63 {
 		return path[:63]
