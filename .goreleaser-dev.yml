@@ -46,10 +46,6 @@ brews:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
-snapcrafts:
-  - name: snap-testkube
-    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
-    license: "MIT"
 nfpms:
   - 
     maintainer: TestKube team 
