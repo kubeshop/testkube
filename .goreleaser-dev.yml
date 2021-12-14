@@ -42,13 +42,14 @@ release:
 brews:
   - tap:
       owner: kubeshop
-      name: homebrew-testkube
+      name: homebrew-testkube-dev
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
 nfpms:
-  - maintainer: TestKube team
+  - 
+    maintainer: TestKube team 
     license: "MIT"
     formats:
       - deb
-    summary: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+

@@ -30,6 +30,9 @@ build-api-server:
 build-testkube-bin: 
 	go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER) -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=$(TELEMETRY_TOKEN)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
 
+build-testkube-bin-intel: 
+	env GOARCH=amd64 go build -ldflags="-s -w -X main.version=0.0.0-$(COMMIT) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER) -X github.com/kubeshop/testkube/pkg/telemetry.telemetryToken=$(TELEMETRY_TOKEN)" -o "$(BIN_DIR)/kubectl-testkube" cmd/kubectl-testkube/main.go
+
 docker-build-api:
 	docker build -t api-server -f build/api-server/Dockerfile .
 

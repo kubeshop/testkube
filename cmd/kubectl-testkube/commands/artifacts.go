@@ -24,6 +24,16 @@ func NewArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// version validation
+			// if client version is less than server version show warning
+			client, _ := scripts.GetClient(cmd)
+
+			err := ValidateVersions(client)
+			if err != nil {
+				ui.Warn(err.Error())
+			}
+		},
 	}
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")

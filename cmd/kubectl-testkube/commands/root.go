@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Masterminds/semver"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
 	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -22,6 +21,7 @@ var (
 func init() {
 	RootCmd.AddCommand(NewDocsCmd())
 	RootCmd.AddCommand(NewScriptsCmd())
+	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
@@ -43,14 +43,6 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
 		telemetry.CollectAnonymousCmdInfo()
-		// version validation
-		// if client version is less than server version show warning
-		client, _ := scripts.GetClient(cmd)
-
-		err := ValidateVersions(client)
-		if err != nil {
-			ui.Warn(err.Error())
-		}
 	},
 }
 

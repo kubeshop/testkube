@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	"github.com/kubeshop/testkube/pkg/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -20,6 +21,16 @@ func NewScriptsCmd() *cobra.Command {
 		Long:    `All available scripts and scripts executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
+		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// version validation
+			// if client version is less than server version show warning
+			client, _ := scripts.GetClient(cmd)
+
+			err := ValidateVersions(client)
+			if err != nil {
+				ui.Warn(err.Error())
+			}
 		},
 	}
 
