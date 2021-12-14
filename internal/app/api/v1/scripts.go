@@ -86,9 +86,8 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 
 		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            request.Name,
-				Namespace:       request.Namespace,
-				ResourceVersion: "1",
+				Name:      request.Name,
+				Namespace: request.Namespace,
 			},
 			Spec: scriptsv1.ScriptSpec{
 				Type_:      request.Type_,
