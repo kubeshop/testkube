@@ -26,5 +26,15 @@ func NewVersionCmd() *cobra.Command {
 			ui.Info("Build date", Date)
 
 		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// version validation
+			// if client version is less than server version show warning
+			client, _ := scripts.GetClient(cmd)
+
+			err := ValidateVersions(client)
+			if err != nil {
+				ui.Warn(err.Error())
+			}
+		},
 	}
 }
