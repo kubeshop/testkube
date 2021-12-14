@@ -16,7 +16,7 @@ kubectl testkube scripts --help
 After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
 (access to Kubernetes cluster would be also needed)
 
-For now TestKube only supports  *Postman collections*, *basic CURL execition* and experimental support for *Cypress* - but we plan to handle more testing tools soon,.
+TestKube supports *Postman collections*, *basic CURL execution* and experimental support for *Cypress*. We plan to handle more testing tools in the future.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
