@@ -51,4 +51,4 @@ nfpms:
     license: "MIT"
     formats:
       - deb
-    summary: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
