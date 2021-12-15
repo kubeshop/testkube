@@ -15,8 +15,7 @@ func MapScriptListKubeToAPI(crScripts scriptsV1.ScriptList) (scripts []testkube.
 func MapScriptCRToAPI(crScript scriptsV1.Script) (script testkube.Script) {
 	script.Name = crScript.Name
 	script.Content = crScript.Spec.Content
-	script.Created = crScript.Status.LastExecution.Time
+	script.Created = crScript.CreationTimestamp.Time
 	script.Type_ = crScript.Spec.Type_
-
 	return
 }
