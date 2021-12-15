@@ -25,7 +25,6 @@ tags:
     description: "Scripts orchestration operations"
 
 paths:
-
   /tests:
     get:
       tags:
@@ -88,7 +87,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-
   /executions:
     get:
       tags:
@@ -98,7 +96,6 @@ paths:
       description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
-
         - $ref: "#/components/parameters/ExecutionsTest"
         - $ref: "#/components/parameters/ExecutionsTextSearch"
         - $ref: "#/components/parameters/ExecutionsPageSize"
@@ -724,7 +721,6 @@ paths:
 
 components:
   schemas:
-
     ObjectRef:
       type: object
       properties:
@@ -733,14 +729,18 @@ components:
         name:
           type: string
 
-
     Test:
       type: object
       properties:
-        name: 
+        name:
           type: string
-        description: 
+        description:
           type: string
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
         before:
           type: array
           items:
@@ -760,24 +760,24 @@ components:
           type: integer
           default: 1
 
-    TestStep: 
-      type: object 
+    TestStep:
+      type: object
       required:
         - name
       properties:
-        name: 
+        name:
           type: string
           description: step name (in case of script it'll be script name)
         stopTestOnFailure:
           type: boolean
           default: true
 
-    TestStepExecuteScript: 
-      allOf:     # Combines the BasicErrorModel and the inline model
-        - $ref: '#/components/schemas/TestStep'
+    TestStepExecuteScript:
+      allOf: # Combines the BasicErrorModel and the inline model
+        - $ref: "#/components/schemas/TestStep"
         - type: object
           required:
-            - namepace 
+            - namepace
             - name
           properties:
             namespace:
@@ -785,19 +785,18 @@ components:
             name:
               type: string
 
-    TestStepDelay: 
-      allOf:     # Combines the TestStep and the inline model
-        - $ref: '#/components/schemas/TestStep'
+    TestStepDelay:
+      allOf: # Combines the TestStep and the inline model
+        - $ref: "#/components/schemas/TestStep"
         - type: object
           required:
-            - duration 
+            - duration
           properties:
             duration:
               type: integer
-              default: 0 
+              default: 0
               description: delay duration in milliseconds
-        
-          
+
     TestExecution:
       type: object
       description: API server test scripts executions container
@@ -827,11 +826,11 @@ components:
             prefix: "some-"
         startTime:
           type: string
-          description: 'test start time'
+          description: "test start time"
           format: date-time
         endTime:
           type: string
-          description: 'test end time'
+          description: "test end time"
           format: date-time
         stepResults:
           type: array
@@ -839,7 +838,6 @@ components:
           items:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
-          
 
     TestStepExecutionResult:
       description: execution result returned from executor
@@ -847,13 +845,12 @@ components:
       required:
         - status
       properties:
-        script: 
+        script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
-        result: 
+        result:
           $ref: "#/components/schemas/ExecutionResult"
           description: execution results of connected test script
-
 
     Script:
       type: object
@@ -868,6 +865,8 @@ components:
             - postman/collection
         tags:
           type: array
+          items:
+            type: string
           description: script tags
         content:
           type: string
@@ -1003,8 +1002,6 @@ components:
         - pending
         - success
         - error
-
-    
 
     ExecutionResult:
       description: execution result returned from executor

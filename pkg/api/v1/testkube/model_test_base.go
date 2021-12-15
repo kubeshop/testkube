@@ -12,6 +12,8 @@ package testkube
 type Test struct {
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
+	// test tags
+	Tags []string `json:"tags,omitempty"`
 	// Run this step before whole suite
 	Before []TestStep `json:"before,omitempty"`
 	// Steps to run
