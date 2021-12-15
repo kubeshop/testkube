@@ -20,7 +20,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
-			execution, err := client.GetExecution("", executionID)
+			execution, err := client.GetExecution("-", executionID)
 			if err != nil {
 
 				ui.Failf("execution result retrievel failed with err %s", err)
