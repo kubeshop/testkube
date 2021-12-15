@@ -4,10 +4,31 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
+
+// GetTestHandler for getting test object
+func (s TestKubeAPI) CreateTestHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request testkube.ExecutorCreateRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		executor := mapExecutorCreateRequestToExecutorCRD(request)
+		created, err := s.ExecutorsClient.Create(&executor)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		c.Status(201)
+		return c.JSON(created)
+	}
+}
 
 // GetTestHandler for getting test object
 func (s TestKubeAPI) GetTestHandler() fiber.Handler {

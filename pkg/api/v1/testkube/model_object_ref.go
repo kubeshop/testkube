@@ -10,6 +10,8 @@
 package testkube
 
 type ObjectRef struct {
+	// object kubernetes namespace
 	Namespace string `json:"namespace,omitempty"`
-	Name      string `json:"name,omitempty"`
+	// object name
+	Name string `json:"name"`
 }
