@@ -762,6 +762,9 @@ components:
         name: 
           type: string
           description: step name (in case of script it'll be script name)
+        stopTestOnFailure:
+          type: boolean
+          default: true
 
     TestStepExecuteScript: 
       allOf:     # Combines the BasicErrorModel and the inline model
@@ -775,9 +778,6 @@ components:
               type: string
             name:
               type: string
-            stopTestOnFailure:
-              type: boolean
-              default: true
 
     TestStepDelay: 
       allOf:     # Combines the TestStep and the inline model

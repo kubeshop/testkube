@@ -11,6 +11,6 @@ package testkube
 
 type TestStepExecuteScript struct {
 	Name              string `json:"name"`
-	Namespace         string `json:"namespace,omitempty"`
 	StopTestOnFailure bool   `json:"stopTestOnFailure,omitempty"`
+	Namespace         string `json:"namespace,omitempty"`
 }
