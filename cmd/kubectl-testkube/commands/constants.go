@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	ApiServerName         string = "testkube-api-server"
-	ApiServerPort         int    = 8088
-	DashboardURI          string = "http://demo.testkube.io?apiEndpoint="
-	IngressControllerName string = "testkube-ing-ctrlr"
-	CurrentApiVersion     string = apiclient.Version
+	ApiServerName     string = "testkube-api-server"
+	ApiServerPort     int    = 8088
+	ApiVersion        string = "v1"
+	DashboardURI      string = "http://demo.testkube.io/apiEndpoint?apiEndpoint="
+	CurrentApiVersion string = apiclient.Version
 )

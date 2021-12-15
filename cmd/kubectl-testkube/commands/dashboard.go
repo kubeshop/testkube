@@ -20,7 +20,7 @@ func NewDashboardCmd() *cobra.Command {
 			ui.Verbose = true
 			ui.Logo()
 
-			dashboardAddress := fmt.Sprintf("%slocalhost:%d", DashboardURI, ApiServerPort)
+			dashboardAddress := fmt.Sprintf("%slocalhost:%d/%s", DashboardURI, ApiServerPort, ApiVersion)
 			ui.Success("The dashboard is accessible here:", dashboardAddress)
 			ui.Success("Port forwarding is started for the test results endpoint, hit Ctrl+C to stop")
 			openCmd, err := getOpenCommand()
