@@ -156,6 +156,12 @@ paths:
       tags:
         - scripts
         - api
+      parameters:
+        - in: query
+          name: tags
+          schema:
+            type: array
+          description: Tags to filter scripts by
       summary: "List scripts"
       description: "filters will be added later"
       operationId: listScripts
@@ -214,25 +220,25 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       tags:
         - scripts
         - api
-      summary: 'delete scripts'
-      description: 'deletes all the scripts'
+      summary: "delete scripts"
+      description: "deletes all the scripts"
       operationId: deleteScripts
       responses:
         204:
-          description: 'no content'
+          description: "no content"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /scripts/{id}:
     patch:
@@ -273,7 +279,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
     get:
       tags:
@@ -303,7 +309,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       tags:
         - scripts
@@ -315,20 +321,20 @@ paths:
             type: string
           required: true
           description: ID of the script
-      summary: 'delete script'
-      description: 'deletes a script'
+      summary: "delete script"
+      description: "deletes a script"
       operationId: deleteScript
       responses:
         204:
-          description: 'no content'
+          description: "no content"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /scripts/{id}/executions:
     post:
@@ -465,7 +471,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       parameters:
         - in: path
@@ -495,7 +501,7 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/ExecutionResult'
+                  $ref: "#/components/schemas/ExecutionResult"
   /executors:
     get:
       tags:
@@ -660,6 +666,9 @@ components:
           description: script type
           enum:
             - postman/collection
+        tags:
+          type: array
+          description: script tags
         content:
           type: string
           description: script content
@@ -715,11 +724,11 @@ components:
           $ref: "#/components/schemas/Repository"
         startTime:
           type: string
-          description: 'test start time'
+          description: "test start time"
           format: date-time
         endTime:
           type: string
-          description: 'test end time'
+          description: "test end time"
           format: date-time
         executionResult:
           required: true
@@ -802,7 +811,7 @@ components:
         - status
       properties:
         status:
-          $ref: '#/components/schemas/ExecutionStatus'
+          $ref: "#/components/schemas/ExecutionStatus"
         output:
           type: string
           description: "RAW Script execution output, depends of reporter used in particular tool"
@@ -1097,7 +1106,6 @@ components:
         executions:
           $ref: "#/components/schemas/ExecutionsResult"
 
-
     ExecutorOutput:
       description: CRD based executor data
       type: object
@@ -1115,11 +1123,10 @@ components:
         content:
           type: string
           description: Message/event data passed from executor (like log lines etc)
-          example: 
+          example:
         result:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
-
 
     #
     # Errors
