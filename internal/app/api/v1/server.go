@@ -13,7 +13,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient, testsClient *testscr.TestsClient) TestKubeAPI {
+func NewServer(
+	repository result.Repository,
+	scriptsClient *scriptscr.ScriptsClient,
+	executorsClient *executorscr.ExecutorsClient,
+	testsClient *testscr.TestsClient,
+) TestKubeAPI {
 
 	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
