@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// GetTest for getting test object
-func (s TestKubeAPI) GetTest() fiber.Handler {
+// GetTestHandler for getting test object
+func (s TestKubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -29,8 +29,8 @@ func (s TestKubeAPI) GetTest() fiber.Handler {
 	}
 }
 
-// ListTests for getting list of all available tests
-func (s TestKubeAPI) ListTests() fiber.Handler {
+// ListTestsHandler for getting list of all available tests
+func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
@@ -45,10 +45,12 @@ func (s TestKubeAPI) ListTests() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ExecuteTest() fiber.Handler {
+func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
+
+		s.Log.Debugw("getting script ", "name", name)
 		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -59,6 +61,8 @@ func (s TestKubeAPI) ExecuteTest() fiber.Handler {
 		}
 
 		test := testsmapper.MapCRToAPI(*crTest)
+
+		s.Log.Debugw("executing script", "name", name)
 
 		c.JSON(test)
 

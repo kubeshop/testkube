@@ -1,13 +1,16 @@
 package v1
 
 import (
+	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
 	testscr "github.com/kubeshop/testkube-operator/client/tests"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -80,39 +83,48 @@ func (s TestKubeAPI) Init() {
 
 	executors := s.Routes.Group("/executors")
 
-	executors.Post("/", s.CreateExecutor())
-	executors.Get("/", s.ListExecutors())
-	executors.Get("/:name", s.GetExecutor())
-	executors.Delete("/:name", s.DeleteExecutor())
+	executors.Post("/", s.CreateExecutorHandler())
+	executors.Get("/", s.ListExecutorsHandler())
+	executors.Get("/:name", s.GetExecutorHandler())
+	executors.Delete("/:name", s.DeleteExecutorHandler())
 
 	executions := s.Routes.Group("/executions")
 
-	executions.Get("/", s.ListExecutions())
-	executions.Get("/:executionID", s.GetExecution())
-	executions.Get("/:executionID/artifacts", s.ListArtifacts())
-	executions.Get("/:executionID/logs", s.ExecutionLogs())
-	executions.Get("/:executionID/artifacts/:filename", s.GetArtifact())
+	executions.Get("/", s.ListExecutionsHandler())
+	executions.Get("/:executionID", s.GetExecutionHandler())
+	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
+	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
+	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
 	scripts := s.Routes.Group("/scripts")
 
-	scripts.Get("/", s.ListScripts())
-	scripts.Post("/", s.CreateScript())
-	scripts.Patch("/:id", s.UpdateScript())
-	scripts.Delete("/", s.DeleteScripts())
+	scripts.Get("/", s.ListScriptsHandler())
+	scripts.Post("/", s.CreateScriptHandler())
+	scripts.Patch("/:id", s.UpdateScriptHandler())
+	scripts.Delete("/", s.DeleteScriptsHandler())
 
-	scripts.Get("/:id", s.GetScript())
-	scripts.Delete("/:id", s.DeleteScript())
+	scripts.Get("/:id", s.GetScriptHandler())
+	scripts.Delete("/:id", s.DeleteScriptHandler())
 
-	scripts.Post("/:id/executions", s.ExecuteScript())
+	scripts.Post("/:id/executions", s.ExecuteScriptHandler())
 
-	scripts.Get("/:id/executions", s.ListExecutions())
-	scripts.Get("/:id/executions/:executionID", s.GetExecution())
-	scripts.Delete("/:id/executions/:executionID", s.AbortExecution())
+	scripts.Get("/:id/executions", s.ListExecutionsHandler())
+	scripts.Get("/:id/executions/:executionID", s.GetExecutionHandler())
+	scripts.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
 
 	tests := s.Routes.Group("/tests")
 
-	tests.Get("/", s.ListTests())
-	tests.Get("/:id", s.GetTest())
-	tests.Post("/:id", s.ExecuteTest())
+	tests.Get("/", s.ListTestsHandler())
+	tests.Get("/:id", s.GetTestHandler())
+	tests.Post("/:id", s.ExecuteTestHandler())
 
+}
+
+func (s TestKubeAPI) Info() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(testkube.ServerInfo{
+			Commit:  api.Commit,
+			Version: api.Version,
+		})
+	}
 }
