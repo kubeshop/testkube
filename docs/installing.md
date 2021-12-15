@@ -64,8 +64,14 @@ The above command will install the following components in your Kubernetes clust
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
 
 You can confirm it by running:
+
+```sh
+kubectl get all -n testkube
 ```
-➜  kubectl get all -n testkube
+
+Output:
+
+```sh
 NAME                                           READY   STATUS    RESTARTS   AGE
 pod/testkube-dashboard-748cbcbb66-q8zzp        1/1     Running   0          4m51s
 pod/testkube-api-server-546777c9f7-7g4kg       1/1     Running   0          4m51s

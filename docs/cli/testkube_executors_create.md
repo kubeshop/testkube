@@ -6,13 +6,13 @@ Create new Executor
 
 Create new Executor Custom Resource
 
-```
+```sh
 testkube executors create [flags]
 ```
 
 ### Options
 
-```
+```sh
       --executor-type string     executor type (defaults to job) (default "job")
   -h, --help                     help for create
   -i, --image string             if uri is git repository we can set additional branch parameter
@@ -25,7 +25,7 @@ testkube executors create [flags]
 
 ### Options inherited from parent commands
 
-```
+```sh
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -35,5 +35,4 @@ testkube executors create [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
-
+* [testkube executors](testkube_executors.md)  - Executor management commands

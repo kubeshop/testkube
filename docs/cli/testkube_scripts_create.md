@@ -4,15 +4,15 @@ Create new script
 
 ### Synopsis
 
-Create new Script Custom Resource, 
+Create new Script Custom Resource,
 
-```
+```sh
 testkube scripts create [flags]
 ```
 
 ### Options
 
-```
+```sh
   -f, --file string         script file - will be read from stdin if not specified
       --git-branch string   if uri is git repository we can set additional branch parameter
       --git-path string     if repository is big we need to define additional path to directory/file to checkout partially
@@ -24,7 +24,7 @@ testkube scripts create [flags]
 
 ### Options inherited from parent commands
 
-```
+```sh
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -34,5 +34,4 @@ testkube scripts create [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)	 - Scripts management commands
-
+* [testkube scripts](testkube_scripts.md)  - Scripts management commands

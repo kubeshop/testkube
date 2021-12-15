@@ -1,20 +1,23 @@
 # Integrating with CI/CD
-In order to automate TestKube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer. 
 
-As TestKube uses your K8S context and access settings in order to interact with the cluster and test scripts etc. 
+In order to automate TestKube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer.
+
+As TestKube uses your K8S context and access settings in order to interact with the cluster and test scripts etc.
 
 In the next few sections we will go through the process of TestKube and Helm (for TestKube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
+
 ## Configuring your GH actions for the access to GKE
 
-To get set up access to a GKE from GH actions please visit official documentation from GH: https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine
+To get set up access to a GKE from GH actions please visit official documentation from GH: <https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine>
 
 1. Create SA (service account)
 2. Save it into GH's secrets of the repository
 3. Run either `Helm` or `Kubectl kubtest` comamnds against set up GKE cluster.
 
-## Main GH's action section configuration:
+## Main GH's action section configuration
 
-To install on Linux or MacOs run 
+To install on Linux or MacOs run
+
 ```sh
       # Deploy into configured GKE cluster:
       - name: Deploy
@@ -24,9 +27,10 @@ To install on Linux or MacOs run
 
 Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
 
-## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs.
+## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs
 
-To install on Linux or MacOs run 
+To install on Linux or MacOs run
+
 ```sh
 name: Releasing Helm charts.
 
@@ -82,8 +86,8 @@ jobs:
         run: |-
           kubectl testkube scripts run SCRIPT_NAME
 ```
-Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
 
+Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
 
 If you wish to automate CI/CD part of TestKube's Helm release you can use `Helm` blocks as follow:
 

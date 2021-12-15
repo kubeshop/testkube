@@ -2,39 +2,49 @@
 
 You can watch simple TestKube intro to get into Postman collections with TestKube
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+</iframe>
 
 TestKube is able to run Postman collections inside your Kubernetes cluster, you can use it to test internal or external services.
 
-
 ## Test environment
 
-Let's assume that our SUT (Service Under Test) is internal Kuberbetes service which has 
+Let's assume that our SUT (Service Under Test) is internal Kuberbetes service which has
 NodePort `Service` created and is exposed on `8088` port. Service has name `testkube-api-server`
 and is exposing `/health` endpoint which we want to test.
 
 So to sum up - inside cluster we can call it like this:
-```
+
+```sh
 curl http://testkube-api-server:8088/health
+```
+
+Output:
+
+```sh
 200 OK 
 ```
 
 ## Create new Postman test
 
-First we need to create postman collection and export it as json 
+First we need to create postman collection and export it as json
 
 ![postman create collection](img/postman_create_collection.png)
 
-just right click and export given Collection to some file, 
-I've saved it into `~/Downloads/API-Health.postman_collection.json` 
+just right click and export given Collection to some file,
+I've saved it into `~/Downloads/API-Health.postman_collection.json`
 
-Now we can create new testkube based on saved Postman Collection: 
+Now we can create new testkube based on saved Postman Collection:
 
 ## Create new TestKube test script
 
-```
+```sh
 kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
+```
 
+Output:
+
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -46,7 +56,7 @@ kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API
 Script created  🥇
 ```
 
-Script created! Now we can run as many times as we want 
+Script created! Now we can run as many times as we want
 
 ## Running test
 
@@ -79,10 +89,15 @@ $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 
 ## Getting test results
 
-Now we can watch/get script execution details: 
+Now we can watch/get script execution details:
 
-```
+```sh
 kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+```
+
+Output:
+
+```sh
 Type          : postman/collection
 Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
@@ -123,8 +138,6 @@ API-Health
 Script execution completed in 598ms
 ```
 
-
 ## Summary
 
 As we can see TestKube can help us to run tests inside our cluster, it can also store our tests and tests results.
-

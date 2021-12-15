@@ -5,7 +5,8 @@ To improve the end-user experience TestKube collects anonymous data about usage 
 Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
 
 The collected data looks like this.
-```
+
+```json
 {
   "anonymousId": "a4652358effb311a074bf84d2aed5a7d270dee858bff10e847df2a9ea132bb38",
   "context": {

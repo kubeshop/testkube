@@ -6,19 +6,19 @@ Get all available scripts
 
 Getting all available scritps from given namespace - if no namespace given "testkube" namespace is used
 
-```
+```sh
 testkube scripts list [flags]
 ```
 
 ### Options
 
-```
+```sh
   -h, --help   help for list
 ```
 
 ### Options inherited from parent commands
 
-```
+```sh
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,5 +28,4 @@ testkube scripts list [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)	 - Scripts management commands
-
+* [testkube scripts](testkube_scripts.md)  - Scripts management commands
