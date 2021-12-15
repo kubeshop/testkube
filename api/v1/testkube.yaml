@@ -827,12 +827,12 @@ components:
           type: string
           description: 'test end time'
           format: date-time
-        executionsResults:
+        stepResults:
           type: array
-          description: "executions restults"
+          description: "steps execution restults"
           items:
             $ref: "#/components/schemas/TestExecutionResult"
-            description: list of scripts executions
+            description: test execution results
           
 
     TestExecutionResult:
