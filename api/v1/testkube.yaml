@@ -40,6 +40,11 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/ExecutionsStartDateFilter"
         - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - in: query
+          name: tags
+          schema:
+            type: array
+          description: Tags to filter tests by
       responses:
         200:
           description: successful operation
