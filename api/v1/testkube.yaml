@@ -21,8 +21,74 @@ tags:
     description: "Script operations"
   - name: executions
     description: "Execution operations"
+  - name: tests
+    description: "Scripts orchestration operations"
 
 paths:
+
+  /tests:
+    get:
+      tags:
+        - tests
+        - api
+      summary: "Get all tests"
+      description: "Returns array of tests"
+      operationId: listTests
+      parameters:
+        - $ref: "#/components/parameters/ExecutionsTextSearch"
+        - $ref: "#/components/parameters/ExecutionsPageSize"
+        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
+        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Test"
+        500:
+          description: "problem with getting script executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /tests/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test
+      tags:
+        - tests
+        - api
+      summary: "Get script execution by ID"
+      description: "Returns execution with given executionID"
+      operationId: getExecutionByID
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+        500:
+          description: "problem with getting test from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+
   /executions:
     get:
       tags:
@@ -32,6 +98,9 @@ paths:
       description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
+
+        - $ref: "#/components/parameters/ExecutionsTest"
+        - $ref: "#/components/parameters/ExecutionsTextSearch"
         - $ref: "#/components/parameters/ExecutionsPageSize"
         - $ref: "#/components/parameters/ExecutionsPageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
@@ -649,6 +718,137 @@ paths:
 
 components:
   schemas:
+
+    ObjectRef:
+      type: object
+      properties:
+        namespace:
+          type: string
+        name:
+          type: string
+
+
+    Test:
+      type: object
+      properties:
+        name: 
+          type: string
+        description: 
+          type: string
+        before:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestStep"
+          description: Run this step before whole suite
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestStep"
+          description: Steps to run
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestStep"
+          description: Run this step after whole suite
+        repeats:
+          type: integer
+          default: 1
+
+    TestStep: 
+      type: object 
+      required:
+        - name
+      properties:
+        name: 
+          type: string
+          description: step name (in case of script it'll be script name)
+        stopTestOnFailure:
+          type: boolean
+          default: true
+
+    TestStepExecuteScript: 
+      allOf:     # Combines the BasicErrorModel and the inline model
+        - $ref: '#/components/schemas/TestStep'
+        - type: object
+          required:
+            - namepace 
+            - name
+          properties:
+            namespace:
+              type: string
+            name:
+              type: string
+
+    TestStepDelay: 
+      allOf:     # Combines the TestStep and the inline model
+        - $ref: '#/components/schemas/TestStep'
+        - type: object
+          required:
+            - duration 
+          properties:
+            duration:
+              type: integer
+              default: 0 
+              description: delay duration in milliseconds
+        
+          
+    TestExecution:
+      type: object
+      description: API server test scripts executions container
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        name:
+          type: string
+          description: "execution name"
+        envs:
+          type: object
+          description: "environment variables passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            record: "true"
+            prefix: "some-"
+        params:
+          type: object
+          description: "execution params passed to executor converted to vars for usage in tests"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+        startTime:
+          type: string
+          description: 'test start time'
+          format: date-time
+        endTime:
+          type: string
+          description: 'test end time'
+          format: date-time
+        stepResults:
+          type: array
+          description: "steps execution restults"
+          items:
+            $ref: "#/components/schemas/TestStepExecutionResult"
+            description: test execution results
+          
+
+    TestStepExecutionResult:
+      description: execution result returned from executor
+      type: object
+      required:
+        - status
+      properties:
+        script: 
+          $ref: "#/components/schemas/ObjectRef"
+          description: name and namespace of script in object reference
+        result: 
+          $ref: "#/components/schemas/ExecutionResult"
+          description: execution results of connected test script
+
+
     Script:
       type: object
       properties:
@@ -794,6 +994,8 @@ components:
         - pending
         - success
         - error
+
+    
 
     ExecutionResult:
       description: execution result returned from executor
@@ -1155,7 +1357,15 @@ components:
   #
 
   parameters:
-    ExecutionTextSearch:
+    ExecutionsTest:
+      in: query
+      name: test
+      schema:
+        type: string
+        default: ""
+      description: test namespaced name to filter
+      required: false
+    ExecutionsTextSearch:
       in: query
       name: textSearch
       schema:

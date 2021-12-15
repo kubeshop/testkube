@@ -27,7 +27,7 @@ import (
 )
 
 // ListScripts for getting list of all available scripts
-func (s testkubeAPI) GetScript() fiber.Handler {
+func (s TestKubeAPI) GetScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -47,7 +47,7 @@ func (s testkubeAPI) GetScript() fiber.Handler {
 }
 
 // ListScripts for getting list of all available scripts
-func (s testkubeAPI) ListScripts() fiber.Handler {
+func (s TestKubeAPI) ListScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		crScripts, err := s.ScriptsClient.List(namespace)
@@ -62,7 +62,7 @@ func (s testkubeAPI) ListScripts() fiber.Handler {
 }
 
 // CreateScript creates new script CR based on script content
-func (s testkubeAPI) CreateScript() fiber.Handler {
+func (s TestKubeAPI) CreateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.ScriptUpsertRequest
@@ -108,7 +108,7 @@ func (s testkubeAPI) CreateScript() fiber.Handler {
 }
 
 // UpdateScript creates new script CR based on script content
-func (s testkubeAPI) UpdateScript() fiber.Handler {
+func (s TestKubeAPI) UpdateScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.ScriptUpsertRequest
@@ -156,7 +156,7 @@ func (s testkubeAPI) UpdateScript() fiber.Handler {
 }
 
 // DeleteScript for deleting a script with id
-func (s testkubeAPI) DeleteScript() fiber.Handler {
+func (s TestKubeAPI) DeleteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -174,7 +174,7 @@ func (s testkubeAPI) DeleteScript() fiber.Handler {
 }
 
 // DeleteScripts for deleting all scripts
-func (s testkubeAPI) DeleteScripts() fiber.Handler {
+func (s TestKubeAPI) DeleteScripts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		err := s.ScriptsClient.DeleteAll(namespace)
@@ -190,7 +190,7 @@ func (s testkubeAPI) DeleteScripts() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s TestKubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
 
@@ -214,7 +214,7 @@ func (s testkubeAPI) GetExecuteOptions(namespace, scriptID string, request testk
 }
 
 // ExecuteScript calls particular executor based on execution request content and type
-func (s testkubeAPI) ExecuteScript() fiber.Handler {
+func (s TestKubeAPI) ExecuteScript() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
@@ -287,7 +287,7 @@ func (s testkubeAPI) ExecuteScript() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) ExecutionLogs() fiber.Handler {
+func (s TestKubeAPI) ExecutionLogs() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
@@ -337,7 +337,7 @@ func (s testkubeAPI) ExecutionLogs() fiber.Handler {
 }
 
 // ListExecutions returns array of available script executions
-func (s testkubeAPI) ListExecutions() fiber.Handler {
+func (s TestKubeAPI) ListExecutions() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		// TODO should we split this to separate endpoint? currently this one handles
@@ -429,7 +429,7 @@ func convertToExecutionSummary(executions []testkube.Execution) []testkube.Execu
 }
 
 // GetExecution returns script execution object for given script and execution id
-func (s testkubeAPI) GetExecution() fiber.Handler {
+func (s TestKubeAPI) GetExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		scriptID := c.Params("id", "-")
@@ -463,14 +463,14 @@ func (s testkubeAPI) GetExecution() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) AbortExecution() fiber.Handler {
+func (s TestKubeAPI) AbortExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		return s.Executor.Abort(id)
 	}
 }
 
-func (s testkubeAPI) Info() fiber.Handler {
+func (s TestKubeAPI) Info() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:  api.Commit,
@@ -495,7 +495,7 @@ func NewExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 }
 
 // GetArtifacts returns list of files in the given bucket
-func (s testkubeAPI) ListArtifacts() fiber.Handler {
+func (s TestKubeAPI) ListArtifacts() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
@@ -508,7 +508,7 @@ func (s testkubeAPI) ListArtifacts() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) GetArtifact() fiber.Handler {
+func (s TestKubeAPI) GetArtifact() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")

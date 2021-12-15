@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (s testkubeAPI) CreateExecutor() fiber.Handler {
+func (s TestKubeAPI) CreateExecutor() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.ExecutorCreateRequest
 		err := c.BodyParser(&request)
@@ -28,7 +28,7 @@ func (s testkubeAPI) CreateExecutor() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) ListExecutors() fiber.Handler {
+func (s TestKubeAPI) ListExecutors() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ns := c.Query("namespace", "testkube")
 		list, err := s.ExecutorsClient.List(ns)
@@ -45,7 +45,7 @@ func (s testkubeAPI) ListExecutors() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) GetExecutor() fiber.Handler {
+func (s TestKubeAPI) GetExecutor() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")
@@ -60,7 +60,7 @@ func (s testkubeAPI) GetExecutor() fiber.Handler {
 	}
 }
 
-func (s testkubeAPI) DeleteExecutor() fiber.Handler {
+func (s TestKubeAPI) DeleteExecutor() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")
@@ -79,12 +79,10 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 	return testkube.ExecutorDetails{
 		Name: item.Name,
 		Executor: &testkube.Executor{
-			ExecutorType:    item.Spec.ExecutorType,
-			Image:           item.Spec.Image,
-			Types:           item.Spec.Types,
-			VolumeMountPath: item.Spec.VolumeMountPath,
-			VolumeQuantity:  item.Spec.VolumeQuantity,
-			Uri:             item.Spec.URI,
+			ExecutorType: item.Spec.ExecutorType,
+			Image:        item.Spec.Image,
+			Types:        item.Spec.Types,
+			Uri:          item.Spec.URI,
 		},
 	}
 }
@@ -96,12 +94,10 @@ func mapExecutorCreateRequestToExecutorCRD(request testkube.ExecutorCreateReques
 			Namespace: request.Namespace,
 		},
 		Spec: executorv1.ExecutorSpec{
-			ExecutorType:    request.ExecutorType,
-			Types:           request.Types,
-			URI:             request.Uri,
-			Image:           request.Image,
-			VolumeQuantity:  request.VolumeQuantity,
-			VolumeMountPath: request.VolumeMountPath,
+			ExecutorType: request.ExecutorType,
+			Types:        request.Types,
+			URI:          request.Uri,
+			Image:        request.Image,
 		},
 	}
 }
