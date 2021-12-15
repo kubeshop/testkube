@@ -6,10 +6,11 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kubeshop/testkube-operator/client"
-	executorscr "github.com/kubeshop/testkube-operator/client/executors"
-	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
-	v1API "github.com/kubeshop/testkube/internal/app/api/v1"
+	kubeclient "github.com/kubeshop/testkube-operator/client"
+	executorsclient "github.com/kubeshop/testkube-operator/client/executors"
+	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts"
+	testsclient "github.com/kubeshop/testkube-operator/client/tests"
+	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -40,20 +41,20 @@ func main() {
 	ln, err := net.Listen("tcp", ":"+port)
 	ui.ExitOnError("Checking if port "+port+"is free", err)
 	ln.Close()
-	ui.Info("TCP Port is available", port)
+	ui.Debug("TCP Port is available", port)
 
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
 	ui.ExitOnError("Getting mongo database", err)
 
-	kubeClient, err := client.GetClient()
+	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
-	scriptsClient := scriptscr.NewClient(kubeClient)
-
-	executorsClient := executorscr.NewClient(kubeClient)
+	scriptsClient := scriptsclient.NewClient(kubeClient)
+	executorsClient := executorsclient.NewClient(kubeClient)
+	testsClient := testsclient.NewClient(kubeClient)
 
 	repository := result.NewMongoRespository(db)
-	err = v1API.NewServer(repository, scriptsClient, executorsClient).Run()
+	err = apiv1.NewServer(repository, scriptsClient, executorsClient, testsClient).Run()
 	ui.ExitOnError("Running API Server", err)
 }
