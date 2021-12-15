@@ -7,6 +7,7 @@ import (
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
 	testscr "github.com/kubeshop/testkube-operator/client/tests"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -14,7 +15,8 @@ import (
 )
 
 func NewServer(
-	repository result.Repository,
+	executionsResults result.Repository,
+	testExecutionsResults testresult.Repository,
 	scriptsClient *scriptscr.ScriptsClient,
 	executorsClient *executorscr.ExecutorsClient,
 	testsClient *testscr.TestsClient,
@@ -24,19 +26,20 @@ func NewServer(
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
-	executor, err := client.NewJobExecutor(repository)
+	executor, err := client.NewJobExecutor(executionsResults)
 	if err != nil {
 		panic(err)
 	}
 
 	s := TestKubeAPI{
-		HTTPServer:      server.NewServer(httpConfig),
-		Repository:      repository,
-		Executor:        executor,
-		ScriptsClient:   scriptsClient,
-		ExecutorsClient: executorsClient,
-		TestsClient:     testsClient,
-		Metrics:         NewMetrics(),
+		HTTPServer:           server.NewServer(httpConfig),
+		TestExecutionResults: testExecutionsResults,
+		ExecutionResults:     executionsResults,
+		Executor:             executor,
+		ScriptsClient:        scriptsClient,
+		ExecutorsClient:      executorsClient,
+		TestsClient:          testsClient,
+		Metrics:              NewMetrics(),
 	}
 
 	s.Init()
@@ -45,14 +48,15 @@ func NewServer(
 
 type TestKubeAPI struct {
 	server.HTTPServer
-	Repository      result.Repository
-	Executor        client.Executor
-	TestsClient     *testscr.TestsClient
-	ScriptsClient   *scriptscr.ScriptsClient
-	ExecutorsClient *executorscr.ExecutorsClient
-	Metrics         Metrics
-	Storage         storage.Client
-	storageParams   storageParams
+	ExecutionResults     result.Repository
+	TestExecutionResults testresult.Repository
+	Executor             client.Executor
+	TestsClient          *testscr.TestsClient
+	ScriptsClient        *scriptscr.ScriptsClient
+	ExecutorsClient      *executorscr.ExecutorsClient
+	Metrics              Metrics
+	Storage              storage.Client
+	storageParams        storageParams
 }
 
 type storageParams struct {
@@ -90,7 +94,6 @@ func (s TestKubeAPI) Init() {
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifact())
 
 	scripts := s.Routes.Group("/scripts")
-	scripts.Use(cors.New())
 
 	scripts.Get("/", s.ListScripts())
 	scripts.Post("/", s.CreateScript())

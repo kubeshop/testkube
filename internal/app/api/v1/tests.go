@@ -47,9 +47,21 @@ func (s TestKubeAPI) ListTests() fiber.Handler {
 
 func (s TestKubeAPI) ExecuteTest() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		ns := c.Query("namespace", "testkube")
-		s.Log.Debugw("executing test", "name", id, "namespace", ns)
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		crTest, err := s.TestsClient.Get(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		test := testsmapper.MapCRToAPI(*crTest)
+
+		c.JSON(test)
+
 		return nil
 	}
 }

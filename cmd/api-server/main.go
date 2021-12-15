@@ -13,6 +13,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -54,7 +55,15 @@ func main() {
 	executorsClient := executorsclient.NewClient(kubeClient)
 	testsClient := testsclient.NewClient(kubeClient)
 
-	repository := result.NewMongoRespository(db)
-	err = apiv1.NewServer(repository, scriptsClient, executorsClient, testsClient).Run()
+	resultsRepository := result.NewMongoRespository(db)
+	testResultsRepository := testresult.NewMongoRespository(db)
+
+	err = apiv1.NewServer(
+		resultsRepository,
+		testResultsRepository,
+		scriptsClient,
+		executorsClient,
+		testsClient,
+	).Run()
 	ui.ExitOnError("Running API Server", err)
 }

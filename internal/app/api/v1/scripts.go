@@ -234,7 +234,7 @@ func (s TestKubeAPI) ExecuteScript() fiber.Handler {
 		}
 
 		// script name + script execution name should be unique
-		execution, _ := s.Repository.GetByNameAndScript(c.Context(), request.Name, scriptID)
+		execution, _ := s.ExecutionResults.GetByNameAndScript(c.Context(), request.Name, scriptID)
 		if execution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
 		}
@@ -249,7 +249,7 @@ func (s TestKubeAPI) ExecuteScript() fiber.Handler {
 		execution = NewExecutionFromExecutionOptions(options)
 		options.ID = execution.Id
 
-		err = s.Repository.Insert(ctx, execution)
+		err = s.ExecutionResults.Insert(ctx, execution)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
 		}
@@ -257,14 +257,14 @@ func (s TestKubeAPI) ExecuteScript() fiber.Handler {
 		// call executor rest or job based and update execution object after queueing execution
 		s.Log.Infow("calling executor with options", "options", options.Request)
 		execution.Start()
-		err = s.Repository.StartExecution(ctx, execution.Id, execution.StartTime)
+		err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
 		}
 
 		result, err := s.Executor.Execute(execution, options)
 
-		if uerr := s.Repository.UpdateResult(ctx, execution.Id, result); uerr != nil {
+		if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
 		}
 
@@ -346,17 +346,17 @@ func (s TestKubeAPI) ListExecutions() fiber.Handler {
 
 		filter := getFilterFromRequest(c)
 
-		executions, err := s.Repository.GetExecutions(c.Context(), filter)
+		executions, err := s.ExecutionResults.GetExecutions(c.Context(), filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		executionTotals, err := s.Repository.GetExecutionTotals(c.Context(), result.NewExecutionsFilter())
+		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), result.NewExecutionsFilter())
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		filteredTotals, err := s.Repository.GetExecutionTotals(c.Context(), filter)
+		filteredTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -439,7 +439,7 @@ func (s TestKubeAPI) GetExecution() fiber.Handler {
 		var err error
 
 		if scriptID == "-" {
-			execution, err = s.Repository.Get(ctx, executionID)
+			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
 			}
@@ -447,7 +447,7 @@ func (s TestKubeAPI) GetExecution() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			execution, err = s.Repository.GetByNameAndScript(ctx, executionID, scriptID)
+			execution, err = s.ExecutionResults.GetByNameAndScript(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
 			}
