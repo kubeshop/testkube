@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// ListScripts for getting list of all available scripts
-func (s testkubeAPI) GetTest() fiber.Handler {
+// GetTest for getting test object
+func (s TestKubeAPI) GetTest() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
-		crScript, err := s.ScriptsClient.Get(namespace, name)
+		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, err)
@@ -23,23 +23,24 @@ func (s testkubeAPI) GetTest() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		scripts := scriptsMapper.MapScriptCRToAPI(*crScript)
+		test := testsmapper.MapCRToAPI(*crTest)
 
-		return c.JSON(scripts)
+		return c.JSON(test)
 	}
 }
 
-// ListScripts for getting list of all available scripts
-func (s testkubeAPI) ListTests() fiber.Handler {
+// ListTests for getting list of all available tests
+func (s TestKubeAPI) ListTests() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
-		crScripts, err := s.ScriptsClient.List(namespace)
+		crTests, err := s.TestsClient.List(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
+		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
-		return c.JSON(scripts)
+		return c.JSON(tests)
 	}
 }

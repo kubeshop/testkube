@@ -10,10 +10,13 @@
 package testkube
 
 type Test struct {
-	Description string    `json:"description,omitempty"`
-	Before      *TestStep `json:"before,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	// Run this step before whole suite
+	Before []TestStep `json:"before,omitempty"`
 	// Steps to run
-	Steps   []TestStep `json:"steps,omitempty"`
-	After   *TestStep  `json:"after,omitempty"`
+	Steps []TestStep `json:"steps,omitempty"`
+	// Run this step after whole suite
+	After   []TestStep `json:"after,omitempty"`
 	Repeats int32      `json:"repeats,omitempty"`
 }

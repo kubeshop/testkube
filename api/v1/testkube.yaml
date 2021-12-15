@@ -731,10 +731,14 @@ components:
     Test:
       type: object
       properties:
+        name: 
+          type: string
         description: 
           type: string
         before:
-          $ref: "#/components/schemas/TestStep"
+          type: array
+          items:
+            $ref: "#/components/schemas/TestStep"
           description: Run this step before whole suite
         steps:
           type: array
@@ -742,7 +746,9 @@ components:
             $ref: "#/components/schemas/TestStep"
           description: Steps to run
         after:
-          $ref: "#/components/schemas/TestStep"
+          type: array
+          items:
+            $ref: "#/components/schemas/TestStep"
           description: Run this step after whole suite
         repeats:
           type: integer

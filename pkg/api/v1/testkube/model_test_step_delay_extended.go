@@ -14,5 +14,5 @@ import (
 )
 
 func (s TestStepDelay) FullName() string {
-	return fmt.Sprintf("Delay %dms", s.Delay)
+	return fmt.Sprintf("Delay %dms", s.Duration)
 }

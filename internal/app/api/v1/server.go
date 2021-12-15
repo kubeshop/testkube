@@ -5,6 +5,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
+	testscr "github.com/kubeshop/testkube-operator/client/tests"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -12,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient) testkubeAPI {
+func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsClient, executorsClient *executorscr.ExecutorsClient, testsClient *testscr.TestsClient) TestKubeAPI {
 
 	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
@@ -23,12 +24,13 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 		panic(err)
 	}
 
-	s := testkubeAPI{
+	s := TestKubeAPI{
 		HTTPServer:      server.NewServer(httpConfig),
 		Repository:      repository,
 		Executor:        executor,
 		ScriptsClient:   scriptsClient,
 		ExecutorsClient: executorsClient,
+		TestsClient:     testsClient,
 		Metrics:         NewMetrics(),
 	}
 
@@ -36,11 +38,11 @@ func NewServer(repository result.Repository, scriptsClient *scriptscr.ScriptsCli
 	return s
 }
 
-type testkubeAPI struct {
+type TestKubeAPI struct {
 	server.HTTPServer
 	Repository      result.Repository
 	Executor        client.Executor
-	TestsClient     *scriptscr.ScriptsClient
+	TestsClient     *testscr.TestsClient
 	ScriptsClient   *scriptscr.ScriptsClient
 	ExecutorsClient *executorscr.ExecutorsClient
 	Metrics         Metrics
@@ -57,7 +59,7 @@ type storageParams struct {
 	Token           string
 }
 
-func (s testkubeAPI) Init() {
+func (s TestKubeAPI) Init() {
 	envconfig.Process("STORAGE", &s.storageParams)
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
@@ -99,7 +101,7 @@ func (s testkubeAPI) Init() {
 	scripts.Get("/:id/executions/:executionID", s.GetExecution())
 	scripts.Delete("/:id/executions/:executionID", s.AbortExecution())
 
-	tests := s.Routes.Group("/scripts")
+	tests := s.Routes.Group("/tests")
 
 	tests.Get("/", s.ListTests())
 	tests.Get("/:id", s.GetTest())
