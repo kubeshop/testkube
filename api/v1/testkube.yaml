@@ -831,11 +831,11 @@ components:
           type: array
           description: "steps execution restults"
           items:
-            $ref: "#/components/schemas/TestExecutionResult"
+            $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
           
 
-    TestExecutionResult:
+    TestStepExecutionResult:
       description: execution result returned from executor
       type: object
       required:
