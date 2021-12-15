@@ -44,3 +44,12 @@ func (s TestKubeAPI) ListTests() fiber.Handler {
 		return c.JSON(tests)
 	}
 }
+
+func (s TestKubeAPI) ExecuteTest() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		ns := c.Query("namespace", "testkube")
+		s.Log.Debugw("executing test", "name", id, "namespace", ns)
+		return nil
+	}
+}

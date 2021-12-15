@@ -105,5 +105,6 @@ func (s TestKubeAPI) Init() {
 
 	tests.Get("/", s.ListTests())
 	tests.Get("/:id", s.GetTest())
+	tests.Post("/:id", s.ExecuteTest())
 
 }
