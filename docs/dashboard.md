@@ -1,17 +1,17 @@
 # TestKube Dashboard
 
-The TestKube Dashboard provides a simple web-based UI for monitoring TestKube test-results via a web-browser. 
+The TestKube Dashboard provides a simple web-based UI for monitoring TestKube test-results via a web-browser.
 
 ![img.png](img/dashboard.png)
 
 It can be accessed at [https://dashboard.testkube.io](https://dashboard.testkube.io) which will prompt for the
 results endpoint of your TestKube installation in order to show your results (see below on how to find that). Once
-you have the results endpoint you can append it to the above URL (as an apiEndpoint parameter) for a direct link to 
-the dashboard with your results, i.e. 
+you have the results endpoint you can append it to the above URL (as an apiEndpoint parameter) for a direct link to
+the dashboard with your results, i.e.
 
 `https://dashboard.testkube.io/?apiEndpoint=...`
 
-Alternatively, the dashboard can be opened on your local machine using command ```sh kubectl testkube dashboard``` which 
+Alternatively, the dashboard can be opened on your local machine using command ```sh kubectl testkube dashboard``` which
 will uses port forwarding for accessing your local results endpoint (see more [here](cli/testkube_dashboard.md)).
 
 ## Dashboard results endpoint

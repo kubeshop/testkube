@@ -7,10 +7,9 @@ currently exposes the following metrics:
 * `testkube_scripts_creation_count` - The total number of scripts created by type events
 * `testkube_scripts_abort_count` - The total number of scripts created by type events
 
-
 ## Installation
 
-If yout don't have installed Prometheus operator please follow [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/) first 
+If yout don't have installed Prometheus operator please follow [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/) first
 
 Next you'll need to add `ServiceMonitor` custom resource to your cluster which will scrape metrics from our
 TestKube API server.
@@ -31,12 +30,10 @@ spec:
       app.kubernetes.io/name: api-server
 ```
 
-If you're installing TestKube manually by our Helm chart you can pass `prometheus.enabled` value to install 
-command: 
+If you're installing TestKube manually by our Helm chart you can pass `prometheus.enabled` value to install
+command:
 
-
-
-## Grafana dashboard 
+## Grafana dashboard
 
 If you want use our dashboard please import this json definition:
 

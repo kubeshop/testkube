@@ -27,7 +27,7 @@ Create the test by running `kubectl testkube scripts create --file curl-test.jso
 
 Check if it was created using command `kubectl testkube scripts list` it will output something like:
 
-```
+```sh
        NAME       |        TYPE         
 +-----------------+--------------------+
   curl-test      | curl/test  
@@ -35,7 +35,7 @@ Check if it was created using command `kubectl testkube scripts list` it will ou
 
 Test can be run using `kubectl testkube scripts start curl-test` which gives the output:
 
-```
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -54,7 +54,7 @@ $ kubectl testkube scripts watch 613a2d7056499e6e3d5b9c3e
 
 As in the output is stated results can be checked using `kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e` where the id of the execution is unique for each execution, make sure that the right id is used. Output of that should look something like:
 
-```
+```sh
 Name: painfully-super-colt,Status: success,Duration: 534ms
 
 HTTP/2 200 
@@ -76,4 +76,4 @@ alt-svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400, h3-28=":443"; ma=86400, h3
 {"success":"true"}
 ```
 
-where there is a generated name for the execution, the status, duration and the output of the curl command. 
+where there is a generated name for the execution, the status, duration and the output of the curl command.

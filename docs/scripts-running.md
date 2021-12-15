@@ -13,7 +13,11 @@ The simplest run command looks like below:
 
 ```sh
 kubectl testkube scripts run api-incluster-test
+```
 
+Output:
+
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -47,7 +51,11 @@ If we want to wait until script execution completes we can pass `-f` flag (follo
 
 ```sh
 kubectl testkube scripts run api-incluster-test -f
+```
 
+Output:
+
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -122,9 +130,12 @@ Let's assume that our example Cypress test need `testparam` parameter with value
 To pass it use `-p` param (If you need to pass more params simply pass multiple `-p` flags)
 
 ```sh
-
 kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
+```
 
+Output:
+
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   

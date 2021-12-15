@@ -2,19 +2,19 @@
 
 Aborts execution of the script
 
-```
+```sh
 testkube scripts abort [flags]
 ```
 
 ### Options
 
-```
+```sh
   -h, --help   help for abort
 ```
 
 ### Options inherited from parent commands
 
-```
+```sh
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -24,5 +24,4 @@ testkube scripts abort [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)	 - Scripts management commands
-
+* [testkube scripts](testkube_scripts.md)  - Scripts management commands
