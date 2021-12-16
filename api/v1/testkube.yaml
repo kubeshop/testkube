@@ -720,12 +720,16 @@ components:
   schemas:
 
     ObjectRef:
+      required:
+        - name
       type: object
       properties:
         namespace:
           type: string
+          description: object kubernetes namespace
         name:
           type: string
+          description: object name
 
 
     Test:
@@ -767,20 +771,12 @@ components:
           default: true
 
     TestStepExecuteScript: 
-      allOf:     # Combines the BasicErrorModel and the inline model
+      allOf:
         - $ref: '#/components/schemas/TestStep'
-        - type: object
-          required:
-            - namepace 
-            - name
-          properties:
-            namespace:
-              type: string
-            name:
-              type: string
+        - $ref: "#/components/schemas/ObjectRef"
 
     TestStepDelay: 
-      allOf:     # Combines the TestStep and the inline model
+      allOf:
         - $ref: '#/components/schemas/TestStep'
         - type: object
           required:
@@ -1185,6 +1181,27 @@ components:
             users: "3"
             prefix: "some-"
 
+    TestExecutionRequest:
+      description: test execution request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script execution custom name
+          example: testing with 1000 users
+        namespace:
+          type: string
+          description: script kubernetes namespace ("testkube" when not set)
+          example: testkube
+        params:
+          type: object
+          description: "execution params passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+
     ScriptUpsertRequest:
       description: scripts create request body
       type: object
@@ -1233,6 +1250,16 @@ components:
                   "response": []
                 }
 
+    TestCreateRequest:
+      description: test create request body
+      type: object
+      required:
+        - name
+        - namespace
+      allOf: 
+        - $ref: "#/components/schemas/Test"
+        - $ref: "#/components/schemas/ObjectRef"
+
     ExecutorCreateRequest:
       description: executor create request body
       type: object
@@ -1240,20 +1267,9 @@ components:
         - name
         - namespace
         - types
-      allOf: # Combines the BasicErrorModel and the inline model
+      allOf: 
         - $ref: "#/components/schemas/Executor"
-        - type: object
-          required:
-            - rootCause
-          properties:
-            name:
-              type: string
-              description: executor name
-              example: kubeshop-homepage-test
-            namespace:
-              type: string
-              description: Kubernetes namespace
-              example: testkube
+        - $ref: "#/components/schemas/ObjectRef"
 
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml

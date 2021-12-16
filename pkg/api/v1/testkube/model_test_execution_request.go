@@ -9,10 +9,12 @@
  */
 package testkube
 
-type TestStepExecuteScript struct {
-	// object kubernetes namespace
+// test execution request body
+type TestExecutionRequest struct {
+	// script execution custom name
+	Name string `json:"name,omitempty"`
+	// script kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
-	// object name
-	Name              string `json:"name"`
-	StopTestOnFailure bool   `json:"stopTestOnFailure,omitempty"`
+	// execution params passed to executor
+	Params map[string]string `json:"params,omitempty"`
 }
