@@ -117,11 +117,15 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 		stepResult := s.executeTestStep(ctx, step)
 		testExecution.StepResults = append(testExecution.StepResults, stepResult)
 		if stepResult.IsFailed() && step.StopOnFailure() {
+			testExecution.Status = testkube.TestStatusError
 			return
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
 	}
+
+	testExecution.Status = testkube.TestStatusSuccess
+	s.TestExecutionResults.Update(ctx, testExecution)
 
 	return
 
@@ -154,7 +158,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, step testkube.TestStep
 }
 
 func newTestStepExecutionResult(execution testkube.Execution, step testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
-	result.Result = &execution
+	result.Execution = &execution
 	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
 
 	return

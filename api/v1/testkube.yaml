@@ -742,8 +742,6 @@ components:
           type: string
         description: 
           type: string
-        status:
-          $ref: '#/components/schemas/TestStatus'
         before:
           type: array
           items:
@@ -763,13 +761,6 @@ components:
           type: integer
           default: 1
 
-    TestStatus:
-      type: string
-      enum:
-        - queued
-        - pending
-        - success
-        - error
     
 
     TestStepType:
@@ -820,6 +811,8 @@ components:
         name:
           type: string
           description: "execution name"
+        status:
+          $ref: '#/components/schemas/TestStatus'
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -851,6 +844,13 @@ components:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
           
+    TestStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - error
 
     TestStepExecutionResult:
       description: execution result returned from executor
@@ -861,7 +861,7 @@ components:
         script: 
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
-        result: 
+        execution: 
           $ref: "#/components/schemas/Execution"
           description: test step execution
 

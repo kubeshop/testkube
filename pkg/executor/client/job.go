@@ -100,6 +100,12 @@ func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOption
 	return c.Client.LaunchK8sJob(options.ExecutorSpec.Image, c.Repository, execution)
 }
 
+// Execute starts new external script execution, reads data and returns ID
+// Execution is started synchronously client will be blocked
+func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+	return c.Client.LaunchK8sJobSync(options.ExecutorSpec.Image, c.Repository, execution)
+}
+
 func (c JobExecutor) Abort(id string) error {
 	c.Client.AbortK8sJob(id)
 	return nil

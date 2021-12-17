@@ -11,5 +11,6 @@ func NewStartedTestExecution(name string) TestExecution {
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
 		Name:      name,
+		Status:    TestStatusQueued,
 	}
 }

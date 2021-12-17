@@ -77,7 +77,10 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 		return execution.Errw("can't create new script execution, can't insert into storage: %w", err)
 	}
 
-	result, err := s.Executor.Execute(execution, options)
+	// we want to execute scripts in sequence
+	result, err := s.Executor.ExecuteSync(execution, options)
+
+	fmt.Printf("%+v\n", *result.Status)
 
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 		return execution.Errw("update execution error: %w", uerr)
@@ -93,7 +96,7 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 		return execution.Errw("script execution failed: %w", err)
 	}
 
-	s.Log.Infow("running execution of script", "executionId", execution.Id)
+	s.Log.Infow("script executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	return
 }

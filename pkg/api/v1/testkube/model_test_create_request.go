@@ -14,9 +14,8 @@ type TestCreateRequest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace"`
 	// object name
-	Name        string      `json:"name"`
-	Description string      `json:"description,omitempty"`
-	Status      *TestStatus `json:"status"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
 	Before []TestStep `json:"before,omitempty"`
 	// Steps to run

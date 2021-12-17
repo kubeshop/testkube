@@ -1,19 +1,19 @@
 package testkube
 
 func (r *TestStepExecutionResult) Err(err error) TestStepExecutionResult {
-	if r.Result == nil {
+	if r.Execution == nil {
 		execution := NewFailedExecution(err)
-		r.Result = &execution
+		r.Execution = &execution
 
 	}
-	e := r.Result.Err(err)
-	r.Result = &e
+	e := r.Execution.Err(err)
+	r.Execution = &e
 	return *r
 }
 
 func (r *TestStepExecutionResult) IsFailed() bool {
-	if r.Result != nil {
-		return r.Result.IsFailed()
+	if r.Execution != nil {
+		return r.Execution.IsFailed()
 	}
 
 	return true
