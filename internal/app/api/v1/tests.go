@@ -1,7 +1,10 @@
 package v1
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -68,6 +71,7 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 
 func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := context.Background()
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
 
@@ -83,10 +87,69 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 
 		test := testsmapper.MapCRToAPI(*crTest)
 
-		s.Log.Debugw("executing script", "name", name)
+		s.Log.Debugw("executing test", "name", name)
+		results := s.executeTest(ctx, test)
 
-		c.JSON(test)
+		c.JSON(results)
 
 		return nil
 	}
+}
+
+func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (result testkube.TestExecution) {
+	s.TestExecutionResults.Insert(ctx, result)
+	s.Log.Debugw("Got test to execute", "test", test)
+
+	result.StartTime = time.Now()
+	defer func() {
+		result.EndTime = time.Now()
+	}()
+
+	// compose all steps into one array
+	steps := append(test.Before, test.Steps...)
+	steps = append(steps, test.After...)
+
+	for _, step := range steps {
+		stepResult := s.executeTestStep(ctx, step)
+		result.StepResults = append(result.StepResults, stepResult)
+		if stepResult.IsFailed() && step.StopOnFailure() {
+			return
+		}
+	}
+
+	return
+
+}
+
+func (s TestKubeAPI) executeTestStep(ctx context.Context, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+	l := s.Log.With("type", step.Type(), "name", step.FullName())
+
+	switch step.Type() {
+
+	case testkube.EXECUTE_SCRIPT_TestStepType:
+		executeScriptStep := step.(testkube.TestStepExecuteScript)
+		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{})
+		if err != nil {
+			return result.Err(err)
+		}
+		l.Debug("executing script")
+		execution := s.executeScript(ctx, options)
+		return newTestStepExecutionResult(execution, executeScriptStep)
+
+	case testkube.DELAY_TestStepType:
+		l.Debug("delaying execution")
+		time.Sleep(time.Millisecond * time.Duration(step.(testkube.TestStepDelay).Duration))
+
+	default:
+		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
+	}
+
+	return
+}
+
+func newTestStepExecutionResult(execution testkube.Execution, step testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
+	result.Result = &execution
+	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
+
+	return
 }

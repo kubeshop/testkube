@@ -731,14 +731,19 @@ components:
           type: string
           description: object name
 
-
     Test:
       type: object
+      required:
+        - name
+        - status
+        - steps
       properties:
         name: 
           type: string
         description: 
           type: string
+        status:
+          $ref: '#/components/schemas/TestStatus'
         before:
           type: array
           items:
@@ -757,6 +762,22 @@ components:
         repeats:
           type: integer
           default: 1
+
+    TestStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - error
+    
+
+    TestStepType:
+      type: string
+      enum:
+        - executeScript
+        - delay
+
 
     TestStep: 
       type: object 
@@ -841,8 +862,8 @@ components:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
         result: 
-          $ref: "#/components/schemas/ExecutionResult"
-          description: execution results of connected test script
+          $ref: "#/components/schemas/Execution"
+          description: test step execution
 
 
     Script:

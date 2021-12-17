@@ -12,6 +12,13 @@ func NewQueuedExecutionResult() ExecutionResult {
 	}
 }
 
+func NewErrorExecutionResult(err error) ExecutionResult {
+	return ExecutionResult{
+		Status:       StatusPtr(ERROR__ExecutionStatus),
+		ErrorMessage: err.Error(),
+	}
+}
+
 func (e *ExecutionResult) Success() {
 	e.Status = StatusPtr(SUCCESS_ExecutionStatus)
 }

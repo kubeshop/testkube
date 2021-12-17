@@ -16,3 +16,11 @@ import (
 func (s TestStepExecuteScript) FullName() string {
 	return fmt.Sprintf("Script %s/%s", s.Namespace, s.Name)
 }
+
+func (s TestStepExecuteScript) Type() TestStepType {
+	return EXECUTE_SCRIPT_TestStepType
+}
+
+func (s TestStepExecuteScript) StopOnFailure() bool {
+	return s.StopTestOnFailure
+}
