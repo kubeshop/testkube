@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/rand"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -88,6 +89,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		test := testsmapper.MapCRToAPI(*crTest)
 
 		s.Log.Debugw("executing test", "name", name)
+
 		results := s.executeTest(ctx, test)
 
 		c.JSON(results)
@@ -96,13 +98,15 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (result testkube.TestExecution) {
-	s.TestExecutionResults.Insert(ctx, result)
+func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testExecution testkube.TestExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
-	result.StartTime = time.Now()
+	testExecution = testkube.NewStartedTestExecution(rand.Name())
+	s.TestExecutionResults.Insert(ctx, testExecution)
+
 	defer func() {
-		result.EndTime = time.Now()
+		testExecution.EndTime = time.Now()
+		s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
 	}()
 
 	// compose all steps into one array
@@ -111,10 +115,12 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (resul
 
 	for _, step := range steps {
 		stepResult := s.executeTestStep(ctx, step)
-		result.StepResults = append(result.StepResults, stepResult)
+		testExecution.StepResults = append(testExecution.StepResults, stepResult)
 		if stepResult.IsFailed() && step.StopOnFailure() {
 			return
 		}
+
+		s.TestExecutionResults.Update(ctx, testExecution)
 	}
 
 	return
