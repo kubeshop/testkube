@@ -40,11 +40,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/ExecutionsStartDateFilter"
         - $ref: "#/components/parameters/ExecutionsEndDateFilter"
-        - in: query
-          name: tags
-          schema:
-            type: array
-          description: Tags to filter tests by
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -228,11 +224,7 @@ paths:
         - scripts
         - api
       parameters:
-        - in: query
-          name: tags
-          schema:
-            type: array
-          description: Tags to filter scripts by
+        - $ref: "#/components/parameters/Tags"
       summary: "List scripts"
       description: "filters will be added later"
       operationId: listScripts
@@ -1421,3 +1413,9 @@ components:
         format: date
       required: false
       description: endDate for filtering
+    Tags:
+      in: query
+      name: tags
+      schema:
+        type: array
+        description: Tags to filter tests by
