@@ -44,7 +44,7 @@ type Client interface {
 	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error)
 
 	GetTestExecution(executionID string) (execution testkube.TestExecution, err error)
-	ListTestExecutions(test string, limit int) (executions testkube.ExecutionsResult, err error)
+	ListTestExecutions(test string, limit int) (executions testkube.TestExecutionsResult, err error)
 
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }

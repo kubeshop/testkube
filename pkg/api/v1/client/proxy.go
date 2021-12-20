@@ -616,6 +616,34 @@ func (c ProxyScriptsAPI) ExecuteTest(id, namespace, executionName string, execut
 	return c.getTestExecutionFromResponse(resp)
 }
 
+func (c ProxyScriptsAPI) GetTestExecution(executionID string) (execution testkube.TestExecution, err error) {
+	uri := c.getURI("/test-executions/%s", executionID)
+	req := c.GetProxy("GET").Suffix(uri)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/get-execution returned error: %w", err)
+	}
+
+	return c.getTestExecutionFromResponse(resp)
+}
+
+// ListExecutions list all executions for given test name
+func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int) (executions testkube.TestExecutionsResult, err error) {
+	uri := c.getURI("/tests/%s/executions", testID)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("pageSize", fmt.Sprintf("%d", limit))
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/get-executions returned error: %w", err)
+	}
+
+	return c.getTestExecutionsFromResponse(resp)
+}
+
 func (c ProxyScriptsAPI) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
@@ -636,4 +664,15 @@ func (c ProxyScriptsAPI) getTestExecutionFromResponse(resp rest.Result) (executi
 	err = json.Unmarshal(bytes, &execution)
 
 	return execution, err
+}
+
+func (c ProxyScriptsAPI) getTestExecutionsFromResponse(resp rest.Result) (executions testkube.TestExecutionsResult, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executions, err
+	}
+
+	err = json.Unmarshal(bytes, &executions)
+
+	return executions, err
 }

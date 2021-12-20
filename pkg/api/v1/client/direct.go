@@ -603,6 +603,37 @@ func (c DirectScriptsAPI) ExecuteTest(id, namespace, executionName string, execu
 	return c.getTestExecutionFromResponse(resp)
 }
 
+func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testkube.TestExecution, err error) {
+	uri := c.getURI("/test-executions/%s", executionID)
+
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return execution, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/get-test-execution returned error: %w", err)
+	}
+
+	return c.getTestExecutionFromResponse(resp)
+}
+
+// ListExecutions list all executions for given script name
+func (c DirectScriptsAPI) ListTestExecutions(testName string, limit int) (executions testkube.TestExecutionsResult, err error) {
+	uri := c.getURI("/scripts/%s/executions?pageSize=%d", testName, limit)
+	resp, err := c.client.Get(uri)
+
+	if err != nil {
+		return executions, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/list-test-executions returned error: %w", err)
+	}
+
+	return c.getTestExecutionsFromResponse(resp)
+}
+
 func (c DirectScriptsAPI) getTestFromResponse(resp *http.Response) (script testkube.Test, err error) {
 	defer resp.Body.Close()
 
@@ -614,5 +645,13 @@ func (c DirectScriptsAPI) getTestExecutionFromResponse(resp *http.Response) (exe
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&execution)
+	return
+}
+
+func (c DirectScriptsAPI) getTestExecutionsFromResponse(resp *http.Response) (executions testkube.TestExecutionsResult, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&executions)
+
 	return
 }

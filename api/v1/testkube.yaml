@@ -913,9 +913,10 @@ components:
           format: date-time
         executions:
           type: array
-          additionalProperties: 
+          items: 
             type: string
           description: list of scripts execution id's
+
 
 
     Script:
@@ -964,7 +965,7 @@ components:
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
-y          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
+          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
         params:
