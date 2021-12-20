@@ -1271,7 +1271,7 @@ components:
                   "response": []
                 }
 
-    TestCreateRequest:
+    TestUpsertRequest:
       description: test create request body
       type: object
       required:

@@ -116,7 +116,7 @@ func (c ProxyScriptsAPI) DeleteScripts(namespace string) error {
 
 func (c ProxyScriptsAPI) DeleteScript(name string, namespace string) error {
 	if name == "" {
-		return fmt.Errorf("script name '%s' is not valid.", name)
+		return fmt.Errorf("script name '%s' is not valid", name)
 	}
 	uri := c.getURI("/scripts/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
@@ -497,4 +497,105 @@ func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts [
 	err = json.Unmarshal(bytes, &artifacts)
 
 	return artifacts, err
+}
+
+// --------------- tests --------------------------
+
+func (c ProxyScriptsAPI) GetTest(id, namespace string) (script testkube.Test, err error) {
+	uri := c.getURI("/tests/%s", id)
+	req := c.GetProxy("GET").Suffix(uri)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/get-script returned error: %w", err)
+	}
+
+	return c.getTestFromResponse(resp)
+}
+
+func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
+	if name == "" {
+		return fmt.Errorf("script name '%s' is not valid", name)
+	}
+	uri := c.getURI("/scripts/%s", name)
+	return c.makeDeleteRequest(uri, namespace, true)
+}
+func (c ProxyScriptsAPI) ListTests(namespace string) (scripts testkube.Tests, err error) {
+	uri := c.getURI("/tests")
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
+	}
+
+	return c.getTestsFromResponse(resp)
+}
+
+// CreateTest creates new Test Custom Resource
+func (c ProxyScriptsAPI) CreateTest(options UpsertTestOptions) (script testkube.Test, err error) {
+	uri := c.getURI("/tests")
+
+	request := testkube.TestUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return script, err
+	}
+
+	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/create-script returned error: %w", err)
+	}
+
+	return c.getTestFromResponse(resp)
+}
+
+// UpdateTest creates new Test Custom Resource
+func (c ProxyScriptsAPI) UpdateTest(options UpsertTestOptions) (script testkube.Test, err error) {
+	uri := c.getURI("/tests/%s", options.Name)
+
+	request := testkube.TestUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return script, err
+	}
+
+	req := c.GetProxy("PATCH").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return script, fmt.Errorf("api/udpate-script returned error: %w", err)
+	}
+
+	return c.getTestFromResponse(resp)
+}
+
+func (c ProxyScriptsAPI) getTestFromResponse(resp rest.Result) (test testkube.Test, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return test, err
+	}
+
+	err = json.Unmarshal(bytes, &test)
+
+	return test, err
+}
+
+func (c ProxyScriptsAPI) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return tests, err
+	}
+
+	err = json.Unmarshal(bytes, &tests)
+
+	return tests, err
 }
