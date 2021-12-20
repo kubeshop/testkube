@@ -56,11 +56,11 @@ func (f *filter) WithTextSearch(textSearch string) *filter {
 	return f
 }
 
-func (f filter) ScriptName() string {
+func (f filter) Name() string {
 	return f.scriptName
 }
 
-func (f filter) ScriptNameDefined() bool {
+func (f filter) NameDefined() bool {
 	return f.scriptName != ""
 }
 

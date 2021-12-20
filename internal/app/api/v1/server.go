@@ -117,8 +117,13 @@ func (s TestKubeAPI) Init() {
 	tests.Post("/", s.CreateTestHandler())
 	tests.Get("/", s.ListTestsHandler())
 	tests.Get("/:id", s.GetTestHandler())
-	tests.Post("/:id", s.ExecuteTestHandler())
-	tests.Post("/:id/executions", s.ListTestExecutionsHandler())
+
+	tests.Post("/:id/executions", s.ExecuteTestHandler())
+	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
+	tests.Get("/:id/executions/:executionID", s.GetTestExecutionHandler())
+
+	testExecutions := s.Routes.Group("/test-executions")
+	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
 
 }
 

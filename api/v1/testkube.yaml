@@ -865,6 +865,58 @@ components:
           $ref: "#/components/schemas/Execution"
           description: test step execution
 
+    TestExecutionsResult:
+      description: the result for a page of executions
+      type: object
+      required:
+        - totals
+        - results
+      properties:
+        totals:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        filtered:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestExecutionSummary"
+
+
+    TestExecutionSummary:
+      description: test execution summary
+      type: object
+      required:
+        - id
+        - name
+        - testName
+        - status
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        name:
+          type: string
+          description: execution name
+        testName:
+          type: string
+          description: name of the script
+        status:
+          $ref: "#/components/schemas/TestStatus"
+        startTime:
+          type: string
+          description: "test execution start time"
+          format: date-time
+        endTime:
+          type: string
+          description: "test execution end time"
+          format: date-time
+        executions:
+          type: array
+          additionalProperties: 
+            type: string
+          description: list of scripts execution id's
+
 
     Script:
       type: object
@@ -912,9 +964,7 @@ components:
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
-          additionalProperties:
-            type: string
-          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
+y          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
         params:

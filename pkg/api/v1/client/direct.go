@@ -575,9 +575,44 @@ func (c DirectScriptsAPI) ListTests(namespace string) (scripts testkube.Tests, e
 	return
 }
 
+// ExecuteTest starts new external test execution, reads data and returns ID
+func (c DirectScriptsAPI) ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error) {
+	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
+	uri := c.getURI("/tests/%s/executions", id)
+
+	request := testkube.TestExecutionRequest{
+		Name:      executionName,
+		Namespace: namespace,
+		Params:    executionParams,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return execution, err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return execution, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/execute-test returned error: %w", err)
+	}
+
+	return c.getTestExecutionFromResponse(resp)
+}
+
 func (c DirectScriptsAPI) getTestFromResponse(resp *http.Response) (script testkube.Test, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&script)
+	return
+}
+
+func (c DirectScriptsAPI) getTestExecutionFromResponse(resp *http.Response) (execution testkube.TestExecution, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&execution)
 	return
 }

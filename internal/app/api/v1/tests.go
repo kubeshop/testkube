@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
@@ -99,8 +102,28 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 
 func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := context.Background()
+		filter := getExecutionsFilterFromRequest(c)
+		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
 
-		return nil
+		return c.JSON(executions)
+	}
+}
+
+func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := context.Background()
+		id := c.Params("executionID")
+		execution, err := s.TestExecutionResults.Get(ctx, id)
+
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.JSON(execution)
 	}
 }
 
@@ -173,4 +196,44 @@ func newTestStepExecutionResult(execution testkube.Execution, step testkube.Test
 	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
 
 	return
+}
+
+func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
+
+	filter := testresult.NewExecutionsFilter()
+	scriptName := c.Params("id", "-")
+	if scriptName != "-" {
+		filter = filter.WithScriptName(scriptName)
+	}
+
+	textSearch := c.Query("textSearch", "")
+	if textSearch != "" {
+		filter = filter.WithTextSearch(textSearch)
+	}
+
+	page, err := strconv.Atoi(c.Query("page", "-"))
+	if err == nil {
+		filter = filter.WithPage(page)
+	}
+
+	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
+	if err == nil && pageSize != 0 {
+		filter = filter.WithPageSize(pageSize)
+	}
+
+	status := c.Query("status", "-")
+	if status != "-" {
+		filter = filter.WithStatus(testkube.ExecutionStatus(status))
+	}
+
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	if dFilter.IsStartValid {
+		filter = filter.WithStartDate(dFilter.Start)
+	}
+
+	if dFilter.IsEndValid {
+		filter = filter.WithEndDate(dFilter.End)
+	}
+
+	return filter
 }

@@ -589,6 +589,33 @@ func (c ProxyScriptsAPI) getTestFromResponse(resp rest.Result) (test testkube.Te
 	return test, err
 }
 
+// ExecuteTest starts new external test execution, reads data and returns ID
+// Execution is started asynchronously client can check later for results
+func (c ProxyScriptsAPI) ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error) {
+	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
+	uri := c.getURI("/tests/%s/executions", id)
+
+	request := testkube.ExecutionRequest{
+		Name:      executionName,
+		Namespace: namespace,
+		Params:    executionParams,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return execution, err
+	}
+
+	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return execution, fmt.Errorf("api/execute-test returned error: %w", err)
+	}
+
+	return c.getTestExecutionFromResponse(resp)
+}
+
 func (c ProxyScriptsAPI) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
@@ -598,4 +625,15 @@ func (c ProxyScriptsAPI) getTestsFromResponse(resp rest.Result) (tests testkube.
 	err = json.Unmarshal(bytes, &tests)
 
 	return tests, err
+}
+
+func (c ProxyScriptsAPI) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestExecution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return execution, err
+	}
+
+	err = json.Unmarshal(bytes, &execution)
+
+	return execution, err
 }
