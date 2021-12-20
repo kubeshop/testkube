@@ -945,7 +945,7 @@ components:
           type: array
           items:
             type: string
-          description: test tags
+          description: script tags
 
     Execution:
       type: object
