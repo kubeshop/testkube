@@ -37,4 +37,6 @@ type Execution struct {
 	// test end time
 	EndTime         time.Time        `json:"endTime,omitempty"`
 	ExecutionResult *ExecutionResult `json:"executionResult,omitempty"`
+	// test tags
+	Tags []string `json:"tags,omitempty"`
 }

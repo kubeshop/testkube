@@ -18,9 +18,9 @@ type Script struct {
 	Name string `json:"name,omitempty"`
 	// script type
 	Type_ string `json:"type,omitempty"`
-	// script tags
-	Tags []string `json:"tags,omitempty"`
 	// script content
 	Content string    `json:"content,omitempty"`
 	Created time.Time `json:"created,omitempty"`
+	// test tags
+	Tags []string `json:"tags,omitempty"`
 }
