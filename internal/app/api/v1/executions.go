@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,46 +50,59 @@ func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
 		}
 
-		// store execution in storage, can be get from API now
-		execution = newExecutionFromExecutionOptions(options)
-		options.ID = execution.Id
-
-		err = s.ExecutionResults.Insert(ctx, execution)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
-		}
-
-		// call executor rest or job based and update execution object after queueing execution
-		s.Log.Infow("calling executor with options", "options", options.Request)
-		execution.Start()
-		err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
-		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create new script execution, can't insert into storage: %w", err))
-		}
-
-		result, err := s.Executor.Execute(execution, options)
-
-		if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("update execution error: %w", uerr))
-		}
-
-		// set execution result to one created
-		execution.ExecutionResult = &result
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("script execution failed: %w", err), options)
-		}
-
-		// watch for changes run listener in async mode
-		s.Log.Infow("running execution of script", "executionId", execution.Id, "request", request)
-
-		// metrics increase
-		s.Metrics.IncExecution(execution)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+		execution = s.executeScript(ctx, options)
+		if execution.ExecutionResult.IsFailed() {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf(execution.ExecutionResult.ErrorMessage))
 		}
 
 		return c.JSON(execution)
 	}
+}
+
+func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
+	// store execution in storage, can be get from API now
+	execution = newExecutionFromExecutionOptions(options)
+	options.ID = execution.Id
+
+	err := s.ExecutionResults.Insert(ctx, execution)
+	if err != nil {
+		return execution.Errw("can't create new script execution, can't insert into storage: %w", err)
+	}
+
+	// call executor rest or job based and update execution object after queueing execution
+	s.Log.Infow("calling executor with options", "options", options.Request)
+	execution.Start()
+	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
+	if err != nil {
+		return execution.Errw("can't execute script, rnto storage error: %w", err)
+	}
+
+	var result testkube.ExecutionResult
+
+	// sync/async script execution
+	if options.Sync {
+		result, err = s.Executor.ExecuteSync(execution, options)
+	} else {
+		result, err = s.Executor.Execute(execution, options)
+	}
+
+	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
+		return execution.Errw("update execution error: %w", uerr)
+	}
+
+	// set execution result to one created
+	execution.ExecutionResult = &result
+
+	// metrics increase
+	s.Metrics.IncExecution(execution)
+
+	if err != nil {
+		return execution.Errw("script execution failed: %w", err)
+	}
+
+	s.Log.Infow("script executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+
+	return
 }
 
 // ListExecutionsHandler returns array of available script executions

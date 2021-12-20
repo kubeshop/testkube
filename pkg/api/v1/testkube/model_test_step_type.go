@@ -9,18 +9,10 @@
  */
 package testkube
 
-import (
-	"fmt"
+type TestStepType string
+
+// List of TestStepType
+const (
+	EXECUTE_SCRIPT_TestStepType TestStepType = "executeScript"
+	DELAY_TestStepType          TestStepType = "delay"
 )
-
-func (s TestStepDelay) FullName() string {
-	return fmt.Sprintf("Delay %dms", s.Duration)
-}
-
-func (s TestStepDelay) Type() TestStepType {
-	return DELAY_TestStepType
-}
-
-func (s TestStepDelay) StopOnFailure() bool {
-	return false
-}

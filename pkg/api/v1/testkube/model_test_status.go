@@ -9,18 +9,12 @@
  */
 package testkube
 
-import (
-	"fmt"
+type TestStatus string
+
+// List of TestStatus
+const (
+	QUEUED_TestStatus  TestStatus = "queued"
+	PENDING_TestStatus TestStatus = "pending"
+	SUCCESS_TestStatus TestStatus = "success"
+	ERROR__TestStatus  TestStatus = "error"
 )
-
-func (s TestStepDelay) FullName() string {
-	return fmt.Sprintf("Delay %dms", s.Duration)
-}
-
-func (s TestStepDelay) Type() TestStepType {
-	return DELAY_TestStepType
-}
-
-func (s TestStepDelay) StopOnFailure() bool {
-	return false
-}

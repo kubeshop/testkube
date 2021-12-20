@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"time"
 
 	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -45,10 +44,11 @@ func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestStep) {
 			Namespace:         crstep.Execute.Namespace,
 			StopTestOnFailure: crstep.Execute.StopOnFailure,
 		}
+
 	case crstep.Delay != nil:
 		teststep = testkube.TestStepDelay{
-			Name:     fmt.Sprintf("Delay %s", crstep.Delay.Duration.String()),
-			Duration: int32(time.Millisecond * crstep.Delay.Duration),
+			Name:     fmt.Sprintf("Delay %dms", crstep.Delay.Duration),
+			Duration: crstep.Delay.Duration,
 		}
 	}
 

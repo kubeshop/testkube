@@ -10,7 +10,7 @@
 package testkube
 
 // test create request body
-type TestCreateRequest struct {
+type TestUpsertRequest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace"`
 	// object name

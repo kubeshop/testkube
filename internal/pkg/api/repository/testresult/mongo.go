@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const CollectionName = "results"
+const CollectionName = "testresults"
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{

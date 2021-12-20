@@ -9,18 +9,9 @@
  */
 package testkube
 
-import (
-	"fmt"
-)
-
-func (s TestStepDelay) FullName() string {
-	return fmt.Sprintf("Delay %dms", s.Duration)
-}
-
-func (s TestStepDelay) Type() TestStepType {
-	return DELAY_TestStepType
-}
-
-func (s TestStepDelay) StopOnFailure() bool {
-	return false
+// the result for a page of executions
+type TestExecutionsResult struct {
+	Totals   *ExecutionsTotals      `json:"totals"`
+	Filtered *ExecutionsTotals      `json:"filtered,omitempty"`
+	Results  []TestExecutionSummary `json:"results"`
 }

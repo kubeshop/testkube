@@ -18,7 +18,8 @@ type TestExecution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
 	// execution name
-	Name string `json:"name,omitempty"`
+	Name   string      `json:"name,omitempty"`
+	Status *TestStatus `json:"status,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor converted to vars for usage in tests

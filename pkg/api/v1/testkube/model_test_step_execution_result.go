@@ -11,6 +11,6 @@ package testkube
 
 // execution result returned from executor
 type TestStepExecutionResult struct {
-	Script *ObjectRef       `json:"script,omitempty"`
-	Result *ExecutionResult `json:"result,omitempty"`
+	Script    *ObjectRef `json:"script,omitempty"`
+	Execution *Execution `json:"execution,omitempty"`
 }
