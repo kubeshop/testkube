@@ -719,15 +719,23 @@ paths:
 components:
   schemas:
     ObjectRef:
+      required:
+        - name
       type: object
       properties:
         namespace:
           type: string
+          description: object kubernetes namespace
         name:
           type: string
+          description: object name
 
     Test:
       type: object
+      required:
+        - name
+        - status
+        - steps
       properties:
         name:
           type: string
@@ -757,6 +765,12 @@ components:
           type: integer
           default: 1
 
+    TestStepType:
+      type: string
+      enum:
+        - executeScript
+        - delay
+
     TestStep:
       type: object
       required:
@@ -770,20 +784,12 @@ components:
           default: true
 
     TestStepExecuteScript:
-      allOf: # Combines the BasicErrorModel and the inline model
+      allOf:
         - $ref: "#/components/schemas/TestStep"
-        - type: object
-          required:
-            - namepace
-            - name
-          properties:
-            namespace:
-              type: string
-            name:
-              type: string
+        - $ref: "#/components/schemas/ObjectRef"
 
     TestStepDelay:
-      allOf: # Combines the TestStep and the inline model
+      allOf:
         - $ref: "#/components/schemas/TestStep"
         - type: object
           required:
@@ -805,6 +811,8 @@ components:
         name:
           type: string
           description: "execution name"
+        status:
+          $ref: "#/components/schemas/TestStatus"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -836,6 +844,14 @@ components:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
 
+    TestStatus:
+      type: string
+      enum:
+        - queued
+        - pending
+        - success
+        - error
+
     TestStepExecutionResult:
       description: execution result returned from executor
       type: object
@@ -845,9 +861,60 @@ components:
         script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
-        result:
-          $ref: "#/components/schemas/ExecutionResult"
-          description: execution results of connected test script
+        execution:
+          $ref: "#/components/schemas/Execution"
+          description: test step execution
+
+    TestExecutionsResult:
+      description: the result for a page of executions
+      type: object
+      required:
+        - totals
+        - results
+      properties:
+        totals:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        filtered:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestExecutionSummary"
+
+    TestExecutionSummary:
+      description: test execution summary
+      type: object
+      required:
+        - id
+        - name
+        - testName
+        - status
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+        name:
+          type: string
+          description: execution name
+        testName:
+          type: string
+          description: name of the script
+        status:
+          $ref: "#/components/schemas/TestStatus"
+        startTime:
+          type: string
+          description: "test execution start time"
+          format: date-time
+        endTime:
+          type: string
+          description: "test execution end time"
+          format: date-time
+        executions:
+          type: array
+          items:
+            type: string
+          description: list of scripts execution id's
 
     Script:
       type: object
@@ -900,8 +967,6 @@ components:
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
-          additionalProperties:
-            type: string
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
@@ -1188,6 +1253,27 @@ components:
             users: "3"
             prefix: "some-"
 
+    TestExecutionRequest:
+      description: test execution request body
+      type: object
+      properties:
+        name:
+          type: string
+          description: script execution custom name
+          example: testing with 1000 users
+        namespace:
+          type: string
+          description: script kubernetes namespace ("testkube" when not set)
+          example: testkube
+        params:
+          type: object
+          description: "execution params passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+
     ScriptUpsertRequest:
       description: scripts create request body
       type: object
@@ -1236,6 +1322,16 @@ components:
                   "response": []
                 }
 
+    TestUpsertRequest:
+      description: test create request body
+      type: object
+      required:
+        - name
+        - namespace
+      allOf:
+        - $ref: "#/components/schemas/Test"
+        - $ref: "#/components/schemas/ObjectRef"
+
     ExecutorCreateRequest:
       description: executor create request body
       type: object
@@ -1243,20 +1339,9 @@ components:
         - name
         - namespace
         - types
-      allOf: # Combines the BasicErrorModel and the inline model
+      allOf:
         - $ref: "#/components/schemas/Executor"
-        - type: object
-          required:
-            - rootCause
-          properties:
-            name:
-              type: string
-              description: executor name
-              example: kubeshop-homepage-test
-            namespace:
-              type: string
-              description: Kubernetes namespace
-              example: testkube
+        - $ref: "#/components/schemas/ObjectRef"
 
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
