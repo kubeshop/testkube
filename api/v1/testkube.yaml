@@ -774,8 +774,8 @@ components:
         - executeScript
         - delay
 
-    TestStep:
-      type: object
+    TestStep: 
+      type: object 
       required:
         - name
       properties:
@@ -786,14 +786,14 @@ components:
           type: boolean
           default: true
 
-    TestStepExecuteScript:
+    TestStepExecuteScript: 
       allOf:
-        - $ref: "#/components/schemas/TestStep"
+        - $ref: '#/components/schemas/TestStep'
         - $ref: "#/components/schemas/ObjectRef"
 
-    TestStepDelay:
+    TestStepDelay: 
       allOf:
-        - $ref: "#/components/schemas/TestStep"
+        - $ref: '#/components/schemas/TestStep'
         - type: object
           required:
             - duration
@@ -815,7 +815,7 @@ components:
           type: string
           description: "execution name"
         status:
-          $ref: "#/components/schemas/TestStatus"
+          $ref: '#/components/schemas/TestStatus'
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -851,7 +851,7 @@ components:
           items:
             type: string
           description: test tags
-
+          
     TestStatus:
       type: string
       enum:
@@ -869,7 +869,7 @@ components:
         script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
-        execution:
+        execution: 
           $ref: "#/components/schemas/Execution"
           description: test step execution
 
@@ -1341,7 +1341,7 @@ components:
       required:
         - name
         - namespace
-      allOf:
+      allOf: 
         - $ref: "#/components/schemas/Test"
         - $ref: "#/components/schemas/ObjectRef"
 
@@ -1352,7 +1352,7 @@ components:
         - name
         - namespace
         - types
-      allOf:
+      allOf: 
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 

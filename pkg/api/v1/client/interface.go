@@ -36,8 +36,20 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
+	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpsertTestOptions) (script testkube.Test, err error)
+	GetTest(id string, namespace string) (script testkube.Test, err error)
+	ListTests(namespace string) (scripts testkube.Tests, err error)
+	DeleteTest(name string, namespace string) error
+	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error)
+
+	GetTestExecution(executionID string) (execution testkube.TestExecution, err error)
+	ListTestExecutions(test string, limit int) (executions testkube.TestExecutionsResult, err error)
+
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
+
+type UpsertTestOptions testkube.TestUpsertRequest
 
 // UpsertScriptOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct

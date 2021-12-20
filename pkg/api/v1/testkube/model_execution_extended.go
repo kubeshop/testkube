@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -24,6 +25,16 @@ func NewExecution(scriptName, name, scriptType, scriptContent string, result Exe
 		ExecutionResult: &result,
 		Params:          params,
 		ScriptContent:   scriptContent,
+	}
+}
+
+func NewFailedExecution(err error) Execution {
+	return Execution{
+		Id: primitive.NewObjectID().Hex(),
+		ExecutionResult: &ExecutionResult{
+			ErrorMessage: err.Error(),
+			Status:       ExecutionStatusError,
+		},
 	}
 }
 
@@ -78,6 +89,11 @@ func (e Execution) Err(err error) Execution {
 	e.ExecutionResult.Err(err)
 	return e
 }
+func (e Execution) Errw(msg string, err error) Execution {
+	e.ExecutionResult.Err(fmt.Errorf(msg, err))
+	return e
+}
+
 func (e *Execution) Start() {
 	e.StartTime = time.Now()
 }
@@ -99,4 +115,11 @@ func (e *Execution) Duration() time.Duration {
 	}
 
 	return end.Sub(e.StartTime)
+}
+func (e Execution) IsFailed() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == ERROR__ExecutionStatus
 }

@@ -26,6 +26,10 @@ type Executor interface {
 	// execution is started asynchronously client can check later for results
 	Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 
+	// Execute starts new external script execution, reads data and returns ID
+	// execution is started synchronously client is blocked
+	ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
+
 	// Abort aborts pending execution, do nothing when there is no pending execution
 	Abort(id string) (err error)
 

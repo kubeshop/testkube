@@ -47,7 +47,77 @@ func NewJobClient() (*JobClient, error) {
 }
 
 // LaunchK8sJob launches new job and run executor of given type
+// TODO Consider moving launch of K8s job as always sync
+// TODO Consider moving storage calls level up (remove dependency from here)
+func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	result = testkube.NewPendingExecutionResult()
+
+	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
+	ctx := context.Background()
+
+	jsn, err := json.Marshal(execution)
+	if err != nil {
+		return result.Err(err), err
+	}
+
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn))
+
+	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
+	if err != nil {
+		return result.Err(err), err
+	}
+
+	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 10)
+	if err != nil {
+		return result.Err(err), err
+	}
+
+	// get job pod and
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+
+			// save stop time
+			defer func() {
+				execution.Stop()
+				repo.EndExecution(ctx, execution.Id, execution.EndTime)
+			}()
+
+			// wait for complete
+			if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				c.Log.Errorw("poll immediate error", "error", err)
+				repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				return result, err
+			}
+
+			var logs []byte
+			logs, err = c.GetPodLogs(pod.Name)
+			if err != nil {
+				c.Log.Errorw("get pod logs error", "error", err)
+				repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				return
+			}
+
+			// parse job ouput log (JSON stream)
+			result, _, err := output.ParseRunnerOutput(logs)
+			if err != nil {
+				c.Log.Errorw("parse ouput error", "error", err)
+				repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				return result, err
+			}
+
+			c.Log.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+			repo.UpdateResult(ctx, execution.Id, result)
+			return result, nil
+		}
+	}
+
+	return
+}
+
+// LaunchK8sJob launches new job and run executor of given type
 // TODO consider moving storage based operation up in hierarchy
+// TODO Consider moving launch of K8s job as always sync
 func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)

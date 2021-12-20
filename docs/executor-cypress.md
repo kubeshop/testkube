@@ -1,17 +1,17 @@
 # Cypress Tests
 
-TestKube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented). 
+TestKube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented).
 
-To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - https://docs.cypress.io/guides/dashboard/projects)
+To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - <https://docs.cypress.io/guides/dashboard/projects>)
 
+## Creating new test
 
-## Creating new test 
-
-Let's assume we've created one in https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples 
-which contains really simple test which checks if some string exists on web site, we'll also check 
+Let's assume we've created one in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples>
+which contains really simple test which checks if some string exists on web site, we'll also check
 if env parameter exists - to show how to pass additional parameters into test.
 
-https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js
+<https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js>
+
 ```js
 describe('The Home Page', () => {
   it('successfully loads', () => {
@@ -28,25 +28,34 @@ describe('The Home Page', () => {
 
 Now we need to create TestKube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
-```sh 
+```sh
 kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 We can check that script is created with:
-```
+
+```sh
 kubectl get scripts 
+```
+
+Output:
+
+```sh
 NAME                  AGE
 kubeshop-cypress      51s
 ```
 
-## Starting test 
+## Starting test
 
 Now we can start our test
 
-```
+```sh
 kubectl testkube scripts start kubeshop-cypress
+```
 
+Output:
 
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -72,11 +81,15 @@ $ kubectl testkube scripts watch 615d5265b046f8fbd3d955d0
 
 ## Getting execution results
 
-Let's watch our script execution 
+Let's watch our script execution
 
-```
+```sh
 kubectl testkube scripts watch 615d43d3b046f8fbd3d955ca
+```
 
+Output:
+
+```sh
 Type          : cypress/project
 Name          : cypress-example
 Execution ID  : 615d43d3b046f8fbd3d955ca
@@ -168,15 +181,19 @@ Script execution completed in 1m17s
 
 ## Adding parameters
 
-We can see that our test was failed because of  `AssertionError: expected undefined to equal 'testvalue'` 
+We can see that our test was failed because of  `AssertionError: expected undefined to equal 'testvalue'`
 
 We forgot to add test param - let's fix that! In our test we assume that param will have name `testparam` and its value will be `testvalue` - so let's add that.  
 
 We can also add `-f` flag to follow execution (watch for changes) - for now we're only looking for test completion but in future we'll pipe test output in real time (ongoing features)
 
-```
+```sh
 kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
+```
 
+Output:
+
+```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   

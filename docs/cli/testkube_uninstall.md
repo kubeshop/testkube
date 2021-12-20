@@ -6,13 +6,13 @@ Uninstall Helm chart registry in current kubectl context
 
 Uninstall Helm chart registry in current kubectl context
 
-```
+```sh
 testkube uninstall [flags]
 ```
 
 ### Options
 
-```
+```sh
   -h, --help          help for uninstall
       --name string   installation name (default "testkube")
       --remove-crds   wipe out Executors and Scripts CRDs
@@ -20,7 +20,7 @@ testkube uninstall [flags]
 
 ### Options inherited from parent commands
 
-```
+```sh
   -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
   -s, --namespace string   kubernetes namespace (default "testkube")
   -v, --verbose            should I show additional debug messages
@@ -28,5 +28,4 @@ testkube uninstall [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-
+* [testkube](testkube.md)  - testkube entrypoint for plugin

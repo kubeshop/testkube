@@ -16,3 +16,11 @@ import (
 func (s TestStepDelay) FullName() string {
 	return fmt.Sprintf("Delay %dms", s.Duration)
 }
+
+func (s TestStepDelay) Type() TestStepType {
+	return DELAY_TestStepType
+}
+
+func (s TestStepDelay) StopOnFailure() bool {
+	return false
+}

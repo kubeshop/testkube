@@ -1,12 +1,13 @@
 # Architecture (C4 Diagrams)
+
 ## Info
 
-Diagrams was made with use of C4 diagram technique 
-(https://c4model.com/)
+Diagrams was made with use of C4 diagram technique
+(<https://c4model.com/>)
 
 ## Diagrams
 
-### System Context 
+### System Context
 
 ![testkube system context diagram](img/system_context.png)
 
@@ -16,7 +17,6 @@ Diagrams was made with use of C4 diagram technique
 
 ### Components
 
-#### API 
+#### API
 
 ![API](img/components_api.png)
-

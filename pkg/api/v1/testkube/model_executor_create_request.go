@@ -11,6 +11,10 @@ package testkube
 
 // executor create request body
 type ExecutorCreateRequest struct {
+	// object kubernetes namespace
+	Namespace string `json:"namespace"`
+	// object name
+	Name string `json:"name"`
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
 	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
@@ -23,8 +27,4 @@ type ExecutorCreateRequest struct {
 	VolumeMountPath string `json:"volumeMountPath,omitempty"`
 	// VolumeQuantity for kube-job PersistentVolume
 	VolumeQuantity string `json:"volumeQuantity,omitempty"`
-	// executor name
-	Name string `json:"name"`
-	// Kubernetes namespace
-	Namespace string `json:"namespace"`
 }
