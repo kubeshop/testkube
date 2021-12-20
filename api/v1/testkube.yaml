@@ -850,7 +850,7 @@ components:
           type: array
           items:
             type: string
-          description: test tags
+          description: test execution tags
           
     TestStatus:
       type: string
