@@ -75,8 +75,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		ctx := context.Background()
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
-
-		s.Log.Debugw("getting script ", "name", name)
+		s.Log.Debugw("getting test", "name", name)
 		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -98,10 +97,17 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 	}
 }
 
+func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		return nil
+	}
+}
+
 func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testExecution testkube.TestExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
-	testExecution = testkube.NewStartedTestExecution(rand.Name())
+	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
 	defer func() {
@@ -114,7 +120,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	steps = append(steps, test.After...)
 
 	for _, step := range steps {
-		stepResult := s.executeTestStep(ctx, step)
+		stepResult := s.executeTestStep(ctx, test.Name, step)
 		testExecution.StepResults = append(testExecution.StepResults, stepResult)
 		if stepResult.IsFailed() && step.StopOnFailure() {
 			testExecution.Status = testkube.TestStatusError
@@ -131,18 +137,23 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
 	l := s.Log.With("type", step.Type(), "name", step.FullName())
 
 	switch step.Type() {
 
 	case testkube.EXECUTE_SCRIPT_TestStepType:
 		executeScriptStep := step.(testkube.TestStepExecuteScript)
-		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{})
+		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
+			Name: fmt.Sprintf("%s-%s", testName, executeScriptStep.Name),
+		})
+
 		if err != nil {
 			return result.Err(err)
 		}
+
 		l.Debug("executing script")
+		options.Sync = true
 		execution := s.executeScript(ctx, options)
 		return newTestStepExecutionResult(execution, executeScriptStep)
 

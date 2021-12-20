@@ -2,7 +2,6 @@ package tests
 
 import (
 	"testing"
-	"time"
 
 	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +15,7 @@ func TestMapTestListKubeToAPI(t *testing.T) {
 				Before: []testsv1.TestStepSpec{
 					{
 						Delay: &testsv1.TestStepDelay{
-							Duration: time.Second,
+							Duration: 1000,
 						},
 					},
 				},
@@ -33,7 +32,7 @@ func TestMapTestListKubeToAPI(t *testing.T) {
 				After: []testsv1.TestStepSpec{
 					{
 						Delay: &testsv1.TestStepDelay{
-							Duration: time.Second,
+							Duration: 1000,
 						},
 					},
 				},

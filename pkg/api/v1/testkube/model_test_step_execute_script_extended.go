@@ -14,7 +14,7 @@ import (
 )
 
 func (s TestStepExecuteScript) FullName() string {
-	return fmt.Sprintf("Script %s/%s", s.Namespace, s.Name)
+	return fmt.Sprintf("Script %s.%s", s.Namespace, s.Name)
 }
 
 func (s TestStepExecuteScript) Type() TestStepType {
