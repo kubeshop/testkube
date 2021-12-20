@@ -1007,7 +1007,7 @@ components:
           type: array
           items:
             type: string
-          description: test tags
+          description: execution tags
 
     Artifact:
       type: object
