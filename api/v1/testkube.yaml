@@ -104,6 +104,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/ExecutionsStartDateFilter"
         - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -223,11 +224,11 @@ paths:
       tags:
         - scripts
         - api
-      parameters:
-        - $ref: "#/components/parameters/Tags"
       summary: "List scripts"
       description: "filters will be added later"
       operationId: listScripts
+      parameters:
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: "successful operation"
@@ -414,6 +415,7 @@ paths:
             type: integer
           description: kubernetes namespace
           required: false
+        - $ref: "#/components/parameters/Tags"
       tags:
         - api
         - scripts
@@ -565,6 +567,7 @@ paths:
                 type: object
                 items:
                   $ref: "#/components/schemas/ExecutionResult"
+
   /executors:
     get:
       tags:
@@ -741,16 +744,16 @@ components:
           type: string
         description:
           type: string
-        tags:
-          type: array
-          items:
-            type: string
-          description: test tags
         before:
           type: array
           items:
             $ref: "#/components/schemas/TestStep"
           description: Run this step before whole suite
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
         steps:
           type: array
           items:
@@ -843,6 +846,11 @@ components:
           items:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
 
     TestStatus:
       type: string
@@ -927,17 +935,17 @@ components:
           description: script type
           enum:
             - postman/collection
-        tags:
-          type: array
-          items:
-            type: string
-          description: script tags
         content:
           type: string
           description: script content
         created:
           type: string
           format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
 
     Execution:
       type: object
@@ -995,6 +1003,11 @@ components:
           required: true
           description: result get from executor
           $ref: "#/components/schemas/ExecutionResult"
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
 
     Artifact:
       type: object
