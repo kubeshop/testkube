@@ -17,3 +17,75 @@ type TestStep interface {
 	// StopOnFailure returns if step failure will hold test suite execution
 	StopOnFailure() bool
 }
+
+type TestStepBase map[string]interface{}
+
+func (ts TestStepBase) FullName() string {
+	return ts["name"].(string)
+}
+
+func (ts TestStepBase) Type() string {
+	return ts["type"].(string)
+}
+
+func (ts TestStepBase) StopOnFailure() bool {
+	return ts["type"].(bool)
+}
+
+func (ts TestStepBase) GetTestStep() (out TestStep) {
+	var err error
+	switch ts.Type() {
+	case string(EXECUTE_SCRIPT_TestStepType):
+		out, err = NewExecuteScriptTestStepFromMap(ts)
+	case string(DELAY_TestStepType):
+		out, err = NewDelayTestStepFromMap(ts)
+	default:
+		return nil
+	}
+
+	if err != nil {
+		return nil
+	}
+
+	return out
+}
+
+func NewExecuteScriptTestStepFromMap(in map[string]interface{}) (ts TestStepExecuteScript, err error) {
+	if name, ok := in["name"].(string); ok {
+		ts.Name = name
+	}
+
+	if ns, ok := in["namespace"].(string); ok {
+		ts.Namespace = ns
+	}
+
+	if t, ok := in["type"].(string); ok {
+		ts.Type_ = t
+	}
+
+	if stop, ok := in["stopTestOnFailure"].(bool); ok {
+		ts.StopTestOnFailure = stop
+	}
+
+	return ts, err
+}
+
+func NewDelayTestStepFromMap(in map[string]interface{}) (ts TestStepDelay, err error) {
+	if name, ok := in["name"].(string); ok {
+		ts.Name = name
+	}
+
+	if d, ok := in["duration"].(int32); ok {
+		ts.Duration = d
+	}
+
+	if t, ok := in["type"].(string); ok {
+		ts.Type_ = t
+	}
+
+	if stop, ok := in["stopTestOnFailure"].(bool); ok {
+		ts.StopTestOnFailure = stop
+	}
+
+	return ts, err
+}

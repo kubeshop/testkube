@@ -774,13 +774,17 @@ components:
       type: object 
       required:
         - name
+        - type
+        - stopTestOnFailure
       properties:
-        name: 
-          type: string
-          description: step name (in case of script it'll be script name)
         stopTestOnFailure:
           type: boolean
           default: true
+        type: 
+          type: string
+          enum:
+            - scriptExecution
+            - delay
 
     TestStepExecuteScript: 
       allOf:
@@ -793,7 +797,11 @@ components:
         - type: object
           required:
             - duration 
+            - name
           properties:
+            name: 
+              type: string
+              description: step name (in case of script it'll be script name)
             duration:
               type: integer
               default: 0 

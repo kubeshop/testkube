@@ -14,5 +14,6 @@ type TestStepExecuteScript struct {
 	Namespace string `json:"namespace,omitempty"`
 	// object name
 	Name              string `json:"name"`
-	StopTestOnFailure bool   `json:"stopTestOnFailure,omitempty"`
+	StopTestOnFailure bool   `json:"stopTestOnFailure"`
+	Type_             string `json:"type"`
 }

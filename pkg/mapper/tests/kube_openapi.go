@@ -43,12 +43,15 @@ func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestStep) {
 			Name:              crstep.Execute.Name,
 			Namespace:         crstep.Execute.Namespace,
 			StopTestOnFailure: crstep.Execute.StopOnFailure,
+			Type_:             string(testkube.EXECUTE_SCRIPT_TestStepType),
 		}
 
 	case crstep.Delay != nil:
 		teststep = testkube.TestStepDelay{
-			Name:     fmt.Sprintf("Delay %dms", crstep.Delay.Duration),
-			Duration: crstep.Delay.Duration,
+			Name:              fmt.Sprintf("Delay %dms", crstep.Delay.Duration),
+			Duration:          crstep.Delay.Duration,
+			Type_:             string(testkube.DELAY_TestStepType),
+			StopTestOnFailure: crstep.Execute.StopOnFailure,
 		}
 	}
 
