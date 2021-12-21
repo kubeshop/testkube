@@ -28,6 +28,7 @@ func init() {
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewExecutorsCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
+	RootCmd.AddCommand(NewTestsCmd())
 }
 
 var RootCmd = &cobra.Command{
