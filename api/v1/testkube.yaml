@@ -1060,7 +1060,7 @@ components:
       description: API server artifact
       properties:
         name:
-          type: string # https://api-server/exec_id/subdirectory/file_name
+          type: string
           description: artifact file path
         size:
           type: integer
