@@ -65,6 +65,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/StartDateFilter"
         - $ref: "#/components/parameters/EndDateFilter"
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -160,6 +161,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/StartDateFilter"
         - $ref: "#/components/parameters/EndDateFilter"
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -282,6 +284,8 @@ paths:
       summary: "List scripts"
       description: "filters will be added later"
       operationId: listScripts
+      parameters:
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: "successful operation"
@@ -475,6 +479,7 @@ paths:
             type: integer
           description: kubernetes namespace
           required: false
+        - $ref: "#/components/parameters/Tags"
       tags:
         - api
         - scripts
@@ -626,6 +631,7 @@ paths:
                 type: object
                 items:
                   $ref: "#/components/schemas/ExecutionResult"
+
   /executors:
     get:
       tags:
@@ -807,6 +813,11 @@ components:
           items:
             $ref: "#/components/schemas/TestStep"
           description: Run this step before whole suite
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
         steps:
           type: array
           items:
@@ -907,6 +918,11 @@ components:
           items:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
+        tags:
+          type: array
+          items:
+            type: string
+          description: test execution tags
 
     TestStatus:
       type: string
@@ -997,6 +1013,11 @@ components:
         created:
           type: string
           format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+          description: script tags
 
     Execution:
       type: object
@@ -1054,6 +1075,11 @@ components:
           required: true
           description: result get from executor
           $ref: "#/components/schemas/ExecutionResult"
+        tags:
+          type: array
+          items:
+            type: string
+          description: execution tags
 
     Artifact:
       type: object
@@ -1564,3 +1590,9 @@ components:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter
       required: false
+    Tags:
+      in: query
+      name: tags
+      schema:
+        type: array
+        description: Tags to filter tests by

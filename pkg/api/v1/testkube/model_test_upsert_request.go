@@ -18,6 +18,8 @@ type TestUpsertRequest struct {
 	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
 	Before []TestStep `json:"before,omitempty"`
+	// test tags
+	Tags []string `json:"tags,omitempty"`
 	// Steps to run
 	Steps []TestStep `json:"steps"`
 	// Run this step after whole suite
