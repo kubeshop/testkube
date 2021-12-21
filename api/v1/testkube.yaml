@@ -25,7 +25,6 @@ tags:
     description: "Scripts orchestration operations"
 
 paths:
-
   /tests:
     get:
       tags:
@@ -41,6 +40,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/ExecutionsStartDateFilter"
         - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -88,7 +88,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-
   /executions:
     get:
       tags:
@@ -98,7 +97,6 @@ paths:
       description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
-
         - $ref: "#/components/parameters/ExecutionsTest"
         - $ref: "#/components/parameters/ExecutionsTextSearch"
         - $ref: "#/components/parameters/ExecutionsPageSize"
@@ -106,6 +104,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/ExecutionsStartDateFilter"
         - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: successful operation
@@ -228,6 +227,8 @@ paths:
       summary: "List scripts"
       description: "filters will be added later"
       operationId: listScripts
+      parameters:
+        - $ref: "#/components/parameters/Tags"
       responses:
         200:
           description: "successful operation"
@@ -283,25 +284,25 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       tags:
         - scripts
         - api
-      summary: 'delete scripts'
-      description: 'deletes all the scripts'
+      summary: "delete scripts"
+      description: "deletes all the scripts"
       operationId: deleteScripts
       responses:
         204:
-          description: 'no content'
+          description: "no content"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /scripts/{id}:
     patch:
@@ -342,7 +343,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
     get:
       tags:
@@ -372,7 +373,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       tags:
         - scripts
@@ -384,20 +385,20 @@ paths:
             type: string
           required: true
           description: ID of the script
-      summary: 'delete script'
-      description: 'deletes a script'
+      summary: "delete script"
+      description: "deletes a script"
       operationId: deleteScript
       responses:
         204:
-          description: 'no content'
+          description: "no content"
         502:
-          description: 'problem with read information from kubernetes cluster'
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
 
   /scripts/{id}/executions:
     post:
@@ -414,6 +415,7 @@ paths:
             type: integer
           description: kubernetes namespace
           required: false
+        - $ref: "#/components/parameters/Tags"
       tags:
         - api
         - scripts
@@ -534,7 +536,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Problem'
+                  $ref: "#/components/schemas/Problem"
     delete:
       parameters:
         - in: path
@@ -564,7 +566,8 @@ paths:
               schema:
                 type: object
                 items:
-                  $ref: '#/components/schemas/ExecutionResult'
+                  $ref: "#/components/schemas/ExecutionResult"
+
   /executors:
     get:
       tags:
@@ -718,7 +721,6 @@ paths:
 
 components:
   schemas:
-
     ObjectRef:
       required:
         - name
@@ -738,15 +740,20 @@ components:
         - status
         - steps
       properties:
-        name: 
+        name:
           type: string
-        description: 
+        description:
           type: string
         before:
           type: array
           items:
             $ref: "#/components/schemas/TestStep"
           description: Run this step before whole suite
+        tags:
+          type: array
+          items:
+            type: string
+          description: test tags
         steps:
           type: array
           items:
@@ -761,21 +768,18 @@ components:
           type: integer
           default: 1
 
-    
-
     TestStepType:
       type: string
       enum:
         - executeScript
         - delay
 
-
     TestStep: 
       type: object 
       required:
         - name
       properties:
-        name: 
+        name:
           type: string
           description: step name (in case of script it'll be script name)
         stopTestOnFailure:
@@ -792,14 +796,13 @@ components:
         - $ref: '#/components/schemas/TestStep'
         - type: object
           required:
-            - duration 
+            - duration
           properties:
             duration:
               type: integer
-              default: 0 
+              default: 0
               description: delay duration in milliseconds
-        
-          
+
     TestExecution:
       type: object
       description: API server test scripts executions container
@@ -831,11 +834,11 @@ components:
             prefix: "some-"
         startTime:
           type: string
-          description: 'test start time'
+          description: "test start time"
           format: date-time
         endTime:
           type: string
-          description: 'test end time'
+          description: "test end time"
           format: date-time
         stepResults:
           type: array
@@ -843,6 +846,11 @@ components:
           items:
             $ref: "#/components/schemas/TestStepExecutionResult"
             description: test execution results
+        tags:
+          type: array
+          items:
+            type: string
+          description: test execution tags
           
     TestStatus:
       type: string
@@ -858,7 +866,7 @@ components:
       required:
         - status
       properties:
-        script: 
+        script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
         execution: 
@@ -880,7 +888,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestExecutionSummary"
-
 
     TestExecutionSummary:
       description: test execution summary
@@ -913,11 +920,9 @@ components:
           format: date-time
         executions:
           type: array
-          items: 
+          items:
             type: string
           description: list of scripts execution id's
-
-
 
     Script:
       type: object
@@ -936,6 +941,11 @@ components:
         created:
           type: string
           format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+          description: script tags
 
     Execution:
       type: object
@@ -983,16 +993,21 @@ components:
           $ref: "#/components/schemas/Repository"
         startTime:
           type: string
-          description: 'test start time'
+          description: "test start time"
           format: date-time
         endTime:
           type: string
-          description: 'test end time'
+          description: "test end time"
           format: date-time
         executionResult:
           required: true
           description: result get from executor
           $ref: "#/components/schemas/ExecutionResult"
+        tags:
+          type: array
+          items:
+            type: string
+          description: execution tags
 
     Artifact:
       type: object
@@ -1063,8 +1078,6 @@ components:
         - success
         - error
 
-    
-
     ExecutionResult:
       description: execution result returned from executor
       type: object
@@ -1072,7 +1085,7 @@ components:
         - status
       properties:
         status:
-          $ref: '#/components/schemas/ExecutionStatus'
+          $ref: "#/components/schemas/ExecutionStatus"
         output:
           type: string
           description: "RAW Script execution output, depends of reporter used in particular tool"
@@ -1387,7 +1400,6 @@ components:
         executions:
           $ref: "#/components/schemas/ExecutionsResult"
 
-
     ExecutorOutput:
       description: CRD based executor data
       type: object
@@ -1405,11 +1417,10 @@ components:
         content:
           type: string
           description: Message/event data passed from executor (like log lines etc)
-          example: 
+          example:
         result:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
-
 
     #
     # Errors
@@ -1500,3 +1511,9 @@ components:
         format: date
       required: false
       description: endDate for filtering
+    Tags:
+      in: query
+      name: tags
+      schema:
+        type: array
+        description: Tags to filter tests by
