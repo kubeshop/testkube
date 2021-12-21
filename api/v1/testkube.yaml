@@ -26,6 +26,31 @@ tags:
 
 paths:
   /tests:
+    post:
+      tags:
+        - tests
+        - api
+      summary: "Create new test"
+      description: "Create new test action"
+      operationId: createTest
+      requestBody:
+        $ref: "#/components/schemas/TestUpsertRequest"
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Test"
+        500:
+          description: "problem with creating script"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
     get:
       tags:
         - tests
@@ -34,12 +59,12 @@ paths:
       description: "Returns array of tests"
       operationId: listTests
       parameters:
-        - $ref: "#/components/parameters/ExecutionsTextSearch"
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
         - $ref: "#/components/parameters/Tags"
       responses:
         200:
@@ -71,7 +96,7 @@ paths:
         - api
       summary: "Get script execution by ID"
       description: "Returns execution with given executionID"
-      operationId: getExecutionByID
+      operationId: getTestByID
       responses:
         200:
           description: successful operation
@@ -88,6 +113,38 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-executions:
+    get:
+      tags:
+        - executions
+        - api
+      summary: "Get all test executions"
+      description: "Returns array of test executions"
+      operationId: listTestExecutions
+      parameters:
+        - $ref: "#/components/parameters/TestName"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
+        - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestExecutionsResult"
+        500:
+          description: "problem with getting script executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /executions:
     get:
       tags:
@@ -97,13 +154,13 @@ paths:
       description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
-        - $ref: "#/components/parameters/ExecutionsTest"
-        - $ref: "#/components/parameters/ExecutionsTextSearch"
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/TestName"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
         - $ref: "#/components/parameters/Tags"
       responses:
         200:
@@ -306,6 +363,13 @@ paths:
 
   /scripts/{id}:
     patch:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the script execution
       tags:
         - scripts
         - api
@@ -472,18 +536,18 @@ paths:
             type: string
           required: true
           description: ID of the script
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
       tags:
         - api
         - scripts
         - executions
       summary: "Get all script executions"
       description: "Returns array of all available script executions"
-      operationId: listExecutions
+      operationId: listScriptExecutions
       responses:
         200:
           description: successful operation
@@ -521,7 +585,7 @@ paths:
         - executions
       summary: "Get script execution"
       description: "Returns execution with given executionID"
-      operationId: getExecution
+      operationId: getScriptExecution
       responses:
         200:
           description: successful operation
@@ -774,30 +838,38 @@ components:
         - executeScript
         - delay
 
-    TestStep: 
-      type: object 
+    TestStep:
+      type: object
       required:
         - name
+        - type
+        - stopTestOnFailure
       properties:
-        name:
-          type: string
-          description: step name (in case of script it'll be script name)
         stopTestOnFailure:
           type: boolean
           default: true
+        type:
+          type: string
+          enum:
+            - scriptExecution
+            - delay
 
-    TestStepExecuteScript: 
+    TestStepExecuteScript:
       allOf:
-        - $ref: '#/components/schemas/TestStep'
+        - $ref: "#/components/schemas/TestStep"
         - $ref: "#/components/schemas/ObjectRef"
 
-    TestStepDelay: 
+    TestStepDelay:
       allOf:
-        - $ref: '#/components/schemas/TestStep'
+        - $ref: "#/components/schemas/TestStep"
         - type: object
           required:
             - duration
+            - name
           properties:
+            name:
+              type: string
+              description: step name (in case of script it'll be script name)
             duration:
               type: integer
               default: 0
@@ -815,7 +887,7 @@ components:
           type: string
           description: "execution name"
         status:
-          $ref: '#/components/schemas/TestStatus'
+          $ref: "#/components/schemas/TestStatus"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -851,7 +923,7 @@ components:
           items:
             type: string
           description: test execution tags
-          
+
     TestStatus:
       type: string
       enum:
@@ -869,7 +941,7 @@ components:
         script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
-        execution: 
+        execution:
           $ref: "#/components/schemas/Execution"
           description: test step execution
 
@@ -1014,7 +1086,7 @@ components:
       description: API server artifact
       properties:
         name:
-          type: string # https://api-server/exec_id/subdirectory/file_name
+          type: string
           description: artifact file path
         size:
           type: integer
@@ -1341,7 +1413,7 @@ components:
       required:
         - name
         - namespace
-      allOf: 
+      allOf:
         - $ref: "#/components/schemas/Test"
         - $ref: "#/components/schemas/ObjectRef"
 
@@ -1352,7 +1424,7 @@ components:
         - name
         - namespace
         - types
-      allOf: 
+      allOf:
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 
@@ -1456,7 +1528,7 @@ components:
   #
 
   parameters:
-    ExecutionsTest:
+    TestName:
       in: query
       name: test
       schema:
@@ -1464,7 +1536,7 @@ components:
         default: ""
       description: test namespaced name to filter
       required: false
-    ExecutionsTextSearch:
+    TextSearch:
       in: query
       name: textSearch
       schema:
@@ -1472,7 +1544,7 @@ components:
         default: ""
       description: text to search in name and script name
       required: false
-    ExecutionsPageSize:
+    PageSize:
       in: query
       name: pageSize
       schema:
@@ -1480,13 +1552,36 @@ components:
         default: 100
       description: the number of executions to get, setting to 0 will return only totals
       required: false
-    ExecutionsPageIndex:
+    PageIndex:
       in: query
       name: page
       schema:
         type: integer
         default: 0
       description: the page index to start at
+      required: false
+    StartDateFilter:
+      in: query
+      name: startDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
+    EndDateFilter:
+      in: query
+      name: endDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: endDate for filtering
+    TestExecutionsStatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: "#/components/schemas/TestStatus"
+      description: optional status filter
       required: false
     ExecutionsStatusFilter:
       in: query
@@ -1495,22 +1590,6 @@ components:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter
       required: false
-    ExecutionsStartDateFilter:
-      in: query
-      name: startDate
-      schema:
-        type: string
-        format: date
-      required: false
-      description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
-    ExecutionsEndDateFilter:
-      in: query
-      name: endDate
-      schema:
-        type: string
-        format: date
-      required: false
-      description: endDate for filtering
     Tags:
       in: query
       name: tags
