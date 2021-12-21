@@ -20,7 +20,9 @@ func (tests Tests) Table() (header []string, output [][]string) {
 	return
 }
 
-// Intermidiate struct to handle convertion from interface to structs for steps
+// TODO rethink this struct and handling as for now we want to simplify OpenAPI spec
+// and this one need to be manually synchronized with genered files on change!
+// TestBase Intermidiate struct to handle convertion from interface to structs for steps
 type TestBase struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
