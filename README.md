@@ -1,5 +1,4 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
-![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 
 ![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 
