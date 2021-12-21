@@ -59,12 +59,12 @@ paths:
       description: "Returns array of tests"
       operationId: listTests
       parameters:
-        - $ref: "#/components/parameters/ExecutionsTextSearch"
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
       responses:
         200:
           description: successful operation
@@ -121,13 +121,13 @@ paths:
       description: "Returns array of test executions"
       operationId: listTestExecutions
       parameters:
-        - $ref: "#/components/parameters/ExecutionsTest"
-        - $ref: "#/components/parameters/ExecutionsTextSearch"
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/TestName"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
       responses:
         200:
           description: successful operation
@@ -153,13 +153,13 @@ paths:
       description: "Returns array of scripts executions"
       operationId: listExecutions
       parameters:
-        - $ref: "#/components/parameters/ExecutionsTest"
-        - $ref: "#/components/parameters/ExecutionsTextSearch"
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/TestName"
+        - $ref: "#/components/parameters/TextSearch"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
       responses:
         200:
           description: successful operation
@@ -531,11 +531,11 @@ paths:
             type: string
           required: true
           description: ID of the script
-        - $ref: "#/components/parameters/ExecutionsPageSize"
-        - $ref: "#/components/parameters/ExecutionsPageIndex"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/ExecutionsStartDateFilter"
-        - $ref: "#/components/parameters/ExecutionsEndDateFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
       tags:
         - api
         - scripts
@@ -1502,7 +1502,7 @@ components:
   #
 
   parameters:
-    ExecutionsTest:
+    TestName:
       in: query
       name: test
       schema:
@@ -1510,7 +1510,7 @@ components:
         default: ""
       description: test namespaced name to filter
       required: false
-    ExecutionsTextSearch:
+    TextSearch:
       in: query
       name: textSearch
       schema:
@@ -1518,7 +1518,7 @@ components:
         default: ""
       description: text to search in name and script name
       required: false
-    ExecutionsPageSize:
+    PageSize:
       in: query
       name: pageSize
       schema:
@@ -1526,13 +1526,36 @@ components:
         default: 100
       description: the number of executions to get, setting to 0 will return only totals
       required: false
-    ExecutionsPageIndex:
+    PageIndex:
       in: query
       name: page
       schema:
         type: integer
         default: 0
       description: the page index to start at
+      required: false
+    StartDateFilter:
+      in: query
+      name: startDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
+    EndDateFilter:
+      in: query
+      name: endDate
+      schema:
+        type: string
+        format: date
+      required: false
+      description: endDate for filtering
+    TestExecutionsStatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: "#/components/schemas/TestStatus"
+      description: optional status filter
       required: false
     ExecutionsStatusFilter:
       in: query
@@ -1541,19 +1564,3 @@ components:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter
       required: false
-    ExecutionsStartDateFilter:
-      in: query
-      name: startDate
-      schema:
-        type: string
-        format: date
-      required: false
-      description: startDate for filtering in ISO-8601 format, i.e. "yyyy-mm-dd"
-    ExecutionsEndDateFilter:
-      in: query
-      name: endDate
-      schema:
-        type: string
-        format: date
-      required: false
-      description: endDate for filtering
