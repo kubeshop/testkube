@@ -7,8 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var tags []string
+
 func NewListScriptsCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Get all available scripts",
 		Long:  `Getting all available scritps from given namespace - if no namespace given "testkube" namespace is used`,
@@ -16,11 +18,13 @@ func NewListScriptsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := GetClient(cmd)
-
-			scripts, err := client.ListScripts(namespace)
+			scripts, err := client.ListScripts(namespace, tags)
 			ui.ExitOnError("getting all scripts in namespace "+namespace, err)
 
 			ui.Table(scripts, os.Stdout)
 		},
 	}
+	cmd.Flags().StringSliceVarP(&tags, "tags", "t", nil, "--tags 1,2,3")
+
+	return cmd
 }

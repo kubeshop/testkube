@@ -8,7 +8,7 @@ import (
 )
 
 func NewListExecutionsCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "executions",
 		Short: "List scripts executions",
 		Long:  `Getting list of execution for given script name or recent executions if there is no script name passed`,
@@ -23,7 +23,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
-			executions, err := client.ListExecutions(scriptID, limit)
+			executions, err := client.ListExecutions(scriptID, limit, tags)
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
 			renderer := GetExecutionsListRenderer(cmd)
@@ -32,4 +32,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("rendering", err)
 		},
 	}
+	cmd.Flags().StringSliceVarP(&tags, "tags", "t", nil, "--tags 1,2,3")
+
+	return cmd
 }

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -94,11 +95,12 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution t
 }
 
 // ListExecutions list all executions for given script name
-func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error) {
+func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 	uri := c.getURI("/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("pageSize", fmt.Sprintf("%d", limit))
+		Param("pageSize", fmt.Sprintf("%d", limit)).
+		Param("tags", strings.Join(tags, ","))
 
 	resp := req.Do(context.Background())
 
@@ -211,11 +213,12 @@ func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given script
-func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
+func (c ProxyScriptsAPI) ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error) {
 	uri := c.getURI("/scripts")
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("namespace", namespace)
+		Param("namespace", namespace).
+		Param("tags", strings.Join(tags, ","))
 
 	resp := req.Do(context.Background())
 

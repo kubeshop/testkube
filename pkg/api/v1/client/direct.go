@@ -85,10 +85,10 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error) {
+func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 	uri := c.getURI("/scripts/%s/executions?pageSize=%d", scriptID, limit)
-	resp, err := c.client.Get(uri)
 
+	resp, err := c.client.Get(uri)
 	if err != nil {
 		return executions, err
 	}
@@ -221,8 +221,8 @@ func (c DirectScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // ListScripts list all scripts in given namespace
-func (c DirectScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
-	uri := c.getURI("/scripts?namespace=%s", namespace)
+func (c DirectScriptsAPI) ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error) {
+	uri := c.getURI("/scripts?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return scripts, fmt.Errorf("client.Get error: %w", err)

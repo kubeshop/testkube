@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
@@ -40,7 +41,8 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-		crScripts, err := s.ScriptsClient.List(namespace)
+		tags := strings.Split(c.Query("tags"), ",")
+		crScripts, err := s.ScriptsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -62,7 +63,9 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
-		crTests, err := s.TestsClient.List(namespace)
+		tags := strings.Split(c.Query("tags"), ",")
+		
+		crTests, err := s.TestsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}

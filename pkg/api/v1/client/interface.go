@@ -16,7 +16,7 @@ type HTTPClient interface {
 
 type Client interface {
 	GetExecution(scriptID, executionID string) (execution testkube.Execution, err error)
-	ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
 	GetScript(id string) (script testkube.Script, err error)
@@ -24,7 +24,7 @@ type Client interface {
 	UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error)
 	DeleteScript(name string, namespace string) error
 	DeleteScripts(namespace string) error
-	ListScripts(namespace string) (scripts testkube.Scripts, err error)
+	ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error)
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
