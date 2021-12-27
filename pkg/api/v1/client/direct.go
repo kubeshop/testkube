@@ -430,7 +430,7 @@ func (c DirectScriptsAPI) makeDeleteRequest(uri string, isContentExpected bool) 
 	return nil
 }
 
-// ListExecutions list all executions for given script name
+// GetExecutionArtifacts list all artifacts of the execution
 func (c DirectScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
 	uri := c.getURI("/executions/%s/artifacts", executionID)
 	resp, err := c.client.Get(uri)
