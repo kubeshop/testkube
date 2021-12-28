@@ -70,6 +70,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 				Repository: repository,
 			}
 
+			// if tags are passed and are different from the existing overwrite
 			if len(tags) > 0 && !reflect.DeepEqual(script.Tags, tags) {
 				options.Tags = tags
 			} else {

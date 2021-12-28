@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -45,6 +46,13 @@ func NewUpdateTestsCmd() *cobra.Command {
 			test, _ := client.GetTest(options.Name, options.Namespace)
 			if options.Name == test.Name {
 				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
+			}
+
+			// if tags are passed and are different from the existing overwrite
+			if len(tags) > 0 && !reflect.DeepEqual(test.Tags, tags) {
+				options.Tags = tags
+			} else {
+				options.Tags = test.Tags
 			}
 
 			// if tags are not passed don't overwrite existing tags
