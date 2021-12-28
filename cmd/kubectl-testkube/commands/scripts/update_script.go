@@ -3,6 +3,7 @@ package scripts
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -28,7 +29,6 @@ func NewUpdateScriptsCmd() *cobra.Command {
 		Long:  `Update Script Custom Resource, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-
 			var content []byte
 			var err error
 
@@ -68,7 +68,12 @@ func NewUpdateScriptsCmd() *cobra.Command {
 				Content:    string(content),
 				Namespace:  namespace,
 				Repository: repository,
-				Tags:       tags,
+			}
+
+			if len(tags) > 0 && !reflect.DeepEqual(script.Tags, tags) {
+				options.Tags = tags
+			} else {
+				options.Tags = script.Tags
 			}
 
 			// try to detect type if none passed
@@ -99,7 +104,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3 Warning: by passing tags existing tags will be overwritten")
 
 	return cmd
 }

@@ -139,7 +139,6 @@ func (c DirectScriptsAPI) CreateScript(options UpsertScriptOptions) (script test
 // UpdateScript creates new Script Custom Resource
 func (c DirectScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts/%s", options.Name)
-
 	request := testkube.ScriptUpsertRequest(options)
 
 	body, err := json.Marshal(request)
@@ -176,7 +175,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	if err != nil {
 		return execution, nil
 	}
-	
+
 	request := testkube.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,

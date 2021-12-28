@@ -139,6 +139,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			InputType:  request.InputType,
 			Content:    request.Content,
 			Repository: repository,
+			Tags:       request.Tags,
 		}
 
 		script, err = s.ScriptsClient.Update(script)
