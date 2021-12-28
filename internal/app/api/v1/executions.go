@@ -109,7 +109,6 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 // ListExecutionsHandler returns array of available script executions
 func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?

@@ -117,7 +117,6 @@ func TestFilters(t *testing.T) {
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTags([]string{"test1", "test2"}))
 		assert.NoError(err)
 		assert.Len(executions, 5)
-		// assert.True(executions[0].StartTime.After(dateFilter.Start) || executions[0].StartTime.Equal(dateFilter.Start))
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {

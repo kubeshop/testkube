@@ -649,11 +649,15 @@ func (c ProxyScriptsAPI) GetTestExecution(executionID string) (execution testkub
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int) (executions testkube.TestExecutionsResult, err error) {
+func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error) {
 	uri := c.getURI("/tests/%s/executions", testID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 

@@ -226,5 +226,10 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithEndDate(dFilter.End)
 	}
 
+	raw_tags := c.Query("tags")
+	if raw_tags != "" {
+		filter = filter.WithTags(strings.Split(raw_tags, ","))
+	}
+
 	return filter
 }

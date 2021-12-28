@@ -47,7 +47,6 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
 	query, opts := composeQueryAndOpts(filter)
-
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
 		return

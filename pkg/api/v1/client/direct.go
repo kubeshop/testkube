@@ -86,7 +86,12 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 
 // ListExecutions list all executions for given script name
 func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
-	uri := c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", scriptID, limit, strings.Join(tags, ","))
+	var uri string
+	if len(tags) > 0 {
+		uri = c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", scriptID, limit, strings.Join(tags, ","))
+	} else {
+		uri = c.getURI("/scripts/%s/executions?pageSize=%d", scriptID, limit)
+	}
 
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -638,8 +643,14 @@ func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testku
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectScriptsAPI) ListTestExecutions(testName string, limit int) (executions testkube.TestExecutionsResult, err error) {
-	uri := c.getURI("/scripts/%s/executions?pageSize=%d", testName, limit)
+func (c DirectScriptsAPI) ListTestExecutions(testName string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error) {
+	var uri string
+	if len(tags) > 0 {
+		uri = c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
+	} else {
+		uri = c.getURI("/scripts/%s/executions?pageSize=%d", testName, limit)
+	}
+
 	resp, err := c.client.Get(uri)
 
 	if err != nil {
