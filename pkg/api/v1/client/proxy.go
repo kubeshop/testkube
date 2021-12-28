@@ -99,8 +99,11 @@ func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []strin
 	uri := c.getURI("/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("pageSize", fmt.Sprintf("%d", limit)).
-		Param("tags", strings.Join(tags, ","))
+		Param("pageSize", fmt.Sprintf("%d", limit))
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 
@@ -217,8 +220,11 @@ func (c ProxyScriptsAPI) ListScripts(namespace string, tags []string) (scripts t
 	uri := c.getURI("/scripts")
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("namespace", namespace).
-		Param("tags", strings.Join(tags, ","))
+		Param("namespace", namespace)
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 
@@ -524,11 +530,15 @@ func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
 	uri := c.getURI("/scripts/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
 }
-func (c ProxyScriptsAPI) ListTests(namespace string) (scripts testkube.Tests, err error) {
+func (c ProxyScriptsAPI) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 

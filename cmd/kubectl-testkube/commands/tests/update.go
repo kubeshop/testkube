@@ -14,12 +14,13 @@ func NewUpdateTestsCmd() *cobra.Command {
 
 	var (
 		file string
+		tags []string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create new test",
-		Long:  `Create new Test Custom Resource, `,
+		Use:   "update",
+		Short: "Update Test",
+		Long:  `Update Test Custom Resource Definitions, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
@@ -46,6 +47,12 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}
 
+			// if tags are not passed don't overwrite existing tags
+			// TODO: figure out how to remove tags from test
+			if tags != nil {
+				options.Tags = tags
+			}
+
 			test, err = client.UpdateTest(options)
 			ui.ExitOnError("updating test "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("Test created", options.Name)
@@ -53,6 +60,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
 
 	return cmd
 }

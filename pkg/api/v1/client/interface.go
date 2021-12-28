@@ -39,7 +39,7 @@ type Client interface {
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	UpdateTest(options UpsertTestOptions) (script testkube.Test, err error)
 	GetTest(id string, namespace string) (script testkube.Test, err error)
-	ListTests(namespace string) (scripts testkube.Tests, err error)
+	ListTests(namespace string, tags []string) (scripts testkube.Tests, err error)
 	DeleteTest(name string, namespace string) error
 	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error)
 

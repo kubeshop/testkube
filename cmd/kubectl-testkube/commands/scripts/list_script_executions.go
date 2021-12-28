@@ -8,6 +8,8 @@ import (
 )
 
 func NewListExecutionsCmd() *cobra.Command {
+	var tags []string
+
 	cmd := &cobra.Command{
 		Use:   "executions",
 		Short: "List scripts executions",
@@ -32,7 +34,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("rendering", err)
 		},
 	}
-	cmd.Flags().StringSliceVarP(&tags, "tags", "t", nil, "--tags 1,2,3")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
 
 	return cmd
 }

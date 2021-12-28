@@ -41,7 +41,13 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-		tags := strings.Split(c.Query("tags"), ",")
+
+		raw_tags := c.Query("tags")
+		var tags []string
+		if raw_tags != "" {
+			tags = strings.Split(raw_tags, ",")
+		}
+
 		crScripts, err := s.ScriptsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -86,6 +92,7 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 				InputType:  request.InputType,
 				Content:    request.Content,
 				Repository: repository,
+				Tags:       request.Tags,
 			},
 		})
 

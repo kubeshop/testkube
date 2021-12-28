@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var tags []string
-
 func NewListScriptsCmd() *cobra.Command {
+	var tags []string
+
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Get all available scripts",
@@ -24,7 +24,7 @@ func NewListScriptsCmd() *cobra.Command {
 			ui.Table(scripts, os.Stdout)
 		},
 	}
-	cmd.Flags().StringSliceVarP(&tags, "tags", "t", nil, "--tags 1,2,3")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
 
 	return cmd
 }

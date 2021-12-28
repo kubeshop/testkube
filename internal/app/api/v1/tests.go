@@ -63,8 +63,13 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
-		tags := strings.Split(c.Query("tags"), ",")
-		
+
+		raw_tags := c.Query("tags")
+		var tags []string
+		if raw_tags != "" {
+			tags = strings.Split(raw_tags, ",")
+		}
+
 		crTests, err := s.TestsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
