@@ -63,6 +63,7 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
+	execution.Tags = options.ScriptSpec.Tags
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -303,6 +304,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.ScriptSpec.Content,
 		testkube.NewQueuedExecutionResult(),
 		options.Request.Params,
+		options.Request.Tags,
 	)
 
 	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)

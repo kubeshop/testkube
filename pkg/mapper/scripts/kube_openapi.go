@@ -17,5 +17,6 @@ func MapScriptCRToAPI(crScript scriptsV1.Script) (script testkube.Script) {
 	script.Content = crScript.Spec.Content
 	script.Created = crScript.CreationTimestamp.Time
 	script.Type_ = crScript.Spec.Type_
+	script.Tags = crScript.Spec.Tags
 	return
 }

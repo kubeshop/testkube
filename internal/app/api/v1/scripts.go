@@ -32,7 +32,6 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 		}
 
 		scripts := scriptsMapper.MapScriptCRToAPI(*crScript)
-
 		return c.JSON(scripts)
 	}
 }

@@ -36,6 +36,7 @@ func getExecutions() testkube.Executions {
 		"",
 		*ex1,
 		map[string]string{"p": "v1"},
+		nil,
 	)
 	execution1.Start()
 	execution1.Stop()
@@ -48,6 +49,7 @@ func getExecutions() testkube.Executions {
 		"",
 		*ex2,
 		map[string]string{"p": "v2"},
+		nil,
 	)
 	execution2.Start()
 	execution2.Stop()

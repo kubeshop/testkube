@@ -175,10 +175,17 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := c.getURI("/scripts/%s/executions", id)
 
+	// get script to get script tags
+	script, err := c.GetScript(id)
+	if err != nil {
+		return execution, nil
+	}
+
 	request := testkube.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
+		Tags:      script.Tags,
 	}
 
 	body, err := json.Marshal(request)
