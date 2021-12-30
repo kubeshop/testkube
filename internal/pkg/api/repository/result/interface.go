@@ -23,6 +23,7 @@ type Filter interface {
 	PageSize() int
 	TextSearchDefined() bool
 	TextSearch() string
+	Tags() []string
 }
 
 type Repository interface {

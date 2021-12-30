@@ -8,7 +8,9 @@ import (
 )
 
 func NewListTestsCmd() *cobra.Command {
-	return &cobra.Command{
+	var tags []string
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Get all available tests",
 		Long:  `Getting all available tests from given namespace - if no namespace given "testkube" namespace is used`,
@@ -16,11 +18,12 @@ func NewListTestsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := GetClient(cmd)
-
-			tests, err := client.ListTests(namespace)
+			tests, err := client.ListTests(namespace, tags)
 			ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
 			ui.Table(tests, os.Stdout)
 		},
 	}
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
+	return cmd
 }

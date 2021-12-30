@@ -171,6 +171,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["executionresult.status"] = filter.Status()
 	}
 
+	if filter.Tags() != nil {
+		query["tags"] = filter.Tags()
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{"starttime", -1}})

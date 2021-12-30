@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -94,11 +95,15 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution t
 }
 
 // ListExecutions list all executions for given script name
-func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int) (executions testkube.ExecutionsResult, err error) {
+func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 	uri := c.getURI("/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 
@@ -170,10 +175,17 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := c.getURI("/scripts/%s/executions", id)
 
+	// get script to get script tags
+	script, err := c.GetScript(id)
+	if err != nil {
+		return execution, nil
+	}
+
 	request := testkube.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
+		Tags:      script.Tags,
 	}
 
 	body, err := json.Marshal(request)
@@ -211,11 +223,15 @@ func (c ProxyScriptsAPI) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given script
-func (c ProxyScriptsAPI) ListScripts(namespace string) (scripts testkube.Scripts, err error) {
+func (c ProxyScriptsAPI) ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error) {
 	uri := c.getURI("/scripts")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 
@@ -521,11 +537,15 @@ func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
 	uri := c.getURI("/scripts/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
 }
-func (c ProxyScriptsAPI) ListTests(namespace string) (scripts testkube.Tests, err error) {
+func (c ProxyScriptsAPI) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 
@@ -629,11 +649,15 @@ func (c ProxyScriptsAPI) GetTestExecution(executionID string) (execution testkub
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int) (executions testkube.TestExecutionsResult, err error) {
+func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error) {
 	uri := c.getURI("/tests/%s/executions", testID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
+
+	if len(tags) > 0 {
+		req.Param("tags", strings.Join(tags, ","))
+	}
 
 	resp := req.Do(context.Background())
 

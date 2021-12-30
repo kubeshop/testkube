@@ -1337,6 +1337,10 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        tags:
+          type: array
+          items:
+            type: string
 
     TestExecutionRequest:
       description: test execution request body
@@ -1384,6 +1388,10 @@ components:
           enum:
             - content
             - git
+        tags:
+          type: array
+          items:
+            type: string
         repository:
           $ref: "#/components/schemas/Repository"
         content:

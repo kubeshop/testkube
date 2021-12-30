@@ -17,4 +17,5 @@ type ExecutionRequest struct {
 	Namespace string `json:"namespace,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
+	Tags   []string          `json:"tags,omitempty"`
 }

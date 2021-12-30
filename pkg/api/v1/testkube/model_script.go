@@ -21,6 +21,6 @@ type Script struct {
 	// script content
 	Content string    `json:"content,omitempty"`
 	Created time.Time `json:"created,omitempty"`
-	// test tags
+	// script tags
 	Tags []string `json:"tags,omitempty"`
 }

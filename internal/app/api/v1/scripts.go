@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
@@ -31,7 +32,6 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 		}
 
 		scripts := scriptsMapper.MapScriptCRToAPI(*crScript)
-
 		return c.JSON(scripts)
 	}
 }
@@ -40,7 +40,14 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-		crScripts, err := s.ScriptsClient.List(namespace)
+
+		raw_tags := c.Query("tags")
+		var tags []string
+		if raw_tags != "" {
+			tags = strings.Split(raw_tags, ",")
+		}
+
+		crScripts, err := s.ScriptsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -84,6 +91,7 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 				InputType:  request.InputType,
 				Content:    request.Content,
 				Repository: repository,
+				Tags:       request.Tags,
 			},
 		})
 
@@ -131,6 +139,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			InputType:  request.InputType,
 			Content:    request.Content,
 			Repository: repository,
+			Tags:       request.Tags,
 		}
 
 		script, err = s.ScriptsClient.Update(script)
@@ -215,6 +224,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	if dFilter.IsEndValid {
 		filter = filter.WithEndDate(dFilter.End)
+	}
+
+	raw_tags := c.Query("tags")
+	if raw_tags != "" {
+		filter = filter.WithTags(strings.Split(raw_tags, ","))
 	}
 
 	return filter

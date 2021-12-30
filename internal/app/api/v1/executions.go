@@ -63,6 +63,7 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
+	execution.Tags = options.ScriptSpec.Tags
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -108,7 +109,6 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 // ListExecutionsHandler returns array of available script executions
 func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
@@ -303,6 +303,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.ScriptSpec.Content,
 		testkube.NewQueuedExecutionResult(),
 		options.Request.Params,
+		options.Request.Tags,
 	)
 
 	execution.Repository = (*testkube.Repository)(options.ScriptSpec.Repository)

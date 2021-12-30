@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package result
 
 import (
@@ -32,47 +29,47 @@ func TestFilters(t *testing.T) {
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
 	defaultName := "name"
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), []string{"test1", "test2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), []string{"test1", "test2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), []string{"test3", "test4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), []string{"test3", "test4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, time.Now(), []string{"test1", "test4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, time.Now(), []string{"test1", "test3"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, time.Now())
+	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, time.Now(), []string{"test5", "test6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, []string{"test1", "test5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, []string{"test1", "test6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, []string{"test2", "test4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, []string{"test2", "test5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, oneDayAgo, []string{"test7", "test8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, oneDayAgo, []string{"test7", "test8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, oneDayAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, oneDayAgo, []string{"test7", "test8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, []string{"test7", "test8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, []string{"test1", "test2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, []string{"test1", "test2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, []string{"test1", "test2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, twoDaysAgo, []string{"test3", "test6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, twoDaysAgo, []string{"test3", "test5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, twoDaysAgo, []string{"test4", "test6"})
 	assert.NoError(err)
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
@@ -109,11 +106,17 @@ func TestFilters(t *testing.T) {
 	assert.True(dateFilter.IsStartValid)
 
 	t.Run("filter with startDate should return only executions after that day", func(t *testing.T) {
-
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStartDate(dateFilter.Start))
 		assert.NoError(err)
 		assert.Len(executions, 14)
 		assert.True(executions[0].StartTime.After(dateFilter.Start) || executions[0].StartTime.Equal(dateFilter.Start))
+	})
+
+	t.Run("filter with tags should return only filters with given tags", func(t *testing.T) {
+
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTags([]string{"test1", "test2"}))
+		assert.NoError(err)
+		assert.Len(executions, 5)
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {
@@ -195,7 +198,7 @@ func TestFilters(t *testing.T) {
 	})
 
 	name := "someDifferentName"
-	err = repository.insertExecutionResult(name, testkube.PENDING_ExecutionStatus, twoDaysAgo)
+	err = repository.insertExecutionResult(name, testkube.PENDING_ExecutionStatus, twoDaysAgo, nil)
 	assert.NoError(err)
 
 	t.Run("filter with script name should return result only for that script name", func(t *testing.T) {
@@ -231,7 +234,7 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
-func (repository *MongoRepository) insertExecutionResult(scriptName string, execStatus testkube.ExecutionStatus, startTime time.Time) error {
+func (repository *MongoRepository) insertExecutionResult(scriptName string, execStatus testkube.ExecutionStatus, startTime time.Time, tags []string) error {
 	return repository.Insert(context.Background(),
 		testkube.Execution{
 			Id:              rand.Name(),
@@ -241,5 +244,6 @@ func (repository *MongoRepository) insertExecutionResult(scriptName string, exec
 			StartTime:       startTime,
 			EndTime:         time.Now(),
 			ExecutionResult: &testkube.ExecutionResult{Status: &execStatus},
+			Tags:            tags,
 		})
 }

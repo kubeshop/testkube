@@ -14,6 +14,7 @@ func NewCreateTestsCmd() *cobra.Command {
 
 	var (
 		file string
+		tags []string
 	)
 
 	cmd := &cobra.Command{
@@ -46,6 +47,8 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}
 
+			options.Tags = tags
+
 			test, err = client.CreateTest(options)
 			ui.ExitOnError("creating test "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("Test created", options.Name)
@@ -53,6 +56,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
 
 	return cmd
 }

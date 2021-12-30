@@ -20,6 +20,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 		uri          string
 		gitBranch    string
 		gitPath      string
+		tags         []string
 	)
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -82,6 +83,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 				ui.Failf("Can't detect executor type by passed file content, please pass valid --type flag")
 			}
 
+			options.Tags = tags
 			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 
@@ -97,6 +99,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
 
 	return cmd
 }
