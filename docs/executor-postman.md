@@ -9,7 +9,7 @@ TestKube is able to run Postman collections inside your Kubernetes cluster, you 
 
 ## Test environment
 
-Let's assume that our SUT (Service Under Test) is internal Kuberbetes service which has
+Let's assume that our SUT (Service Under Test) is internal Kubernetes service which has
 NodePort `Service` created and is exposed on `8088` port. Service has name `testkube-api-server`
 and is exposing `/health` endpoint which we want to test.
 
