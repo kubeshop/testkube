@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -34,6 +35,7 @@ func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script s
 }
 
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestExecution, err error) {
+	result = make([]testkube.TestExecution, 0)
 	resultLimit := int64(limit)
 	opts := &options.FindOptions{Limit: &resultLimit}
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
@@ -46,6 +48,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 }
 
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestExecution, err error) {
+	result = make([]testkube.TestExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
@@ -85,8 +88,8 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TextSearchDefined() {
 		query["$or"] = bson.A{
-			bson.M{"scriptname": filter.TextSearch()},
-			bson.M{"name": filter.TextSearch()},
+			bson.M{"scriptname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
+			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 		}
 	}
 
