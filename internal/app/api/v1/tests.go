@@ -151,18 +151,26 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	steps := append(test.Before, test.Steps...)
 	steps = append(steps, test.After...)
 
+	hasFailedSteps := false
 	for _, step := range steps {
 		stepResult := s.executeTestStep(ctx, test.Name, step)
 		testExecution.StepResults = append(testExecution.StepResults, stepResult)
-		if stepResult.IsFailed() && step.StopOnFailure() {
-			testExecution.Status = testkube.TestStatusError
-			return
+		if stepResult.IsFailed() {
+			hasFailedSteps = true
+			if step.StopOnFailure() {
+				testExecution.Status = testkube.TestStatusError
+				return
+			}
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
 	}
 
 	testExecution.Status = testkube.TestStatusSuccess
+	if hasFailedSteps {
+		testExecution.Status = testkube.TestStatusSuccess
+	}
+
 	s.TestExecutionResults.Update(ctx, testExecution)
 
 	return

@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -20,7 +22,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 func printTestExecutionDetails(execution testkube.TestExecution) {
 	ui.Warn("Name          :", execution.Name)
 	for _, result := range execution.StepResults {
-		ui.Info(result.Script.Name, string(*result.Execution.ExecutionResult.Status))
+		if result.Execution != nil && result.Script != nil {
+			ui.Info(result.Script.Name, string(*result.Execution.ExecutionResult.Status))
+		}
+		fmt.Printf("%+v\n", result)
+
 	}
 	ui.NL()
 	ui.NL()
