@@ -87,10 +87,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	startTimeQuery := bson.M{}
 
 	if filter.TextSearchDefined() {
-		query["$or"] = bson.A{
-			bson.M{"scriptname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
-			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
-		}
+		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
 
 	if filter.StartDateDefined() {
