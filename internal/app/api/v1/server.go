@@ -123,6 +123,7 @@ func (s TestKubeAPI) Init() {
 	tests.Get("/:id/executions/:executionID", s.GetTestExecutionHandler())
 
 	testExecutions := s.Routes.Group("/test-executions")
+	testExecutions.Get("/", s.ListTestExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
 
 }

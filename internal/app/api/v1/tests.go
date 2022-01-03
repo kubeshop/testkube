@@ -113,6 +113,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 		ctx := context.Background()
 		filter := getExecutionsFilterFromRequest(c)
 		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
