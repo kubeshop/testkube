@@ -1000,11 +1000,28 @@ components:
           type: string
           description: "test execution end time"
           format: date-time
-        executions:
+        execution:
           type: array
           items:
-            type: string
-          description: list of scripts execution id's
+            $ref: "#/components/schemas/TestStepExecutionSummary"
+
+    TestStepExecutionSummary:
+      description: test execution summary
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: execution name
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        type:
+          type: string
 
     Script:
       type: object

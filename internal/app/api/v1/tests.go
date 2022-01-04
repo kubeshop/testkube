@@ -109,13 +109,26 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		filter := getExecutionsFilterFromRequest(c)
-		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
 
+		executionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filter)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, testresult.NewExecutionsFilter())
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		return c.JSON(executions)
+		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.JSON(testkube.TestExecutionsResult{
+			Totals:   &allExecutionsTotals,
+			Filtered: &executionsTotals,
+			Results:  convertToTestExecutionSummary(executions),
+		})
 	}
 }
 
@@ -256,4 +269,31 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	}
 
 	return filter
+}
+
+func convertToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
+	result := make([]testkube.TestExecutionSummary, len(executions))
+
+	for i, execution := range executions {
+		executionsSummary := make([]testkube.TestStepExecutionSummary, len(execution.StepResults))
+		for _, stepResult := range execution.StepResults {
+			executionsSummary = append(executionsSummary, testkube.TestStepExecutionSummary{
+				Id:     stepResult.Execution.Id,
+				Name:   stepResult.Script.Name,
+				Status: stepResult.Execution.ExecutionResult.Status,
+			})
+		}
+
+		result[i] = testkube.TestExecutionSummary{
+			Id:        execution.Id,
+			Name:      execution.Name,
+			TestName:  execution.Test.Name,
+			Status:    execution.Status,
+			StartTime: execution.StartTime,
+			EndTime:   execution.EndTime,
+			Execution: executionsSummary,
+		}
+	}
+
+	return result
 }
