@@ -28,6 +28,8 @@ type Repository interface {
 	Get(ctx context.Context, id string) (testkube.TestExecution, error)
 	// GetByNameAndScript gets execution result by name
 	GetByNameAndScript(ctx context.Context, name, script string) (testkube.TestExecution, error)
+	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
+	GetExecutionsTotals(ctx context.Context, filter Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestExecution, error)
 	// Insert inserts new execution result

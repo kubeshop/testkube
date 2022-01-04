@@ -11,6 +11,7 @@ package testkube
 
 type Test struct {
 	Name        string `json:"name"`
+	Namespace   string `json:"namespace,omitempty"`
 	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
 	Before []TestStep `json:"before,omitempty"`

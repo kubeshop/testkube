@@ -25,7 +25,6 @@ type TestExecutionSummary struct {
 	// test execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time
-	EndTime time.Time `json:"endTime,omitempty"`
-	// list of scripts execution id's
-	Executions []string `json:"executions,omitempty"`
+	EndTime   time.Time                  `json:"endTime,omitempty"`
+	Execution []TestStepExecutionSummary `json:"execution,omitempty"`
 }

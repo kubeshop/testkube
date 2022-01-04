@@ -47,6 +47,47 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
+func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter Filter) (totals testkube.ExecutionsTotals, err error) {
+	var result []struct {
+		Status string `bson:"_id"`
+		Count  int32  `bson:"count"`
+	}
+	query, _ := composeQueryAndOpts(filter)
+	// cursor, err := r.Coll.Find(ctx, query, opts)
+
+	cursor, err := r.Coll.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{"$match", query}},
+		bson.D{{"$group", bson.D{{"_id", "$status"}, {"count", bson.D{{"$sum", 1}}}}}},
+	})
+	if err != nil {
+		return totals, err
+	}
+	err = cursor.All(ctx, &result)
+	if err != nil {
+		return totals, err
+	}
+
+	var sum int32
+
+	// TODO: statuses are messy e.g. success==passed error==failed
+	for _, o := range result {
+		sum += o.Count
+		switch testkube.TestStatus(o.Status) {
+		case testkube.QUEUED_TestStatus:
+			totals.Queued = o.Count
+		case testkube.PENDING_TestStatus:
+			totals.Pending = o.Count
+		case testkube.SUCCESS_TestStatus:
+			totals.Passed = o.Count
+		case testkube.ERROR__TestStatus:
+			totals.Failed = o.Count
+		}
+	}
+	totals.Results = sum
+
+	return
+}
+
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestExecution, err error) {
 	result = make([]testkube.TestExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
