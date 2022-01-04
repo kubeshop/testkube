@@ -87,6 +87,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
 		s.Log.Debugw("getting test", "name", name)
+
 		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -97,14 +98,10 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapCRToAPI(*crTest)
-
 		s.Log.Debugw("executing test", "name", name)
-
 		results := s.executeTest(ctx, test)
 
-		c.JSON(results)
-
-		return nil
+		return c.JSON(results)
 	}
 }
 
@@ -140,6 +137,10 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	s.Log.Debugw("Got test to execute", "test", test)
 
 	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
+	testExecution.Test = &testkube.ObjectRef{
+		Name:      test.Name,
+		Namespace: "testkube",
+	}
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
 	defer func() {
@@ -152,8 +153,10 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	steps = append(steps, test.After...)
 
 	hasFailedSteps := false
-	for _, step := range steps {
+	for _, str := range steps {
+		step := str
 		stepResult := s.executeTestStep(ctx, test.Name, step)
+		stepResult.Step = &step
 		testExecution.StepResults = append(testExecution.StepResults, stepResult)
 		if stepResult.IsFailed() {
 			hasFailedSteps = true

@@ -806,6 +806,8 @@ components:
       properties:
         name:
           type: string
+        namespace:
+          type: string
         description:
           type: string
         before:
@@ -878,6 +880,10 @@ components:
     TestExecution:
       type: object
       description: API server test scripts executions container
+      required:
+        - id
+        - name
+        - test
       properties:
         id:
           type: string
@@ -886,6 +892,8 @@ components:
         name:
           type: string
           description: "execution name"
+        test:
+          $ref: "#/components/schemas/ObjectRef"
         status:
           $ref: "#/components/schemas/TestStatus"
         envs:
@@ -938,6 +946,8 @@ components:
       required:
         - status
       properties:
+        step:
+          $ref: "#/components/schemas/TestStep"
         script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference

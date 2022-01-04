@@ -16,9 +16,10 @@ import (
 // API server test scripts executions container
 type TestExecution struct {
 	// execution id
-	Id string `json:"id,omitempty"`
+	Id string `json:"id"`
 	// execution name
-	Name   string      `json:"name,omitempty"`
+	Name   string      `json:"name"`
+	Test   *ObjectRef  `json:"test"`
 	Status *TestStatus `json:"status,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
