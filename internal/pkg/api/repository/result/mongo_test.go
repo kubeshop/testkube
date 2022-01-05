@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -71,6 +72,8 @@ func TestFilters(t *testing.T) {
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, twoDaysAgo, []string{"test4", "test6"})
 	assert.NoError(err)
+
+	numberOfTags := 8
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
@@ -225,6 +228,12 @@ func TestFilters(t *testing.T) {
 		assert.NoError(err)
 		assert.NotEmpty(executions)
 		assert.True(executions[0].StartTime.After(executions[len(executions)-1].StartTime), "executions are not sorted with the most recent first")
+	})
+
+	t.Run("getting tags should return all available tags", func(t *testing.T) {
+		tags, err := repository.GetTags(context.Background())
+		assert.NoError(err)
+		assert.Len(tags, numberOfTags)
 	})
 }
 

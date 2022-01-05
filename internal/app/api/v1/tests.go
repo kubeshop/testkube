@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
-
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 // GetTestHandler for getting test object
