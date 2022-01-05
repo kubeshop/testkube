@@ -5,8 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
+      - "docs/**"
+      - "mkdocs.yml"
+      - "api/v1/*"
 
 jobs:
   deploy:
