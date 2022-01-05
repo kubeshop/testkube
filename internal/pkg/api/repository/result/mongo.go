@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const CollectionName = "results"
@@ -58,62 +58,45 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
-func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter Filter) (result testkube.ExecutionsTotals, err error) {
-
+func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter Filter) (totals testkube.ExecutionsTotals, err error) {
+	var result []struct {
+		Status string `bson:"_id"`
+		Count  int32  `bson:"count"`
+	}
 	query, _ := composeQueryAndOpts(filter)
-	total, err := r.Coll.CountDocuments(ctx, query)
+
+	cursor, err := r.Coll.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{"$match", query}},
+		bson.D{{"$group", bson.D{{"_id", "$executionresult.status"}, {"count", bson.D{{"$sum", 1}}}}}},
+	})
 	if err != nil {
-		return result, err
+		return totals, err
 	}
-	result.Results = int32(total)
-
-	if status, ok := query["executionresult.status"]; ok {
-		count, err := r.Coll.CountDocuments(ctx, query)
-		if err != nil {
-			return result, err
-		}
-		switch status {
-		case testkube.QUEUED_ExecutionStatus:
-			result.Queued = int32(count)
-		case testkube.PENDING_ExecutionStatus:
-			result.Pending = int32(count)
-		case testkube.SUCCESS_ExecutionStatus:
-			result.Passed = int32(count)
-		case testkube.ERROR__ExecutionStatus:
-			result.Failed = int32(count)
-		}
-	} else {
-		query["executionresult.status"] = testkube.ExecutionStatusQueued
-		queued, err := r.Coll.CountDocuments(ctx, query)
-		if err != nil {
-			return result, err
-		}
-		result.Queued = int32(queued)
-
-		query["executionresult.status"] = testkube.ExecutionStatusPending
-		pending, err := r.Coll.CountDocuments(ctx, query)
-		if err != nil {
-			return result, err
-		}
-		result.Pending = int32(pending)
-
-		query["executionresult.status"] = testkube.ExecutionStatusSuccess
-		passed, err := r.Coll.CountDocuments(ctx, query)
-		if err != nil {
-			return result, err
-		}
-		result.Passed = int32(passed)
-
-		query["executionresult.status"] = testkube.ExecutionStatusError
-		failed, err := r.Coll.CountDocuments(ctx, query)
-		if err != nil {
-			return result, err
-		}
-		result.Failed = int32(failed)
+	err = cursor.All(ctx, &result)
+	if err != nil {
+		return totals, err
 	}
-	return result, err
+
+	var sum int32
+
+	// TODO: statuses are messy e.g. success==passed error==failed
+	for _, o := range result {
+		sum += o.Count
+		switch testkube.TestStatus(o.Status) {
+		case testkube.QUEUED_TestStatus:
+			totals.Queued = o.Count
+		case testkube.PENDING_TestStatus:
+			totals.Pending = o.Count
+		case testkube.SUCCESS_TestStatus:
+			totals.Passed = o.Count
+		case testkube.ERROR__TestStatus:
+			totals.Failed = o.Count
+		}
+	}
+	totals.Results = sum
+
+	return
 }
-
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
