@@ -64,15 +64,25 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
 
-		raw_tags := c.Query("tags")
+		rawTags := c.Query("tags")
 		var tags []string
-		if raw_tags != "" {
-			tags = strings.Split(raw_tags, ",")
+		if rawTags != "" {
+			tags = strings.Split(rawTags, ",")
 		}
 
 		crTests, err := s.TestsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		search := c.Query("textSearch")
+		if search != "" {
+			// filter items array
+			for i := len(crTests.Items) - 1; i >= 0; i-- {
+				if !strings.Contains(crTests.Items[i].Name, search) {
+					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
+				}
+			}
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
