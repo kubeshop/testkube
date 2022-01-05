@@ -8,6 +8,7 @@ import (
 )
 
 func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.Test) {
+	tests = make([]testkube.Test, len(cr.Items))
 	for _, item := range cr.Items {
 		tests = append(tests, MapCRToAPI(item))
 	}
