@@ -67,7 +67,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Test"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Test"
         500:
           description: "problem with getting script executions from storage"
           content:
