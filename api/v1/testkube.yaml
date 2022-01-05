@@ -23,6 +23,8 @@ tags:
     description: "Execution operations"
   - name: tests
     description: "Scripts orchestration operations"
+  - name: tags
+    description: "Listing all available tags"
 
 paths:
   /tests:
@@ -780,6 +782,31 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting executor data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /tags:
+    get:
+      tags:
+        - tags
+      summary: "List tags"
+      description: "list all available tags"
+      operationId: listTags
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        502:
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
