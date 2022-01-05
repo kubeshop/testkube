@@ -2,7 +2,6 @@ package v1
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,9 +11,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 )
 
 // ListScripts for getting list of all available scripts
@@ -41,15 +37,25 @@ func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 
-		raw_tags := c.Query("tags")
+		rawTags := c.Query("tags")
 		var tags []string
-		if raw_tags != "" {
-			tags = strings.Split(raw_tags, ",")
+		if rawTags != "" {
+			tags = strings.Split(rawTags, ",")
 		}
 
 		crScripts, err := s.ScriptsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		search := c.Query("textSearch")
+		if search != "" {
+			// filter items array
+			for i := len(crScripts.Items) - 1; i >= 0; i-- {
+				if !strings.Contains(crScripts.Items[i].Name, search) {
+					crScripts.Items = append(crScripts.Items[:i], crScripts.Items[i+1:]...)
+				}
+			}
 		}
 
 		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
@@ -187,49 +193,4 @@ func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
 
 		return c.SendStatus(fiber.StatusNoContent)
 	}
-}
-
-func getFilterFromRequest(c *fiber.Ctx) result.Filter {
-
-	filter := result.NewExecutionsFilter()
-	scriptName := c.Params("id", "-")
-	if scriptName != "-" {
-		filter = filter.WithScriptName(scriptName)
-	}
-
-	textSearch := c.Query("textSearch", "")
-	if textSearch != "" {
-		filter = filter.WithTextSearch(textSearch)
-	}
-
-	page, err := strconv.Atoi(c.Query("page", "-"))
-	if err == nil {
-		filter = filter.WithPage(page)
-	}
-
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
-	if err == nil && pageSize != 0 {
-		filter = filter.WithPageSize(pageSize)
-	}
-
-	status := c.Query("status", "-")
-	if status != "-" {
-		filter = filter.WithStatus(testkube.ExecutionStatus(status))
-	}
-
-	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
-	if dFilter.IsStartValid {
-		filter = filter.WithStartDate(dFilter.Start)
-	}
-
-	if dFilter.IsEndValid {
-		filter = filter.WithEndDate(dFilter.End)
-	}
-
-	raw_tags := c.Query("tags")
-	if raw_tags != "" {
-		filter = filter.WithTags(strings.Split(raw_tags, ","))
-	}
-
-	return filter
 }

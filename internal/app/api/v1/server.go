@@ -1,6 +1,9 @@
 package v1
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
@@ -8,6 +11,7 @@ import (
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
 	testscr "github.com/kubeshop/testkube-operator/client/tests"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -135,4 +139,51 @@ func (s TestKubeAPI) Info() fiber.Handler {
 			Version: api.Version,
 		})
 	}
+}
+
+// TODO should we use single generic filter for all list based resources ?
+// currently filters for e.g. scripts are done "by hand"
+func getFilterFromRequest(c *fiber.Ctx) result.Filter {
+
+	filter := result.NewExecutionsFilter()
+	scriptName := c.Params("id", "-")
+	if scriptName != "-" {
+		filter = filter.WithScriptName(scriptName)
+	}
+
+	textSearch := c.Query("textSearch", "")
+	if textSearch != "" {
+		filter = filter.WithTextSearch(textSearch)
+	}
+
+	page, err := strconv.Atoi(c.Query("page", "-"))
+	if err == nil {
+		filter = filter.WithPage(page)
+	}
+
+	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
+	if err == nil && pageSize != 0 {
+		filter = filter.WithPageSize(pageSize)
+	}
+
+	status := c.Query("status", "-")
+	if status != "-" {
+		filter = filter.WithStatus(testkube.ExecutionStatus(status))
+	}
+
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	if dFilter.IsStartValid {
+		filter = filter.WithStartDate(dFilter.Start)
+	}
+
+	if dFilter.IsEndValid {
+		filter = filter.WithEndDate(dFilter.End)
+	}
+
+	raw_tags := c.Query("tags")
+	if raw_tags != "" {
+		filter = filter.WithTags(strings.Split(raw_tags, ","))
+	}
+
+	return filter
 }
