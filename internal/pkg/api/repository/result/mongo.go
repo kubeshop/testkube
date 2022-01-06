@@ -116,9 +116,12 @@ func (r *MongoRepository) GetTags(ctx context.Context) (tags []string, err error
 	if err != nil {
 		return nil, err
 	}
-	sortedResult := result[0].Tags
-	sort.Sort(sort.StringSlice(sortedResult))
-	return sortedResult, nil
+	tags = []string{}
+	if len(result) > 0 {
+		tags = result[0].Tags
+		sort.Sort(sort.StringSlice(tags))
+	}
+	return tags, nil
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
