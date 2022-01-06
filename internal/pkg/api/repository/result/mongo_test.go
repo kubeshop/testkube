@@ -18,7 +18,7 @@ const (
 	mongoDbName = "testkube"
 )
 
-func TestFilters(t *testing.T) {
+func TestStorage(t *testing.T) {
 	assert := require.New(t)
 
 	repository, err := getRepository()
@@ -234,6 +234,23 @@ func TestFilters(t *testing.T) {
 		tags, err := repository.GetTags(context.Background())
 		assert.NoError(err)
 		assert.Len(tags, numberOfTags)
+	})
+
+}
+
+func TestTags(t *testing.T) {
+	assert := require.New(t)
+
+	repository, err := getRepository()
+	assert.NoError(err)
+
+	err = repository.Coll.Drop(context.TODO())
+	assert.NoError(err)
+
+	t.Run("getting tags when there are no tags should return empty slice", func(t *testing.T) {
+		tags, err := repository.GetTags(context.Background())
+		assert.NoError(err)
+		assert.Len(tags, 0)
 	})
 }
 
