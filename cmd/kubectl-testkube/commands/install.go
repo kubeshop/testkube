@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -32,7 +33,9 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("checking helm installation path", err)
 
 			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
-			ui.WarnOnError("adding testkube repo", err)
+			if !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
+				ui.WarnOnError("adding testkube repo", err)
+			}
 
 			_, err = process.Execute(helmPath, "repo", "update")
 			ui.ExitOnError("updating helm repositories", err)
