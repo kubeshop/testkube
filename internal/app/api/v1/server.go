@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
+
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
 	testscr "github.com/kubeshop/testkube-operator/client/tests"
@@ -128,6 +129,9 @@ func (s TestKubeAPI) Init() {
 	testExecutions := s.Routes.Group("/test-executions")
 	testExecutions.Get("/", s.ListTestExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
+
+	tags := s.Routes.Group("/tags")
+	tags.Get("/", s.ListTagsHandler())
 
 }
 

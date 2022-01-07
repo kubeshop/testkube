@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -97,6 +98,32 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter Filter)
 
 	return
 }
+
+func (r *MongoRepository) GetTags(ctx context.Context) (tags []string, err error) {
+	var result []struct {
+		Id   string   `bson:"_id"`
+		Tags []string `bson:"tags"`
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{"$unwind", "$tags"}},
+		bson.D{{"$group", bson.D{{"_id", "alltags"}, {"tags", bson.D{{"$addToSet", "$tags"}}}}}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &result)
+	if err != nil {
+		return nil, err
+	}
+	tags = []string{}
+	if len(result) > 0 {
+		tags = result[0].Tags
+		sort.Sort(sort.StringSlice(tags))
+	}
+	return tags, nil
+}
+
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
