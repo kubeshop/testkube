@@ -35,9 +35,6 @@ paths:
       summary: "Create new test"
       description: "Create new test action"
       operationId: createTest
-      parameters:
-        - $ref: "#/components/parameters/Tags"
-        - $ref: "#/components/parameters/TextSearch"
       requestBody:
         $ref: "#/components/schemas/TestUpsertRequest"
       responses:
@@ -64,20 +61,17 @@ paths:
       description: "Returns array of tests"
       operationId: listTests
       parameters:
-        - $ref: "#/components/parameters/TextSearch"
-        - $ref: "#/components/parameters/PageSize"
-        - $ref: "#/components/parameters/PageIndex"
-        - $ref: "#/components/parameters/ExecutionsStatusFilter"
-        - $ref: "#/components/parameters/StartDateFilter"
-        - $ref: "#/components/parameters/EndDateFilter"
         - $ref: "#/components/parameters/Tags"
+        - $ref: "#/components/parameters/TextSearch"
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Test"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Test"
         500:
           description: "problem with getting script executions from storage"
           content:

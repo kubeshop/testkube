@@ -35,7 +35,6 @@ type JobExecutor struct {
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
 // Worker should set valid state for success or error after script completion
 // TODO add timeout
-// TODO rethink how to get real time logs
 func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
 	events = make(chan ResultEvent)
 
