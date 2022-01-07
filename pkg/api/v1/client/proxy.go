@@ -172,7 +172,6 @@ func (c ProxyScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testk
 // ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error) {
-	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := c.getURI("/scripts/%s/executions", id)
 
 	// get script to get script tags
@@ -479,7 +478,6 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 }
 
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
-	// TODO consider use Query param for filename
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	req, err := c.GetProxy("GET").
 		Suffix(uri).
@@ -612,7 +610,6 @@ func (c ProxyScriptsAPI) getTestFromResponse(resp rest.Result) (test testkube.Te
 // ExecuteTest starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ProxyScriptsAPI) ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error) {
-	// TODO call executor API - need to get parameters (what executor?) taken from CRD?
 	uri := c.getURI("/tests/%s/executions", id)
 
 	request := testkube.ExecutionRequest{

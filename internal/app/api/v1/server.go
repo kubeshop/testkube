@@ -29,7 +29,6 @@ func NewServer(
 	testsClient *testscr.TestsClient,
 ) TestKubeAPI {
 
-	// TODO consider moving to server pkg as some API_HTTPSERVER_ config prefix
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
