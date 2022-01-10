@@ -2,10 +2,12 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -36,9 +38,12 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			var options apiClient.UpsertTestOptions
+			var options testkube.TestUpsertRequest
 
-			json.Unmarshal(content, &options)
+			err = json.Unmarshal(content, &options)
+			ui.ExitOnError("Invalid file content", err)
+
+			fmt.Printf("%+v\n", options)
 
 			client, _ := GetClient(cmd)
 
@@ -49,7 +54,7 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			options.Tags = tags
 
-			test, err = client.CreateTest(options)
+			test, err = client.CreateTest((apiClient.UpsertTestOptions(options)))
 			ui.ExitOnError("creating test "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("Test created", options.Name)
 		},

@@ -9,26 +9,27 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"k8s.io/apimachinery/pkg/api/errors"
-
+	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetTestHandler for getting test object
 func (s TestKubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.ExecutorCreateRequest
+		var request testkube.TestUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		executor := mapExecutorCreateRequestToExecutorCRD(request)
-		created, err := s.ExecutorsClient.Create(&executor)
+		test := mapTestUpsertRequestToTestCRD(request)
+		created, err := s.TestsClient.Create(&test)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -306,4 +307,48 @@ func convertToTestExecutionSummary(executions []testkube.TestExecution) []testku
 	}
 
 	return result
+}
+
+func mapTestUpsertRequestToTestCRD(request testkube.TestUpsertRequest) testsv1.Test {
+	return testsv1.Test{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      request.Name,
+			Namespace: request.Namespace,
+		},
+		Spec: testsv1.TestSpec{
+			Repeats:     int(request.Repeats),
+			Description: request.Description,
+			Tags:        request.Tags,
+			Before:      mapTestStepsToCRD(request.Before),
+			Steps:       mapTestStepsToCRD(request.Steps),
+			After:       mapTestStepsToCRD(request.After),
+		},
+	}
+}
+
+func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
+	for _, step := range steps {
+		out = append(out, mapTestStepToCRD(step))
+	}
+
+	return
+}
+
+func mapTestStepToCRD(request testkube.TestStep) (step testsv1.TestStepSpec) {
+	switch request.Type() {
+	case testkube.DELAY_TestStepType:
+		s := request.(testkube.TestStepDelay)
+		step.Delay = &testsv1.TestStepDelay{
+			Duration: s.Duration,
+		}
+	case testkube.EXECUTE_SCRIPT_TestStepType:
+		s := request.(testkube.TestStepExecuteScript)
+		step.Execute = &testsv1.TestStepExecute{
+			Namespace:     s.Namespace,
+			Name:          s.Name,
+			StopOnFailure: s.StopTestOnFailure,
+		}
+	}
+
+	return
 }
