@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -462,7 +461,7 @@ func (c DirectScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts t
 }
 
 func (c DirectScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
-	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
+	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return artifact, err

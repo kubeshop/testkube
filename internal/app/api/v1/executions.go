@@ -140,6 +140,7 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
+// ExecutionLogsHandler returns execution logs for given execution id
 func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
@@ -224,6 +225,7 @@ func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
 	}
 }
 
+// AbortExecutionHandler aborts script execution for given executor id
 func (s TestKubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
@@ -231,24 +233,18 @@ func (s TestKubeAPI) AbortExecutionHandler() fiber.Handler {
 	}
 }
 
+// GetArtifactHandler returns execution result file for given execution id and filename
 func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
 
-		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
 		unescaped, err := url.QueryUnescape(fileName)
-		if err == nil {
-			fileName = unescaped
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't unescape filename %s for execution %s with error %w", fileName, executionID, err))
 		}
 
-		unescaped, err = url.QueryUnescape(fileName)
-		if err == nil {
-			fileName = unescaped
-		}
-
-		//// quickfix end
-
+		fileName = unescaped
 		file, err := s.Storage.DownloadFile(executionID, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -259,7 +255,7 @@ func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
 	}
 }
 
-// GetArtifacts returns list of files in the given bucket
+// ListArtifactsHandler returns list of files for the given execution id
 func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -273,6 +269,7 @@ func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
 	}
 }
 
+// GetExecuteOptions returns execute options for given namespace, script id and request
 func (s TestKubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
