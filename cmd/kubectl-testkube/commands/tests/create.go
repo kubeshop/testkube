@@ -14,6 +14,7 @@ import (
 func NewCreateTestsCmd() *cobra.Command {
 
 	var (
+		name string
 		file string
 		tags []string
 	)
@@ -42,6 +43,10 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = json.Unmarshal(content, &options)
 			ui.ExitOnError("Invalid file content", err)
 
+			if name != "" {
+				options.Name = name
+			}
+
 			client, _ := GetClient(cmd)
 
 			test, _ := client.GetTest(options.Name, options.Namespace)
@@ -58,7 +63,8 @@ func NewCreateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
+	cmd.Flags().StringVar(&name, "name", "", "Set/Override test name")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd
 }

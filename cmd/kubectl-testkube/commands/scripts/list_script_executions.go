@@ -34,7 +34,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("rendering", err)
 		},
 	}
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd
 }

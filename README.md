@@ -1,4 +1,21 @@
-![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
+![Release](https://img.shields.io/github/v/release/kubeshop/testkube)
+![Prerelease](https://img.shields.io/github/v/release/kubeshop/testkube?color=%230f120f&include_prereleases&label=prerelease)
+![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) 
+[![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
+
+![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server)
+![Docker image size](https://img.shields.io/docker/image-size/kubeshop/testkube-api-server)
+![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube)
+![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks)
+![MkDocs](https://img.shields.io/github/workflow/status/kubeshop/testkube/mkdocs?label=mkdocs)
+![Requirements](https://img.shields.io/requires/github/kubeshop/testkube)
+
+![Contributors](https://img.shields.io/github/contributors/kubeshop/testkube)
+![Commit activity](https://img.shields.io/github/commit-activity/w/kubeshop/testkube)
+![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
+
+![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social)
+![Discord](https://img.shields.io/discord/884464549347074049)
 
 ![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 

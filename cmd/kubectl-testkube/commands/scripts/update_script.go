@@ -105,7 +105,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3 Warning: by passing tags existing tags will be overwritten")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3 - Warning: by passing tags existing tags will be overwritten")
 
 	return cmd
 }
