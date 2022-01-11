@@ -2,7 +2,6 @@ package tests
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -42,8 +41,6 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			err = json.Unmarshal(content, &options)
 			ui.ExitOnError("Invalid file content", err)
-
-			fmt.Printf("%+v\n", options)
 
 			client, _ := GetClient(cmd)
 
