@@ -68,7 +68,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "--tags 1,2,3")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd
 }

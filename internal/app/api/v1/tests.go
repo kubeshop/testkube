@@ -72,6 +72,7 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 		}
 
 		crTests, err := s.TestsClient.List(namespace, tags)
+
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -85,6 +86,8 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 				}
 			}
 		}
+
+		fmt.Printf("%+v\n", len(crTests.Items))
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
