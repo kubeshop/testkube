@@ -167,8 +167,7 @@ func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
 			logs, err = s.Executor.Logs(executionID)
 			s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 			if err != nil {
-				// TODO convert to some library for common output
-				fmt.Fprintf(w, `data: {"type": "error","message": "%s"}\n\n`, err.Error())
+				output.PrintError(err)
 				s.Log.Errorw("getting logs error", "error", err)
 				w.Flush()
 				return
