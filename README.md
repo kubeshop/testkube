@@ -1,4 +1,12 @@
-![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
+![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) 
+[![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
+![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server)
+![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks)
+![MkDocs](https://img.shields.io/github/workflow/status/kubeshop/testkube/mkdocs?label=mkdocs)
+![Discord](https://img.shields.io/discord/884464549347074049)
+![Requirements](https://img.shields.io/requires/github/kubeshop/testkube)
+
+![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social)
 
 ![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 
