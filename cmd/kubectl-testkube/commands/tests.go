@@ -47,5 +47,8 @@ func NewTestsCmd() *cobra.Command {
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
+	cmd.AddCommand(tests.NewListExecutionsCmd())
+	cmd.AddCommand(tests.NewExecutionCmd())
+
 	return cmd
 }

@@ -8,6 +8,7 @@ import (
 
 type filter struct {
 	scriptName string
+	testName   string
 	startDate  *time.Time
 	endDate    *time.Time
 	status     *testkube.ExecutionStatus
@@ -19,6 +20,11 @@ type filter struct {
 func NewExecutionsFilter() *filter {
 	result := filter{page: 0, pageSize: PageDefaultLimit}
 	return &result
+}
+
+func (f *filter) WithTestName(testName string) *filter {
+	f.testName = testName
+	return f
 }
 
 func (f *filter) WithScriptName(scriptName string) *filter {

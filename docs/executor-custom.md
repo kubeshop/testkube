@@ -84,8 +84,6 @@ spec:
   image: kubeshop/testkube-example-executor:0.0.1 # pass your repository and tag
   types:
   - example/test
-  volume_mount_path: /mnt/artifacts-storage
-  volume_quantity: 10Gix
 ```
 
 and apply it on your cluster:

@@ -969,7 +969,9 @@ components:
       description: execution result returned from executor
       type: object
       required:
-        - status
+        - step
+        - script
+        - execution
       properties:
         step:
           $ref: "#/components/schemas/TestStep"

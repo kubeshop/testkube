@@ -2,6 +2,7 @@ package testresult
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -105,7 +106,16 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestExecut
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestExecution) (err error) {
+	e, _ := r.Get(ctx, result.Id)
+	fmt.Printf("Before save %+v\n", e)
+
+	fmt.Printf("testsresult.Replace(%+v)\n", result)
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.Coll.InsertOne(ctx, result)
+
+	e, _ = r.Get(ctx, result.Id)
+	fmt.Printf("After save %+v\n", e)
+
 	return
 }
 
