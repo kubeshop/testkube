@@ -87,8 +87,6 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 			}
 		}
 
-		fmt.Printf("%+v\n", len(crTests.Items))
-
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
