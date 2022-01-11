@@ -33,7 +33,7 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("checking helm installation path", err)
 
 			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
-			if !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
+			if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 				ui.WarnOnError("adding testkube repo", err)
 			}
 
