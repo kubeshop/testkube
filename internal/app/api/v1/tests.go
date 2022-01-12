@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
-	"go.mongodb.org/mongo-driver/bson"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,10 +110,14 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapCRToAPI(*crTest)
-		s.Log.Debugw("executing test", "name", name)
+
+		fmt.Printf("%+v\n", crTest)
+		fmt.Printf("%+v\n", test)
+
+		s.Log.Debugw("executing test", "name", name, "test", test)
 		results := s.executeTest(ctx, test)
 
-		return c.JSON(results)
+		return s.JSON(c, results)
 	}
 }
 
@@ -155,13 +158,11 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		return c.JSON(execution)
+		return s.JSON(c, execution)
 	}
 }
 
 func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testExecution testkube.TestExecution) {
-	s.Log.Debugw("Got test to execute", "test", test)
-
 	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
 	testExecution.Test = &testkube.ObjectRef{
 		Name:      test.Name,
@@ -178,16 +179,23 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	steps := append(test.Before, test.Steps...)
 	steps = append(steps, test.After...)
 
+	// TODO load scripts to stepResultData
+
 	hasFailedSteps := false
-	for _, str := range steps {
-		step := str
+	for _, step := range steps {
 		stepResult := s.executeTestStep(ctx, test.Name, step)
 		stepResult.Step = &step
+
+		fmt.Printf("-- STEPRESULT : %+v\n", stepResult.Step)
+		fmt.Printf("-- -- execution: %+v\n", stepResult.Execution)
+
 		testExecution.StepResults = append(testExecution.StepResults, stepResult)
+
 		if stepResult.IsFailed() {
 			hasFailedSteps = true
 			if step.StopOnFailure() {
 				testExecution.Status = testkube.TestStatusError
+				s.TestExecutionResults.Update(ctx, testExecution)
 				return
 			}
 		}
@@ -197,12 +205,8 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 
 	testExecution.Status = testkube.TestStatusSuccess
 	if hasFailedSteps {
-		testExecution.Status = testkube.TestStatusSuccess
+		testExecution.Status = testkube.TestStatusError
 	}
-
-	b, err := bson.Marshal(testExecution)
-	fmt.Printf("\n\n\nBSON: %+v\n\n", string(b))
-	fmt.Printf("%+v\n", err)
 
 	s.TestExecutionResults.Update(ctx, testExecution)
 
@@ -211,12 +215,12 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 }
 
 func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
-	l := s.Log.With("type", step.Type(), "name", step.FullName())
+	l := s.Log.With("type", step.Type, "name", step.FullName())
 
-	switch step.Type() {
+	switch step.Type {
 
 	case testkube.EXECUTE_SCRIPT_TestStepType:
-		executeScriptStep := step.(testkube.TestStepExecuteScript)
+		executeScriptStep := step.TestStepExecuteScript
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name: fmt.Sprintf("%s-%s", testName, executeScriptStep.Name),
 		})
@@ -232,10 +236,10 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 
 	case testkube.DELAY_TestStepType:
 		l.Debug("delaying execution")
-		time.Sleep(time.Millisecond * time.Duration(step.(testkube.TestStepDelay).Duration))
+		time.Sleep(time.Millisecond * time.Duration(step.TestStepDelay.Duration))
 
 	default:
-		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
+		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type))
 	}
 
 	return
@@ -340,15 +344,15 @@ func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
 	return
 }
 
-func mapTestStepToCRD(request testkube.TestStep) (step testsv1.TestStepSpec) {
-	switch request.Type() {
+func mapTestStepToCRD(testStep testkube.TestStep) (step testsv1.TestStepSpec) {
+	switch testStep.Type {
 	case testkube.DELAY_TestStepType:
-		s := request.(testkube.TestStepDelay)
+		s := testStep.TestStepDelay
 		step.Delay = &testsv1.TestStepDelay{
 			Duration: s.Duration,
 		}
 	case testkube.EXECUTE_SCRIPT_TestStepType:
-		s := request.(testkube.TestStepExecuteScript)
+		s := testStep.TestStepExecuteScript
 		step.Execute = &testsv1.TestStepExecute{
 			Namespace:     s.Namespace,
 			Name:          s.Name,

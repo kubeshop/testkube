@@ -867,40 +867,34 @@ components:
 
     TestStep:
       type: object
-      required:
-        - name
-        - type
-        - stopTestOnFailure
       properties:
-        stopTestOnFailure:
-          type: boolean
-          default: true
         type:
-          type: string
-          enum:
-            - scriptExecution
-            - delay
+          $ref: "#/components/schemas/TestStepType"
+      oneOf:
+        - $ref: "#/components/schemas/TestStepExecuteScript"
+        - $ref: "#/components/schemas/TestStepDelay"
 
     TestStepExecuteScript:
       allOf:
-        - $ref: "#/components/schemas/TestStep"
         - $ref: "#/components/schemas/ObjectRef"
+        - type: object
+          properties:
+            stopTestOnFailure:
+              type: boolean
+              default: true
 
     TestStepDelay:
-      allOf:
-        - $ref: "#/components/schemas/TestStep"
-        - type: object
-          required:
-            - duration
-            - name
-          properties:
-            name:
-              type: string
-              description: step name (in case of script it'll be script name)
-            duration:
-              type: integer
-              default: 0
-              description: delay duration in milliseconds
+      type: object
+      required:
+        - duration
+        - name
+      properties:
+        name:
+          type: string
+        duration:
+          type: integer
+          default: 0
+          description: delay duration in milliseconds
 
     TestExecution:
       type: object

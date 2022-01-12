@@ -24,10 +24,10 @@ func printTestExecutionDetails(execution testkube.TestExecution) {
 	tab := [][]string{}
 
 	for _, result := range execution.StepResults {
-		step := (*result.Step)
+		step := result.Step
 		r := []string{step.FullName()}
 
-		switch step.Type() {
+		switch step.Type {
 		case testkube.EXECUTE_SCRIPT_TestStepType:
 			if result.Execution != nil && result.Script != nil {
 				status := string(*result.Execution.ExecutionResult.Status)

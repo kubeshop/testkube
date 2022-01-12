@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -132,6 +133,18 @@ func (s TestKubeAPI) Init() {
 
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
+
+}
+
+func (s TestKubeAPI) JSON(c *fiber.Ctx, i interface{}) error {
+	c.Response().Header.SetContentType(fiber.MIMEApplicationJSON)
+
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+	_, err = c.Write(b)
+	return err
 
 }
 

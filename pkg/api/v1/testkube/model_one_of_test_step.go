@@ -9,10 +9,7 @@
  */
 package testkube
 
-type TestStepExecuteScript struct {
-	// object kubernetes namespace
-	Namespace string `json:"namespace,omitempty"`
-	// object name
-	Name              string `json:"name"`
-	StopTestOnFailure bool   `json:"stopTestOnFailure,omitempty"`
+type OneOfTestStep struct {
+	TestStepExecuteScript
+	TestStepDelay
 }

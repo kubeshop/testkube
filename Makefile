@@ -48,12 +48,12 @@ openapi-generate-model: openapi-generate-model-testkube
 # look at https://github.com/swagger-api/swagger-codegen/issues/11292
 openapi-generate-model-testkube:
 	swagger-codegen generate -i api/v1/testkube.yaml -l go -o tmp/api/testkube
+	rm tmp/api/testkube/model_test_step.go 
 	mv tmp/api/testkube/model_test.go tmp/api/testkube/model_test_base.go
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
 	rm -rf tmp
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
-	rm pkg/api/v1/testkube/model_test_step.go
 	
 
 test: 
