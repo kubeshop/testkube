@@ -2,29 +2,29 @@
 
 ## Running with CRDs only on kubernetes cluster
 
-The minimial compoenent which must be deployed on your local kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>)
+The minimial component which must be deployed on your local kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>)
 
-Checkout this project and run:
+Checkout testkube-operator project and run:
 
 ```sh
 make install 
 ```
 
-to install CRD's in your local cluster
+to install CRD's into your local cluster
 
 ## Running on local machine
 
-Next critical component is API (<https://github.com/kubeshop/testkube>) and some executor you can build your
-own tests executor or use one from TestKube.
+Next critical component is testkube API (<https://github.com/kubeshop/testkube>) and some executor you can build - your
+own tests executor or existing one from TestKube.
 
-First let's run local API server:
+Checkout testkube project and run local API server:
 
 ```sh
-make run-mongo-dev run-api-server
+make run-mongo-dev run-api
 ```
 
-Next goto executor (<https://github.com/kubeshop/testkube-executor-postman>) and run it
-(Postman executor is also MongoDB based so it'll use database run in API server step):
+Next go to testkube postman executor (<https://github.com/kubeshop/testkube-executor-postman>), checkout and run it
+(Postman executor is also MongoDB based so it'll use database launched in API server step):
 
 ```sh
 make run-executor
@@ -32,7 +32,7 @@ make run-executor
 
 ### Installing local executors
 
-You can install development executors by running
+You can install development executors by running them from testkube project (<https://github.com/kubeshop/testkube>)
 
 ```sh
 make dev-install-local-executors
@@ -58,14 +58,14 @@ To summarize: `type` is the single relation between `Script` and `Executor`
 ## Intercepting api server on cluster
 
 In case of debugging on Kubernetes we can intercept whole API Server (or Postman executor) service
-with use of [Telepresence](https://telepresence.io).
+with usage of [Telepresence](https://telepresence.io).
 
 Simply intercept API server with local instance
 
 You can start API Server with telepresence mode with:
 
 ```sh
-make run-api-server-telepresence
+make run-api-telepresence
 ```
 
 and create/run test scripts pointed to in-cluster executors.
