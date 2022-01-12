@@ -2,6 +2,9 @@ package testkube
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 )
 
 func (r *TestStepExecutionResult) Err(err error) TestStepExecutionResult {
@@ -41,6 +44,13 @@ func (result *TestStepExecutionResult) UnmarshalJSON(data []byte) error {
 
 	result.Script = r.Script
 	result.Execution = r.Execution
+
+	return nil
+}
+
+func (result *TestStepExecutionResult) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
+
+	fmt.Printf("\n\n\n\n\n%+v\n\n\n\n\n\n", string(b))
 
 	return nil
 }

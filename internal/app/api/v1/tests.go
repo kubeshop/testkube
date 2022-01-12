@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
+	"go.mongodb.org/mongo-driver/bson"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -198,6 +199,10 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	if hasFailedSteps {
 		testExecution.Status = testkube.TestStatusSuccess
 	}
+
+	b, err := bson.Marshal(testExecution)
+	fmt.Printf("\n\n\nBSON: %+v\n\n", string(b))
+	fmt.Printf("%+v\n", err)
 
 	s.TestExecutionResults.Update(ctx, testExecution)
 
