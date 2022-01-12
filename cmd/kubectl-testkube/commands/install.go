@@ -13,6 +13,7 @@ import (
 var (
 	noDashboard bool
 	noMinio     bool
+	noKusk      bool
 )
 
 func NewInstallCmd() *cobra.Command {
@@ -43,6 +44,8 @@ func NewInstallCmd() *cobra.Command {
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
 			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noDashboard))
 			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noMinio))
+			command = append(command, "--set", fmt.Sprintf("api-server.kusk.enabled=%t", !noKusk))
+			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.kusk.enabled=%t", !noKusk))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
@@ -58,6 +61,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&noMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&noDashboard, "no-dashboard", false, "don't install dashboard")
+	cmd.Flags().BoolVar(&noKusk, "no-kusk", false, "don't install Kusk")
 
 	return cmd
 }
