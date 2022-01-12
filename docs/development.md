@@ -24,7 +24,7 @@ make run-mongo-dev run-api
 ```
 
 Next go to testkube postman executor (<https://github.com/kubeshop/testkube-executor-postman>), checkout and run it
-(Postman executor is also MongoDB based so it'll use database launched in API server step):
+(Postman executor is also MongoDB based so it will use MongoDB launched with API server step):
 
 ```sh
 make run-executor
