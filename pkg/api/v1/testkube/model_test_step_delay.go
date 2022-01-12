@@ -10,8 +10,6 @@
 package testkube
 
 type TestStepDelay struct {
-	StopTestOnFailure bool   `json:"stopTestOnFailure"`
-	Type_             string `json:"type"`
 	// step name (in case of script it'll be script name)
 	Name string `json:"name"`
 	// delay duration in milliseconds

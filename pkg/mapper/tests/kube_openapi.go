@@ -41,19 +41,20 @@ func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestStep) {
 
 	switch true {
 	case crstep.Execute != nil:
-		teststep = testkube.TestStepExecuteScript{
-			Name:              crstep.Execute.Name,
-			Namespace:         crstep.Execute.Namespace,
+		teststep = testkube.TestStep{
 			StopTestOnFailure: crstep.Execute.StopOnFailure,
-			Type_:             string(testkube.EXECUTE_SCRIPT_TestStepType),
+			Execute: &testkube.TestStepExecuteScript{
+				Name:      crstep.Execute.Name,
+				Namespace: crstep.Execute.Namespace,
+			},
 		}
 
 	case crstep.Delay != nil:
-		teststep = testkube.TestStepDelay{
-			Name:              fmt.Sprintf("Delay %dms", crstep.Delay.Duration),
-			Duration:          crstep.Delay.Duration,
-			Type_:             string(testkube.DELAY_TestStepType),
-			StopTestOnFailure: false,
+		teststep = testkube.TestStep{
+			Delay: &testkube.TestStepDelay{
+				Name:     fmt.Sprintf("Delay %dms", crstep.Delay.Duration),
+				Duration: crstep.Delay.Duration,
+			},
 		}
 	}
 

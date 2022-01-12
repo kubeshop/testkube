@@ -9,18 +9,8 @@
  */
 package testkube
 
-import (
-	"fmt"
-)
-
-func (s TestStepDelay) FullName() string {
-	return fmt.Sprintf("Delay %dms", s.Duration)
-}
-
-func (s TestStepDelay) Type() TestStepType {
-	return DELAY_TestStepType
-}
-
-func (s TestStepDelay) StopOnFailure() bool {
-	return false
+type TestStep struct {
+	StopTestOnFailure bool                   `json:"stopTestOnFailure"`
+	Execute           *TestStepExecuteScript `json:"execute,omitempty"`
+	Delay             *TestStepDelay         `json:"delay,omitempty"`
 }
