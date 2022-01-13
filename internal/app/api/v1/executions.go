@@ -133,7 +133,7 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 		results := testkube.ExecutionsResult{
 			Totals:   &executionTotals,
 			Filtered: &filteredTotals,
-			Results:  convertToExecutionSummary(executions),
+			Results:  mapExecutionsToExecutionSummary(executions),
 		}
 
 		return c.JSON(results)
@@ -308,7 +308,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	return execution
 }
 
-func convertToExecutionSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
+func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
 	result := make([]testkube.ExecutionSummary, len(executions))
 
 	for i, execution := range executions {

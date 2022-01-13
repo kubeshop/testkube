@@ -140,7 +140,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 		return c.JSON(testkube.TestExecutionsResult{
 			Totals:   &allExecutionsTotals,
 			Filtered: &executionsTotals,
-			Results:  convertToTestExecutionSummary(executions),
+			Results:  mapToTestExecutionSummary(executions),
 		})
 	}
 }
@@ -290,17 +290,13 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	return filter
 }
 
-func convertToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
+func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
 	result := make([]testkube.TestExecutionSummary, len(executions))
 
 	for i, execution := range executions {
 		executionsSummary := make([]testkube.TestStepExecutionSummary, len(execution.StepResults))
 		for _, stepResult := range execution.StepResults {
-			executionsSummary = append(executionsSummary, testkube.TestStepExecutionSummary{
-				Id:     stepResult.Execution.Id,
-				Name:   stepResult.Script.Name,
-				Status: stepResult.Execution.ExecutionResult.Status,
-			})
+			executionsSummary = append(executionsSummary, mapStepResultToExecutionSummary(stepResult))
 		}
 
 		result[i] = testkube.TestExecutionSummary{
@@ -315,6 +311,34 @@ func convertToTestExecutionSummary(executions []testkube.TestExecution) []testku
 	}
 
 	return result
+}
+
+func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkube.TestStepExecutionSummary {
+	var id, name string
+	var status *testkube.ExecutionStatus
+	var stepType *testkube.TestStepType
+
+	if r.Script != nil {
+		name = r.Script.Name
+	}
+
+	if r.Execution != nil {
+		id = r.Execution.Id
+		if r.Execution.ExecutionResult != nil {
+			status = r.Execution.ExecutionResult.Status
+		}
+	}
+
+	if r.Step != nil {
+		stepType = r.Step.Type()
+	}
+
+	return testkube.TestStepExecutionSummary{
+		Id:     id,
+		Name:   name,
+		Status: status,
+		Type_:  stepType,
+	}
 }
 
 func mapTestUpsertRequestToTestCRD(request testkube.TestUpsertRequest) testsv1.Test {

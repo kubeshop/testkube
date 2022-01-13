@@ -18,11 +18,3 @@ func (r *TestStepExecutionResult) IsFailed() bool {
 
 	return true
 }
-
-func (r *TestStepExecutionResult) Sto() bool {
-	if r.Execution != nil {
-		return r.Execution.IsFailed()
-	}
-
-	return true
-}
