@@ -237,7 +237,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
 
 	default:
-		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type))
+		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 	}
 
 	return
