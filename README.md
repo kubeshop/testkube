@@ -1,3 +1,5 @@
+![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
+
 ![Release](https://img.shields.io/github/v/release/kubeshop/testkube)
 ![Prerelease](https://img.shields.io/github/v/release/kubeshop/testkube?color=%230f120f&include_prereleases&label=prerelease)
 ![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) 
@@ -17,7 +19,6 @@
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social)
 ![Discord](https://img.shields.io/discord/884464549347074049)
 
-![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
 
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
