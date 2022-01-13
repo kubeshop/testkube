@@ -2,15 +2,12 @@ package tests
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
-const WatchInterval = 2 * time.Second
-
-func NewStartTestCmd() *cobra.Command {
+func NewTestExecutionCmd() *cobra.Command {
 	var (
 		name                     string
 		watchEnabled             bool
@@ -20,41 +17,28 @@ func NewStartTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start",
-		Aliases: []string{"run", "r"},
-		Short:   "Starts new test",
-		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
+		Use:     "execution",
+		Aliases: []string{"e"},
+		Short:   "Gets execution details",
+		Long:    `Gets ececution details by ID`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
 			if len(args) == 0 {
-				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass test name to run"))
+				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass execution ID"))
 			}
 
-			testID := args[0]
+			client, _ := GetClient(cmd)
 
-			client, namespace := GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, testID)
-
-			execution, err := client.ExecuteTest(testID, namespace, name, params)
-			ui.ExitOnError("starting test execution "+namespacedName, err)
-
-			if watchEnabled {
-				executionCh, err := client.WatchTestExecution(execution.Id)
-				for execution := range executionCh {
-					ui.ExitOnError("watching test execution", err)
-					printTestExecutionDetails(execution)
-				}
-			}
-
-			execution, err = client.GetTestExecution(execution.Id)
-			printTestExecutionDetails(execution)
+			executionID := args[0]
+			execution, err := client.GetTestExecution(executionID)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+
+			printTestExecutionDetails(execution)
 
 			uiPrintTestStatus(execution)
 
 			uiShellTestGetCommandBlock(execution.Id)
-			uiShellTestWatchCommandBlock(execution.Id)
 		},
 	}
 

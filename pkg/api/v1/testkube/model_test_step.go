@@ -9,7 +9,8 @@
  */
 package testkube
 
-type TestStepDelay struct {
-	// delay duration in milliseconds
-	Duration int32 `json:"duration"`
+type TestStep struct {
+	StopTestOnFailure bool                   `json:"stopTestOnFailure"`
+	Execute           *TestStepExecuteScript `json:"execute,omitempty"`
+	Delay             *TestStepDelay         `json:"delay,omitempty"`
 }

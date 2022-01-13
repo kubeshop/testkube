@@ -15,7 +15,7 @@ func NewTestsCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:     "tests",
-		Aliases: []string{"test"},
+		Aliases: []string{"test", "t"},
 		Short:   "Tests management commands",
 		Long:    `All available tests and tests executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -42,10 +42,12 @@ func NewTestsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
 	cmd.AddCommand(tests.NewListTestsCmd())
-	cmd.AddCommand(tests.NewGetTestsCmd())
+	cmd.AddCommand(tests.NewGetTestCmd())
 	cmd.AddCommand(tests.NewStartTestCmd())
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
+	cmd.AddCommand(tests.NewTestExecutionCmd())
+	cmd.AddCommand(tests.NewWatchTestExecutionCmd())
 	return cmd
 }

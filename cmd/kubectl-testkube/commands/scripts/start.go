@@ -23,7 +23,7 @@ func NewStartScriptCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "start",
-		Aliases: []string{"run"},
+		Aliases: []string{"run", "r"},
 		Short:   "Starts new script",
 		Long:    `Starts new script based on Script Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -110,9 +110,10 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapCRToAPI(*crTest)
-		s.Log.Debugw("executing test", "name", name)
+		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
 		results := s.executeTest(ctx, test)
 
+		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -139,7 +140,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 		return c.JSON(testkube.TestExecutionsResult{
 			Totals:   &allExecutionsTotals,
 			Filtered: &executionsTotals,
-			Results:  convertToTestExecutionSummary(executions),
+			Results:  mapToTestExecutionSummary(executions),
 		})
 	}
 }
@@ -168,50 +169,56 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	}
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
-	defer func() {
-		testExecution.EndTime = time.Now()
-		s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
-	}()
+	go func(testExecution testkube.TestExecution) {
+		defer func() {
+			testExecution.EndTime = time.Now()
+			s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
+		}()
 
-	// compose all steps into one array
-	steps := append(test.Before, test.Steps...)
-	steps = append(steps, test.After...)
+		// compose all steps into one array
+		steps := append(test.Before, test.Steps...)
+		steps = append(steps, test.After...)
 
-	hasFailedSteps := false
-	for _, str := range steps {
-		step := str
-		stepResult := s.executeTestStep(ctx, test.Name, step)
-		stepResult.Step = &step
-		testExecution.StepResults = append(testExecution.StepResults, stepResult)
-		if stepResult.IsFailed() {
-			hasFailedSteps = true
-			if step.StopOnFailure() {
-				testExecution.Status = testkube.TestStatusError
-				return
+		hasFailedSteps := false
+		for _, step := range steps {
+			// we need to pass pointer to value - so we need to copy it
+			stepCopy := step
+			stepResult := s.executeTestStep(ctx, test.Name, step)
+			stepResult.Step = &stepCopy
+			// TODO load script details to stepResult
+			testExecution.StepResults = append(testExecution.StepResults, stepResult)
+			if stepResult.IsFailed() {
+				hasFailedSteps = true
+				if step.StopTestOnFailure {
+					testExecution.Status = testkube.TestStatusError
+					return
+				}
 			}
+
+			s.TestExecutionResults.Update(ctx, testExecution)
+		}
+
+		testExecution.Status = testkube.TestStatusSuccess
+		if hasFailedSteps {
+			testExecution.Status = testkube.TestStatusSuccess
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
-	}
 
-	testExecution.Status = testkube.TestStatusSuccess
-	if hasFailedSteps {
-		testExecution.Status = testkube.TestStatusSuccess
-	}
-
-	s.TestExecutionResults.Update(ctx, testExecution)
+	}(testExecution)
 
 	return
 
 }
 
 func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+
 	l := s.Log.With("type", step.Type(), "name", step.FullName())
 
 	switch step.Type() {
 
-	case testkube.EXECUTE_SCRIPT_TestStepType:
-		executeScriptStep := step.(testkube.TestStepExecuteScript)
+	case testkube.TestStepTypeExecuteScript:
+		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name: fmt.Sprintf("%s-%s", testName, executeScriptStep.Name),
 		})
@@ -225,9 +232,9 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 		execution := s.executeScript(ctx, options)
 		return newTestStepExecutionResult(execution, executeScriptStep)
 
-	case testkube.DELAY_TestStepType:
+	case testkube.TestStepTypeDelay:
 		l.Debug("delaying execution")
-		time.Sleep(time.Millisecond * time.Duration(step.(testkube.TestStepDelay).Duration))
+		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
 
 	default:
 		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
@@ -236,7 +243,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 	return
 }
 
-func newTestStepExecutionResult(execution testkube.Execution, step testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
+func newTestStepExecutionResult(execution testkube.Execution, step *testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
 	result.Execution = &execution
 	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
 
@@ -283,17 +290,13 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	return filter
 }
 
-func convertToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
+func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
 	result := make([]testkube.TestExecutionSummary, len(executions))
 
 	for i, execution := range executions {
 		executionsSummary := make([]testkube.TestStepExecutionSummary, len(execution.StepResults))
-		for _, stepResult := range execution.StepResults {
-			executionsSummary = append(executionsSummary, testkube.TestStepExecutionSummary{
-				Id:     stepResult.Execution.Id,
-				Name:   stepResult.Script.Name,
-				Status: stepResult.Execution.ExecutionResult.Status,
-			})
+		for j, stepResult := range execution.StepResults {
+			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
 		}
 
 		result[i] = testkube.TestExecutionSummary{
@@ -308,6 +311,36 @@ func convertToTestExecutionSummary(executions []testkube.TestExecution) []testku
 	}
 
 	return result
+}
+
+func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkube.TestStepExecutionSummary {
+	var id, scriptName, name string
+	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
+	var stepType *testkube.TestStepType
+
+	if r.Script != nil {
+		scriptName = r.Script.Name
+	}
+
+	if r.Execution != nil {
+		id = r.Execution.Id
+		if r.Execution.ExecutionResult != nil {
+			status = r.Execution.ExecutionResult.Status
+		}
+	}
+
+	if r.Step != nil {
+		stepType = r.Step.Type()
+		name = r.Step.FullName()
+	}
+
+	return testkube.TestStepExecutionSummary{
+		Id:         id,
+		Name:       name,
+		ScriptName: scriptName,
+		Status:     status,
+		Type_:      stepType,
+	}
 }
 
 func mapTestUpsertRequestToTestCRD(request testkube.TestUpsertRequest) testsv1.Test {
@@ -335,19 +368,20 @@ func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
 	return
 }
 
-func mapTestStepToCRD(request testkube.TestStep) (step testsv1.TestStepSpec) {
-	switch request.Type() {
-	case testkube.DELAY_TestStepType:
-		s := request.(testkube.TestStepDelay)
-		step.Delay = &testsv1.TestStepDelay{
+func mapTestStepToCRD(step testkube.TestStep) (stepSpec testsv1.TestStepSpec) {
+	switch step.Type() {
+	case testkube.TestStepTypeExecuteScript:
+		s := step.Delay
+		stepSpec.Delay = &testsv1.TestStepDelay{
 			Duration: s.Duration,
 		}
-	case testkube.EXECUTE_SCRIPT_TestStepType:
-		s := request.(testkube.TestStepExecuteScript)
-		step.Execute = &testsv1.TestStepExecute{
-			Namespace:     s.Namespace,
-			Name:          s.Name,
-			StopOnFailure: s.StopTestOnFailure,
+	case testkube.TestStepTypeDelay:
+		s := step.Execute
+		stepSpec.Execute = &testsv1.TestStepExecute{
+			Namespace: s.Namespace,
+			Name:      s.Name,
+			// TODO move StopOnFailure level up in operator model to mimic this one
+			StopOnFailure: step.StopTestOnFailure,
 		}
 	}
 

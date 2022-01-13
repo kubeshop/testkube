@@ -8,11 +8,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewGetTestsCmd() *cobra.Command {
+func NewGetTestCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get",
-		Short: "Get test by name",
-		Long:  `Getting test from given namespace - if no namespace given "testkube" namespace is used`,
+		Use:     "get",
+		Aliases: []string{"g"},
+		Short:   "Get test by name",
+		Long:    `Getting test from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 			ui.Logo()

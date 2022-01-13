@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -642,6 +643,35 @@ func (c ProxyScriptsAPI) GetTestExecution(executionID string) (execution testkub
 	}
 
 	return c.getTestExecutionFromResponse(resp)
+}
+
+// WatchTestExecution watches for changes in test executions
+func (c ProxyScriptsAPI) WatchTestExecution(executionID string) (executionCh chan testkube.TestExecution, err error) {
+	executionCh = make(chan testkube.TestExecution)
+
+	go func() {
+		execution, err := c.GetTestExecution(executionID)
+		if err != nil {
+			close(executionCh)
+			return
+		}
+		executionCh <- execution
+		for range time.NewTicker(time.Second).C {
+			execution, err = c.GetTestExecution(executionID)
+			if err != nil {
+				close(executionCh)
+				return
+			}
+
+			if execution.IsCompleted() {
+				close(executionCh)
+				return
+			}
+
+			executionCh <- execution
+		}
+	}()
+	return
 }
 
 // ListExecutions list all executions for given test name

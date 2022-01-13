@@ -20,34 +20,48 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 }
 
 func printTestExecutionDetails(execution testkube.TestExecution) {
-	ui.Warn("Name:", execution.Name+"\n")
-	tab := [][]string{}
-
-	for _, result := range execution.StepResults {
-		step := (*result.Step)
-		r := []string{step.FullName()}
-
-		switch step.Type() {
-		case testkube.EXECUTE_SCRIPT_TestStepType:
-			if result.Execution != nil && result.Script != nil {
-				status := string(*result.Execution.ExecutionResult.Status)
-				switch status {
-				case string(testkube.SUCCESS_TestStatus):
-					status = ui.Green(status)
-				case string(testkube.ERROR__TestStatus):
-					status = ui.Red(status)
-				}
-				r = append(r, status)
-			}
-		case testkube.DELAY_TestStepType:
-			r = append(r, "✓")
-		}
-
-		tab = append(tab, r)
-	}
-
-	ui.Table(ui.NewArrayTable(tab), os.Stdout)
+	ui.Warn("Name:", execution.Name)
+	ui.Warn("Status:", string(*execution.Status)+"\n")
+	ui.Table(execution, os.Stdout)
 
 	ui.NL()
+	ui.NL()
+}
+
+func uiPrintTestStatus(execution testkube.TestExecution) {
+	switch execution.Status {
+	case testkube.TestStatusQueued:
+		ui.Warn("Test queued for execution")
+
+	case testkube.TestStatusPending:
+		ui.Warn("Test execution started")
+
+	case testkube.TestStatusSuccess:
+		duration := execution.EndTime.Sub(execution.StartTime)
+		ui.Success("Test execution completed with sucess in " + duration.String())
+
+	case testkube.TestStatusError:
+		ui.Errf("Test execution failed")
+		os.Exit(1)
+	}
+
+	ui.NL()
+}
+
+func uiShellTestGetCommandBlock(id string) {
+	ui.ShellCommand(
+		"Use following command to get test execution details",
+		"kubectl testkube tests execution "+id,
+	)
+
+	ui.NL()
+}
+
+func uiShellTestWatchCommandBlock(id string) {
+	ui.ShellCommand(
+		"Use following command to get test execution details",
+		"kubectl testkube tests watch "+id,
+	)
+
 	ui.NL()
 }

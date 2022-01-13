@@ -13,7 +13,9 @@ package testkube
 type TestStepExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
-	Name   string           `json:"name"`
-	Status *ExecutionStatus `json:"status"`
-	Type_  string           `json:"type,omitempty"`
+	Name string `json:"name"`
+	// script name
+	ScriptName string           `json:"scriptName,omitempty"`
+	Status     *ExecutionStatus `json:"status"`
+	Type_      *TestStepType    `json:"type,omitempty"`
 }

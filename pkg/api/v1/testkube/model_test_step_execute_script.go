@@ -13,7 +13,5 @@ type TestStepExecuteScript struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace,omitempty"`
 	// object name
-	Name              string `json:"name"`
-	StopTestOnFailure bool   `json:"stopTestOnFailure"`
-	Type_             string `json:"type"`
+	Name string `json:"name"`
 }

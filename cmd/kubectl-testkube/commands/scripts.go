@@ -16,7 +16,7 @@ var (
 func NewScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "scripts",
-		Aliases: []string{"script"},
+		Aliases: []string{"script", "s"},
 		Short:   "Scripts management commands",
 		Long:    `All available scripts and scripts executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
