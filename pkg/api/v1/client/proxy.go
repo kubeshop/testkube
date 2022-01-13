@@ -676,13 +676,17 @@ func (c ProxyScriptsAPI) WatchTestExecution(executionID string) (executionCh cha
 
 // ListExecutions list all executions for given test name
 func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error) {
-	uri := c.getURI("/tests/%s/executions", testID)
+	uri := c.getURI("/test-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
 
 	if len(tags) > 0 {
 		req.Param("tags", strings.Join(tags, ","))
+	}
+
+	if testID != "" {
+		req.Param("id", testID)
 	}
 
 	resp := req.Do(context.Background())
