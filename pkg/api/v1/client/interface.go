@@ -45,6 +45,7 @@ type Client interface {
 
 	GetTestExecution(executionID string) (execution testkube.TestExecution, err error)
 	ListTestExecutions(test string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error)
+	WatchTestExecution(executionID string) (execution chan testkube.TestExecution, err error)
 
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }

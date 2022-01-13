@@ -624,6 +624,36 @@ func (c DirectScriptsAPI) ExecuteTest(id, namespace, executionName string, execu
 	return c.getTestExecutionFromResponse(resp)
 }
 
+// WatchTestExecution watches for changes in test executions
+func (c DirectScriptsAPI) WatchTestExecution(executionID string) (executionCh chan testkube.TestExecution, err error) {
+	executionCh = make(chan testkube.TestExecution)
+
+	go func() {
+		execution, err := c.GetTestExecution(executionID)
+		if err != nil {
+			close(executionCh)
+			return
+		}
+		executionCh <- execution
+		for range time.NewTicker(time.Second).C {
+			execution, err = c.GetTestExecution(executionID)
+			if err != nil {
+				close(executionCh)
+				return
+			}
+
+			if execution.IsCompleted() {
+				close(executionCh)
+				return
+			}
+
+			executionCh <- execution
+		}
+	}()
+
+	return
+}
+
 func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testkube.TestExecution, err error) {
 	uri := c.getURI("/test-executions/%s", executionID)
 

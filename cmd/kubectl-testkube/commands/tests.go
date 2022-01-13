@@ -42,10 +42,11 @@ func NewTestsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
 	cmd.AddCommand(tests.NewListTestsCmd())
-	cmd.AddCommand(tests.NewGetTestsCmd())
+	cmd.AddCommand(tests.NewGetTestCmd())
 	cmd.AddCommand(tests.NewStartTestCmd())
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
+	cmd.AddCommand(tests.NewTestExecutionCmd())
 	return cmd
 }

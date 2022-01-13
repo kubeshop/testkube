@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewGetTestsCmd() *cobra.Command {
+func NewGetTestCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get",
 		Short: "Get test by name",

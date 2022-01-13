@@ -113,6 +113,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
 		results := s.executeTest(ctx, test)
 
+		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -168,40 +169,43 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	}
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
-	defer func() {
-		testExecution.EndTime = time.Now()
-		s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
-	}()
+	go func(testExecution testkube.TestExecution) {
+		defer func() {
+			testExecution.EndTime = time.Now()
+			s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
+		}()
 
-	// compose all steps into one array
-	steps := append(test.Before, test.Steps...)
-	steps = append(steps, test.After...)
+		// compose all steps into one array
+		steps := append(test.Before, test.Steps...)
+		steps = append(steps, test.After...)
 
-	hasFailedSteps := false
-	for _, step := range steps {
-		// we need to pass pointer to value - so we need to copy it
-		stepCopy := step
-		stepResult := s.executeTestStep(ctx, test.Name, step)
-		stepResult.Step = &stepCopy
-		// TODO load script details to stepResult
-		testExecution.StepResults = append(testExecution.StepResults, stepResult)
-		if stepResult.IsFailed() {
-			hasFailedSteps = true
-			if step.StopTestOnFailure {
-				testExecution.Status = testkube.TestStatusError
-				return
+		hasFailedSteps := false
+		for _, step := range steps {
+			// we need to pass pointer to value - so we need to copy it
+			stepCopy := step
+			stepResult := s.executeTestStep(ctx, test.Name, step)
+			stepResult.Step = &stepCopy
+			// TODO load script details to stepResult
+			testExecution.StepResults = append(testExecution.StepResults, stepResult)
+			if stepResult.IsFailed() {
+				hasFailedSteps = true
+				if step.StopTestOnFailure {
+					testExecution.Status = testkube.TestStatusError
+					return
+				}
 			}
+
+			s.TestExecutionResults.Update(ctx, testExecution)
+		}
+
+		testExecution.Status = testkube.TestStatusSuccess
+		if hasFailedSteps {
+			testExecution.Status = testkube.TestStatusSuccess
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
-	}
 
-	testExecution.Status = testkube.TestStatusSuccess
-	if hasFailedSteps {
-		testExecution.Status = testkube.TestStatusSuccess
-	}
-
-	s.TestExecutionResults.Update(ctx, testExecution)
+	}(testExecution)
 
 	return
 

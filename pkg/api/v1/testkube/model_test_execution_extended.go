@@ -11,12 +11,16 @@ func NewStartedTestExecution(name string) TestExecution {
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
 		Name:      name,
-		Status:    TestStatusQueued,
+		Status:    TestStatusPending,
 	}
 }
 
+func (e TestExecution) IsCompleted() bool {
+	return *e.Status == *TestStatusError || *e.Status == *TestStatusSuccess
+}
+
 func (e TestExecution) Table() (header []string, output [][]string) {
-	header = []string{"Step", "Status", "Error", "ID"}
+	header = []string{"Step", "Status", "ID", "Error"}
 	output = make([][]string, 0)
 
 	// TODO introduce Array ArrayHeader? interface to allow easily compose array like data in model
@@ -34,7 +38,7 @@ func (e TestExecution) Table() (header []string, output [][]string) {
 				status = "no execution results"
 			}
 
-			row := []string{sr.Step.FullName(), status, errorMessage, id}
+			row := []string{sr.Step.FullName(), status, id, errorMessage}
 			output = append(output, row)
 		case TestStepTypeDelay:
 			row := []string{sr.Step.FullName(), "success", "", ""}
