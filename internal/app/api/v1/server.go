@@ -138,7 +138,7 @@ func (s TestKubeAPI) Init() {
 	for _, e := range stack {
 		for _, s := range e {
 			route := *s
-			fmt.Printf("%s %%s\n", route.Method, route.Path)
+			fmt.Printf("%s %s\n", route.Method, route.Path)
 		}
 	}
 
