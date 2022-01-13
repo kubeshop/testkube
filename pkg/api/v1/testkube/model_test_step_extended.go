@@ -13,9 +13,9 @@ func (s TestStep) Type() *TestStepType {
 func (s TestStep) FullName() string {
 	switch s.Type() {
 	case TestStepTypeDelay:
-		return s.Delay.Name
+		return s.Delay.FullName()
 	case TestStepTypeExecuteScript:
-		return s.Execute.Name
+		return s.Execute.FullName()
 	default:
 		return "unknown"
 	}

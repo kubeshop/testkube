@@ -295,8 +295,8 @@ func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.T
 
 	for i, execution := range executions {
 		executionsSummary := make([]testkube.TestStepExecutionSummary, len(execution.StepResults))
-		for _, stepResult := range execution.StepResults {
-			executionsSummary = append(executionsSummary, mapStepResultToExecutionSummary(stepResult))
+		for j, stepResult := range execution.StepResults {
+			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
 		}
 
 		result[i] = testkube.TestExecutionSummary{
@@ -314,12 +314,12 @@ func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.T
 }
 
 func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkube.TestStepExecutionSummary {
-	var id, name string
-	var status *testkube.ExecutionStatus
+	var id, scriptName, name string
+	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
 	var stepType *testkube.TestStepType
 
 	if r.Script != nil {
-		name = r.Script.Name
+		scriptName = r.Script.Name
 	}
 
 	if r.Execution != nil {
@@ -331,13 +331,15 @@ func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkub
 
 	if r.Step != nil {
 		stepType = r.Step.Type()
+		name = r.Step.FullName()
 	}
 
 	return testkube.TestStepExecutionSummary{
-		Id:     id,
-		Name:   name,
-		Status: status,
-		Type_:  stepType,
+		Id:         id,
+		Name:       name,
+		ScriptName: scriptName,
+		Status:     status,
+		Type_:      stepType,
 	}
 }
 

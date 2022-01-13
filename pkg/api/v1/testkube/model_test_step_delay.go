@@ -10,8 +10,6 @@
 package testkube
 
 type TestStepDelay struct {
-	// step name (in case of script it'll be script name)
-	Name string `json:"name"`
 	// delay duration in milliseconds
 	Duration int32 `json:"duration"`
 }

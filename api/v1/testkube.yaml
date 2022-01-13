@@ -890,9 +890,6 @@ components:
         - duration
         - name
       properties:
-        name:
-          type: string
-          description: step name (in case of script it'll be script name)
         duration:
           type: integer
           default: 0
@@ -1039,6 +1036,9 @@ components:
         name:
           type: string
           description: execution name
+        scriptName:
+          type: string
+          description: script name
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
