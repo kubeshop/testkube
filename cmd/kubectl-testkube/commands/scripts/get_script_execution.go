@@ -9,9 +9,10 @@ import (
 
 func NewGetExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "execution",
-		Short: "Gets script execution details",
-		Long:  `Gets script execution details, you can change output format`,
+		Use:     "execution",
+		Aliases: []string{"e"},
+		Short:   "Gets script execution details",
+		Long:    `Gets script execution details, you can change output format`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			// get args

@@ -15,7 +15,7 @@ func NewTestsCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:     "tests",
-		Aliases: []string{"test"},
+		Aliases: []string{"test", "t"},
 		Short:   "Tests management commands",
 		Long:    `All available tests and tests executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -48,5 +48,6 @@ func NewTestsCmd() *cobra.Command {
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
 	cmd.AddCommand(tests.NewTestExecutionCmd())
+	cmd.AddCommand(tests.NewWatchTestExecutionCmd())
 	return cmd
 }

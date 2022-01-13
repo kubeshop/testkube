@@ -18,9 +18,9 @@ func NewTestExecutionCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "execution",
-		Aliases: []string{"run"},
-		Short:   "Starts new test",
-		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
+		Aliases: []string{"e"},
+		Short:   "Gets execution details",
+		Long:    `Gets ececution details by ID`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
@@ -38,7 +38,7 @@ func NewTestExecutionCmd() *cobra.Command {
 
 			uiPrintTestStatus(execution)
 
-			uiShellTestCommandBlock(execution.Id)
+			uiShellTestGetCommandBlock(execution.Id)
 		},
 	}
 

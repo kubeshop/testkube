@@ -7,9 +7,10 @@ import (
 
 func NewWatchExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "watch",
-		Short: "Watch logs output from executor pod",
-		Long:  `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
+		Use:     "watch",
+		Aliases: []string{"w"},
+		Short:   "Watch logs output from executor pod",
+		Long:    `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			var executionID string

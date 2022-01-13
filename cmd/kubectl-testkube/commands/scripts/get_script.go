@@ -10,9 +10,10 @@ import (
 
 func NewGetScriptsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get",
-		Short: "Get script by name",
-		Long:  `Getting script from given namespace - if no namespace given "testkube" namespace is used`,
+		Use:     "get",
+		Aliases: []string{"g"},
+		Short:   "Get script by name",
+		Long:    `Getting script from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
