@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -84,7 +83,8 @@ func (s TestKubeAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
 
-	s.Routes.Get("/info", s.Info())
+	s.Routes.Get("/info", s.InfoHandler())
+	s.Routes.Get("/routes", s.RoutesHandler())
 
 	executors := s.Routes.Group("/executors")
 
@@ -134,22 +134,30 @@ func (s TestKubeAPI) Init() {
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
 
-	stack := s.Mux.Stack()
-	for _, e := range stack {
-		for _, s := range e {
-			route := *s
-			fmt.Printf("%s %s\n", route.Method, route.Path)
-		}
-	}
-
 }
 
-func (s TestKubeAPI) Info() fiber.Handler {
+func (s TestKubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:  api.Commit,
 			Version: api.Version,
 		})
+	}
+}
+
+func (s TestKubeAPI) RoutesHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		routes := []fiber.Route{}
+
+		stack := s.Mux.Stack()
+		for _, e := range stack {
+			for _, s := range e {
+				route := *s
+				routes = append(routes, route)
+			}
+		}
+
+		return c.JSON(routes)
 	}
 }
 
