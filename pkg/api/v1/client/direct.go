@@ -673,9 +673,9 @@ func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testku
 func (c DirectScriptsAPI) ListTestExecutions(testName string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error) {
 	var uri string
 	if len(tags) > 0 {
-		uri = c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
+		uri = c.getURI("/test-executions?id=%s&pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
 	} else {
-		uri = c.getURI("/scripts/%s/executions?pageSize=%d", testName, limit)
+		uri = c.getURI("/test-executions?id=%s&pageSize=%d", testName, limit)
 	}
 
 	resp, err := c.client.Get(uri)
