@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -132,6 +133,14 @@ func (s TestKubeAPI) Init() {
 
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
+
+	stack := s.Mux.Stack()
+	for _, e := range stack {
+		for _, s := range e {
+			route := *s
+			fmt.Printf("%s %%s\n", route.Method, route.Path)
+		}
+	}
 
 }
 
