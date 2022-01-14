@@ -1,0 +1,173 @@
+{
+	"info": {
+		"_postman_id": "b40de9fe-9201-4b03-8ca2-3064d9027dd6",
+		"name": "TODO",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create TODO",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201 CREATED\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"",
+							"pm.test(\"Check if todo item craeted successfully\", function() {",
+							"    var json = pm.response.json();",
+							"    pm.environment.set(\"item\", json.url);",
+							"    pm.sendRequest(json.url, function (err, response) {",
+							"        var json = pm.response.json();",
+							"        pm.expect(json.title).to.eq(\"Create video for conference\");",
+							"",
+							"    });",
+							"    console.log(\"creating\", pm.environment.get(\"item\"))",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {}
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"title\":\"Create video for conference\",\"order\":1,\"completed\":false}"
+				},
+				"url": {
+					"raw": "{{uri}}",
+					"host": [
+						"{{uri}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Complete TODO item",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(\"completing\", pm.environment.get(\"item\"))"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"completed\": true}"
+				},
+				"url": {
+					"raw": "{{item}}",
+					"host": [
+						"{{item}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete TODO item",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(\"deleting\", pm.environment.get(\"item\"))"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 204 no content\", function () {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{item}}",
+					"host": [
+						"{{item}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "uri",
+			"value": "http://34.74.127.60:8080/todos"
+		},
+		{
+			"key": "item",
+			"value": null
+		}
+	]
+}

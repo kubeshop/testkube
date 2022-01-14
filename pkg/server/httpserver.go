@@ -45,19 +45,33 @@ func (s *HTTPServer) Init() {
 }
 
 // Error writes rfc-7807 json problem to response
+func (s *HTTPServer) Warn(c *fiber.Ctx, status int, err error, context ...interface{}) error {
+	c.Status(status)
+	c.Response().Header.Set("Content-Type", "application/problem+json")
+	s.Log.Warnw(err.Error(), "status", status)
+	pr := problem.New(status, s.getProblemMessage(err, context))
+	return c.JSON(pr)
+}
+
+// Error writes rfc-7807 json problem to response
 func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error, context ...interface{}) error {
 	c.Status(status)
 	c.Response().Header.Set("Content-Type", "application/problem+json")
 	s.Log.Errorw(err.Error(), "status", status)
-	errStr := err.Error()
+	pr := problem.New(status, s.getProblemMessage(err, context))
+	return c.JSON(pr)
+}
+
+func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string {
+	message := err.Error()
 	if len(context) > 0 {
 		b, err := json.Marshal(context[0])
 		if err == nil {
-			errStr += ", context: " + string(b)
+			message += ", context: " + string(b)
 		}
 	}
-	pr := problem.New(status, errStr)
-	return c.JSON(pr)
+
+	return message
 }
 
 // Run starts listening for incoming connetions

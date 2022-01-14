@@ -1,0 +1,14 @@
+{
+	"name": "test-example-2",
+	"namespace": "testkube",
+	"description": "Run test several times",
+	"steps": [
+		{"execute": {"namespace": "testkube", "name": "testkube-dashboard"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "testkube-api"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "kubeshop-site"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "testkube-site"}}
+	]
+}

@@ -64,9 +64,21 @@ test-e2e:
 test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
+create-examples:
+	kubectl delete script testkube-todo-frontend -ntestkube || true
+	kubectl testkube scripts create --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
+	kubectl delete script testkube-todo-api -ntestkube || true
+	kubectl testkube scripts create --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
+	kubectl delete script kubeshop-site -ntestkube || true
+	kubectl testkube scripts create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
+	kubectl delete test testkube-global-test -ntestkube || true
+	cat test/e2e/test-example-1.json | kubectl testkube tests create --name testkube-global-test
+
+
 test-reload-sanity-script:
 	kubectl delete script sanity || true
 	kubectl testkube scripts create -f test/e2e/TestKube-Sanity.postman_collection.json --name sanity
+
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
 test-api-local:
