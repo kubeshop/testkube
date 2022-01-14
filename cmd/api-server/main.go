@@ -64,6 +64,7 @@ func main() {
 		scriptsClient,
 		executorsClient,
 		testsClient,
+		kubeClient,
 	).Run()
 	ui.ExitOnError("Running API Server", err)
 }

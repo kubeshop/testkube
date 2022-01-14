@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewCreateScriptsCmd is a command tp create new scriptcustom resource
 func NewCreateScriptsCmd() *cobra.Command {
 
 	var (
@@ -20,6 +21,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 		uri          string
 		gitBranch    string
 		gitPath      string
+		gitToken     string
 		tags         []string
 	)
 	cmd := &cobra.Command{
@@ -59,6 +61,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 					Uri:    uri,
 					Branch: gitBranch,
 					Path:   gitPath,
+					Token:  gitToken,
 				}
 			}
 
@@ -99,6 +102,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd

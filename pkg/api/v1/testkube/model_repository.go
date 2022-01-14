@@ -19,4 +19,6 @@ type Repository struct {
 	Branch string `json:"branch"`
 	// if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
 	Path string `json:"path,omitempty"`
+	// git auth token for private repositories
+	Token string `json:"token,omitempty"`
 }
