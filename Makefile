@@ -65,8 +65,11 @@ test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
 create-examples:
+<<<<<<< HEAD
 	kubectl delete script testkube-dashboard -ntestkube || true
 	kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
+=======
+>>>>>>> origin/main
 	kubectl delete script testkube-todo-frontend -ntestkube || true
 	kubectl testkube scripts create --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
 	kubectl delete script testkube-todo-api -ntestkube || true
