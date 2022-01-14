@@ -168,7 +168,7 @@ func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 		err := s.ScriptsClient.Delete(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, err)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
@@ -185,7 +185,7 @@ func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
 		err := s.ScriptsClient.DeleteAll(namespace)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, err)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)

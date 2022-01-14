@@ -144,6 +144,37 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-executions/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test execution
+      tags:
+        - executions
+        - api
+      summary: "Get test execution by ID"
+      description: "Returns test execution with given executionID"
+      operationId: getTestExecutionByID
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestExecution"
+        500:
+          description: "problem with getting script executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /executions:
     get:
       tags:

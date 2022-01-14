@@ -47,7 +47,7 @@ func (s TestKubeAPI) GetTestHandler() fiber.Handler {
 		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, err)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
@@ -103,7 +103,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, err)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
@@ -370,12 +370,13 @@ func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
 
 func mapTestStepToCRD(step testkube.TestStep) (stepSpec testsv1.TestStepSpec) {
 	switch step.Type() {
-	case testkube.TestStepTypeExecuteScript:
-		s := step.Delay
-		stepSpec.Delay = &testsv1.TestStepDelay{
-			Duration: s.Duration,
-		}
+
 	case testkube.TestStepTypeDelay:
+		stepSpec.Delay = &testsv1.TestStepDelay{
+			Duration: step.Delay.Duration,
+		}
+
+	case testkube.TestStepTypeExecuteScript:
 		s := step.Execute
 		stepSpec.Execute = &testsv1.TestStepExecute{
 			Namespace: s.Namespace,

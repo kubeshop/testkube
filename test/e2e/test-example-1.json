@@ -3,12 +3,12 @@
 	"namespace": "testkube",
 	"description": "Run test several times",
 	"steps": [
-		{"type": "executeScript", "namespace": "testkube", "name": "testkube-dashboard"},
-		{"type": "delay", "duration": 5000},
-		{"type": "executeScript", "namespace": "testkube", "name": "testkube-api"},
-		{"type": "delay", "duration": 5000},
-		{"type": "executeScript", "namespace": "testkube", "name": "kubeshop-site"},
-		{"type": "delay", "duration": 5000},
-		{"type": "executeScript", "namespace": "testkube", "name": "testkube-site"}
+		{"execute": {"namespace": "testkube", "name": "testkube-dashboard"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "testkube-api"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "kubeshop-site"}},
+		{"delay": {"duration": 5000}},
+		{"execute": {"namespace": "testkube", "name": "testkube-site"}}
 	]
 }
