@@ -12,10 +12,11 @@ package testkube
 import "fmt"
 
 func (r TestExecutionsResult) Table() (headers []string, output [][]string) {
-	headers = []string{"Test Name", "Execution Name", "Status", "Steps"}
+	headers = []string{"ID", "Test Name", "Execution Name", "Status", "Steps"}
 
 	for _, result := range r.Results {
 		output = append(output, []string{
+			result.Id,
 			result.TestName,
 			result.Name,
 			string(*result.Status),
