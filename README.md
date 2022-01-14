@@ -2,7 +2,7 @@
 
 ![Release](https://img.shields.io/github/v/release/kubeshop/testkube)
 ![Prerelease](https://img.shields.io/github/v/release/kubeshop/testkube?color=%230f120f&include_prereleases&label=prerelease)
-![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers) 
+![GitHub Repo stars](https://img.shields.io/github/stars/kubeshop/testkube?color=blueviolet&label=Stargazers)
 [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads)
 
 ![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server)
@@ -19,16 +19,14 @@
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social)
 ![Discord](https://img.shields.io/discord/884464549347074049)
 
-
-
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
 
 Known vulnerabilities: [![TestKube](https://snyk.io/test/github/kubeshop/testkube/badge.svg)](https://snyk.io/test/github/kubeshop/testkube)
 [![testkube-operator](https://snyk.io/test/github/kubeshop/testkube-operator/badge.svg)](https://snyk.io/test/github/kubeshop/testkube-operator)
 [![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)](https://snyk.io/test/github/kubeshop/helm-charts)
 -->
-                                                           
-# Welcome to TestKube - your friendly Kubernetes testing framework!
+
+# Welcome to TestKube - your friendly Kubernetes testing framework
 
 TestKube decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
 
@@ -52,8 +50,7 @@ Main TestKube components are:
 TestKube attempts to:
 
 - Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
-- Make it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. - 
-  in your clusters, without having to wrap them in docker-images or providing network access
+- Make it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
 - Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralize all test results in a consistent format for "actionable QA analytics"
 - Provide a modular architecture for adding new types of test scripts and executors
@@ -66,7 +63,7 @@ run your first tests!
 
 # Discord
 
-Don't hesitate to say hi to the team and ask questions on our [Discord server](https://discord.gg/uNuhy6GDyn).
+Don't hesitate to say hi to the team and ask questions on our [Discord server](https://discord.gg/6zupCZFQbe).
 
 # Documentation
 
@@ -76,6 +73,6 @@ Is available at [https://kubeshop.github.io/testkube](https://kubeshop.github.io
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
-# Feedback 
+# Feedback
 
 Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
