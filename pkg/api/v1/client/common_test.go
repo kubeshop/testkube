@@ -19,7 +19,7 @@ func TestTrimSSEChunk(t *testing.T) {
 	assert.Equal(t, `{"type": "error","message": "some message"}`, string(out))
 }
 
-// TestStreamToLogsChannelOldFormat parses old output error format and return type field
+// TestStreamToLogsChannelOldErrorFormat parses old output error format and return type field
 func TestStreamToLogsChannelOldErrorFormat(t *testing.T) {
 	log := make(chan output.Output)
 	in := []byte(`data: {"type": "error", "message": "some message"}\n\n`)
@@ -30,7 +30,7 @@ func TestStreamToLogsChannelOldErrorFormat(t *testing.T) {
 	assert.Equal(t, output.Output{Type_: "error", Content: ""}, result)
 }
 
-// TestStreamToLogsChannelNewFormat parses new output error format and return type and content fields
+// TestStreamToLogsChannelNewErrorFormat parses new output error format and return type and content fields
 func TestStreamToLogsChannelNewErrorFormat(t *testing.T) {
 	log := make(chan output.Output)
 	out, _ := json.Marshal(output.NewOutputError(errors.New("some message")))
