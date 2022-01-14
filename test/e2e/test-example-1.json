@@ -1,5 +1,5 @@
 {
-	"name": "test-example-2",
+	"name": "test-example-1",
 	"namespace": "testkube",
 	"description": "Run test several times",
 	"steps": [
