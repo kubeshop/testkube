@@ -54,7 +54,9 @@ func NewStartTestCmd() *cobra.Command {
 			uiPrintTestStatus(execution)
 
 			uiShellTestGetCommandBlock(execution.Id)
-			uiShellTestWatchCommandBlock(execution.Id)
+			if !watchEnabled {
+				uiShellTestWatchCommandBlock(execution.Id)
+			}
 		},
 	}
 
