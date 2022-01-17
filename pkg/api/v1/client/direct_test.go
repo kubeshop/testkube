@@ -37,7 +37,7 @@ func TestScriptsAPI(t *testing.T) {
 	t.Run("Get executed script details", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/v1/scripts/test/executions/1", r.URL.Path)
+			assert.Equal(t, "/v1/executions/1", r.URL.Path)
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprintf(w, `{"id":"1", "executionResult":{"status": "error"}}`)
 		}))
