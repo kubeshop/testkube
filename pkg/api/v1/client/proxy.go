@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -478,7 +479,7 @@ func (c ProxyScriptsAPI) GetExecutionArtifacts(executionID string) (artifacts te
 }
 
 func (c ProxyScriptsAPI) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
-	uri := c.getURI("/executions/%s/artifacts/%s", executionID, fileName)
+	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	req, err := c.GetProxy("GET").
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
