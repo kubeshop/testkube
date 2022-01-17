@@ -97,12 +97,16 @@ func (e Execution) Errw(msg string, err error) Execution {
 
 func (e *Execution) Start() {
 	e.StartTime = time.Now()
+	if e.ExecutionResult != nil {
+		e.ExecutionResult.Status = ExecutionStatusPending
+	}
 }
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
+	e.Duration = e.CalculateDuration().String()
 }
-func (e *Execution) Duration() time.Duration {
+func (e *Execution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
 	start := e.StartTime

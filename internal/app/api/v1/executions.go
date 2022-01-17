@@ -298,7 +298,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Name,
 		options.ScriptSpec.Type_,
 		options.ScriptSpec.Content,
-		testkube.NewQueuedExecutionResult(),
+		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
 		options.Request.Tags,
 	)

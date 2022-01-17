@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -20,13 +21,14 @@ func NewTestExecutionCmd() *cobra.Command {
 				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass execution ID"))
 			}
 
+			startTime := time.Now()
 			client, _ := GetClient(cmd)
 
 			executionID := args[0]
 			execution, err := client.GetTestExecution(executionID)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			printTestExecutionDetails(execution)
+			printTestExecutionDetails(execution, startTime)
 
 			uiPrintTestStatus(execution)
 

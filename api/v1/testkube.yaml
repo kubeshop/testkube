@@ -969,6 +969,9 @@ components:
           type: string
           description: "test end time"
           format: date-time
+        duration:
+          type: string
+          description: "test duration"
         stepResults:
           type: array
           description: "steps execution restults"
@@ -1049,6 +1052,9 @@ components:
           type: string
           description: "test execution end time"
           format: date-time
+        duration:
+          type: string
+          description: "test execution duration"
         execution:
           type: array
           items:
@@ -1150,6 +1156,9 @@ components:
           type: string
           description: "test end time"
           format: date-time
+        duration:
+          type: string
+          description: "test duration"
         executionResult:
           required: true
           description: result get from executor
