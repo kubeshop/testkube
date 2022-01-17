@@ -46,7 +46,7 @@ func NewJobClient() (*JobClient, error) {
 	}, nil
 }
 
-// LaunchK8sJob launches new job and run executor of given type
+// LaunchK8sJobSync launches new job and run executor of given type
 // TODO Consider moving launch of K8s job as always sync
 // TODO Consider moving storage calls level up (remove dependency from here)
 func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {

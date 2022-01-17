@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/secrets"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -51,6 +52,9 @@ func main() {
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
+	secretClient, err := secrets.NewSecretClient()
+	ui.ExitOnError("Getting secret client", err)
+
 	scriptsClient := scriptsclient.NewClient(kubeClient)
 	executorsClient := executorsclient.NewClient(kubeClient)
 	testsClient := testsclient.NewClient(kubeClient)
@@ -64,7 +68,7 @@ func main() {
 		scriptsClient,
 		executorsClient,
 		testsClient,
-		kubeClient,
+		secretClient,
 	).Run()
 	ui.ExitOnError("Running API Server", err)
 }

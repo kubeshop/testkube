@@ -17,10 +17,10 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/secrets"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	ctrclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func NewServer(
@@ -29,7 +29,7 @@ func NewServer(
 	scriptsClient *scriptscr.ScriptsClient,
 	executorsClient *executorscr.ExecutorsClient,
 	testsClient *testscr.TestsClient,
-	kubeClient ctrclient.Client,
+	secretClient *secrets.SecretClient,
 ) TestKubeAPI {
 
 	var httpConfig server.Config
@@ -63,6 +63,7 @@ type TestKubeAPI struct {
 	TestsClient          *testscr.TestsClient
 	ScriptsClient        *scriptscr.ScriptsClient
 	ExecutorsClient      *executorscr.ExecutorsClient
+	SecretClient         secrets.SecretClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
