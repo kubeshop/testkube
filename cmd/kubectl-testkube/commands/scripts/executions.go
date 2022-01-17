@@ -3,8 +3,9 @@ package scripts
 import (
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewListExecutionsCmd() *cobra.Command {

@@ -82,13 +82,9 @@ func (c ProxyScriptsAPI) GetScript(id string) (script testkube.Script, err error
 	return c.getScriptFromResponse(resp)
 }
 
-func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
+func (c ProxyScriptsAPI) GetExecution(executionID string) (execution testkube.Execution, err error) {
 
 	uri := c.getURI("/executions/%s", executionID)
-
-	if scriptID != "" {
-		uri = c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
-	}
 
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())

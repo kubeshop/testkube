@@ -69,13 +69,9 @@ func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err erro
 	return c.getScriptFromResponse(resp)
 }
 
-func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
+func (c DirectScriptsAPI) GetExecution(executionID string) (execution testkube.Execution, err error) {
 
 	uri := c.getURI("/executions/%s", executionID)
-
-	if scriptID != "" {
-		uri = c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
-	}
 
 	resp, err := c.client.Get(uri)
 	if err != nil {

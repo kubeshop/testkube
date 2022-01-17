@@ -6,8 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestScriptsAPI(t *testing.T) {
@@ -46,7 +47,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		execution, err := client.GetExecution("test", "1")
+		execution, err := client.GetExecution("1")
 
 		// then
 		assert.Equal(t, "1", execution.Id)

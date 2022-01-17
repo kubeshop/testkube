@@ -15,7 +15,7 @@ type HTTPClient interface {
 }
 
 type Client interface {
-	GetExecution(scriptID, executionID string) (execution testkube.Execution, err error)
+	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
