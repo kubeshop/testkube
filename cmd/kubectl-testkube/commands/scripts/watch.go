@@ -1,8 +1,9 @@
 package scripts
 
 import (
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewWatchExecutionCmd() *cobra.Command {
@@ -21,7 +22,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
-			execution, err := client.GetExecution("-", executionID)
+			execution, err := client.GetExecution("", executionID)
 			if err != nil {
 
 				ui.Failf("execution result retrievel failed with err %s", err)

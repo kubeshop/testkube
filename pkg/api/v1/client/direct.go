@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
 	"github.com/kubeshop/testkube/pkg/runner/output"
@@ -69,6 +70,11 @@ func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err erro
 }
 
 func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
+
+	if scriptID == "" {
+		scriptID = "-"
+	}
+
 	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
 
 	resp, err := c.client.Get(uri)
@@ -85,6 +91,11 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 
 // ListExecutions list all executions for given script name
 func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+
+	if scriptID == "" {
+		scriptID = "-"
+	}
+
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", scriptID, limit, strings.Join(tags, ","))

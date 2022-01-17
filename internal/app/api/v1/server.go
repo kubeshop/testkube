@@ -166,8 +166,8 @@ func (s TestKubeAPI) RoutesHandler() fiber.Handler {
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
-	scriptName := c.Params("id", "-")
-	if scriptName != "-" {
+	scriptName := c.Params("id", "")
+	if scriptName != "" {
 		filter = filter.WithScriptName(scriptName)
 	}
 
@@ -176,18 +176,18 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithTextSearch(textSearch)
 	}
 
-	page, err := strconv.Atoi(c.Query("page", "-"))
+	page, err := strconv.Atoi(c.Query("page", ""))
 	if err == nil {
 		filter = filter.WithPage(page)
 	}
 
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
+	pageSize, err := strconv.Atoi(c.Query("pageSize", ""))
 	if err == nil && pageSize != 0 {
 		filter = filter.WithPageSize(pageSize)
 	}
 
-	status := c.Query("status", "-")
-	if status != "-" {
+	status := c.Query("status", "")
+	if status != "" {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 

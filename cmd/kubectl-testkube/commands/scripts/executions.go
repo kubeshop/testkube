@@ -18,7 +18,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			var scriptID string
 			limit := 10
 			if len(args) == 0 {
-				scriptID = "-"
+				scriptID = ""
 			} else if len(args) > 0 {
 				scriptID = args[0]
 				limit = 0
