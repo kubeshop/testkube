@@ -6,12 +6,6 @@ func NewPendingExecutionResult() ExecutionResult {
 	}
 }
 
-func NewQueuedExecutionResult() ExecutionResult {
-	return ExecutionResult{
-		Status: StatusPtr(QUEUED_ExecutionStatus),
-	}
-}
-
 func NewErrorExecutionResult(err error) ExecutionResult {
 	return ExecutionResult{
 		Status:       StatusPtr(ERROR__ExecutionStatus),

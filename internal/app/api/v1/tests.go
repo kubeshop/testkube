@@ -170,10 +170,17 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
 	go func(testExecution testkube.TestExecution) {
-		defer func() {
+
+		defer func(testExecution *testkube.TestExecution) {
+			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
-			s.TestExecutionResults.EndExecution(ctx, testExecution.Id, time.Now())
-		}()
+			testExecution.Duration = duration.String()
+
+			err := s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
+			if err != nil {
+				s.Log.Errorw("error setting end time", "error", err.Error())
+			}
+		}(&testExecution)
 
 		// compose all steps into one array
 		steps := append(test.Before, test.Steps...)
@@ -220,7 +227,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 	case testkube.TestStepTypeExecuteScript:
 		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
-			Name: fmt.Sprintf("%s-%s", testName, executeScriptStep.Name),
+			Name: fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
 		})
 
 		if err != nil {
@@ -306,6 +313,7 @@ func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.T
 			Status:    execution.Status,
 			StartTime: execution.StartTime,
 			EndTime:   execution.EndTime,
+			Duration:  execution.Duration,
 			Execution: executionsSummary,
 		}
 	}

@@ -32,6 +32,7 @@ func NewStartTestCmd() *cobra.Command {
 			}
 
 			testID := args[0]
+			startTime := time.Now()
 
 			client, namespace := GetClient(cmd)
 			namespacedName := fmt.Sprintf("%s/%s", namespace, testID)
@@ -43,12 +44,12 @@ func NewStartTestCmd() *cobra.Command {
 				executionCh, err := client.WatchTestExecution(execution.Id)
 				for execution := range executionCh {
 					ui.ExitOnError("watching test execution", err)
-					printTestExecutionDetails(execution)
+					printTestExecutionDetails(execution, startTime)
 				}
 			}
 
 			execution, err = client.GetTestExecution(execution.Id)
-			printTestExecutionDetails(execution)
+			printTestExecutionDetails(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintTestStatus(execution)

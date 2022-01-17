@@ -71,7 +71,7 @@ func (r ExecutionRawRenderer) Render(execution testkube.Execution, writer io.Wri
 func (r ExecutionRawRenderer) Watch(execution testkube.Execution, writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, "Status: %s, Duration: %s\n",
 		*execution.ExecutionResult.Status,
-		execution.Duration(),
+		execution.CalculateDuration(),
 	)
 
 	return err
@@ -81,7 +81,7 @@ func (r ExecutionRawRenderer) renderDetails(execution testkube.Execution, writer
 	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
 		execution.Name,
 		*execution.ExecutionResult.Status,
-		execution.Duration(),
+		execution.CalculateDuration(),
 	)
 
 	return err

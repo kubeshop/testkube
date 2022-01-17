@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -29,17 +30,18 @@ func NewWatchTestExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
+			startTime := time.Now()
 
 			executionID := args[0]
 			executionCh, err := client.WatchTestExecution(executionID)
 			for execution := range executionCh {
 				ui.ExitOnError("watching test execution", err)
-				printTestExecutionDetails(execution)
+				printTestExecutionDetails(execution, startTime)
 			}
 
 			execution, err := client.GetTestExecution(executionID)
 			ui.ExitOnError("getting test excecution", err)
-			printTestExecutionDetails(execution)
+			printTestExecutionDetails(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintTestStatus(execution)

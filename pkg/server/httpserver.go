@@ -33,6 +33,13 @@ type HTTPServer struct {
 
 // Init initializes router and setting up basic routes for health and metrics
 func (s *HTTPServer) Init() {
+
+	// global log for requests
+	s.Mux.Use(func(c *fiber.Ctx) error {
+		s.Log.Debugw("request", "method", string(c.Request().Header.Method()), "path", c.Request().URI().String())
+		return c.Next()
+	})
+
 	// server generic endpoints
 	s.Mux.Get("/health", s.HealthEndpoint())
 	s.Mux.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))

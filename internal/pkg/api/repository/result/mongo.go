@@ -146,8 +146,8 @@ func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTi
 }
 
 // EndExecution updates execution end time
-func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime time.Time) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"endtime": endTime}})
+func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"endtime": endTime, "duration": duration.String()}})
 	return
 }
 

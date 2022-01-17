@@ -80,7 +80,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			// save stop time
 			defer func() {
 				execution.Stop()
-				repo.EndExecution(ctx, execution.Id, execution.EndTime)
+				repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 			}()
 
 			// wait for complete
@@ -149,7 +149,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 				// save stop time
 				defer func() {
 					execution.Stop()
-					repo.EndExecution(ctx, execution.Id, execution.EndTime)
+					repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 				}()
 				// wait for complete
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {

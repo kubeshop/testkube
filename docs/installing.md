@@ -14,7 +14,7 @@ We're building Homebew tap for each release, so you can easily install TestKube 
 
 ```sh
 brew tap kubeshop/homebrew-testkube
-brew install kubeshop/testkube
+brew install kubeshop/testkube/testkube
 ```
 
 If you want to upgrade testkube please run following command

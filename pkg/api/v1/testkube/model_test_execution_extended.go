@@ -19,6 +19,22 @@ func (e TestExecution) IsCompleted() bool {
 	return *e.Status == *TestStatusError || *e.Status == *TestStatusSuccess
 }
 
+func (e *TestExecution) CalculateDuration() time.Duration {
+
+	end := e.EndTime
+	start := e.StartTime
+
+	if start.UnixNano() <= 0 && end.UnixNano() <= 0 {
+		return time.Duration(0)
+	}
+
+	if end.UnixNano() <= 0 {
+		end = time.Now()
+	}
+
+	return end.Sub(e.StartTime)
+}
+
 func (e TestExecution) Table() (header []string, output [][]string) {
 	header = []string{"Step", "Status", "ID", "Error"}
 	output = make([][]string, 0)

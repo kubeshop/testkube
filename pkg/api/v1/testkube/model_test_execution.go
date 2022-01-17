@@ -29,6 +29,8 @@ type TestExecution struct {
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
 	EndTime time.Time `json:"endTime,omitempty"`
+	// test duration
+	Duration string `json:"duration,omitempty"`
 	// steps execution restults
 	StepResults []TestStepExecutionResult `json:"stepResults,omitempty"`
 	// test execution tags

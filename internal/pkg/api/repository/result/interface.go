@@ -44,7 +44,7 @@ type Repository interface {
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, id string, endTime time.Time) error
+	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
 	// GetTags get all available tags
 	GetTags(ctx context.Context) (tags []string, err error)
 }

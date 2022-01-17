@@ -2,6 +2,7 @@ package tests
 
 import (
 	"os"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -19,9 +20,12 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	return client, namespace
 }
 
-func printTestExecutionDetails(execution testkube.TestExecution) {
+func printTestExecutionDetails(execution testkube.TestExecution, startTime time.Time) {
 	ui.Warn("Name:", execution.Name)
-	ui.Warn("Status:", string(*execution.Status)+"\n")
+	if execution.Status != nil {
+		ui.Warn("Status:", string(*execution.Status))
+	}
+	ui.Warn("Duration", execution.CalculateDuration().String()+"\n")
 	ui.Table(execution, os.Stdout)
 
 	ui.NL()
@@ -37,8 +41,7 @@ func uiPrintTestStatus(execution testkube.TestExecution) {
 		ui.Warn("Test execution started")
 
 	case testkube.TestStatusSuccess:
-		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with sucess in " + duration.String())
+		ui.Success("Test execution completed with sucess in " + execution.Duration)
 
 	case testkube.TestStatusError:
 		ui.Errf("Test execution failed")
