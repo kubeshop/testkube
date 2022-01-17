@@ -84,11 +84,12 @@ func (c ProxyScriptsAPI) GetScript(id string) (script testkube.Script, err error
 
 func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
 
-	if scriptID == "" {
-		scriptID = "-"
+	uri := c.getURI("/executions/%s", executionID)
+
+	if scriptID != "" {
+		uri = c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
 	}
 
-	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -102,11 +103,12 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution t
 // ListExecutions list all executions for given script name
 func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
-	if scriptID == "" {
-		scriptID = "-"
+	uri := c.getURI("/executions")
+
+	if scriptID != "" {
+		uri = c.getURI("/scripts/%s/executions", scriptID)
 	}
 
-	uri := c.getURI("/scripts/%s/executions", scriptID)
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
