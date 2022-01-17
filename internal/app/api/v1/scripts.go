@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -9,16 +8,12 @@ import (
 	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	"github.com/kubeshop/testkube/pkg/secrets"
 
+	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-const gitTokenSecretName = "RUNNER_GITTOKEN"
-
-func getSecretName(name string) string {
-	return fmt.Sprintf("%s-secrets", name)
-}
 
 // GetScriptHandler is method for getting an existing script
 func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
@@ -115,12 +110,8 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 		}
 
 		// create secrets for script
-		stringData := map[string]string{}
-		if request.Repository.Token != "" {
-			stringData[gitTokenSecretName] = request.Repository.Token
-		}
-
-		if err = s.SecretClient.Create(getSecretName(request.Name), request.Namespace, stringData); err != nil {
+		stringData := map[string]string{jobs.GitTokenSecretName: request.Repository.Token}
+		if err = s.SecretClient.Create(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -174,12 +165,8 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 		}
 
 		// update secrets for scipt
-		stringData := map[string]string{}
-		if request.Repository.Token != "" {
-			stringData[gitTokenSecretName] = request.Repository.Token
-		}
-
-		if err = s.SecretClient.Update(getSecretName(request.Name), request.Namespace, stringData); err != nil {
+		stringData := map[string]string{jobs.GitTokenSecretName: request.Repository.Token}
+		if err = s.SecretClient.Update(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}

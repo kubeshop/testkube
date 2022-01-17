@@ -137,3 +137,8 @@ func NewSecretSpec(id, namespace string, stringData map[string]string) *v1.Secre
 		StringData: stringData,
 	}
 }
+
+// GetSecretName returns secret name
+func GetSecretName(name string) string {
+	return fmt.Sprintf("%s-secrets", name)
+}

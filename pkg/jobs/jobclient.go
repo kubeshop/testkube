@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/secrets"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -23,6 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	pods "k8s.io/client-go/kubernetes/typed/core/v1"
+)
+
+const (
+	// GitTokenSecretName is git token secret name
+	GitTokenSecretName = "git-token"
+	// GitTokenEnvVarName is git token environment var name
+	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 )
 
 type JobClient struct {
@@ -373,6 +381,18 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 
+	secretEnvVar := v1.EnvVar{
+		Name: GitTokenEnvVarName,
+		ValueFrom: &v1.EnvVarSource{
+			SecretKeyRef: &v1.SecretKeySelector{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: secrets.GetSecretName(id),
+				},
+				Key: GitTokenSecretName,
+			},
+		},
+	}
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
@@ -388,7 +408,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 							Image:           image,
 							Command:         []string{"/bin/runner", jsn},
 							ImagePullPolicy: v1.PullAlways,
-							Env:             envVars,
+							Env:             append(envVars, secretEnvVar),
 						},
 					},
 					RestartPolicy: v1.RestartPolicyNever,
@@ -397,7 +417,6 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 			BackoffLimit: &backOffLimit,
 		},
 	}
-
 }
 
 var envVars = []v1.EnvVar{
