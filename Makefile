@@ -75,6 +75,8 @@ create-examples:
 	kubectl testkube scripts create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
 	kubectl delete test testkube-global-test -ntestkube || true
 	cat test/e2e/test-example-1.json | kubectl testkube tests create --name testkube-global-test
+	kubectl delete test kubeshop-sites-test -ntestkube || true
+	cat test/e2e/test-example-2.json | kubectl testkube tests create --name kubeshop-sites-test
 
 
 test-reload-sanity-script:
