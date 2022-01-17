@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -11,10 +12,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const testkubeScriptSecretLabel = "scripts-secrets"
+
 // SecretClient provide methods to manage secrets
 type SecretClient struct {
 	ClientSet *kubernetes.Clientset
-	Namespace string
 	Log       *zap.SugaredLogger
 }
 
@@ -27,14 +29,13 @@ func NewSecretClient() (*SecretClient, error) {
 
 	return &SecretClient{
 		ClientSet: clientSet,
-		Namespace: "testkube",
 		Log:       log.DefaultLogger,
 	}, nil
 }
 
 // Get is a method to retrieve an existing secret
-func (c *SecretClient) Get(id string) (map[string]string, error) {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *SecretClient) Get(id, namespace string) (map[string]string, error) {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
 	secretSpec, err := secretsClient.Get(ctx, id, metav1.GetOptions{})
@@ -51,11 +52,12 @@ func (c *SecretClient) Get(id string) (map[string]string, error) {
 }
 
 // List is a method to retrieve all existing secrets
-func (c *SecretClient) List() (map[string]map[string]string, error) {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *SecretClient) List(namespace string) (map[string]map[string]string, error) {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
-	secretList, err := secretsClient.List(ctx, metav1.ListOptions{})
+	secretList, err := secretsClient.List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("testkube=%s", testkubeScriptSecretLabel)})
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +76,11 @@ func (c *SecretClient) List() (map[string]map[string]string, error) {
 }
 
 // Create is a method to create new secret
-func (c *SecretClient) Create(id string, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *SecretClient) Create(id, namespace string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSecretSpec(id, c.Namespace, stringData)
+	secretSpec := NewSecretSpec(id, namespace, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}
@@ -87,11 +89,11 @@ func (c *SecretClient) Create(id string, stringData map[string]string) error {
 }
 
 // Update is a method to update an existing secret
-func (c *SecretClient) Update(id string, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *SecretClient) Update(id, namespace string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSecretSpec(id, c.Namespace, stringData)
+	secretSpec := NewSecretSpec(id, namespace, stringData)
 	if _, err := secretsClient.Update(ctx, secretSpec, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
@@ -100,11 +102,23 @@ func (c *SecretClient) Update(id string, stringData map[string]string) error {
 }
 
 // Delete is a method to delete an existing secret
-func (c *SecretClient) Delete(id string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *SecretClient) Delete(id, namespace string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
 	if err := secretsClient.Delete(ctx, id, metav1.DeleteOptions{}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *SecretClient) DeleteAll(namespace string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+	ctx := context.Background()
+
+	if err := secretsClient.DeleteCollection(ctx, metav1.DeleteOptions{},
+		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", testkubeScriptSecretLabel)}); err != nil {
 		return err
 	}
 
@@ -117,6 +131,7 @@ func NewSecretSpec(id, namespace string, stringData map[string]string) *v1.Secre
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
 			Namespace: namespace,
+			Labels:    map[string]string{"testkube": testkubeScriptSecretLabel},
 		},
 		Type:       v1.SecretTypeOpaque,
 		StringData: stringData,
