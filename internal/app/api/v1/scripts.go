@@ -203,7 +203,7 @@ func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 		}
 
 		// delete secrets for script
-		if err = s.SecretClient.Delete(name, namespace); err != nil {
+		if err = s.SecretClient.Delete(secrets.GetSecretName(name), namespace); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}

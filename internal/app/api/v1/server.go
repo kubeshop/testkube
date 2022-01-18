@@ -47,6 +47,7 @@ func NewServer(
 		Executor:             executor,
 		ScriptsClient:        scriptsClient,
 		ExecutorsClient:      executorsClient,
+		SecretClient:         secretClient,
 		TestsClient:          testsClient,
 		Metrics:              NewMetrics(),
 	}
@@ -63,7 +64,7 @@ type TestKubeAPI struct {
 	TestsClient          *testscr.TestsClient
 	ScriptsClient        *scriptscr.ScriptsClient
 	ExecutorsClient      *executorscr.ExecutorsClient
-	SecretClient         secrets.SecretClient
+	SecretClient         *secrets.SecretClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
