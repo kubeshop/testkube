@@ -1,4 +1,4 @@
-package secrets
+package secret
 
 import (
 	"context"
@@ -14,27 +14,27 @@ import (
 
 const testkubeScriptSecretLabel = "scripts-secrets"
 
-// SecretClient provide methods to manage secrets
-type SecretClient struct {
+// Client provide methods to manage secrets
+type Client struct {
 	ClientSet *kubernetes.Clientset
 	Log       *zap.SugaredLogger
 }
 
-// NewSecretClient is a method to create new secret client
-func NewSecretClient() (*SecretClient, error) {
+// NewClient is a method to create new secret client
+func NewClient() (*Client, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
 	}
 
-	return &SecretClient{
+	return &Client{
 		ClientSet: clientSet,
 		Log:       log.DefaultLogger,
 	}, nil
 }
 
 // Get is a method to retrieve an existing secret
-func (c *SecretClient) Get(id, namespace string) (map[string]string, error) {
+func (c *Client) Get(id, namespace string) (map[string]string, error) {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
@@ -52,7 +52,7 @@ func (c *SecretClient) Get(id, namespace string) (map[string]string, error) {
 }
 
 // List is a method to retrieve all existing secrets
-func (c *SecretClient) List(namespace string) (map[string]map[string]string, error) {
+func (c *Client) List(namespace string) (map[string]map[string]string, error) {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
@@ -76,11 +76,11 @@ func (c *SecretClient) List(namespace string) (map[string]map[string]string, err
 }
 
 // Create is a method to create new secret
-func (c *SecretClient) Create(id, namespace string, stringData map[string]string) error {
+func (c *Client) Create(id, namespace string, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSecretSpec(id, namespace, stringData)
+	secretSpec := NewSpec(id, namespace, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}
@@ -89,11 +89,11 @@ func (c *SecretClient) Create(id, namespace string, stringData map[string]string
 }
 
 // Update is a method to update an existing secret
-func (c *SecretClient) Update(id, namespace string, stringData map[string]string) error {
+func (c *Client) Update(id, namespace string, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSecretSpec(id, namespace, stringData)
+	secretSpec := NewSpec(id, namespace, stringData)
 	if _, err := secretsClient.Update(ctx, secretSpec, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (c *SecretClient) Update(id, namespace string, stringData map[string]string
 }
 
 // Delete is a method to delete an existing secret
-func (c *SecretClient) Delete(id, namespace string) error {
+func (c *Client) Delete(id, namespace string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
@@ -113,7 +113,8 @@ func (c *SecretClient) Delete(id, namespace string) error {
 	return nil
 }
 
-func (c *SecretClient) DeleteAll(namespace string) error {
+// DeleteAll is a method to delete all existing secrets
+func (c *Client) DeleteAll(namespace string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
 	ctx := context.Background()
 
@@ -125,8 +126,8 @@ func (c *SecretClient) DeleteAll(namespace string) error {
 	return nil
 }
 
-// NewSecretSpec is a method to return secret spec
-func NewSecretSpec(id, namespace string, stringData map[string]string) *v1.Secret {
+// NewSpec is a method to return secret spec
+func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
@@ -138,7 +139,7 @@ func NewSecretSpec(id, namespace string, stringData map[string]string) *v1.Secre
 	}
 }
 
-// GetSecretName returns secret name
-func GetSecretName(name string) string {
+// GetMetadataName returns secret metadata name
+func GetMetadataName(name string) string {
 	return fmt.Sprintf("%s-secrets", name)
 }
