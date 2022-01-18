@@ -3,8 +3,9 @@ package scripts
 import (
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewListExecutionsCmd() *cobra.Command {
@@ -18,7 +19,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			var scriptID string
 			limit := 10
 			if len(args) == 0 {
-				scriptID = "-"
+				scriptID = ""
 			} else if len(args) > 0 {
 				scriptID = args[0]
 				limit = 0

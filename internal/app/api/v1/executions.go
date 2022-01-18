@@ -192,13 +192,13 @@ func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
 func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		scriptID := c.Params("id", "-")
+		scriptID := c.Params("id", "")
 		executionID := c.Params("executionID")
 
 		var execution testkube.Execution
 		var err error
 
-		if scriptID == "-" {
+		if scriptID == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))

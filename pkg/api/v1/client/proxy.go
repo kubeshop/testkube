@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 // check in compile time if interface is implemented
@@ -83,8 +83,10 @@ func (c ProxyScriptsAPI) GetScript(id string) (script testkube.Script, err error
 	return c.getScriptFromResponse(resp)
 }
 
-func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
-	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
+func (c ProxyScriptsAPI) GetExecution(executionID string) (execution testkube.Execution, err error) {
+
+	uri := c.getURI("/executions/%s", executionID)
+
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -97,7 +99,13 @@ func (c ProxyScriptsAPI) GetExecution(scriptID, executionID string) (execution t
 
 // ListExecutions list all executions for given script name
 func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
-	uri := c.getURI("/scripts/%s/executions", scriptID)
+
+	uri := "/executions"
+
+	if scriptID != "" {
+		uri = fmt.Sprintf("/scripts/%s/executions", scriptID)
+	}
+
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))

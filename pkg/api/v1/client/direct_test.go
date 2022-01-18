@@ -6,8 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestScriptsAPI(t *testing.T) {
@@ -36,7 +37,7 @@ func TestScriptsAPI(t *testing.T) {
 	t.Run("Get executed script details", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/v1/scripts/test/executions/1", r.URL.Path)
+			assert.Equal(t, "/v1/executions/1", r.URL.Path)
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprintf(w, `{"id":"1", "executionResult":{"status": "error"}}`)
 		}))
@@ -46,7 +47,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		execution, err := client.GetExecution("test", "1")
+		execution, err := client.GetExecution("1")
 
 		// then
 		assert.Equal(t, "1", execution.Id)

@@ -3,8 +3,9 @@ package scripts
 import (
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewGetExecutionCmd() *cobra.Command {
@@ -20,7 +21,6 @@ func NewGetExecutionCmd() *cobra.Command {
 			// - 2 - scriptName + executionName
 			var scriptID, executionID string
 			if len(args) == 1 {
-				scriptID = "-"
 				executionID = args[0]
 			} else if len(args) == 2 {
 				scriptID = args[0]
@@ -30,7 +30,7 @@ func NewGetExecutionCmd() *cobra.Command {
 			}
 
 			client, _ := GetClient(cmd)
-			execution, err := client.GetExecution(scriptID, executionID)
+			execution, err := client.GetExecution(executionID)
 			ui.ExitOnError("getting script execution: "+scriptID+"/"+executionID, err)
 
 			render := GetExecutionRenderer(cmd)

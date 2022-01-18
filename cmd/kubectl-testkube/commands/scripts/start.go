@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 const WatchInterval = 2 * time.Second
@@ -47,7 +48,7 @@ func NewStartScriptCmd() *cobra.Command {
 				watchLogs(execution.Id, client)
 			}
 
-			execution, err = client.GetExecution("-", execution.Id)
+			execution, err = client.GetExecution(execution.Id)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintStatus(execution)

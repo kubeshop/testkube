@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
 	"github.com/kubeshop/testkube/pkg/ui"
-
-	"github.com/spf13/cobra"
 )
 
 var (
