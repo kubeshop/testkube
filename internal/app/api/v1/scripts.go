@@ -8,7 +8,7 @@ import (
 	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
-	"github.com/kubeshop/testkube/pkg/secrets"
+	"github.com/kubeshop/testkube/pkg/secret"
 
 	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -116,7 +116,7 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 			stringData[jobs.GitTokenSecretName] = request.Repository.Token
 		}
 
-		if err = s.SecretClient.Create(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
+		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -176,7 +176,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			stringData[jobs.GitTokenSecretName] = request.Repository.Token
 		}
 
-		if err = s.SecretClient.Update(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
+		if err = s.SecretClient.Update(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
@@ -203,7 +203,7 @@ func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 		}
 
 		// delete secrets for script
-		if err = s.SecretClient.Delete(secrets.GetSecretName(name), namespace); err != nil {
+		if err = s.SecretClient.Delete(secret.GetMetadataName(name), namespace); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}

@@ -15,7 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/runner/output"
-	"github.com/kubeshop/testkube/pkg/secrets"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -392,7 +392,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
-						Name: secrets.GetSecretName(id),
+						Name: secret.GetMetadataName(id),
 					},
 					Key: GitUsernameSecretName,
 				},
@@ -403,7 +403,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
-						Name: secrets.GetSecretName(id),
+						Name: secret.GetMetadataName(id),
 					},
 					Key: GitTokenSecretName,
 				},
