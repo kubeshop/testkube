@@ -145,3 +145,13 @@ video:
 		--output-ppm-stream - \
 		--output-framerate 30 \
 		| ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i - -b 65536K movie.mp4
+
+
+port-forward-minio:
+	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube 
+
+port-forward-mongo: 
+	kubectl port-forward svc/testkube-mongodb 27017 -ntestkube
+
+port-forward-api: 
+	kubectl port-forward svc/testkube-api-server 8088 -ntestkube
