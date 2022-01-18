@@ -110,7 +110,10 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 		}
 
 		// create secrets for script
-		stringData := map[string]string{jobs.GitTokenSecretName: request.Repository.Token}
+		stringData := map[string]string{
+			jobs.GitUsernameSecretName: request.Repository.Username,
+			jobs.GitTokenSecretName:    request.Repository.Token,
+		}
 		if err = s.SecretClient.Create(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -165,7 +168,10 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 		}
 
 		// update secrets for scipt
-		stringData := map[string]string{jobs.GitTokenSecretName: request.Repository.Token}
+		stringData := map[string]string{
+			jobs.GitUsernameSecretName: request.Repository.Username,
+			jobs.GitTokenSecretName:    request.Repository.Token,
+		}
 		if err = s.SecretClient.Update(secrets.GetSecretName(request.Name), request.Namespace, stringData); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)

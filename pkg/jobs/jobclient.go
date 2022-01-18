@@ -27,6 +27,10 @@ import (
 )
 
 const (
+	// GitUsernameSecretName is git username secret name
+	GitUsernameSecretName = "git-username"
+	// GitUsernameEnvVarName is git username environment var name
+	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
 	// GitTokenEnvVarName is git token environment var name
@@ -377,18 +381,32 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 	return nil
 }
 
+// NewJobSpec is a method to create new job spec
 func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 
-	secretEnvVar := v1.EnvVar{
-		Name: GitTokenEnvVarName,
-		ValueFrom: &v1.EnvVarSource{
-			SecretKeyRef: &v1.SecretKeySelector{
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: secrets.GetSecretName(id),
+	secretEnvVars := []v1.EnvVar{
+		{
+			Name: GitUsernameEnvVarName,
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: secrets.GetSecretName(id),
+					},
+					Key: GitUsernameSecretName,
 				},
-				Key: GitTokenSecretName,
+			},
+		},
+		{
+			Name: GitTokenEnvVarName,
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: secrets.GetSecretName(id),
+					},
+					Key: GitTokenSecretName,
+				},
 			},
 		},
 	}
@@ -408,7 +426,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 							Image:           image,
 							Command:         []string{"/bin/runner", jsn},
 							ImagePullPolicy: v1.PullAlways,
-							Env:             append(envVars, secretEnvVar),
+							Env:             append(envVars, secretEnvVars...),
 						},
 					},
 					RestartPolicy: v1.RestartPolicyNever,
