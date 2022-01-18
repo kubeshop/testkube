@@ -3,6 +3,8 @@ package tests
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -10,20 +12,17 @@ import (
 
 func NewGetTestCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "get",
+		Use:     "get <testName>",
 		Aliases: []string{"g"},
 		Short:   "Get test by name",
 		Long:    `Getting test from given namespace - if no namespace given "testkube" namespace is used`,
+		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 			ui.Logo()
 
-			if len(args) == 0 {
-				ui.Failf("test name is not specified")
-			}
-
 			name := args[0]
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			test, err := client.GetTest(name, namespace)
 			ui.ExitOnError("getting test "+name, err)
 

@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ func NewVersionCmd() *cobra.Command {
 		Short: "Shows version and build info",
 		Long:  `Shows version and build info`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := scripts.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			info, err := client.GetServerInfo()
 			if err != nil {
 				info.Version = info.Version + " " + err.Error()
@@ -29,7 +29,7 @@ func NewVersionCmd() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// version validation
 			// if client version is less than server version show warning
-			client, _ := scripts.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			err := ValidateVersions(client)
 			if err != nil {

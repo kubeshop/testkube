@@ -3,6 +3,7 @@ package scripts
 import (
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ func NewGetExecutionCmd() *cobra.Command {
 				ui.Failf("invalid script arguments please pass execution id or script name and execution name pair")
 			}
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			execution, err := client.GetExecution(scriptID, executionID)
 			ui.ExitOnError("getting script execution: "+scriptID+"/"+executionID, err)
 

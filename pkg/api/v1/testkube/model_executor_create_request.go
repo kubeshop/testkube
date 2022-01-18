@@ -23,8 +23,4 @@ type ExecutorCreateRequest struct {
 	Types []string `json:"types"`
 	// URI for rest based executors
 	Uri string `json:"uri,omitempty"`
-	// VolumeMountPath - where should PV be monted inside job pod for e.g. artifacts
-	VolumeMountPath string `json:"volumeMountPath,omitempty"`
-	// VolumeQuantity for kube-job PersistentVolume
-	VolumeQuantity string `json:"volumeQuantity,omitempty"`
 }

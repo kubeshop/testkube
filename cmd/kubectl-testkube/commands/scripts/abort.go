@@ -3,24 +3,21 @@ package scripts
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewAbortExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "abort",
+		Use:   "abort <executionID>",
 		Short: "Aborts execution of the script",
-		Long:  ``,
+		Args:  validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			var executionID string
-			if len(args) == 0 {
-				ui.Failf("Please pass execution ID as argument")
-			}
+			executionID := args[0]
 
-			executionID = args[0]
-
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			err := client.AbortExecution("script", executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting execution %s", executionID), err)

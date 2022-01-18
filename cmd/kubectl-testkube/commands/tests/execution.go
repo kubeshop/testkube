@@ -1,28 +1,26 @@
 package tests
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewTestExecutionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "execution",
+		Use:     "execution <executionID>",
 		Aliases: []string{"e"},
 		Short:   "Gets execution details",
 		Long:    `Gets ececution details by ID`,
+		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			if len(args) == 0 {
-				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass execution ID"))
-			}
-
 			startTime := time.Now()
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			executionID := args[0]
 			execution, err := client.GetTestExecution(executionID)

@@ -1,26 +1,24 @@
 package tests
 
 import (
-	"fmt"
-
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewDeleteTestsCmd() *cobra.Command {
-	var name string
 	cmd := &cobra.Command{
-		Use:   "delete",
+		Use:   "delete <testName>",
 		Short: "Delete tests",
-		Long:  `Delete tests`,
+		Long:  `Delete tests by name`,
+		Args:  validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			if len(args) == 0 {
-				ui.ExitOnError("delete test", fmt.Errorf("test name is not specified"))
-			}
-			client, namespace := GetClient(cmd)
 
-			name = args[0]
+			client, namespace := common.GetClient(cmd)
+
+			name := args[0]
 			err := client.DeleteTest(name, namespace)
 			ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
 			ui.Success("Succesfully deleted", name)

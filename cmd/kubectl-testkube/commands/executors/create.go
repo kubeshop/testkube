@@ -1,6 +1,7 @@
 package executors
 
 import (
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -8,8 +9,8 @@ import (
 
 func NewCreateExecutorCmd() *cobra.Command {
 	var (
-		types                                                      []string
-		name, executorType, image, uri, volueMount, volumeQuantity string
+		types                          []string
+		name, executorType, image, uri string
 	)
 
 	cmd := &cobra.Command{
@@ -21,7 +22,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 			var err error
 
-			client, namespace := GetClient(cmd)
+			client, namespace := common.GetClient(cmd)
 
 			executor, _ := client.GetExecutor(name)
 			if name == executor.Name {
@@ -29,14 +30,12 @@ func NewCreateExecutorCmd() *cobra.Command {
 			}
 
 			options := apiClient.CreateExecutorOptions{
-				Name:            name,
-				Namespace:       namespace,
-				Types:           types,
-				ExecutorType:    executorType,
-				Image:           image,
-				Uri:             uri,
-				VolumeMountPath: volueMount,
-				VolumeQuantity:  volumeQuantity,
+				Name:         name,
+				Namespace:    namespace,
+				Types:        types,
+				ExecutorType: executorType,
+				Image:        image,
+				Uri:          uri,
 			}
 
 			_, err = client.CreateExecutor(options)
@@ -52,8 +51,6 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
-	cmd.Flags().StringVarP(&volueMount, "volume-mount", "", "", "where volume should be mounted")
-	cmd.Flags().StringVarP(&volumeQuantity, "volume-quantity", "", "", "how big volume should be")
 
 	return cmd
 }

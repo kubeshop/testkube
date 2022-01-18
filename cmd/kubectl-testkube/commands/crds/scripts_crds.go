@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/test/script/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -18,21 +19,17 @@ import (
 
 func NewCRDScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "scripts",
+		Use:   "scripts <manifestDirectory>",
 		Short: "Generate scripts CRD file based on directory",
 		Long:  `Generate scripts manifest based on directory (e.g. for ArgoCD sync based on scripts files)`,
+		Args:  validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
-
-			if len(args) == 0 {
-				ui.Failf("Please pass directory")
-			}
 
 			dir := args[0]
 			firstEntry := true
 
 			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-
 				if err != nil {
 					return nil
 				}

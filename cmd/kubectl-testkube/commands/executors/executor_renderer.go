@@ -38,9 +38,9 @@ type ExecutorRawRenderer struct {
 }
 
 func (r ExecutorRawRenderer) Render(executor testkube.ExecutorDetails, writer io.Writer) error {
-	_, err := fmt.Fprintf(writer, "Name: %s, URI: %s\n",
+	_, err := fmt.Fprintf(writer, "Name: %s, Image: %s\n",
 		executor.Name,
-		executor.Executor.Uri,
+		executor.Executor.Image,
 	)
 
 	return err

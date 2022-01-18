@@ -3,6 +3,8 @@ package tests
 import (
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -19,17 +21,15 @@ func NewTestExecutionsCmd() *cobra.Command {
 		Aliases: []string{"el"},
 		Short:   "Gets tests executions list",
 		Long:    `Gets tests executions list, can be filtered by test name`,
+		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			testID := ""
-			if len(args) > 0 {
-				testID = args[0]
-			}
+			testName := args[0]
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
-			executions, err := client.ListTestExecutions(testID, 1000, tags)
+			executions, err := client.ListTestExecutions(testName, 1000, tags)
 			ui.ExitOnError("getting tests executions list", err)
 
 			ui.Table(executions, os.Stdout)

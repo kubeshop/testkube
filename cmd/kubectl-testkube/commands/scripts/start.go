@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -22,23 +24,20 @@ func NewStartScriptCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start",
+		Use:     "start <scriptName>",
 		Aliases: []string{"run", "r"},
 		Short:   "Starts new script",
 		Long:    `Starts new script based on Script Custom Resource name, returns results to console`,
+		Args:    validator.ScriptName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			if len(args) == 0 {
-				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass script name to run"))
-			}
+			scriptName := args[0]
 
-			scriptID := args[0]
+			client, namespace := common.GetClient(cmd)
+			namespacedName := fmt.Sprintf("%s/%s", namespace, scriptName)
 
-			client, namespace := GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, scriptID)
-
-			execution, err := client.ExecuteScript(scriptID, namespace, name, params)
+			execution, err := client.ExecuteScript(scriptName, namespace, name, params)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
 			printExecutionDetails(execution)

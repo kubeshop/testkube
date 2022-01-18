@@ -1548,13 +1548,6 @@ components:
         uri:
           description: URI for rest based executors
           type: string
-        volumeMountPath:
-          description: VolumeMountPath - where should PV be monted inside job
-            pod for e.g. artifacts
-          type: string
-        volumeQuantity:
-          description: VolumeQuantity for kube-job PersistentVolume
-          type: string
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions

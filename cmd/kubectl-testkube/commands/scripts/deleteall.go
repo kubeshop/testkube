@@ -7,18 +7,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteScriptsCmd() *cobra.Command {
+func NewDeleteAllScriptsCmd() *cobra.Command {
+	var name string
 	cmd := &cobra.Command{
-		Use:   "delete <scriptName>",
-		Short: "Delete scripts",
+		Use:   "delete-all",
+		Short: "Delete all scripts",
 		Args:  validator.ScriptName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
 			client, namespace := common.GetClient(cmd)
-			name := args[0]
-			err := client.DeleteScript(name, namespace)
-			ui.ExitOnError("delete script "+name+" from namespace "+namespace, err)
+			err := client.DeleteScripts(namespace)
+			ui.ExitOnError("delete all scripts from namespace "+namespace, err)
 
 			ui.Success("Succesfully deleted", name)
 		},

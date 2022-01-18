@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/test/script/detector"
@@ -41,7 +42,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			client, namespace := GetClient(cmd)
+			client, namespace := common.GetClient(cmd)
 
 			script, _ := client.GetScript(name)
 			if name == script.Name {
