@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -20,24 +22,21 @@ func NewStartTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start",
+		Use:     "start <testName>",
 		Aliases: []string{"run", "r"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
+		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			if len(args) == 0 {
-				ui.ExitOnError("Invalid arguments", fmt.Errorf("please pass test name to run"))
-			}
-
-			testID := args[0]
+			testName := args[0]
 			startTime := time.Now()
 
-			client, namespace := GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, testID)
+			client, namespace := common.GetClient(cmd)
+			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-			execution, err := client.ExecuteTest(testID, namespace, name, params)
+			execution, err := client.ExecuteTest(testName, namespace, name, params)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			if watchEnabled {

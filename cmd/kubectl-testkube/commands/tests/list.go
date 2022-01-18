@@ -3,6 +3,7 @@ package tests
 import (
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +19,7 @@ func NewListTestsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			tests, err := client.ListTests(namespace, tags)
 
 			ui.ExitOnError("getting all tests in namespace "+namespace, err)

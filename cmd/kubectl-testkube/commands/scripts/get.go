@@ -3,6 +3,8 @@ package scripts
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -10,19 +12,16 @@ import (
 
 func NewGetScriptsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "get",
+		Use:     "get <scriptName>",
 		Aliases: []string{"g"},
 		Short:   "Get script by name",
 		Long:    `Getting script from given namespace - if no namespace given "testkube" namespace is used`,
+		Args:    validator.ScriptName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			if len(args) == 0 {
-				ui.Failf("script name is not specified")
-			}
-
 			name := args[0]
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			script, err := client.GetScript(name)
 			ui.ExitOnError("getting script "+name, err)
 

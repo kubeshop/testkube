@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -41,7 +42,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 
 			json.Unmarshal(content, &options)
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			test, _ := client.GetTest(options.Name, options.Namespace)
 			if options.Name == test.Name {

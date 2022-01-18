@@ -3,16 +3,16 @@ package scripts
 import (
 	"os"
 
-	"github.com/spf13/cobra"
-
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/spf13/cobra"
 )
 
 func NewListExecutionsCmd() *cobra.Command {
 	var tags []string
 
 	cmd := &cobra.Command{
-		Use:   "executions",
+		Use:   "executions [scriptName]",
 		Short: "List scripts executions",
 		Long:  `Getting list of execution for given script name or recent executions if there is no script name passed`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -25,7 +25,7 @@ func NewListExecutionsCmd() *cobra.Command {
 				limit = 0
 			}
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			executions, err := client.ListExecutions(scriptID, limit, tags)
 			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 

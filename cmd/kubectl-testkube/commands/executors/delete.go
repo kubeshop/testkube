@@ -1,6 +1,8 @@
 package executors
 
 import (
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -9,22 +11,18 @@ func NewDeleteExecutorCmd() *cobra.Command {
 	var name string
 
 	cmd := &cobra.Command{
-		Use:   "delete",
+		Use:   "delete <executorName>",
 		Short: "Gets executordetails",
 		Long:  `Gets executor, you can change output format`,
+		Args:  validator.ExecutorName,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 1 {
-				name = args[0]
-			}
+			name = args[0]
 
-			if name == "" {
-				ui.Failf("Please pass executor name")
-			}
-
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			err := client.DeleteExecutor(name)
 			ui.ExitOnError("deleting executor: "+name, err)
+
 			ui.Success("Executor deleted")
 		},
 	}

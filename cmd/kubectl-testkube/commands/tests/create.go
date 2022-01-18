@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -47,7 +48,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				options.Name = name
 			}
 
-			client, _ := GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
 			test, _ := client.GetTest(options.Name, options.Namespace)
 			if options.Name == test.Name {

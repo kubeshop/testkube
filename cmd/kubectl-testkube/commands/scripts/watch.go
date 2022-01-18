@@ -1,32 +1,25 @@
 package scripts
 
 import (
-	"github.com/spf13/cobra"
-
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/spf13/cobra"
 )
 
 func NewWatchExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "watch",
+		Use:     "watch <executionID>",
 		Aliases: []string{"w"},
 		Short:   "Watch logs output from executor pod",
 		Long:    `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
+		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
+			client, _ := common.GetClient(cmd)
 
-			var executionID string
-			if len(args) == 1 {
-				executionID = args[0]
-			} else {
-				ui.Failf("invalid script arguments please pass execution id or script name and execution name pair")
-			}
-
-			client, _ := GetClient(cmd)
+			executionID := args[0]
 			execution, err := client.GetExecution(executionID)
-			if err != nil {
-
-				ui.Failf("execution result retrievel failed with err %s", err)
-			}
+			ui.ExitOnError("get execution failed", err)
 
 			if execution.ExecutionResult.IsCompleted() {
 				ui.Completed("execution is already finished")

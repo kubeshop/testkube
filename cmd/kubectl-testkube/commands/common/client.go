@@ -1,4 +1,4 @@
-package executors
+package common
 
 import (
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
