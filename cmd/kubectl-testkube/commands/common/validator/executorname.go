@@ -7,7 +7,7 @@ import (
 )
 
 func ExecutorName(cmd *cobra.Command, args []string) error {
-	// TODO validate script name as valid kubernetes resource name
+	// TODO validate executor name as valid kubernetes resource name
 
 	if len(args) < 1 {
 		return errors.New("please pass valid executor-name")
