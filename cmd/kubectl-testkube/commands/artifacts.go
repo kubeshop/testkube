@@ -40,12 +40,11 @@ func NewArtifactsCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
-	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 
 	cmd.AddCommand(NewListArtifactsCmd())
 	cmd.AddCommand(NewDownloadSingleArtifactsCmd())
 	cmd.AddCommand(NewDownloadAllArtifactsCmd())
-	// output renderer flags
+
 	return cmd
 }
 
@@ -76,33 +75,19 @@ func NewListArtifactsCmd() *cobra.Command {
 
 func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "download-one",
+		Use:   "download-one <executionID> <fileName> <destinationDir>",
 		Short: "download artifact",
-		Args:  validator.ExecutionID,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if executionID == "" {
-				cmd.SilenceUsage = true
-				return fmt.Errorf("execution-id is a required parameter")
-			}
+		Args:  validator.ExecutionIDAndFileNames,
+		Run: func(cmd *cobra.Command, args []string) {
+			executionID := args[0]
+			filename := args[1]
+			destination := args[2]
 
-			if filename == "" {
-				cmd.SilenceUsage = true
-				return fmt.Errorf("fileName is a required parameter")
-			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.SilenceUsage = true
 			client, _ := common.GetClient(cmd)
-			if f, err := client.DownloadFile(executionID, filename, destination); err != nil {
-				cmd.SilenceUsage = true
-				return err
+			f, err := client.DownloadFile(executionID, filename, destination)
+			ui.ExitOnError("downloading file"+filename, err)
 
-			} else {
-				fmt.Printf("File %s downloaded.\n", f)
-			}
-
-			return nil
+			fmt.Printf("File %s downloaded.\n", f)
 		},
 	}
 
@@ -119,21 +104,13 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 
 func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "download",
-		Short: "download artifact",
+		Use:   "download <executionID>",
+		Short: "download artifacts",
 		Args:  validator.ExecutionID,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if executionID == "" {
-				cmd.SilenceUsage = true
-				return fmt.Errorf("execution-id is a required parameter")
-			}
-
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(cmd *cobra.Command, args []string) {
+			executionID := args[0]
 			client, _ := common.GetClient(cmd)
 			scripts.DownloadArtifacts(executionID, downloadDir, client)
-			return nil
 		},
 	}
 
