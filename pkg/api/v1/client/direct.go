@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
 	"github.com/kubeshop/testkube/pkg/runner/output"
@@ -69,8 +70,9 @@ func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err erro
 	return c.getScriptFromResponse(resp)
 }
 
-func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution testkube.Execution, err error) {
-	uri := c.getURI("/scripts/%s/executions/%s", scriptID, executionID)
+func (c DirectScriptsAPI) GetExecution(executionID string) (execution testkube.Execution, err error) {
+
+	uri := c.getURI("/executions/%s", executionID)
 
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -86,11 +88,17 @@ func (c DirectScriptsAPI) GetExecution(scriptID, executionID string) (execution 
 
 // ListExecutions list all executions for given script name
 func (c DirectScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
-	var uri string
+
+	uri := "/executions"
+
+	if scriptID != "" {
+		uri = fmt.Sprintf("/scripts/%s/executions", scriptID)
+	}
+
 	if len(tags) > 0 {
-		uri = c.getURI("/scripts/%s/executions?pageSize=%d&tags=%s", scriptID, limit, strings.Join(tags, ","))
+		uri = c.getURI("%s?pageSize=%d&tags=%s", uri, limit, strings.Join(tags, ","))
 	} else {
-		uri = c.getURI("/scripts/%s/executions?pageSize=%d", scriptID, limit)
+		uri = c.getURI("%s?pageSize=%d", uri, limit)
 	}
 
 	resp, err := c.client.Get(uri)

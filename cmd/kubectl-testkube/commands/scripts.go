@@ -4,7 +4,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
 	"github.com/kubeshop/testkube/pkg/ui"
-
 	"github.com/spf13/cobra"
 )
 

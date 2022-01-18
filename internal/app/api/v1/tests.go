@@ -9,14 +9,15 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetTestHandler for getting test object
@@ -260,8 +261,8 @@ func newTestStepExecutionResult(execution testkube.Execution, step *testkube.Tes
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	filter := testresult.NewExecutionsFilter()
-	scriptName := c.Params("id", "-")
-	if scriptName != "-" {
+	scriptName := c.Params("id", "")
+	if scriptName != "" {
 		filter = filter.WithScriptName(scriptName)
 	}
 
@@ -270,18 +271,18 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 		filter = filter.WithTextSearch(textSearch)
 	}
 
-	page, err := strconv.Atoi(c.Query("page", "-"))
+	page, err := strconv.Atoi(c.Query("page", ""))
 	if err == nil {
 		filter = filter.WithPage(page)
 	}
 
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "-"))
+	pageSize, err := strconv.Atoi(c.Query("pageSize", ""))
 	if err == nil && pageSize != 0 {
 		filter = filter.WithPageSize(pageSize)
 	}
 
-	status := c.Query("status", "-")
-	if status != "-" {
+	status := c.Query("status", "")
+	if status != "" {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 

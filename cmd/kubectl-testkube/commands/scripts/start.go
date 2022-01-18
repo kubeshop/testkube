@@ -46,7 +46,7 @@ func NewStartScriptCmd() *cobra.Command {
 				watchLogs(execution.Id, client)
 			}
 
-			execution, err = client.GetExecution("-", execution.Id)
+			execution, err = client.GetExecution(execution.Id)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintStatus(execution)

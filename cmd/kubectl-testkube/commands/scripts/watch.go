@@ -15,13 +15,11 @@ func NewWatchExecutionCmd() *cobra.Command {
 		Long:    `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			executionID := args[0]
-
 			client, _ := common.GetClient(cmd)
-			execution, err := client.GetExecution("-", executionID)
-			if err != nil {
-				ui.Failf("execution result retrievel failed with err %s", err)
-			}
+
+			executionID := args[0]
+			execution, err := client.GetExecution(executionID)
+			ui.ExitOnError("get execution failed", err)
 
 			if execution.ExecutionResult.IsCompleted() {
 				ui.Completed("execution is already finished")

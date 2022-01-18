@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/runner/output"
@@ -61,7 +63,7 @@ func watchLogs(id string, client client.Client) {
 
 	// TODO watch for success | error status - in case of connection error on logs watch need fix in 0.8
 	for range time.Tick(time.Second) {
-		execution, err := client.GetExecution("-", id)
+		execution, err := client.GetExecution(id)
 		ui.ExitOnError("get script execution details", err)
 
 		fmt.Print(".")
