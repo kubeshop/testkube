@@ -21,8 +21,10 @@ func NewGetScriptsCmd() *cobra.Command {
 			ui.Logo()
 
 			name := args[0]
+			namespace := cmd.Flag("namespace").Value.String()
+
 			client, _ := common.GetClient(cmd)
-			script, err := client.GetScript(name)
+			script, err := client.GetScript(name, namespace)
 			ui.ExitOnError("getting script "+name, err)
 
 			out, err := yaml.Marshal(script)
