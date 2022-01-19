@@ -15,8 +15,10 @@ func NewDeleteScriptsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			client, namespace := common.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
+			namespace := cmd.Flag("namespace").Value.String()
 			name := args[0]
+
 			err := client.DeleteScript(name, namespace)
 			ui.ExitOnError("delete script "+name+" from namespace "+namespace, err)
 

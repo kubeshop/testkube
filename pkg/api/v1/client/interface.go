@@ -19,7 +19,7 @@ type Client interface {
 	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
-	GetScript(id string) (script testkube.Script, err error)
+	GetScript(id, namespace string) (script testkube.Script, err error)
 	CreateScript(options UpsertScriptOptions) (script testkube.Script, err error)
 	UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error)
 	DeleteScript(name string, namespace string) error

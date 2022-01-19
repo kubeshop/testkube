@@ -70,9 +70,11 @@ type ProxyScriptsAPI struct {
 
 // scripts and executions -----------------------------------------------------------------------------
 
-func (c ProxyScriptsAPI) GetScript(id string) (script testkube.Script, err error) {
+func (c ProxyScriptsAPI) GetScript(id, namespace string) (script testkube.Script, err error) {
 	uri := c.getURI("/scripts/%s", id)
-	req := c.GetProxy("GET").Suffix(uri)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
 
 	resp := req.Do(context.Background())
 
@@ -184,7 +186,7 @@ func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, exec
 	uri := c.getURI("/scripts/%s/executions", id)
 
 	// get script to get script tags
-	script, err := c.GetScript(id)
+	script, err := c.GetScript(id, namespace)
 	if err != nil {
 		return execution, nil
 	}
@@ -526,7 +528,9 @@ func (c ProxyScriptsAPI) getArtifactsFromResponse(resp rest.Result) (artifacts [
 
 func (c ProxyScriptsAPI) GetTest(id, namespace string) (script testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
-	req := c.GetProxy("GET").Suffix(uri)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
 
 	resp := req.Do(context.Background())
 
@@ -544,6 +548,7 @@ func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
 	uri := c.getURI("/scripts/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
 }
+
 func (c ProxyScriptsAPI) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").

@@ -11,6 +11,7 @@ import (
 )
 
 const Version = "v1"
+const TestkubeInstallationNamespace = "testkube"
 
 // Converts io.Reader with SSE data like `data: {"type": "event", "message":"something"}`
 // to channel of output.Output objects, helps with logs streaming from SSE endpoint (passed from job executor)

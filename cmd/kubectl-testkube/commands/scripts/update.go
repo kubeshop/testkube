@@ -44,7 +44,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 
 			client, namespace := common.GetClient(cmd)
 
-			script, _ := client.GetScript(name)
+			script, _ := client.GetScript(name, namespace)
 			if name != script.Name {
 				ui.Failf("Script with name '%s' not exists in namespace %s", name, namespace)
 			}

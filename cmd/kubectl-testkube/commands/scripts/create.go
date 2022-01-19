@@ -23,6 +23,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 		gitPath      string
 		tags         []string
 	)
+
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create new script",
@@ -32,6 +33,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 
 			var content []byte
 			var err error
+			namespace := cmd.Flag("namespace").Value.String()
 
 			if file != "" {
 				// read script content
@@ -42,9 +44,9 @@ func NewCreateScriptsCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			client, namespace := common.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
-			script, _ := client.GetScript(name)
+			script, _ := client.GetScript(name, namespace)
 			if name == script.Name {
 				ui.Failf("Script with name '%s' already exists in namespace %s", name, namespace)
 			}
@@ -85,6 +87,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 			}
 
 			options.Tags = tags
+
 			script, err = client.CreateScript(options)
 			ui.ExitOnError("creating script "+name+" in namespace "+namespace, err)
 

@@ -56,8 +56,8 @@ type DirectScriptsAPI struct {
 
 // scripts and executions -----------------------------------------------------------------------------
 
-func (c DirectScriptsAPI) GetScript(id string) (script testkube.Script, err error) {
-	uri := c.getURI("/scripts/%s", id)
+func (c DirectScriptsAPI) GetScript(id, namespace string) (script testkube.Script, err error) {
+	uri := c.getURI("/scripts/%s?namespace=%s", id, namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return script, err
@@ -183,7 +183,7 @@ func (c DirectScriptsAPI) ExecuteScript(id, namespace, executionName string, exe
 	uri := c.getURI("/scripts/%s/executions", id)
 
 	// get script to get script tags
-	script, err := c.GetScript(id)
+	script, err := c.GetScript(id, namespace)
 	if err != nil {
 		return execution, nil
 	}

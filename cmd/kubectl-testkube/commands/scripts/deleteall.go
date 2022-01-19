@@ -15,8 +15,9 @@ func NewDeleteAllScriptsCmd() *cobra.Command {
 		Args:  validator.ScriptName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
+			namespace := cmd.Flag("namespace").Value.String()
 
-			client, namespace := common.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 			err := client.DeleteScripts(namespace)
 			ui.ExitOnError("delete all scripts from namespace "+namespace, err)
 
