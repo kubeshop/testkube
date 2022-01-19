@@ -73,7 +73,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn))
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -141,7 +141,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn))
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -382,7 +382,7 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
+func NewJobSpec(id, namespace, image, jsn, scriptName string) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 
@@ -392,7 +392,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
-						Name: secret.GetMetadataName(id),
+						Name: secret.GetMetadataName(scriptName),
 					},
 					Key: GitUsernameSecretName,
 				},
@@ -403,7 +403,7 @@ func NewJobSpec(id, namespace, image, jsn string) *batchv1.Job {
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
-						Name: secret.GetMetadataName(id),
+						Name: secret.GetMetadataName(scriptName),
 					},
 					Key: GitTokenSecretName,
 				},
