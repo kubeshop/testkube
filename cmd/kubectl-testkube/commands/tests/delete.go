@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteTestsCmd() *cobra.Command {
+func NewDeleteTestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <testName>",
 		Short: "Delete tests",
