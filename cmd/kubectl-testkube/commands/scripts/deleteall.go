@@ -7,7 +7,6 @@ import (
 )
 
 func NewDeleteAllScriptsCmd() *cobra.Command {
-	var name string
 	cmd := &cobra.Command{
 		Use:   "delete-all",
 		Short: "Delete all scripts",
@@ -16,10 +15,11 @@ func NewDeleteAllScriptsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
+
 			err := client.DeleteScripts(namespace)
 			ui.ExitOnError("delete all scripts from namespace "+namespace, err)
 
-			ui.Success("Succesfully deleted", name)
+			ui.Success("Succesfully deleted all scripts in namespace", namespace)
 		},
 	}
 
