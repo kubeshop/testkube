@@ -1,5 +1,10 @@
+#!/bin/bash
+
+set -e
+
 # delete all scripts test
 kubectl testkube scripts 
+kubectl testkube scripts delete-all
 kubectl testkube scripts create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site1
 kubectl testkube scripts create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site2
 kubectl testkube scripts create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site3
@@ -22,6 +27,8 @@ cat test/e2e/curl.json | kubectl testkube scripts create --name curl-test
 sleep 5
 
 
+# create tests for test purpose
+kubectl testkube tests delete-all
 cat test/e2e/test-example-1.json | kubectl testkube tests create --name todo-app1
 cat test/e2e/test-example-1.json | kubectl testkube tests create --name todo-app2
 cat test/e2e/test-example-1.json | kubectl testkube tests create --name todo-app3
