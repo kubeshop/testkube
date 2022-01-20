@@ -60,6 +60,41 @@ func (s TestKubeAPI) GetTestHandler() fiber.Handler {
 	}
 }
 
+// DeleteTestHandler for deleting a test with id
+func (s TestKubeAPI) DeleteTestHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		err := s.TestsClient.Delete(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+}
+
+// DeleteTestsHandler for deleting all Tests
+func (s TestKubeAPI) DeleteTestsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		namespace := c.Query("namespace", "testkube")
+		err := s.TestsClient.DeleteAll(namespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+}
+
 // ListTestsHandler for getting list of all available tests
 func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

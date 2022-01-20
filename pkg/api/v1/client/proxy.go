@@ -545,7 +545,12 @@ func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("script name '%s' is not valid", name)
 	}
-	uri := c.getURI("/scripts/%s", name)
+	uri := c.getURI("/tests/%s", name)
+	return c.makeDeleteRequest(uri, namespace, true)
+}
+
+func (c ProxyScriptsAPI) DeleteTests(namespace string) error {
+	uri := c.getURI("/tests")
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 

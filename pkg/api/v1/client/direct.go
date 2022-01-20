@@ -553,6 +553,25 @@ func (c DirectScriptsAPI) DeleteTest(name, namespace string) (err error) {
 	return
 }
 
+func (c DirectScriptsAPI) DeleteTests(namespace string) (err error) {
+	uri := c.getURI("/tests?namespace=%s", namespace)
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	if err != nil {
+		return fmt.Errorf("prepare request error: %w", err)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client.Do error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/delete-tests returned error: %w", err)
+	}
+
+	return
+}
+
 // UpdateTest creates new Test Custom Resource
 func (c DirectScriptsAPI) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
