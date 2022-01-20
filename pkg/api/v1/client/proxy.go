@@ -102,7 +102,7 @@ func (c ProxyScriptsAPI) GetExecution(executionID string) (execution testkube.Ex
 // ListExecutions list all executions for given script name
 func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
-	uri := "/executions"
+	uri := c.getURI("/executions/")
 
 	if scriptID != "" {
 		uri = fmt.Sprintf("/scripts/%s/executions", scriptID)
