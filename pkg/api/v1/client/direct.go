@@ -566,7 +566,7 @@ func (c DirectScriptsAPI) DeleteTests(namespace string) (err error) {
 	defer resp.Body.Close()
 
 	if err := c.responseError(resp); err != nil {
-		return fmt.Errorf("api/delete-test returned error: %w", err)
+		return fmt.Errorf("api/delete-tests returned error: %w", err)
 	}
 
 	return
