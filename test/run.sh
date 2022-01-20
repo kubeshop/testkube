@@ -44,14 +44,23 @@ sleep 5
 
 # running scripts
 kubectl testkube scripts run kubeshop-site -f       # postman
+kubectl testkube scripts execution $(id kubeshop-site) 
 kubectl testkube scripts run testkube-dashboard -f  # cypress
+kubectl testkube scripts execution $(id testkube-dashboard) 
 kubectl testkube scripts run curl-test -f           # curl
+kubectl testkube scripts execution $(id curl-test) 
 
 
 # running tests
 kubectl testkube tests run todo-app -f
+kubectl testkube tests execution $(id todo-app) 
 kubectl testkube tests run kubeshop -f
+kubectl testkube tests execution $(id kubeshop) 
 
 id() {
-	kubectl testkube scripts executions | grep $1 | head | tr -s ' ' | cut -d" " -f 8
+	kubectl testkube scripts executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
+}
+
+testid() {
+	kubectl testkube tests executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
 }
