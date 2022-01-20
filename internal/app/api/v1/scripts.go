@@ -8,12 +8,14 @@ import (
 	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	"github.com/kubeshop/testkube/pkg/secret"
 
+	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ListScripts for getting list of all available scripts
+// GetScriptHandler is method for getting an existing script
 func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
@@ -32,7 +34,7 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 	}
 }
 
-// ListScriptsHandler for getting list of all available scripts
+// ListScriptsHandler is a method for getting list of all available scripts
 func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
@@ -107,11 +109,22 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		// create secrets for script
+		stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
+		if request.Repository != nil {
+			stringData[jobs.GitUsernameSecretName] = request.Repository.Username
+			stringData[jobs.GitTokenSecretName] = request.Repository.Token
+		}
+
+		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		return c.JSON(script)
 	}
 }
 
-// UpdateScriptHandler creates new script CR based on script content
+// UpdateScriptHandler updates an existing script CR based on script content
 func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -134,7 +147,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			}
 		}
 
-		// we need to get resouece first and load its metadata.ResourceVersion
+		// we need to get resource first and load its metadata.ResourceVersion
 		script, err := s.ScriptsClient.Get(request.Namespace, request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -156,17 +169,41 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		// update secrets for scipt
+		stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
+		if request.Repository != nil {
+			stringData[jobs.GitUsernameSecretName] = request.Repository.Username
+			stringData[jobs.GitTokenSecretName] = request.Repository.Token
+		}
+
+		if err = s.SecretClient.Update(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		return c.JSON(script)
 	}
 }
 
-// DeleteScriptHandler for deleting a script with id
+// DeleteScriptHandler is a method for deleting a script with id
 func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
 		err := s.ScriptsClient.Delete(namespace, name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// delete secrets for script
+		if err = s.SecretClient.Delete(secret.GetMetadataName(name), namespace); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
@@ -184,6 +221,15 @@ func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
 		namespace := c.Query("namespace", "testkube")
 		err := s.ScriptsClient.DeleteAll(namespace)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// delete all secrets for scripts
+		if err = s.SecretClient.DeleteAll(namespace); err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}

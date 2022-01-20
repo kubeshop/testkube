@@ -21,6 +21,8 @@ func NewUpdateScriptsCmd() *cobra.Command {
 		uri          string
 		gitBranch    string
 		gitPath      string
+		gitUsername  string
+		gitToken     string
 		tags         []string
 	)
 
@@ -56,10 +58,12 @@ func NewUpdateScriptsCmd() *cobra.Command {
 			var repository *testkube.Repository
 			if uri != "" && gitBranch != "" {
 				repository = &testkube.Repository{
-					Type_:  "git",
-					Uri:    uri,
-					Branch: gitBranch,
-					Path:   gitPath,
+					Type_:    "git",
+					Uri:      uri,
+					Branch:   gitBranch,
+					Path:     gitPath,
+					Username: gitUsername,
+					Token:    gitToken,
 				}
 			}
 
@@ -106,6 +110,8 @@ func NewUpdateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
+	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3 - Warning: by passing tags existing tags will be overwritten")
 
 	return cmd
