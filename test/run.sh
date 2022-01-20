@@ -52,3 +52,6 @@ kubectl testkube scripts run curl-test -f           # curl
 kubectl testkube tests run todo-app -f
 kubectl testkube tests run kubeshop -f
 
+id() {
+	kubectl testkube scripts executions | grep $1 | head | tr -s ' ' | cut -d" " -f 8
+}
