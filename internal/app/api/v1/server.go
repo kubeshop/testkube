@@ -121,7 +121,9 @@ func (s TestKubeAPI) Init() {
 
 	tests.Post("/", s.CreateTestHandler())
 	tests.Get("/", s.ListTestsHandler())
+	tests.Delete("/", s.DeleteTestsHandler())
 	tests.Get("/:id", s.GetTestHandler())
+	tests.Delete("/:id", s.DeleteTestHandler())
 
 	tests.Post("/:id/executions", s.ExecuteTestHandler())
 	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
