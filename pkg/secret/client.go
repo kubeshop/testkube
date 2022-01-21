@@ -10,7 +10,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	confv1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -96,7 +95,8 @@ func (c *Client) Apply(id, namespace string, stringData map[string]string) error
 	ctx := context.Background()
 
 	secretSpec := NewApplySpec(id, namespace, stringData)
-	if _, err := secretsClient.Apply(ctx, secretSpec, metav1.ApplyOptions{}); err != nil {
+	if _, err := secretsClient.Apply(ctx, secretSpec, metav1.ApplyOptions{
+		FieldManager: "application/apply-patch"}); err != nil {
 		return err
 	}
 
@@ -156,16 +156,10 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 
 // NewApplySpec is a method to return secret apply spec
 func NewApplySpec(id, namespace string, stringData map[string]string) *corev1.SecretApplyConfiguration {
-	secretType := v1.SecretTypeOpaque
-	return &corev1.SecretApplyConfiguration{
-		ObjectMetaApplyConfiguration: &confv1.ObjectMetaApplyConfiguration{
-			Name:      &id,
-			Namespace: &namespace,
-			Labels:    map[string]string{"testkube": testkubeScriptSecretLabel},
-		},
-		Type:       &secretType,
-		StringData: stringData,
-	}
+	return corev1.Secret(id, namespace).
+		WithLabels(map[string]string{"testkube": testkubeScriptSecretLabel}).
+		WithStringData(stringData).
+		WithType(v1.SecretTypeOpaque)
 }
 
 // GetMetadataName returns secret metadata name
