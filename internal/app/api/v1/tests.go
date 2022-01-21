@@ -296,9 +296,9 @@ func newTestStepExecutionResult(execution testkube.Execution, step *testkube.Tes
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	filter := testresult.NewExecutionsFilter()
-	scriptName := c.Params("id", "")
-	if scriptName != "" {
-		filter = filter.WithScriptName(scriptName)
+	name := c.Query("id", "")
+	if name != "" {
+		filter = filter.WithName(name)
 	}
 
 	textSearch := c.Query("textSearch", "")

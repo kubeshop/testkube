@@ -127,6 +127,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	opts := options.Find()
 	startTimeQuery := bson.M{}
 
+	if filter.NameDefined() {
+		query["test.name"] = filter.Name()
+	}
+
 	if filter.TextSearchDefined() {
 		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
