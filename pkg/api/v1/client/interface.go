@@ -41,6 +41,7 @@ type Client interface {
 	GetTest(id string, namespace string) (script testkube.Test, err error)
 	ListTests(namespace string, tags []string) (scripts testkube.Tests, err error)
 	DeleteTest(name string, namespace string) error
+	DeleteTests(namespace string) error
 	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error)
 
 	GetTestExecution(executionID string) (execution testkube.TestExecution, err error)

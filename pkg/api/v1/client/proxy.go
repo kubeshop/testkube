@@ -102,7 +102,7 @@ func (c ProxyScriptsAPI) GetExecution(executionID string) (execution testkube.Ex
 // ListExecutions list all executions for given script name
 func (c ProxyScriptsAPI) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
-	uri := "/executions"
+	uri := c.getURI("/executions/")
 
 	if scriptID != "" {
 		uri = fmt.Sprintf("/scripts/%s/executions", scriptID)
@@ -545,7 +545,12 @@ func (c ProxyScriptsAPI) DeleteTest(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("script name '%s' is not valid", name)
 	}
-	uri := c.getURI("/scripts/%s", name)
+	uri := c.getURI("/tests/%s", name)
+	return c.makeDeleteRequest(uri, namespace, true)
+}
+
+func (c ProxyScriptsAPI) DeleteTests(namespace string) error {
+	uri := c.getURI("/tests")
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
