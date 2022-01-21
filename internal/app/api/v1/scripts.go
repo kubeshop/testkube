@@ -176,11 +176,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 			stringData[jobs.GitTokenSecretName] = request.Repository.Token
 		}
 
-		if err = s.SecretClient.Update(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
-			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
-			}
-
+		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -205,7 +201,7 @@ func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 		// delete secrets for script
 		if err = s.SecretClient.Delete(secret.GetMetadataName(name), namespace); err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return c.SendStatus(fiber.StatusNoContent)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
@@ -231,7 +227,7 @@ func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
 		// delete all secrets for scripts
 		if err = s.SecretClient.DeleteAll(namespace); err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return c.SendStatus(fiber.StatusNoContent)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)

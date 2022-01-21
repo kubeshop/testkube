@@ -20,6 +20,7 @@ type ExecuteOptions struct {
 	ExecutorSpec executorv1.ExecutorSpec
 	Request      testkube.ExecutionRequest
 	Sync         bool
+	HasSecrets   bool
 }
 
 func NewExecuteOptions() ExecuteOptions {
