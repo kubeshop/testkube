@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +20,6 @@ func NewTestExecutionsCmd() *cobra.Command {
 		Aliases: []string{"el"},
 		Short:   "Gets tests executions list",
 		Long:    `Gets tests executions list, can be filtered by test name`,
-		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
