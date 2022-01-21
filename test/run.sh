@@ -2,13 +2,12 @@
 
 set -e
 
-
 script_execution_id() {
 	kubectl testkube scripts executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
 }
 
 test_execution_id() {
-	kubectl testkube tests executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
+	kubectl testkube tests executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 2
 }
 
 test_scripts_delete() {
@@ -36,6 +35,19 @@ test_scripts_create() {
 	cat test/e2e/curl.json | kubectl testkube scripts create --name curl-test
 }
 
+test_scripts_run() {
+	kubectl testkube scripts run kubeshop-site -f       # postman
+	kubectl testkube scripts execution $(script_execution_id kubeshop-site)
+	kubectl testkube scripts run testkube-dashboard -f  # cypress
+	kubectl testkube scripts execution $(script_execution_id testkube-dashboard) 
+
+	# curl issue #821 - need to be without -f
+	kubectl testkube scripts run curl-test              # curl
+	sleep 5
+	kubectl testkube scripts execution $(script_execution_id curl-test) 
+}
+
+
 
 test_tests_delete() {
 	echo "Tests delete test"
@@ -53,19 +65,6 @@ test_tests_delete() {
 	kubectl testkube tests list
 }
 
-
-test_scripts_run() {
-	kubectl testkube scripts run kubeshop-site -f       # postman
-	kubectl testkube scripts execution $(script_execution_id kubeshop-site)
-	kubectl testkube scripts run testkube-dashboard -f  # cypress
-	kubectl testkube scripts execution $(script_execution_id testkube-dashboard) 
-
-	# curl issue #821
-	kubectl testkube scripts run curl-test              # curl
-	sleep 5
-	kubectl testkube scripts execution $(script_execution_id curl-test) 
-}
-
 test_tests_create() {
 	echo "create tests"
 	cat test/e2e/test-example-1.json | kubectl testkube tests create --name todo-app
@@ -73,12 +72,12 @@ test_tests_create() {
 }
 
 test_tests_run() {
+	echo "run tests"
 	kubectl testkube tests run todo-app -f
 	kubectl testkube tests execution $(test_execution_id todo-app) 
 	kubectl testkube tests run kubeshop -f
 	kubectl testkube tests execution $(test_execution_id kubeshop) 
 }
-
 
 test_scripts_delete
 test_scripts_create 
