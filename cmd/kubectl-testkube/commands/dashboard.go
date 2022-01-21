@@ -42,17 +42,19 @@ func NewDashboardCmd() *cobra.Command {
 				err     error
 			)
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				command, err = process.ExecuteAsync("kubectl", "port-forward",
-					"--namespace", namespace,
-					fmt.Sprintf("deployment/%s", DashboardName),
-					fmt.Sprintf("%d:%d", DashboardPort, DashboardLocalPort))
-			}()
+			if !useGlobalDashboard {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					command, err = process.ExecuteAsync("kubectl", "port-forward",
+						"--namespace", namespace,
+						fmt.Sprintf("deployment/%s", DashboardName),
+						fmt.Sprintf("%d:%d", DashboardLocalPort, DashboardPort))
+				}()
 
-			wg.Wait()
-			ui.ExitOnError("port forwarding dashboard endpoint", err)
+				wg.Wait()
+				ui.ExitOnError("port forwarding dashboard endpoint", err)
+			}
 
 			openCmd, err := getOpenCommand()
 			if err == nil {
@@ -66,8 +68,10 @@ func NewDashboardCmd() *cobra.Command {
 				fmt.Sprintf("%d:%d", ApiServerPort, ApiServerPort))
 			ui.PrintOnError("port forwarding results endpoint", err)
 
-			err = command.Process.Kill()
-			ui.ExitOnError("process killing", err)
+			if command != nil {
+				err = command.Process.Kill()
+				ui.ExitOnError("process killing", err)
+			}
 		},
 	}
 
