@@ -46,10 +46,7 @@ func NewDashboardCmd() *cobra.Command {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					command, err = process.ExecuteAsync("kubectl", "port-forward",
-						"--namespace", namespace,
-						fmt.Sprintf("deployment/%s", DashboardName),
-						fmt.Sprintf("%d:%d", DashboardLocalPort, DashboardPort))
+					command, err = forwardKubernetesPort(true, namespace, DashboardName, DashboardLocalPort, DashboardPort)
 				}()
 
 				wg.Wait()
@@ -62,10 +59,7 @@ func NewDashboardCmd() *cobra.Command {
 				ui.PrintOnError("openning dashboard", err)
 			}
 
-			_, err = process.Execute("kubectl", "port-forward",
-				"--namespace", namespace,
-				fmt.Sprintf("deployment/%s", ApiServerName),
-				fmt.Sprintf("%d:%d", ApiServerPort, ApiServerPort))
+			_, err = forwardKubernetesPort(false, namespace, ApiServerName, ApiServerPort, ApiServerPort)
 			ui.PrintOnError("port forwarding results endpoint", err)
 
 			if command != nil {
@@ -92,4 +86,18 @@ func getOpenCommand() (string, error) {
 	default:
 		return "", fmt.Errorf("Unsupported OS")
 	}
+}
+
+func forwardKubernetesPort(isAsync bool, namespace, deploymentName string, localPort, clusterPort int) (
+	command *exec.Cmd, err error) {
+	fullDeploymentName := fmt.Sprintf("deployment/%s", deploymentName)
+	ports := fmt.Sprintf("%d:%d", localPort, clusterPort)
+
+	if isAsync {
+		command, err = process.ExecuteAsync("kubectl", "port-forward", "--namespace", namespace, fullDeploymentName, ports)
+	} else {
+		_, err = process.Execute("kubectl", "port-forward", "--namespace", namespace, fullDeploymentName, ports)
+	}
+
+	return
 }
