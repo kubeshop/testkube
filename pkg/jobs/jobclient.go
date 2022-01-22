@@ -61,7 +61,8 @@ func NewJobClient() (*JobClient, error) {
 // LaunchK8sJobSync launches new job and run executor of given type
 // TODO Consider moving launch of K8s job as always sync
 // TODO Consider moving storage calls level up (remove dependency from here)
-func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execution testkube.Execution,
+	hasSecrets bool) (result testkube.ExecutionResult, err error) {
 	result = testkube.NewPendingExecutionResult()
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -73,7 +74,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -130,7 +131,8 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 // LaunchK8sJob launches new job and run executor of given type
 // TODO consider moving storage based operation up in hierarchy
 // TODO Consider moving launch of K8s job as always sync
-func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution, hasSecrets bool) (
+	result testkube.ExecutionResult, err error) {
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
@@ -141,7 +143,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -382,33 +384,36 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn, scriptName string) *batchv1.Job {
+func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	var backOffLimit int32 = 2
 
-	secretEnvVars := []v1.EnvVar{
-		{
-			Name: GitUsernameEnvVarName,
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: secret.GetMetadataName(scriptName),
+	var secretEnvVars []v1.EnvVar
+	if hasSecrets {
+		secretEnvVars = []v1.EnvVar{
+			{
+				Name: GitUsernameEnvVarName,
+				ValueFrom: &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: secret.GetMetadataName(scriptName),
+						},
+						Key: GitUsernameSecretName,
 					},
-					Key: GitUsernameSecretName,
 				},
 			},
-		},
-		{
-			Name: GitTokenEnvVarName,
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: secret.GetMetadataName(scriptName),
+			{
+				Name: GitTokenEnvVarName,
+				ValueFrom: &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: secret.GetMetadataName(scriptName),
+						},
+						Key: GitTokenSecretName,
 					},
-					Key: GitTokenSecretName,
 				},
 			},
-		},
+		}
 	}
 
 	return &batchv1.Job{

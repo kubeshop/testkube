@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -88,6 +89,20 @@ func (c *Client) Create(id, namespace string, stringData map[string]string) erro
 	return nil
 }
 
+// Apply is a method to create or update a secret
+func (c *Client) Apply(id, namespace string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+	ctx := context.Background()
+
+	secretSpec := NewApplySpec(id, namespace, stringData)
+	if _, err := secretsClient.Apply(ctx, secretSpec, metav1.ApplyOptions{
+		FieldManager: "application/apply-patch"}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Update is a method to update an existing secret
 func (c *Client) Update(id, namespace string, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
@@ -137,6 +152,14 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 		Type:       v1.SecretTypeOpaque,
 		StringData: stringData,
 	}
+}
+
+// NewApplySpec is a method to return secret apply spec
+func NewApplySpec(id, namespace string, stringData map[string]string) *corev1.SecretApplyConfiguration {
+	return corev1.Secret(id, namespace).
+		WithLabels(map[string]string{"testkube": testkubeScriptSecretLabel}).
+		WithStringData(stringData).
+		WithType(v1.SecretTypeOpaque)
 }
 
 // GetMetadataName returns secret metadata name

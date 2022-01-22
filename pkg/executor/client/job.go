@@ -96,13 +96,13 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
-	return c.Client.LaunchK8sJob(options.ExecutorSpec.Image, c.Repository, execution)
+	return c.Client.LaunchK8sJob(options.ExecutorSpec.Image, c.Repository, execution, options.HasSecrets)
 }
 
 // Execute starts new external script execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
 func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
-	return c.Client.LaunchK8sJobSync(options.ExecutorSpec.Image, c.Repository, execution)
+	return c.Client.LaunchK8sJobSync(options.ExecutorSpec.Image, c.Repository, execution, options.HasSecrets)
 }
 
 func (c JobExecutor) Abort(id string) error {

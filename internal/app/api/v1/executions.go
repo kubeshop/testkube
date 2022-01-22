@@ -9,14 +9,17 @@ import (
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 // ExecuteScriptHandler calls particular executor based on execution request content and type
@@ -76,7 +79,16 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	execution.Start()
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		return execution.Errw("can't execute script, rnto storage error: %w", err)
+		return execution.Errw("can't execute script, can't insert into storage error: %w", err)
+	}
+
+	options.HasSecrets = true
+	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.ScriptName), options.Request.Namespace); err != nil {
+		if !errors.IsNotFound(err) {
+			return execution.Errw("can't get secrets: %w", err)
+		}
+
+		options.HasSecrets = false
 	}
 
 	var result testkube.ExecutionResult
