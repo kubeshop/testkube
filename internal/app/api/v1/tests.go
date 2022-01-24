@@ -263,7 +263,8 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 	case testkube.TestStepTypeExecuteScript:
 		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
-			Name: fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
+			Name:      fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
+			Namespace: executeScriptStep.Namespace,
 		})
 
 		if err != nil {
