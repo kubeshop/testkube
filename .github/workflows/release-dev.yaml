@@ -2,49 +2,25 @@ name: Release kubectl-testkube dev
 
 on:
   push:
-    tags: 
+    tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-
-  # release_creation:
-  #   name: Prepares Release on GitHub
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     id: ${{ steps.main_step.outputs.id }}
-  #   steps:
-  #     - name: Create Release
-  #       id: main_step
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ github.ref }}
-  #         release_name: testkube CLI ${{ github.ref }}
-  #         body: |
-  #           Changes in this Release
-  #           - Releasing new version of the testkube CLI for Kubectl.
-  #         draft: false
-  #         prerelease: false
-
   release:
     name: Create and upload release-artifacts
     # needs: [release_creation]
     runs-on: ubuntu-latest
 
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.17
-      -
-        name: Run GoReleaser
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
           distribution: goreleaser
@@ -55,3 +31,14 @@ jobs:
           TELEMETRY_TOKEN: ${{ secrets.TELEMETRY_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
+  release-chocolatey:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Choco help
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: -h
