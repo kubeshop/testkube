@@ -48,7 +48,7 @@ func NewDashboardCmd() *cobra.Command {
 				for _, command := range commandsToKill {
 					if command != nil {
 						err := command.Process.Kill()
-						ui.ExitOnError("killing command: "+command.String(), err)
+						ui.PrintOnError("killing command: "+command.String(), err)
 					}
 				}
 			}()
@@ -56,7 +56,7 @@ func NewDashboardCmd() *cobra.Command {
 			// if not global dasboard - we'll try to port-forward current cluster API
 			if !useGlobalDashboard {
 				command, err := asyncPortForward(namespace, DashboardName, DashboardLocalPort, DashboardPort)
-				ui.ExitOnError("port forwarding dashboard endpoint", err)
+				ui.PrintOnError("port forwarding dashboard endpoint", err)
 				commandsToKill = append(commandsToKill, command)
 			}
 
@@ -65,8 +65,9 @@ func NewDashboardCmd() *cobra.Command {
 			commandsToKill = append(commandsToKill, command)
 
 			// check for api and dasboard to be ready
-			err = readinessCheck(apiAddress, dashboardAddress)
-			ui.ExitOnError("checking readiness of services", err)
+			ready, err := readinessCheck(apiAddress, dashboardAddress)
+			ui.PrintOnError("checking readiness of services", err)
+			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
 
 			// open browser
 			openCmd, err := getOpenCommand()
@@ -94,22 +95,31 @@ func NewDashboardCmd() *cobra.Command {
 	return cmd
 }
 
-func readinessCheck(apiURI, dashboardURI string) error {
-	for {
-		time.Sleep(500 * time.Millisecond)
+func readinessCheck(apiURI, dashboardURI string) (bool, error) {
+	const readinessCheckTimeout = 30 * time.Second
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	go func() {
+		time.Sleep(readinessCheckTimeout)
+		ticker.Stop()
+	}()
+
+	for range ticker.C {
 		apiResp, err := http.Get(apiURI + "/info")
 		if err != nil {
-			return err
+			continue
 		}
 		dashboardResp, err := http.Get(dashboardURI)
 		if err != nil {
-			return err
+			continue
 		}
 
 		if apiResp.StatusCode < 400 && dashboardResp.StatusCode < 400 {
-			return nil
+			return true, nil
 		}
 	}
+
+	return false, fmt.Errorf("timed-out waiting for dashboard and api")
 }
 
 func getOpenCommand() (string, error) {
