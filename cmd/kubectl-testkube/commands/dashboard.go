@@ -2,9 +2,12 @@ package commands
 
 import (
 	"fmt"
+	"net/http"
+	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
-	"sync"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -19,12 +22,11 @@ func NewDashboardCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "dashboard",
-		Short: "Open testkube dashboard",
-		Long:  `Open testkube dashboard`,
+		Use:     "dashboard",
+		Aliases: []string{"d"},
+		Short:   "Open testkube dashboard",
+		Long:    `Open testkube dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {
-
-			ui.Verbose = true
 			ui.Logo()
 
 			uri := fmt.Sprintf("http://localhost:%d", DashboardLocalPort)
@@ -32,46 +34,92 @@ func NewDashboardCmd() *cobra.Command {
 				uri = DashboardURI
 			}
 
-			dashboardAddress := fmt.Sprintf("%s/apiEndpoint?apiEndpoint=localhost:%d/%s", uri, ApiServerPort, ApiVersion)
-			ui.Success("The dashboard is accessible here:", dashboardAddress)
-			ui.Success("Port forwarding is started for the test results endpoint, hit Ctrl+C to stop")
+			apiURI := fmt.Sprintf("localhost:%d/%s", ApiServerPort, ApiVersion)
+			dashboardAddress := fmt.Sprintf("%s/apiEndpoint?apiEndpoint=%s", uri, apiURI)
+			apiAddress := fmt.Sprintf("http://%s", apiURI)
 
 			var (
-				wg      sync.WaitGroup
-				command *exec.Cmd
-				err     error
+				commandsToKill []*exec.Cmd
+				err            error
 			)
 
-			if !useGlobalDashboard {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					command, err = forwardKubernetesPort(true, namespace, DashboardName, DashboardLocalPort, DashboardPort)
-				}()
+			// kill background port-forwarded processes
+			defer func() {
+				for _, command := range commandsToKill {
+					if command != nil {
+						err := command.Process.Kill()
+						ui.PrintOnError("killing command: "+command.String(), err)
+					}
+				}
+			}()
 
-				wg.Wait()
-				ui.ExitOnError("port forwarding dashboard endpoint", err)
+			// if not global dasboard - we'll try to port-forward current cluster API
+			if !useGlobalDashboard {
+				command, err := asyncPortForward(namespace, DashboardName, DashboardLocalPort, DashboardPort)
+				ui.PrintOnError("port forwarding dashboard endpoint", err)
+				commandsToKill = append(commandsToKill, command)
 			}
 
+			command, err := asyncPortForward(namespace, ApiServerName, ApiServerPort, ApiServerPort)
+			ui.PrintOnError("port forwarding api endpoint", err)
+			commandsToKill = append(commandsToKill, command)
+
+			// check for api and dasboard to be ready
+			ready, err := readinessCheck(apiAddress, dashboardAddress)
+			ui.PrintOnError("checking readiness of services", err)
+			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
+
+			// open browser
 			openCmd, err := getOpenCommand()
 			if err == nil {
 				_, err = process.Execute(openCmd, dashboardAddress)
 				ui.PrintOnError("openning dashboard", err)
 			}
 
-			_, err = forwardKubernetesPort(false, namespace, ApiServerName, ApiServerPort, ApiServerPort)
-			ui.PrintOnError("port forwarding results endpoint", err)
+			// wait for Ctrl/Cmd + c signal to clear everything
+			c := make(chan os.Signal, 1)
+			signal.Notify(c, os.Interrupt)
 
-			if command != nil {
-				err = command.Process.Kill()
-				ui.ExitOnError("process killing", err)
-			}
+			ui.NL()
+			ui.Success("The dashboard is accessible here:", dashboardAddress)
+			ui.Success("The API is accessible here:", apiAddress+"/info")
+			ui.Success("Port forwarding is started for the test results endpoint, hit Ctrl+c (or Cmd+c) to stop")
+
+			s := <-c
+			fmt.Println("Got signal:", s)
 		},
 	}
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "s", "testkube", "namespace where the testkube is installed")
 	cmd.Flags().BoolVar(&useGlobalDashboard, "use-global-dashboard", false, "use global dashboard for viewing testkube results")
 	return cmd
+}
+
+func readinessCheck(apiURI, dashboardURI string) (bool, error) {
+	const readinessCheckTimeout = 30 * time.Second
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	go func() {
+		time.Sleep(readinessCheckTimeout)
+		ticker.Stop()
+	}()
+
+	for range ticker.C {
+		apiResp, err := http.Get(apiURI + "/info")
+		if err != nil {
+			continue
+		}
+		dashboardResp, err := http.Get(dashboardURI)
+		if err != nil {
+			continue
+		}
+
+		if apiResp.StatusCode < 400 && dashboardResp.StatusCode < 400 {
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("timed-out waiting for dashboard and api")
 }
 
 func getOpenCommand() (string, error) {
@@ -84,20 +132,12 @@ func getOpenCommand() (string, error) {
 	case "linux":
 		return "xdg-open", nil
 	default:
-		return "", fmt.Errorf("Unsupported OS")
+		return "", fmt.Errorf("unsupported OS")
 	}
 }
 
-func forwardKubernetesPort(isAsync bool, namespace, deploymentName string, localPort, clusterPort int) (
-	command *exec.Cmd, err error) {
+func asyncPortForward(namespace, deploymentName string, localPort, clusterPort int) (command *exec.Cmd, err error) {
 	fullDeploymentName := fmt.Sprintf("deployment/%s", deploymentName)
 	ports := fmt.Sprintf("%d:%d", localPort, clusterPort)
-
-	if isAsync {
-		command, err = process.ExecuteAsync("kubectl", "port-forward", "--namespace", namespace, fullDeploymentName, ports)
-	} else {
-		_, err = process.Execute("kubectl", "port-forward", "--namespace", namespace, fullDeploymentName, ports)
-	}
-
-	return
+	return process.ExecuteAsync("kubectl", "port-forward", "--namespace", namespace, fullDeploymentName, ports)
 }
