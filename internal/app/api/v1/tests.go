@@ -145,9 +145,15 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		var request testkube.TestExecutionRequest
+		err = c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
+		}
+
 		test := testsmapper.MapCRToAPI(*crTest)
 		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
-		results := s.executeTest(ctx, test)
+		results := s.executeTest(ctx, request, test)
 
 		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)
@@ -195,10 +201,12 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testExecution testkube.TestExecution) {
+func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecutionRequest, test testkube.Test) (testExecution testkube.TestExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
+	// TODO testExecution shold be based on request model
 	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
+	testExecution.Params = request.Params
 	testExecution.Test = &testkube.ObjectRef{
 		Name:      test.Name,
 		Namespace: "testkube",
@@ -277,7 +285,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 			return result.Err(err)
 		}
 
-		l.Debug("executing script")
+		l.Debug("executing script", "params", testExecution.Params)
 		options.Sync = true
 		execution := s.executeScript(ctx, options)
 		return newTestStepExecutionResult(execution, executeScriptStep)
