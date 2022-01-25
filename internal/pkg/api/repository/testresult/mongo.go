@@ -47,18 +47,26 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int32  `bson:"count"`
 	}
-	query, _ := composeQueryAndOpts(filter)
-	// cursor, err := r.Coll.Find(ctx, query, opts)
 
-	cursor, err := r.Coll.Aggregate(ctx, mongo.Pipeline{
-		bson.D{{"$match", query}},
-		bson.D{{"$group", bson.D{{"_id", "$status"}, {"count", bson.D{{"$sum", 1}}}}}},
-	})
+	query := bson.M{}
+	if len(filter) > 0 {
+		query, _ = composeQueryAndOpts(filter[0])
+	}
+
+	pipeline := []bson.D{{{"$match", query}}}
+	if len(filter) > 0 {
+		pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
+		pipeline = append(pipeline, bson.D{{"$skip", int64(filter[0].Page() * filter[0].PageSize())}})
+		pipeline = append(pipeline, bson.D{{"$limit", int64(filter[0].PageSize())}})
+	}
+
+	pipeline = append(pipeline, bson.D{{"$group", bson.D{{"_id", "$status"}, {"count", bson.D{{"$sum", 1}}}}}})
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
 	if err != nil {
 		return totals, err
 	}

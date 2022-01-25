@@ -169,7 +169,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, testresult.NewExecutionsFilter())
+		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}

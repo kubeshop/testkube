@@ -95,7 +95,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter())
+		totals, err := repository.GetExecutionTotals(context.Background())
 
 		assert.NoError(err)
 		assert.Equal(int32(21), totals.Results)
