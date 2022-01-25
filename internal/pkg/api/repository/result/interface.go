@@ -34,7 +34,7 @@ type Repository interface {
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
 	// GetExecutionTotals gets the statistics on number of executions using a filter, use filter with no data for all
-	GetExecutionTotals(ctx context.Context, filter Filter) (result testkube.ExecutionsTotals, err error)
+	GetExecutionTotals(ctx context.Context, filter ...Filter) (result testkube.ExecutionsTotals, err error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.Execution) error
 	// Update updates execution result

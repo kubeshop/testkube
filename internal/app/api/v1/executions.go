@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/rand"
@@ -133,7 +132,7 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), result.NewExecutionsFilter())
+		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context())
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
