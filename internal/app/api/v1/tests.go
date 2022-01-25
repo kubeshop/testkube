@@ -226,7 +226,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 		for _, step := range steps {
 			// we need to pass pointer to value - so we need to copy it
 			stepCopy := step
-			stepResult := s.executeTestStep(ctx, test.Name, step)
+			stepResult := s.executeTestStep(ctx, testExecution, step)
 			stepResult.Step = &stepCopy
 			// TODO load script details to stepResult
 			testExecution.StepResults = append(testExecution.StepResults, stepResult)
@@ -254,9 +254,14 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestExecution, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
 
-	l := s.Log.With("type", step.Type(), "name", step.FullName())
+	var testName string
+	if testExecution.Test != nil {
+		testName = testExecution.Test.Name
+	}
+
+	l := s.Log.With("type", step.Type(), "testName", testName, "name", step.FullName())
 
 	switch step.Type() {
 
@@ -265,6 +270,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
 			Namespace: executeScriptStep.Namespace,
+			Params:    testExecution.Params,
 		})
 
 		if err != nil {
