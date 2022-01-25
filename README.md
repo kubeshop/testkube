@@ -76,4 +76,4 @@ Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 
 
 # Feedback
 
-Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.  Please join our growing community on Discord or here.
+Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.  Please join our growing community on Discord or [here](https://discord.com/invite/6zupCZFQbe).
