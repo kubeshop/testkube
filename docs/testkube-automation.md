@@ -29,10 +29,10 @@ Instead of Helm you can run any other k8s-native command. In our case: `kubectl 
 
 ## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs
 
-To install on Linux or MacOs run
+To Run Tests on Linux or MacOs OS:
 
 ```sh
-name: Releasing Helm charts.
+name: Running TestKube Tests.
 
 on:
   push:
@@ -63,7 +63,7 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      # Setup gcloud CLI
+      # Setup gcloud CLI 
       - uses: google-github-actions/setup-gcloud@94337306dda8180d967a56932ceb4ddcf01edae7
         with:
           service_account_key: ${{ secrets.GKE_SA_KEY }}
@@ -82,7 +82,7 @@ jobs:
           credentials: ${{ secrets.GKE_SA_KEY }}
 
       # Run TestKube script on a GKE cluster
-      - name: Deploy
+      - name: Run Tests
         run: |-
           kubectl testkube scripts run SCRIPT_NAME
 ```
