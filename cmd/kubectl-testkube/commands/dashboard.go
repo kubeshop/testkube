@@ -65,7 +65,8 @@ func NewDashboardCmd() *cobra.Command {
 			commandsToKill = append(commandsToKill, command)
 
 			// check for api and dasboard to be ready
-			readinessCheck(apiAddress, dashboardAddress)
+			err = readinessCheck(apiAddress, dashboardAddress)
+			ui.ExitOnError("checking readiness of services", err)
 
 			// open browser
 			openCmd, err := getOpenCommand()
@@ -93,22 +94,20 @@ func NewDashboardCmd() *cobra.Command {
 	return cmd
 }
 
-func readinessCheck(apiURI, dashboardURI string) (bool, error) {
-	ui.Info("waiting for port-forwarded services ...")
+func readinessCheck(apiURI, dashboardURI string) error {
 	for {
 		time.Sleep(500 * time.Millisecond)
-
 		apiResp, err := http.Get(apiURI + "/info")
 		if err != nil {
-			ui.ExitOnError("getting status from api ")
+			return err
 		}
 		dashboardResp, err := http.Get(dashboardURI)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		if apiResp.StatusCode < 400 && dashboardResp.StatusCode < 400 {
-			return true, nil
+			return nil
 		}
 	}
 }
