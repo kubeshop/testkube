@@ -29,7 +29,7 @@ Instead of Helm you can run any other k8s-native command. In our case: `kubectl 
 
 ## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs
 
-To install on Linux or MacOs run
+To Run Tests on Linux or MacOs OS:
 
 ```sh
 name: Running TestKube Tests.
@@ -82,7 +82,7 @@ jobs:
           credentials: ${{ secrets.GKE_SA_KEY }}
 
       # Run TestKube script on a GKE cluster
-      - name: Deploy
+      - name: Run Tests
         run: |-
           kubectl testkube scripts run SCRIPT_NAME
 ```
