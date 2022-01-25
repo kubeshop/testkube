@@ -145,9 +145,15 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		var request testkube.TestExecutionRequest
+		err = c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
+		}
+
 		test := testsmapper.MapCRToAPI(*crTest)
 		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
-		results := s.executeTest(ctx, test)
+		results := s.executeTest(ctx, request, test)
 
 		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)
@@ -195,10 +201,12 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testExecution testkube.TestExecution) {
+func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecutionRequest, test testkube.Test) (testExecution testkube.TestExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
+	// TODO testExecution shold be based on request model
 	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
+	testExecution.Params = request.Params
 	testExecution.Test = &testkube.ObjectRef{
 		Name:      test.Name,
 		Namespace: "testkube",
@@ -226,7 +234,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 		for _, step := range steps {
 			// we need to pass pointer to value - so we need to copy it
 			stepCopy := step
-			stepResult := s.executeTestStep(ctx, test.Name, step)
+			stepResult := s.executeTestStep(ctx, testExecution, step)
 			stepResult.Step = &stepCopy
 			// TODO load script details to stepResult
 			testExecution.StepResults = append(testExecution.StepResults, stepResult)
@@ -254,9 +262,14 @@ func (s TestKubeAPI) executeTest(ctx context.Context, test testkube.Test) (testE
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestExecution, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
 
-	l := s.Log.With("type", step.Type(), "name", step.FullName())
+	var testName string
+	if testExecution.Test != nil {
+		testName = testExecution.Test.Name
+	}
+
+	l := s.Log.With("type", step.Type(), "testName", testName, "name", step.FullName())
 
 	switch step.Type() {
 
@@ -265,13 +278,14 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testName string, step 
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
 			Namespace: executeScriptStep.Namespace,
+			Params:    testExecution.Params,
 		})
 
 		if err != nil {
 			return result.Err(err)
 		}
 
-		l.Debug("executing script")
+		l.Debug("executing script", "params", testExecution.Params)
 		options.Sync = true
 		execution := s.executeScript(ctx, options)
 		return newTestStepExecutionResult(execution, executeScriptStep)
