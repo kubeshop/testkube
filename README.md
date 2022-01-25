@@ -50,10 +50,6 @@ Check out the [Installation](https://kubeshop.github.io/testkube/installing/) an
 [Getting Started](https://kubeshop.github.io/testkube/getting-started/) guides to set up Testkube and
 run your first tests!
 
-# Discord
-
-Don't hesitate to say hi to the team and ask questions on our [Discord server](https://discord.gg/6zupCZFQbe).
-
 # Documentation
 
 Is available at [https://kubeshop.github.io/testkube](https://kubeshop.github.io/testkube)
@@ -64,4 +60,4 @@ Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 
 
 # Feedback
 Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
-Please join our growing community on Discord [here](https://discord.com/invite/6zupCZFQbe).
+Please join our growing community on [Discord](https://discord.com/invite/6zupCZFQbe).
