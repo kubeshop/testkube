@@ -16,20 +16,19 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 -->
 
 # Welcome to Testkube
-Your friendly cloud-native framework for reliable software testing in Kubernetes.
-Testkube natively integrates tests into the cluster by making it very simple to configure the testing phase of your CI/CD while adding lots of extra capabilities.
+Your friendly cloud-native testing framework for Kubernetes.
 
-Testkube decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
+Testkube natively integrates test orchestration and execution into Kubernetes and your CI/CD/GitOps pipeline. It decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
 - Kubectl pluggin
 - Externally triggered via API (CI, external tooling, etc)
 - Automatically on deployment of annotated/labeled services/pods/etc (WIP)
 
 Testkube advantages:
-- Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
+- Avoids vendor lock-in for test orchestration and execution in CI/CD  pipelines
 - Makes it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
 - Makes it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
-- Centralize all test results in a consistent format for "actionable QA analytics"
-- Provide a modular architecture for adding new types of test scripts and executors
+- Centralizes all test results in a consistent format for "actionable QA analytics"
+- Provides a modular architecture for adding new types of test scripts and executors
 
 Main TestKube components are:
 
@@ -64,5 +63,5 @@ Is available at [https://kubeshop.github.io/testkube](https://kubeshop.github.io
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
 # Feedback
-
 Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
+Please join our growing community on Discord [here](https://discord.com/invite/6zupCZFQbe).
