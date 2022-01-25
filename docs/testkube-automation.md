@@ -32,7 +32,7 @@ Instead of Helm you can run any other k8s-native command. In our case: `kubectl 
 To install on Linux or MacOs run
 
 ```sh
-name: Releasing Helm charts.
+name: Running TestKube Tests.
 
 on:
   push:
