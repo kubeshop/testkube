@@ -28,11 +28,20 @@ Known vulnerabilities: [![TestKube](https://snyk.io/test/github/kubeshop/testkub
 
 # Welcome to TestKube - your friendly Kubernetes testing framework
 
-TestKube decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
+TestKube decouples test artifacts and execution from CI/CD tooling. 
+Tests such as Postman, Cypress, or others are stored as part of your clusters state and can be executed as needed:
 
 - Manually via kubectl cli
 - Externally triggered via API (CI, external tooling, etc)
 - Automatically on deployment of annotated/labeled services/pods/etc (WIP)
+
+TestKube helps to:
+
+- Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
+- Make it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
+- Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
+- Centralize all test results in a consistent format for "actionable QA analytics"
+- Provide a modular architecture for adding new types of test scripts and executors
 
 Main TestKube components are:
 
@@ -46,14 +55,6 @@ Main TestKube components are:
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
 - [TestKube Dashboard](https://github.com/kubeshop/testkube-dashboard) - standalone web application for viewing real-time TestKube test results
-
-TestKube attempts to:
-
-- Avoid vendor lock-in for test orchestration and execution in CI/CD  pipelines
-- Make it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
-- Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
-- Centralize all test results in a consistent format for "actionable QA analytics"
-- Provide a modular architecture for adding new types of test scripts and executors
 
 ## Getting Started
 
@@ -75,4 +76,4 @@ Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 
 
 # Feedback
 
-Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
+Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.  Please join our growing community on Discord or here.
