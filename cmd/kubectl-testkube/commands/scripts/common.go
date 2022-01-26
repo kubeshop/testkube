@@ -75,11 +75,11 @@ func watchLogs(id string, client client.Client) {
 		if execution.ExecutionResult.IsCompleted() {
 			fmt.Println()
 
-			uiShellCommandBlock(id)
+			uiShellGetExecution(id)
 
 			return
 		}
 	}
 
-	uiShellCommandBlock(id)
+	uiShellGetExecution(id)
 }
