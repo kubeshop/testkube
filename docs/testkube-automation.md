@@ -81,6 +81,11 @@ jobs:
           location: ${{ env.GKE_ZONE_DEV }}
           credentials: ${{ secrets.GKE_SA_KEY }}
 
+      # Installing TestKube CLI:
+      - name: Install TestKube CLI
+        run: |-
+          bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
+          
       # Run TestKube script on a GKE cluster
       - name: Run Tests
         run: |-
