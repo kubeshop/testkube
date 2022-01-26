@@ -93,7 +93,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
+			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace, "func", "LaunchK8sJobSync")
 
 			// save stop time
 			defer func() {
@@ -102,20 +102,18 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			}()
 
 			// wait for complete
-			l.Debugw("waiting for pod complete error", "error", err)
-
+			l.Debug("poll immediate waiting for pod to succeed")
 			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				l.Errorw("waiting for pod complete error", "error", err)
-				repo.UpdateResult(ctx, execution.Id, result.Err(err))
-				return result, err
 			}
+			l.Debug("poll immediate end")
 
 			var logs []byte
 			logs, err = c.GetPodLogs(pod.Name)
 			if err != nil {
 				l.Errorw("get pod logs error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
-				return
+				return result, err
 			}
 
 			// parse job ouput log (JSON stream)
@@ -170,7 +168,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func() {
-				l := c.Log.With("executionID", execution.Id)
+				l := c.Log.With("executionID", execution.Id, "func", "LaunchK8sJob")
 				// save stop time
 				defer func() {
 					l.Debug("stopping execution")
