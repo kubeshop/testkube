@@ -93,6 +93,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
 
 			// save stop time
 			defer func() {
@@ -101,8 +102,10 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			}()
 
 			// wait for complete
+			l.Debugw("waiting for pod complete error", "error", err)
+
 			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-				c.Log.Errorw("waiting for pod complete error", "error", err)
+				l.Errorw("waiting for pod complete error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
 				return result, err
 			}
@@ -110,7 +113,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			var logs []byte
 			logs, err = c.GetPodLogs(pod.Name)
 			if err != nil {
-				c.Log.Errorw("get pod logs error", "error", err)
+				l.Errorw("get pod logs error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
 				return
 			}
@@ -118,12 +121,12 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			// parse job ouput log (JSON stream)
 			result, _, err := output.ParseRunnerOutput(logs)
 			if err != nil {
-				c.Log.Errorw("parse ouput error", "error", err)
+				l.Errorw("parse ouput error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
 				return result, err
 			}
 
-			c.Log.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
 			repo.UpdateResult(ctx, execution.Id, result)
 			return result, nil
 		}
@@ -169,11 +172,11 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 					execution.Stop()
 					repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 				}()
+
 				// wait for complete
 				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+					// continue on poll err and try to get logs later
 					c.Log.Errorw("poll immediate error", "error", err)
-					repo.UpdateResult(ctx, execution.Id, result.Err(err))
-					return
 				}
 
 				var logs []byte
@@ -248,12 +251,23 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 				l.Debugw("Waiting for pod to be ready")
 				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
+					log, err := c.GetPodLogError(ctx, pod.Name)
+					if err != nil {
+						return fmt.Errorf("GetPodLogs error: %w", err)
+					}
+
+					l.Debugw("poll immediete log", "log", string(log))
+					entry, err := output.GetLogEntry(log)
+					if err != nil {
+						return fmt.Errorf("GetLogEntry error: %w", err)
+					}
 					close(logs)
-					return err
+
+					return fmt.Errorf("last log entry: %s", entry.String())
 				}
+
 				l.Debug("Tailing pod logs")
 				return c.TailPodLogs(ctx, pod.Name, logs)
-
 			}
 		}
 	}
@@ -261,8 +275,11 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 	return
 }
 
-func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
+func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []byte, err error) {
 	count := int64(100)
+	if len(logLinesCount) > 0 {
+		count = logLinesCount[0]
+	}
 
 	podLogOptions := v1.PodLogOptions{
 		Follow:    false,
@@ -287,6 +304,11 @@ func (c *JobClient) GetPodLogs(podName string) (logs []byte, err error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func (c *JobClient) GetPodLogError(ctx context.Context, podName string) (logsBytes []byte, err error) {
+	// error line should be last one
+	return c.GetPodLogs(podName, 1)
 }
 
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
@@ -404,7 +426,8 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
-	var backOffLimit int32 = 2
+	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
+	var backOffLimit int32 = 0
 
 	var secretEnvVars []v1.EnvVar
 	if hasSecrets {

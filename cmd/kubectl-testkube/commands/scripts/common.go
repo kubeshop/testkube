@@ -50,6 +50,12 @@ func watchLogs(id string, client client.Client) {
 		switch l.Type_ {
 		case output.TypeError:
 			ui.Errf(l.Content)
+			if l.Result != nil {
+				ui.Errf("Error: %s", l.Result.ErrorMessage)
+				ui.Debug("Output: %s", l.Result.Output)
+			}
+			os.Exit(1)
+			return
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:
