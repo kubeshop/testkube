@@ -290,6 +290,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 	case testkube.TestStepTypeDelay:
 		l.Debug("delaying execution")
 		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
+		return newTestStepDelayResult()
 
 	default:
 		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
@@ -301,6 +302,12 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 func newTestStepExecutionResult(execution testkube.Execution, step *testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
 	result.Execution = &execution
 	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
+
+	return
+}
+
+func newTestStepDelayResult() (result testkube.TestStepExecutionResult) {
+	result.Execution = &testkube.Execution{ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusSuccess}}
 
 	return
 }
