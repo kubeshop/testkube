@@ -55,7 +55,8 @@ func NewStartScriptCmd() *cobra.Command {
 				DownloadArtifacts(execution.Id, downloadDir, client)
 			}
 
-			uiShellCommandBlock(execution.Id)
+			uiShellGetExecution(execution.Id)
+			uiShellWatchExecution(execution.Id)
 		},
 	}
 
@@ -71,6 +72,8 @@ func NewStartScriptCmd() *cobra.Command {
 func uiPrintStatus(execution testkube.Execution) {
 	result := execution.ExecutionResult
 
+	ui.NL()
+
 	switch true {
 	case result.IsQueued():
 		ui.Warn("Script queued for execution")
@@ -79,12 +82,13 @@ func uiPrintStatus(execution testkube.Execution) {
 		ui.Warn("Script execution started")
 
 	case result.IsSuccesful():
-		fmt.Println(result.Output)
+		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
 		ui.Success("Script execution completed with sucess in " + duration.String())
 
 	case result.IsFailed():
-		fmt.Println(result.ErrorMessage)
+		ui.Warn("Test script execution failed:")
+		ui.Info(result.ErrorMessage)
 		ui.Errf("Script execution failed")
 		os.Exit(1)
 	}
@@ -92,13 +96,18 @@ func uiPrintStatus(execution testkube.Execution) {
 	ui.NL()
 }
 
-func uiShellCommandBlock(id string) {
+func uiShellGetExecution(id string) {
 	ui.ShellCommand(
 		"Use following command to get script execution details",
 		"kubectl testkube scripts execution "+id,
 	)
+
+	ui.NL()
+}
+
+func uiShellWatchExecution(id string) {
 	ui.ShellCommand(
-		"or watch script execution until complete",
+		"Watch script execution until complete",
 		"kubectl testkube scripts watch "+id,
 	)
 

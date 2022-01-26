@@ -19,12 +19,11 @@ import (
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	pods "k8s.io/client-go/kubernetes/typed/core/v1"
+	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -92,8 +91,8 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 
 	// get job pod and
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
+		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
+			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace, "func", "LaunchK8sJobSync")
 
 			// save stop time
 			defer func() {
@@ -102,13 +101,12 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			}()
 
 			// wait for complete
-			l.Debugw("waiting for pod complete error", "error", err)
-
+			l.Debug("poll immediate waiting for pod to succeed")
 			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				// continue on poll err and try to get logs later
 				l.Errorw("waiting for pod complete error", "error", err)
-				repo.UpdateResult(ctx, execution.Id, result.Err(err))
 			}
+			l.Debug("poll immediate end")
 
 			var logs []byte
 			logs, err = c.GetPodLogs(pod.Name)
@@ -145,6 +143,9 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
 
+	// init result
+	result = testkube.NewPendingExecutionResult()
+
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return result.Err(err), err
@@ -164,25 +165,29 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 
 	// get job pod and
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func() {
+				l := c.Log.With("executionID", execution.Id, "func", "LaunchK8sJob")
 				// save stop time
 				defer func() {
+					l.Debug("stopping execution")
 					execution.Stop()
 					repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 				}()
 
 				// wait for complete
-				if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				l.Debug("poll immediate waiting for pod to succeed")
+				if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					// continue on poll err and try to get logs later
-					c.Log.Errorw("poll immediate error", "error", err)
+					l.Errorw("poll immediate error", "error", err)
 				}
+				l.Debug("poll immediate end")
 
 				var logs []byte
 				logs, err = c.GetPodLogs(pod.Name)
 				if err != nil {
-					c.Log.Errorw("get pod logs error", "error", err)
+					l.Errorw("get pod logs error", "error", err)
 					repo.UpdateResult(ctx, execution.Id, result.Err(err))
 					return
 				}
@@ -190,12 +195,12 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 				// parse job ouput log (JSON stream)
 				result, _, err := output.ParseRunnerOutput(logs)
 				if err != nil {
-					c.Log.Errorw("parse ouput error", "error", err)
+					l.Errorw("parse ouput error", "error", err)
 					repo.UpdateResult(ctx, execution.Id, result.Err(err))
 					return
 				}
 
-				c.Log.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+				l.Infow("execution completed saving result", "status", result.Status)
 				repo.UpdateResult(ctx, execution.Id, result)
 			}()
 		}
@@ -204,7 +209,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	return testkube.NewPendingExecutionResult(), nil
 }
 
-func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, retryNr, retryCount int) (*v1.PodList, error) {
+func (c *JobClient) GetJobPods(podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
 	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
 		return nil, err
@@ -234,39 +239,27 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 	for _, pod := range pods.Items {
 		if pod.Labels["job-name"] == id {
 
-			l := c.Log.With("namespace", pod.Namespace, "pod", pod.Name)
+			l := c.Log.With("podNamespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
 
 			switch pod.Status.Phase {
 
-			case v1.PodRunning:
-				l.Debug("Tailing pod logs immediately")
+			case corev1.PodRunning:
+				l.Debug("tailing pod logs: immediately")
 				return c.TailPodLogs(ctx, pod.Name, logs)
 
-			case v1.PodFailed:
+			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
 				l.Errorw(err.Error())
-				return err
+				return c.GetLastLogLineError(ctx, pod.Namespace, pod.Name)
 
 			default:
-				l.Debugw("Waiting for pod to be ready")
+				l.Debugw("tailing job logs: waiting for pod to be ready")
 				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
-					log, err := c.GetPodLogError(ctx, pod.Name)
-					if err != nil {
-						return fmt.Errorf("GetPodLogs error: %w", err)
-					}
-
-					l.Debugw("poll immediete log", "log", string(log))
-					entry, err := output.GetLogEntry(log)
-					if err != nil {
-						return fmt.Errorf("GetLogEntry error: %w", err)
-					}
-					close(logs)
-
-					return fmt.Errorf("last log entry: %s", entry.String())
+					return c.GetLastLogLineError(ctx, pod.Namespace, pod.Name)
 				}
 
-				l.Debug("Tailing pod logs")
+				l.Debug("tailing pod logs")
 				return c.TailPodLogs(ctx, pod.Name, logs)
 			}
 		}
@@ -275,13 +268,30 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 	return
 }
 
+func (c *JobClient) GetLastLogLineError(ctx context.Context, podNamespace, podName string) error {
+	l := c.Log.With("pod", podName, "namespace", podNamespace)
+	log, err := c.GetPodLogError(ctx, podName)
+	if err != nil {
+		return fmt.Errorf("getPodLogs error: %w", err)
+	}
+
+	l.Debugw("log", "got last log bytes", string(log)) // in case distorted log bytes
+	entry, err := output.GetLogEntry(log)
+	if err != nil {
+		return fmt.Errorf("GetLogEntry error: %w", err)
+	}
+
+	c.Log.Errorw("got last log entry", "log", entry.String())
+	return fmt.Errorf("error from last log entry: %s", entry.String())
+}
+
 func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []byte, err error) {
 	count := int64(100)
 	if len(logLinesCount) > 0 {
 		count = logLinesCount[0]
 	}
 
-	podLogOptions := v1.PodLogOptions{
+	podLogOptions := corev1.PodLogOptions{
 		Follow:    false,
 		TailLines: &count,
 	}
@@ -314,7 +324,7 @@ func (c *JobClient) GetPodLogError(ctx context.Context, podName string) (logsByt
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
 	count := int64(1)
 
-	podLogOptions := v1.PodLogOptions{
+	podLogOptions := corev1.PodLogOptions{
 		Follow:    true,
 		TailLines: &count,
 	}
@@ -373,16 +383,16 @@ func (c *JobClient) CreatePersistentVolume(name string) error {
 	if err != nil {
 		return err
 	}
-	pv := &v1.PersistentVolume{
+	pv := &corev1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{"type": "local"},
 		},
-		Spec: v1.PersistentVolumeSpec{
-			Capacity:    v1.ResourceList{"storage": quantity},
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			PersistentVolumeSource: v1.PersistentVolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
+		Spec: corev1.PersistentVolumeSpec{
+			Capacity:    corev1.ResourceList{"storage": quantity},
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			PersistentVolumeSource: corev1.PersistentVolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
 					Path: fmt.Sprintf("/mnt/data/%s", name),
 				},
 			},
@@ -404,15 +414,15 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 		return err
 	}
 
-	pvc := &v1.PersistentVolumeClaim{
+	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PersistentVolumeClaimSpec{
+		Spec: corev1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageClassName,
-			AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{"storage": quantity},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{"storage": quantity},
 			},
 		},
 	}
@@ -429,14 +439,14 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
 	var backOffLimit int32 = 0
 
-	var secretEnvVars []v1.EnvVar
+	var secretEnvVars []corev1.EnvVar
 	if hasSecrets {
-		secretEnvVars = []v1.EnvVar{
+		secretEnvVars = []corev1.EnvVar{
 			{
 				Name: GitUsernameEnvVarName,
-				ValueFrom: &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: secret.GetMetadataName(scriptName),
 						},
 						Key: GitUsernameSecretName,
@@ -445,9 +455,9 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 			},
 			{
 				Name: GitTokenEnvVarName,
-				ValueFrom: &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: secret.GetMetadataName(scriptName),
 						},
 						Key: GitTokenSecretName,
@@ -464,18 +474,18 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
 						{
 							Name:            id,
 							Image:           image,
 							Command:         []string{"/bin/runner", jsn},
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: corev1.PullAlways,
 							Env:             append(envVars, secretEnvVars...),
 						},
 					},
-					RestartPolicy: v1.RestartPolicyNever,
+					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
 			BackoffLimit: &backOffLimit,
@@ -483,7 +493,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 	}
 }
 
-var envVars = []v1.EnvVar{
+var envVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_ENDPOINT",
 		Value: os.Getenv("STORAGE_ENDPOINT"),

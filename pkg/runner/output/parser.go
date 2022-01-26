@@ -59,7 +59,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 			}
 
 		case TypeError:
-			result = testkube.ExecutionResult{ErrorMessage: log.Content, Status: testkube.ExecutionStatusError}
+			result = testkube.NewErrorExecutionResult(fmt.Errorf(log.Content))
 
 		case TypeLogEvent, TypeLogLine:
 			logs = append(logs, log.Content)
