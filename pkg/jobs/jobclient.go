@@ -18,12 +18,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	pods "k8s.io/client-go/kubernetes/typed/core/v1"
+	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -91,7 +91,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 
 	// get job pod and
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace, "func", "LaunchK8sJobSync")
 
 			// save stop time
@@ -164,7 +164,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 
 	// get job pod and
 	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning && pod.Labels["job-name"] == execution.Id {
+		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func() {
 				l := c.Log.With("executionID", execution.Id, "func", "LaunchK8sJob")
@@ -208,7 +208,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 	return testkube.NewPendingExecutionResult(), nil
 }
 
-func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, retryNr, retryCount int) (*v1.PodList, error) {
+func (c *JobClient) GetJobPods(podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
 	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
 		return nil, err
@@ -242,11 +242,11 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 
 			switch pod.Status.Phase {
 
-			case v1.PodRunning:
+			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
 				return c.TailPodLogs(ctx, pod.Name, logs)
 
-			case v1.PodFailed:
+			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
 				l.Errorw(err.Error())
 				return c.GetLastLogLineError(ctx, pod.Namespace, pod.Name)
@@ -290,7 +290,7 @@ func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []b
 		count = logLinesCount[0]
 	}
 
-	podLogOptions := v1.PodLogOptions{
+	podLogOptions := corev1.PodLogOptions{
 		Follow:    false,
 		TailLines: &count,
 	}
@@ -323,7 +323,7 @@ func (c *JobClient) GetPodLogError(ctx context.Context, podName string) (logsByt
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
 	count := int64(1)
 
-	podLogOptions := v1.PodLogOptions{
+	podLogOptions := corev1.PodLogOptions{
 		Follow:    true,
 		TailLines: &count,
 	}
@@ -382,16 +382,16 @@ func (c *JobClient) CreatePersistentVolume(name string) error {
 	if err != nil {
 		return err
 	}
-	pv := &v1.PersistentVolume{
+	pv := &corev1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{"type": "local"},
 		},
-		Spec: v1.PersistentVolumeSpec{
-			Capacity:    v1.ResourceList{"storage": quantity},
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			PersistentVolumeSource: v1.PersistentVolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
+		Spec: corev1.PersistentVolumeSpec{
+			Capacity:    corev1.ResourceList{"storage": quantity},
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			PersistentVolumeSource: corev1.PersistentVolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
 					Path: fmt.Sprintf("/mnt/data/%s", name),
 				},
 			},
@@ -413,15 +413,15 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 		return err
 	}
 
-	pvc := &v1.PersistentVolumeClaim{
+	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PersistentVolumeClaimSpec{
+		Spec: corev1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageClassName,
-			AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{"storage": quantity},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{"storage": quantity},
 			},
 		},
 	}
@@ -438,14 +438,14 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
 	var backOffLimit int32 = 0
 
-	var secretEnvVars []v1.EnvVar
+	var secretEnvVars []corev1.EnvVar
 	if hasSecrets {
-		secretEnvVars = []v1.EnvVar{
+		secretEnvVars = []corev1.EnvVar{
 			{
 				Name: GitUsernameEnvVarName,
-				ValueFrom: &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: secret.GetMetadataName(scriptName),
 						},
 						Key: GitUsernameSecretName,
@@ -454,9 +454,9 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 			},
 			{
 				Name: GitTokenEnvVarName,
-				ValueFrom: &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: secret.GetMetadataName(scriptName),
 						},
 						Key: GitTokenSecretName,
@@ -473,18 +473,18 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
 						{
 							Name:            id,
 							Image:           image,
 							Command:         []string{"/bin/runner", jsn},
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: corev1.PullAlways,
 							Env:             append(envVars, secretEnvVars...),
 						},
 					},
-					RestartPolicy: v1.RestartPolicyNever,
+					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
 			BackoffLimit: &backOffLimit,
@@ -492,7 +492,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 	}
 }
 
-var envVars = []v1.EnvVar{
+var envVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_ENDPOINT",
 		Value: os.Getenv("STORAGE_ENDPOINT"),
@@ -532,9 +532,9 @@ func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.Conditi
 		}
 
 		switch pod.Status.Phase {
-		case v1.PodSucceeded:
+		case corev1.PodSucceeded:
 			return true, nil
-		case v1.PodFailed:
+		case corev1.PodFailed:
 			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
 		}
 		return false, nil
