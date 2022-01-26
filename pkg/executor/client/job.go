@@ -66,24 +66,26 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 	return *exec.ExecutionResult, nil
 }
 
-// Logs returns job logs
-// TODO too many goroutines - need to be simplified
+// Logs returns job logs using kubernetes api
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
 	logs := make(chan []byte)
-
-	if err := c.Client.TailJobLogs(id, logs); err != nil {
-		return out, err
-	}
 
 	go func() {
 		defer func() {
 			c.Log.Debug("closing JobExecutor.Logs out log")
 			close(out)
 		}()
+
+		if err := c.Client.TailJobLogs(id, logs); err != nil {
+			out <- output.NewOutputError(err)
+			return
+		}
+
 		for l := range logs {
 			entry, err := output.GetLogEntry(l)
 			if err != nil {
+				out <- output.NewOutputError(err)
 				return
 			}
 			out <- entry
