@@ -1,139 +1,129 @@
-// simple ui - TODO use something more sophisticated :)
 package ui
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 )
 
-var Writer io.Writer = os.Stdout
-
-// IconMedal emoji
-const IconMedal = "🥇"
-
-// IconError emoji
-const IconError = "💔"
-
-func NL() {
-	fmt.Fprintln(Writer)
+func (ui *UI) NL() {
+	fmt.Fprintln(ui.Writer)
 }
 
 // Warn shows warning in terminal
-func Success(message string, subMessages ...string) {
-	fmt.Fprintf(Writer, "%s", LightYellow(message))
+func (ui *UI) Success(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", LightYellow(message))
 	for _, sub := range subMessages {
-		fmt.Fprintf(Writer, " %s", LightCyan(sub))
+		fmt.Fprintf(ui.Writer, " %s", LightCyan(sub))
 	}
-	fmt.Fprintf(Writer, " "+IconMedal)
-	fmt.Fprintln(Writer)
+	fmt.Fprintf(ui.Writer, " "+IconMedal)
+	fmt.Fprintln(ui.Writer)
 }
 
 // Warn shows warning in terminal
-func Warn(message string, subMessages ...string) {
-	fmt.Fprintf(Writer, "%s", LightYellow(message))
+func (ui *UI) Warn(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", LightYellow(message))
 	for _, sub := range subMessages {
-		fmt.Fprintf(Writer, " %s", LightCyan(sub))
+		fmt.Fprintf(ui.Writer, " %s", LightCyan(sub))
 	}
-	fmt.Fprintln(Writer)
+	fmt.Fprintln(ui.Writer)
 }
 
-func LogLine(message string) {
-	fmt.Fprintf(Writer, "%s\n", DarkGray(message))
+func (ui *UI) LogLine(message string) {
+	fmt.Fprintf(ui.Writer, "%s\n", DarkGray(message))
 }
 
-func Debug(message string, subMessages ...string) {
-	if !Verbose {
+func (ui *UI) Debug(message string, subMessages ...string) {
+	if !ui.Verbose {
 		return
 	}
-	fmt.Fprintf(Writer, "%s", DarkGray(message))
+	fmt.Fprintf(ui.Writer, "%s", DarkGray(message))
 	for _, sub := range subMessages {
-		fmt.Fprintf(Writer, " %s", LightGray(sub))
+		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
 	}
-	fmt.Fprintln(Writer)
+	fmt.Fprintln(ui.Writer)
 }
 
-func Info(message string, subMessages ...string) {
-	fmt.Fprintf(Writer, "%s", DarkGray(message))
+func (ui *UI) Info(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", DarkGray(message))
 	for _, sub := range subMessages {
-		fmt.Fprintf(Writer, " %s", LightGray(sub))
+		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
 	}
-	fmt.Fprintln(Writer)
+	fmt.Fprintln(ui.Writer)
 }
 
-func Err(err error) {
-	fmt.Fprintf(Writer, "%s %s %s\n", LightRed("⨯"), Red(err.Error()), IconError)
+func (ui *UI) Err(err error) {
+	fmt.Fprintf(ui.Writer, "%s %s %s\n", LightRed("⨯"), Red(err.Error()), IconError)
 }
 
-func Errf(err string, params ...interface{}) {
-	fmt.Fprintf(Writer, "%s %s\n", LightRed("⨯"), Red(fmt.Sprintf(err, params...)))
+func (ui *UI) Errf(err string, params ...interface{}) {
+	fmt.Fprintf(ui.Writer, "%s %s\n", LightRed("⨯"), Red(fmt.Sprintf(err, params...)))
 }
 
-func Fail(err error) {
-	Err(err)
-	fmt.Fprintln(Writer)
+func (ui *UI) Fail(err error) {
+	ui.Err(err)
+	fmt.Fprintln(ui.Writer)
 	os.Exit(1)
 }
 
-func Failf(err string, params ...interface{}) {
-	Errf(err, params...)
-	fmt.Fprintln(Writer)
+func (ui *UI) Failf(err string, params ...interface{}) {
+	ui.Errf(err, params...)
+	fmt.Fprintln(ui.Writer)
 	os.Exit(1)
 }
 
-func CommandOutput(output []byte, command string, params ...string) {
+func (ui *UI) CommandOutput(output []byte, command string, params ...string) {
 	fullCommand := fmt.Sprintf("%s %s", LightCyan(command), DarkGray(strings.Join(params, " ")))
-	fmt.Fprintf(Writer, "command: %s\noutput:\n%s\n", LightGray(fullCommand), DarkGray(string(output)))
+	fmt.Fprintf(ui.Writer, "command: %s\noutput:\n%s\n", LightGray(fullCommand), DarkGray(string(output)))
 }
 
-func Medal() {
-	Completed("Congratulations! - Here's your medal: " + IconMedal)
+func (ui *UI) Medal() {
+	ui.Completed("Congratulations! - Here's your medal: " + IconMedal)
 }
 
-func Completed(main string, sub ...string) {
-	fmt.Fprintln(Writer)
+func (ui *UI) Completed(main string, sub ...string) {
+	fmt.Fprintln(ui.Writer)
 	if len(sub) == 1 {
-		fmt.Fprintf(Writer, "%s: %s\n", LightGray(main), LightBlue(sub[0]))
+		fmt.Fprintf(ui.Writer, "%s: %s\n", LightGray(main), LightBlue(sub[0]))
 	} else {
-		fmt.Fprintln(Writer, LightGray(main), LightBlue(strings.Join(sub, " ")))
+		fmt.Fprintln(ui.Writer, LightGray(main), LightBlue(strings.Join(sub, " ")))
 	}
 }
 
-func GroupCompleted(main string, sub ...string) {
-	fmt.Fprintln(Writer)
-	line := strings.Repeat("=", calculateMessageLength(main, sub...))
-	fmt.Fprintln(Writer, LightBlue(line))
+func (ui *UI) GroupCompleted(main string, sub ...string) {
+	fmt.Fprintln(ui.Writer)
+	line := strings.Repeat("=", ui.calculateMessageLength(main, sub...))
+	fmt.Fprintln(ui.Writer, LightBlue(line))
 	if len(sub) == 1 {
-		fmt.Fprintf(Writer, "%s: %s", LightGray(main), LightBlue(sub[0]))
+		fmt.Fprintf(ui.Writer, "%s: %s", LightGray(main), LightBlue(sub[0]))
 	} else {
-		fmt.Fprintln(Writer, LightGray(main))
+		fmt.Fprintln(ui.Writer, LightGray(main))
 	}
 }
 
-func InfoGrid(table map[string]string) {
+func (ui *UI) InfoGrid(table map[string]string) {
 	for k, v := range table {
-		fmt.Fprintf(Writer, "  %s: %s\n", DarkGray(k), LightBlue(v))
+		fmt.Fprintf(ui.Writer, "  %s: %s\n", DarkGray(k), LightBlue(v))
 	}
-	fmt.Fprintln(Writer)
+	fmt.Fprintln(ui.Writer)
 }
 
-func Vector(table []string) {
+func (ui *UI) Vector(table []string) {
 	for _, v := range table {
-		fmt.Fprintf(Writer, "  %s\n", DarkGray(v))
+		fmt.Fprintf(ui.Writer, "  %s\n", DarkGray(v))
 	}
 }
 
 // Warn shows warning in terminal
-func ShellCommand(title string, commands ...string) {
-	fmt.Fprintf(Writer, "%s:\n", White(title))
+func (ui *UI) ShellCommand(title string, commands ...string) {
+	fmt.Fprintf(ui.Writer, "%s:\n", White(title))
 	for _, sub := range commands {
-		fmt.Fprintf(Writer, "$ %s\n", LightGray(sub))
+		fmt.Fprintf(ui.Writer, "$ %s\n", LightGray(sub))
 	}
-	fmt.Fprintln(Writer)
+	fmt.Fprintln(ui.Writer)
 }
 
-func calculateMessageLength(message string, subMessages ...string) int {
+func (ui *UI) calculateMessageLength(message string, subMessages ...string) int {
 	sum := 0
 	for _, sub := range subMessages {
 		sum += len(sub) + 1 // space
