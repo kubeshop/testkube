@@ -239,8 +239,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 			if stepResult.IsFailed() {
 				hasFailedSteps = true
 				if steps[i].StopTestOnFailure {
-					testExecution.Status = testkube.TestStatusError
-					return
+					break
 				}
 			}
 
