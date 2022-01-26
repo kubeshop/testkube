@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -77,14 +78,14 @@ func (r ExecutionRawRenderer) Watch(execution testkube.Execution, writer io.Writ
 	return err
 }
 
+// TODO fix this - introduce some common data interface for rendering such objects
+// renderers need to be simplified and render Execution should be in one place (not many as now)
+// - move all logic from execution, start, watch here to show final execution
 func (r ExecutionRawRenderer) renderDetails(execution testkube.Execution, writer io.Writer) error {
-	_, err := fmt.Fprintf(writer, "Name: %s, Status: %s, Duration: %s\n",
-		execution.Name,
-		*execution.ExecutionResult.Status,
-		execution.CalculateDuration(),
-	)
-
-	return err
+	ui.Writer = writer
+	uiPrintStatus(execution)
+	uiShellGetExecution(execution.Id)
+	return nil
 }
 
 func GetExecutionRenderer(cmd *cobra.Command) ExecutionRenderer {

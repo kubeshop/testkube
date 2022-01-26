@@ -226,7 +226,6 @@ func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
 			}
 		}
 
-		s.Log.Infow("get script execution request", "id", scriptID, "executionID", executionID)
 		s.Log.Debugw("get script execution request - debug", "execution", execution)
 
 		return c.JSON(execution)

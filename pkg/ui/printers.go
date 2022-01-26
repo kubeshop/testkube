@@ -3,9 +3,12 @@ package ui
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
+
+var Writer io.Writer = os.Stdout
 
 // IconMedal emoji
 const IconMedal = "🥇"
@@ -14,74 +17,74 @@ const IconMedal = "🥇"
 const IconError = "💔"
 
 func NL() {
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 // Warn shows warning in terminal
 func Success(message string, subMessages ...string) {
-	fmt.Printf("%s", LightYellow(message))
+	fmt.Fprintf(Writer, "%s", LightYellow(message))
 	for _, sub := range subMessages {
-		fmt.Printf(" %s", LightCyan(sub))
+		fmt.Fprintf(Writer, " %s", LightCyan(sub))
 	}
-	fmt.Printf(" " + IconMedal)
-	fmt.Println()
+	fmt.Fprintf(Writer, " "+IconMedal)
+	fmt.Fprintln(Writer)
 }
 
 // Warn shows warning in terminal
 func Warn(message string, subMessages ...string) {
-	fmt.Printf("%s", LightYellow(message))
+	fmt.Fprintf(Writer, "%s", LightYellow(message))
 	for _, sub := range subMessages {
-		fmt.Printf(" %s", LightCyan(sub))
+		fmt.Fprintf(Writer, " %s", LightCyan(sub))
 	}
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 func LogLine(message string) {
-	fmt.Printf("%s\n", DarkGray(message))
+	fmt.Fprintf(Writer, "%s\n", DarkGray(message))
 }
 
 func Debug(message string, subMessages ...string) {
 	if !Verbose {
 		return
 	}
-	fmt.Printf("%s", DarkGray(message))
+	fmt.Fprintf(Writer, "%s", DarkGray(message))
 	for _, sub := range subMessages {
-		fmt.Printf(" %s", LightGray(sub))
+		fmt.Fprintf(Writer, " %s", LightGray(sub))
 	}
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 func Info(message string, subMessages ...string) {
-	fmt.Printf("%s", DarkGray(message))
+	fmt.Fprintf(Writer, "%s", DarkGray(message))
 	for _, sub := range subMessages {
-		fmt.Printf(" %s", LightGray(sub))
+		fmt.Fprintf(Writer, " %s", LightGray(sub))
 	}
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 func Err(err error) {
-	fmt.Printf("%s %s %s\n", LightRed("⨯"), Red(err.Error()), IconError)
+	fmt.Fprintf(Writer, "%s %s %s\n", LightRed("⨯"), Red(err.Error()), IconError)
 }
 
 func Errf(err string, params ...interface{}) {
-	fmt.Printf("%s %s\n", LightRed("⨯"), Red(fmt.Sprintf(err, params...)))
+	fmt.Fprintf(Writer, "%s %s\n", LightRed("⨯"), Red(fmt.Sprintf(err, params...)))
 }
 
 func Fail(err error) {
 	Err(err)
-	fmt.Println()
+	fmt.Fprintln(Writer)
 	os.Exit(1)
 }
 
 func Failf(err string, params ...interface{}) {
 	Errf(err, params...)
-	fmt.Println()
+	fmt.Fprintln(Writer)
 	os.Exit(1)
 }
 
 func CommandOutput(output []byte, command string, params ...string) {
 	fullCommand := fmt.Sprintf("%s %s", LightCyan(command), DarkGray(strings.Join(params, " ")))
-	fmt.Printf("command: %s\noutput:\n%s\n", LightGray(fullCommand), DarkGray(string(output)))
+	fmt.Fprintf(Writer, "command: %s\noutput:\n%s\n", LightGray(fullCommand), DarkGray(string(output)))
 }
 
 func Medal() {
@@ -89,45 +92,45 @@ func Medal() {
 }
 
 func Completed(main string, sub ...string) {
-	fmt.Println()
+	fmt.Fprintln(Writer)
 	if len(sub) == 1 {
-		fmt.Printf("%s: %s\n", LightGray(main), LightBlue(sub[0]))
+		fmt.Fprintf(Writer, "%s: %s\n", LightGray(main), LightBlue(sub[0]))
 	} else {
-		fmt.Println(LightGray(main), LightBlue(strings.Join(sub, " ")))
+		fmt.Fprintln(Writer, LightGray(main), LightBlue(strings.Join(sub, " ")))
 	}
 }
 
 func GroupCompleted(main string, sub ...string) {
-	fmt.Println()
+	fmt.Fprintln(Writer)
 	line := strings.Repeat("=", calculateMessageLength(main, sub...))
-	fmt.Println(LightBlue(line))
+	fmt.Fprintln(Writer, LightBlue(line))
 	if len(sub) == 1 {
-		fmt.Printf("%s: %s", LightGray(main), LightBlue(sub[0]))
+		fmt.Fprintf(Writer, "%s: %s", LightGray(main), LightBlue(sub[0]))
 	} else {
-		fmt.Println(LightGray(main))
+		fmt.Fprintln(Writer, LightGray(main))
 	}
 }
 
 func InfoGrid(table map[string]string) {
 	for k, v := range table {
-		fmt.Printf("  %s: %s\n", DarkGray(k), LightBlue(v))
+		fmt.Fprintf(Writer, "  %s: %s\n", DarkGray(k), LightBlue(v))
 	}
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 func Vector(table []string) {
 	for _, v := range table {
-		fmt.Printf("  %s\n", DarkGray(v))
+		fmt.Fprintf(Writer, "  %s\n", DarkGray(v))
 	}
 }
 
 // Warn shows warning in terminal
 func ShellCommand(title string, commands ...string) {
-	fmt.Printf("%s:\n", White(title))
+	fmt.Fprintf(Writer, "%s:\n", White(title))
 	for _, sub := range commands {
-		fmt.Printf("$ %s\n", LightGray(sub))
+		fmt.Fprintf(Writer, "$ %s\n", LightGray(sub))
 	}
-	fmt.Println()
+	fmt.Fprintln(Writer)
 }
 
 func calculateMessageLength(message string, subMessages ...string) int {

@@ -15,11 +15,11 @@ var logo = `
 `
 
 func Logo() {
-	fmt.Print(Blue(logo))
-	fmt.Println()
+	fmt.Fprint(Writer, Blue(logo))
+	fmt.Fprintln(Writer)
 }
 
 func LogoNoColor() {
-	fmt.Print(logo)
-	fmt.Println()
+	fmt.Fprint(Writer, logo)
+	fmt.Fprintln(Writer)
 }
