@@ -231,16 +231,14 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 		steps = append(steps, test.After...)
 
 		hasFailedSteps := false
-		for _, step := range steps {
-			// we need to pass pointer to value - so we need to copy it
-			stepCopy := step
-			stepResult := s.executeTestStep(ctx, testExecution, step)
-			stepResult.Step = &stepCopy
+		for i := range steps {
+			stepResult := s.executeTestStep(ctx, testExecution, steps[i])
+			stepResult.Step = &steps[i]
 			// TODO load script details to stepResult
 			testExecution.StepResults = append(testExecution.StepResults, stepResult)
 			if stepResult.IsFailed() {
 				hasFailedSteps = true
-				if step.StopTestOnFailure {
+				if steps[i].StopTestOnFailure {
 					testExecution.Status = testkube.TestStatusError
 					return
 				}
@@ -251,7 +249,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 
 		testExecution.Status = testkube.TestStatusSuccess
 		if hasFailedSteps {
-			testExecution.Status = testkube.TestStatusSuccess
+			testExecution.Status = testkube.TestStatusError
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
