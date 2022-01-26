@@ -35,6 +35,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 	// try to locate execution result should be the last one
 	// but there could be some buffers or go routines used so go through whole
 	// array too
+	result.Status = testkube.ExecutionStatusError
 	for scanner.Scan() {
 		b := scanner.Bytes()
 
@@ -50,6 +51,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 			continue
 		}
 
+		result.Status = testkube.ExecutionStatusSuccess
 		switch log.Type_ {
 		case TypeResult:
 			if log.Result != nil {
@@ -57,7 +59,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 			}
 
 		case TypeError:
-			result = testkube.ExecutionResult{ErrorMessage: log.Content}
+			result = testkube.ExecutionResult{ErrorMessage: log.Content, Status: testkube.ExecutionStatusError}
 
 		case TypeLogEvent, TypeLogLine:
 			logs = append(logs, log.Content)

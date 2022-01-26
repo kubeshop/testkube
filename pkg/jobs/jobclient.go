@@ -105,9 +105,9 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			l.Debugw("waiting for pod complete error", "error", err)
 
 			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				// continue on poll err and try to get logs later
 				l.Errorw("waiting for pod complete error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
-				return result, err
 			}
 
 			var logs []byte
@@ -115,7 +115,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			if err != nil {
 				l.Errorw("get pod logs error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
-				return
+				return result, err
 			}
 
 			// parse job ouput log (JSON stream)
