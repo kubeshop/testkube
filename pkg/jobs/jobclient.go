@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -214,10 +215,13 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 
 // TailJobLogs - locates logs for job pod(s)
 func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
+
+	const pollTimeout = 24 * time.Hour
+	const pollInterval = 200 * time.Millisecond
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
-	pods, err := c.GetJobPods(podsClient, id, 1, 10)
 
+	pods, err := c.GetJobPods(podsClient, id, 1, 10)
 	if err != nil {
 		close(logs)
 		return err
@@ -225,17 +229,30 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 
 	for _, pod := range pods.Items {
 		if pod.Labels["job-name"] == id {
-			if pod.Status.Phase != v1.PodRunning {
-				c.Log.Debugw("Waiting for pod to be ready", "pod", pod.Name)
-				if err = wait.PollImmediate(100*time.Millisecond, time.Duration(0)*time.Second, k8sclient.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-					c.Log.Errorw("poll immediate error when tailing logs", "error", err)
+
+			l := c.Log.With("namespace", pod.Namespace, "pod", pod.Name)
+
+			switch pod.Status.Phase {
+
+			case v1.PodRunning:
+				l.Debug("Tailing pod logs immediately")
+				return c.TailPodLogs(ctx, pod.Name, logs)
+
+			case v1.PodFailed:
+				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
+				l.Errorw(err.Error())
+				return err
+
+			default:
+				l.Debugw("Waiting for pod to be ready")
+				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+					l.Errorw("poll immediate error when tailing logs", "error", err)
 					close(logs)
 					return err
 				}
-				c.Log.Debug("Tailing pod logs")
+				l.Debug("Tailing pod logs")
 				return c.TailPodLogs(ctx, pod.Name, logs)
-			} else if pod.Status.Phase == v1.PodRunning {
-				return c.TailPodLogs(ctx, pod.Name, logs)
+
 			}
 		}
 	}
@@ -471,4 +488,22 @@ var envVars = []v1.EnvVar{
 		Name:  "RUNNER_SCRAPPERENABLED",
 		Value: os.Getenv("SCRAPPERENABLED"),
 	},
+}
+
+// IsPodReady defines if pod is ready or failed for logs scrapping
+func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded:
+			return true, nil
+		case corev1.PodFailed:
+			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
+		}
+		return false, nil
+	}
 }

@@ -56,10 +56,14 @@ openapi-generate-model-testkube:
 	
 
 test: 
-	go test ./... -cover
+	go test ./... -cover -v 
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e
+
+test-integration:
+	go test --tags=integration -v ./...
+
 
 test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 

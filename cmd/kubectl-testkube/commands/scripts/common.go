@@ -49,7 +49,7 @@ func watchLogs(id string, client client.Client) {
 	for l := range logs {
 		switch l.Type_ {
 		case output.TypeError:
-			ui.Warn(l.Content)
+			ui.Errf(l.Content)
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:
