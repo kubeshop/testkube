@@ -18,7 +18,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -533,9 +532,9 @@ func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.Conditi
 		}
 
 		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
+		case v1.PodSucceeded:
 			return true, nil
-		case corev1.PodFailed:
+		case v1.PodFailed:
 			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
 		}
 		return false, nil
