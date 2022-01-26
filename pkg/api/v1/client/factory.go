@@ -1,5 +1,7 @@
 package client
 
+import "fmt"
+
 type ClientType string
 
 const (
@@ -18,6 +20,8 @@ func GetClient(clientType ClientType, namespace string) (client Client, err erro
 			return client, err
 		}
 		client = NewProxyScriptsAPI(clientset, NewProxyConfig(namespace))
+	default:
+		err = fmt.Errorf("Client %s is not handled by testkube, use one of: %v", clientType, []ClientType{ClientDirect, ClientProxy})
 	}
 
 	return client, err
