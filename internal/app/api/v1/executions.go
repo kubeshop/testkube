@@ -74,7 +74,6 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 		return execution.Errw("can't create new script execution, can't insert into storage: %w", err)
 	}
 
-	// call executor rest or job based and update execution object after queueing execution
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)

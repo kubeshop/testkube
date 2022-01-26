@@ -36,6 +36,9 @@ const (
 	GitTokenSecretName = "git-token"
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
+
+	pollTimeout  = 24 * time.Hour
+	pollInterval = 200 * time.Millisecond
 )
 
 type JobClient struct {
@@ -98,8 +101,8 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			}()
 
 			// wait for complete
-			if err := wait.PollImmediate(time.Second, time.Duration(0)*time.Second, k8sclient.HasPodSucceeded(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-				c.Log.Errorw("poll immediate error", "error", err)
+			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				c.Log.Errorw("waiting for pod complete error", "error", err)
 				repo.UpdateResult(ctx, execution.Id, result.Err(err))
 				return result, err
 			}
@@ -216,8 +219,6 @@ func (c *JobClient) GetJobPods(podsClient pods.PodInterface, jobName string, ret
 // TailJobLogs - locates logs for job pod(s)
 func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 
-	const pollTimeout = 24 * time.Hour
-	const pollInterval = 200 * time.Millisecond
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
 
