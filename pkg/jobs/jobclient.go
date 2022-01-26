@@ -103,6 +103,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 			// wait for complete
 			l.Debug("poll immediate waiting for pod to succeed")
 			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				// continue on poll err and try to get logs later
 				l.Errorw("waiting for pod complete error", "error", err)
 			}
 			l.Debug("poll immediate end")
