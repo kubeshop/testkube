@@ -87,9 +87,8 @@ func uiPrintStatus(execution testkube.Execution) {
 		ui.Success("Script execution completed with sucess in " + duration.String())
 
 	case result.IsFailed():
-		ui.Warn("Test script execution failed:")
-		ui.Info(result.ErrorMessage)
-		ui.Errf("Script execution failed")
+		ui.Warn("Test script execution failed:\n")
+		ui.Errf(result.ErrorMessage)
 		os.Exit(1)
 	}
 
