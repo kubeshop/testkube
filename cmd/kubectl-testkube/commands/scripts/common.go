@@ -54,6 +54,7 @@ func watchLogs(id string, client client.Client) {
 				ui.Errf("Error: %s", l.Result.ErrorMessage)
 				ui.Debug("Output: %s", l.Result.Output)
 			}
+			uiShellGetExecution(id)
 			os.Exit(1)
 			return
 		case output.TypeResult:
