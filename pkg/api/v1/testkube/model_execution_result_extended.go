@@ -13,6 +13,10 @@ func NewErrorExecutionResult(err error) ExecutionResult {
 	}
 }
 
+func (e *ExecutionResult) InProgress() {
+	e.Status = StatusPtr(PENDING_ExecutionStatus)
+}
+
 func (e *ExecutionResult) Success() {
 	e.Status = StatusPtr(SUCCESS_ExecutionStatus)
 }

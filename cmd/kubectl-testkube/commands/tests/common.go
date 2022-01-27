@@ -9,11 +9,12 @@ import (
 )
 
 func printTestExecutionDetails(execution testkube.TestExecution, startTime time.Time) {
-	ui.Warn("Name:", execution.Name)
+	ui.Warn("Id:      ", execution.Id)
+	ui.Warn("Name:    ", execution.Name)
 	if execution.Status != nil {
-		ui.Warn("Status:", string(*execution.Status))
+		ui.Warn("Status:  ", string(*execution.Status))
 	}
-	ui.Warn("Duration", execution.CalculateDuration().String()+"\n")
+	ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
 	ui.Table(execution, os.Stdout)
 
 	ui.NL()

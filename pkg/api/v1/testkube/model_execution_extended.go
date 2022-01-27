@@ -39,6 +39,15 @@ func NewFailedExecution(err error) Execution {
 	}
 }
 
+// NewQueued execution for executions status used in test executions
+func NewQueuedExecution() *Execution {
+	return &Execution{
+		ExecutionResult: &ExecutionResult{
+			Status: ExecutionStatusQueued,
+		},
+	}
+}
+
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
