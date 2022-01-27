@@ -50,28 +50,26 @@ func (e *TestExecution) CalculateDuration() time.Duration {
 }
 
 func (e TestExecution) Table() (header []string, output [][]string) {
-	header = []string{"Step", "Status", "ID", "Error"}
+	header = []string{"Status", "Step", "ID", "Error"}
 	output = make([][]string, 0)
 
-	// TODO introduce Array ArrayHeader? interface to allow easily compose array like data in model
 	for _, sr := range e.StepResults {
+		status := "no-execution-result"
+		if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
+			status = string(*sr.Execution.ExecutionResult.Status)
+		}
+
 		switch sr.Step.Type() {
 		case TestStepTypeExecuteScript:
-			status := "unknown"
-			id := ""
-			errorMessage := ""
-			if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
-				status = string(*sr.Execution.ExecutionResult.Status)
+			var id, errorMessage string
+			if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
 				errorMessage = sr.Execution.ExecutionResult.ErrorMessage
 				id = sr.Execution.Id
-			} else {
-				status = "no execution results"
 			}
-
-			row := []string{sr.Step.FullName(), status, id, errorMessage}
+			row := []string{status, sr.Step.FullName(), id, errorMessage}
 			output = append(output, row)
 		case TestStepTypeDelay:
-			row := []string{sr.Step.FullName(), "success", "", ""}
+			row := []string{status, sr.Step.FullName(), "", ""}
 			output = append(output, row)
 		}
 	}

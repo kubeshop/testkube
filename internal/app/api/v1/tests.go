@@ -220,19 +220,17 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 			}
 		}(&testExecution)
 
-		// compose all steps into one array
-		steps := append(test.Before, test.Steps...)
-		steps = append(steps, test.After...)
-
 		hasFailedSteps := false
-		for i := range steps {
-			stepResult := s.executeTestStep(ctx, testExecution, steps[i])
-			stepResult.Step = &steps[i]
-			// TODO load script details to stepResult
-			testExecution.StepResults = append(testExecution.StepResults, stepResult)
-			if stepResult.IsFailed() {
+		for i := range testExecution.StepResults {
+
+			// start execution of given step
+			testExecution.StepResults[i].Execution.ExecutionResult.InProgress()
+			s.TestExecutionResults.Update(ctx, testExecution)
+
+			s.executeTestStep(ctx, testExecution, &testExecution.StepResults[i])
+			if testExecution.StepResults[i].IsFailed() {
 				hasFailedSteps = true
-				if steps[i].StopTestOnFailure {
+				if testExecution.StepResults[i].Step.StopTestOnFailure {
 					break
 				}
 			}
@@ -253,12 +251,14 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestExecution, step testkube.TestStep) (result testkube.TestStepExecutionResult) {
+func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestExecution, result *testkube.TestStepExecutionResult) {
 
 	var testName string
 	if testExecution.Test != nil {
 		testName = testExecution.Test.Name
 	}
+
+	step := result.Step
 
 	l := s.Log.With("type", step.Type(), "testName", testName, "name", step.FullName())
 
@@ -273,24 +273,22 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 		})
 
 		if err != nil {
-			return result.Err(err)
+			result.Err(err)
 		}
 
 		l.Debug("executing script", "params", testExecution.Params)
 		options.Sync = true
 		execution := s.executeScript(ctx, options)
-		return testkube.NewTestStepExecutionResult(execution, executeScriptStep)
+		result.Execution = &execution
 
 	case testkube.TestStepTypeDelay:
 		l.Debug("delaying execution")
 		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
-		return testkube.NewTestStepDelayResult()
+		result.Execution.ExecutionResult.Success()
 
 	default:
 		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 	}
-
-	return
 }
 
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
