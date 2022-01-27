@@ -14,12 +14,12 @@ var logo = `
 
 `
 
-func Logo() {
-	fmt.Fprint(Writer, Blue(logo))
-	fmt.Fprintln(Writer)
+func (ui *UI) Logo() {
+	fmt.Fprint(ui.Writer, Blue(logo))
+	fmt.Fprintln(ui.Writer)
 }
 
-func LogoNoColor() {
-	fmt.Fprint(Writer, logo)
-	fmt.Fprintln(Writer)
+func (ui *UI) LogoNoColor() {
+	fmt.Fprint(ui.Writer, logo)
+	fmt.Fprintln(ui.Writer)
 }
