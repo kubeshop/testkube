@@ -1,18 +1,32 @@
 package testkube
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/rand"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewStartedTestExecution(name string) TestExecution {
-	return TestExecution{
+func NewStartedTestExecution(test Test, request TestExecutionRequest) TestExecution {
+	testExecution := TestExecution{
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
-		Name:      name,
+		Name:      fmt.Sprintf("%s.%s", test.Name, rand.Name()),
 		Status:    TestStatusPending,
+		Params:    request.Params,
+		Test:      test.GetObjectRef(),
 	}
+
+	// add queued execution steps
+	steps := append(test.Before, test.Steps...)
+	steps = append(steps, test.After...)
+
+	for i := range steps {
+		testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&steps[i]))
+	}
+
+	return testExecution
 }
 
 func (e TestExecution) IsCompleted() bool {

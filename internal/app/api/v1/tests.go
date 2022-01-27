@@ -204,13 +204,7 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecutionRequest, test testkube.Test) (testExecution testkube.TestExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
-	// TODO testExecution shold be based on request model
-	testExecution = testkube.NewStartedTestExecution(fmt.Sprintf("%s.%s", test.Name, rand.Name()))
-	testExecution.Params = request.Params
-	testExecution.Test = &testkube.ObjectRef{
-		Name:      test.Name,
-		Namespace: "testkube",
-	}
+	testExecution = testkube.NewStartedTestExecution(test, request)
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
 	go func(testExecution testkube.TestExecution) {
@@ -285,29 +279,16 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 		l.Debug("executing script", "params", testExecution.Params)
 		options.Sync = true
 		execution := s.executeScript(ctx, options)
-		return newTestStepExecutionResult(execution, executeScriptStep)
+		return testkube.NewTestStepExecutionResult(execution, executeScriptStep)
 
 	case testkube.TestStepTypeDelay:
 		l.Debug("delaying execution")
 		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
-		return newTestStepDelayResult()
+		return testkube.NewTestStepDelayResult()
 
 	default:
 		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 	}
-
-	return
-}
-
-func newTestStepExecutionResult(execution testkube.Execution, step *testkube.TestStepExecuteScript) (result testkube.TestStepExecutionResult) {
-	result.Execution = &execution
-	result.Script = &testkube.ObjectRef{Name: step.Name, Namespace: step.Namespace}
-
-	return
-}
-
-func newTestStepDelayResult() (result testkube.TestStepExecutionResult) {
-	result.Execution = &testkube.Execution{ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusSuccess}}
 
 	return
 }

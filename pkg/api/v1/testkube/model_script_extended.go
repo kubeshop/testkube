@@ -13,3 +13,11 @@ func (scripts Scripts) Table() (header []string, output [][]string) {
 
 	return
 }
+
+func (s Script) GetObjectRef() *ObjectRef {
+	return &ObjectRef{
+		Name: s.Name,
+		// TODO add namespace to script model and all dependencies
+		Namespace: "testkube",
+	}
+}

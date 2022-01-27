@@ -18,3 +18,10 @@ func (tests Tests) Table() (header []string, output [][]string) {
 
 	return
 }
+
+func (t Test) GetObjectRef() *ObjectRef {
+	return &ObjectRef{
+		Name:      t.Name,
+		Namespace: t.Namespace,
+	}
+}
