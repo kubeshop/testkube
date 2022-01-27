@@ -45,6 +45,7 @@ func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 			tags = strings.Split(rawTags, ",")
 		}
 
+		// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
 		crScripts, err := s.ScriptsClient.List(namespace, tags)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -55,6 +56,16 @@ func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 			// filter items array
 			for i := len(crScripts.Items) - 1; i >= 0; i-- {
 				if !strings.Contains(crScripts.Items[i].Name, search) {
+					crScripts.Items = append(crScripts.Items[:i], crScripts.Items[i+1:]...)
+				}
+			}
+		}
+
+		scriptType := c.Query("type")
+		if scriptType != "" {
+			// filter items array
+			for i := len(crScripts.Items) - 1; i >= 0; i-- {
+				if !strings.Contains(crScripts.Items[i].Spec.Type_, scriptType) {
 					crScripts.Items = append(crScripts.Items[:i], crScripts.Items[i+1:]...)
 				}
 			}
