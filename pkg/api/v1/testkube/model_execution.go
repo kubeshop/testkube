@@ -19,6 +19,8 @@ type Execution struct {
 	Id string `json:"id,omitempty"`
 	// unique script name (CRD Script name)
 	ScriptName string `json:"scriptName,omitempty"`
+	// script namespace
+	ScriptNamespace string `json:"scriptNamespace,omitempty"`
 	// script type e.g. postman/collection
 	ScriptType string `json:"scriptType,omitempty"`
 	// execution name

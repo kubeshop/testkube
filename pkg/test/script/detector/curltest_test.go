@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +19,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return true when valid content", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: curlValidContent,
+			Content: testkube.NewStringScriptContent(curlValidContent),
 		})
 
 		assert.True(t, is, "content should be of curl/test type")
@@ -28,7 +29,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return false in case of invalid JSON content", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: curlInvalidContent,
+			Content: testkube.NewStringScriptContent(curlInvalidContent),
 		})
 
 		assert.Empty(t, name)
@@ -39,7 +40,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return false in case of content which is not JSON ", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: curlInvalidJSONContent,
+			Content: testkube.NewStringScriptContent(curlInvalidJSONContent),
 		})
 
 		assert.Empty(t, name)

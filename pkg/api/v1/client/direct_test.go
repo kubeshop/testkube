@@ -93,14 +93,14 @@ func TestScriptsAPI(t *testing.T) {
 
 		// when
 		response, err := client.CreateScript(UpsertScriptOptions{
-			Content: "{}",
+			Content: testkube.NewStringScriptContent("{}"),
 			Name:    "t1",
 			Type_:   "postman/collection",
 		})
 
 		// then
 		assert.NoError(t, err)
-		assert.Equal(t, "{}", response.Content)
+		assert.Equal(t, "{}", response.Content.Data)
 		assert.Equal(t, "t1", response.Name)
 		assert.Equal(t, "postman/collection", response.Type_)
 	})

@@ -5,14 +5,12 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	scriptsv1 "github.com/kubeshop/testkube-operator/apis/script/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	scriptsMapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	scriptsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
 	"github.com/kubeshop/testkube/pkg/secret"
 
 	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetScriptHandler is method for getting an existing script
@@ -29,7 +27,7 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		scripts := scriptsMapper.MapScriptCRToAPI(*crScript)
+		scripts := scriptsmapper.MapScriptCRToAPI(*crScript)
 		return c.JSON(scripts)
 	}
 }
@@ -71,7 +69,7 @@ func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 			}
 		}
 
-		scripts := scriptsMapper.MapScriptListKubeToAPI(*crScripts)
+		scripts := scriptsmapper.MapScriptListKubeToAPI(*crScripts)
 
 		return c.JSON(scripts)
 	}
@@ -89,30 +87,8 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 
 		s.Log.Infow("creating script", "request", request)
 
-		var repository *scriptsv1.Repository
-
-		if request.Repository != nil {
-			repository = &scriptsv1.Repository{
-				Type_:  "git",
-				Uri:    request.Repository.Uri,
-				Branch: request.Repository.Branch,
-				Path:   request.Repository.Path,
-			}
-		}
-
-		script, err := s.ScriptsClient.Create(&scriptsv1.Script{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      request.Name,
-				Namespace: request.Namespace,
-			},
-			Spec: scriptsv1.ScriptSpec{
-				Type_:      request.Type_,
-				InputType:  request.InputType,
-				Content:    request.Content,
-				Repository: repository,
-				Tags:       request.Tags,
-			},
-		})
+		scriptSpec := scriptsmapper.MapScriptToScriptSpec(request)
+		script, err := s.ScriptsClient.Create(scriptSpec)
 
 		s.Metrics.IncCreateScript(script.Spec.Type_, err)
 
@@ -120,13 +96,7 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// create secrets for script
-		stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
-		if request.Repository != nil {
-			stringData[jobs.GitUsernameSecretName] = request.Repository.Username
-			stringData[jobs.GitTokenSecretName] = request.Repository.Token
-		}
-
+		stringData := GetSecretsStringData(request.Content)
 		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -147,31 +117,15 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 
 		s.Log.Infow("updating script", "request", request)
 
-		var repository *scriptsv1.Repository
-
-		if request.Repository != nil {
-			repository = &scriptsv1.Repository{
-				Type_:  "git",
-				Uri:    request.Repository.Uri,
-				Branch: request.Repository.Branch,
-				Path:   request.Repository.Path,
-			}
-		}
-
 		// we need to get resource first and load its metadata.ResourceVersion
 		script, err := s.ScriptsClient.Get(request.Namespace, request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		script.Spec = scriptsv1.ScriptSpec{
-			Type_:      request.Type_,
-			InputType:  request.InputType,
-			Content:    request.Content,
-			Repository: repository,
-			Tags:       request.Tags,
-		}
-
+		// map script but load spec only to not override metadata.ResourceVersion
+		scriptSpec := scriptsmapper.MapScriptToScriptSpec(request)
+		script.Spec = scriptSpec.Spec
 		script, err = s.ScriptsClient.Update(script)
 
 		s.Metrics.IncUpdateScript(script.Spec.Type_, err)
@@ -181,12 +135,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 		}
 
 		// update secrets for scipt
-		stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
-		if request.Repository != nil {
-			stringData[jobs.GitUsernameSecretName] = request.Repository.Username
-			stringData[jobs.GitTokenSecretName] = request.Repository.Token
-		}
-
+		stringData := GetSecretsStringData(request.Content)
 		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -246,4 +195,15 @@ func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
 
 		return c.SendStatus(fiber.StatusNoContent)
 	}
+}
+
+func GetSecretsStringData(content *testkube.ScriptContent) map[string]string {
+	// create secrets for script
+	stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
+	if content != nil && content.Repository != nil {
+		stringData[jobs.GitUsernameSecretName] = content.Repository.Username
+		stringData[jobs.GitTokenSecretName] = content.Repository.Token
+	}
+
+	return stringData
 }

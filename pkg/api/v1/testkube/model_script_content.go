@@ -13,8 +13,8 @@ type ScriptContent struct {
 	// script type
 	Type_      string      `json:"type,omitempty"`
 	Repository *Repository `json:"repository,omitempty"`
-	// script content
-	Content string `json:"content,omitempty"`
+	// script content data as string
+	Data string `json:"data,omitempty"`
 	// script content
 	Uri string `json:"uri,omitempty"`
 }

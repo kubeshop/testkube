@@ -1113,15 +1113,15 @@ components:
           type: string
           description: script type
           enum:
-            - file-string
+            - string
             - file-uri
             - git-file
             - git-dir
         repository:
           $ref: "#/components/schemas/Repository"
-        content:
+        data:
           type: string
-          description: script content
+          description: script content data as string
         uri:
           type: string
           description: script content
@@ -1137,6 +1137,9 @@ components:
         scriptName:
           type: string
           description: unique script name (CRD Script name)
+        scriptNamespace:
+          type: string
+          description: script namespace
         scriptType:
           type: string
           description: script type e.g. postman/collection
@@ -1387,19 +1390,7 @@ components:
             users: "3"
             prefix: "some-"
         content:
-          type: string
-          description: script content as string (content depends from executor)
-        inputType:
-          type: string
-          description: >
-            script content type can be: 
-            - direct content - created from file,
-            - git repository with path, will be checked out, useful when test have more than one file or complicated directory structure,
-          enum:
-            - content
-            - git
-        repository:
-          $ref: "#/components/schemas/Repository"
+          $ref: "#/components/schemas/ScriptContent"
 
     Repository:
       description: repository representation for tests in git repositories
