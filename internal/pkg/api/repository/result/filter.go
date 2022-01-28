@@ -15,6 +15,7 @@ type filter struct {
 	pageSize   int
 	textSearch string
 	tags       []string
+	objectType string
 }
 
 func NewExecutionsFilter() *filter {
@@ -62,6 +63,10 @@ func (f *filter) WithTags(tags []string) *filter {
 	return f
 }
 
+func (f *filter) WithType(objectType string) *filter {
+	f.objectType = objectType
+	return f
+}
 func (f filter) ScriptName() string {
 	return f.scriptName
 }
@@ -108,6 +113,14 @@ func (f filter) TextSearchDefined() bool {
 
 func (f filter) TextSearch() string {
 	return f.textSearch
+}
+
+func (f filter) TypeDefined() bool {
+	return f.objectType != ""
+}
+
+func (f filter) Type() string {
+	return f.objectType
 }
 
 func (f filter) Tags() []string {

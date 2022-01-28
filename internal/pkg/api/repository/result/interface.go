@@ -24,6 +24,8 @@ type Filter interface {
 	TextSearchDefined() bool
 	TextSearch() string
 	Tags() []string
+	TypeDefined() bool
+	Type() string
 }
 
 type Repository interface {
