@@ -197,6 +197,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithStatus(testkube.ExecutionStatus(status))
 	}
 
+	objectType := c.Query("type", "")
+	if objectType != "" {
+		filter = filter.WithType(objectType)
+	}
+
 	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
 		filter = filter.WithStartDate(dFilter.Start)

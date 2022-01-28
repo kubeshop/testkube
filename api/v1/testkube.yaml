@@ -185,6 +185,7 @@ paths:
       operationId: listExecutions
       parameters:
         - $ref: "#/components/parameters/TestName"
+        - $ref: "#/components/parameters/Type"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/PageIndex"
@@ -1601,6 +1602,14 @@ components:
         type: string
         default: ""
       description: test namespaced name to filter
+      required: false
+    Type:
+      in: query
+      name: type
+      schema:
+        type: string
+        default: ""
+      description: object type
       required: false
     TextSearch:
       in: query

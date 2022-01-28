@@ -161,7 +161,6 @@ func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime t
 }
 
 func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
-
 	query := bson.M{}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
@@ -195,6 +194,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.Tags() != nil {
 		query["tags"] = filter.Tags()
+	}
+
+	if filter.TypeDefined() {
+		query["scripttype"] = filter.Type()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
