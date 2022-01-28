@@ -28,10 +28,8 @@ type Execution struct {
 	// additional arguments/flags passed to executor binary
 	Args []string `json:"args,omitempty"`
 	// execution params passed to executor converted to vars for usage in tests
-	Params map[string]string `json:"params,omitempty"`
-	// script metadata content
-	ScriptContent string      `json:"scriptContent,omitempty"`
-	Repository    *Repository `json:"repository,omitempty"`
+	Params  map[string]string `json:"params,omitempty"`
+	Content *ScriptContent    `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
