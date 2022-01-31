@@ -84,7 +84,7 @@ func TestScriptsAPI(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, `{"id":"1", "name":"t1", "content":"{}", "type":"postman/collection"}`)
+			fmt.Fprintf(w, `{"id":"1", "name":"t1", "content":{"data":"{}"}, "type":"postman/collection"}`)
 		}))
 		defer srv.Close()
 
@@ -181,7 +181,7 @@ func TestScriptsAPI(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, `[{"id":"1", "name":"t1", "content":"{}", "type":"postman/collection"},{"id":"2", "name":"t2", "content":"{}", "type":"cypress/project"}]`)
+			fmt.Fprintf(w, `[{"id":"1", "name":"t1", "content":{"data":"{}"}, "type":"postman/collection"},{"id":"2", "name":"t2", "content":{"data":"{}"}, "type":"cypress/project"}]`)
 		}))
 		defer srv.Close()
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +19,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 	t.Run("Is return true when valid content", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: exampleValidContent,
+			Content: testkube.NewStringScriptContent(exampleValidContent),
 		})
 
 		assert.Equal(t, "postman/collection", name)
@@ -28,7 +29,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 	t.Run("Is return false in case of invalid JSON content", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: exampleInvalidContent,
+			Content: testkube.NewStringScriptContent(exampleInvalidContent),
 		})
 
 		assert.Empty(t, name)
@@ -39,7 +40,7 @@ func TestPostmanCollectionAdapter(t *testing.T) {
 	t.Run("Is return false in case of content which is not JSON ", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: exampleInvalidJSONContent,
+			Content: testkube.NewStringScriptContent(exampleInvalidJSONContent),
 		})
 
 		assert.Empty(t, name)
