@@ -32,7 +32,7 @@ func (f Fetcher) Fetch(content *testkube.ScriptContent) (path string, err error)
 	case testkube.ScriptContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
 	default:
-		return path, fmt.Errorf("can't fetch %s", content.Type_)
+		return path, fmt.Errorf("unhandled content type: '%s'", content.Type_)
 	}
 }
 

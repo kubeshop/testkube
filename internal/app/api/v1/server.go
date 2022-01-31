@@ -8,9 +8,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
 
-	executorscr "github.com/kubeshop/testkube-operator/client/executors"
-	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
-	testscr "github.com/kubeshop/testkube-operator/client/tests"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
+	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
+	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
+
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -26,9 +27,9 @@ import (
 func NewServer(
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	scriptsClient *scriptscr.ScriptsClient,
-	executorsClient *executorscr.ExecutorsClient,
-	testsClient *testscr.TestsClient,
+	scriptsClient *scriptsclientv2.ScriptsClient,
+	executorsClient *executorsclientv1.ExecutorsClient,
+	testsClient *testsclientv1.TestsClient,
 	secretClient *secret.Client,
 ) TestKubeAPI {
 
@@ -61,9 +62,9 @@ type TestKubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsClient          *testscr.TestsClient
-	ScriptsClient        *scriptscr.ScriptsClient
-	ExecutorsClient      *executorscr.ExecutorsClient
+	TestsClient          *testsclientv1.TestsClient
+	ScriptsClient        *scriptsclientv2.ScriptsClient
+	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	Metrics              Metrics
 	Storage              storage.Client

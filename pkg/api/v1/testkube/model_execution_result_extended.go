@@ -50,3 +50,13 @@ func (r *ExecutionResult) Err(err error) ExecutionResult {
 	r.ErrorMessage = err.Error()
 	return *r
 }
+
+// Errs return error result if any of passed errors is not nil
+func (r *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
+	for _, err := range errors {
+		if err != nil {
+			return r.Err(err)
+		}
+	}
+	return *r
+}
