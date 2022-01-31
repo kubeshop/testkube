@@ -8,7 +8,7 @@ type ContentFetcher interface {
 	GitDirFetcher
 	GitFileFetcher
 
-	Fetch(content testkube.ScriptContent) (path string, err error)
+	Fetch(content *testkube.ScriptContent) (path string, err error)
 }
 
 type StringFetcher interface {
@@ -20,9 +20,9 @@ type URIFetcher interface {
 }
 
 type GitDirFetcher interface {
-	FetchGitDir(repo testkube.Repository) (path string, err error)
+	FetchGitDir(repo *testkube.Repository) (path string, err error)
 }
 
 type GitFileFetcher interface {
-	FetchGitFile(repo testkube.Repository) (path string, err error)
+	FetchGitFile(repo *testkube.Repository) (path string, err error)
 }

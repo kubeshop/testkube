@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 const Version = "v1"

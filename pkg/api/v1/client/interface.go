@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 type HTTPClient interface {

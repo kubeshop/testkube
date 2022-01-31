@@ -3,8 +3,8 @@ package executor
 import (
 	"os"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/process"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 // Run runs executor process wrapped in json line output

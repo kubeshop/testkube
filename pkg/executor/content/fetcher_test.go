@@ -20,7 +20,7 @@ func TestFetcher(t *testing.T) {
 
 	t.Run("test fetch uri", func(t *testing.T) {
 
-		content := testkube.ScriptContent{
+		content := &testkube.ScriptContent{
 			Type_: string(testkube.ScriptContentTypeString),
 			Data:  fileContent,
 		}
@@ -35,7 +35,7 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git repo based file", func(t *testing.T) {
-		content := testkube.ScriptContent{
+		content := &testkube.ScriptContent{
 			Type_: string(testkube.ScriptContentTypeGitFile),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
 				WithPath("example.json"),
@@ -51,7 +51,7 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git root dir", func(t *testing.T) {
-		content := testkube.ScriptContent{
+		content := &testkube.ScriptContent{
 			Type_: string(testkube.ScriptContentTypeGitDir),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
 				WithPath("."),
@@ -66,7 +66,7 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git subdir", func(t *testing.T) {
-		content := testkube.ScriptContent{
+		content := &testkube.ScriptContent{
 			Type_: string(testkube.ScriptContentTypeGitDir),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
 				WithPath("subdir"),

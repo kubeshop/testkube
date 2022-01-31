@@ -16,8 +16,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 const (

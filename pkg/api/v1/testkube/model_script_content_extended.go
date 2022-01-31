@@ -1,3 +1,4 @@
+// content could be fetched as file or dir (many files, e.g. Cypress project) in executor
 package testkube
 
 type ScriptContentType string
@@ -14,4 +15,17 @@ func NewStringScriptContent(str string) *ScriptContent {
 		Type_: string(ScriptContentTypeGitFile),
 		Data:  str,
 	}
+}
+
+// IsDir - for content fetched as dir
+func (c *ScriptContent) IsDir() bool {
+	return ScriptContentType(c.Type_) == ScriptContentTypeGitDir
+
+}
+
+// IsFile - for content fetched as file
+func (c *ScriptContent) IsFile() bool {
+	return ScriptContentType(c.Type_) == ScriptContentTypeGitFile ||
+		ScriptContentType(c.Type_) == ScriptContentTypeFileURI ||
+		ScriptContentType(c.Type_) == ScriptContentTypeString
 }

@@ -21,7 +21,7 @@ func NewFetcher() Fetcher {
 type Fetcher struct {
 }
 
-func (f Fetcher) Fetch(content testkube.ScriptContent) (path string, err error) {
+func (f Fetcher) Fetch(content *testkube.ScriptContent) (path string, err error) {
 	switch testkube.ScriptContentType(content.Type_) {
 	case testkube.ScriptContentTypeFileURI:
 		return f.FetchURI(content.Uri)

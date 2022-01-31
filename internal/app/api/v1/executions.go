@@ -17,9 +17,9 @@ import (
 	scriptsv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	scriptsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
 	"github.com/kubeshop/testkube/pkg/rand"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
 
