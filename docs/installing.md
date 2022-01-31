@@ -62,6 +62,7 @@ The above command will install the following components in your Kubernetes clust
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
+7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag)
 
 You can confirm it by running:
 
@@ -73,24 +74,35 @@ Output:
 
 ```sh
 NAME                                           READY   STATUS    RESTARTS   AGE
+pod/cert-manager-847544bbd-fw2h8               1/1     Running   0          4m51s
+pod/cert-manager-cainjector-5c747645bf-qgftx   1/1     Running   0          4m51s
+pod/cert-manager-webhook-77b946cb6d-dl6gb      1/1     Running   0          4m51s
 pod/testkube-dashboard-748cbcbb66-q8zzp        1/1     Running   0          4m51s
 pod/testkube-api-server-546777c9f7-7g4kg       1/1     Running   0          4m51s
 pod/testkube-mongodb-5d95f44fdd-cxqz6          1/1     Running   0          4m51s
 pod/testkube-minio-testkube-64cd475b94-562hz   1/1     Running   0          4m51s
 
 NAME                                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                                        AGE
+service/cert-manager                      ClusterIP   10.106.81.214   <none>        9402/TCP                                       2d20h
+service/cert-manager-webhook              ClusterIP   10.104.228.254  <none>        443/TCP                                        2d20h
 service/testkube-minio-service-testkube   NodePort    10.43.121.107   <none>        9000:31222/TCP,9090:32002/TCP,9443:32586/TCP   4m51s
 service/testkube-api-server               NodePort    10.43.66.13     <none>        8088:32203/TCP                                 4m51s
 service/testkube-mongodb                  ClusterIP   10.43.126.230   <none>        27017/TCP                                      4m51s
 service/testkube-dashboard                NodePort    10.43.136.34    <none>        80:31991/TCP                                   4m51s
 
 NAME                                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/cert-manager              1/1     1            1           4m51s
+deployment.apps/cert-manager-cainjector   1/1     1            1           4m51s
+deployment.apps/cert-manager-webhook      1/1     1            1           4m51s
 deployment.apps/testkube-dashboard        1/1     1            1           4m51s
 deployment.apps/testkube-api-server       1/1     1            1           4m51s
 deployment.apps/testkube-mongodb          1/1     1            1           4m51s
 deployment.apps/testkube-minio-testkube   1/1     1            1           4m51s
 
 NAME                                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/cert-manager-847544bbd               1         1         1       4m51s
+replicaset.apps/cert-manager-cainjector-5c747645bf   1         1         1       4m51s
+replicaset.apps/cert-manager-webhook-77b946cb6d      1         1         1       4m51s
 replicaset.apps/testkube-dashboard-748cbcbb66        1         1         1       4m51s
 replicaset.apps/testkube-api-server-546777c9f7       1         1         1       4m51s
 replicaset.apps/testkube-mongodb-5d95f44fdd          1         1         1       4m51s

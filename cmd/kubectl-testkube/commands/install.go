@@ -13,6 +13,7 @@ import (
 var (
 	noDashboard bool
 	noMinio     bool
+	noJetstack  bool
 )
 
 func NewInstallCmd() *cobra.Command {
@@ -41,8 +42,9 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("updating helm repositories", err)
 
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
-			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noDashboard))
-			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noMinio))
+			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noMinio))
+			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noDashboard))
+			command = append(command, "--set", fmt.Sprintf("api-server.jetstack.enabled=%t", !noJetstack))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
@@ -58,6 +60,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&noMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&noDashboard, "no-dashboard", false, "don't install dashboard")
+	cmd.Flags().BoolVar(&noJetstack, "no-jetstack", false, "don't install Jetstack")
 
 	return cmd
 }
