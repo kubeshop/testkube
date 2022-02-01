@@ -24,7 +24,8 @@ func MapScriptCRToAPI(crScript scriptsv2.Script) (script testkube.Script) {
 func MapScriptContentFromSpec(specContent *scriptsv2.ScriptContent) *testkube.ScriptContent {
 	content := &testkube.ScriptContent{
 		Type_: specContent.Type_,
-		// assuming same data steructure
+		// assuming same data structure - there is task about syncing them automatically
+		// https://github.com/kubeshop/testkube/issues/723
 		Repository: (*testkube.Repository)(specContent.Repository),
 		Data:       specContent.Data,
 		Uri:        specContent.Uri,
