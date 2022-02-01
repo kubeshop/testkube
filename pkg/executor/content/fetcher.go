@@ -58,8 +58,8 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 		return path, err
 	}
 
-	// if . make full repo checkout
-	if repo.Path == "." {
+	// if path not set make full repo checkout
+	if repo.Path == "" {
 		return git.Checkout(uri, repo.Branch)
 	}
 
