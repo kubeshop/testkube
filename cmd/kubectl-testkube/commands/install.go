@@ -44,7 +44,7 @@ func NewInstallCmd() *cobra.Command {
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
 			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noMinio))
 			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noDashboard))
-			command = append(command, "--set", fmt.Sprintf("api-server.jetstack.enabled=%t", !noJetstack))
+			command = append(command, "--set", fmt.Sprintf("jetstack.enabled=%t", !noJetstack))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
