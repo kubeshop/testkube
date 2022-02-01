@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	scriptsv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -318,17 +317,6 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	)
 
 	return execution
-}
-
-func mapScriptContentFromSpec(specContent *scriptsv2.ScriptContent) *testkube.ScriptContent {
-	content := &testkube.ScriptContent{
-		Type_:      specContent.Type_,
-		Repository: (*testkube.Repository)(specContent.Repository),
-		Data:       specContent.Data,
-		Uri:        specContent.Uri,
-	}
-
-	return content
 }
 
 func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
