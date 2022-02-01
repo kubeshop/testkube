@@ -26,7 +26,7 @@ func MapScriptContentFromSpec(specContent *scriptsv2.ScriptContent) *testkube.Sc
 		Type_: specContent.Type_,
 		// assuming same data steructure
 		Repository: (*testkube.Repository)(specContent.Repository),
-		Data:       specContent.Content,
+		Data:       specContent.Data,
 		Uri:        specContent.Uri,
 	}
 

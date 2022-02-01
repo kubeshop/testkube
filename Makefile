@@ -56,7 +56,7 @@ openapi-generate-model-testkube:
 	
 
 test: 
-	go test ./... -cover -v -failfast
+	go test ./... -cover -failfast
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e

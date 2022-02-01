@@ -324,7 +324,7 @@ func mapScriptContentFromSpec(specContent *scriptsv2.ScriptContent) *testkube.Sc
 	content := &testkube.ScriptContent{
 		Type_:      specContent.Type_,
 		Repository: (*testkube.Repository)(specContent.Repository),
-		Data:       specContent.Content,
+		Data:       specContent.Data,
 		Uri:        specContent.Uri,
 	}
 

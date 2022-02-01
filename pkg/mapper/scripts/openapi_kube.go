@@ -32,7 +32,7 @@ func MapScriptContentToScriptSpecContent(content *testkube.ScriptContent) (specC
 	return &scriptsv2.ScriptContent{
 		// assuming same data structure
 		Repository: (*scriptsv2.Repository)(content.Repository),
-		Content:    content.Data,
+		Data:       content.Data,
 		Uri:        content.Uri,
 		Type_:      content.Type_,
 	}
