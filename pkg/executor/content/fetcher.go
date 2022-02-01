@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -100,13 +99,11 @@ func (f Fetcher) gitURI(repo *testkube.Repository) (uri string, err error) {
 
 func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {
 	tmpFile, err := ioutil.TempFile("", "fetcher-save-temp-file")
-	path = tmpFile.Name()
-	out, err := os.Create(path)
 	if err != nil {
-		return path, err
+		return "", err
 	}
-	defer out.Close()
-	_, err = io.Copy(out, reader)
+	defer tmpFile.Close()
+	_, err = io.Copy(tmpFile, reader)
 
-	return
+	return tmpFile.Name(), err
 }
