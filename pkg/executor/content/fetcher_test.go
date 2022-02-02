@@ -1,5 +1,6 @@
 //go:build integration
 
+// this test need git to test fetchers
 package content
 
 import (
