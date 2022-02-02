@@ -56,7 +56,7 @@ func TestFetcher(t *testing.T) {
 		content := &testkube.ScriptContent{
 			Type_: string(testkube.ScriptContentTypeGitDir),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
-				WithPath("."),
+				WithPath(""),
 		}
 
 		path, err := f.Fetch(content)
