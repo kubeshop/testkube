@@ -182,7 +182,7 @@ func (c ProxyScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testk
 
 // ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error) {
+func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/scripts/%s/executions", id)
 
 	// get script to get script tags
