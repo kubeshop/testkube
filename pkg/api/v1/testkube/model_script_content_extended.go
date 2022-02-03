@@ -17,7 +17,7 @@ var ErrScriptContentTypeNotDir = fmt.Errorf("unsupported content type use one of
 
 func NewStringScriptContent(str string) *ScriptContent {
 	return &ScriptContent{
-		Type_: string(ScriptContentTypeGitFile),
+		Type_: string(ScriptContentTypeString),
 		Data:  str,
 	}
 }
