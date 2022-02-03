@@ -12,8 +12,8 @@ const (
 	ScriptContentTypeGitDir  ScriptContentType = "git-dir"
 )
 
-var ErrTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
-var ErrTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
+var ErrScriptContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
+var ErrScriptContentTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
 
 func NewStringScriptContent(str string) *ScriptContent {
 	return &ScriptContent{
