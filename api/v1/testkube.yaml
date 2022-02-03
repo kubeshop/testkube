@@ -1168,6 +1168,9 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        paramsFile:
+          type: string
+          description: params file content - need to be in format for particular executor (e.g. postman envs file)
         content:
           $ref: "#/components/schemas/ScriptContent"
         startTime:
