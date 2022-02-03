@@ -1,6 +1,8 @@
 // content could be fetched as file or dir (many files, e.g. Cypress project) in executor
 package testkube
 
+import "fmt"
+
 type ScriptContentType string
 
 const (
@@ -9,6 +11,9 @@ const (
 	ScriptContentTypeGitFile ScriptContentType = "git-file"
 	ScriptContentTypeGitDir  ScriptContentType = "git-dir"
 )
+
+var ErrTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
+var ErrTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
 
 func NewStringScriptContent(str string) *ScriptContent {
 	return &ScriptContent{
