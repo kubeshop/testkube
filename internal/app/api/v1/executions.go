@@ -132,12 +132,12 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context())
+		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), false, filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		filteredTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), filter)
+		filteredTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), true, filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
