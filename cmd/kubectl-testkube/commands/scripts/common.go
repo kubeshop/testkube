@@ -102,10 +102,14 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 
 	if file != "" {
 		fileContent, err = ioutil.ReadFile(file)
-		return content, fmt.Errorf("reading file "+file+" error: %w", err)
+		if err != nil {
+			return content, fmt.Errorf("reading file "+file+" error: %w", err)
+		}
 	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
 		fileContent, err = ioutil.ReadAll(os.Stdin)
-		return content, fmt.Errorf("reading stdin error: %w", err)
+		if err != nil {
+			return content, fmt.Errorf("reading stdin error: %w", err)
+		}
 	}
 
 	if len(fileContent) == 0 && len(uri) == 0 {
@@ -169,7 +173,7 @@ func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Script)
 	}
 
 	if options.Type_ == "" {
-		return options, fmt.Errorf("Can't detect executor type by passed file content (%s), please pass valid --type flag", executorType)
+		return options, fmt.Errorf("can't detect executor type by passed file content (%s), please pass valid --type flag", executorType)
 	}
 
 	return options, nil
