@@ -104,12 +104,12 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	}
 	object, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("minio saving file (%s) open error: %w", filePath, err)
 	}
 	defer object.Close()
 	objectStat, err := object.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("minio SaveFile.object.Stat error: %w", err)
 	}
 
 	var fileName string
@@ -121,7 +121,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		return err
+		return fmt.Errorf("minio saving file putting object error: %w", err)
 	}
 
 	return nil
@@ -129,17 +129,17 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 
 func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	if err := c.Connect(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
 	}
 
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("minio DownloadFile GetObject error: %w", err)
 	}
 
 	_, err = reader.Stat()
 	if err != nil {
-		return reader, err
+		return reader, fmt.Errorf("minio Download File Stat error: %w", err)
 	}
 
 	return reader, nil
@@ -147,31 +147,31 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 
 func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	if err := c.Connect(); err != nil {
-		return err
+		return fmt.Errorf("minio scrape artefacts connection error: %w", err)
 	}
 
 	err := c.CreateBucket(id) // create bucket name it by execution ID
 	if err != nil {
-		return fmt.Errorf("failed to create a bucket %s: %w", id, err)
+		return fmt.Errorf("minio failed to create a bucket %s: %w", id, err)
 	}
 
 	for _, directory := range directories {
 		err = filepath.Walk(directory,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					return err
+					return fmt.Errorf("minio path (%s) walk error: %w", path, err)
 				}
 
 				if !info.IsDir() {
 					err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 					if err != nil {
-						return err
+						return fmt.Errorf("minio save file (%s) error: %w", path, err)
 					}
 				}
 				return nil
 			})
 		if err != nil {
-			return err
+			return fmt.Errorf("minio walk error: %w", err)
 		}
 	}
 	return nil

@@ -101,6 +101,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
 
+	// get file content
 	if file != "" {
 		fileContent, err = ioutil.ReadFile(file)
 		if err != nil {
@@ -118,11 +119,30 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 		return content, fmt.Errorf("empty script content, please pass some script content to create script")
 	}
 
+	// detect content type (git-file need to be everrided manually as we don't)
+	// TODO handle git-file somehow
+	if gitUri != "" && scriptContentType == "" {
+		scriptContentType = string(testkube.ScriptContentTypeGitDir)
+	}
+
+	if uri != "" && scriptContentType == "" {
+		scriptContentType = string(testkube.ScriptContentTypeFileURI)
+	}
+
+	if len(fileContent) > 0 {
+		scriptContentType = string(testkube.ScriptContentTypeString)
+	}
+
+	fmt.Printf("git uri %+v\n", gitUri)
+	fmt.Printf("git branch %+v\n", gitBranch)
+	fmt.Printf("uri %+v\n", uri)
+
 	var repository *testkube.Repository
 	if gitUri != "" && gitBranch != "" {
 		if scriptContentType == "" {
 			scriptContentType = "git-dir"
 		}
+
 		repository = &testkube.Repository{
 			Type_:    "git",
 			Uri:      gitUri,
@@ -131,14 +151,6 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 			Username: gitUsername,
 			Token:    gitToken,
 		}
-	}
-
-	if uri != "" {
-		scriptContentType = "uri"
-	}
-
-	if scriptContentType == "" {
-		scriptContentType = "string"
 	}
 
 	content = &testkube.ScriptContent{
@@ -153,6 +165,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 
 func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Script) (options apiclientv1.UpsertScriptOptions, err error) {
 	content, err := newContentFromFlags(cmd)
+
 	ui.ExitOnError("creating content from passed parameters", err)
 
 	name := cmd.Flag("name").Value.String()
