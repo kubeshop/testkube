@@ -109,7 +109,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	defer object.Close()
 	objectStat, err := object.Stat()
 	if err != nil {
-		return fmt.Errorf("minio SaveFile.object.Stat error: %w", err)
+		return fmt.Errorf("minio object stat (file:%s) error: %w", filePath, err)
 	}
 
 	var fileName string
@@ -119,9 +119,11 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		fileName = objectStat.Name()
 	}
 
+	fmt.Printf("SAVING: %+v\n", filePath)
+
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		return fmt.Errorf("minio saving file putting object error: %w", err)
+		return fmt.Errorf("minio saving file (%s) put object error: %w", fileName, err)
 	}
 
 	return nil

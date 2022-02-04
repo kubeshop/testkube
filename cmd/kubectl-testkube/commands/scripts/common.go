@@ -133,10 +133,6 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 		scriptContentType = string(testkube.ScriptContentTypeString)
 	}
 
-	fmt.Printf("git uri %+v\n", gitUri)
-	fmt.Printf("git branch %+v\n", gitBranch)
-	fmt.Printf("uri %+v\n", uri)
-
 	var repository *testkube.Repository
 	if gitUri != "" && gitBranch != "" {
 		if scriptContentType == "" {
