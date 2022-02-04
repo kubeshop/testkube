@@ -33,6 +33,31 @@ func NewInstallCmd() *cobra.Command {
 			helmPath, err := exec.LookPath("helm")
 			ui.ExitOnError("checking helm installation path", err)
 
+			if !noJetstack {
+				_, err = process.Execute(helmPath, "get", "crds", "certificates.cert-manager.io")
+				if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
+					ui.ExitOnError("checking cert manager installation", err)
+				}
+
+				if err != nil {
+					_, err = process.Execute(helmPath, "repo", "add", "jetstack", "https://charts.jetstack.io")
+					if err != nil && !strings.Contains(err.Error(), "Error: repository name (jetstack) already exists") {
+						ui.ExitOnError("adding jetstack repo", err)
+					}
+
+					_, err = process.Execute(helmPath, "repo", "update")
+					ui.ExitOnError("updating helm repositories", err)
+
+					command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace, "--set", "installCRDs=true"}
+					command = append(command, "jetstack", "jetstack/cert-manager")
+
+					out, err := process.Execute(helmPath, command...)
+
+					ui.ExitOnError("executing helm install jetstack", err)
+					ui.Info("Helm install jetstack output", string(out))
+				}
+			}
+
 			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 			if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 				ui.WarnOnError("adding testkube repo", err)
@@ -44,13 +69,12 @@ func NewInstallCmd() *cobra.Command {
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
 			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noMinio))
 			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noDashboard))
-			command = append(command, "--set", fmt.Sprintf("jetstack.enabled=%t", !noJetstack))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
 
-			ui.ExitOnError("executing helm install", err)
-			ui.Info("Helm install output", string(out))
+			ui.ExitOnError("executing helm install testkube", err)
+			ui.Info("Helm install testkube output", string(out))
 		},
 	}
 
