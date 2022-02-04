@@ -9,17 +9,18 @@ import (
 func NewUpdateScriptsCmd() *cobra.Command {
 
 	var (
-		scriptName      string
-		scriptNamespace string
-		file            string
-		executorType    string
-		uri             string
-		gitUri          string
-		gitBranch       string
-		gitPath         string
-		gitUsername     string
-		gitToken        string
-		tags            []string
+		scriptName        string
+		scriptNamespace   string
+		scriptContentType string
+		file              string
+		executorType      string
+		uri               string
+		gitUri            string
+		gitBranch         string
+		gitPath           string
+		gitUsername       string
+		gitToken          string
+		tags              []string
 	)
 
 	cmd := &cobra.Command{
@@ -49,7 +50,10 @@ func NewUpdateScriptsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&scriptName, "name", "n", "", "unique script name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will try to read content from stdin if not specified")
 	cmd.Flags().StringVarP(&scriptNamespace, "script-namespace", "", "testkube", "namespace where script will be created defaults to 'testkube' namespace")
+	cmd.Flags().StringVarP(&scriptContentType, "script-content-type", "", "", "content type of script one of string|file-uri|git-file|git-dir")
+
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
+
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")

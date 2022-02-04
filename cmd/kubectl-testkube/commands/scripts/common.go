@@ -92,6 +92,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, err error) {
 	var fileContent []byte
 
+	scriptContentType := cmd.Flag("script-content-type").Value.String()
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
@@ -112,12 +113,16 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 		}
 	}
 
-	if len(fileContent) == 0 && len(uri) == 0 {
+	// content is correct when is passed from file, by uri, ur by git repo
+	if len(fileContent) == 0 && (uri == "" || gitUri == "") {
 		return content, fmt.Errorf("empty script content, please pass some script content to create script")
 	}
 
 	var repository *testkube.Repository
-	if uri != "" && gitBranch != "" {
+	if gitUri != "" && gitBranch != "" {
+		if scriptContentType == "" {
+			scriptContentType = "git-dir"
+		}
 		repository = &testkube.Repository{
 			Type_:    "git",
 			Uri:      gitUri,
@@ -128,7 +133,16 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 		}
 	}
 
+	if uri != "" {
+		scriptContentType = "uri"
+	}
+
+	if scriptContentType == "" {
+		scriptContentType = "string"
+	}
+
 	content = &testkube.ScriptContent{
+		Type_:      scriptContentType,
 		Data:       string(fileContent),
 		Repository: repository,
 		Uri:        uri,
