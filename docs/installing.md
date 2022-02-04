@@ -62,7 +62,7 @@ The above command will install the following components in your Kubernetes clust
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
-7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag)
+7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag). It will not be installed, if it's already installed to your Kubernetes cluster
 
 You can confirm it by running:
 
