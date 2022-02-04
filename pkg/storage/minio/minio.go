@@ -154,6 +154,13 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	}
 
 	for _, directory := range directories {
+
+		if _, err := os.Stat(directory); os.IsNotExist(err) {
+			c.Log.Debugw("directory %s does not exists, skipping", directory)
+			continue
+		}
+
+		// if directory exists walk through recursively
 		err = filepath.Walk(directory,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -168,6 +175,7 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 				}
 				return nil
 			})
+
 		if err != nil {
 			return fmt.Errorf("minio walk error: %w", err)
 		}
