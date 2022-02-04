@@ -8,9 +8,10 @@ import (
 
 func NewVersionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "version",
-		Short: "Shows version and build info",
-		Long:  `Shows version and build info`,
+		Use:     "version",
+		Aliases: []string{"v"},
+		Short:   "Shows version and build info",
+		Long:    `Shows version and build info`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 			info, err := client.GetServerInfo()

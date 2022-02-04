@@ -114,7 +114,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 	}
 
 	// content is correct when is passed from file, by uri, ur by git repo
-	if len(fileContent) == 0 && (uri == "" || gitUri == "") {
+	if len(fileContent) == 0 && uri == "" && gitUri == "" {
 		return content, fmt.Errorf("empty script content, please pass some script content to create script")
 	}
 
