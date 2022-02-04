@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -116,12 +114,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		return fmt.Errorf("minio object stat (file:%s) error: %w", filePath, err)
 	}
 
-	var fileName string
-	if strings.Contains(filePath, "/") {
-		_, fileName = path.Split("/")
-	} else {
-		fileName = objectStat.Name()
-	}
+	fileName := objectStat.Name()
 
 	c.Log.Debugw("saving object in minio", "filePath", filePath, "fileName", fileName, "bucket", bucket, "size", objectStat.Size())
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
