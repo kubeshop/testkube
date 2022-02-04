@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
 
 var _ storage.Client = (*Client)(nil)
@@ -24,6 +26,7 @@ type Client struct {
 	location        string
 	token           string
 	minioclient     *minio.Client
+	Log             *zap.SugaredLogger
 }
 
 func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Client {
@@ -34,6 +37,7 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, s
 		token:           token,
 		ssl:             ssl,
 		Endpoint:        endpoint,
+		Log:             log.DefaultLogger,
 	}
 
 	return c
@@ -119,8 +123,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 		fileName = objectStat.Name()
 	}
 
-	fmt.Printf("SAVING: %+v\n", filePath)
-
+	c.Log.Debugw("saving object in minio", "filePath", filePath, "fileName", fileName, "bucket", bucket, "size", objectStat.Size())
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", fileName, err)

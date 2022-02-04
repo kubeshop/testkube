@@ -495,6 +495,10 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 
 var envVars = []corev1.EnvVar{
 	{
+		Name:  "DEBUG",
+		Value: os.Getenv("DEBUG"),
+	},
+	{
 		Name:  "RUNNER_ENDPOINT",
 		Value: os.Getenv("STORAGE_ENDPOINT"),
 	},
