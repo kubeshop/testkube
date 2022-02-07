@@ -86,7 +86,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithStatus(testkube.ERROR__ExecutionStatus))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.ERROR__ExecutionStatus))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
@@ -97,7 +97,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background())
+		totals, err := repository.GetExecutionTotals(context.Background(), false)
 
 		assert.NoError(err)
 		assert.Equal(int32(21), totals.Results)
@@ -125,7 +125,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithStartDate(dateFilter.Start))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStartDate(dateFilter.Start))
 
 		assert.NoError(err)
 		assert.Equal(int32(14), totals.Results)
@@ -147,7 +147,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results before this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithEndDate(dateFilter.End))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithEndDate(dateFilter.End))
 
 		assert.NoError(err)
 		assert.Equal(int32(7), totals.Results)
@@ -165,7 +165,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals with script name that doesn't exist should return 0 results", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithScriptName("noneExisting"))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName("noneExisting"))
 
 		assert.NoError(err)
 		assert.Equal(int32(0), totals.Results)
@@ -192,7 +192,7 @@ func TestStorage(t *testing.T) {
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
 			WithScriptName(defaultName)
-		totals, err := repository.GetExecutionTotals(context.Background(), filter)
+		totals, err := repository.GetExecutionTotals(context.Background(), false, filter)
 
 		assert.NoError(err)
 		assert.Equal(int32(2), totals.Results)
@@ -215,7 +215,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("getting totals with script name should return result only for that script name", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), NewExecutionsFilter().WithScriptName(name))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName(name))
 
 		assert.NoError(err)
 		assert.Equal(int32(1), totals.Results)

@@ -182,7 +182,14 @@ func (s TestKubeAPI) RoutesHandler() fiber.Handler {
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
+
+	// id for /scripts/ID/executions
 	scriptName := c.Params("id", "")
+	if scriptName == "" {
+		// query param for /executions?scriptName
+		scriptName = c.Query("scriptName", "")
+	}
+
 	if scriptName != "" {
 		filter = filter.WithScriptName(scriptName)
 	}

@@ -59,7 +59,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
-func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int32  `bson:"count"`
@@ -73,8 +73,10 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, filter ...Filt
 	pipeline := []bson.D{{{"$match", query}}}
 	if len(filter) > 0 {
 		pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
-		pipeline = append(pipeline, bson.D{{"$skip", int64(filter[0].Page() * filter[0].PageSize())}})
-		pipeline = append(pipeline, bson.D{{"$limit", int64(filter[0].PageSize())}})
+		if paging {
+			pipeline = append(pipeline, bson.D{{"$skip", int64(filter[0].Page() * filter[0].PageSize())}})
+			pipeline = append(pipeline, bson.D{{"$limit", int64(filter[0].PageSize())}})
+		}
 	}
 
 	pipeline = append(pipeline, bson.D{{"$group", bson.D{{"_id", "$executionresult.status"}, {"count", bson.D{{"$sum", 1}}}}}})
