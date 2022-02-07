@@ -34,12 +34,13 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("checking helm installation path", err)
 
 			if !noJetstack {
-				_, err = process.Execute(helmPath, "get", "crds", "certificates.cert-manager.io")
+				_, err = process.Execute("kubectl", "get", "crds", "certificates.cert-manager.io")
 				if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
 					ui.ExitOnError("checking cert manager installation", err)
 				}
 
 				if err != nil {
+					ui.Info("Helm installing jetstack cert manager")
 					_, err = process.Execute(helmPath, "repo", "add", "jetstack", "https://charts.jetstack.io")
 					if err != nil && !strings.Contains(err.Error(), "Error: repository name (jetstack) already exists") {
 						ui.ExitOnError("adding jetstack repo", err)
@@ -58,6 +59,7 @@ func NewInstallCmd() *cobra.Command {
 				}
 			}
 
+			ui.Info("Helm installing testkube framework")
 			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 			if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 				ui.WarnOnError("adding testkube repo", err)
