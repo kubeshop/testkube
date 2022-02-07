@@ -13,6 +13,7 @@ import (
 var (
 	noDashboard bool
 	noMinio     bool
+	noJetstack  bool
 )
 
 func NewInstallCmd() *cobra.Command {
@@ -32,6 +33,33 @@ func NewInstallCmd() *cobra.Command {
 			helmPath, err := exec.LookPath("helm")
 			ui.ExitOnError("checking helm installation path", err)
 
+			if !noJetstack {
+				_, err = process.Execute("kubectl", "get", "crds", "certificates.cert-manager.io")
+				if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
+					ui.ExitOnError("checking cert manager installation", err)
+				}
+
+				if err != nil {
+					ui.Info("Helm installing jetstack cert manager")
+					_, err = process.Execute(helmPath, "repo", "add", "jetstack", "https://charts.jetstack.io")
+					if err != nil && !strings.Contains(err.Error(), "Error: repository name (jetstack) already exists") {
+						ui.ExitOnError("adding jetstack repo", err)
+					}
+
+					_, err = process.Execute(helmPath, "repo", "update")
+					ui.ExitOnError("updating helm repositories", err)
+
+					command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace, "--set", "installCRDs=true"}
+					command = append(command, "jetstack", "jetstack/cert-manager")
+
+					out, err := process.Execute(helmPath, command...)
+
+					ui.ExitOnError("executing helm install jetstack", err)
+					ui.Info("Helm install jetstack output", string(out))
+				}
+			}
+
+			ui.Info("Helm installing testkube framework")
 			_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 			if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 				ui.WarnOnError("adding testkube repo", err)
@@ -41,14 +69,14 @@ func NewInstallCmd() *cobra.Command {
 			ui.ExitOnError("updating helm repositories", err)
 
 			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
-			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noDashboard))
-			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noMinio))
+			command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noMinio))
+			command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noDashboard))
 			command = append(command, name, chart)
 
 			out, err := process.Execute(helmPath, command...)
 
-			ui.ExitOnError("executing helm install", err)
-			ui.Info("Helm install output", string(out))
+			ui.ExitOnError("executing helm install testkube", err)
+			ui.Info("Helm install testkube output", string(out))
 		},
 	}
 
@@ -58,6 +86,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&noMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&noDashboard, "no-dashboard", false, "don't install dashboard")
+	cmd.Flags().BoolVar(&noJetstack, "no-jetstack", false, "don't install Jetstack")
 
 	return cmd
 }
