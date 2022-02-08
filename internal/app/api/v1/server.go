@@ -1,13 +1,19 @@
 package v1
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorscr "github.com/kubeshop/testkube-operator/client/executors"
 	scriptscr "github.com/kubeshop/testkube-operator/client/scripts"
 	testscr "github.com/kubeshop/testkube-operator/client/tests"
@@ -50,6 +56,10 @@ func NewServer(
 		SecretClient:         secretClient,
 		TestsClient:          testsClient,
 		Metrics:              NewMetrics(),
+	}
+
+	if err = s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")); err != nil {
+		s.Log.Warnf("load default executors %w", err)
 	}
 
 	s.Init()
@@ -224,4 +234,54 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
+}
+
+// loadDefaultExecutors loads default executors
+func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
+	var executors []testkube.ExecutorDetails
+
+	dataDecoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal([]byte(dataDecoded), &executors); err != nil {
+		return err
+	}
+
+	for _, executor := range executors {
+		if executor.Executor == nil {
+			continue
+		}
+
+		obj := &executorv1.Executor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      executor.Name,
+				Namespace: namespace,
+			},
+			Spec: executorv1.ExecutorSpec{
+				Types:        executor.Executor.Types,
+				ExecutorType: executor.Executor.ExecutorType,
+				Image:        executor.Executor.Image,
+			},
+		}
+
+		result, err := s.ExecutorsClient.Get(namespace, executor.Name)
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+
+		if err != nil {
+			if _, err = s.ExecutorsClient.Create(obj); err != nil {
+				return err
+			}
+		} else {
+			result.Spec = obj.Spec
+			if _, err = s.ExecutorsClient.Update(result); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
