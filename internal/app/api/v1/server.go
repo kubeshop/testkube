@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
 	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
@@ -254,12 +256,12 @@ func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
 			continue
 		}
 
-		obj := &executorsclientv1.Executor{
+		obj := &executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      executor.Name,
 				Namespace: namespace,
 			},
-			Spec: executorsclientv1.ExecutorSpec{
+			Spec: executorv1.ExecutorSpec{
 				Types:        executor.Executor.Types,
 				ExecutorType: executor.Executor.ExecutorType,
 				Image:        executor.Executor.Image,
