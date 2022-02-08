@@ -1,29 +1,26 @@
 package scripts
 
 import (
-	"io/ioutil"
-	"os"
-	"reflect"
-
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/test/script/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewUpdateScriptsCmd() *cobra.Command {
+
 	var (
-		name         string
-		file         string
-		executorType string
-		uri          string
-		gitBranch    string
-		gitPath      string
-		gitUsername  string
-		gitToken     string
-		tags         []string
+		scriptName        string
+		scriptNamespace   string
+		scriptContentType string
+		file              string
+		executorType      string
+		uri               string
+		gitUri            string
+		gitBranch         string
+		gitPath           string
+		gitUsername       string
+		gitToken          string
+		tags              []string
 	)
 
 	cmd := &cobra.Command{
@@ -32,87 +29,38 @@ func NewUpdateScriptsCmd() *cobra.Command {
 		Long:  `Update Script Custom Resource, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			var content []byte
 			var err error
 
-			if file != "" {
-				// read script content
-				content, err = ioutil.ReadFile(file)
-				ui.ExitOnError("reading file"+file, err)
-			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-				content, err = ioutil.ReadAll(os.Stdin)
-				ui.ExitOnError("reading stdin", err)
+			client, _ := common.GetClient(cmd)
+			script, _ := client.GetScript(scriptName, scriptNamespace)
+			if scriptName != script.Name {
+				ui.Failf("Script with name '%s' not exists in namespace %s", scriptName, scriptNamespace)
 			}
 
-			client, namespace := common.GetClient(cmd)
-
-			script, _ := client.GetScript(name, namespace)
-			if name != script.Name {
-				ui.Failf("Script with name '%s' not exists in namespace %s", name, namespace)
-			}
-
-			if len(content) == 0 && len(uri) == 0 {
-				ui.Failf("Empty script content. Please pass some script content to create script")
-			}
-
-			var repository *testkube.Repository
-			if uri != "" && gitBranch != "" {
-				repository = &testkube.Repository{
-					Type_:    "git",
-					Uri:      uri,
-					Branch:   gitBranch,
-					Path:     gitPath,
-					Username: gitUsername,
-					Token:    gitToken,
-				}
-			}
-
-			options := apiClient.UpsertScriptOptions{
-				Name:       name,
-				Type_:      executorType,
-				Content:    string(content),
-				Namespace:  namespace,
-				Repository: repository,
-			}
-
-			// if tags are passed and are different from the existing overwrite
-			if len(tags) > 0 && !reflect.DeepEqual(script.Tags, tags) {
-				options.Tags = tags
-			} else {
-				options.Tags = script.Tags
-			}
-
-			// try to detect type if none passed
-			if executorType == "" {
-				d := detector.NewDefaultDetector()
-				if detectedType, ok := d.Detect(options); ok {
-					ui.Info("Detected test script type", detectedType)
-					options.Type_ = detectedType
-				}
-			}
-
-			if options.Type_ == "" {
-				ui.Failf("Can't detect executor type by passed file content, please pass valid --type flag")
-			}
+			options, err := NewUpsertScriptOptionsFromFlags(cmd, script)
+			ui.ExitOnError("getting script options", err)
 
 			script, err = client.UpdateScript(options)
-			ui.ExitOnError("updating script "+name+" in namespace "+namespace, err)
+			ui.ExitOnError("updating script "+scriptName+" in namespace "+scriptNamespace, err)
 
-			ui.Success("Script updated", name)
+			ui.Success("Script updated", scriptNamespace, "/", scriptName)
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "unique script name - mandatory")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
+	cmd.Flags().StringVarP(&scriptName, "name", "n", "", "unique script name - mandatory")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will try to read content from stdin if not specified")
+	cmd.Flags().StringVarP(&scriptNamespace, "script-namespace", "", "testkube", "namespace where script will be created defaults to 'testkube' namespace")
+	cmd.Flags().StringVarP(&scriptContentType, "script-content-type", "", "", "content type of script one of string|file-uri|git-file|git-dir")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
 
-	cmd.Flags().StringVarP(&uri, "uri", "", "", "if resource need to be loaded from URI")
+	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
+	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3 - Warning: by passing tags existing tags will be overwritten")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd
 }

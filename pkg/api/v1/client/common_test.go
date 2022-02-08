@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -27,7 +27,9 @@ jobs:
         run: go test -v ./...
 
       - name: Integration tests
-        run: go test --tags=integration -v ./...
+        run: |
+          sudo apt-get install -y git
+          go test --tags=integration -v ./...
 
       # Don't work yet as expected https://github.com/nwestfall/openapi-action/issues/3
       - name: OpenAPI Lint Checks

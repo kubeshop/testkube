@@ -16,11 +16,12 @@ import (
 type Script struct {
 	// script name
 	Name string `json:"name,omitempty"`
+	// script namespace
+	Namespace string `json:"namespace,omitempty"`
 	// script type
-	Type_ string `json:"type,omitempty"`
-	// script content
-	Content string    `json:"content,omitempty"`
-	Created time.Time `json:"created,omitempty"`
+	Type_   string         `json:"type,omitempty"`
+	Content *ScriptContent `json:"content,omitempty"`
+	Created time.Time      `json:"created,omitempty"`
 	// script tags
 	Tags []string `json:"tags,omitempty"`
 }

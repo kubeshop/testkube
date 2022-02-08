@@ -16,15 +16,15 @@ func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	}
 }
 
-func NewExecution(scriptName, name, scriptType, scriptContent string, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(scriptName, executionName, scriptType string, content *ScriptContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
 		ScriptName:      scriptName,
-		Name:            name,
+		Name:            executionName,
 		ScriptType:      scriptType,
 		ExecutionResult: &result,
 		Params:          params,
-		ScriptContent:   scriptContent,
+		Content:         content,
 		Tags:            tags,
 	}
 }
@@ -71,27 +71,13 @@ func (executions Executions) Table() (header []string, output [][]string) {
 	return
 }
 
-func (e *Execution) WithContent(content string) *Execution {
-	e.ScriptContent = content
-	return e
-}
-
-func (e *Execution) WithRepository(repository *Repository) *Execution {
-	e.Repository = repository
+func (e *Execution) WithContent(content *ScriptContent) *Execution {
+	e.Content = content
 	return e
 }
 
 func (e *Execution) WithParams(params map[string]string) *Execution {
 	e.Params = params
-	return e
-}
-
-func (e *Execution) WithRepositoryData(uri, branch, path string) *Execution {
-	e.Repository = &Repository{
-		Uri:    uri,
-		Branch: branch,
-		Path:   path,
-	}
 	return e
 }
 

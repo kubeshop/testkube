@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
 
 var _ storage.Client = (*Client)(nil)
@@ -24,6 +24,7 @@ type Client struct {
 	location        string
 	token           string
 	minioclient     *minio.Client
+	Log             *zap.SugaredLogger
 }
 
 func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Client {
@@ -34,6 +35,7 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, s
 		token:           token,
 		ssl:             ssl,
 		Endpoint:        endpoint,
+		Log:             log.DefaultLogger,
 	}
 
 	return c
@@ -104,24 +106,20 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	}
 	object, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("minio saving file (%s) open error: %w", filePath, err)
 	}
 	defer object.Close()
 	objectStat, err := object.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("minio object stat (file:%s) error: %w", filePath, err)
 	}
 
-	var fileName string
-	if strings.Contains(filePath, "/") {
-		_, fileName = path.Split("/")
-	} else {
-		fileName = objectStat.Name()
-	}
+	fileName := objectStat.Name()
 
+	c.Log.Debugw("saving object in minio", "filePath", filePath, "fileName", fileName, "bucket", bucket, "size", objectStat.Size())
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		return err
+		return fmt.Errorf("minio saving file (%s) put object error: %w", fileName, err)
 	}
 
 	return nil
@@ -129,17 +127,17 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 
 func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	if err := c.Connect(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
 	}
 
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("minio DownloadFile GetObject error: %w", err)
 	}
 
 	_, err = reader.Stat()
 	if err != nil {
-		return reader, err
+		return reader, fmt.Errorf("minio Download File Stat error: %w", err)
 	}
 
 	return reader, nil
@@ -147,31 +145,39 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 
 func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	if err := c.Connect(); err != nil {
-		return err
+		return fmt.Errorf("minio scrape artefacts connection error: %w", err)
 	}
 
 	err := c.CreateBucket(id) // create bucket name it by execution ID
 	if err != nil {
-		return fmt.Errorf("failed to create a bucket %s: %w", id, err)
+		return fmt.Errorf("minio failed to create a bucket %s: %w", id, err)
 	}
 
 	for _, directory := range directories {
+
+		if _, err := os.Stat(directory); os.IsNotExist(err) {
+			c.Log.Debugw("directory %s does not exists, skipping", directory)
+			continue
+		}
+
+		// if directory exists walk through recursively
 		err = filepath.Walk(directory,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					return err
+					return fmt.Errorf("minio path (%s) walk error: %w", path, err)
 				}
 
 				if !info.IsDir() {
 					err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
 					if err != nil {
-						return err
+						return fmt.Errorf("minio save file (%s) error: %w", path, err)
 					}
 				}
 				return nil
 			})
+
 		if err != nil {
-			return err
+			return fmt.Errorf("minio walk error: %w", err)
 		}
 	}
 	return nil

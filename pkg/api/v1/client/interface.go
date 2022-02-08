@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 type HTTPClient interface {
@@ -25,7 +25,7 @@ type Client interface {
 	DeleteScript(name string, namespace string) error
 	DeleteScripts(namespace string) error
 	ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error)
-	ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error)
+	ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)

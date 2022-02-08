@@ -21,9 +21,10 @@ func NewCreateTestsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create new test",
-		Long:  `Create new Test Custom Resource, `,
+		Use:     "create",
+		Aliases: []string{"c"},
+		Short:   "Create new test",
+		Long:    `Create new Test Custom Resource, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 

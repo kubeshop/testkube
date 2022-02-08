@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/runner"
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/executor/runner"
 )
 
 // Run starts test runner, test runner can have 3 states

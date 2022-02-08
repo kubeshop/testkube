@@ -17,8 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/runner/output"
 )
 
 // check in compile time if interface is implemented
@@ -182,7 +182,7 @@ func (c ProxyScriptsAPI) UpdateScript(options UpsertScriptOptions) (script testk
 
 // ExecuteScript starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string) (execution testkube.Execution, err error) {
+func (c ProxyScriptsAPI) ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/scripts/%s/executions", id)
 
 	// get script to get script tags

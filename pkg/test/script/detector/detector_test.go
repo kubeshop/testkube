@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,7 @@ func TestDetector(t *testing.T) {
 		detector.Add(PostmanCollectionAdapter{})
 
 		name, found := detector.Detect(client.UpsertScriptOptions{
-			Content: exampleValidContent,
+			Content: testkube.NewStringScriptContent(exampleValidContent),
 		})
 
 		assert.True(t, found, "detector should find postman/collection")

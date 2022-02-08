@@ -14,9 +14,10 @@ func NewCreateExecutorCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create new Executor",
-		Long:  `Create new Executor Custom Resource`,
+		Use:     "create",
+		Aliases: []string{"c"},
+		Short:   "Create new Executor",
+		Long:    `Create new Executor Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 

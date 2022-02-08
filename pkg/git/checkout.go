@@ -9,10 +9,33 @@ import (
 	"github.com/kubeshop/testkube/pkg/process"
 )
 
+// Checkout will checkout directory from Git repository
+func Checkout(uri, branch string) (outputDir string, err error) {
+
+	tmpDir, err := ioutil.TempDir("", "git-checkout")
+	if err != nil {
+		return tmpDir, err
+	}
+
+	_, err = process.ExecuteInDir(
+		tmpDir,
+		"git",
+		"clone",
+		"-b", branch,
+		"--depth", "1",
+		uri, "repo",
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpDir + "/repo/", nil
+}
+
 // Partial checkout will checkout only given directory from Git repository
 func PartialCheckout(uri, path, branch string) (outputDir string, err error) {
 
-	tmpDir, err := ioutil.TempDir("", "testkube-scripts")
+	tmpDir, err := ioutil.TempDir("", "git-sparse-checkout")
 	if err != nil {
 		return tmpDir, err
 	}

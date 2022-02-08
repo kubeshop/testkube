@@ -1088,13 +1088,14 @@ components:
         name:
           type: string
           description: script name
+        namespace:
+          type: string
+          description: script namespace
         type:
           type: string
           description: script type
-          enum:
-            - postman/collection
         content:
-          type: string
+          $ref: "#/components/schemas/ScriptContent"
           description: script content
         created:
           type: string
@@ -1104,6 +1105,26 @@ components:
           items:
             type: string
           description: script tags
+
+    ScriptContent:
+      type: object
+      properties:
+        type:
+          type: string
+          description: script type
+          enum:
+            - string
+            - file-uri
+            - git-file
+            - git-dir
+        repository:
+          $ref: "#/components/schemas/Repository"
+        data:
+          type: string
+          description: script content data as string
+        uri:
+          type: string
+          description: script content
 
     Execution:
       type: object
@@ -1116,6 +1137,9 @@ components:
         scriptName:
           type: string
           description: unique script name (CRD Script name)
+        scriptNamespace:
+          type: string
+          description: script namespace
         scriptType:
           type: string
           description: script type e.g. postman/collection
@@ -1144,11 +1168,11 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        scriptContent:
+        paramsFile:
           type: string
-          description: script metadata content
-        repository:
-          $ref: "#/components/schemas/Repository"
+          description: params file content - need to be in format for particular executor (e.g. postman envs file)
+        content:
+          $ref: "#/components/schemas/ScriptContent"
         startTime:
           type: string
           description: "test start time"
@@ -1369,19 +1393,7 @@ components:
             users: "3"
             prefix: "some-"
         content:
-          type: string
-          description: script content as string (content depends from executor)
-        inputType:
-          type: string
-          description: >
-            script content type can be: 
-            - direct content - created from file,
-            - git repository with path, will be checked out, useful when test have more than one file or complicated directory structure,
-          enum:
-            - content
-            - git
-        repository:
-          $ref: "#/components/schemas/Repository"
+          $ref: "#/components/schemas/ScriptContent"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -1460,55 +1472,8 @@ components:
 
     ScriptUpsertRequest:
       description: scripts create request body
-      type: object
-      properties:
-        name:
-          type: string
-          description: script name - Custom Resource name - must be unique, use only lowercase numbers and dashes (-)
-          example: kubeshop-homepage-test
-        type:
-          type: string
-          description: script type - what executor type should be used during test execution
-          example: postman/collection
-        namespace:
-          type: string
-          description: kubernetes namespace (defaults to 'testkube')
-          example: testkube
-        inputType:
-          type: string
-          description: >
-            script content type can be: 
-            - direct content - created from file, 
-            - git repo directory checkout in case when test is some kind of project or have more than one file,
-          enum:
-            - content
-            - git
-        tags:
-          type: array
-          items:
-            type: string
-        repository:
-          $ref: "#/components/schemas/Repository"
-        content:
-          type: string
-          description: script content - executor specific e.g. fo postman-collections executor
-          example: >
-            {
-              "info": {
-                "_postman_id": "57ad6291-5b8f-4b2d-b24d-d2d2ce8785bb",
-                "name": "SimpleKubeshop",
-                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-              },
-              "item": [
-                {
-                  "name": "Homepage",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": null
-                  },
-                  "response": []
-                }
+      allOf:
+        - $ref: "#/components/schemas/Script"
 
     TestUpsertRequest:
       description: test create request body

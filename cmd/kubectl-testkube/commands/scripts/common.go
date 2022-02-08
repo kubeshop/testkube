@@ -2,13 +2,17 @@ package scripts
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"reflect"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/runner/output"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/test/script/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/spf13/cobra"
 )
 
 func printExecutionDetails(execution testkube.Execution) {
@@ -20,7 +24,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir string, client client.Client) {
+func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -40,7 +44,7 @@ func DownloadArtifacts(id, dir string, client client.Client) {
 	ui.NL()
 }
 
-func watchLogs(id string, client client.Client) {
+func watchLogs(id string, client apiclientv1.Client) {
 	ui.Info("Getting pod logs")
 
 	logs, err := client.Logs(id)
@@ -83,4 +87,118 @@ func watchLogs(id string, client client.Client) {
 	}
 
 	uiShellGetExecution(id)
+}
+
+func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, err error) {
+	var fileContent []byte
+
+	scriptContentType := cmd.Flag("script-content-type").Value.String()
+	file := cmd.Flag("file").Value.String()
+	uri := cmd.Flag("uri").Value.String()
+	gitUri := cmd.Flag("git-uri").Value.String()
+	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitPath := cmd.Flag("git-path").Value.String()
+	gitUsername := cmd.Flag("git-username").Value.String()
+	gitToken := cmd.Flag("git-token").Value.String()
+
+	// get file content
+	if file != "" {
+		fileContent, err = ioutil.ReadFile(file)
+		if err != nil {
+			return content, fmt.Errorf("reading file "+file+" error: %w", err)
+		}
+	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
+		fileContent, err = ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return content, fmt.Errorf("reading stdin error: %w", err)
+		}
+	}
+
+	// content is correct when is passed from file, by uri, ur by git repo
+	if len(fileContent) == 0 && uri == "" && gitUri == "" {
+		return content, fmt.Errorf("empty script content, please pass some script content to create script")
+	}
+
+	// detect content type (git-file need to be everrided manually as we don't)
+	// TODO handle git-file somehow
+	if gitUri != "" && scriptContentType == "" {
+		scriptContentType = string(testkube.ScriptContentTypeGitDir)
+	}
+
+	if uri != "" && scriptContentType == "" {
+		scriptContentType = string(testkube.ScriptContentTypeFileURI)
+	}
+
+	if len(fileContent) > 0 {
+		scriptContentType = string(testkube.ScriptContentTypeString)
+	}
+
+	var repository *testkube.Repository
+	if gitUri != "" && gitBranch != "" {
+		if scriptContentType == "" {
+			scriptContentType = "git-dir"
+		}
+
+		repository = &testkube.Repository{
+			Type_:    "git",
+			Uri:      gitUri,
+			Branch:   gitBranch,
+			Path:     gitPath,
+			Username: gitUsername,
+			Token:    gitToken,
+		}
+	}
+
+	content = &testkube.ScriptContent{
+		Type_:      scriptContentType,
+		Data:       string(fileContent),
+		Repository: repository,
+		Uri:        uri,
+	}
+
+	return content, nil
+}
+
+func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Script) (options apiclientv1.UpsertScriptOptions, err error) {
+	content, err := newContentFromFlags(cmd)
+
+	ui.ExitOnError("creating content from passed parameters", err)
+
+	name := cmd.Flag("name").Value.String()
+	executorType := cmd.Flag("type").Value.String()
+	namespace := cmd.Flag("script-namespace").Value.String()
+	tags, err := cmd.Flags().GetStringSlice("tags")
+	if err != nil {
+		return options, err
+	}
+
+	options = apiclientv1.UpsertScriptOptions{
+		Name:      name,
+		Type_:     executorType,
+		Content:   content,
+		Namespace: namespace,
+	}
+
+	// if tags are passed and are different from the existing overwrite
+	if len(tags) > 0 && !reflect.DeepEqual(script.Tags, tags) {
+		options.Tags = tags
+	} else {
+		options.Tags = script.Tags
+	}
+
+	// try to detect type if none passed
+	if executorType == "" {
+		d := detector.NewDefaultDetector()
+		if detectedType, ok := d.Detect(options); ok {
+			ui.Info("Detected test script type", detectedType)
+			options.Type_ = detectedType
+		}
+	}
+
+	if options.Type_ == "" {
+		return options, fmt.Errorf("can't detect executor type by passed file content (%s), please pass valid --type flag", executorType)
+	}
+
+	return options, nil
+
 }
