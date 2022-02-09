@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
 
-TESTKUBE=${TESTKUBE:-'kubectl testkube'}
+TESTKUBE=${TESTKUBE:-$(which kubectl-testkube)}
 
 script_execution_id() {
 	$TESTKUBE scripts executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
