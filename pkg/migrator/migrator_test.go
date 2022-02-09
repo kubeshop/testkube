@@ -21,10 +21,6 @@ func TestMigrator(t *testing.T) {
 		// when
 		migrator.Run("0.0.2")
 
-		fmt.Printf("%+v\n", migrator.Migrations[0])
-		fmt.Printf("%+v\n", migrator.Migrations[1])
-		fmt.Printf("%+v\n", migrator.Migrations[2])
-
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, false)
 		assert.Equal(t, migrator.Migrations[1].(*Migr2).Run, true)
