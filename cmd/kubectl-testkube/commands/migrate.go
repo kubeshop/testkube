@@ -22,15 +22,24 @@ func NewMigrateCmd() *cobra.Command {
 			info, err := client.GetServerInfo()
 			ui.ExitOnError("getting server info", err)
 
+			if info.Version == "" {
+				ui.Failf("Can't detect cluster version")
+			}
+
 			migrator := migrations.Migrator
-			ui.Info("Running migrations for", info.Version)
+			ui.Info("Available migrations for", info.Version)
 			migrations := migrator.GetValidMigrations(info.Version)
+			if len(migrations) == 0 {
+				ui.Warn("No migrations available for", info.Version)
+			}
+
 			for _, migration := range migrations {
 				fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
 			}
 
-			migrator.Run(info.Version)
-
+			err = migrator.Run(info.Version)
+			ui.ExitOnError("running migrations", err)
+			ui.Success("All migrations executed successfully")
 		},
 	}
 
