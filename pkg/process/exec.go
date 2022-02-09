@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
+
+	"github.com/kubeshop/kubtest/pkg/process"
 )
 
 // Execute runs system command and returns whole output also in case of error
@@ -71,4 +74,21 @@ func ExecuteAsyncInDir(dir string, command string, arguments ...string) (cmd *ex
 	}
 
 	return cmd, nil
+}
+
+func ExecuteString(command string) (out []byte, err error) {
+	parts := strings.Split(command, " ")
+	if len(parts) == 1 {
+		out, err = process.Execute(parts[0])
+	} else if len(parts) > 1 {
+		out, err = process.Execute(parts[0], parts[1:]...)
+	} else {
+		return out, fmt.Errorf("invalid command to run '%s'", command)
+	}
+
+	if err != nil {
+		return out, fmt.Errorf("error: %w, output: %s", err, out)
+	}
+
+	return out, nil
 }

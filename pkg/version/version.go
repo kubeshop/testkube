@@ -105,6 +105,15 @@ func Lt(version1, version2 string) (bool, error) {
 	return v1.LessThan(v2), nil
 }
 
+func Lte(version1, version2 string) (bool, error) {
+	ok, err := Lt(version1, version2)
+	if err != nil {
+		return false, err
+	}
+
+	return ok || version1 == version2, nil
+}
+
 func validateVersionPostion(kind string) error {
 	if kind == Major || kind == Minor || kind == Patch {
 		return nil
