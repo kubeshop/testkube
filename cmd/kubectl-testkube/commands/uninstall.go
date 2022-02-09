@@ -23,7 +23,7 @@ func NewUninstallCmd() *cobra.Command {
 			ui.PrintOnError("uninstalling testkube", err)
 
 			if removeCRDs {
-				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.testkube.io", "executors.executor.testkube.io")
+				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.testkube.io", "tests.tests.testkube.io", "executors.executor.testkube.io")
 				ui.PrintOnError("uninstalling CRDs", err)
 			}
 		},
