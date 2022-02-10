@@ -1,19 +1,19 @@
-## testkube doc
+## testkube migrate
 
-Generate docs for kubectl testkube
+manual migrate command
 
 ### Synopsis
 
-Generate docs for kubectl testkube
+migrate command will run migrations greater or equals current version
 
 ```
-testkube doc [flags]
+testkube migrate [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doc
+  -h, --help   help for migrate
 ```
 
 ### Options inherited from parent commands

@@ -1,19 +1,19 @@
-## testkube executors list
+## testkube testsuites watch
 
-Gets executors
+Watch test
 
 ### Synopsis
 
-Gets executor, you can change output format
+Watch test by test execution ID, returns results to console
 
 ```
-testkube executors list [flags]
+testkube testsuites watch <executionID> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for watch
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
 

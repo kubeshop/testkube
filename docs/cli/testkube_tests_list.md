@@ -1,24 +1,25 @@
-## testkube scripts list
+## testkube tests list
 
-Get all available scripts
+Get all available tests
 
 ### Synopsis
 
 Getting all available scritps from given namespace - if no namespace given "testkube" namespace is used
 
-```sh
-testkube scripts list [flags]
+```
+testkube tests list [flags]
 ```
 
 ### Options
 
-```sh
-  -h, --help   help for list
+```
+  -h, --help           help for list
+      --tags strings   comma separated list of tags: --tags tag1,tag2,tag3
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,4 +29,5 @@ testkube scripts list [flags]
 
 ### SEE ALSO
 
-* [testkube tests](testkube_tests.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
+

@@ -1,19 +1,15 @@
-## testkube doc
+## testkube artifacts
 
-Generate docs for kubectl testkube
-
-### Synopsis
-
-Generate docs for kubectl testkube
+Artifacts management commands
 
 ```
-testkube doc [flags]
+testkube artifacts [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doc
+  -h, --help   help for artifacts
 ```
 
 ### Options inherited from parent commands
@@ -27,4 +23,7 @@ testkube doc [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [testkube artifacts download](testkube_artifacts_download.md)	 - download artifacts
+* [testkube artifacts download-one](testkube_artifacts_download-one.md)	 - download artifact
+* [testkube artifacts list](testkube_artifacts_list.md)	 - List artifacts of the given execution ID
 

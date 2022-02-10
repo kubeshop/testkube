@@ -1,30 +1,30 @@
-## testkube tests create
+## testkube tests update
 
-Create new test
+Update test
 
 ### Synopsis
 
-Create new Test Custom Resource
+Update Test Custom Resource, 
 
 ```
-testkube tests create [flags]
+testkube tests update [flags]
 ```
 
 ### Options
 
 ```
-  -f, --file string                test file - will be read from stdin if not specified
+  -f, --file string                test file - will try to read content from stdin if not specified
       --git-branch string          if uri is git repository we can set additional branch parameter
       --git-path string            if repository is big we need to define additional path to directory/file to checkout partially
       --git-token string           if git repository is private we can use token as an auth parameter
       --git-uri string             Git repository uri
       --git-username string        if git repository is private we can use username as an auth parameter
-  -h, --help                       help for create
+  -h, --help                       help for update
   -n, --name string                unique test name - mandatory
       --tags strings               comma separated list of tags: --tags tag1,tag2,tag3
       --test-content-type string   content type of test one of string|file-uri|git-file|git-dir
       --test-namespace string      namespace where test will be created defaults to 'testkube' namespace (default "testkube")
-  -t, --type string                test type (defaults to postman/collection)
+  -t, --type string                test type (defaults to postman-collection)
       --uri string                 URI of resource - will be loaded by http GET
 ```
 

@@ -1,19 +1,15 @@
-## testkube executors list
+## testkube tests delete
 
-Gets executors
-
-### Synopsis
-
-Gets executor, you can change output format
+Delete tests
 
 ```
-testkube executors list [flags]
+testkube tests delete <testName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +24,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
 

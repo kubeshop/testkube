@@ -1,19 +1,19 @@
-## testkube executors list
+## testkube testsuites execution
 
-Gets executors
+Gets execution details
 
 ### Synopsis
 
-Gets executor, you can change output format
+Gets ececution details by ID
 
 ```
-testkube executors list [flags]
+testkube testsuites execution <executionID> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for execution
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
 

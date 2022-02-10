@@ -1,19 +1,20 @@
-## testkube executors list
+## testkube testsuites list
 
-Gets executors
+Get all available tests
 
 ### Synopsis
 
-Gets executor, you can change output format
+Getting all available tests from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-testkube executors list [flags]
+testkube testsuites list [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help           help for list
+      --tags strings   comma separated list of tags: --tags tag1,tag2,tag3
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +29,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
 

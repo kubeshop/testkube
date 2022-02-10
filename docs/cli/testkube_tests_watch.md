@@ -1,24 +1,24 @@
-## testkube scripts watch
+## testkube tests watch
 
-Watch until test execution is in complete state
+Watch logs output from executor pod
 
 ### Synopsis
 
 Gets test execution details, until it's in success/error state, blocks until gets complete state
 
-```sh
-testkube scripts watch [flags]
+```
+testkube tests watch <executionID> [flags]
 ```
 
 ### Options
 
-```sh
+```
   -h, --help   help for watch
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,4 +28,5 @@ testkube scripts watch [flags]
 
 ### SEE ALSO
 
-* [testkube tests](testkube_tests.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
+

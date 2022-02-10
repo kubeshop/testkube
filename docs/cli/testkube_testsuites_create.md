@@ -1,19 +1,22 @@
-## testkube executors list
+## testkube testsuites create
 
-Gets executors
+Create new test
 
 ### Synopsis
 
-Gets executor, you can change output format
+Create new Test Custom Resource, 
 
 ```
-testkube executors list [flags]
+testkube testsuites create [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -f, --file string    JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
+  -h, --help           help for create
+      --name string    Set/Override test name
+      --tags strings   comma separated list of tags: --tags tag1,tag2,tag3
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +31,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
 

@@ -1,24 +1,25 @@
-## testkube scripts executions
+## testkube tests executions
 
-List scripts executions
+List test executions
 
 ### Synopsis
 
 Getting list of execution for given test name or recent executions if there is no test name passed
 
-```sh
-testkube scripts executions [flags]
+```
+testkube tests executions [testName] [flags]
 ```
 
 ### Options
 
-```sh
-  -h, --help   help for executions
+```
+  -h, --help           help for executions
+      --tags strings   comma separated list of tags: --tags tag1,tag2,tag3
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,4 +29,5 @@ testkube scripts executions [flags]
 
 ### SEE ALSO
 
-* [testkube tests](testkube_tests.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
+

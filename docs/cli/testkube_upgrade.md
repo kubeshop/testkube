@@ -1,20 +1,20 @@
-## testkube install
+## testkube upgrade
 
-Install Helm chart registry in current kubectl context
+Upgrade Helm chart and run migrations
 
 ### Synopsis
 
-Install can be configured with use of particular 
+Upgrade can be configured with use of particular 
 
 ```
-testkube install [flags]
+testkube upgrade [flags]
 ```
 
 ### Options
 
 ```
       --chart string   chart name (default "kubeshop/testkube")
-  -h, --help           help for install
+  -h, --help           help for upgrade
       --name string    installation name (default "testkube")
       --no-dashboard   don't install dashboard
       --no-jetstack    don't install Jetstack

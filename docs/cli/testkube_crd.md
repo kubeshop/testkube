@@ -1,19 +1,19 @@
-## testkube doc
+## testkube crd
 
-Generate docs for kubectl testkube
+CRDs management commands
 
 ### Synopsis
 
-Generate docs for kubectl testkube
+CRD generation tools
 
 ```
-testkube doc [flags]
+testkube crd [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doc
+  -h, --help   help for crd
 ```
 
 ### Options inherited from parent commands
@@ -27,4 +27,5 @@ testkube doc [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [testkube crd tests](testkube_crd_tests.md)	 - Generate tests CRD file based on directory
 

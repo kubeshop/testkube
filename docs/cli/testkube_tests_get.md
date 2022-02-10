@@ -1,19 +1,19 @@
-## testkube executors list
+## testkube tests get
 
-Gets executors
+Get test by name
 
 ### Synopsis
 
-Gets executor, you can change output format
+Getting test from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-testkube executors list [flags]
+testkube tests get <testName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for get
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
 

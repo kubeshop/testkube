@@ -1,19 +1,19 @@
-## testkube doc
+## testkube crd tests
 
-Generate docs for kubectl testkube
+Generate tests CRD file based on directory
 
 ### Synopsis
 
-Generate docs for kubectl testkube
+Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)
 
 ```
-testkube doc [flags]
+testkube crd tests <manifestDirectory> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doc
+  -h, --help   help for tests
 ```
 
 ### Options inherited from parent commands
@@ -26,5 +26,5 @@ testkube doc [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [testkube crd](testkube_crd.md)	 - CRDs management commands
 

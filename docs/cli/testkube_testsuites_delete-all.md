@@ -1,19 +1,15 @@
-## testkube executors list
+## testkube testsuites delete-all
 
-Gets executors
-
-### Synopsis
-
-Gets executor, you can change output format
+Delete all tests in namespace
 
 ```
-testkube executors list [flags]
+testkube testsuites delete-all [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for delete-all
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +24,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
 

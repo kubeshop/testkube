@@ -1,4 +1,4 @@
-## testkube scripts execution
+## testkube tests execution
 
 Gets test execution details
 
@@ -6,19 +6,19 @@ Gets test execution details
 
 Gets test execution details, you can change output format
 
-```sh
-testkube scripts execution [flags]
+```
+testkube tests execution <executionID> [flags]
 ```
 
 ### Options
 
-```sh
+```
   -h, --help   help for execution
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,4 +28,5 @@ testkube scripts execution [flags]
 
 ### SEE ALSO
 
-* [testkube tests](testkube_tests.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)	 - Tests management commands
+
