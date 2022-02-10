@@ -2,7 +2,7 @@ package client
 
 import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	scriptsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 )
 
 func MapExecutionOptionsToStartRequest(options ExecuteOptions) testkube.ExecutorStartRequest {
@@ -10,7 +10,7 @@ func MapExecutionOptionsToStartRequest(options ExecuteOptions) testkube.Executor
 	request := testkube.ExecutorStartRequest{
 		Id:      options.ID,
 		Type_:   options.ScriptSpec.Type_,
-		Content: scriptsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
+		Content: testsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
 		Params:  options.Request.Params,
 	}
 

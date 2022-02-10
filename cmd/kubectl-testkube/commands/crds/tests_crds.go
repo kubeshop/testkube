@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/test/script/detector"
+	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )

@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	scriptsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
@@ -310,7 +310,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.ScriptName,
 		options.Request.Name,
 		options.ScriptSpec.Type_,
-		scriptsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
+		testsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
 		options.Request.Tags,

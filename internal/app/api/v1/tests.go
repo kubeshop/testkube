@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
 
 	"github.com/kubeshop/testkube/pkg/jobs"

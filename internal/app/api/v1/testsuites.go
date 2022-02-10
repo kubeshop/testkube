@@ -16,7 +16,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
@@ -54,7 +54,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		test := testsmapper.MapCRToAPI(*crTest)
+		test := testsuitesmapper.MapCRToAPI(*crTest)
 
 		return c.JSON(test)
 	}
@@ -123,7 +123,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 			}
 		}
 
-		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		tests := testsuitesmapper.MapTestListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
 	}
@@ -151,7 +151,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
 		}
 
-		test := testsmapper.MapCRToAPI(*crTest)
+		test := testsuitesmapper.MapCRToAPI(*crTest)
 		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
 		results := s.executeTest(ctx, request, test)
 

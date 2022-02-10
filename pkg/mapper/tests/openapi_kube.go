@@ -1,4 +1,4 @@
-package scripts
+package tests
 
 import (
 	scriptsv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
