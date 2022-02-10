@@ -93,7 +93,7 @@ func TestScriptsAPI(t *testing.T) {
 
 		// when
 		response, err := client.CreateScript(UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent("{}"),
+			Content: testkube.NewStringTestContent("{}"),
 			Name:    "t1",
 			Type_:   "postman/collection",
 		})

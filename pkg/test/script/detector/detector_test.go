@@ -17,7 +17,7 @@ func TestDetector(t *testing.T) {
 		detector.Add(PostmanCollectionAdapter{})
 
 		name, found := detector.Detect(client.UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent(exampleValidContent),
+			Content: testkube.NewStringTestContent(exampleValidContent),
 		})
 
 		assert.True(t, found, "detector should find postman/collection")

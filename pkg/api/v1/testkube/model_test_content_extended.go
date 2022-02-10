@@ -3,34 +3,34 @@ package testkube
 
 import "fmt"
 
-type ScriptContentType string
+type TestContentType string
 
 const (
-	ScriptContentTypeString  ScriptContentType = "string"
-	ScriptContentTypeFileURI ScriptContentType = "file-uri"
-	ScriptContentTypeGitFile ScriptContentType = "git-file"
-	ScriptContentTypeGitDir  ScriptContentType = "git-dir"
+	TestContentTypeString  TestContentType = "string"
+	TestContentTypeFileURI TestContentType = "file-uri"
+	TestContentTypeGitFile TestContentType = "git-file"
+	TestContentTypeGitDir  TestContentType = "git-dir"
 )
 
-var ErrScriptContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
-var ErrScriptContentTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
+var ErrTestContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
+var ErrTestContentTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
 
-func NewStringScriptContent(str string) *TestContent {
+func NewStringTestContent(str string) *TestContent {
 	return &TestContent{
-		Type_: string(ScriptContentTypeString),
+		Type_: string(TestContentTypeString),
 		Data:  str,
 	}
 }
 
 // IsDir - for content fetched as dir
 func (c *TestContent) IsDir() bool {
-	return ScriptContentType(c.Type_) == ScriptContentTypeGitDir
+	return TestContentType(c.Type_) == TestContentTypeGitDir
 
 }
 
 // IsFile - for content fetched as file
 func (c *TestContent) IsFile() bool {
-	return ScriptContentType(c.Type_) == ScriptContentTypeGitFile ||
-		ScriptContentType(c.Type_) == ScriptContentTypeFileURI ||
-		ScriptContentType(c.Type_) == ScriptContentTypeString
+	return TestContentType(c.Type_) == TestContentTypeGitFile ||
+		TestContentType(c.Type_) == TestContentTypeFileURI ||
+		TestContentType(c.Type_) == TestContentTypeString
 }

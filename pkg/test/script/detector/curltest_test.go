@@ -19,7 +19,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return true when valid content", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent(curlValidContent),
+			Content: testkube.NewStringTestContent(curlValidContent),
 		})
 
 		assert.True(t, is, "content should be of curl/test type")
@@ -29,7 +29,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return false in case of invalid JSON content", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent(curlInvalidContent),
+			Content: testkube.NewStringTestContent(curlInvalidContent),
 		})
 
 		assert.Empty(t, name)
@@ -40,7 +40,7 @@ func TestCurlTestAdapter(t *testing.T) {
 	t.Run("Is return false in case of content which is not JSON ", func(t *testing.T) {
 		detector := CurlTestAdapter{}
 		name, is := detector.Is(client.UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent(curlInvalidJSONContent),
+			Content: testkube.NewStringTestContent(curlInvalidJSONContent),
 		})
 
 		assert.Empty(t, name)

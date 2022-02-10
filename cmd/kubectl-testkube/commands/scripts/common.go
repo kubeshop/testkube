@@ -122,15 +122,15 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	// detect content type (git-file need to be everrided manually as we don't)
 	// TODO handle git-file somehow
 	if gitUri != "" && scriptContentType == "" {
-		scriptContentType = string(testkube.ScriptContentTypeGitDir)
+		scriptContentType = string(testkube.TestContentTypeGitDir)
 	}
 
 	if uri != "" && scriptContentType == "" {
-		scriptContentType = string(testkube.ScriptContentTypeFileURI)
+		scriptContentType = string(testkube.TestContentTypeFileURI)
 	}
 
 	if len(fileContent) > 0 {
-		scriptContentType = string(testkube.ScriptContentTypeString)
+		scriptContentType = string(testkube.TestContentTypeString)
 	}
 
 	var repository *testkube.Repository
