@@ -55,7 +55,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 	// can't override REST client to change requested URI
 	// k8sClient.CoreV1().RESTCli nt()
 	config := NewProxyConfig("testkube")
-	client := NewProxyScriptsAPI(k8sClient, config)
+	client := NewProxyAPIClient(k8sClient, config)
 
 	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given

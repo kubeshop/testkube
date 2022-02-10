@@ -39,7 +39,7 @@ func GetClientSet() (clientset kubernetes.Interface, err error) {
 	return kubernetes.NewForConfig(restcfg)
 }
 
-func NewProxyScriptsAPI(client kubernetes.Interface, config ProxyConfig) ProxyAPIClient {
+func NewProxyAPIClient(client kubernetes.Interface, config ProxyConfig) ProxyAPIClient {
 	return ProxyAPIClient{
 		client: client,
 		config: config,
