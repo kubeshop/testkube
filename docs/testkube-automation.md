@@ -86,7 +86,7 @@ jobs:
         run: |-
           bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
           
-      # Run Testkube script on a GKE cluster
+      # Run Testkube test on a GKE cluster
       - name: Run Tests
         run: |-
           kubectl testkube tests run SCRIPT_NAME

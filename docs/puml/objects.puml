@@ -16,8 +16,8 @@ Boundary(ext, "Test execution") {
 
 	System(test1, "Test 1", "Test defined with scripts attached", "clipboard_list")
 
-	System(script1, "Script 1", "script content", "file_code")
-	System(script2, "Script 2", "script content", "file_code")
+	System(script1, "Script 1", "test content", "file_code")
+	System(script2, "Script 2", "test content", "file_code")
 
 	System(test1Execution1, "Test 1 Execution 1", "Test RUN - knows about what scripts was executed and stores executions references", "check_double")
 	System(test1Execution2, "Test 1 Execution 2", "Test RUN - knows about what scripts was executed and stores executions references", "check_double")
@@ -45,12 +45,12 @@ Boundary(grids, "Views on dashboard and relations") {
 
 	System(testgrid, "Tests List", "Test 1\nTest 2", "clipboard_list")
 	System(scriptsgrid, "Scripts List", "Script 1\nScript 2\nScript 3", "clipboard_list")
-	System(executionsgrid, "Executions List", "Execution 1\nExecution 2\n\nlists script or test scripts executions", "check_double")
-	System(testsexecutionsgrid, "Tests Executions List", "Test 1 Execution 1\nTest 1 Execution 2\n\nlists script or test scripts executions", "check")
+	System(executionsgrid, "Executions List", "Execution 1\nExecution 2\n\nlists test or test scripts executions", "check_double")
+	System(testsexecutionsgrid, "Tests Executions List", "Test 1 Execution 1\nTest 1 Execution 2\n\nlists test or test scripts executions", "check")
 
 
 	Rel(testgrid, scriptsgrid, "Click on 'show scripts' in 'Test 1' row will filter scripts which are part of 'Test 1'")
-	Rel(scriptsgrid, executionsgrid, "Click on 'show executions' in 'Script 1' will show executions of that script")
+	Rel(scriptsgrid, executionsgrid, "Click on 'show executions' in 'Script 1' will show executions of that test")
 	Rel(testgrid, testsexecutionsgrid, "Click on 'show executions' in 'Test 1' row will show given test scripts executions")
 	Rel(testsexecutionsgrid, executionsgrid, "Click on 'show executions' will show scripts executions of given test executions (list of executions of test scripts in given test run)")
 }

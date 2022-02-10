@@ -10,7 +10,7 @@ kubectl get pods                         # should return 3 pods
 kubectl testkube version
 create new Postman collection (in Postman and save it somewhere)
 kubectl testkube tests create --name test1 --file jw.postman_collection.json
-kubectl testkube tests list            # check script name
+kubectl testkube tests list            # check test name
 kubectl testkube tests start test1
 kubectl testkube tests executions      # copy last execution id
 kubectl testkube tests execution SCRIPT_NAME EXECUTION_ID

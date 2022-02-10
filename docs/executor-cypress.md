@@ -24,15 +24,15 @@ describe('The Home Page', () => {
 })
 ```
 
-## Creating `testkube` test script
+## Creating `testkube` test 
 
-Now we need to create Testkube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
+Now we need to create Testkube test from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
 ```sh
 kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
-We can check that script is created with:
+We can check that test is created with:
 
 ```sh
 kubectl get scripts 
@@ -72,16 +72,16 @@ Execution ID  : 615d5265b046f8fbd3d955d0
 Execution name: wildly-popular-worm
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
 ```
 
 ## Getting execution results
 
-Let's watch our script execution
+Let's watch our test execution
 
 ```sh
 kubectl testkube tests watch 615d43d3b046f8fbd3d955ca
@@ -208,10 +208,10 @@ Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
 
 
@@ -276,7 +276,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s

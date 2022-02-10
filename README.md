@@ -28,7 +28,7 @@ Testkube advantages:
 - Makes it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
 - Makes it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralizes all test results in a consistent format for "actionable QA analytics"
-- Provides a modular architecture for adding new types of test scripts and executors
+- Provides a modular architecture for adding new types of test tests and executors
 
 Main Testkube components are:
 

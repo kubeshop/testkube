@@ -57,7 +57,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 	config := NewProxyConfig("testkube")
 	client := NewProxyScriptsAPI(k8sClient, config)
 
-	t.Run("Execute script with given ID", func(t *testing.T) {
+	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")

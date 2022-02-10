@@ -19,7 +19,7 @@ type TestSuiteExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
-	// name of the script
+	// name of the test
 	TestName string                    `json:"testSuiteName"`
 	Status   *TestSuiteExecutionStatus `json:"status"`
 	// test execution start time

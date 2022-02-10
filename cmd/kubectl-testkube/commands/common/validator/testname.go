@@ -7,10 +7,11 @@ import (
 )
 
 func TestName(cmd *cobra.Command, args []string) error {
-	// TODO validate script name as valid kubernetes resource name
+	// TODO validate test name as valid kubernetes resource name
+	// ISO subdomain name
 
 	if len(args) < 1 {
-		return errors.New("please pass valid script-name")
+		return errors.New("please pass valid test name")
 	}
 	return nil
 }

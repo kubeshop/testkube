@@ -10,11 +10,11 @@
 package testkube
 
 type TestContent struct {
-	// script type
+	// test type
 	Type_      string      `json:"type,omitempty"`
 	Repository *Repository `json:"repository,omitempty"`
-	// script content data as string
+	// test content data as string
 	Data string `json:"data,omitempty"`
-	// script content
+	// test content
 	Uri string `json:"uri,omitempty"`
 }

@@ -21,7 +21,7 @@ testkube [flags]
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)  - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)  - generate the autocompletion test for the specified shell
 * [testkube dashboard](testkube_dashboard.md)  - Open testkube dashboard
 * [testkube doc](testkube_doc.md)  - Generate docs for kubectl testkube
 * [testkube executors](testkube_executors.md)  - Executor management commands

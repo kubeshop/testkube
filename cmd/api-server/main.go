@@ -55,9 +55,9 @@ func main() {
 	secretClient, err := secret.NewClient()
 	ui.ExitOnError("Getting secret client", err)
 
-	scriptsClient := scriptsclientv2.NewClient(kubeClient)
+	testsClient := scriptsclientv2.NewClient(kubeClient)
 	executorsClient := executorsclientv1.NewClient(kubeClient)
-	testsClient := testsclientv1.NewClient(kubeClient)
+	testsuitesClient := testsclientv1.NewClient(kubeClient)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
@@ -65,9 +65,9 @@ func main() {
 	err = apiv1.NewServer(
 		resultsRepository,
 		testResultsRepository,
-		scriptsClient,
-		executorsClient,
 		testsClient,
+		executorsClient,
+		testsuitesClient,
 		secretClient,
 	).Run()
 	ui.ExitOnError("Running API Server", err)

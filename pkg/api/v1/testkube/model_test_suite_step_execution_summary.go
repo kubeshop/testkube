@@ -14,7 +14,7 @@ type TestSuiteStepExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
-	// script name
+	// test name
 	ScriptName string             `json:"testName,omitempty"`
 	Status     *ExecutionStatus   `json:"status"`
 	Type_      *TestSuiteStepType `json:"type,omitempty"`

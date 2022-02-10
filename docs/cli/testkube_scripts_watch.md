@@ -1,10 +1,10 @@
 ## testkube scripts watch
 
-Watch until script execution is in complete state
+Watch until test execution is in complete state
 
 ### Synopsis
 
-Gets script execution details, until it's in success/error state, blocks until gets complete state
+Gets test execution details, until it's in success/error state, blocks until gets complete state
 
 ```sh
 testkube scripts watch [flags]

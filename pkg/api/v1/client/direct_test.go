@@ -13,7 +13,7 @@ import (
 
 func TestScriptsAPI(t *testing.T) {
 
-	t.Run("Execute script with given ID", func(t *testing.T) {
+	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -34,7 +34,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Get executed script details", func(t *testing.T) {
+	t.Run("Get executed test details", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/v1/executions/1", r.URL.Path)
@@ -80,7 +80,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Create script", func(t *testing.T) {
+	t.Run("Create test", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -105,7 +105,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.Equal(t, "postman/collection", response.Type_)
 	})
 
-	t.Run("Delete script positive flow", func(t *testing.T) {
+	t.Run("Delete test positive flow", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -123,7 +123,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Delete script fails", func(t *testing.T) {
+	t.Run("Delete test fails", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")

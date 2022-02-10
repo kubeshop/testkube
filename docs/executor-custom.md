@@ -84,8 +84,6 @@ spec:
   image: kubeshop/testkube-example-executor:0.0.1 # pass your repository and tag
   types:
   - example/test
-  volume_mount_path: /mnt/artifacts-storage
-  volume_quantity: 10Gix
 ```
 
 and apply it on your cluster:
@@ -94,7 +92,7 @@ and apply it on your cluster:
 kubectl apply -f executor.yaml
 ```
 
-Now we're ready to create and run your custom scripts by passing URI as script content
+Now we're ready to create and run your custom tests by passing URI as test content
 
 ```sh
 # create 

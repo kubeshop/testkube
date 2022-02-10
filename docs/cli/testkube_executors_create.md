@@ -16,7 +16,7 @@ testkube executors create [flags]
       --executor-type string     executor type (defaults to job) (default "job")
   -h, --help                     help for create
   -i, --image string             if uri is git repository we can set additional branch parameter
-  -n, --name string              unique script name - mandatory
+  -n, --name string              unique test name - mandatory
   -t, --types stringArray        types handled by exeutor
   -u, --uri string               if resource need to be loaded from URI
       --volume-mount string      where volume should be mounted

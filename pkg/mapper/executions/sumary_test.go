@@ -18,8 +18,8 @@ func TestMapToSummary(t *testing.T) {
 	for i := 0; i < len(executions); i++ {
 		assert.Equal(t, result[i].Id, executions[i].Id)
 		assert.Equal(t, result[i].Name, executions[i].Name)
-		assert.Equal(t, result[i].ScriptName, executions[i].ScriptName)
-		assert.Equal(t, result[i].ScriptType, executions[i].ScriptType)
+		assert.Equal(t, result[i].TestName, executions[i].ScriptName)
+		assert.Equal(t, result[i].TestType, executions[i].ScriptType)
 		assert.Equal(t, result[i].Status, executions[i].ExecutionResult.Status)
 		assert.Equal(t, result[i].StartTime, executions[i].StartTime)
 		assert.Equal(t, result[i].EndTime, executions[i].EndTime)

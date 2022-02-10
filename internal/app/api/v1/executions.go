@@ -30,7 +30,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 		var request testkube.ExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test request body invalid: %w", err))
 		}
 
 		scriptID := c.Params("id")
@@ -42,13 +42,13 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
-		// script name + script execution name should be unique
+		// test name + test execution name should be unique
 		execution, _ := s.ExecutionResults.GetByNameAndScript(c.Context(), request.Name, scriptID)
 		if execution.Name == request.Name {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution with name %s already exists", request.Name))
 		}
 
-		// merge available data into execution options script spec, executor spec, request, script id
+		// merge available data into execution options test spec, executor spec, request, test id
 		options, err := s.GetExecuteOptions(namespace, scriptID, request)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
@@ -71,14 +71,14 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
-		return execution.Errw("can't create new script execution, can't insert into storage: %w", err)
+		return execution.Errw("can't create new test execution, can't insert into storage: %w", err)
 	}
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		return execution.Errw("can't execute script, can't insert into storage error: %w", err)
+		return execution.Errw("can't execute test, can't insert into storage error: %w", err)
 	}
 
 	options.HasSecrets = true
@@ -92,7 +92,7 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 
 	var result testkube.ExecutionResult
 
-	// sync/async script execution
+	// sync/async test execution
 	if options.Sync {
 		result, err = s.Executor.ExecuteSync(execution, options)
 	} else {
@@ -110,15 +110,15 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	s.Metrics.IncExecution(execution)
 
 	if err != nil {
-		return execution.Errw("script execution failed: %w", err)
+		return execution.Errw("test execution failed: %w", err)
 	}
 
-	s.Log.Infow("script executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	return
 }
 
-// ListExecutionsHandler returns array of available script executions
+// ListExecutionsHandler returns array of available test executions
 func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO should we split this to separate endpoint? currently this one handles
@@ -199,7 +199,7 @@ func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-// GetExecutionHandler returns script execution object for given script and execution id
+// GetExecutionHandler returns test execution object for given test and execution id
 func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -212,7 +212,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if scriptID == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -220,14 +220,14 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		} else {
 			execution, err = s.ExecutionResults.GetByNameAndScript(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", scriptID, executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		}
 
-		s.Log.Debugw("get script execution request - debug", "execution", execution)
+		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
 	}
@@ -283,11 +283,11 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
-	// get script content from kubernetes CRs
-	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+	// get test content from kubernetes CRs
+	scriptCR, err := s.TestsClient.Get(namespace, scriptID)
 
 	if err != nil {
-		return options, fmt.Errorf("can't get script custom resource %w", err)
+		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
 	// get executor from kubernetes CRs
@@ -324,13 +324,13 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:         execution.Id,
-			Name:       execution.Name,
-			ScriptName: execution.ScriptName,
-			ScriptType: execution.ScriptType,
-			Status:     execution.ExecutionResult.Status,
-			StartTime:  execution.StartTime,
-			EndTime:    execution.EndTime,
+			Id:        execution.Id,
+			Name:      execution.Name,
+			TestName:  execution.ScriptName,
+			TestType:  execution.ScriptType,
+			Status:    execution.ExecutionResult.Status,
+			StartTime: execution.StartTime,
+			EndTime:   execution.EndTime,
 		}
 	}
 

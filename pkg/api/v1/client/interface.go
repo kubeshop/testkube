@@ -17,11 +17,11 @@ type HTTPClient interface {
 type Client interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
-	AbortExecution(script string, id string) error
+	AbortExecution(test string, id string) error
 
-	GetTest(id, namespace string) (script testkube.Test, err error)
-	CreateTest(options UpsertScriptOptions) (script testkube.Test, err error)
-	UpdateTest(options UpsertScriptOptions) (script testkube.Test, err error)
+	GetTest(id, namespace string) (test testkube.Test, err error)
+	CreateTest(options UpsertScriptOptions) (test testkube.Test, err error)
+	UpdateTest(options UpsertScriptOptions) (test testkube.Test, err error)
 	DeleteTest(name string, namespace string) error
 	DeleteTests(namespace string) error
 	ListTests(namespace string, tags []string) (scripts testkube.Tests, err error)
@@ -37,8 +37,8 @@ type Client interface {
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
 	CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestOptions) (script testkube.TestSuite, err error)
-	GetTestSuite(id string, namespace string) (script testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error)
+	GetTestSuite(id string, namespace string) (test testkube.TestSuite, err error)
 	ListTestSuites(namespace string, tags []string) (scripts testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
 	DeleteTestSuites(namespace string) error

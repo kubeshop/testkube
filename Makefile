@@ -67,13 +67,13 @@ test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
 create-examples:
-	kubectl delete script testkube-dashboard -ntestkube || true
+	kubectl delete test testkube-dashboard -ntestkube || true
 	kubectl testkube tests create --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
-	kubectl delete script testkube-todo-frontend -ntestkube || true
+	kubectl delete test testkube-todo-frontend -ntestkube || true
 	kubectl testkube tests create --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
-	kubectl delete script testkube-todo-api -ntestkube || true
+	kubectl delete test testkube-todo-api -ntestkube || true
 	kubectl testkube tests create --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
-	kubectl delete script kubeshop-site -ntestkube || true
+	kubectl delete test kubeshop-site -ntestkube || true
 	kubectl testkube tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
 	kubectl delete test testkube-global-test -ntestkube || true
 	cat test/e2e/test-example-1.json | kubectl testkube testsuites create --name testkube-global-test
@@ -81,8 +81,8 @@ create-examples:
 	cat test/e2e/test-example-2.json | kubectl testkube testsuites create --name kubeshop-sites-test
 
 
-test-reload-sanity-script:
-	kubectl delete script sanity -ntestkube || true
+test-reload-sanity-test:
+	kubectl delete test sanity -ntestkube || true
 	kubectl testkube tests create -f test/e2e/Testkube-Sanity.postman_collection.json --name sanity
 
 
@@ -95,7 +95,7 @@ test-api-local:
 test-api-port-forwarded:
 	newman run test/e2e/Testkube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var script_api_uri=http://testkube-api-server:8088 --verbose
 
-# run script by testkube plugin
+# run test by testkube plugin
 test-api-on-cluster: 
 	kubectl testkube tests start sanity -f -p api_uri=http://testkube-api-server:8088 -p script_api_uri=http://testkube-api-server:8088 -p script_type=postman/collection -p script_name=fill-me -p execution_name=fill-me
 

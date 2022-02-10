@@ -12,14 +12,14 @@ import (
 func NewAbortExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "abort <executionID>",
-		Short: "Aborts execution of the script",
+		Short: "Aborts execution of the test",
 		Args:  validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 
 			client, _ := common.GetClient(cmd)
 
-			err := client.AbortExecution("script", executionID)
+			err := client.AbortExecution("test", executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting execution %s", executionID), err)
 		},
 	}

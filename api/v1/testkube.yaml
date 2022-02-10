@@ -45,7 +45,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuite"
         500:
-          description: "problem with creating script"
+          description: "problem with creating test suite"
           content:
             application/problem+json:
               schema:
@@ -73,7 +73,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/TestSuite"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test suite executions from storage"
           content:
             application/problem+json:
               schema:
@@ -136,7 +136,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecutionsResult"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test suite executions from storage"
           content:
             application/problem+json:
               schema:
@@ -167,7 +167,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecution"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test suite executions from storage"
           content:
             application/problem+json:
               schema:
@@ -180,7 +180,7 @@ paths:
       tags:
         - executions
         - api
-      summary: "Get all script executions"
+      summary: "Get all test executions"
       description: "Returns array of test executions"
       operationId: listExecutions
       parameters:
@@ -201,7 +201,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test executions from storage"
           content:
             application/problem+json:
               schema:
@@ -217,11 +217,11 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script execution
+          description: ID of the test execution
       tags:
         - executions
         - api
-      summary: "Get script execution by ID"
+      summary: "Get test execution by ID"
       description: "Returns execution with given executionID"
       operationId: getExecutionByID
       responses:
@@ -232,7 +232,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test executions from storage"
           content:
             application/problem+json:
               schema:
@@ -248,7 +248,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script execution
+          description: ID of the test execution
       tags:
         - artifacts
         - executions
@@ -282,7 +282,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script execution
+          description: ID of the test execution
         - in: path # minio/[bucket_exec_id]/cypress/video/somevideo.avi
           name: filename
           schema:
@@ -340,7 +340,7 @@ paths:
         - tests
         - api
       summary: "create new test"
-      description: "create new test based on script content or git based data"
+      description: "create new test based on file content, uri or git based data"
       operationId: createTest
       requestBody:
         description: test details body
@@ -359,7 +359,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Test"
         400:
-          description: "problem with script definition - probably some bad input occurs (invalid JSON body or similar)"
+          description: "problem with test definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
@@ -615,7 +615,7 @@ paths:
         - api
         - tests
         - executions
-      summary: "Get script execution"
+      summary: "Get test execution"
       description: "Returns execution with given executionID"
       operationId: getTestExecution
       responses:
@@ -626,7 +626,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
         500:
-          description: "problem with getting script executions from storage"
+          description: "problem with getting test executions from storage"
           content:
             application/problem+json:
               schema:
@@ -640,13 +640,13 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the script
+          description: ID of the test
         - in: path
           name: executionID
           schema:
             type: string
           required: true
-          description: ID of the script execution
+          description: ID of the test execution
       tags:
         - api
         - tests
@@ -944,6 +944,7 @@ components:
           description: "execution name"
         test:
           $ref: "#/components/schemas/ObjectRef"
+          description: object name and namespace
         status:
           $ref: "#/components/schemas/TestSuiteExecutionStatus"
         envs:
@@ -1001,9 +1002,9 @@ components:
       properties:
         step:
           $ref: "#/components/schemas/TestSuiteStep"
-        script:
+        test:
           $ref: "#/components/schemas/ObjectRef"
-          description: name and namespace of script in object reference
+          description: object name and namespace
         execution:
           $ref: "#/components/schemas/Execution"
           description: test step execution
@@ -1042,27 +1043,27 @@ components:
           description: execution name
         testSuiteName:
           type: string
-          description: name of the script
+          description: name of the test suite
         status:
           $ref: "#/components/schemas/TestSuiteExecutionStatus"
         startTime:
           type: string
-          description: "test execution start time"
+          description: "test suite execution start time"
           format: date-time
         endTime:
           type: string
-          description: "test execution end time"
+          description: "test suite execution end time"
           format: date-time
         duration:
           type: string
-          description: "test execution duration"
+          description: "test suite execution duration"
         execution:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
 
     TestSuiteStepExecutionSummary:
-      description: test execution summary
+      description: test suite execution summary
       type: object
       required:
         - id
@@ -1076,7 +1077,7 @@ components:
           description: execution name
         testName:
           type: string
-          description: script name
+          description: test name
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
@@ -1087,16 +1088,16 @@ components:
       properties:
         name:
           type: string
-          description: script name
+          description: test name
         namespace:
           type: string
-          description: script namespace
+          description: test namespace
         type:
           type: string
-          description: script type
+          description: test type
         content:
           $ref: "#/components/schemas/TestContent"
-          description: script content
+          description: test content
         created:
           type: string
           format: date-time
@@ -1104,14 +1105,14 @@ components:
           type: array
           items:
             type: string
-          description: script tags
+          description: test tags
 
     TestContent:
       type: object
       properties:
         type:
           type: string
-          description: script type
+          description: test type
           enum:
             - string
             - file-uri
@@ -1121,14 +1122,14 @@ components:
           $ref: "#/components/schemas/Repository"
         data:
           type: string
-          description: script content data as string
+          description: test content data as string
         uri:
           type: string
-          description: script content
+          description: test content
 
     Execution:
       type: object
-      description: API server script execution
+      description: Test execution
       properties:
         id:
           type: string
@@ -1136,13 +1137,13 @@ components:
           format: bson objectId
         testName:
           type: string
-          description: unique script name (CRD Script name)
+          description: unique test name (CRD Script name)
         testNamespace:
           type: string
-          description: script namespace
+          description: test namespace
         scriptType:
           type: string
-          description: script type e.g. postman/collection
+          description: test type e.g. postman/collection
         name:
           type: string
           description: "execution name"
@@ -1240,10 +1241,13 @@ components:
           description: execution name
         testName:
           type: string
-          description: name of the script
-        scriptType:
+          description: name of the test
+        testNamespace:
           type: string
-          description: the type of script for this execution
+          description: name of the test
+        testType:
+          type: string
+          description: the type of test for this execution
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         startTime:
@@ -1374,15 +1378,15 @@ components:
       properties:
         id:
           type: string
-          description: ID of script execution to handle by executor, execution need to be able to return execution info based on this ID
+          description: ID of test execution to handle by executor, execution need to be able to return execution info based on this ID
           example: af7f8afa8bc8ab8ab8a83b8
         type:
           type: string
-          description: script type
+          description: test type
           example: postaman/collection
         name:
           type: string
-          description: script execution custom name
+          description: test execution custom name
           example: testing with 1000 users
         params:
           type: object
@@ -1430,11 +1434,11 @@ components:
       properties:
         name:
           type: string
-          description: script execution custom name
+          description: test execution custom name
           example: testing with 1000 users
         namespace:
           type: string
-          description: script kubernetes namespace ("testkube" when not set)
+          description: test kubernetes namespace ("testkube" when not set)
           example: testkube
         params:
           type: object
@@ -1455,11 +1459,11 @@ components:
       properties:
         name:
           type: string
-          description: script execution custom name
+          description: test execution custom name
           example: testing with 1000 users
         namespace:
           type: string
-          description: script kubernetes namespace ("testkube" when not set)
+          description: test kubernetes namespace ("testkube" when not set)
           example: testkube
         params:
           type: object
@@ -1570,7 +1574,7 @@ components:
         title:
           type: string
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
-          example: Invalid script name
+          example: Invalid test name
         status:
           type: integer
           description: HTTP status code for this occurrence of the problem.
@@ -1578,7 +1582,7 @@ components:
         detail:
           type: string
           description: A human-readable explanation specific to this occurrence of the problem.
-          example: Your script name can't contain forbidden characters like "}}}" passed
+          example: Your test name can't contain forbidden characters like "}}}" passed
         instance:
           type: string
           description: A URI that identifies the specific occurrence of the problem. This URI may or may not yield further information if de-referenced.
@@ -1611,7 +1615,7 @@ components:
       schema:
         type: string
         default: ""
-      description: text to search in name and script name
+      description: text to search in name and test name
       required: false
     PageSize:
       in: query

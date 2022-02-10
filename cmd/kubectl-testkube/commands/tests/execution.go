@@ -13,8 +13,8 @@ func NewGetExecutionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "execution <executionID>",
 		Aliases: []string{"e"},
-		Short:   "Gets script execution details",
-		Long:    `Gets script execution details, you can change output format`,
+		Short:   "Gets test execution details",
+		Long:    `Gets test execution details, you can change output format`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -22,7 +22,7 @@ func NewGetExecutionCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 			execution, err := client.GetExecution(executionID)
-			ui.ExitOnError("getting script execution: "+executionID, err)
+			ui.ExitOnError("getting test execution: "+executionID, err)
 
 			render := GetExecutionRenderer(cmd)
 			err = render.Render(execution, os.Stdout)

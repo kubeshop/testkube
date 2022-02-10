@@ -1,10 +1,10 @@
 ## testkube completion zsh
 
-generate the autocompletion script for zsh
+generate the autocompletion test for zsh
 
 ### Synopsis
 
-Generate the autocompletion script for the zsh shell.
+Generate the autocompletion test for the zsh shell.
 
 If shell completion is not already enabled in your environment you will need
 to enable it.  You can execute the following once:
@@ -50,4 +50,4 @@ testkube completion zsh [flags]
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)  - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)  - generate the autocompletion test for the specified shell

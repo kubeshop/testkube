@@ -17,9 +17,9 @@ import (
 type ExecutionResultStep struct {
 	// step name
 	Name string `json:"name,omitempty"`
-	// script execution start time
+	// test execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
-	// script execution start time
+	// test execution start time
 	EndTime time.Time `json:"endTime,omitempty"`
 	// execution step status
 	Status     string                        `json:"status,omitempty"`

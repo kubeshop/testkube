@@ -42,9 +42,9 @@ Status: success
 
              STEP            | STATUS  |            ID            | ERROR  
 +----------------------------+---------+--------------------------+-------+
-  run script: testkube/test1 | success | 61e1136165e59a3183465127 |        
+  run test: testkube/test1 | success | 61e1136165e59a3183465127 |        
   delay 2000ms               | success |                          |        
-  run script: testkube/test1 | success | 61e1136765e59a3183465129 |        
+  run test: testkube/test1 | success | 61e1136765e59a3183465129 |        
 
 
 
@@ -52,7 +52,7 @@ Use following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 ```
 
-Test steps which are running workflows based on `Scripts` Custom Resources have script execution ID - you can get details of each in separate command: 
+Test steps which are running workflows based on `Scripts` Custom Resources have test execution ID - you can get details of each in separate command: 
 
 ```sh 
 kubectl testkube tests execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s

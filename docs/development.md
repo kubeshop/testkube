@@ -44,9 +44,9 @@ It'll register Custom Resources for
 - local-cypress/project
 - local-curl/test
 
-script types.
+test types.
 
-You'll need to create `Script` Custom Resource with type from above to
+You'll need to create `Test` Custom Resource with type from above to
 be executed on given executor. e.g.
 
 ```sh

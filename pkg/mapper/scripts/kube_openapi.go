@@ -12,12 +12,12 @@ func MapScriptListKubeToAPI(crScripts scriptsv2.ScriptList) (scripts []testkube.
 
 	return
 }
-func MapScriptCRToAPI(crScript scriptsv2.Script) (script testkube.Test) {
-	script.Name = crScript.Name
-	script.Content = MapScriptContentFromSpec(crScript.Spec.Content)
-	script.Created = crScript.CreationTimestamp.Time
-	script.Type_ = crScript.Spec.Type_
-	script.Tags = crScript.Spec.Tags
+func MapScriptCRToAPI(crScript scriptsv2.Script) (test testkube.Test) {
+	test.Name = crScript.Name
+	test.Content = MapScriptContentFromSpec(crScript.Spec.Content)
+	test.Created = crScript.CreationTimestamp.Time
+	test.Type_ = crScript.Spec.Type_
+	test.Tags = crScript.Spec.Tags
 	return
 }
 

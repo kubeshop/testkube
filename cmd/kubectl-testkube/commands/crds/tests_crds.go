@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCRDScriptsCmd() *cobra.Command {
+func NewCRDTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tests <manifestDirectory>",
 		Short: "Generate tests CRD file based on directory",
@@ -74,7 +74,7 @@ type Script struct {
 // TODO find a way to use internal objects as YAML
 // GenerateCRD generates CRDs based on directory of test files
 func GenerateCRD(namespace, path string) (string, error) {
-	var scriptType string
+	var testType string
 
 	tpl := `apiVersion: tests.testkube.io/v1
 kind: Script
@@ -94,21 +94,21 @@ spec:
 	// try to detect type if none passed
 	d := detector.NewDefaultDetector()
 	if detectedType, ok := d.Detect(client.UpsertScriptOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
-		ui.Debug("Detected test script type", detectedType)
-		scriptType = detectedType
+		ui.Debug("Detected test type", detectedType)
+		testType = detectedType
 	} else {
 		return "", ErrTypeNotDetected
 	}
 
 	name := filepath.Base(path)
 
-	t := template.Must(template.New("script").Parse(tpl))
+	t := template.Must(template.New("test").Parse(tpl))
 	b := bytes.NewBuffer([]byte{})
 	err = t.Execute(b, Script{
 		Name:      SanitizeName(name),
 		Namespace: namespace,
 		Content:   fmt.Sprintf("%q", strings.TrimSpace(string(content))),
-		Type:      scriptType,
+		Type:      testType,
 	})
 
 	return b.String(), err

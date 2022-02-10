@@ -52,7 +52,7 @@ func (r ExecutionRawRenderer) Render(execution testkube.Execution, writer io.Wri
 	}
 
 	if execution.ExecutionResult == nil {
-		return fmt.Errorf("invalid script execution, want struct but got nil, please ensure executor returns valid Execution object")
+		return fmt.Errorf("invalid test execution, want data in execution result but got nil, please ensure executor returns valid Execution object")
 	}
 
 	result := execution.ExecutionResult

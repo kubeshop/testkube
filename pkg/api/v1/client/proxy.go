@@ -70,7 +70,7 @@ type ProxyAPIClient struct {
 
 // scripts and executions -----------------------------------------------------------------------------
 
-func (c ProxyAPIClient) GetTest(id, namespace string) (script testkube.Test, err error) {
+func (c ProxyAPIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -79,7 +79,7 @@ func (c ProxyAPIClient) GetTest(id, namespace string) (script testkube.Test, err
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/get-script returned error: %w", err)
+		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)
@@ -99,7 +99,7 @@ func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Exe
 	return c.getExecutionFromResponse(resp)
 }
 
-// ListExecutions list all executions for given script name
+// ListExecutions list all executions for given test name
 func (c ProxyAPIClient) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := c.getURI("/executions/")
@@ -132,61 +132,61 @@ func (c ProxyAPIClient) DeleteTests(namespace string) error {
 
 func (c ProxyAPIClient) DeleteTest(name string, namespace string) error {
 	if name == "" {
-		return fmt.Errorf("script name '%s' is not valid", name)
+		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 	uri := c.getURI("/tests/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
 // CreateTest creates new Script Custom Resource
-func (c ProxyAPIClient) CreateTest(options UpsertScriptOptions) (script testkube.Test, err error) {
+func (c ProxyAPIClient) CreateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests")
 
 	request := testkube.TestUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return script, err
+		return test, err
 	}
 
 	req := c.GetProxy("POST").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/create-script returned error: %w", err)
+		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)
 }
 
 // UpdateTest creates new Script Custom Resource
-func (c ProxyAPIClient) UpdateTest(options UpsertScriptOptions) (script testkube.Test, err error) {
+func (c ProxyAPIClient) UpdateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 
 	request := testkube.TestUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return script, err
+		return test, err
 	}
 
 	req := c.GetProxy("PATCH").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/udpate-script returned error: %w", err)
+		return test, fmt.Errorf("api/udpate-test returned error: %w", err)
 	}
 
 	return c.getScriptFromResponse(resp)
 }
 
-// ExecuteTest starts new external script execution, reads data and returns ID
+// ExecuteTest starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
-	// get script to get script tags
-	script, err := c.GetTest(id, namespace)
+	// get test to get test tags
+	test, err := c.GetTest(id, namespace)
 	if err != nil {
 		return execution, nil
 	}
@@ -195,7 +195,7 @@ func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executi
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
-		Tags:      script.Tags,
+		Tags:      test.Tags,
 	}
 
 	body, err := json.Marshal(request)
@@ -207,7 +207,7 @@ func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executi
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return execution, fmt.Errorf("api/execute-script returned error: %w", err)
+		return execution, fmt.Errorf("api/execute-test returned error: %w", err)
 	}
 
 	return c.getExecutionFromResponse(resp)
@@ -232,7 +232,7 @@ func (c ProxyAPIClient) Logs(id string) (logs chan output.Output, err error) {
 	return
 }
 
-// GetExecutions list all executions in given script
+// GetExecutions list all executions in given test
 func (c ProxyAPIClient) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
@@ -252,7 +252,7 @@ func (c ProxyAPIClient) ListTests(namespace string, tags []string) (scripts test
 	return c.getScriptsFromResponse(resp)
 }
 
-// GetExecutions list all executions in given script
+// GetExecutions list all executions in given test
 func (c ProxyAPIClient) AbortExecution(scriptID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", scriptID, id)
 	return c.makeDeleteRequest(uri, "testkube", false)
@@ -274,7 +274,7 @@ func (c ProxyAPIClient) CreateExecutor(options CreateExecutorOptions) (executor 
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return executor, fmt.Errorf("api/create-script returned error: %w", err)
+		return executor, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
 	return c.getExecutorDetailsFromResponse(resp)
@@ -386,15 +386,15 @@ func (c ProxyAPIClient) getExecutorsDetailsFromResponse(resp rest.Result) (execu
 	return executors, err
 }
 
-func (c ProxyAPIClient) getScriptFromResponse(resp rest.Result) (script testkube.Test, err error) {
+func (c ProxyAPIClient) getScriptFromResponse(resp rest.Result) (test testkube.Test, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
-		return script, err
+		return test, err
 	}
 
-	err = json.Unmarshal(bytes, &script)
+	err = json.Unmarshal(bytes, &test)
 
-	return script, err
+	return test, err
 }
 
 func (c ProxyAPIClient) getExecutorDetailsFromResponse(resp rest.Result) (executor testkube.ExecutorDetails, err error) {
@@ -526,7 +526,7 @@ func (c ProxyAPIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []
 
 // --------------- tests --------------------------
 
-func (c ProxyAPIClient) GetTestSuite(id, namespace string) (script testkube.TestSuite, err error) {
+func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -535,7 +535,7 @@ func (c ProxyAPIClient) GetTestSuite(id, namespace string) (script testkube.Test
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/get-script returned error: %w", err)
+		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
 	return c.getTestFromResponse(resp)
@@ -543,7 +543,7 @@ func (c ProxyAPIClient) GetTestSuite(id, namespace string) (script testkube.Test
 
 func (c ProxyAPIClient) DeleteTestSuite(name string, namespace string) error {
 	if name == "" {
-		return fmt.Errorf("script name '%s' is not valid", name)
+		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 	uri := c.getURI("/test-suites/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
@@ -574,42 +574,42 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (scripts
 }
 
 // CreateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) CreateTestSuite(options UpsertTestOptions) (script testkube.TestSuite, err error) {
+func (c ProxyAPIClient) CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return script, err
+		return test, err
 	}
 
 	req := c.GetProxy("POST").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/create-script returned error: %w", err)
+		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
 	return c.getTestFromResponse(resp)
 }
 
 // UpdateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestOptions) (script testkube.TestSuite, err error) {
+func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return script, err
+		return test, err
 	}
 
 	req := c.GetProxy("PATCH").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return script, fmt.Errorf("api/udpate-script returned error: %w", err)
+		return test, fmt.Errorf("api/udpate-test returned error: %w", err)
 	}
 
 	return c.getTestFromResponse(resp)

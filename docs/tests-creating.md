@@ -7,7 +7,7 @@ There is also some QA leader who is responsible for release trains and wants to 
 
 ... it would be so easy if all of them have used Testkube. Each team can run their tests against clusters easily on their own, and the QA manager can create Test resources and add test scripts written by all teams.  
 
-`Tests` stand for orchestration, orchestration of different test steps like e.g. script execution, delay, or other (future) steps. 
+`Tests` stand for orchestration, orchestration of different test steps like e.g. test execution, delay, or other (future) steps. 
 # Tests creation
 
 Creating tests is really simple - you need to write down test definition in json file and then pass it to `testkube` `kubectl` plugin.

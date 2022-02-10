@@ -48,7 +48,7 @@ Container_Boundary(executors, "Test runners") {
 
 }
 
-Person_Ext(engineer, "Engineer", "kubectl apply -f script.yaml")
+Person_Ext(engineer, "Engineer", "kubectl apply -f test.yaml")
 
 Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
 	System_Ext(scriptsCrds, "Scripts CRD", "YAML", "kubernetes")
@@ -61,7 +61,7 @@ Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
 System_Ext(sut, "SUT", "System Under Test", "html5")
 Rel(executors, sut, "runs test")
 
-Rel(engineer, scriptsCrds, "applying script definition to cluster")
+Rel(engineer, scriptsCrds, "applying test definition to cluster")
 Rel(kubectl, apiServer, "runs tests, getting results")
 Rel(cicd, apiServer, "runs tests getting results")
 Rel(web, apiServer, "runs tests, getting restuls")

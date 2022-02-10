@@ -21,6 +21,6 @@ func NewCRDsCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
-	cmd.AddCommand(crds.NewCRDScriptsCmd())
+	cmd.AddCommand(crds.NewCRDTestsCmd())
 	return cmd
 }

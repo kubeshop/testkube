@@ -6,7 +6,7 @@ import (
 )
 
 func MapExecutionOptionsToStartRequest(options ExecuteOptions) testkube.ExecutorStartRequest {
-	// pass options to executor client get params from script execution request
+	// pass options to executor client get params from test execution request
 	request := testkube.ExecutorStartRequest{
 		Id:      options.ID,
 		Type_:   options.ScriptSpec.Type_,

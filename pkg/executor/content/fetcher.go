@@ -22,7 +22,7 @@ type Fetcher struct {
 
 func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 	if content == nil {
-		return "", fmt.Errorf("fetch - empty content, make sure script content has valid data structure and is not nil")
+		return "", fmt.Errorf("fetch - empty content, make sure test content has valid data structure and is not nil")
 	}
 	switch testkube.TestContentType(content.Type_) {
 	case testkube.TestContentTypeFileURI:

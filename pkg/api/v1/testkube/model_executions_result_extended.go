@@ -9,8 +9,8 @@ func (result ExecutionsResult) Table() (header []string, output [][]string) {
 			status = string(*e.Status)
 		}
 		output = append(output, []string{
-			e.ScriptName,
-			e.ScriptType,
+			e.TestName,
+			e.TestType,
 			e.Name,
 			e.Id,
 			status,

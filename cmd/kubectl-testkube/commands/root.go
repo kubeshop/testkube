@@ -20,7 +20,7 @@ var (
 
 func init() {
 	RootCmd.AddCommand(NewDocsCmd())
-	RootCmd.AddCommand(NewScriptsCmd())
+	RootCmd.AddCommand(NewTestsCmd())
 	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 	RootCmd.AddCommand(NewInstallCmd())

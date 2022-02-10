@@ -34,9 +34,9 @@ import (
 func NewServer(
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	scriptsClient *scriptsclientv2.ScriptsClient,
+	testsClient *scriptsclientv2.ScriptsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
-	testsClient *testsclientv1.TestsClient,
+	testsuitesClient *testsclientv1.TestsClient,
 	secretClient *secret.Client,
 ) TestkubeAPI {
 
@@ -53,10 +53,10 @@ func NewServer(
 		TestExecutionResults: testExecutionsResults,
 		ExecutionResults:     executionsResults,
 		Executor:             executor,
-		ScriptsClient:        scriptsClient,
+		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
-		TestsClient:          testsClient,
+		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
 	}
 
@@ -73,8 +73,8 @@ type TestkubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsClient          *testsclientv1.TestsClient
-	ScriptsClient        *scriptsclientv2.ScriptsClient
+	TestsSuitesClient    *testsclientv1.TestsClient
+	TestsClient          *scriptsclientv2.ScriptsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	Metrics              Metrics

@@ -3,7 +3,7 @@
 The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Prometheus, Grafana, etc. It
 currently exposes the following metrics:
 
-* `testkube_executions_count` - The total number of script executions
+* `testkube_executions_count` - The total number of test executions
 * `testkube_scripts_creation_count` - The total number of scripts created by type events
 * `testkube_scripts_abort_count` - The total number of scripts created by type events
 

@@ -4,7 +4,7 @@ List scripts executions
 
 ### Synopsis
 
-Getting list of execution for given script name or recent executions if there is no script name passed
+Getting list of execution for given test name or recent executions if there is no test name passed
 
 ```sh
 testkube scripts executions [flags]

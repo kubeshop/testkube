@@ -36,7 +36,7 @@ I've saved it into `~/Downloads/API-Health.postman_collection.json`
 
 Now we can create new testkube based on saved Postman Collection:
 
-## Create new Testkube test script
+## Create new Testkube test
 
 ```sh
 kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
@@ -77,10 +77,10 @@ Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
@@ -89,7 +89,7 @@ $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ## Getting test results
 
-Now we can watch/get script execution details:
+Now we can watch/get test execution details:
 
 ```sh
 kubectl testkube tests watch 615d6398b046f8fbd3d955d4

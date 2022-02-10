@@ -1,10 +1,10 @@
 ## testkube scripts execution
 
-Gets script execution details
+Gets test execution details
 
 ### Synopsis
 
-Gets script execution details, you can change output format
+Gets test execution details, you can change output format
 
 ```sh
 testkube scripts execution [flags]

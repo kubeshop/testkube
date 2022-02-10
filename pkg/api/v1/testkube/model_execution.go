@@ -13,15 +13,15 @@ import (
 	"time"
 )
 
-// API server script execution
+// API server test execution
 type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
-	// unique script name (CRD Script name)
+	// unique test name (CRD Script name)
 	ScriptName string `json:"testName,omitempty"`
-	// script namespace
+	// test namespace
 	ScriptNamespace string `json:"testNamespace,omitempty"`
-	// script type e.g. postman/collection
+	// test type e.g. postman/collection
 	ScriptType string `json:"scriptType,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`

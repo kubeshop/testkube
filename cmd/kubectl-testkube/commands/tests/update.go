@@ -25,34 +25,34 @@ func NewUpdateTestsCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update script",
-		Long:  `Update Script Custom Resource, `,
+		Short: "Update test",
+		Long:  `Update Test Custom Resource, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			var err error
 
 			client, _ := common.GetClient(cmd)
-			script, _ := client.GetTest(testName, testNamespace)
-			if testName != script.Name {
-				ui.Failf("Script with name '%s' not exists in namespace %s", testName, testNamespace)
+			test, _ := client.GetTest(testName, testNamespace)
+			if testName != test.Name {
+				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
 
-			options, err := NewUpsertScriptOptionsFromFlags(cmd, script)
-			ui.ExitOnError("getting script options", err)
+			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
+			ui.ExitOnError("getting test options", err)
 
-			script, err = client.UpdateTest(options)
-			ui.ExitOnError("updating script "+testName+" in namespace "+testNamespace, err)
+			test, err = client.UpdateTest(options)
+			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
 
-			ui.Success("Script updated", testNamespace, "/", testName)
+			ui.Success("Test updated", testNamespace, "/", testName)
 		},
 	}
 
-	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique script name - mandatory")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will try to read content from stdin if not specified")
-	cmd.Flags().StringVarP(&testNamespace, "script-namespace", "", "testkube", "namespace where script will be created defaults to 'testkube' namespace")
-	cmd.Flags().StringVarP(&scriptContentType, "script-content-type", "", "", "content type of script one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will try to read content from stdin if not specified")
+	cmd.Flags().StringVarP(&testNamespace, "test-namespace", "", "testkube", "namespace where test will be created defaults to 'testkube' namespace")
+	cmd.Flags().StringVarP(&scriptContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
 
-	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman-collection)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")

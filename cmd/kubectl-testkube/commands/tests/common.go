@@ -73,7 +73,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 	// TODO watch for success | error status - in case of connection error on logs watch need fix in 0.8
 	for range time.Tick(time.Second) {
 		execution, err := client.GetExecution(id)
-		ui.ExitOnError("get script execution details", err)
+		ui.ExitOnError("get test execution details", err)
 
 		fmt.Print(".")
 
@@ -92,7 +92,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
 	var fileContent []byte
 
-	scriptContentType := cmd.Flag("script-content-type").Value.String()
+	testContentType := cmd.Flag("test-content-type").Value.String()
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
@@ -116,27 +116,27 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 
 	// content is correct when is passed from file, by uri, ur by git repo
 	if len(fileContent) == 0 && uri == "" && gitUri == "" {
-		return content, fmt.Errorf("empty script content, please pass some script content to create script")
+		return content, fmt.Errorf("empty test content, please pass some test content to create test")
 	}
 
 	// detect content type (git-file need to be everrided manually as we don't)
 	// TODO handle git-file somehow
-	if gitUri != "" && scriptContentType == "" {
-		scriptContentType = string(testkube.TestContentTypeGitDir)
+	if gitUri != "" && testContentType == "" {
+		testContentType = string(testkube.TestContentTypeGitDir)
 	}
 
-	if uri != "" && scriptContentType == "" {
-		scriptContentType = string(testkube.TestContentTypeFileURI)
+	if uri != "" && testContentType == "" {
+		testContentType = string(testkube.TestContentTypeFileURI)
 	}
 
 	if len(fileContent) > 0 {
-		scriptContentType = string(testkube.TestContentTypeString)
+		testContentType = string(testkube.TestContentTypeString)
 	}
 
 	var repository *testkube.Repository
 	if gitUri != "" && gitBranch != "" {
-		if scriptContentType == "" {
-			scriptContentType = "git-dir"
+		if testContentType == "" {
+			testContentType = "git-dir"
 		}
 
 		repository = &testkube.Repository{
@@ -150,7 +150,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	content = &testkube.TestContent{
-		Type_:      scriptContentType,
+		Type_:      testContentType,
 		Data:       string(fileContent),
 		Repository: repository,
 		Uri:        uri,
@@ -159,14 +159,14 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	return content, nil
 }
 
-func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Test) (options apiclientv1.UpsertScriptOptions, err error) {
+func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (options apiclientv1.UpsertScriptOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 
 	ui.ExitOnError("creating content from passed parameters", err)
 
 	name := cmd.Flag("name").Value.String()
 	executorType := cmd.Flag("type").Value.String()
-	namespace := cmd.Flag("script-namespace").Value.String()
+	namespace := cmd.Flag("test-namespace").Value.String()
 	tags, err := cmd.Flags().GetStringSlice("tags")
 	if err != nil {
 		return options, err
@@ -180,17 +180,17 @@ func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Test) (
 	}
 
 	// if tags are passed and are different from the existing overwrite
-	if len(tags) > 0 && !reflect.DeepEqual(script.Tags, tags) {
+	if len(tags) > 0 && !reflect.DeepEqual(test.Tags, tags) {
 		options.Tags = tags
 	} else {
-		options.Tags = script.Tags
+		options.Tags = test.Tags
 	}
 
 	// try to detect type if none passed
 	if executorType == "" {
 		d := detector.NewDefaultDetector()
 		if detectedType, ok := d.Detect(options); ok {
-			ui.Info("Detected test script type", detectedType)
+			ui.Info("Detected test test type", detectedType)
 			options.Type_ = detectedType
 		}
 	}

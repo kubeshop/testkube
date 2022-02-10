@@ -1,30 +1,30 @@
-# Testkube test scripts
+# Testkube test tests
 
-Test scripts are single executor oriented tests. Script can have different types, which depends what executors are installed in your cluster.
+Test tests are single executor oriented tests. Test can have different types, which depends what executors are installed in your cluster.
 
-Testkubes includes `postman/collection`, `cypress/project` and `curl/test` script types which are auto registered during testkube install by default. // provide examples for cypress and  curl
+Testkubes includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during testkube install by default. // provide examples for cypress and  curl
 
-As Testkube was designed with flexibility in mind - you can add your own executor which will handle additional script types.
+As Testkube was designed with flexibility in mind - you can add your own executor which will handle additional test types.
 
-## Script test source
+## Test test source
 
-Scripts can be currently created from two sources:
+Tests can be currently created from two sources:
 
 - First one is simple `file` with test content e.g. for postman collections we're exporting collection as json file, or for curl executor we're passing json file with configured curl command.
 - Second source handled by Testkube is `git` - we can pass `repository`, `path` and `branch` where our tests is. This one is used in Cypress executor - as Cypress tests are more like npm-based projects which can have a lot of files. We're handling here sparse checkouts which are fast even in case of huge mono-repos
 
-## Create script
+## Create test
 
-### Create your first script from file (Postman Collection test)
+### Create your first test from file (Postman Collection test)
 
 To create your first postman collection in Testkube you'll first need to export your collection into a file
 
 Right click on your collection name
-![create postman colletion step 1](img/script-create-1.png)
+![create postman colletion step 1](img/test-create-1.png)
 Click "Export" button
-![create postman colletion step 2](img/script-create-1.png)
+![create postman colletion step 2](img/test-create-1.png)
 Save in convinient location (We're using `~/Downloads/TODO.postman_collection.json` path)
-![create postman colletion step 3](img/script-create-1.png)
+![create postman colletion step 3](img/test-create-1.png)
 
 ```sh
 kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --name test
@@ -41,15 +41,15 @@ Output:
                                            /tɛst kjub/ by Kubeshop
 
 
-Detected test script type postman/collection
-Script created test 🥇
+Detected test type postman/collection
+Test created test 🥇
 ```
 
-Script created! Now we can run as many times as we want.
+Test created! Now we can run as many times as we want.
 
-### Updating scripts
+### Updating tests
 
-If you need to update your script after change in Postman just re-export it to file and run update command:
+If you need to update your test after change in Postman just re-export it to file and run update command:
 
 ```sh
 kubectl testkube tests update --file ~/Downloads/TODO.postman_collection.json --name test
@@ -66,18 +66,18 @@ Output:
                                            /tɛst kjub/ by Kubeshop
 
 
-Detected test script type postman/collection
-Script updated test 🥇
+Detected test test type postman/collection
+Test updated test 🥇
 ```
 
-Testkube will override all script settings and content with `update` method.
+Testkube will override all test settings and content with `update` method.
 
-### Checking scripts content
+### Checking tests content
 
 Let's see what has been created:
 
 ```sh
-kubectl get scripts -n testkube
+kubectl get tests -n testkube
 ```
 
 Output:
@@ -215,7 +215,7 @@ content: |-
                                                 "exec": [
                                                         "console.log(\"deleting\", pm.environment.get(\"item\"))"
                                                 ],
-                                                "type": "text/javascript"
+                                                "type": "text/javatest"
                                         }
                                 },
                                 {
@@ -277,23 +277,23 @@ content: |-
 
 ```
 
-We can see that script resource was created with Postman collection JSON content.
+We can see that test resource was created with Postman collection JSON content.
 
-You can also check scripts with standard `kubectl` comman which will list Scripts Custom Resource
+You can also check tests with standard `kubectl` comman which will list Tests Custom Resource
 
 ```sh
-kubectl get scripts -ntestkube test -oyaml
+kubectl get tests -ntestkube test -oyaml
 ```
 
-### Create script from git
+### Create test from git
 
-Some executors can handle files and some could handle only git resources - You'll need to follow particular executor readme file to be aware what scripts type does he handle.
+Some executors can handle files and some could handle only git resources - You'll need to follow particular executor readme file to be aware what tests type does he handle.
 
 Let's assume that some Cypress project is created in some git repository - Let's assume we've created one in Let's assume we've created one in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples>  
 
 Where `examples` is test directory in `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
 
-Now we can create our Cypress based script (in git based scripts we need to pass script type)
+Now we can create our Cypress based test (in git based tests we need to pass test type)
 
 ```sh
 kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
@@ -310,15 +310,15 @@ Output:
                                            /tɛst kjub/ by Kubeshop
 
 
-Script created kubeshop-cypress 🥇
+Test created kubeshop-cypress 🥇
 ```
 
-Let's check how created testkube test script is defined on cluster: 
+Let's check how created testkube test test is defined on cluster: 
 
 ```sh
-$ kubectl get scripts -n testkube kubeshop-cypress -o yaml
+$ kubectl get tests -n testkube kubeshop-cypress -o yaml
 apiVersion: tests.testkube.io/v1
-kind: Script
+kind: Test
 metadata:
   creationTimestamp: "2021-11-17T12:29:32Z"
   generation: 1
@@ -335,8 +335,8 @@ spec:
   type: cypress/project
 ```
 
-As we can see this script has `spec.repository` with git repository data. Those data can now be used by executor to download script data.
+As we can see this test has `spec.repository` with git repository data. Those data can now be used by executor to download test data.
 
 ## Summary
 
-Scripts are main smallest abstractions over tests in Testkube, they can be created with different sources and used by executors to run on top of particular test framework.
+Tests are main smallest abstractions over tests in Testkube, they can be created with different sources and used by executors to run on top of particular test framework.

@@ -1,6 +1,6 @@
 ## testkube scripts abort
 
-Aborts execution of the script
+Aborts execution of the test
 
 ```sh
 testkube scripts abort [flags]

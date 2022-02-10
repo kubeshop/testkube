@@ -1,10 +1,10 @@
 ## testkube completion fish
 
-generate the autocompletion script for fish
+generate the autocompletion test for fish
 
 ### Synopsis
 
-Generate the autocompletion script for the fish shell.
+Generate the autocompletion test for the fish shell.
 
 To load completions in your current shell session:
 
@@ -41,4 +41,4 @@ testkube completion fish [flags]
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)  - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)  - generate the autocompletion test for the specified shell

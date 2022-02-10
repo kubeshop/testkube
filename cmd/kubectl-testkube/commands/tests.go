@@ -13,7 +13,7 @@ var (
 	namespace string
 )
 
-func NewScriptsCmd() *cobra.Command {
+func NewTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tests",
 		Aliases: []string{"test", "t"},
@@ -45,13 +45,13 @@ func NewScriptsCmd() *cobra.Command {
 	cmd.AddCommand(tests.NewAbortExecutionCmd())
 	cmd.AddCommand(tests.NewListTestsCmd())
 	cmd.AddCommand(tests.NewGetTestsCmd())
-	cmd.AddCommand(tests.NewStartScriptCmd())
+	cmd.AddCommand(tests.NewStartTestCmd())
 	cmd.AddCommand(tests.NewGetExecutionCmd())
 	cmd.AddCommand(tests.NewWatchExecutionCmd())
 	cmd.AddCommand(tests.NewListExecutionsCmd())
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
-	cmd.AddCommand(tests.NewDeleteAllScriptsCmd())
+	cmd.AddCommand(tests.NewDeleteAllTestsCmd())
 	return cmd
 }

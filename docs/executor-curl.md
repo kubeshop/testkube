@@ -45,10 +45,10 @@ Test can be run using `kubectl testkube tests start curl-test` which gives the o
 
 Script queued for execution
 
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 613a2d7056499e6e3d5b9c3e
 ```
 

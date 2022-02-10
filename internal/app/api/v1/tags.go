@@ -11,12 +11,12 @@ import (
 func (s TestkubeAPI) ListTagsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-		testsTags, err := s.TestsClient.ListTags(namespace)
+		testsTags, err := s.TestsSuitesClient.ListTags(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		scriptsTags, err := s.ScriptsClient.ListTags(namespace)
+		scriptsTags, err := s.TestsClient.ListTags(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}

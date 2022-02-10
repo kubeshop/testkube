@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 func TestE2E(t *testing.T) {
 	a := require.New(t)
 	test := testkube.NewTestkube(namespace)
-	testName := fmt.Sprintf("script-%s", rand.Name())
+	testName := fmt.Sprintf("test-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 
 	t.Logf("Sctipt name: %s", testName)
@@ -109,7 +109,7 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Body matches string")
 	})
 
-	t.Run("delete script", func(t *testing.T) {
+	t.Run("delete test", func(t *testing.T) {
 		// given
 		out, err := test.DeleteTest(testName)
 		a.NoError(err)

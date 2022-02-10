@@ -12,7 +12,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 		Use:     "watch <executionID>",
 		Aliases: []string{"w"},
 		Short:   "Watch logs output from executor pod",
-		Long:    `Gets script execution details, until it's in success/error state, blocks until gets complete state`,
+		Long:    `Gets test execution details, until it's in success/error state, blocks until gets complete state`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)

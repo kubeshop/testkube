@@ -8,7 +8,7 @@ import (
 
 func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *scriptsv2.Script {
 
-	script := &scriptsv2.Script{
+	test := &scriptsv2.Script{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
@@ -20,7 +20,7 @@ func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *scriptsv2.Script
 		},
 	}
 
-	return script
+	return test
 
 }
 

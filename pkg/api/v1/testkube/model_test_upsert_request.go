@@ -15,14 +15,14 @@ import (
 
 // scripts create request body
 type TestUpsertRequest struct {
-	// script name
+	// test name
 	Name string `json:"name,omitempty"`
-	// script namespace
+	// test namespace
 	Namespace string `json:"namespace,omitempty"`
-	// script type
+	// test type
 	Type_   string       `json:"type,omitempty"`
 	Content *TestContent `json:"content,omitempty"`
 	Created time.Time    `json:"created,omitempty"`
-	// script tags
+	// test tags
 	Tags []string `json:"tags,omitempty"`
 }

@@ -14,7 +14,7 @@ import (
 
 const WatchInterval = 2 * time.Second
 
-func NewStartScriptCmd() *cobra.Command {
+func NewStartTestCmd() *cobra.Command {
 	var (
 		name                     string
 		watchEnabled             bool
@@ -27,8 +27,8 @@ func NewStartScriptCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "start <testName>",
 		Aliases: []string{"run", "r"},
-		Short:   "Starts new script",
-		Long:    `Starts new script based on Script Custom Resource name, returns results to console`,
+		Short:   "Starts new test",
+		Long:    `Starts new test based on Script Custom Resource name, returns results to console`,
 		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -39,7 +39,7 @@ func NewStartScriptCmd() *cobra.Command {
 			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
 			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent)
-			ui.ExitOnError("starting script execution "+namespacedName, err)
+			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			printExecutionDetails(execution)
 
@@ -89,7 +89,7 @@ func uiPrintStatus(execution testkube.Execution) {
 		ui.Success("Script execution completed with sucess in " + duration.String())
 
 	case result.IsFailed():
-		ui.Warn("Test script execution failed:\n")
+		ui.Warn("Test test execution failed:\n")
 		ui.Errf(result.ErrorMessage)
 		os.Exit(1)
 	}
@@ -99,7 +99,7 @@ func uiPrintStatus(execution testkube.Execution) {
 
 func uiShellGetExecution(id string) {
 	ui.ShellCommand(
-		"Use following command to get script execution details",
+		"Use following command to get test execution details",
 		"kubectl testkube tests execution "+id,
 	)
 
@@ -108,7 +108,7 @@ func uiShellGetExecution(id string) {
 
 func uiShellWatchExecution(id string) {
 	ui.ShellCommand(
-		"Watch script execution until complete",
+		"Watch test execution until complete",
 		"kubectl testkube tests watch "+id,
 	)
 

@@ -1,12 +1,12 @@
 ## testkube completion bash
 
-generate the autocompletion script for bash
+generate the autocompletion test for bash
 
 ### Synopsis
 
-Generate the autocompletion script for the bash shell.
+Generate the autocompletion test for the bash shell.
 
-This script depends on the 'bash-completion' package.
+This test depends on the 'bash-completion' package.
 If it is not installed already, you can install it via your OS's package manager.
 
 To load completions in your current shell session:
@@ -41,4 +41,4 @@ testkube completion bash
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)  - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)  - generate the autocompletion test for the specified shell

@@ -1,6 +1,6 @@
 ## testkube scripts create
 
-Create new script
+Create new test
 
 ### Synopsis
 
@@ -13,12 +13,12 @@ testkube scripts create [flags]
 ### Options
 
 ```sh
-  -f, --file string         script file - will be read from stdin if not specified
+  -f, --file string         test file - will be read from stdin if not specified
       --git-branch string   if uri is git repository we can set additional branch parameter
       --git-path string     if repository is big we need to define additional path to directory/file to checkout partially
   -h, --help                help for create
-  -n, --name string         unique script name - mandatory
-  -t, --type string         script type (defaults to postman-collection)
+  -n, --name string         unique test name - mandatory
+  -t, --type string         test type (defaults to postman-collection)
       --uri string          if resource need to be loaded from URI
 ```
 

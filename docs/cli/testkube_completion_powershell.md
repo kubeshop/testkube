@@ -1,10 +1,10 @@
 ## testkube completion powershell
 
-generate the autocompletion script for powershell
+generate the autocompletion test for powershell
 
 ### Synopsis
 
-Generate the autocompletion script for powershell.
+Generate the autocompletion test for powershell.
 
 To load completions in your current shell session:
 
@@ -36,4 +36,4 @@ testkube completion powershell [flags]
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)  - generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)  - generate the autocompletion test for the specified shell

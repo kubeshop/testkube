@@ -4,8 +4,8 @@ Test scripts are stored in Kubernetes cluster a Custom resources. We can run the
 
 ## Running
 
-Running scripts looks the same for any type of script
-Let's assume we've previously created script with name `api-incluster-test`
+Running scripts looks the same for any type of test
+Let's assume we've previously created test with name `api-incluster-test`
 
 ### Standard run comnand
 
@@ -32,10 +32,10 @@ Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
@@ -43,11 +43,11 @@ $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 Testkube will inform us about possible commands to get scripts:
 
 - `kubectl testkube tests execution 615d6398b046f8fbd3d955d4` to get execution details
-- `kubectl testkube tests watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when script is completed and is good for long running scripts to lock your terminal until script execution completes)
+- `kubectl testkube tests watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when test is completed and is good for long running scripts to lock your terminal until test execution completes)
 
 ## Run with watch for changes
 
-If we want to wait until script execution completes we can pass `-f` flag (follow) to script run command
+If we want to wait until test execution completes we can pass `-f` flag (follow) to test run command
 
 ```sh
 kubectl testkube tests run api-incluster-test -f
@@ -70,10 +70,10 @@ Execution ID  : 615d7e1ab046f8fbd3d955d6
 Execution name: monthly-sure-finch
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d7e1ab046f8fbd3d955d6
 
 
@@ -113,13 +113,13 @@ API-Health
 ├──────────────────────────────────────────────────────────────────┤
 │ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
 Script execution completed in 595ms
 ```
 
-As we can see command will wait until script execution completes with error or success
+As we can see command will wait until test execution completes with error or success
 
 ### Passing params
 
@@ -150,10 +150,10 @@ Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
 
 
@@ -218,7 +218,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s

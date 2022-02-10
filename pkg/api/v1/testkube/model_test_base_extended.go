@@ -17,7 +17,7 @@ func (scripts Tests) Table() (header []string, output [][]string) {
 func (s Test) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
 		Name: s.Name,
-		// TODO add namespace to script model and all dependencies
+		// TODO add namespace to test model and all dependencies
 		Namespace: "testkube",
 	}
 }

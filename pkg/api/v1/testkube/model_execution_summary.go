@@ -19,11 +19,11 @@ type ExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
-	// name of the script
-	ScriptName string `json:"testName"`
-	// the type of script for this execution
-	ScriptType string           `json:"scriptType"`
-	Status     *ExecutionStatus `json:"status"`
+	// name of the test
+	TestName string `json:"testName"`
+	// the type of test for this execution
+	TestType string           `json:"testType"`
+	Status   *ExecutionStatus `json:"status"`
 	// test execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time

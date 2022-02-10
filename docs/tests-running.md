@@ -58,7 +58,7 @@ Status: pending
 
              STEP            | STATUS  |            ID            | ERROR  
 +----------------------------+---------+--------------------------+-------+
-  run script: testkube/test1 | success | 61e1142465e59a318346512d |        
+  run test: testkube/test1 | success | 61e1142465e59a318346512d |        
 
 
 Name: test-example.equally-enabled-heron
@@ -66,7 +66,7 @@ Status: pending
 
              STEP            | STATUS  |            ID            | ERROR  
 +----------------------------+---------+--------------------------+-------+
-  run script: testkube/test1 | success | 61e1142465e59a318346512d |        
+  run test: testkube/test1 | success | 61e1142465e59a318346512d |        
   delay 2000ms               | success |                          |        
 
 
@@ -78,9 +78,9 @@ Status: success
 
              STEP            | STATUS  |            ID            | ERROR  
 +----------------------------+---------+--------------------------+-------+
-  run script: testkube/test1 | success | 61e1142465e59a318346512d |        
+  run test: testkube/test1 | success | 61e1142465e59a318346512d |        
   delay 2000ms               | success |                          |        
-  run script: testkube/test1 | success | 61e1142a65e59a318346512f |        
+  run test: testkube/test1 | success | 61e1142a65e59a318346512f |        
 
 
 

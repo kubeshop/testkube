@@ -2,9 +2,9 @@
 
 We could see how simple it is to create and run Testkube scripts execution. The good news is that getting results is also simple.
 
-## Getting test executions after script is executed
+## Getting test executions after test is executed
 
-After each run Testkube informs you that you can get results later of given script execution
+After each run Testkube informs you that you can get results later of given test execution
 
 ```sh
 kubectl testkube tests run api-incluster-test
@@ -27,17 +27,17 @@ Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
 Script queued for execution
-Use following command to get script execution details:
+Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
-or watch script execution until complete:
+or watch test execution until complete:
 $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
 
-`kubectl testkube tests execution 615d6398b046f8fbd3d955d4` - is for getting string output of script execution.
+`kubectl testkube tests execution 615d6398b046f8fbd3d955d4` - is for getting string output of test execution.
 
-Where `615d6398b046f8fbd3d955d4` is script execution ID.
+Where `615d6398b046f8fbd3d955d4` is test execution ID.
 
 ## Change output format of execution result
 
@@ -71,7 +71,7 @@ Output:
 monthly-sure-finch 615d7e1ab046f8fbd3d955d6 success  
 ```
 
-## Getting list of test script executions
+## Getting list of test executions
 
 You can also check video about getting scripts results in different formats:
 
@@ -122,7 +122,7 @@ as we can see it's very easy to get JSON results from test executions.
 
 #### Go-Template
 
-Let's try to get list of script excution IDs with their corresponding statuses - with go-template it's easy:
+Let's try to get list of test excution IDs with their corresponding statuses - with go-template it's easy:
 
 ```sh
 kubectl testkube tests executions -ogo --go-template '{{.Id}}:{{.Status}} '
@@ -135,7 +135,7 @@ kubectl testkube tests executions -ogo --go-template '{{.Id}}:{{.Status}} '
 
 When there is a lot of test cases you want probably to get executions of particular test
 
-you can do this by passing script name as parameter to:
+you can do this by passing test name as parameter to:
 
 ```sh
 kubectl testkube tests executions api-incluster-test
