@@ -36,7 +36,7 @@ func NewStartTestCmd() *cobra.Command {
 			client, namespace := common.GetClient(cmd)
 			namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
-			execution, err := client.ExecuteTest(testSuiteName, namespace, name, params)
+			execution, err := client.ExecuteTestSuite(testSuiteName, namespace, name, params)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			if watchEnabled {
@@ -47,7 +47,7 @@ func NewStartTestCmd() *cobra.Command {
 				}
 			}
 
-			execution, err = client.GetTestExecution(execution.Id)
+			execution, err = client.GetTestSuiteExecution(execution.Id)
 			printTestExecutionDetails(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 

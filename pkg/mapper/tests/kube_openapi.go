@@ -41,7 +41,7 @@ func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestSuiteSte
 	case crstep.Execute != nil:
 		teststep = testkube.TestSuiteStep{
 			StopTestOnFailure: crstep.Execute.StopOnFailure,
-			Execute: &testkube.TestSuiteStepExecuteScript{
+			Execute: &testkube.TestSuiteStepExecuteTest{
 				Name:      crstep.Execute.Name,
 				Namespace: crstep.Execute.Namespace,
 			},

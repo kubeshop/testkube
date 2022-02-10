@@ -22,8 +22,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 )
 
-// ExecuteScriptHandler calls particular executor based on execution request content and type
-func (s TestkubeAPI) ExecuteScriptHandler() fiber.Handler {
+// ExecuteTestHandler calls particular executor based on execution request content and type
+func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 

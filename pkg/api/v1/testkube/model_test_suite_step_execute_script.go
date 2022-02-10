@@ -9,7 +9,7 @@
  */
 package testkube
 
-type TestSuiteStepExecuteScript struct {
+type TestSuiteStepExecuteTest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace,omitempty"`
 	// object name

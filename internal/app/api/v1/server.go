@@ -119,15 +119,15 @@ func (s TestkubeAPI) Init() {
 
 	scripts := s.Routes.Group("/tests")
 
-	scripts.Get("/", s.ListScriptsHandler())
-	scripts.Post("/", s.CreateScriptHandler())
-	scripts.Patch("/:id", s.UpdateScriptHandler())
-	scripts.Delete("/", s.DeleteScriptsHandler())
+	scripts.Get("/", s.ListTestsHandler())
+	scripts.Post("/", s.CreateTestHandler())
+	scripts.Patch("/:id", s.UpdateTestHandler())
+	scripts.Delete("/", s.DeleteTestsHandler())
 
-	scripts.Get("/:id", s.GetScriptHandler())
-	scripts.Delete("/:id", s.DeleteScriptHandler())
+	scripts.Get("/:id", s.GetTestHandler())
+	scripts.Delete("/:id", s.DeleteTestHandler())
 
-	scripts.Post("/:id/executions", s.ExecuteScriptHandler())
+	scripts.Post("/:id/executions", s.ExecuteTestHandler())
 
 	scripts.Get("/:id/executions", s.ListExecutionsHandler())
 	scripts.Get("/:id/executions/:executionID", s.GetExecutionHandler())
@@ -135,19 +135,19 @@ func (s TestkubeAPI) Init() {
 
 	tests := s.Routes.Group("/test-suites")
 
-	tests.Post("/", s.CreateTestHandler())
-	tests.Get("/", s.ListTestsHandler())
-	tests.Delete("/", s.DeleteTestsHandler())
-	tests.Get("/:id", s.GetTestHandler())
-	tests.Delete("/:id", s.DeleteTestHandler())
+	tests.Post("/", s.CreateTestSuiteHandler())
+	tests.Get("/", s.ListTestSuitesHandler())
+	tests.Delete("/", s.DeleteTestSuitesHandler())
+	tests.Get("/:id", s.GetTestSuiteHandler())
+	tests.Delete("/:id", s.DeleteTestSuiteHandler())
 
-	tests.Post("/:id/executions", s.ExecuteTestHandler())
+	tests.Post("/:id/executions", s.ExecuteTestSuiteHandler())
 	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
-	tests.Get("/:id/executions/:executionID", s.GetTestExecutionHandler())
+	tests.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestExecutionsHandler())
-	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
+	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
 
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())

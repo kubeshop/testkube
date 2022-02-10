@@ -29,7 +29,7 @@ func NewWatchTestExecutionCmd() *cobra.Command {
 				printTestExecutionDetails(execution, startTime)
 			}
 
-			execution, err := client.GetTestExecution(executionID)
+			execution, err := client.GetTestSuiteExecution(executionID)
 			ui.ExitOnError("getting test excecution", err)
 			printTestExecutionDetails(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)

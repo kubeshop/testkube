@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// GetScriptHandler is method for getting an existing script
-func (s TestkubeAPI) GetScriptHandler() fiber.Handler {
+// GetTestHandler is method for getting an existing script
+func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -32,8 +32,8 @@ func (s TestkubeAPI) GetScriptHandler() fiber.Handler {
 	}
 }
 
-// ListScriptsHandler is a method for getting list of all available scripts
-func (s TestkubeAPI) ListScriptsHandler() fiber.Handler {
+// ListTestsHandler is a method for getting list of all available scripts
+func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 
@@ -75,8 +75,8 @@ func (s TestkubeAPI) ListScriptsHandler() fiber.Handler {
 	}
 }
 
-// CreateScriptHandler creates new script CR based on script content
-func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
+// CreateTestHandler creates new script CR based on script content
+func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.TestUpsertRequest
@@ -90,7 +90,7 @@ func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
 		scriptSpec := scriptsmapper.MapScriptToScriptSpec(request)
 		script, err := s.ScriptsClient.Create(scriptSpec)
 
-		s.Metrics.IncCreateScript(script.Spec.Type_, err)
+		s.Metrics.IncCreateTest(script.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -105,8 +105,8 @@ func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
 	}
 }
 
-// UpdateScriptHandler updates an existing script CR based on script content
-func (s TestkubeAPI) UpdateScriptHandler() fiber.Handler {
+// UpdateTestHandler updates an existing script CR based on script content
+func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.TestUpsertRequest
@@ -128,7 +128,7 @@ func (s TestkubeAPI) UpdateScriptHandler() fiber.Handler {
 		script.Spec = scriptSpec.Spec
 		script, err = s.ScriptsClient.Update(script)
 
-		s.Metrics.IncUpdateScript(script.Spec.Type_, err)
+		s.Metrics.IncUpdateTest(script.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -144,8 +144,8 @@ func (s TestkubeAPI) UpdateScriptHandler() fiber.Handler {
 	}
 }
 
-// DeleteScriptHandler is a method for deleting a script with id
-func (s TestkubeAPI) DeleteScriptHandler() fiber.Handler {
+// DeleteTestHandler is a method for deleting a script with id
+func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -171,8 +171,8 @@ func (s TestkubeAPI) DeleteScriptHandler() fiber.Handler {
 	}
 }
 
-// DeleteScriptsHandler for deleting all scripts
-func (s TestkubeAPI) DeleteScriptsHandler() fiber.Handler {
+// DeleteTestsHandler for deleting all scripts
+func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		err := s.ScriptsClient.DeleteAll(namespace)

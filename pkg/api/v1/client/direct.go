@@ -56,7 +56,7 @@ type DirectAPIClient struct {
 
 // scripts and executions -----------------------------------------------------------------------------
 
-func (c DirectAPIClient) GetScript(id, namespace string) (script testkube.Test, err error) {
+func (c DirectAPIClient) GetTest(id, namespace string) (script testkube.Test, err error) {
 	uri := c.getURI("/tests/%s?namespace=%s", id, namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -113,12 +113,12 @@ func (c DirectAPIClient) ListExecutions(scriptID string, limit int, tags []strin
 	return c.getExecutionsFromResponse(resp)
 }
 
-func (c DirectAPIClient) DeleteScripts(namespace string) error {
+func (c DirectAPIClient) DeleteTests(namespace string) error {
 	uri := c.getURI("/tests?namespace=%s", namespace)
 	return c.makeDeleteRequest(uri, true)
 }
 
-func (c DirectAPIClient) DeleteScript(name string, namespace string) error {
+func (c DirectAPIClient) DeleteTest(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("script name '%s' is not valid", name)
 	}
@@ -126,8 +126,8 @@ func (c DirectAPIClient) DeleteScript(name string, namespace string) error {
 	return c.makeDeleteRequest(uri, true)
 }
 
-// CreateScript creates new Script Custom Resource
-func (c DirectAPIClient) CreateScript(options UpsertScriptOptions) (script testkube.Test, err error) {
+// CreateTest creates new Script Custom Resource
+func (c DirectAPIClient) CreateTest(options UpsertScriptOptions) (script testkube.Test, err error) {
 	uri := c.getURI("/tests")
 
 	request := testkube.TestUpsertRequest(options)
@@ -149,8 +149,8 @@ func (c DirectAPIClient) CreateScript(options UpsertScriptOptions) (script testk
 	return c.getScriptFromResponse(resp)
 }
 
-// UpdateScript creates new Script Custom Resource
-func (c DirectAPIClient) UpdateScript(options UpsertScriptOptions) (script testkube.Test, err error) {
+// UpdateTest creates new Script Custom Resource
+func (c DirectAPIClient) UpdateTest(options UpsertScriptOptions) (script testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 	request := testkube.TestUpsertRequest(options)
 
@@ -177,13 +177,13 @@ func (c DirectAPIClient) UpdateScript(options UpsertScriptOptions) (script testk
 	return c.getScriptFromResponse(resp)
 }
 
-// ExecuteScript starts new external script execution, reads data and returns ID
+// ExecuteTest starts new external script execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c DirectAPIClient) ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
+func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get script to get script tags
-	script, err := c.GetScript(id, namespace)
+	script, err := c.GetTest(id, namespace)
 	if err != nil {
 		return execution, nil
 	}
@@ -238,8 +238,8 @@ func (c DirectAPIClient) Logs(id string) (logs chan output.Output, err error) {
 	return
 }
 
-// ListScripts list all scripts in given namespace
-func (c DirectAPIClient) ListScripts(namespace string, tags []string) (scripts testkube.Tests, err error) {
+// ListTests list all scripts in given namespace
+func (c DirectAPIClient) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/tests?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
@@ -497,7 +497,7 @@ func (c DirectAPIClient) DownloadFile(executionID, fileName, destination string)
 	return f.Name(), nil
 }
 
-func (c DirectAPIClient) GetTest(id, namespace string) (script testkube.TestSuite, err error) {
+func (c DirectAPIClient) GetTestSuite(id, namespace string) (script testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -511,8 +511,8 @@ func (c DirectAPIClient) GetTest(id, namespace string) (script testkube.TestSuit
 	return c.getTestFromResponse(resp)
 }
 
-// CreateTest creates new Test Custom Resource
-func (c DirectAPIClient) CreateTest(options UpsertTestOptions) (script testkube.TestSuite, err error) {
+// CreateTestSuite creates new Test Custom Resource
+func (c DirectAPIClient) CreateTestSuite(options UpsertTestOptions) (script testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -534,7 +534,7 @@ func (c DirectAPIClient) CreateTest(options UpsertTestOptions) (script testkube.
 	return c.getTestFromResponse(resp)
 }
 
-func (c DirectAPIClient) DeleteTest(name, namespace string) (err error) {
+func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
 	uri := c.getURI("/test-suites/%s?namespace=%s", name, namespace)
 	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
 	if err != nil {
@@ -553,7 +553,7 @@ func (c DirectAPIClient) DeleteTest(name, namespace string) (err error) {
 	return
 }
 
-func (c DirectAPIClient) DeleteTests(namespace string) (err error) {
+func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 	uri := c.getURI("/test-suites?namespace=%s", namespace)
 	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
 	if err != nil {
@@ -572,8 +572,8 @@ func (c DirectAPIClient) DeleteTests(namespace string) (err error) {
 	return
 }
 
-// UpdateTest creates new Test Custom Resource
-func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.TestSuite, err error) {
+// UpdateTestSuite creates new Test Custom Resource
+func (c DirectAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -601,8 +601,8 @@ func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Te
 	return c.getTestFromResponse(resp)
 }
 
-// ListTests list all scripts in given namespace
-func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testkube.TestSuites, err error) {
+// ListTestSuites list all scripts in given namespace
+func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (tests testkube.TestSuites, err error) {
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/test-suites?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
@@ -625,8 +625,8 @@ func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testk
 	return
 }
 
-// ExecuteTest starts new external test execution, reads data and returns ID
-func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
+// ExecuteTestSuite starts new external test execution, reads data and returns ID
+func (c DirectAPIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
 	request := testkube.TestSuiteExecutionRequest{
@@ -657,14 +657,14 @@ func (c DirectAPIClient) WatchTestExecution(executionID string) (executionCh cha
 	executionCh = make(chan testkube.TestSuiteExecution)
 
 	go func() {
-		execution, err := c.GetTestExecution(executionID)
+		execution, err := c.GetTestSuiteExecution(executionID)
 		if err != nil {
 			close(executionCh)
 			return
 		}
 		executionCh <- execution
 		for range time.NewTicker(time.Second).C {
-			execution, err = c.GetTestExecution(executionID)
+			execution, err = c.GetTestSuiteExecution(executionID)
 			if err != nil {
 				close(executionCh)
 				return
@@ -682,7 +682,7 @@ func (c DirectAPIClient) WatchTestExecution(executionID string) (executionCh cha
 	return
 }
 
-func (c DirectAPIClient) GetTestExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
+func (c DirectAPIClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions/%s", executionID)
 
 	resp, err := c.client.Get(uri)

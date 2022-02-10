@@ -60,7 +60,7 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 		}
 
 		switch sr.Step.Type() {
-		case TestSuiteStepTypeExecuteScript:
+		case TestSuiteStepTypeExecuteTest:
 			var id, errorMessage string
 			if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
 				errorMessage = sr.Execution.ExecutionResult.ErrorMessage

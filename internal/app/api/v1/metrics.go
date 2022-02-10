@@ -50,7 +50,7 @@ func (m Metrics) IncExecution(execution testkube.Execution) {
 	}).Inc()
 }
 
-func (m Metrics) IncUpdateScript(scriptType string, err error) {
+func (m Metrics) IncUpdateTest(scriptType string, err error) {
 	result := "updated"
 	if err != nil {
 		result = "error"
@@ -62,7 +62,7 @@ func (m Metrics) IncUpdateScript(scriptType string, err error) {
 	}).Inc()
 }
 
-func (m Metrics) IncCreateScript(scriptType string, err error) {
+func (m Metrics) IncCreateTest(scriptType string, err error) {
 	result := "created"
 	if err != nil {
 		result = "error"

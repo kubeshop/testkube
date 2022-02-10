@@ -2,11 +2,11 @@ package testkube
 
 import "fmt"
 
-func (s TestSuiteStepExecuteScript) FullName() string {
+func (s TestSuiteStepExecuteTest) FullName() string {
 	return fmt.Sprintf("run:%s/%s", s.Namespace, s.Name)
 }
 
-func (t TestSuiteStepExecuteScript) GetObjectRef() *ObjectRef {
+func (t TestSuiteStepExecuteTest) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
 		Name:      t.Name,
 		Namespace: t.Namespace,

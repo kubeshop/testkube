@@ -38,7 +38,7 @@ func NewStartScriptCmd() *cobra.Command {
 			client, namespace := common.GetClient(cmd)
 			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-			execution, err := client.ExecuteScript(testName, namespace, name, params, paramsFileContent)
+			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
 			printExecutionDetails(execution)

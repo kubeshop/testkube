@@ -908,11 +908,11 @@ components:
           type: boolean
           default: true
         execute:
-          $ref: "#/components/schemas/TestSuiteStepExecuteScript"
+          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
         delay:
           $ref: "#/components/schemas/TestSuiteStepDelay"
 
-    TestSuiteStepExecuteScript:
+    TestSuiteStepExecuteTest:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
 

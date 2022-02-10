@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewUpdateScriptsCmd() *cobra.Command {
+func NewUpdateTestsCmd() *cobra.Command {
 
 	var (
 		testName          string
@@ -32,7 +32,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 			var err error
 
 			client, _ := common.GetClient(cmd)
-			script, _ := client.GetScript(testName, testNamespace)
+			script, _ := client.GetTest(testName, testNamespace)
 			if testName != script.Name {
 				ui.Failf("Script with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
@@ -40,7 +40,7 @@ func NewUpdateScriptsCmd() *cobra.Command {
 			options, err := NewUpsertScriptOptionsFromFlags(cmd, script)
 			ui.ExitOnError("getting script options", err)
 
-			script, err = client.UpdateScript(options)
+			script, err = client.UpdateTest(options)
 			ui.ExitOnError("updating script "+testName+" in namespace "+testNamespace, err)
 
 			ui.Success("Script updated", testNamespace, "/", testName)

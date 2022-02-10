@@ -19,13 +19,13 @@ type Client interface {
 	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
-	GetScript(id, namespace string) (script testkube.Test, err error)
-	CreateScript(options UpsertScriptOptions) (script testkube.Test, err error)
-	UpdateScript(options UpsertScriptOptions) (script testkube.Test, err error)
-	DeleteScript(name string, namespace string) error
-	DeleteScripts(namespace string) error
-	ListScripts(namespace string, tags []string) (scripts testkube.Tests, err error)
-	ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error)
+	GetTest(id, namespace string) (script testkube.Test, err error)
+	CreateTest(options UpsertScriptOptions) (script testkube.Test, err error)
+	UpdateTest(options UpsertScriptOptions) (script testkube.Test, err error)
+	DeleteTest(name string, namespace string) error
+	DeleteTests(namespace string) error
+	ListTests(namespace string, tags []string) (scripts testkube.Tests, err error)
+	ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
@@ -36,15 +36,15 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
-	CreateTest(options UpsertTestOptions) (test testkube.TestSuite, err error)
-	UpdateTest(options UpsertTestOptions) (script testkube.TestSuite, err error)
-	GetTest(id string, namespace string) (script testkube.TestSuite, err error)
-	ListTests(namespace string, tags []string) (scripts testkube.TestSuites, err error)
-	DeleteTest(name string, namespace string) error
-	DeleteTests(namespace string) error
-	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
+	CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestOptions) (script testkube.TestSuite, err error)
+	GetTestSuite(id string, namespace string) (script testkube.TestSuite, err error)
+	ListTestSuites(namespace string, tags []string) (scripts testkube.TestSuites, err error)
+	DeleteTestSuite(name string, namespace string) error
+	DeleteTestSuites(namespace string) error
+	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
 
-	GetTestExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
+	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 

@@ -25,7 +25,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		execution, err := client.ExecuteScript("test", "testkube", "some name", map[string]string{}, "")
+		execution, err := client.ExecuteTest("test", "testkube", "some name", map[string]string{}, "")
 
 		// then
 		assert.Equal(t, "1", execution.Id)
@@ -92,7 +92,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		response, err := client.CreateScript(UpsertScriptOptions{
+		response, err := client.CreateTest(UpsertScriptOptions{
 			Content: testkube.NewStringTestContent("{}"),
 			Name:    "t1",
 			Type_:   "postman/collection",
@@ -117,7 +117,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScript("t1", "testkube")
+		err := client.DeleteTest("t1", "testkube")
 
 		// then
 		assert.NoError(t, err)
@@ -135,7 +135,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScript("t1", "testkube")
+		err := client.DeleteTest("t1", "testkube")
 
 		// then
 		assert.Error(t, err)
@@ -153,7 +153,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScripts("testkube")
+		err := client.DeleteTests("testkube")
 
 		// then
 		assert.NoError(t, err)
@@ -171,7 +171,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScripts("testkube")
+		err := client.DeleteTests("testkube")
 
 		// then
 		assert.Error(t, err)
@@ -189,7 +189,7 @@ func TestScriptsAPI(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		scripts, err := client.ListScripts("testkube", nil)
+		scripts, err := client.ListTests("testkube", nil)
 
 		// then
 		assert.NoError(t, err)

@@ -23,7 +23,7 @@ func NewTestExecutionCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			executionID := args[0]
-			execution, err := client.GetTestExecution(executionID)
+			execution, err := client.GetTestSuiteExecution(executionID)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			printTestExecutionDetails(execution, startTime)

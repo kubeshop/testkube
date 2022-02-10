@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteTestsCmd() *cobra.Command {
+func NewDeleteTestSuitesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete-all",
 		Short: "Delete all tests in namespace",
@@ -15,7 +15,7 @@ func NewDeleteTestsCmd() *cobra.Command {
 
 			client, namespace := common.GetClient(cmd)
 
-			err := client.DeleteTests(namespace)
+			err := client.DeleteTestSuites(namespace)
 			ui.ExitOnError("delete all tests from namespace "+namespace, err)
 			ui.Success("Succesfully deleted all tests in namespace", namespace)
 		},

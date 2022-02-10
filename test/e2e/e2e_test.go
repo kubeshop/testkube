@@ -67,7 +67,7 @@ func TestE2E(t *testing.T) {
 
 	t.Run("scripts management", func(t *testing.T) {
 		// given
-		out, err := test.CreateScript(testName, collectionFile)
+		out, err := test.CreateTest(testName, collectionFile)
 		a.NoError(err)
 		a.Contains(string(out), "Script created")
 
@@ -111,7 +111,7 @@ func TestE2E(t *testing.T) {
 
 	t.Run("delete script", func(t *testing.T) {
 		// given
-		out, err := test.DeleteScript(testName)
+		out, err := test.DeleteTest(testName)
 		a.NoError(err)
 		a.Contains(string(out), "Succesfully deleted")
 

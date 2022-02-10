@@ -5,6 +5,6 @@ func TestSuiteStepTypePtr(stepType TestSuiteStepType) *TestSuiteStepType {
 }
 
 var (
-	TestSuiteStepTypeExecuteScript = TestSuiteStepTypePtr(EXECUTE_SCRIPT_TestSuiteStepType)
-	TestSuiteStepTypeDelay         = TestSuiteStepTypePtr(DELAY_TestSuiteStepType)
+	TestSuiteStepTypeExecuteTest = TestSuiteStepTypePtr(EXECUTE_SCRIPT_TestSuiteStepType)
+	TestSuiteStepTypeDelay       = TestSuiteStepTypePtr(DELAY_TestSuiteStepType)
 )

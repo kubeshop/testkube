@@ -36,15 +36,15 @@ func (k Testkube) Install() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "install", "--namespace", k.Namespace)
 }
 
-func (k Testkube) CreateScript(name, path string) ([]byte, error) {
+func (k Testkube) CreateTest(name, path string) ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "create", "--file", path, "--name", name, "--namespace", k.Namespace)
 }
 
-func (k Testkube) DeleteScript(name string) ([]byte, error) {
+func (k Testkube) DeleteTest(name string) ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "delete", "--name", name, "--namespace", k.Namespace)
 }
 
-func (k Testkube) DeleteScripts() ([]byte, error) {
+func (k Testkube) DeleteTests() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "delete", "--all", "--namespace", k.Namespace)
 }
 

@@ -20,8 +20,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
-// GetTestHandler for getting test object
-func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
+// GetTestSuiteHandler for getting test object
+func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestSuiteUpsertRequest
 		err := c.BodyParser(&request)
@@ -40,8 +40,8 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 	}
 }
 
-// GetTestHandler for getting test object
-func (s TestkubeAPI) GetTestHandler() fiber.Handler {
+// GetTestSuiteHandler for getting test object
+func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -60,8 +60,8 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	}
 }
 
-// DeleteTestHandler for deleting a test with id
-func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
+// DeleteTestSuiteHandler for deleting a test with id
+func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -78,8 +78,8 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	}
 }
 
-// DeleteTestsHandler for deleting all Tests
-func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
+// DeleteTestSuitesHandler for deleting all Tests
+func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		err := s.TestsClient.DeleteAll(namespace)
@@ -95,8 +95,8 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	}
 }
 
-// ListTestsHandler for getting list of all available tests
-func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
+// ListTestSuitesHandler for getting list of all available tests
+func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
@@ -129,7 +129,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
+func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		name := c.Params("id")
@@ -187,7 +187,7 @@ func (s TestkubeAPI) ListTestExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetTestExecutionHandler() fiber.Handler {
+func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		id := c.Params("executionID")
@@ -264,7 +264,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 
 	switch step.Type() {
 
-	case testkube.TestSuiteStepTypeExecuteScript:
+	case testkube.TestSuiteStepTypeExecuteTest:
 		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeScriptStep.Name, rand.String(5)),
@@ -418,7 +418,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsv1.TestStepSpe
 			Duration: step.Delay.Duration,
 		}
 
-	case testkube.TestSuiteStepTypeExecuteScript:
+	case testkube.TestSuiteStepTypeExecuteTest:
 		s := step.Execute
 		stepSpec.Execute = &testsv1.TestStepExecute{
 			Namespace: s.Namespace,

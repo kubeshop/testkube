@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteTestCmd() *cobra.Command {
+func NewDeleteTestSuiteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <testSuiteName>",
 		Short: "Delete tests",
@@ -19,7 +19,7 @@ func NewDeleteTestCmd() *cobra.Command {
 			client, namespace := common.GetClient(cmd)
 
 			name := args[0]
-			err := client.DeleteTest(name, namespace)
+			err := client.DeleteTestSuite(name, namespace)
 			ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
 			ui.Success("Succesfully deleted", name)
 		},

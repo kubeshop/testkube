@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewGetScriptsCmd() *cobra.Command {
+func NewGetTestsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "get <testName>",
 		Aliases: []string{"g"},
@@ -24,7 +24,7 @@ func NewGetScriptsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
-			script, err := client.GetScript(name, namespace)
+			script, err := client.GetTest(name, namespace)
 			ui.ExitOnError("getting script "+name, err)
 
 			out, err := yaml.Marshal(script)

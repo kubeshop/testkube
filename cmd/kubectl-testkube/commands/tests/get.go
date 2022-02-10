@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewGetTestCmd() *cobra.Command {
+func NewGetTestSuiteCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "get <testSuiteName>",
 		Aliases: []string{"g"},
@@ -23,7 +23,7 @@ func NewGetTestCmd() *cobra.Command {
 
 			name := args[0]
 			client, _ := common.GetClient(cmd)
-			test, err := client.GetTest(name, namespace)
+			test, err := client.GetTestSuite(name, namespace)
 			ui.ExitOnError("getting test "+name, err)
 
 			out, err := yaml.Marshal(test)

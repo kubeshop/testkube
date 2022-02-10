@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCreateTestsCmd() *cobra.Command {
+func NewCreateTestSuitesCmd() *cobra.Command {
 
 	var (
 		name string
@@ -51,14 +51,14 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 
-			test, _ := client.GetTest(options.Name, options.Namespace)
+			test, _ := client.GetTestSuite(options.Name, options.Namespace)
 			if options.Name == test.Name {
 				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}
 
 			options.Tags = tags
 
-			test, err = client.CreateTest((apiClient.UpsertTestOptions(options)))
+			test, err = client.CreateTestSuite((apiClient.UpsertTestOptions(options)))
 			ui.ExitOnError("creating test "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("Test created", options.Name)
 		},

@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewListScriptsCmd() *cobra.Command {
+func NewListTestsCmd() *cobra.Command {
 	var tags []string
 
 	cmd := &cobra.Command{
@@ -20,7 +20,7 @@ func NewListScriptsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
-			scripts, err := client.ListScripts(namespace, tags)
+			scripts, err := client.ListTests(namespace, tags)
 			ui.ExitOnError("getting all scripts in namespace "+namespace, err)
 
 			ui.Table(scripts, os.Stdout)

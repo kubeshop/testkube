@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCreateScriptsCmd is a command tp create new scriptcustom resource
-func NewCreateScriptsCmd() *cobra.Command {
+// NewCreateTestsCmd is a command tp create new scriptcustom resource
+func NewCreateTestsCmd() *cobra.Command {
 
 	var (
 		testName          string
@@ -33,7 +33,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 			ui.Logo()
 
 			client, _ := common.GetClient(cmd)
-			script, _ := client.GetScript(testName, testNamespace)
+			script, _ := client.GetTest(testName, testNamespace)
 			if testName == script.Name {
 				ui.Failf("Script with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
@@ -41,7 +41,7 @@ func NewCreateScriptsCmd() *cobra.Command {
 			options, err := NewUpsertScriptOptionsFromFlags(cmd, script)
 			ui.ExitOnError("getting script options", err)
 
-			script, err = client.CreateScript(options)
+			script, err = client.CreateTest(options)
 			ui.ExitOnError("creating script "+testName+" in namespace "+testNamespace, err)
 
 			ui.Success("Script created", testNamespace, "/", testName)
