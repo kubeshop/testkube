@@ -22,7 +22,7 @@ tags:
   - name: executions
     description: "Test suites and tests execution operations"
   - name: test-suites
-    description: "Tests orchestration operations"
+    description: "Test suites orchestration operations"
   - name: tags
     description: "Listing all available tags"
 

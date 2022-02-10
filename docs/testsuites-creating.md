@@ -1,4 +1,4 @@
-# Tests
+# TestSuites
 
 Let's assume a quite big IT department where there is a frontend team and backend team, everything is 
 deployed on Kubernetes cluster, and each team is responsible for their part of work. Frontend engineers test their code with the use of Cypress testing framework, but backend engineers prefer simpler tools like Postman, they have a lot of Postman collections defined and want to run them against Kubernetes cluster, unfortunately, some of their services are not exposed externally.
@@ -7,8 +7,8 @@ There is also some QA leader who is responsible for release trains and wants to 
 
 ... it would be so easy if all of them have used Testkube. Each team can run their tests against clusters easily on their own, and the QA manager can create Test resources and add test scripts written by all teams.  
 
-`Tests` stand for orchestration, orchestration of different test steps like e.g. test execution, delay, or other (future) steps. 
-# Tests creation
+`TestSuites` stand for orchestration, orchestration of different test steps like e.g. test execution, delay, or other (future) steps. 
+# TestSuites creation
 
 Creating tests is really simple - you need to write down test definition in json file and then pass it to `testkube` `kubectl` plugin.
 

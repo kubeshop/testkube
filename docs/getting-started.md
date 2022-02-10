@@ -180,7 +180,7 @@ kubectl testkube tests list
 ## Getting available executions
 
 ```shell
-kubectl testkube tests executions SCRIPT_NAME
+kubectl testkube tests executions TEST_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
@@ -206,4 +206,4 @@ For lists and details you can use different output format (`--output` flag) for 
 
 ## Deleting a test
 
-For deleting a test there is `kubectl testkube tests delete SCRIPT_NAME` command and also `--all` flag can be used to delete all.
+For deleting a test there is `kubectl testkube tests delete TEST_NAME` command and also `--all` flag can be used to delete all.

@@ -1,6 +1,6 @@
 # Running `Test`
 
-To run your tests pass `tests run` command with test name to your `kubectl testkube` plugin. Tests are started asynchronously by default.
+To run your tests pass `tests run` command with test name to your `kubectl testkube` plugin. TestSuites are started asynchronously by default.
 
 ```sh
 kubectl testkube testsuites run test-example

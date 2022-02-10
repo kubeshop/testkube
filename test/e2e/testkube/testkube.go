@@ -13,7 +13,7 @@ kubectl testkube tests create --name test1 --file jw.postman_collection.json
 kubectl testkube tests list            # check test name
 kubectl testkube tests start test1
 kubectl testkube tests executions      # copy last execution id
-kubectl testkube tests execution SCRIPT_NAME EXECUTION_ID
+kubectl testkube tests execution TEST_NAME EXECUTION_ID
 ***/
 
 func NewTestkube(namespace string) Testkube {

@@ -239,7 +239,7 @@ func (c DirectAPIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // ListTests list all scripts in given namespace
-func (c DirectAPIClient) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
+func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/tests?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
@@ -249,15 +249,15 @@ func (c DirectAPIClient) ListTests(namespace string, tags []string) (scripts tes
 
 	resp, err := c.client.Get(uri)
 	if err != nil {
-		return scripts, fmt.Errorf("client.Get error: %w", err)
+		return tests, fmt.Errorf("client.Get error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if err := c.responseError(resp); err != nil {
-		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
+		return tests, fmt.Errorf("api/list-scripts returned error: %w", err)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&scripts)
+	err = json.NewDecoder(resp.Body).Decode(&tests)
 	return
 }
 
