@@ -16,12 +16,20 @@ func NewUpgradeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "upgrade",
 		Short:   "Upgrade Helm chart and run migrations",
-		Long:    `Upgraed can be configured with use of particular `,
+		Long:    `Upgrade can be configured with use of particular `,
 		Aliases: []string{"update"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			RunMigrations(cmd)
-			HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+
+			hasMigrations, err := RunMigrations(cmd)
+			ui.ExitOnError("Running migrations", err)
+			if hasMigrations {
+				ui.Success("All migrations executed successfully")
+			}
+
+			err = HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+			ui.ExitOnError("installing Testkube", err)
+
 		},
 	}
 

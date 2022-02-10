@@ -13,7 +13,11 @@ func NewMigrateCmd() *cobra.Command {
 		Long:  `migrate command manages migrations will run migrations greater or equals current version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			RunMigrations(cmd)
+			hasMigrations, err := RunMigrations(cmd)
+			ui.ExitOnError("Running migrations", err)
+			if hasMigrations {
+				ui.Success("All migrations executed successfully")
+			}
 		},
 	}
 

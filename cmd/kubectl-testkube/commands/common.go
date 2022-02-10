@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func RunMigrations(cmd *cobra.Command) error {
+func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	client, _ := common.GetClient(cmd)
 	info, err := client.GetServerInfo()
 	ui.ExitOnError("getting server info", err)
@@ -26,17 +26,14 @@ func RunMigrations(cmd *cobra.Command) error {
 	migrations := migrator.GetValidMigrations(info.Version)
 	if len(migrations) == 0 {
 		ui.Warn("No migrations available for", info.Version)
+		return false, nil
 	}
 
 	for _, migration := range migrations {
 		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
 	}
 
-	err = migrator.Run(info.Version)
-	ui.ExitOnError("running migrations", err)
-	ui.Success("All migrations executed successfully")
-
-	return err
+	return true, migrator.Run(info.Version)
 }
 
 func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noMinio, noJetstack bool) error {
