@@ -8,37 +8,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTestExecutionsCmd() *cobra.Command {
-	var (
-		limit int
-		tags  []string
-	)
+func NewListExecutionsCmd() *cobra.Command {
+	var tags []string
 
 	cmd := &cobra.Command{
-		Use:     "executions [testSuiteName]",
+		Use:     "executions [testName]",
 		Aliases: []string{"el"},
-		Short:   "Gets tests executions list",
-		Long:    `Gets tests executions list, can be filtered by test name`,
+		Short:   "List scripts executions",
+		Long:    `Getting list of execution for given script name or recent executions if there is no script name passed`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-
-			var testSuiteName string
-			if len(args) > 0 {
-				testSuiteName = args[0]
+			var scriptID string
+			limit := 10
+			if len(args) == 0 {
+				scriptID = ""
+			} else if len(args) > 0 {
+				scriptID = args[0]
+				limit = 0
 			}
 
 			client, _ := common.GetClient(cmd)
+			executions, err := client.ListExecutions(scriptID, limit, tags)
+			ui.ExitOnError("Getting executions for script: "+scriptID, err)
 
-			executions, err := client.ListTestExecutions(testSuiteName, limit, tags)
-			ui.ExitOnError("getting tests executions list", err)
+			renderer := GetExecutionsListRenderer(cmd)
 
-			ui.Table(executions, os.Stdout)
-			ui.NL()
-
+			err = renderer.Render(executions, os.Stdout)
+			ui.ExitOnError("rendering", err)
 		},
 	}
-
-	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd

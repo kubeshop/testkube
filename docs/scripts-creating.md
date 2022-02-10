@@ -27,7 +27,7 @@ Save in convinient location (We're using `~/Downloads/TODO.postman_collection.js
 ![create postman colletion step 3](img/script-create-1.png)
 
 ```sh
-kubectl testkube scripts create --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 Output:
@@ -52,7 +52,7 @@ Script created! Now we can run as many times as we want.
 If you need to update your script after change in Postman just re-export it to file and run update command:
 
 ```sh
-kubectl testkube scripts update --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube tests update --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 Output:
@@ -88,7 +88,7 @@ test   32s
 ```
 
 ```sh
-$ kubectl testkube scripts get test
+$ kubectl testkube tests get test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -296,7 +296,7 @@ Where `examples` is test directory in `https://github.com/kubeshop/testkube-exec
 Now we can create our Cypress based script (in git based scripts we need to pass script type)
 
 ```sh
-kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Output:

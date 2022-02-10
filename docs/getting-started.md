@@ -8,7 +8,7 @@ Please follow [install steps](/docs/installing.md) first for Testkube installati
 kubectl testkube --help 
 
 # or for scripts runs
-kubectl testkube scripts --help 
+kubectl testkube tests --help 
 ```
 
 ## Defining tests
@@ -104,7 +104,7 @@ EOF
 ```
 
 ```sh
-kubectl testkube scripts create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
+kubectl testkube tests create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
 ```
 
 **Note**: this is just an example of how it works. For further details you can visit [Postman documentation](executor-postman.md)
@@ -116,7 +116,7 @@ Cypress tests are little more complicated to pass - for now we're supporting Git
 You can create new test with kubectl testkube plugin:
 
 ```sh
- kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
+ kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
 ```
 
 Where:
@@ -134,15 +134,15 @@ For now we're supporting only Cypress test runs, but we plan to fully integrate 
 When our script is defined as CR we can now run it:
 
 ```shell
-kubectl testkube scripts start my-test-name 
+kubectl testkube tests start my-test-name 
 
 ... some script run data ...
 
 Use following command to get script execution details:
-kubectl testkube scripts execution 611b6da38cd74034e7c9d408
+kubectl testkube tests execution 611b6da38cd74034e7c9d408
 
 or watch for completition with
-kubectl testkube scripts watch 611b6da38cd74034e7c9d408
+kubectl testkube tests watch 611b6da38cd74034e7c9d408
 
 ```
 
@@ -152,7 +152,7 @@ After script completed with success or error you can go back to script details b
 scripts execution command:
 
 ```sh
-kubectl testkube scripts execution 6103a45b7e18c4ea04883866
+kubectl testkube tests execution 6103a45b7e18c4ea04883866
 
 ....
 some execution details
@@ -163,7 +163,7 @@ some execution details
 To run script execution you'll need to know script name
 
 ```shell
-kubectl testkube scripts list
+kubectl testkube tests list
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
@@ -180,7 +180,7 @@ kubectl testkube scripts list
 ## Getting available executions
 
 ```shell
-kubectl testkube scripts executions SCRIPT_NAME
+kubectl testkube tests executions SCRIPT_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
@@ -206,4 +206,4 @@ For lists and details you can use different output format (`--output` flag) for 
 
 ## Deleting a script
 
-For deleting a script there is `kubectl testkube scripts delete SCRIPT_NAME` command and also `--all` flag can be used to delete all.
+For deleting a script there is `kubectl testkube tests delete SCRIPT_NAME` command and also `--all` flag can be used to delete all.

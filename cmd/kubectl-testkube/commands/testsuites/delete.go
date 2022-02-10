@@ -1,4 +1,4 @@
-package scripts
+package testsuites
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -7,21 +7,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteTestsCmd() *cobra.Command {
+func NewDeleteTestSuiteCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete <testName>",
-		Short: "Delete scripts",
-		Args:  validator.ScriptName,
+		Use:   "delete <testSuiteName>",
+		Short: "Delete tests",
+		Long:  `Delete tests by name`,
+		Args:  validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			client, _ := common.GetClient(cmd)
-			namespace := cmd.Flag("namespace").Value.String()
+			client, namespace := common.GetClient(cmd)
+
 			name := args[0]
-
-			err := client.DeleteTest(name, namespace)
-			ui.ExitOnError("delete script "+name+" from namespace "+namespace, err)
-
+			err := client.DeleteTestSuite(name, namespace)
+			ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
 			ui.Success("Succesfully deleted", name)
 		},
 	}

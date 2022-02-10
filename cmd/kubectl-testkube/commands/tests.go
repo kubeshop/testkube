@@ -4,21 +4,21 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/pkg/ui"
-
 	"github.com/spf13/cobra"
 )
 
-func NewTestsCmd() *cobra.Command {
-	var (
-		client    string
-		verbose   bool
-		namespace string
-	)
+var (
+	client    string
+	verbose   bool
+	namespace string
+)
+
+func NewScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tests",
 		Aliases: []string{"test", "t"},
 		Short:   "Tests management commands",
-		Long:    `All available tests and tests executions commands`,
+		Long:    `All available tests and test executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
@@ -42,15 +42,16 @@ func NewTestsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringP("output", "o", "raw", "output type one of raw|json|go ")
 	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
-	cmd.AddCommand(tests.NewListTestSuitesCmd())
-	cmd.AddCommand(tests.NewGetTestSuiteCmd())
-	cmd.AddCommand(tests.NewStartTestCmd())
-	cmd.AddCommand(tests.NewCreateTestSuitesCmd())
-	cmd.AddCommand(tests.NewUpdateTestSuitesCmd())
-	cmd.AddCommand(tests.NewDeleteTestSuiteCmd())
-	cmd.AddCommand(tests.NewDeleteTestSuitesCmd())
-	cmd.AddCommand(tests.NewTestExecutionCmd())
-	cmd.AddCommand(tests.NewWatchTestExecutionCmd())
-	cmd.AddCommand(tests.NewTestExecutionsCmd())
+	cmd.AddCommand(tests.NewAbortExecutionCmd())
+	cmd.AddCommand(tests.NewListTestsCmd())
+	cmd.AddCommand(tests.NewGetTestsCmd())
+	cmd.AddCommand(tests.NewStartScriptCmd())
+	cmd.AddCommand(tests.NewGetExecutionCmd())
+	cmd.AddCommand(tests.NewWatchExecutionCmd())
+	cmd.AddCommand(tests.NewListExecutionsCmd())
+	cmd.AddCommand(tests.NewCreateTestsCmd())
+	cmd.AddCommand(tests.NewUpdateTestsCmd())
+	cmd.AddCommand(tests.NewDeleteTestsCmd())
+	cmd.AddCommand(tests.NewDeleteAllScriptsCmd())
 	return cmd
 }

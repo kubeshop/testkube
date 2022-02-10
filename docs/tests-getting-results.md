@@ -4,7 +4,7 @@ To get recent results simply call `tests executions` subcommand
 
 ```sh
 
-kubectl testkube tests executions
+kubectl testkube testsuites executions
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -28,7 +28,7 @@ kubectl testkube tests executions
 Now when you know test execution ID you can get results 
 
 ```sh 
-kubectl testkube tests execution 61e1136165e59a3183465125 
+kubectl testkube testsuites execution 61e1136165e59a3183465125 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
    ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
@@ -49,13 +49,13 @@ Status: success
 
 
 Use following command to get test execution details:
-$ kubectl testkube tests execution 61e1136165e59a3183465125
+$ kubectl testkube testsuites execution 61e1136165e59a3183465125
 ```
 
 Test steps which are running workflows based on `Scripts` Custom Resources have script execution ID - you can get details of each in separate command: 
 
 ```sh 
-kubectl testkube scripts execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s
+kubectl testkube tests execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s
 
 newman
 

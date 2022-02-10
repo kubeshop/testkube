@@ -50,7 +50,7 @@ You'll need to create `Script` Custom Resource with type from above to
 be executed on given executor. e.g.
 
 ```sh
-kubectl testkube scripts create --file my_collection_file.json --name my-test-name --type local-postman/collection
+kubectl testkube tests create --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
 To summarize: `type` is the single relation between `Script` and `Executor`

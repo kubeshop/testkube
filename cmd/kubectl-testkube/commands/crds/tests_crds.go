@@ -20,9 +20,9 @@ import (
 
 func NewCRDScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "scripts <manifestDirectory>",
-		Short: "Generate scripts CRD file based on directory",
-		Long:  `Generate scripts manifest based on directory (e.g. for ArgoCD sync based on scripts files)`,
+		Use:   "tests <manifestDirectory>",
+		Short: "Generate tests CRD file based on directory",
+		Long:  `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
 		Args:  validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error

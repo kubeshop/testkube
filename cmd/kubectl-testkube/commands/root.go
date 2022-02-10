@@ -29,7 +29,7 @@ func init() {
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewExecutorsCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
-	RootCmd.AddCommand(NewTestsCmd())
+	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
 }
 

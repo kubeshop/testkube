@@ -29,7 +29,7 @@ describe('The Home Page', () => {
 Now we need to create Testkube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
 ```sh
-kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 We can check that script is created with:
@@ -50,7 +50,7 @@ kubeshop-cypress      51s
 Now we can start our test
 
 ```sh
-kubectl testkube scripts start kubeshop-cypress
+kubectl testkube tests start kubeshop-cypress
 ```
 
 Output:
@@ -73,10 +73,10 @@ Execution name: wildly-popular-worm
 
 Script queued for execution
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 615d5265b046f8fbd3d955d0
+$ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
 or watch script execution until complete:
-$ kubectl testkube scripts watch 615d5265b046f8fbd3d955d0
+$ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
 ```
 
 ## Getting execution results
@@ -84,7 +84,7 @@ $ kubectl testkube scripts watch 615d5265b046f8fbd3d955d0
 Let's watch our script execution
 
 ```sh
-kubectl testkube scripts watch 615d43d3b046f8fbd3d955ca
+kubectl testkube tests watch 615d43d3b046f8fbd3d955ca
 ```
 
 Output:
@@ -188,7 +188,7 @@ We forgot to add test param - let's fix that! In our test we assume that param w
 We can also add `-f` flag to follow execution (watch for changes) - for now we're only looking for test completion but in future we'll pipe test output in real time (ongoing features)
 
 ```sh
-kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube tests start kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
@@ -209,10 +209,10 @@ Execution name: nominally-able-glider
 
 Script queued for execution
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 or watch script execution until complete:
-$ kubectl testkube scripts watch 615d5372b046f8fbd3d955d2
+$ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -277,7 +277,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s
 ```

@@ -98,9 +98,9 @@ Now we're ready to create and run your custom scripts by passing URI as script c
 
 ```sh
 # create 
-echo "http://google.pl" | kubectl testkube scripts create --name example-google-test --type example/test 
+echo "http://google.pl" | kubectl testkube tests create --name example-google-test --type example/test 
 # and run it in testkube
-kubectl testkube scripts run example-google-test
+kubectl testkube tests run example-google-test
 ```
 
 That's all for the most basic executor example, you can look our internal projects for more examples

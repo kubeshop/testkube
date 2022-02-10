@@ -6,18 +6,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDeleteTestSuitesCmd() *cobra.Command {
+func NewDeleteAllScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete-all",
-		Short: "Delete all tests in namespace",
+		Short: "Delete all scripts",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
+			namespace := cmd.Flag("namespace").Value.String()
 
-			client, namespace := common.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
-			err := client.DeleteTestSuites(namespace)
-			ui.ExitOnError("delete all tests from namespace "+namespace, err)
-			ui.Success("Succesfully deleted all tests in namespace", namespace)
+			err := client.DeleteTests(namespace)
+			ui.ExitOnError("delete all scripts from namespace "+namespace, err)
+
+			ui.Success("Succesfully deleted all scripts in namespace", namespace)
 		},
 	}
 

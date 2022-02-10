@@ -39,7 +39,7 @@ Now we can create new testkube based on saved Postman Collection:
 ## Create new Testkube test script
 
 ```sh
-kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
+kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
 ```
 
 Output:
@@ -61,7 +61,7 @@ Script created! Now we can run as many times as we want
 ## Running test
 
 ```sh
-kubectl testkube scripts run api-incluster-test
+kubectl testkube tests run api-incluster-test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -78,10 +78,10 @@ Execution name: openly-full-bream
 
 Script queued for execution
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 615d6398b046f8fbd3d955d4
+$ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
 or watch script execution until complete:
-$ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+$ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
 
@@ -92,7 +92,7 @@ $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 Now we can watch/get script execution details:
 
 ```sh
-kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 ```
 
 Output:
