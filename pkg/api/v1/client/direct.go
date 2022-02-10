@@ -698,12 +698,12 @@ func (c DirectAPIClient) GetTestExecution(executionID string) (execution testkub
 }
 
 // ListExecutions list all executions for given script name
-func (c DirectAPIClient) ListTestExecutions(testName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c DirectAPIClient) ListTestExecutions(testSuiteName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	var uri string
 	if len(tags) > 0 {
-		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
+		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&tags=%s", testSuiteName, limit, strings.Join(tags, ","))
 	} else {
-		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d", testName, limit)
+		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d", testSuiteName, limit)
 	}
 
 	resp, err := c.client.Get(uri)

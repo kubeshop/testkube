@@ -118,7 +118,7 @@ spec:
             scriptContent:
               description: script metadata content
               type: string
-            scriptName:
+            testName:
               description: unique script name (CRD Script name)
               type: string
             scriptType:
@@ -221,7 +221,7 @@ spec:
             name:
               description: execution name
               type: string
-            scriptName:
+            testName:
               description: name of the script
               type: string
             scriptType:
@@ -236,7 +236,7 @@ spec:
           required:
           - id
           - name
-          - scriptName
+          - testName
           - scriptType
           - status
           type: object

@@ -12,7 +12,7 @@ import (
 
 func NewGetScriptsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "get <scriptName>",
+		Use:     "get <testName>",
 		Aliases: []string{"g"},
 		Short:   "Get script by name",
 		Long:    `Getting script from given namespace - if no namespace given "testkube" namespace is used`,

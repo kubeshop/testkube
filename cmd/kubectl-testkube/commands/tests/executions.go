@@ -15,21 +15,21 @@ func NewTestExecutionsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "executions [testName]",
+		Use:     "executions [testSuiteName]",
 		Aliases: []string{"el"},
 		Short:   "Gets tests executions list",
 		Long:    `Gets tests executions list, can be filtered by test name`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			var testName string
+			var testSuiteName string
 			if len(args) > 0 {
-				testName = args[0]
+				testSuiteName = args[0]
 			}
 
 			client, _ := common.GetClient(cmd)
 
-			executions, err := client.ListTestExecutions(testName, limit, tags)
+			executions, err := client.ListTestExecutions(testSuiteName, limit, tags)
 			ui.ExitOnError("getting tests executions list", err)
 
 			ui.Table(executions, os.Stdout)

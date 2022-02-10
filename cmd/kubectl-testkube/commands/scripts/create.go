@@ -10,8 +10,8 @@ import (
 func NewCreateScriptsCmd() *cobra.Command {
 
 	var (
-		scriptName        string
-		scriptNamespace   string
+		testName          string
+		testNamespace     string
 		scriptContentType string
 		file              string
 		executorType      string
@@ -33,24 +33,24 @@ func NewCreateScriptsCmd() *cobra.Command {
 			ui.Logo()
 
 			client, _ := common.GetClient(cmd)
-			script, _ := client.GetScript(scriptName, scriptNamespace)
-			if scriptName == script.Name {
-				ui.Failf("Script with name '%s' already exists in namespace %s", scriptName, scriptNamespace)
+			script, _ := client.GetScript(testName, testNamespace)
+			if testName == script.Name {
+				ui.Failf("Script with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
 
 			options, err := NewUpsertScriptOptionsFromFlags(cmd, script)
 			ui.ExitOnError("getting script options", err)
 
 			script, err = client.CreateScript(options)
-			ui.ExitOnError("creating script "+scriptName+" in namespace "+scriptNamespace, err)
+			ui.ExitOnError("creating script "+testName+" in namespace "+testNamespace, err)
 
-			ui.Success("Script created", scriptNamespace, "/", scriptName)
+			ui.Success("Script created", testNamespace, "/", testName)
 		},
 	}
 
-	cmd.Flags().StringVarP(&scriptName, "name", "n", "", "unique script name - mandatory")
+	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique script name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "script file - will be read from stdin if not specified")
-	cmd.Flags().StringVarP(&scriptNamespace, "script-namespace", "", "testkube", "namespace where script will be created defaults to 'testkube' namespace")
+	cmd.Flags().StringVarP(&testNamespace, "script-namespace", "", "testkube", "namespace where script will be created defaults to 'testkube' namespace")
 	cmd.Flags().StringVarP(&scriptContentType, "script-content-type", "", "", "content type of script one of string|file-uri|git-file|git-dir")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "script type (defaults to postman-collection)")

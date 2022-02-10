@@ -7,7 +7,7 @@ import (
 )
 
 type filter struct {
-	scriptName string
+	testName   string
 	startDate  *time.Time
 	endDate    *time.Time
 	status     *testkube.ExecutionStatus
@@ -23,8 +23,8 @@ func NewExecutionsFilter() *filter {
 	return &result
 }
 
-func (f *filter) WithScriptName(scriptName string) *filter {
-	f.scriptName = scriptName
+func (f *filter) WithScriptName(testName string) *filter {
+	f.testName = testName
 	return f
 }
 
@@ -68,11 +68,11 @@ func (f *filter) WithType(objectType string) *filter {
 	return f
 }
 func (f filter) ScriptName() string {
-	return f.scriptName
+	return f.testName
 }
 
 func (f filter) ScriptNameDefined() bool {
-	return f.scriptName != ""
+	return f.testName != ""
 }
 
 func (f filter) StartDateDefined() bool {

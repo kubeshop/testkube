@@ -48,8 +48,8 @@ func (k Testkube) DeleteScripts() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "delete", "--all", "--namespace", k.Namespace)
 }
 
-func (k Testkube) StartScript(scriptName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "start", scriptName, "--name", executionName, "--namespace", k.Namespace)
+func (k Testkube) StartScript(testName, executionName string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "scripts", "start", testName, "--name", executionName, "--namespace", k.Namespace)
 }
 
 func (k Testkube) Version() ([]byte, error) {
@@ -64,6 +64,6 @@ func (k Testkube) Executions(name, path string) ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "executions", "--namespace", k.Namespace, "--output", k.Output)
 }
 
-func (k Testkube) Execution(scriptName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "execution", "--namespace", k.Namespace, "--output", k.Output, scriptName, executionName)
+func (k Testkube) Execution(testName, executionName string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "scripts", "execution", "--namespace", k.Namespace, "--output", k.Output, testName, executionName)
 }

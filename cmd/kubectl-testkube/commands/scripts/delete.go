@@ -9,7 +9,7 @@ import (
 
 func NewDeleteScriptsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete <scriptName>",
+		Use:   "delete <testName>",
 		Short: "Delete scripts",
 		Args:  validator.ScriptName,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -20,7 +20,7 @@ type ExecutionSummary struct {
 	// execution name
 	Name string `json:"name"`
 	// name of the script
-	ScriptName string `json:"scriptName"`
+	ScriptName string `json:"testName"`
 	// the type of script for this execution
 	ScriptType string           `json:"scriptType"`
 	Status     *ExecutionStatus `json:"status"`

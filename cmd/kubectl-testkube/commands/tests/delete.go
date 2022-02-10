@@ -9,7 +9,7 @@ import (
 
 func NewDeleteTestCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete <testName>",
+		Use:   "delete <testSuiteName>",
 		Short: "Delete tests",
 		Long:  `Delete tests by name`,
 		Args:  validator.TestName,

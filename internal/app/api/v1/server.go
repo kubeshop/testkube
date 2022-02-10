@@ -186,14 +186,14 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	filter := result.NewExecutionsFilter()
 
 	// id for /tests/ID/executions
-	scriptName := c.Params("id", "")
-	if scriptName == "" {
-		// query param for /executions?scriptName
-		scriptName = c.Query("scriptName", "")
+	testName := c.Params("id", "")
+	if testName == "" {
+		// query param for /executions?testName
+		testName = c.Query("testName", "")
 	}
 
-	if scriptName != "" {
-		filter = filter.WithScriptName(scriptName)
+	if testName != "" {
+		filter = filter.WithScriptName(testName)
 	}
 
 	textSearch := c.Query("textSearch", "")

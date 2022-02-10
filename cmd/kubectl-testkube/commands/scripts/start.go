@@ -25,7 +25,7 @@ func NewStartScriptCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start <scriptName>",
+		Use:     "start <testName>",
 		Aliases: []string{"run", "r"},
 		Short:   "Starts new script",
 		Long:    `Starts new script based on Script Custom Resource name, returns results to console`,
@@ -33,12 +33,12 @@ func NewStartScriptCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			scriptName := args[0]
+			testName := args[0]
 
 			client, namespace := common.GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, scriptName)
+			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-			execution, err := client.ExecuteScript(scriptName, namespace, name, params, paramsFileContent)
+			execution, err := client.ExecuteScript(testName, namespace, name, params, paramsFileContent)
 			ui.ExitOnError("starting script execution "+namespacedName, err)
 
 			printExecutionDetails(execution)

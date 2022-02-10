@@ -33,10 +33,10 @@ func TestMain(m *testing.M) {
 func TestE2E(t *testing.T) {
 	a := require.New(t)
 	test := testkube.NewTestkube(namespace)
-	scriptName := fmt.Sprintf("script-%s", rand.Name())
+	testName := fmt.Sprintf("script-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 
-	t.Logf("Sctipt name: %s", scriptName)
+	t.Logf("Sctipt name: %s", testName)
 	t.Logf("Collection file name: %s", collectionFile)
 	t.Logf("Kubernetes namespace: %s", namespace)
 
@@ -67,7 +67,7 @@ func TestE2E(t *testing.T) {
 
 	t.Run("scripts management", func(t *testing.T) {
 		// given
-		out, err := test.CreateScript(scriptName, collectionFile)
+		out, err := test.CreateScript(testName, collectionFile)
 		a.NoError(err)
 		a.Contains(string(out), "Script created")
 
@@ -76,7 +76,7 @@ func TestE2E(t *testing.T) {
 		a.NoError(err)
 
 		// then
-		a.Contains(string(out), scriptName)
+		a.Contains(string(out), testName)
 
 		sleep(t, 5*time.Second)
 	})
@@ -86,7 +86,7 @@ func TestE2E(t *testing.T) {
 		executionName := rand.Name()
 
 		// when
-		out, err := test.StartScript(scriptName, executionName)
+		out, err := test.StartScript(testName, executionName)
 		a.NoError(err)
 
 		// then check if info about collection steps exists somewhere in output
@@ -100,7 +100,7 @@ func TestE2E(t *testing.T) {
 		t.Logf("Execution completed ID: %s", executionID)
 		a.NotEmpty(executionID)
 
-		out, err = test.Execution(scriptName, executionID)
+		out, err = test.Execution(testName, executionID)
 		// check tests results for postman collection
 		a.Contains(string(out), "Google")
 		a.Contains(string(out), "Successful GET request")
@@ -111,7 +111,7 @@ func TestE2E(t *testing.T) {
 
 	t.Run("delete script", func(t *testing.T) {
 		// given
-		out, err := test.DeleteScript(scriptName)
+		out, err := test.DeleteScript(testName)
 		a.NoError(err)
 		a.Contains(string(out), "Succesfully deleted")
 
@@ -120,7 +120,7 @@ func TestE2E(t *testing.T) {
 		a.NoError(err)
 
 		// then
-		a.NotContains(string(out), scriptName)
+		a.NotContains(string(out), testName)
 	})
 
 	sleep(t, time.Second)

@@ -1030,7 +1030,7 @@ components:
       required:
         - id
         - name
-        - testName
+        - testSuiteName
         - status
       properties:
         id:
@@ -1040,7 +1040,7 @@ components:
         name:
           type: string
           description: execution name
-        testName:
+        testSuiteName:
           type: string
           description: name of the script
         status:
@@ -1074,7 +1074,7 @@ components:
         name:
           type: string
           description: execution name
-        scriptName:
+        testName:
           type: string
           description: script name
         status:
@@ -1134,10 +1134,10 @@ components:
           type: string
           description: execution id
           format: bson objectId
-        scriptName:
+        testName:
           type: string
           description: unique script name (CRD Script name)
-        scriptNamespace:
+        testNamespace:
           type: string
           description: script namespace
         scriptType:
@@ -1227,7 +1227,7 @@ components:
       required:
         - id
         - name
-        - scriptName
+        - testName
         - scriptType
         - status
       properties:
@@ -1238,7 +1238,7 @@ components:
         name:
           type: string
           description: execution name
-        scriptName:
+        testName:
           type: string
           description: name of the script
         scriptType:

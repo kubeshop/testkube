@@ -7,19 +7,19 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewExecutionWithID(id, scriptType, scriptName string) Execution {
+func NewExecutionWithID(id, scriptType, testName string) Execution {
 	return Execution{
 		Id:              id,
 		ExecutionResult: &ExecutionResult{},
-		ScriptName:      scriptName,
+		ScriptName:      testName,
 		ScriptType:      scriptType,
 	}
 }
 
-func NewExecution(scriptName, executionName, scriptType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(testName, executionName, scriptType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
-		ScriptName:      scriptName,
+		ScriptName:      testName,
 		Name:            executionName,
 		ScriptType:      scriptType,
 		ExecutionResult: &result,

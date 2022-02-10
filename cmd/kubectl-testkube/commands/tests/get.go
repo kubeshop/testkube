@@ -12,7 +12,7 @@ import (
 
 func NewGetTestCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "get <testName>",
+		Use:     "get <testSuiteName>",
 		Aliases: []string{"g"},
 		Short:   "Get test by name",
 		Long:    `Getting test from given namespace - if no namespace given "testkube" namespace is used`,

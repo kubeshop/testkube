@@ -12,7 +12,7 @@ func NewListExecutionsCmd() *cobra.Command {
 	var tags []string
 
 	cmd := &cobra.Command{
-		Use:     "executions [scriptName]",
+		Use:     "executions [testName]",
 		Aliases: []string{"el"},
 		Short:   "List scripts executions",
 		Long:    `Getting list of execution for given script name or recent executions if there is no script name passed`,

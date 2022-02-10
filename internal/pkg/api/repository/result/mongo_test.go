@@ -262,11 +262,11 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
-func (repository *MongoRepository) insertExecutionResult(scriptName string, execStatus testkube.ExecutionStatus, startTime time.Time, tags []string) error {
+func (repository *MongoRepository) insertExecutionResult(testName string, execStatus testkube.ExecutionStatus, startTime time.Time, tags []string) error {
 	return repository.Insert(context.Background(),
 		testkube.Execution{
 			Id:              rand.Name(),
-			ScriptName:      scriptName,
+			ScriptName:      testName,
 			Name:            "dummyName",
 			ScriptType:      "test/curl",
 			StartTime:       startTime,

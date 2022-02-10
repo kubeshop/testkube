@@ -253,21 +253,21 @@ func (s TestkubeAPI) executeTest(ctx context.Context, request testkube.TestSuite
 
 func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
 
-	var testName string
+	var testSuiteName string
 	if testExecution.Test != nil {
-		testName = testExecution.Test.Name
+		testSuiteName = testExecution.Test.Name
 	}
 
 	step := result.Step
 
-	l := s.Log.With("type", step.Type(), "testName", testName, "name", step.FullName())
+	l := s.Log.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
 
 	switch step.Type() {
 
 	case testkube.TestSuiteStepTypeExecuteScript:
 		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
-			Name:      fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
+			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeScriptStep.Name, rand.String(5)),
 			Namespace: executeScriptStep.Namespace,
 			Params:    testExecution.Params,
 		})
@@ -356,12 +356,12 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 }
 
 func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
-	var id, scriptName, name string
+	var id, testName, name string
 	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
 	var stepType *testkube.TestSuiteStepType
 
 	if r.Script != nil {
-		scriptName = r.Script.Name
+		testName = r.Script.Name
 	}
 
 	if r.Execution != nil {
@@ -379,7 +379,7 @@ func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) te
 	return testkube.TestSuiteStepExecutionSummary{
 		Id:         id,
 		Name:       name,
-		ScriptName: scriptName,
+		ScriptName: testName,
 		Status:     status,
 		Type_:      stepType,
 	}

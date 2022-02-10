@@ -44,9 +44,9 @@
 							"pm.test(\"Check if script created successfully\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let name = jsonData.metadata.name;",
-							"    let scriptName = pm.environment.get(\"script_name\");",
+							"    let testName = pm.environment.get(\"script_name\");",
 							"    ",
-							"    pm.expect(name).to.eql(scriptName);",
+							"    pm.expect(name).to.eql(testName);",
 							"});",
 							""
 						],

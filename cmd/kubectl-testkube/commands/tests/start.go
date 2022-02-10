@@ -22,7 +22,7 @@ func NewStartTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start <testName>",
+		Use:     "start <testSuiteName>",
 		Aliases: []string{"run", "r"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
@@ -30,13 +30,13 @@ func NewStartTestCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			testName := args[0]
+			testSuiteName := args[0]
 			startTime := time.Now()
 
 			client, namespace := common.GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
+			namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
-			execution, err := client.ExecuteTest(testName, namespace, name, params)
+			execution, err := client.ExecuteTest(testSuiteName, namespace, name, params)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			if watchEnabled {
