@@ -93,7 +93,7 @@ spec:
 
 	// try to detect type if none passed
 	d := detector.NewDefaultDetector()
-	if detectedType, ok := d.Detect(client.UpsertScriptOptions{Content: &testkube.ScriptContent{Data: string(content)}}); ok {
+	if detectedType, ok := d.Detect(client.UpsertScriptOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
 		ui.Debug("Detected test script type", detectedType)
 		scriptType = detectedType
 	} else {

@@ -9,7 +9,7 @@
  */
 package testkube
 
-type ScriptContent struct {
+type TestContent struct {
 	// script type
 	Type_      string      `json:"type,omitempty"`
 	Repository *Repository `json:"repository,omitempty"`

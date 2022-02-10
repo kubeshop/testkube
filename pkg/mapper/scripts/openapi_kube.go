@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func MapScriptToScriptSpec(request testkube.ScriptUpsertRequest) *scriptsv2.Script {
+func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *scriptsv2.Script {
 
 	script := &scriptsv2.Script{
 		ObjectMeta: metav1.ObjectMeta{
@@ -24,7 +24,7 @@ func MapScriptToScriptSpec(request testkube.ScriptUpsertRequest) *scriptsv2.Scri
 
 }
 
-func MapScriptContentToScriptSpecContent(content *testkube.ScriptContent) (specContent *scriptsv2.ScriptContent) {
+func MapScriptContentToScriptSpecContent(content *testkube.TestContent) (specContent *scriptsv2.ScriptContent) {
 	if content == nil {
 		return
 	}

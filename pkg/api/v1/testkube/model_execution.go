@@ -32,8 +32,8 @@ type Execution struct {
 	// execution params passed to executor converted to vars for usage in tests
 	Params map[string]string `json:"params,omitempty"`
 	// params file content - need to be in format for particular executor (e.g. postman envs file)
-	ParamsFile string         `json:"paramsFile,omitempty"`
-	Content    *ScriptContent `json:"content,omitempty"`
+	ParamsFile string       `json:"paramsFile,omitempty"`
+	Content    *TestContent `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

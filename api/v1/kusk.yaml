@@ -841,7 +841,7 @@ spec:
           tags:
           - api
           - executor
-      /scripts:
+      /tests:
         delete:
           description: deletes all the scripts
           operationId: deleteScripts
@@ -924,7 +924,7 @@ spec:
           tags:
           - scripts
           - api
-      /scripts/{id}:
+      /tests/{id}:
         delete:
           description: deletes a script
           operationId: deleteScript
@@ -979,7 +979,7 @@ spec:
           tags:
           - scripts
           - api
-      /scripts/{id}/executions:
+      /tests/{id}/executions:
         get:
           description: Returns array of all available script executions
           operationId: listExecutions
@@ -1076,7 +1076,7 @@ spec:
           - api
           - scripts
           - executions
-      /scripts/{id}/executions/{executionID}:
+      /tests/{id}/executions/{executionID}:
         delete:
           description: Aborts execution and returns execution details
           operationId: abortExecution

@@ -16,7 +16,7 @@ func NewExecutionWithID(id, scriptType, scriptName string) Execution {
 	}
 }
 
-func NewExecution(scriptName, executionName, scriptType string, content *ScriptContent, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(scriptName, executionName, scriptType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
 		ScriptName:      scriptName,
@@ -71,7 +71,7 @@ func (executions Executions) Table() (header []string, output [][]string) {
 	return
 }
 
-func (e *Execution) WithContent(content *ScriptContent) *Execution {
+func (e *Execution) WithContent(content *TestContent) *Execution {
 	e.Content = content
 	return e
 }

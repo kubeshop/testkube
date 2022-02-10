@@ -15,21 +15,21 @@ const (
 var ErrScriptContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
 var ErrScriptContentTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
 
-func NewStringScriptContent(str string) *ScriptContent {
-	return &ScriptContent{
+func NewStringScriptContent(str string) *TestContent {
+	return &TestContent{
 		Type_: string(ScriptContentTypeString),
 		Data:  str,
 	}
 }
 
 // IsDir - for content fetched as dir
-func (c *ScriptContent) IsDir() bool {
+func (c *TestContent) IsDir() bool {
 	return ScriptContentType(c.Type_) == ScriptContentTypeGitDir
 
 }
 
 // IsFile - for content fetched as file
-func (c *ScriptContent) IsFile() bool {
+func (c *TestContent) IsFile() bool {
 	return ScriptContentType(c.Type_) == ScriptContentTypeGitFile ||
 		ScriptContentType(c.Type_) == ScriptContentTypeFileURI ||
 		ScriptContentType(c.Type_) == ScriptContentTypeString

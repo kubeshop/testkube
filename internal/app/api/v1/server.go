@@ -117,7 +117,7 @@ func (s TestkubeAPI) Init() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
-	scripts := s.Routes.Group("/scripts")
+	scripts := s.Routes.Group("/tests")
 
 	scripts.Get("/", s.ListScriptsHandler())
 	scripts.Post("/", s.CreateScriptHandler())
@@ -185,7 +185,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
 
-	// id for /scripts/ID/executions
+	// id for /tests/ID/executions
 	scriptName := c.Params("id", "")
 	if scriptName == "" {
 		// query param for /executions?scriptName

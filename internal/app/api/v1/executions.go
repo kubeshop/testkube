@@ -122,7 +122,7 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO should we split this to separate endpoint? currently this one handles
-		// endpoints from /executions and from /scripts/{id}/executions
+		// endpoints from /executions and from /tests/{id}/executions
 		// or should scriptID be a query string as it's some kind of filter?
 
 		filter := getFilterFromRequest(c)

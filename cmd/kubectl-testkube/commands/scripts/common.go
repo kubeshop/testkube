@@ -89,7 +89,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 	uiShellGetExecution(id)
 }
 
-func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, err error) {
+func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
 	var fileContent []byte
 
 	scriptContentType := cmd.Flag("script-content-type").Value.String()
@@ -149,7 +149,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 		}
 	}
 
-	content = &testkube.ScriptContent{
+	content = &testkube.TestContent{
 		Type_:      scriptContentType,
 		Data:       string(fileContent),
 		Repository: repository,
@@ -159,7 +159,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.ScriptContent, e
 	return content, nil
 }
 
-func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Script) (options apiclientv1.UpsertScriptOptions, err error) {
+func NewUpsertScriptOptionsFromFlags(cmd *cobra.Command, script testkube.Test) (options apiclientv1.UpsertScriptOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 
 	ui.ExitOnError("creating content from passed parameters", err)

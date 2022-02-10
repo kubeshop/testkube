@@ -19,5 +19,5 @@ type ExecutorStartRequest struct {
 	Name string `json:"name,omitempty"`
 	// execution params passed to executor
 	Params  map[string]string `json:"params,omitempty"`
-	Content *ScriptContent    `json:"content,omitempty"`
+	Content *TestContent      `json:"content,omitempty"`
 }

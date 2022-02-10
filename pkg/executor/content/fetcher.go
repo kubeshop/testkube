@@ -20,7 +20,7 @@ func NewFetcher() Fetcher {
 type Fetcher struct {
 }
 
-func (f Fetcher) Fetch(content *testkube.ScriptContent) (path string, err error) {
+func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 	if content == nil {
 		return "", fmt.Errorf("fetch - empty content, make sure script content has valid data structure and is not nil")
 	}

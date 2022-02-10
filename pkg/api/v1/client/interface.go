@@ -19,12 +19,12 @@ type Client interface {
 	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(script string, id string) error
 
-	GetScript(id, namespace string) (script testkube.Script, err error)
-	CreateScript(options UpsertScriptOptions) (script testkube.Script, err error)
-	UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error)
+	GetScript(id, namespace string) (script testkube.Test, err error)
+	CreateScript(options UpsertScriptOptions) (script testkube.Test, err error)
+	UpdateScript(options UpsertScriptOptions) (script testkube.Test, err error)
 	DeleteScript(name string, namespace string) error
 	DeleteScripts(namespace string) error
-	ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error)
+	ListScripts(namespace string, tags []string) (scripts testkube.Tests, err error)
 	ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
@@ -55,7 +55,7 @@ type UpsertTestOptions testkube.TestSuiteUpsertRequest
 
 // UpsertScriptOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct
-type UpsertScriptOptions testkube.ScriptUpsertRequest
+type UpsertScriptOptions testkube.TestUpsertRequest
 
 // CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
 type CreateExecutorOptions testkube.ExecutorCreateRequest

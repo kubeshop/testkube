@@ -79,7 +79,7 @@ func (s TestkubeAPI) ListScriptsHandler() fiber.Handler {
 func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request testkube.ScriptUpsertRequest
+		var request testkube.TestUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -109,7 +109,7 @@ func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
 func (s TestkubeAPI) UpdateScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		var request testkube.ScriptUpsertRequest
+		var request testkube.TestUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -197,7 +197,7 @@ func (s TestkubeAPI) DeleteScriptsHandler() fiber.Handler {
 	}
 }
 
-func GetSecretsStringData(content *testkube.ScriptContent) map[string]string {
+func GetSecretsStringData(content *testkube.TestContent) map[string]string {
 	// create secrets for script
 	stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
 	if content != nil && content.Repository != nil {
