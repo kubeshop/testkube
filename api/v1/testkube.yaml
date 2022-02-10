@@ -1141,7 +1141,7 @@ components:
         testNamespace:
           type: string
           description: test namespace
-        scriptType:
+        testType:
           type: string
           description: test type e.g. postman/collection
         name:
@@ -1229,7 +1229,7 @@ components:
         - id
         - name
         - testName
-        - scriptType
+        - testType
         - status
       properties:
         id:

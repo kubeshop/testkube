@@ -12,17 +12,17 @@ var executionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 }, []string{"type", "name", "result"})
 
 var creationCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_scripts_creation_count",
+	Name: "testkube_tests_creation_count",
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 
 var updatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_scripts_updates_count",
+	Name: "testkube_tests_updates_count",
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 
 var abortCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_scripts_abort_count",
+	Name: "testkube_tests_abort_count",
 	Help: "The total number of scripts created by type events",
 }, []string{"type", "result"})
 

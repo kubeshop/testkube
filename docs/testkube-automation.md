@@ -2,7 +2,7 @@
 
 In order to automate Testkube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer.
 
-As Testkube uses your K8S context and access settings in order to interact with the cluster and test scripts etc.
+As Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources etc.
 
 In the next few sections we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
 
@@ -27,7 +27,7 @@ To install on Linux or MacOs run
 
 Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
 
-## Full example of working GH actions workflow and Testkube scripts usage. Can be easily re-used with minimal modifications upon your needs
+## Full example of working GH actions workflow and Testkube tests usage. Can be easily re-used with minimal modifications upon your needs
 
 To Run Tests on Linux or MacOs OS:
 

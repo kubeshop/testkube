@@ -26,6 +26,6 @@ testkube [flags]
 * [testkube doc](testkube_doc.md)  - Generate docs for kubectl testkube
 * [testkube executors](testkube_executors.md)  - Executor management commands
 * [testkube install](testkube_install.md)  - Install Helm chart registry in current kubectl context
-* [testkube scripts](testkube_scripts.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)  - Tests management commands
 * [testkube uninstall](testkube_uninstall.md)  - Uninstall Helm chart registry in current kubectl context
 * [testkube version](testkube_version.md)  - Shows version and build info

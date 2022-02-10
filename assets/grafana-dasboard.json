@@ -289,7 +289,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_scripts_creation_count{}",
+          "expr": "testkube_tests_creation_count{}",
           "format": "table",
           "hide": false,
           "instant": false,

@@ -7,7 +7,7 @@ Please follow [install steps](/docs/installing.md) first for Testkube installati
 ```sh
 kubectl testkube --help 
 
-# or for scripts runs
+# or for tests
 kubectl testkube tests --help 
 ```
 
@@ -158,7 +158,7 @@ kubectl testkube tests execution 6103a45b7e18c4ea04883866
 some execution details
 ```
 
-## Getting available scripts
+## Getting available tests
 
 To run test execution you'll need to know test name
 

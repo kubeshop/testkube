@@ -226,4 +226,4 @@ Script execution completed in 1m45.405939s
 
 ## Summary
 
-As we can see running scripts in Kubernetes cluster is really easy with use of Testkube kubectl plugin!
+As we can see running tests in Kubernetes cluster is really easy with use of Testkube kubectl plugin!

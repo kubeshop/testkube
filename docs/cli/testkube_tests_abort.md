@@ -1,9 +1,9 @@
-## testkube scripts abort
+## testkube tests abort
 
 Aborts execution of the test
 
 ```sh
-testkube scripts abort [flags]
+testkube tests abort [flags]
 ```
 
 ### Options
@@ -24,4 +24,4 @@ testkube scripts abort [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)  - Tests management commands
+* [testkube tests](testkube_tests.md)  - Tests management commands

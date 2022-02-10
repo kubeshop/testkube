@@ -24,7 +24,7 @@ Testkube attempts to:
   in your clusters, without having to wrap them in docker-images or providing network access
 - Make it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralize all test results in a consistent format for "actionable QA analytics"
-- Provide a modular architecture for adding new types of test scripts and executors
+- Provide a modular architecture for adding new types of tests and executors
 
 Check out our Intro video:
 

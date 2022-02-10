@@ -29,10 +29,10 @@ testkube scripts [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)  - testkube entrypoint for plugin
-* [testkube scripts abort](testkube_scripts_abort.md)  - Aborts execution of the test
-* [testkube scripts create](testkube_scripts_create.md)  - Create new test
-* [testkube scripts execution](testkube_scripts_execution.md)  - Gets test execution details
-* [testkube scripts executions](testkube_scripts_executions.md)  - List scripts executions
-* [testkube scripts list](testkube_scripts_list.md)  - Get all available scripts
-* [testkube scripts start](testkube_scripts_start.md)  - Starts new test
-* [testkube scripts watch](testkube_scripts_watch.md)  - Watch until test execution is in complete state
+* [testkube scripts abort](testkube_tests_abort.md)  - Aborts execution of the test
+* [testkube scripts create](testkube_tests_create.md)  - Create new test
+* [testkube scripts execution](testkube_tests_execution.md)  - Gets test execution details
+* [testkube scripts executions](testkube_tests_executions.md)  - List scripts executions
+* [testkube scripts list](testkube_tests_list.md)  - Get all available scripts
+* [testkube scripts start](testkube_tests_start.md)  - Starts new test
+* [testkube scripts watch](testkube_tests_watch.md)  - Watch until test execution is in complete state

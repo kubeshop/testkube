@@ -4,8 +4,8 @@ The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Pr
 currently exposes the following metrics:
 
 * `testkube_executions_count` - The total number of test executions
-* `testkube_scripts_creation_count` - The total number of scripts created by type events
-* `testkube_scripts_abort_count` - The total number of scripts created by type events
+* `testkube_tests_creation_count` - The total number of tests created by type events
+* `testkube_tests_abort_count` - The total number of tests created by type events
 
 ## Installation
 
