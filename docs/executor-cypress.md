@@ -35,7 +35,7 @@ kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executo
 We can check that test is created with:
 
 ```sh
-kubectl get scripts 
+kubectl get tests 
 ```
 
 Output:

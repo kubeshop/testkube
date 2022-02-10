@@ -14,16 +14,16 @@ func NewListTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"l"},
-		Short:   "Get all available scripts",
+		Short:   "Get all available tests",
 		Long:    `Getting all available scritps from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
-			scripts, err := client.ListTests(namespace, tags)
-			ui.ExitOnError("getting all scripts in namespace "+namespace, err)
+			tests, err := client.ListTests(namespace, tags)
+			ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
-			ui.Table(scripts, os.Stdout)
+			ui.Table(tests, os.Stdout)
 		},
 	}
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
