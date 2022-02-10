@@ -60,7 +60,7 @@ test-e2e:
 	go test --tags=e2e -v ./test/e2e
 
 test-integration:
-	go test -failfast --tags=integration -v ./...
+	go test -failfast --tags=integration ./...
 
 
 test-e2e-namespace:

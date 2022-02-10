@@ -31,7 +31,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 }
 
 func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result testkube.Execution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "scriptname": script}).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": script}).Decode(&result)
 	return
 }
 
@@ -169,13 +169,13 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TextSearchDefined() {
 		query["$or"] = bson.A{
-			bson.M{"scriptname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
+			bson.M{"testname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 		}
 	}
 
 	if filter.TestNameDefined() {
-		query["scriptname"] = filter.TestName()
+		query["testname"] = filter.TestName()
 	}
 
 	if filter.StartDateDefined() {

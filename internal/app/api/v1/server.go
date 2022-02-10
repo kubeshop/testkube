@@ -193,7 +193,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	if testName != "" {
-		filter = filter.WithScriptName(testName)
+		filter = filter.WithTestName(testName)
 	}
 
 	textSearch := c.Query("textSearch", "")

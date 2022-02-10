@@ -159,13 +159,13 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with script name that doesn't exist should return 0 results", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithScriptName("noneExisting"))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName("noneExisting"))
 		assert.NoError(err)
 		assert.Empty(executions)
 	})
 
 	t.Run("getting totals with script name that doesn't exist should return 0 results", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName("noneExisting"))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
 		assert.Equal(int32(0), totals.Results)
@@ -180,8 +180,10 @@ func TestStorage(t *testing.T) {
 			WithStatus(testkube.SUCCESS_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
-			WithScriptName(defaultName)
+			WithTestName(defaultName)
+
 		executions, err := repository.GetExecutions(context.Background(), filter)
+
 		assert.NoError(err)
 		assert.Len(executions, 2)
 	})
@@ -191,7 +193,7 @@ func TestStorage(t *testing.T) {
 			WithStatus(testkube.SUCCESS_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
-			WithScriptName(defaultName)
+			WithTestName(defaultName)
 		totals, err := repository.GetExecutionTotals(context.Background(), false, filter)
 
 		assert.NoError(err)
@@ -208,14 +210,14 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with script name should return result only for that script name", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithScriptName(name))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName(name))
 		assert.NoError(err)
 		assert.Len(executions, 1)
-		assert.Equal(executions[0].ScriptName, name)
+		assert.Equal(executions[0].TestName, name)
 	})
 
 	t.Run("getting totals with script name should return result only for that script name", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName(name))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
 
 		assert.NoError(err)
 		assert.Equal(int32(1), totals.Results)
@@ -268,7 +270,7 @@ func (repository *MongoRepository) insertExecutionResult(testName string, execSt
 			Id:              rand.Name(),
 			TestName:        testName,
 			Name:            "dummyName",
-			ScriptType:      "test/curl",
+			TestType:        "test/curl",
 			StartTime:       startTime,
 			EndTime:         time.Now(),
 			ExecutionResult: &testkube.ExecutionResult{Status: &execStatus},

@@ -23,7 +23,7 @@ func NewExecutionsFilter() *filter {
 	return &result
 }
 
-func (f *filter) WithScriptName(testName string) *filter {
+func (f *filter) WithTestName(testName string) *filter {
 	f.testName = testName
 	return f
 }
