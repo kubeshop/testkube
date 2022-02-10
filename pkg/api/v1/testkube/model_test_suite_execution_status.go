@@ -11,7 +11,7 @@ package testkube
 
 type TestSuiteExecutionStatus string
 
-// List of TestStatus
+// List of TestSuiteExecutionStatus
 const (
 	QUEUED_TestSuiteExecutionStatus  TestSuiteExecutionStatus = "queued"
 	PENDING_TestSuiteExecutionStatus TestSuiteExecutionStatus = "pending"

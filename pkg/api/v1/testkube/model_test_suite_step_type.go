@@ -11,7 +11,7 @@ package testkube
 
 type TestSuiteStepType string
 
-// List of TestStepType
+// List of TestSuiteStepType
 const (
 	EXECUTE_SCRIPT_TestSuiteStepType TestSuiteStepType = "executeScript"
 	DELAY_TestSuiteStepType          TestSuiteStepType = "delay"

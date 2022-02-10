@@ -134,7 +134,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestExecutionsResult"
+                $ref: "#/components/schemas/TestSuiteExecutionsResult"
         500:
           description: "problem with getting script executions from storage"
           content:
@@ -1008,7 +1008,7 @@ components:
           $ref: "#/components/schemas/Execution"
           description: test step execution
 
-    TestExecutionsResult:
+    TestSuiteExecutionsResult:
       description: the result for a page of executions
       type: object
       required:
@@ -1449,7 +1449,7 @@ components:
           items:
             type: string
 
-    TestExecutionRequest:
+    TestSuiteExecutionRequest:
       description: test execution request body
       type: object
       properties:
