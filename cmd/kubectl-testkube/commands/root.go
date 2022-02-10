@@ -24,6 +24,7 @@ func init() {
 	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 	RootCmd.AddCommand(NewInstallCmd())
+	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewExecutorsCmd())
