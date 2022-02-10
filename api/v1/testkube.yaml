@@ -165,7 +165,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestExecution"
+                $ref: "#/components/schemas/TestSuiteExecution"
         500:
           description: "problem with getting script executions from storage"
           content:
