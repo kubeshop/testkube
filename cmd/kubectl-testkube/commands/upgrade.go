@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewInstallCmd() *cobra.Command {
+func NewUpgradeCmd() *cobra.Command {
 	var (
 		noDashboard            bool
 		noMinio                bool
@@ -14,12 +14,22 @@ func NewInstallCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "Install Helm chart registry in current kubectl context",
-		Long:  `Install can be configured with use of particular `,
+		Use:     "upgrade",
+		Short:   "Upgrade Helm chart and run migrations",
+		Long:    `Upgrade can be configured with use of particular `,
+		Aliases: []string{"update"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+
+			hasMigrations, err := RunMigrations(cmd)
+			ui.ExitOnError("Running migrations", err)
+			if hasMigrations {
+				ui.Success("All migrations executed successfully")
+			}
+
+			err = HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+			ui.ExitOnError("installing Testkube", err)
+
 		},
 	}
 

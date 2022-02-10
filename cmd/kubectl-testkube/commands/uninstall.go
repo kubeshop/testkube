@@ -8,7 +8,6 @@ import (
 
 func NewUninstallCmd() *cobra.Command {
 	var name, namespace string
-	var removeCRDs bool
 
 	cmd := &cobra.Command{
 		Use:   "uninstall",
@@ -21,17 +20,11 @@ func NewUninstallCmd() *cobra.Command {
 
 			_, err := process.Execute("helm", "uninstall", "--namespace", namespace, name)
 			ui.PrintOnError("uninstalling testkube", err)
-
-			if removeCRDs {
-				_, err = process.Execute("kubectl", "delete", "crds", "--namespace", namespace, "scripts.tests.testkube.io", "tests.tests.testkube.io", "executors.executor.testkube.io")
-				ui.PrintOnError("uninstalling CRDs", err)
-			}
 		},
 	}
 
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
-	cmd.Flags().BoolVar(&removeCRDs, "remove-crds", false, "wipe out Executors and Scripts CRDs")
 
 	return cmd
 }

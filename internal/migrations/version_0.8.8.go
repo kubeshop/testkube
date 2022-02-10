@@ -17,9 +17,9 @@ func (m *Version_0_8_8) Version() string {
 }
 func (m *Version_0_8_8) Migrate() error {
 	commands := []string{
-		`kubectl annotate --overwrite crds executors.executor.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"`,
-		`kubectl annotate --overwrite crds tests.tests.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"`,
-		`kubectl annotate --overwrite crds scripts.tests.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"`,
+		`kubectl annotate --overwrite crds executors.executor.testkube.io meta.helm.sh/release-name=testkube meta.helm.sh/release-namespace=testkube`,
+		`kubectl annotate --overwrite crds tests.tests.testkube.io meta.helm.sh/release-name=testkube meta.helm.sh/release-namespace=testkube`,
+		`kubectl annotate --overwrite crds scripts.tests.testkube.io meta.helm.sh/release-name=testkube meta.helm.sh/release-namespace=testkube`,
 		`kubectl label --overwrite crds executors.executor.testkube.io app.kubernetes.io/managed-by=Helm`,
 		`kubectl label --overwrite crds tests.tests.testkube.io app.kubernetes.io/managed-by=Helm`,
 		`kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/managed-by=Helm`,
