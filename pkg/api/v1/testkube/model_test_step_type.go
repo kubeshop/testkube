@@ -9,10 +9,10 @@
  */
 package testkube
 
-type TestStepType string
+type TestSuiteStepType string
 
 // List of TestStepType
 const (
-	EXECUTE_SCRIPT_TestStepType TestStepType = "executeScript"
-	DELAY_TestStepType          TestStepType = "delay"
+	EXECUTE_SCRIPT_TestSuiteStepType TestSuiteStepType = "executeScript"
+	DELAY_TestSuiteStepType          TestSuiteStepType = "delay"
 )

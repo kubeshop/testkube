@@ -5,8 +5,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.Test) {
-	tests = make([]testkube.Test, len(cr.Items))
+func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.TestSuite) {
+	tests = make([]testkube.TestSuite, len(cr.Items))
 	for i, item := range cr.Items {
 		tests[i] = MapCRToAPI(item)
 	}
@@ -14,7 +14,7 @@ func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.Test) {
 	return
 }
 
-func MapCRToAPI(cr testsv1.Test) (test testkube.Test) {
+func MapCRToAPI(cr testsv1.Test) (test testkube.TestSuite) {
 	test.Name = cr.Name
 	test.Namespace = cr.Namespace
 	test.Description = cr.Spec.Description
@@ -35,21 +35,21 @@ func MapCRToAPI(cr testsv1.Test) (test testkube.Test) {
 	return
 }
 
-func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestStep) {
+func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {
 	case crstep.Execute != nil:
-		teststep = testkube.TestStep{
+		teststep = testkube.TestSuiteStep{
 			StopTestOnFailure: crstep.Execute.StopOnFailure,
-			Execute: &testkube.TestStepExecuteScript{
+			Execute: &testkube.TestSuiteStepExecuteScript{
 				Name:      crstep.Execute.Name,
 				Namespace: crstep.Execute.Namespace,
 			},
 		}
 
 	case crstep.Delay != nil:
-		teststep = testkube.TestStep{
-			Delay: &testkube.TestStepDelay{
+		teststep = testkube.TestSuiteStep{
+			Delay: &testkube.TestSuiteStepDelay{
 				Duration: crstep.Delay.Duration,
 			},
 		}

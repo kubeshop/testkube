@@ -14,13 +14,13 @@ import (
 )
 
 // API server test scripts executions container
-type TestExecution struct {
+type TestSuiteExecution struct {
 	// execution id
 	Id string `json:"id"`
 	// execution name
-	Name   string      `json:"name"`
-	Test   *ObjectRef  `json:"test"`
-	Status *TestStatus `json:"status,omitempty"`
+	Name   string                    `json:"name"`
+	Test   *ObjectRef                `json:"test"`
+	Status *TestSuiteExecutionStatus `json:"status,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor converted to vars for usage in tests
@@ -32,7 +32,7 @@ type TestExecution struct {
 	// test duration
 	Duration string `json:"duration,omitempty"`
 	// steps execution restults
-	StepResults []TestStepExecutionResult `json:"stepResults,omitempty"`
+	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
 	// test execution tags
 	Tags []string `json:"tags,omitempty"`
 }

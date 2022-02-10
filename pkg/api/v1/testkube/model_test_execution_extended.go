@@ -8,12 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewStartedTestExecution(test Test, request TestExecutionRequest) TestExecution {
-	testExecution := TestExecution{
+func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
+	testExecution := TestSuiteExecution{
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
 		Name:      fmt.Sprintf("%s.%s", test.Name, rand.Name()),
-		Status:    TestStatusPending,
+		Status:    TestSuiteExecutionStatusPending,
 		Params:    request.Params,
 		Test:      test.GetObjectRef(),
 	}
@@ -29,11 +29,11 @@ func NewStartedTestExecution(test Test, request TestExecutionRequest) TestExecut
 	return testExecution
 }
 
-func (e TestExecution) IsCompleted() bool {
-	return *e.Status == *TestStatusError || *e.Status == *TestStatusSuccess
+func (e TestSuiteExecution) IsCompleted() bool {
+	return *e.Status == *TestSuiteExecutionStatusError || *e.Status == *TestSuiteExecutionStatusSuccess
 }
 
-func (e *TestExecution) CalculateDuration() time.Duration {
+func (e *TestSuiteExecution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
 	start := e.StartTime
@@ -49,7 +49,7 @@ func (e *TestExecution) CalculateDuration() time.Duration {
 	return end.Sub(e.StartTime)
 }
 
-func (e TestExecution) Table() (header []string, output [][]string) {
+func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 	header = []string{"Status", "Step", "ID", "Error"}
 	output = make([][]string, 0)
 
@@ -60,7 +60,7 @@ func (e TestExecution) Table() (header []string, output [][]string) {
 		}
 
 		switch sr.Step.Type() {
-		case TestStepTypeExecuteScript:
+		case TestSuiteStepTypeExecuteScript:
 			var id, errorMessage string
 			if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
 				errorMessage = sr.Execution.ExecutionResult.ErrorMessage
@@ -68,7 +68,7 @@ func (e TestExecution) Table() (header []string, output [][]string) {
 			}
 			row := []string{status, sr.Step.FullName(), id, errorMessage}
 			output = append(output, row)
-		case TestStepTypeDelay:
+		case TestSuiteStepTypeDelay:
 			row := []string{status, sr.Step.FullName(), "", ""}
 			output = append(output, row)
 		}

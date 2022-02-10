@@ -40,7 +40,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			var options testkube.TestUpsertRequest
+			var options testkube.TestSuiteUpsertRequest
 
 			err = json.Unmarshal(content, &options)
 			ui.ExitOnError("Invalid file content", err)

@@ -24,18 +24,18 @@ type MongoRepository struct {
 	Coll *mongo.Collection
 }
 
-func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestExecution, err error) {
+func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result testkube.TestExecution, err error) {
+func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "scriptname": script}).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestExecution, err error) {
-	result = make([]testkube.TestExecution, 0)
+func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestSuiteExecution, err error) {
+	result = make([]testkube.TestSuiteExecution, 0)
 	resultLimit := int64(limit)
 	opts := &options.FindOptions{Limit: &resultLimit}
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
@@ -80,14 +80,14 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	// TODO: statuses are messy e.g. success==passed error==failed
 	for _, o := range result {
 		sum += o.Count
-		switch testkube.TestStatus(o.Status) {
-		case testkube.QUEUED_TestStatus:
+		switch testkube.TestSuiteExecutionStatus(o.Status) {
+		case testkube.QUEUED_TestSuiteExecutionStatus:
 			totals.Queued = o.Count
-		case testkube.PENDING_TestStatus:
+		case testkube.PENDING_TestSuiteExecutionStatus:
 			totals.Pending = o.Count
-		case testkube.SUCCESS_TestStatus:
+		case testkube.SUCCESS_TestSuiteExecutionStatus:
 			totals.Passed = o.Count
-		case testkube.ERROR__TestStatus:
+		case testkube.ERROR__TestSuiteExecutionStatus:
 			totals.Failed = o.Count
 		}
 	}
@@ -96,8 +96,8 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestExecution, err error) {
-	result = make([]testkube.TestExecution, 0)
+func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestSuiteExecution, err error) {
+	result = make([]testkube.TestSuiteExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
@@ -107,12 +107,12 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
-func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestExecution) (err error) {
+func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
 
-func (r *MongoRepository) Update(ctx context.Context, result testkube.TestExecution) (err error) {
+func (r *MongoRepository) Update(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func printTestExecutionDetails(execution testkube.TestExecution, startTime time.Time) {
+func printTestExecutionDetails(execution testkube.TestSuiteExecution, startTime time.Time) {
 	ui.Warn("Id:      ", execution.Id)
 	ui.Warn("Name:    ", execution.Name)
 	if execution.Status != nil {
@@ -21,18 +21,18 @@ func printTestExecutionDetails(execution testkube.TestExecution, startTime time.
 	ui.NL()
 }
 
-func uiPrintTestStatus(execution testkube.TestExecution) {
+func uiPrintTestStatus(execution testkube.TestSuiteExecution) {
 	switch execution.Status {
-	case testkube.TestStatusQueued:
+	case testkube.TestSuiteExecutionStatusQueued:
 		ui.Warn("Test queued for execution")
 
-	case testkube.TestStatusPending:
+	case testkube.TestSuiteExecutionStatusPending:
 		ui.Warn("Test execution started")
 
-	case testkube.TestStatusSuccess:
+	case testkube.TestSuiteExecutionStatusSuccess:
 		ui.Success("Test execution completed with sucess in " + execution.Duration)
 
-	case testkube.TestStatusError:
+	case testkube.TestSuiteExecutionStatusError:
 		ui.Errf("Test execution failed")
 		os.Exit(1)
 	}

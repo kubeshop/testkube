@@ -9,17 +9,17 @@
  */
 package testkube
 
-type Test struct {
+type TestSuite struct {
 	Name        string `json:"name"`
 	Namespace   string `json:"namespace,omitempty"`
 	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
-	Before []TestStep `json:"before,omitempty"`
+	Before []TestSuiteStep `json:"before,omitempty"`
 	// test tags
 	Tags []string `json:"tags,omitempty"`
 	// Steps to run
-	Steps []TestStep `json:"steps"`
+	Steps []TestSuiteStep `json:"steps"`
 	// Run this step after whole suite
-	After   []TestStep `json:"after,omitempty"`
-	Repeats int32      `json:"repeats,omitempty"`
+	After   []TestSuiteStep `json:"after,omitempty"`
+	Repeats int32           `json:"repeats,omitempty"`
 }

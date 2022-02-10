@@ -9,8 +9,8 @@
  */
 package testkube
 
-type TestStep struct {
-	StopTestOnFailure bool                   `json:"stopTestOnFailure"`
-	Execute           *TestStepExecuteScript `json:"execute,omitempty"`
-	Delay             *TestStepDelay         `json:"delay,omitempty"`
+type TestSuiteStep struct {
+	StopTestOnFailure bool                        `json:"stopTestOnFailure"`
+	Execute           *TestSuiteStepExecuteScript `json:"execute,omitempty"`
+	Delay             *TestSuiteStepDelay         `json:"delay,omitempty"`
 }

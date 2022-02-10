@@ -133,7 +133,7 @@ func (s TestKubeAPI) Init() {
 	scripts.Get("/:id/executions/:executionID", s.GetExecutionHandler())
 	scripts.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
 
-	tests := s.Routes.Group("/tests")
+	tests := s.Routes.Group("/test-suites")
 
 	tests.Post("/", s.CreateTestHandler())
 	tests.Get("/", s.ListTestsHandler())

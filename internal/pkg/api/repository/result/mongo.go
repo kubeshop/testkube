@@ -94,14 +94,14 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 	// TODO: statuses are messy e.g. success==passed error==failed
 	for _, o := range result {
 		sum += o.Count
-		switch testkube.TestStatus(o.Status) {
-		case testkube.QUEUED_TestStatus:
+		switch testkube.TestSuiteExecutionStatus(o.Status) {
+		case testkube.QUEUED_TestSuiteExecutionStatus:
 			totals.Queued = o.Count
-		case testkube.PENDING_TestStatus:
+		case testkube.PENDING_TestSuiteExecutionStatus:
 			totals.Pending = o.Count
-		case testkube.SUCCESS_TestStatus:
+		case testkube.SUCCESS_TestSuiteExecutionStatus:
 			totals.Passed = o.Count
-		case testkube.ERROR__TestStatus:
+		case testkube.ERROR__TestSuiteExecutionStatus:
 			totals.Failed = o.Count
 		}
 	}

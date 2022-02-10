@@ -14,19 +14,19 @@ import (
 )
 
 // test execution summary
-type TestExecutionSummary struct {
+type TestSuiteExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
 	// name of the script
-	TestName string      `json:"testName"`
-	Status   *TestStatus `json:"status"`
+	TestName string                    `json:"testName"`
+	Status   *TestSuiteExecutionStatus `json:"status"`
 	// test execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time
 	EndTime time.Time `json:"endTime,omitempty"`
 	// test execution duration
-	Duration  string                     `json:"duration,omitempty"`
-	Execution []TestStepExecutionSummary `json:"execution,omitempty"`
+	Duration  string                          `json:"duration,omitempty"`
+	Execution []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
 }

@@ -1,10 +1,10 @@
 package testkube
 
-func TestStatusPtr(status TestStatus) *TestStatus {
+func TestSuiteExecutionStatusPtr(status TestSuiteExecutionStatus) *TestSuiteExecutionStatus {
 	return &status
 }
 
-var TestStatusError = TestStatusPtr(ERROR__TestStatus)
-var TestStatusSuccess = TestStatusPtr(SUCCESS_TestStatus)
-var TestStatusQueued = TestStatusPtr(QUEUED_TestStatus)
-var TestStatusPending = TestStatusPtr(PENDING_TestStatus)
+var TestSuiteExecutionStatusError = TestSuiteExecutionStatusPtr(ERROR__TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusSuccess = TestSuiteExecutionStatusPtr(SUCCESS_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusQueued = TestSuiteExecutionStatusPtr(QUEUED_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusPending = TestSuiteExecutionStatusPtr(PENDING_TestSuiteExecutionStatus)

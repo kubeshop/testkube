@@ -1,20 +1,20 @@
 package testkube
 
-func (s TestStep) Type() *TestStepType {
+func (s TestSuiteStep) Type() *TestSuiteStepType {
 	if s.Execute != nil {
-		return TestStepTypeExecuteScript
+		return TestSuiteStepTypeExecuteScript
 	}
 	if s.Delay != nil {
-		return TestStepTypeDelay
+		return TestSuiteStepTypeDelay
 	}
 	return nil
 }
 
-func (s TestStep) FullName() string {
+func (s TestSuiteStep) FullName() string {
 	switch s.Type() {
-	case TestStepTypeDelay:
+	case TestSuiteStepTypeDelay:
 		return s.Delay.FullName()
-	case TestStepTypeExecuteScript:
+	case TestSuiteStepTypeExecuteScript:
 		return s.Execute.FullName()
 	default:
 		return "unknown"

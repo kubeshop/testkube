@@ -9,7 +9,7 @@
  */
 package testkube
 
-type TestStepDelay struct {
+type TestSuiteStepDelay struct {
 	// delay duration in milliseconds
 	Duration int32 `json:"duration"`
 }

@@ -1,10 +1,10 @@
 package testkube
 
-func TestStepTypePtr(stepType TestStepType) *TestStepType {
+func TestSuiteStepTypePtr(stepType TestSuiteStepType) *TestSuiteStepType {
 	return &stepType
 }
 
 var (
-	TestStepTypeExecuteScript = TestStepTypePtr(EXECUTE_SCRIPT_TestStepType)
-	TestStepTypeDelay         = TestStepTypePtr(DELAY_TestStepType)
+	TestSuiteStepTypeExecuteScript = TestSuiteStepTypePtr(EXECUTE_SCRIPT_TestSuiteStepType)
+	TestSuiteStepTypeDelay         = TestSuiteStepTypePtr(DELAY_TestSuiteStepType)
 )

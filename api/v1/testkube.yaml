@@ -17,33 +17,33 @@ externalDocs:
 tags:
   - name: api
     description: "TestKube API operations"
-  - name: scripts
+  - name: tests
     description: "Script operations"
   - name: executions
     description: "Execution operations"
-  - name: tests
+  - name: test-suites
     description: "Scripts orchestration operations"
   - name: tags
     description: "Listing all available tags"
 
 paths:
-  /tests:
+  /test-suites:
     post:
       tags:
-        - tests
+        - test-suites
         - api
       summary: "Create new test"
-      description: "Create new test action"
-      operationId: createTest
+      description: "Create new test suite action"
+      operationId: createTestSuite
       requestBody:
-        $ref: "#/components/schemas/TestUpsertRequest"
+        $ref: "#/components/schemas/TestSuiteUpsertRequest"
       responses:
         200:
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Test"
+                $ref: "#/components/schemas/TestSuite"
         500:
           description: "problem with creating script"
           content:
@@ -55,7 +55,7 @@ paths:
 
     get:
       tags:
-        - tests
+        - test-suites
         - api
       summary: "Get all tests"
       description: "Returns array of tests"
@@ -71,7 +71,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Test"
+                  $ref: "#/components/schemas/TestSuite"
         500:
           description: "problem with getting script executions from storage"
           content:
@@ -81,7 +81,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /tests/{id}:
+  /test-suites/{id}:
     get:
       parameters:
         - in: path
@@ -91,11 +91,11 @@ paths:
           required: true
           description: ID of the test
       tags:
-        - tests
+        - test-suites
         - api
-      summary: "Get script execution by ID"
-      description: "Returns execution with given executionID"
-      operationId: getTestByID
+      summary: "Get test suite by ID"
+      description: "Returns test suite with given name"
+      operationId: getTestSuiteByID
       responses:
         200:
           description: successful operation
@@ -104,7 +104,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
         500:
-          description: "problem with getting test from storage"
+          description: "problem with getting test suite from storage"
           content:
             application/problem+json:
               schema:
@@ -310,7 +310,7 @@ paths:
   /scripts:
     get:
       tags:
-        - scripts
+        - tests
         - api
       summary: "List scripts"
       description: "filters will be added later"
@@ -337,7 +337,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
     post:
       tags:
-        - scripts
+        - tests
         - api
       summary: "create new script"
       description: "create new script based on script content or git based data"
@@ -376,7 +376,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
     delete:
       tags:
-        - scripts
+        - tests
         - api
       summary: "delete scripts"
       description: "deletes all the scripts"
@@ -403,7 +403,7 @@ paths:
           required: true
           description: ID of the script execution
       tags:
-        - scripts
+        - tests
         - api
       summary: "update script"
       description: "update script based on script content or git based data"
@@ -443,7 +443,7 @@ paths:
 
     get:
       tags:
-        - scripts
+        - tests
         - api
       parameters:
         - in: path
@@ -472,7 +472,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
     delete:
       tags:
-        - scripts
+        - tests
         - api
       parameters:
         - in: path
@@ -514,7 +514,7 @@ paths:
         - $ref: "#/components/parameters/Tags"
       tags:
         - api
-        - scripts
+        - tests
         - executions
       summary: "Starts new script execution"
       description: "New script execution returns new execution details on successful execution start"
@@ -575,7 +575,7 @@ paths:
         - $ref: "#/components/parameters/EndDateFilter"
       tags:
         - api
-        - scripts
+        - tests
         - executions
       summary: "Get all script executions"
       description: "Returns array of all available script executions"
@@ -613,7 +613,7 @@ paths:
           description: ID of the script execution
       tags:
         - api
-        - scripts
+        - tests
         - executions
       summary: "Get script execution"
       description: "Returns execution with given executionID"
@@ -649,7 +649,7 @@ paths:
           description: ID of the script execution
       tags:
         - api
-        - scripts
+        - tests
         - executions
       summary: "Aborts execution"
       description: "Aborts execution and returns execution details"
@@ -698,7 +698,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
     post:
       tags:
-        - scripts
+        - tests
         - api
       summary: "create new executor"
       description: "create new executor based on params passed in request"
@@ -854,7 +854,7 @@ components:
           type: string
           description: object name
 
-    Test:
+    TestSuite:
       type: object
       required:
         - name
@@ -870,7 +870,7 @@ components:
         before:
           type: array
           items:
-            $ref: "#/components/schemas/TestStep"
+            $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
         tags:
           type: array
@@ -880,24 +880,24 @@ components:
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/TestStep"
+            $ref: "#/components/schemas/TestSuiteStep"
           description: Steps to run
         after:
           type: array
           items:
-            $ref: "#/components/schemas/TestStep"
+            $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step after whole suite
         repeats:
           type: integer
           default: 1
 
-    TestStepType:
+    TestSuiteStepType:
       type: string
       enum:
         - executeScript
         - delay
 
-    TestStep:
+    TestSuiteStep:
       type: object
       required:
         - name
@@ -908,15 +908,15 @@ components:
           type: boolean
           default: true
         execute:
-          $ref: "#/components/schemas/TestStepExecuteScript"
+          $ref: "#/components/schemas/TestSuiteStepExecuteScript"
         delay:
-          $ref: "#/components/schemas/TestStepDelay"
+          $ref: "#/components/schemas/TestSuiteStepDelay"
 
-    TestStepExecuteScript:
+    TestSuiteStepExecuteScript:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
 
-    TestStepDelay:
+    TestSuiteStepDelay:
       type: object
       required:
         - duration
@@ -927,7 +927,7 @@ components:
           default: 0
           description: delay duration in milliseconds
 
-    TestExecution:
+    TestSuiteExecution:
       type: object
       description: API server test scripts executions container
       required:
@@ -945,7 +945,7 @@ components:
         test:
           $ref: "#/components/schemas/ObjectRef"
         status:
-          $ref: "#/components/schemas/TestStatus"
+          $ref: "#/components/schemas/TestSuiteExecutionStatus"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -977,7 +977,7 @@ components:
           type: array
           description: "steps execution restults"
           items:
-            $ref: "#/components/schemas/TestStepExecutionResult"
+            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
             description: test execution results
         tags:
           type: array
@@ -985,7 +985,7 @@ components:
             type: string
           description: test execution tags
 
-    TestStatus:
+    TestSuiteExecutionStatus:
       type: string
       enum:
         - queued
@@ -993,14 +993,14 @@ components:
         - success
         - error
 
-    TestStepExecutionResult:
+    TestSuiteStepExecutionResult:
       description: execution result returned from executor
       type: object
       required:
         - status
       properties:
         step:
-          $ref: "#/components/schemas/TestStep"
+          $ref: "#/components/schemas/TestSuiteStep"
         script:
           $ref: "#/components/schemas/ObjectRef"
           description: name and namespace of script in object reference
@@ -1022,9 +1022,9 @@ components:
         results:
           type: array
           items:
-            $ref: "#/components/schemas/TestExecutionSummary"
+            $ref: "#/components/schemas/TestSuiteExecutionSummary"
 
-    TestExecutionSummary:
+    TestSuiteExecutionSummary:
       description: test execution summary
       type: object
       required:
@@ -1044,7 +1044,7 @@ components:
           type: string
           description: name of the script
         status:
-          $ref: "#/components/schemas/TestStatus"
+          $ref: "#/components/schemas/TestSuiteExecutionStatus"
         startTime:
           type: string
           description: "test execution start time"
@@ -1059,9 +1059,9 @@ components:
         execution:
           type: array
           items:
-            $ref: "#/components/schemas/TestStepExecutionSummary"
+            $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
 
-    TestStepExecutionSummary:
+    TestSuiteStepExecutionSummary:
       description: test execution summary
       type: object
       required:
@@ -1080,7 +1080,7 @@ components:
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
-          $ref: "#/components/schemas/TestStepType"
+          $ref: "#/components/schemas/TestSuiteStepType"
 
     Script:
       type: object
@@ -1475,14 +1475,14 @@ components:
       allOf:
         - $ref: "#/components/schemas/Script"
 
-    TestUpsertRequest:
+    TestSuiteUpsertRequest:
       description: test create request body
       type: object
       required:
         - name
         - namespace
       allOf:
-        - $ref: "#/components/schemas/Test"
+        - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
     ExecutorCreateRequest:
@@ -1649,7 +1649,7 @@ components:
       in: query
       name: status
       schema:
-        $ref: "#/components/schemas/TestStatus"
+        $ref: "#/components/schemas/TestSuiteExecutionStatus"
       description: optional status filter
       required: false
     ExecutionsStatusFilter:

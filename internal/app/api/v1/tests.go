@@ -23,7 +23,7 @@ import (
 // GetTestHandler for getting test object
 func (s TestKubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestUpsertRequest
+		var request testkube.TestSuiteUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -145,7 +145,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		var request testkube.TestExecutionRequest
+		var request testkube.TestSuiteExecutionRequest
 		err = c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
@@ -179,7 +179,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		return c.JSON(testkube.TestExecutionsResult{
+		return c.JSON(testkube.TestSuiteExecutionsResult{
 			Totals:   &allExecutionsTotals,
 			Filtered: &executionsTotals,
 			Results:  mapToTestExecutionSummary(executions),
@@ -201,15 +201,15 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecutionRequest, test testkube.Test) (testExecution testkube.TestExecution) {
+func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
-	testExecution = testkube.NewStartedTestExecution(test, request)
+	testExecution = testkube.NewStartedTestSuiteExecution(test, request)
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
-	go func(testExecution testkube.TestExecution) {
+	go func(testExecution testkube.TestSuiteExecution) {
 
-		defer func(testExecution *testkube.TestExecution) {
+		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
 			testExecution.Duration = duration.String()
@@ -238,9 +238,9 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 			s.TestExecutionResults.Update(ctx, testExecution)
 		}
 
-		testExecution.Status = testkube.TestStatusSuccess
+		testExecution.Status = testkube.TestSuiteExecutionStatusSuccess
 		if hasFailedSteps {
-			testExecution.Status = testkube.TestStatusError
+			testExecution.Status = testkube.TestSuiteExecutionStatusError
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
@@ -251,7 +251,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestExecu
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestExecution, result *testkube.TestStepExecutionResult) {
+func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
 
 	var testName string
 	if testExecution.Test != nil {
@@ -264,7 +264,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 
 	switch step.Type() {
 
-	case testkube.TestStepTypeExecuteScript:
+	case testkube.TestSuiteStepTypeExecuteScript:
 		executeScriptStep := step.Execute
 		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testName, executeScriptStep.Name, rand.String(5)),
@@ -281,7 +281,7 @@ func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 		execution := s.executeScript(ctx, options)
 		result.Execution = &execution
 
-	case testkube.TestStepTypeDelay:
+	case testkube.TestSuiteStepTypeDelay:
 		l.Debug("delaying execution")
 		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
 		result.Execution.ExecutionResult.Success()
@@ -331,16 +331,16 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	return filter
 }
 
-func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.TestExecutionSummary {
-	result := make([]testkube.TestExecutionSummary, len(executions))
+func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testkube.TestSuiteExecutionSummary {
+	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
 
 	for i, execution := range executions {
-		executionsSummary := make([]testkube.TestStepExecutionSummary, len(execution.StepResults))
+		executionsSummary := make([]testkube.TestSuiteStepExecutionSummary, len(execution.StepResults))
 		for j, stepResult := range execution.StepResults {
 			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
 		}
 
-		result[i] = testkube.TestExecutionSummary{
+		result[i] = testkube.TestSuiteExecutionSummary{
 			Id:        execution.Id,
 			Name:      execution.Name,
 			TestName:  execution.Test.Name,
@@ -355,10 +355,10 @@ func mapToTestExecutionSummary(executions []testkube.TestExecution) []testkube.T
 	return result
 }
 
-func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkube.TestStepExecutionSummary {
+func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
 	var id, scriptName, name string
 	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
-	var stepType *testkube.TestStepType
+	var stepType *testkube.TestSuiteStepType
 
 	if r.Script != nil {
 		scriptName = r.Script.Name
@@ -376,7 +376,7 @@ func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkub
 		name = r.Step.FullName()
 	}
 
-	return testkube.TestStepExecutionSummary{
+	return testkube.TestSuiteStepExecutionSummary{
 		Id:         id,
 		Name:       name,
 		ScriptName: scriptName,
@@ -385,7 +385,7 @@ func mapStepResultToExecutionSummary(r testkube.TestStepExecutionResult) testkub
 	}
 }
 
-func mapTestUpsertRequestToTestCRD(request testkube.TestUpsertRequest) testsv1.Test {
+func mapTestUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsv1.Test {
 	return testsv1.Test{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
@@ -402,7 +402,7 @@ func mapTestUpsertRequestToTestCRD(request testkube.TestUpsertRequest) testsv1.T
 	}
 }
 
-func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
+func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsv1.TestStepSpec) {
 	for _, step := range steps {
 		out = append(out, mapTestStepToCRD(step))
 	}
@@ -410,15 +410,15 @@ func mapTestStepsToCRD(steps []testkube.TestStep) (out []testsv1.TestStepSpec) {
 	return
 }
 
-func mapTestStepToCRD(step testkube.TestStep) (stepSpec testsv1.TestStepSpec) {
+func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsv1.TestStepSpec) {
 	switch step.Type() {
 
-	case testkube.TestStepTypeDelay:
+	case testkube.TestSuiteStepTypeDelay:
 		stepSpec.Delay = &testsv1.TestStepDelay{
 			Duration: step.Delay.Duration,
 		}
 
-	case testkube.TestStepTypeExecuteScript:
+	case testkube.TestSuiteStepTypeExecuteScript:
 		s := step.Execute
 		stepSpec.Execute = &testsv1.TestStepExecute{
 			Namespace: s.Namespace,

@@ -10,19 +10,19 @@
 package testkube
 
 // test create request body
-type TestUpsertRequest struct {
+type TestSuiteUpsertRequest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace"`
 	// object name
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
-	Before []TestStep `json:"before,omitempty"`
+	Before []TestSuiteStep `json:"before,omitempty"`
 	// test tags
 	Tags []string `json:"tags,omitempty"`
 	// Steps to run
-	Steps []TestStep `json:"steps"`
+	Steps []TestSuiteStep `json:"steps"`
 	// Run this step after whole suite
-	After   []TestStep `json:"after,omitempty"`
-	Repeats int32      `json:"repeats,omitempty"`
+	After   []TestSuiteStep `json:"after,omitempty"`
+	Repeats int32           `json:"repeats,omitempty"`
 }

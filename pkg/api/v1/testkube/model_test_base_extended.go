@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-type Tests []Test
+type TestSuites []TestSuite
 
-func (tests Tests) Table() (header []string, output [][]string) {
+func (tests TestSuites) Table() (header []string, output [][]string) {
 	header = []string{"Name", "Description", "Steps"}
 	for _, e := range tests {
 		output = append(output, []string{
@@ -19,7 +19,7 @@ func (tests Tests) Table() (header []string, output [][]string) {
 	return
 }
 
-func (t Test) GetObjectRef() *ObjectRef {
+func (t TestSuite) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
 		Name:      t.Name,
 		Namespace: t.Namespace,

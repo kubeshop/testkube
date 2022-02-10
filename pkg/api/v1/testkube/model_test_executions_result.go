@@ -10,8 +10,8 @@
 package testkube
 
 // the result for a page of executions
-type TestExecutionsResult struct {
-	Totals   *ExecutionsTotals      `json:"totals"`
-	Filtered *ExecutionsTotals      `json:"filtered,omitempty"`
-	Results  []TestExecutionSummary `json:"results"`
+type TestSuiteExecutionsResult struct {
+	Totals   *ExecutionsTotals           `json:"totals"`
+	Filtered *ExecutionsTotals           `json:"filtered,omitempty"`
+	Results  []TestSuiteExecutionSummary `json:"results"`
 }

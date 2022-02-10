@@ -10,7 +10,7 @@
 package testkube
 
 // test execution request body
-type TestExecutionRequest struct {
+type TestSuiteExecutionRequest struct {
 	// script execution custom name
 	Name string `json:"name,omitempty"`
 	// script kubernetes namespace (\"testkube\" when not set)

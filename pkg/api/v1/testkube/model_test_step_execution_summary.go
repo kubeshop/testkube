@@ -10,12 +10,12 @@
 package testkube
 
 // test execution summary
-type TestStepExecutionSummary struct {
+type TestSuiteStepExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
 	// script name
-	ScriptName string           `json:"scriptName,omitempty"`
-	Status     *ExecutionStatus `json:"status"`
-	Type_      *TestStepType    `json:"type,omitempty"`
+	ScriptName string             `json:"scriptName,omitempty"`
+	Status     *ExecutionStatus   `json:"status"`
+	Type_      *TestSuiteStepType `json:"type,omitempty"`
 }

@@ -9,12 +9,12 @@
  */
 package testkube
 
-type TestStatus string
+type TestSuiteExecutionStatus string
 
 // List of TestStatus
 const (
-	QUEUED_TestStatus  TestStatus = "queued"
-	PENDING_TestStatus TestStatus = "pending"
-	SUCCESS_TestStatus TestStatus = "success"
-	ERROR__TestStatus  TestStatus = "error"
+	QUEUED_TestSuiteExecutionStatus  TestSuiteExecutionStatus = "queued"
+	PENDING_TestSuiteExecutionStatus TestSuiteExecutionStatus = "pending"
+	SUCCESS_TestSuiteExecutionStatus TestSuiteExecutionStatus = "success"
+	ERROR__TestSuiteExecutionStatus  TestSuiteExecutionStatus = "error"
 )
