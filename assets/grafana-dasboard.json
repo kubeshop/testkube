@@ -145,7 +145,7 @@
           "refId": "B"
         }
       ],
-      "title": "SUCCESSFUL scripts executions",
+      "title": "SUCCESSFUL tests executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -234,7 +234,7 @@
           "refId": "B"
         }
       ],
-      "title": "FAILED scripts executions",
+      "title": "FAILED tests executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -303,7 +303,7 @@
           "refId": "B"
         }
       ],
-      "title": "Scripts creations",
+      "title": "Tests creations",
       "transparent": true,
       "type": "stat"
     }

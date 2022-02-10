@@ -52,7 +52,7 @@ Use following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 ```
 
-Test steps which are running workflows based on `Scripts` Custom Resources have test execution ID - you can get details of each in separate command: 
+TestSuite steps which are running workflows based on `Test` Custom Resources have test execution ID - you can get details of each in separate command: 
 
 ```sh 
 kubectl testkube tests execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s

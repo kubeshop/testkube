@@ -15,7 +15,6 @@ testkube uninstall [flags]
 ```sh
   -h, --help          help for uninstall
       --name string   installation name (default "testkube")
-      --remove-crds   wipe out Executors and Scripts CRDs
 ```
 
 ### Options inherited from parent commands

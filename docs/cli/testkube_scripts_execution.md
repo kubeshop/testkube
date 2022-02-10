@@ -28,4 +28,4 @@ testkube scripts execution [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)  - Scripts management commands
+* [testkube scripts](testkube_scripts.md)  - Tests management commands

@@ -1,6 +1,6 @@
 ## testkube scripts
 
-Scripts management commands
+Tests management commands
 
 ### Synopsis
 

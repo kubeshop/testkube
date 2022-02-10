@@ -14,7 +14,7 @@ import (
 
 const WatchInterval = 2 * time.Second
 
-func NewStartTestCmd() *cobra.Command {
+func NewRunTestCmd() *cobra.Command {
 	var (
 		name                     string
 		watchEnabled             bool
@@ -25,8 +25,8 @@ func NewStartTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "start <testName>",
-		Aliases: []string{"run", "r"},
+		Use:     "run <testName>",
+		Aliases: []string{"start", "r"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Script Custom Resource name, returns results to console`,
 		Args:    validator.TestName,

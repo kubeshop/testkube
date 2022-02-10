@@ -1,6 +1,6 @@
-# Getting Testkube scripts execution results
+# Getting Testkube tests execution results
 
-We could see how simple it is to create and run Testkube scripts execution. The good news is that getting results is also simple.
+We could see how simple it is to create and run Testkube tests execution. The good news is that getting results is also simple.
 
 ## Getting test executions after test is executed
 
@@ -51,7 +51,7 @@ Sometimes you need to parse test resutls programatically, to simplify this task 
 
 kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6 -ojson
 
- {"id":"615d7e1ab046f8fbd3d955d6","testName":"api-incluster-test","scriptType":"postman/collection","name":"monthly-sure-finch","executionResult":{"status":"success","startTime":"2021-10-06T10:44:46.338Z","endTime":"2021-10-06T10:44:46.933Z","output":"newman\n\nAPI-Health\n\n→ Health\n  GET http://testkube-api-server:8088/health [200 OK, 124B, 282ms]\n  ✓  Status code is 200\n\n┌─────────────────────────┬────────────────────┬───────────────────┐\n│                         │           executed │            failed │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              iterations │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│                requests │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│            test-scripts │                  2 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│      prerequest-scripts │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              assertions │                  1 │                 0 │\n├─────────────────────────┴────────────────────┴───────────────────┤\n│ total run duration: 519ms                                        │\n├──────────────────────────────────────────────────────────────────┤\n│ total data received: 8B (approx)                                 │\n├──────────────────────────────────────────────────────────────────┤\n│ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │\n└──────────────────────────────────────────────────────────────────┘\n","outputType":"text/plain","steps":[{"name":"Health","duration":"282ms","status":"success","assertionResults":[{"name":"Status code is 200","status":"success"}]}]}}
+ {"id":"615d7e1ab046f8fbd3d955d6","testName":"api-incluster-test","scriptType":"postman/collection","name":"monthly-sure-finch","executionResult":{"status":"success","startTime":"2021-10-06T10:44:46.338Z","endTime":"2021-10-06T10:44:46.933Z","output":"newman\n\nAPI-Health\n\n→ Health\n  GET http://testkube-api-server:8088/health [200 OK, 124B, 282ms]\n  ✓  Status code is 200\n\n┌─────────────────────────┬────────────────────┬───────────────────┐\n│                         │           executed │            failed │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              iterations │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│                requests │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│            test-tests │                  2 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│      prerequest-tests │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              assertions │                  1 │                 0 │\n├─────────────────────────┴────────────────────┴───────────────────┤\n│ total run duration: 519ms                                        │\n├──────────────────────────────────────────────────────────────────┤\n│ total data received: 8B (approx)                                 │\n├──────────────────────────────────────────────────────────────────┤\n│ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │\n└──────────────────────────────────────────────────────────────────┘\n","outputType":"text/plain","steps":[{"name":"Health","duration":"282ms","status":"success","assertionResults":[{"name":"Status code is 200","status":"success"}]}]}}
 
 ```
 
@@ -73,7 +73,7 @@ monthly-sure-finch 615d7e1ab046f8fbd3d955d6 success
 
 ## Getting list of test executions
 
-You can also check video about getting scripts results in different formats:
+You can also check video about getting tests results in different formats:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/ukHvS5x7TvM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
@@ -106,7 +106,7 @@ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
 ### Getting list of executions in different format
 
-Table data in terminal is not always what we want when processing results in code or shell scripts. To simplify this we've implemented possibility to get JSON or Go-Template based results when getting results lists.
+Table data in terminal is not always what we want when processing results in code or shell tests. To simplify this we've implemented possibility to get JSON or Go-Template based results when getting results lists.
 
 #### JSON
 

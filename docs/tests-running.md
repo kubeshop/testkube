@@ -1,10 +1,10 @@
-# Running Testkube test scripts
+# Running Testkube tests
 
-Test scripts are stored in Kubernetes cluster a Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with API.
+Tests are stored in Kubernetes cluster a Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with API.
 
 ## Running
 
-Running scripts looks the same for any type of test
+Running tests looks the same for any type of test
 Let's assume we've previously created test with name `api-incluster-test`
 
 ### Standard run comnand

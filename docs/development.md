@@ -53,7 +53,7 @@ be executed on given executor. e.g.
 kubectl testkube tests create --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
-To summarize: `type` is the single relation between `Script` and `Executor`
+To summarize: `type` is the single relation between `Test` and `Executor`
 
 ## Intercepting api server on cluster
 
@@ -68,4 +68,4 @@ You can start API Server with telepresence mode with:
 make run-api-telepresence
 ```
 
-and create/run test scripts pointed to in-cluster executors.
+and create/run tests pointed to in-cluster executors.

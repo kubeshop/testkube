@@ -24,4 +24,4 @@ testkube scripts abort [flags]
 
 ### SEE ALSO
 
-* [testkube scripts](testkube_scripts.md)  - Scripts management commands
+* [testkube scripts](testkube_scripts.md)  - Tests management commands
