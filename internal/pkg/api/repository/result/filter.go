@@ -67,11 +67,11 @@ func (f *filter) WithType(objectType string) *filter {
 	f.objectType = objectType
 	return f
 }
-func (f filter) ScriptName() string {
+func (f filter) TestName() string {
 	return f.testName
 }
 
-func (f filter) ScriptNameDefined() bool {
+func (f filter) TestNameDefined() bool {
 	return f.testName != ""
 }
 

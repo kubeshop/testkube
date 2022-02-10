@@ -11,8 +11,8 @@ import (
 const PageDefaultLimit int = 1000
 
 type Filter interface {
-	ScriptName() string
-	ScriptNameDefined() bool
+	TestName() string
+	TestNameDefined() bool
 	StartDate() time.Time
 	StartDateDefined() bool
 	EndDate() time.Time

@@ -8,8 +8,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
-	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
-	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
+	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
+	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
@@ -55,9 +55,9 @@ func main() {
 	secretClient, err := secret.NewClient()
 	ui.ExitOnError("Getting secret client", err)
 
-	testsClient := scriptsclientv2.NewClient(kubeClient)
+	testsClient := testsclientv2.NewClient(kubeClient)
 	executorsClient := executorsclientv1.NewClient(kubeClient)
-	testsuitesClient := testsclientv1.NewClient(kubeClient)
+	testsuitesClient := testsuitesclientv1.NewClient(kubeClient)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)

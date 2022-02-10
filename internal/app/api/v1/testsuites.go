@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
+	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -29,7 +29,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		test := mapTestUpsertRequestToTestCRD(request)
+		test := mapTestSuiteUpsertRequestToTestCRD(request)
 		created, err := s.TestsSuitesClient.Create(&test)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -123,7 +123,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 			}
 		}
 
-		tests := testsuitesmapper.MapTestListKubeToAPI(*crTests)
+		tests := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
 	}
@@ -377,21 +377,21 @@ func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) te
 	}
 
 	return testkube.TestSuiteStepExecutionSummary{
-		Id:         id,
-		Name:       name,
-		ScriptName: testName,
-		Status:     status,
-		Type_:      stepType,
+		Id:       id,
+		Name:     name,
+		TestName: testName,
+		Status:   status,
+		Type_:    stepType,
 	}
 }
 
-func mapTestUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsv1.Test {
-	return testsv1.Test{
+func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsuitesv1.TestSuite {
+	return testsuitesv1.TestSuite{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
 		},
-		Spec: testsv1.TestSpec{
+		Spec: testsuitesv1.TestSuiteSpec{
 			Repeats:     int(request.Repeats),
 			Description: request.Description,
 			Tags:        request.Tags,
@@ -402,7 +402,7 @@ func mapTestUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) test
 	}
 }
 
-func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsv1.TestStepSpec) {
+func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsuitesv1.TestSuiteStepSpec) {
 	for _, step := range steps {
 		out = append(out, mapTestStepToCRD(step))
 	}
@@ -410,17 +410,17 @@ func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsv1.TestStepSp
 	return
 }
 
-func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsv1.TestStepSpec) {
+func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSuiteStepSpec) {
 	switch step.Type() {
 
 	case testkube.TestSuiteStepTypeDelay:
-		stepSpec.Delay = &testsv1.TestStepDelay{
+		stepSpec.Delay = &testsuitesv1.TestSuiteStepDelay{
 			Duration: step.Delay.Duration,
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:
 		s := step.Execute
-		stepSpec.Execute = &testsv1.TestStepExecute{
+		stepSpec.Execute = &testsuitesv1.TestSuiteStepExecute{
 			Namespace: s.Namespace,
 			Name:      s.Name,
 			// TODO move StopOnFailure level up in operator model to mimic this one

@@ -67,7 +67,7 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
-	execution.Tags = options.ScriptSpec.Tags
+	execution.Tags = options.TestSpec.Tags
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -82,7 +82,7 @@ func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	}
 
 	options.HasSecrets = true
-	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.ScriptName), options.Request.Namespace); err != nil {
+	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName), options.Request.Namespace); err != nil {
 		if !errors.IsNotFound(err) {
 			return execution.Errw("can't get secrets: %w", err)
 		}
@@ -284,21 +284,21 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 
 func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
-	scriptCR, err := s.TestsClient.Get(namespace, scriptID)
+	testCR, err := s.TestsClient.Get(namespace, scriptID)
 
 	if err != nil {
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
 	// get executor from kubernetes CRs
-	executorCR, err := s.ExecutorsClient.GetByType(scriptCR.Spec.Type_)
+	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
 	if err != nil {
 		return options, fmt.Errorf("can't get executor spec: %w", err)
 	}
 
 	return client.ExecuteOptions{
-		ScriptName:   scriptID,
-		ScriptSpec:   scriptCR.Spec,
+		TestName:     scriptID,
+		TestSpec:     testCR.Spec,
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
@@ -307,10 +307,10 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testk
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
-		options.ScriptName,
+		options.TestName,
 		options.Request.Name,
-		options.ScriptSpec.Type_,
-		testsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
+		options.TestSpec.Type_,
+		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
 		options.Request.Tags,
@@ -326,8 +326,8 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 		result[i] = testkube.ExecutionSummary{
 			Id:        execution.Id,
 			Name:      execution.Name,
-			TestName:  execution.ScriptName,
-			TestType:  execution.ScriptType,
+			TestName:  execution.TestName,
+			TestType:  execution.TestType,
 			Status:    execution.ExecutionResult.Status,
 			StartTime: execution.StartTime,
 			EndTime:   execution.EndTime,

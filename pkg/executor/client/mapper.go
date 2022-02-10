@@ -9,8 +9,8 @@ func MapExecutionOptionsToStartRequest(options ExecuteOptions) testkube.Executor
 	// pass options to executor client get params from test execution request
 	request := testkube.ExecutorStartRequest{
 		Id:      options.ID,
-		Type_:   options.ScriptSpec.Type_,
-		Content: testsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
+		Type_:   options.TestSpec.Type_,
+		Content: testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		Params:  options.Request.Params,
 	}
 

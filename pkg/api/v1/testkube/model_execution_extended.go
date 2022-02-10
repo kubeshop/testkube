@@ -11,17 +11,17 @@ func NewExecutionWithID(id, scriptType, testName string) Execution {
 	return Execution{
 		Id:              id,
 		ExecutionResult: &ExecutionResult{},
-		ScriptName:      testName,
-		ScriptType:      scriptType,
+		TestName:        testName,
+		TestType:        scriptType,
 	}
 }
 
 func NewExecution(testName, executionName, scriptType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
-		ScriptName:      testName,
+		TestName:        testName,
 		Name:            executionName,
-		ScriptType:      scriptType,
+		TestType:        scriptType,
 		ExecutionResult: &result,
 		Params:          params,
 		Content:         content,
@@ -60,8 +60,8 @@ func (executions Executions) Table() (header []string, output [][]string) {
 		}
 
 		output = append(output, []string{
-			e.ScriptName,
-			e.ScriptType,
+			e.TestName,
+			e.TestType,
 			e.Name,
 			e.Id,
 			status,

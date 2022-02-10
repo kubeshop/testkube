@@ -266,7 +266,7 @@ func (repository *MongoRepository) insertExecutionResult(testName string, execSt
 	return repository.Insert(context.Background(),
 		testkube.Execution{
 			Id:              rand.Name(),
-			ScriptName:      testName,
+			TestName:        testName,
 			Name:            "dummyName",
 			ScriptType:      "test/curl",
 			StartTime:       startTime,

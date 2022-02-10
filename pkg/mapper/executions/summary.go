@@ -8,8 +8,8 @@ func MapToSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
 		result[i] = testkube.ExecutionSummary{
 			Id:        s.Id,
 			Name:      s.Name,
-			TestName:  s.ScriptName,
-			TestType:  s.ScriptType,
+			TestName:  s.TestName,
+			TestType:  s.TestType,
 			Status:    s.ExecutionResult.Status,
 			StartTime: s.StartTime,
 			EndTime:   s.EndTime,

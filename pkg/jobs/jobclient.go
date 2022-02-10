@@ -77,7 +77,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -151,7 +151,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {

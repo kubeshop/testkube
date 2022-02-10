@@ -44,8 +44,8 @@ type Metrics struct {
 
 func (m Metrics) IncExecution(execution testkube.Execution) {
 	m.Executions.With(map[string]string{
-		"type":   execution.ScriptType,
-		"name":   execution.ScriptName,
+		"type":   execution.TestType,
+		"name":   execution.TestName,
 		"result": string(*execution.ExecutionResult.Status),
 	}).Inc()
 }

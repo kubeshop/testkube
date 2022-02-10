@@ -1,11 +1,11 @@
 package testsuites
 
 import (
-	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
+	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.TestSuite) {
+func MapTestSuiteListKubeToAPI(cr testsuitesv1.TestSuiteList) (tests []testkube.TestSuite) {
 	tests = make([]testkube.TestSuite, len(cr.Items))
 	for i, item := range cr.Items {
 		tests[i] = MapCRToAPI(item)
@@ -14,7 +14,7 @@ func MapTestListKubeToAPI(cr testsv1.TestList) (tests []testkube.TestSuite) {
 	return
 }
 
-func MapCRToAPI(cr testsv1.Test) (test testkube.TestSuite) {
+func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Name = cr.Name
 	test.Namespace = cr.Namespace
 	test.Description = cr.Spec.Description
@@ -35,7 +35,7 @@ func MapCRToAPI(cr testsv1.Test) (test testkube.TestSuite) {
 	return
 }
 
-func mapCRStepToAPI(crstep testsv1.TestStepSpec) (teststep testkube.TestSuiteStep) {
+func mapCRStepToAPI(crstep testsuitesv1.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {
 	case crstep.Execute != nil:

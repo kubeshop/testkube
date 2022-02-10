@@ -18,11 +18,11 @@ type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
 	// unique test name (CRD Script name)
-	ScriptName string `json:"testName,omitempty"`
+	TestName string `json:"testName,omitempty"`
 	// test namespace
-	ScriptNamespace string `json:"testNamespace,omitempty"`
+	TestNamespace string `json:"testNamespace,omitempty"`
 	// test type e.g. postman/collection
-	ScriptType string `json:"scriptType,omitempty"`
+	TestType string `json:"testType,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
 	// environment variables passed to executor

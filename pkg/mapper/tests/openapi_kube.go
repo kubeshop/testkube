@@ -1,19 +1,19 @@
 package tests
 
 import (
-	scriptsv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
+	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *scriptsv2.Script {
+func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 
-	test := &scriptsv2.Script{
+	test := &testsv2.Test{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
 		},
-		Spec: scriptsv2.ScriptSpec{
+		Spec: testsv2.TestSpec{
 			Type_:   request.Type_,
 			Content: MapScriptContentToScriptSpecContent(request.Content),
 			Tags:    request.Tags,
@@ -24,14 +24,14 @@ func MapScriptToScriptSpec(request testkube.TestUpsertRequest) *scriptsv2.Script
 
 }
 
-func MapScriptContentToScriptSpecContent(content *testkube.TestContent) (specContent *scriptsv2.ScriptContent) {
+func MapScriptContentToScriptSpecContent(content *testkube.TestContent) (specContent *testsv2.TestContent) {
 	if content == nil {
 		return
 	}
 
-	return &scriptsv2.ScriptContent{
+	return &testsv2.TestContent{
 		// assuming same data structure
-		Repository: (*scriptsv2.Repository)(content.Repository),
+		Repository: (*testsv2.Repository)(content.Repository),
 		Data:       content.Data,
 		Uri:        content.Uri,
 		Type_:      content.Type_,

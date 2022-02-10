@@ -1,27 +1,27 @@
 package tests
 
 import (
-	scriptsv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
+	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapScriptListKubeToAPI(crScripts scriptsv2.ScriptList) (scripts []testkube.Test) {
+func MapScriptListKubeToAPI(crScripts testsv2.TestList) (scripts []testkube.Test) {
 	for _, item := range crScripts.Items {
 		scripts = append(scripts, MapScriptCRToAPI(item))
 	}
 
 	return
 }
-func MapScriptCRToAPI(crScript scriptsv2.Script) (test testkube.Test) {
+func MapScriptCRToAPI(crScript testsv2.Test) (test testkube.Test) {
 	test.Name = crScript.Name
-	test.Content = MapScriptContentFromSpec(crScript.Spec.Content)
+	test.Content = MapTestContentFromSpec(crScript.Spec.Content)
 	test.Created = crScript.CreationTimestamp.Time
 	test.Type_ = crScript.Spec.Type_
 	test.Tags = crScript.Spec.Tags
 	return
 }
 
-func MapScriptContentFromSpec(specContent *scriptsv2.ScriptContent) *testkube.TestContent {
+func MapTestContentFromSpec(specContent *testsv2.TestContent) *testkube.TestContent {
 	content := &testkube.TestContent{
 		Type_: specContent.Type_,
 		// assuming same data structure - there is task about syncing them automatically

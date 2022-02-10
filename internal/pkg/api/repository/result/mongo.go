@@ -174,8 +174,8 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}
 	}
 
-	if filter.ScriptNameDefined() {
-		query["scriptname"] = filter.ScriptName()
+	if filter.TestNameDefined() {
+		query["scriptname"] = filter.TestName()
 	}
 
 	if filter.StartDateDefined() {
