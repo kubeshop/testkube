@@ -683,7 +683,7 @@ func (c DirectScriptsAPI) WatchTestExecution(executionID string) (executionCh ch
 }
 
 func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
-	uri := c.getURI("/test-executions/%s", executionID)
+	uri := c.getURI("/test-suite-executions/%s", executionID)
 
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -701,9 +701,9 @@ func (c DirectScriptsAPI) GetTestExecution(executionID string) (execution testku
 func (c DirectScriptsAPI) ListTestExecutions(testName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	var uri string
 	if len(tags) > 0 {
-		uri = c.getURI("/test-executions?id=%s&pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
+		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&tags=%s", testName, limit, strings.Join(tags, ","))
 	} else {
-		uri = c.getURI("/test-executions?id=%s&pageSize=%d", testName, limit)
+		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d", testName, limit)
 	}
 
 	resp, err := c.client.Get(uri)

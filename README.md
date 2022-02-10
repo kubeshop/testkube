@@ -30,11 +30,11 @@ Testkube advantages:
 - Centralizes all test results in a consistent format for "actionable QA analytics"
 - Provides a modular architecture for adding new types of test scripts and executors
 
-Main TestKube components are:
+Main Testkube components are:
 
 - kubectl Testkube plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
-- [CRDs Operator](https://github.com/kubeshop/testkube-operator) - watches TestKube CR, handles changes, communicates with API Server
+- [CRDs Operator](https://github.com/kubeshop/testkube-operator) - watches Testkube CR, handles changes, communicates with API Server
 - Executors - runs tests defined for specific runner
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests

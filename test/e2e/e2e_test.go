@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 }
 func TestE2E(t *testing.T) {
 	a := require.New(t)
-	test := testkube.NewTestKube(namespace)
+	test := testkube.NewTestkube(namespace)
 	scriptName := fmt.Sprintf("script-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 

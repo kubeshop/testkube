@@ -83,17 +83,17 @@ create-examples:
 
 test-reload-sanity-script:
 	kubectl delete script sanity -ntestkube || true
-	kubectl testkube scripts create -f test/e2e/TestKube-Sanity.postman_collection.json --name sanity
+	kubectl testkube scripts create -f test/e2e/Testkube-Sanity.postman_collection.json --name sanity
 
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
 test-api-local:
-	newman run test/e2e/TestKube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var script_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
+	newman run test/e2e/Testkube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var script_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
 
 # run by newman but on top of port-forwarded cluster service to api-server 
 # e.g. kubectl port-forward svc/testkube-api-server 8088
 test-api-port-forwarded:
-	newman run test/e2e/TestKube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var script_api_uri=http://testkube-api-server:8088 --verbose
+	newman run test/e2e/Testkube-Sanity.postman_collection.json --env-var script_name=fill-me --env-var script_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var script_api_uri=http://testkube-api-server:8088 --verbose
 
 # run script by testkube plugin
 test-api-on-cluster: 

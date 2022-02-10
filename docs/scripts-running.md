@@ -1,4 +1,4 @@
-# Running TestKube test scripts
+# Running Testkube test scripts
 
 Test scripts are stored in Kubernetes cluster a Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with API.
 
@@ -40,7 +40,7 @@ $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 
 ```
 
-TestKube will inform us about possible commands to get scripts:
+Testkube will inform us about possible commands to get scripts:
 
 - `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details
 - `kubectl testkube scripts watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when script is completed and is good for long running scripts to lock your terminal until script execution completes)
@@ -226,4 +226,4 @@ Script execution completed in 1m45.405939s
 
 ## Summary
 
-As we can see running scripts in Kubernetes cluster is really easy with use of TestKube kubectl plugin!
+As we can see running scripts in Kubernetes cluster is really easy with use of Testkube kubectl plugin!

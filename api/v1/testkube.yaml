@@ -1,8 +1,8 @@
 openapi: 3.0.1
 
 info:
-  title: TestKube API
-  description: "TestKube provides a Kubernetes-native framework for test definition, execution and results"
+  title: Testkube API
+  description: "Testkube provides a Kubernetes-native framework for test definition, execution and results"
   contact:
     email: testkube@kubeshop.io
   license:
@@ -16,13 +16,13 @@ externalDocs:
 
 tags:
   - name: api
-    description: "TestKube API operations"
+    description: "Testkube API operations"
   - name: tests
-    description: "Script operations"
+    description: "Tests operations"
   - name: executions
-    description: "Execution operations"
+    description: "Test suites and tests execution operations"
   - name: test-suites
-    description: "Scripts orchestration operations"
+    description: "Tests orchestration operations"
   - name: tags
     description: "Listing all available tags"
 
@@ -112,7 +112,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /test-executions:
+  /test-suite-executions:
     get:
       tags:
         - executions
@@ -144,7 +144,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /test-executions/{id}:
+  /test-suite-executions/{id}:
     get:
       parameters:
         - in: path

@@ -21,7 +21,7 @@ You can check full example implementation here: <https://github.com/exu/testkube
 
 ### Implement Runner Components
 
-[TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
+[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
 
 Let's try to create new test runner which test if given URI call is successfull (`status code == 200`)
 

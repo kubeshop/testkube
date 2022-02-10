@@ -14,7 +14,7 @@ import (
 )
 
 // GetScriptHandler is method for getting an existing script
-func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
+func (s TestkubeAPI) GetScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -33,7 +33,7 @@ func (s TestKubeAPI) GetScriptHandler() fiber.Handler {
 }
 
 // ListScriptsHandler is a method for getting list of all available scripts
-func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
+func (s TestkubeAPI) ListScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 
@@ -76,7 +76,7 @@ func (s TestKubeAPI) ListScriptsHandler() fiber.Handler {
 }
 
 // CreateScriptHandler creates new script CR based on script content
-func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
+func (s TestkubeAPI) CreateScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.ScriptUpsertRequest
@@ -106,7 +106,7 @@ func (s TestKubeAPI) CreateScriptHandler() fiber.Handler {
 }
 
 // UpdateScriptHandler updates an existing script CR based on script content
-func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
+func (s TestkubeAPI) UpdateScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		var request testkube.ScriptUpsertRequest
@@ -145,7 +145,7 @@ func (s TestKubeAPI) UpdateScriptHandler() fiber.Handler {
 }
 
 // DeleteScriptHandler is a method for deleting a script with id
-func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
+func (s TestkubeAPI) DeleteScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -172,7 +172,7 @@ func (s TestKubeAPI) DeleteScriptHandler() fiber.Handler {
 }
 
 // DeleteScriptsHandler for deleting all scripts
-func (s TestKubeAPI) DeleteScriptsHandler() fiber.Handler {
+func (s TestkubeAPI) DeleteScriptsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		err := s.ScriptsClient.DeleteAll(namespace)

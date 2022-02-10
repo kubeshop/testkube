@@ -1,10 +1,10 @@
 # Integrating with CI/CD
 
-In order to automate TestKube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer.
+In order to automate Testkube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer.
 
-As TestKube uses your K8S context and access settings in order to interact with the cluster and test scripts etc.
+As Testkube uses your K8S context and access settings in order to interact with the cluster and test scripts etc.
 
-In the next few sections we will go through the process of TestKube and Helm (for TestKube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
+In the next few sections we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
 
 ## Configuring your GH actions for the access to GKE
 
@@ -27,12 +27,12 @@ To install on Linux or MacOs run
 
 Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
 
-## Full example of working GH actions workflow and TestKube scripts usage. Can be easily re-used with minimal modifications upon your needs
+## Full example of working GH actions workflow and Testkube scripts usage. Can be easily re-used with minimal modifications upon your needs
 
 To Run Tests on Linux or MacOs OS:
 
 ```sh
-name: Running TestKube Tests.
+name: Running Testkube Tests.
 
 on:
   push:
@@ -81,12 +81,12 @@ jobs:
           location: ${{ env.GKE_ZONE_DEV }}
           credentials: ${{ secrets.GKE_SA_KEY }}
 
-      # Installing TestKube CLI:
-      - name: Install TestKube CLI
+      # Installing Testkube CLI:
+      - name: Install Testkube CLI
         run: |-
           bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
           
-      # Run TestKube script on a GKE cluster
+      # Run Testkube script on a GKE cluster
       - name: Run Tests
         run: |-
           kubectl testkube scripts run SCRIPT_NAME
@@ -94,7 +94,7 @@ jobs:
 
 Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
 
-If you wish to automate CI/CD part of TestKube's Helm release you can use `Helm` blocks as follow:
+If you wish to automate CI/CD part of Testkube's Helm release you can use `Helm` blocks as follow:
 
 ```sh
 ...
@@ -108,7 +108,7 @@ If you wish to automate CI/CD part of TestKube's Helm release you can use `Helm`
           helm repo add helm-charts https://kubeshop.github.io/helm-charts
           helm repo add bitnami https://charts.bitnami.com/bitnami
       
-      # Run Helm delpoy/upgrade of the TestKube release on a GKE cluster
+      # Run Helm delpoy/upgrade of the Testkube release on a GKE cluster
       - name: Deploy
         run: |-
           helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace

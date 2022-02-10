@@ -653,7 +653,7 @@ func (c ProxyScriptsAPI) ExecuteTest(id, namespace, executionName string, execut
 }
 
 func (c ProxyScriptsAPI) GetTestExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
-	uri := c.getURI("/test-executions/%s", executionID)
+	uri := c.getURI("/test-suite-executions/%s", executionID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
 
@@ -695,7 +695,7 @@ func (c ProxyScriptsAPI) WatchTestExecution(executionID string) (executionCh cha
 
 // ListExecutions list all executions for given test name
 func (c ProxyScriptsAPI) ListTestExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
-	uri := c.getURI("/test-executions")
+	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))

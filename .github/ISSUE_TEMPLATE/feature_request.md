@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea or new feature for TestKube
+about: Suggest an idea or new feature for Testkube
 title: ''
 labels: 'feature-request 🚀'
 assignees: ''

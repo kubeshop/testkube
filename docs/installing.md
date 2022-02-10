@@ -1,16 +1,16 @@
 # Installation
 
-To get TestKube up and running you will need to
+To get Testkube up and running you will need to
 
 1. Install the kubectl testkube plugin
-2. Install TestKube in your cluster
-3. Configure TestKube's Dashboard UI Ingress for your ingress-controller if needed.
+2. Install Testkube in your cluster
+3. Configure Testkube's Dashboard UI Ingress for your ingress-controller if needed.
 
 ## Install the kubectl testkube plugin
 
 ### Installing on MacOS
 
-We're building Homebew tap for each release, so you can easily install TestKube with Homebrew.
+We're building Homebew tap for each release, so you can easily install Testkube with Homebrew.
 
 ```sh
 brew tap kubeshop/homebrew-testkube
@@ -182,10 +182,10 @@ Helm defaults used in the `testkube` chart:
 
 ## Uninstall `testkube`
 
-You can uninstall TestKube using the uninstall command integrated into the testkube plugin.
+You can uninstall Testkube using the uninstall command integrated into the testkube plugin.
 
 ```sh
 kubectl testkube uninstall [--remove-crds]
 ```
 
-Optionally you can use the `--remove-crds` flag which will clean all installed Custom Resource Definitions installed by TestKube.
+Optionally you can use the `--remove-crds` flag which will clean all installed Custom Resource Definitions installed by Testkube.

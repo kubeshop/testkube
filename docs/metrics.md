@@ -1,6 +1,6 @@
 # Metrics
 
-The TestKube API Server exposes a `/metrics` endpoint that can be consumed by Prometheus, Grafana, etc. It
+The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Prometheus, Grafana, etc. It
 currently exposes the following metrics:
 
 * `testkube_executions_count` - The total number of script executions
@@ -12,7 +12,7 @@ currently exposes the following metrics:
 If yout don't have installed Prometheus operator please follow [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/) first
 
 Next you'll need to add `ServiceMonitor` custom resource to your cluster which will scrape metrics from our
-TestKube API server.
+Testkube API server.
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -30,7 +30,7 @@ spec:
       app.kubernetes.io/name: api-server
 ```
 
-If you're installing TestKube manually by our Helm chart you can pass `prometheus.enabled` value to install
+If you're installing Testkube manually by our Helm chart you can pass `prometheus.enabled` value to install
 command:
 
 ## Grafana dashboard

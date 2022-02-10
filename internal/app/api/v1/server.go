@@ -38,7 +38,7 @@ func NewServer(
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsClient *testsclientv1.TestsClient,
 	secretClient *secret.Client,
-) TestKubeAPI {
+) TestkubeAPI {
 
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
@@ -48,7 +48,7 @@ func NewServer(
 		panic(err)
 	}
 
-	s := TestKubeAPI{
+	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
 		ExecutionResults:     executionsResults,
@@ -68,7 +68,7 @@ func NewServer(
 	return s
 }
 
-type TestKubeAPI struct {
+type TestkubeAPI struct {
 	server.HTTPServer
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
@@ -91,7 +91,7 @@ type storageParams struct {
 	Token           string
 }
 
-func (s TestKubeAPI) Init() {
+func (s TestkubeAPI) Init() {
 	envconfig.Process("STORAGE", &s.storageParams)
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
@@ -145,7 +145,7 @@ func (s TestKubeAPI) Init() {
 	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
 	tests.Get("/:id/executions/:executionID", s.GetTestExecutionHandler())
 
-	testExecutions := s.Routes.Group("/test-executions")
+	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
 
@@ -154,7 +154,7 @@ func (s TestKubeAPI) Init() {
 
 }
 
-func (s TestKubeAPI) InfoHandler() fiber.Handler {
+func (s TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:  api.Commit,
@@ -163,7 +163,7 @@ func (s TestKubeAPI) InfoHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) RoutesHandler() fiber.Handler {
+func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		routes := []fiber.Route{}
 
@@ -239,7 +239,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) error {
 	var executors []testkube.ExecutorDetails
 
 	dataDecoded, err := base64.StdEncoding.DecodeString(data)

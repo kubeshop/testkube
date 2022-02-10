@@ -23,7 +23,7 @@ import (
 )
 
 // ExecuteScriptHandler calls particular executor based on execution request content and type
-func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
+func (s TestkubeAPI) ExecuteScriptHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
@@ -63,7 +63,7 @@ func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
+func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
@@ -119,7 +119,7 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 }
 
 // ListExecutionsHandler returns array of available script executions
-func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
+func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /scripts/{id}/executions
@@ -151,7 +151,7 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
+func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
@@ -200,7 +200,7 @@ func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
 }
 
 // GetExecutionHandler returns script execution object for given script and execution id
-func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
+func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		scriptID := c.Params("id", "")
@@ -233,14 +233,14 @@ func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) AbortExecutionHandler() fiber.Handler {
+func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		return s.Executor.Abort(id)
 	}
 }
 
-func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
+func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
@@ -269,7 +269,7 @@ func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
 }
 
 // GetArtifacts returns list of files in the given bucket
-func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
+func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
@@ -282,7 +282,7 @@ func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get script content from kubernetes CRs
 	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
 

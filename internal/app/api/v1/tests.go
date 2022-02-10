@@ -21,7 +21,7 @@ import (
 )
 
 // GetTestHandler for getting test object
-func (s TestKubeAPI) CreateTestHandler() fiber.Handler {
+func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestSuiteUpsertRequest
 		err := c.BodyParser(&request)
@@ -41,7 +41,7 @@ func (s TestKubeAPI) CreateTestHandler() fiber.Handler {
 }
 
 // GetTestHandler for getting test object
-func (s TestKubeAPI) GetTestHandler() fiber.Handler {
+func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -61,7 +61,7 @@ func (s TestKubeAPI) GetTestHandler() fiber.Handler {
 }
 
 // DeleteTestHandler for deleting a test with id
-func (s TestKubeAPI) DeleteTestHandler() fiber.Handler {
+func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
@@ -79,7 +79,7 @@ func (s TestKubeAPI) DeleteTestHandler() fiber.Handler {
 }
 
 // DeleteTestsHandler for deleting all Tests
-func (s TestKubeAPI) DeleteTestsHandler() fiber.Handler {
+func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
 		err := s.TestsClient.DeleteAll(namespace)
@@ -96,7 +96,7 @@ func (s TestKubeAPI) DeleteTestsHandler() fiber.Handler {
 }
 
 // ListTestsHandler for getting list of all available tests
-func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
+func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
@@ -129,7 +129,7 @@ func (s TestKubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
+func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		name := c.Params("id")
@@ -160,7 +160,7 @@ func (s TestKubeAPI) ExecuteTestHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
+func (s TestkubeAPI) ListTestExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		filter := getExecutionsFilterFromRequest(c)
@@ -187,7 +187,7 @@ func (s TestKubeAPI) ListTestExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
+func (s TestkubeAPI) GetTestExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		id := c.Params("executionID")
@@ -201,7 +201,7 @@ func (s TestKubeAPI) GetTestExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
+func (s TestkubeAPI) executeTest(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
 	testExecution = testkube.NewStartedTestSuiteExecution(test, request)
@@ -251,7 +251,7 @@ func (s TestKubeAPI) executeTest(ctx context.Context, request testkube.TestSuite
 
 }
 
-func (s TestKubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
+func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
 
 	var testName string
 	if testExecution.Test != nil {

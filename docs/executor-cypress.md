@@ -1,6 +1,6 @@
 # Cypress Tests
 
-TestKube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented).
+Testkube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented).
 
 To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - <https://docs.cypress.io/guides/dashboard/projects>)
 
@@ -26,7 +26,7 @@ describe('The Home Page', () => {
 
 ## Creating `testkube` test script
 
-Now we need to create TestKube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
+Now we need to create Testkube test script from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
 
 ```sh
 kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
@@ -284,4 +284,4 @@ Script execution completed in 1m45.405939s
 
 ## Summary
 
-Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with TestKube!
+Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with Testkube!

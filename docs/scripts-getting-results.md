@@ -1,10 +1,10 @@
-# Getting TestKube scripts execution results
+# Getting Testkube scripts execution results
 
-We could see how simple it is to create and run TestKube scripts execution. The good news is that getting results is also simple.
+We could see how simple it is to create and run Testkube scripts execution. The good news is that getting results is also simple.
 
 ## Getting test executions after script is executed
 
-After each run TestKube informs you that you can get results later of given script execution
+After each run Testkube informs you that you can get results later of given script execution
 
 ```sh
 kubectl testkube scripts run api-incluster-test

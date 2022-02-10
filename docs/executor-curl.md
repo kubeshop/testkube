@@ -1,6 +1,6 @@
 # Curl Commands
 
-TestKube is able to run curl commands as tests, there are 2 possibilities to validate the outputs of the curl command, one using the status returned and the other checking the body of the response. Bellow is an example on how to format the tests.
+Testkube is able to run curl commands as tests, there are 2 possibilities to validate the outputs of the curl command, one using the status returned and the other checking the body of the response. Bellow is an example on how to format the tests.
 
 ```js
 {

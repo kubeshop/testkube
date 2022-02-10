@@ -1,4 +1,4 @@
-site_name: TestKube
+site_name: Testkube
 site_description: "Your Kubernetes Testing Friend"
 site_author: "Kubeshop testkube Team"
 docs_dir: docs/

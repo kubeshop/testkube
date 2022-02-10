@@ -532,12 +532,12 @@ spec:
     info:
       contact:
         email: testkube@kubeshop.io
-      description: TestKube provides a Kubernetes-native framework for test definition,
+      description: Testkube provides a Kubernetes-native framework for test definition,
         execution and results
       license:
         name: MIT
         url: https://opensource.org/licenses/MIT
-      title: TestKube API
+      title: Testkube API
       version: 1.0.0
     openapi: 3.0.1
     paths:
@@ -1144,7 +1144,7 @@ spec:
           - scripts
           - executions
     tags:
-    - description: TestKube API operations
+    - description: Testkube API operations
       name: api
     - description: Script operations
       name: scripts

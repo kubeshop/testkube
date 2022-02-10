@@ -15,7 +15,7 @@ to install CRD's into your local cluster
 ## Running on local machine
 
 Next critical component is testkube API (<https://github.com/kubeshop/testkube>) and some executor you can build - your
-own tests executor or existing one from TestKube.
+own tests executor or existing one from Testkube.
 
 Checkout testkube project and run local API server:
 

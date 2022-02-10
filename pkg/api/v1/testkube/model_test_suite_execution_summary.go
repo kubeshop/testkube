@@ -1,7 +1,7 @@
 /*
- * TestKube API
+ * Testkube API
  *
- * TestKube provides a Kubernetes-native framework for test definition, execution and results
+ * Testkube provides a Kubernetes-native framework for test definition, execution and results
  *
  * API version: 1.0.0
  * Contact: testkube@kubeshop.io
