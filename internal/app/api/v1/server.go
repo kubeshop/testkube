@@ -242,6 +242,10 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
 	var executors []testkube.ExecutorDetails
 
+	if data == "" {
+		return nil
+	}
+
 	dataDecoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return err
