@@ -4,7 +4,7 @@ Get all available tests
 
 ### Synopsis
 
-Getting all available scritps from given namespace - if no namespace given "testkube" namespace is used
+Getting all available tests from given namespace - if no namespace given "testkube" namespace is used
 
 ```
 testkube tests list [flags]
