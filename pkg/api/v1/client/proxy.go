@@ -68,7 +68,7 @@ type ProxyAPIClient struct {
 	config ProxyConfig
 }
 
-// scripts and executions -----------------------------------------------------------------------------
+// tests and executions -----------------------------------------------------------------------------
 
 func (c ProxyAPIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
@@ -100,12 +100,12 @@ func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Exe
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyAPIClient) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+func (c ProxyAPIClient) ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := c.getURI("/executions/")
 
-	if scriptID != "" {
-		uri = fmt.Sprintf("/tests/%s/executions", scriptID)
+	if id != "" {
+		uri = fmt.Sprintf("/tests/%s/executions", id)
 	}
 
 	req := c.GetProxy("GET").
@@ -233,7 +233,7 @@ func (c ProxyAPIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given test
-func (c ProxyAPIClient) ListTests(namespace string, tags []string) (scripts testkube.Tests, err error) {
+func (c ProxyAPIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -246,15 +246,15 @@ func (c ProxyAPIClient) ListTests(namespace string, tags []string) (scripts test
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
+		return tests, fmt.Errorf("api/list-tests returned error: %w", err)
 	}
 
 	return c.getTestsFromResponse(resp)
 }
 
 // GetExecutions list all executions in given test
-func (c ProxyAPIClient) AbortExecution(scriptID, id string) error {
-	uri := c.getURI("/tests/%s/executions/%s", scriptID, id)
+func (c ProxyAPIClient) AbortExecution(testID, id string) error {
+	uri := c.getURI("/tests/%s/executions/%s", testID, id)
 	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
@@ -364,15 +364,15 @@ func (c ProxyAPIClient) getExecutionsFromResponse(resp rest.Result) (executions 
 	return executions, err
 }
 
-func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (scripts testkube.Tests, err error) {
+func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
-		return scripts, err
+		return tests, err
 	}
 
-	err = json.Unmarshal(bytes, &scripts)
+	err = json.Unmarshal(bytes, &tests)
 
-	return scripts, err
+	return tests, err
 }
 
 func (c ProxyAPIClient) getExecutorsDetailsFromResponse(resp rest.Result) (executors testkube.ExecutorsDetails, err error) {
@@ -543,7 +543,7 @@ func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSu
 
 func (c ProxyAPIClient) DeleteTestSuite(name string, namespace string) error {
 	if name == "" {
-		return fmt.Errorf("test name '%s' is not valid", name)
+		return fmt.Errorf("testsuite name '%s' is not valid", name)
 	}
 	uri := c.getURI("/test-suites/%s", name)
 	return c.makeDeleteRequest(uri, namespace, true)
@@ -554,7 +554,7 @@ func (c ProxyAPIClient) DeleteTestSuites(namespace string) error {
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (scripts testkube.TestSuites, err error) {
+func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error) {
 	uri := c.getURI("/test-suites")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -567,7 +567,7 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (scripts
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
+		return testSuites, fmt.Errorf("api/list-test-suites returned error: %w", err)
 	}
 
 	return c.getTestSuitesFromResponse(resp)
@@ -588,7 +588,7 @@ func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (test te
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/create-test returned error: %w", err)
+		return test, fmt.Errorf("api/create-test-suite returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
@@ -609,7 +609,7 @@ func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test te
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/udpate-test returned error: %w", err)
+		return test, fmt.Errorf("api/udpate-test-suite returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
@@ -646,7 +646,7 @@ func (c ProxyAPIClient) ExecuteTestSuite(id, namespace, executionName string, ex
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return execution, fmt.Errorf("api/execute-test returned error: %w", err)
+		return execution, fmt.Errorf("api/execute-test-suite returned error: %w", err)
 	}
 
 	return c.getTestExecutionFromResponse(resp)
@@ -658,7 +658,7 @@ func (c ProxyAPIClient) GetTestSuiteExecution(executionID string) (execution tes
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return execution, fmt.Errorf("api/get-execution returned error: %w", err)
+		return execution, fmt.Errorf("api/get-test-suite-execution returned error: %w", err)
 	}
 
 	return c.getTestExecutionFromResponse(resp)
@@ -711,7 +711,7 @@ func (c ProxyAPIClient) ListTestExecutions(testID string, limit int, tags []stri
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return executions, fmt.Errorf("api/get-executions returned error: %w", err)
+		return executions, fmt.Errorf("api/get-test-suite-executions returned error: %w", err)
 	}
 
 	return c.getTestExecutionsFromResponse(resp)

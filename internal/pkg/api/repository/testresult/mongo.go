@@ -29,8 +29,8 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 	return
 }
 
-func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, script string) (result testkube.TestSuiteExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": script}).Decode(&result)
+func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.TestSuiteExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
 	return
 }
 

@@ -3,7 +3,7 @@ set -e
 
 TESTKUBE=${TESTKUBE:-$(which kubectl-testkube)}
 
-script_execution_id() {
+test_execution_id() {
 	$TESTKUBE tests executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
 }
 
@@ -12,7 +12,7 @@ test_execution_id() {
 }
 
 
-test_scripts_delete() {
+test_tests_delete() {
 	echo "Tests delete test"
 	$TESTKUBE tests 
 	$TESTKUBE tests delete kubeshop-site1 > /dev/null || true
@@ -38,7 +38,7 @@ test_scripts_delete() {
 	$TESTKUBE tests list 
 }
 
-test_scripts_delete_all() {
+test_tests_delete_all() {
 	echo "Tests delete all test"
 	$TESTKUBE tests 
 	$TESTKUBE tests delete-all
@@ -54,7 +54,7 @@ test_scripts_delete_all() {
 	$TESTKUBE tests list 
 }
 
-test_scripts_create() {
+test_tests_create() {
 	echo "Tests create test"
 	$TESTKUBE tests delete kubeshop-site > /dev/null || true
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site
@@ -68,16 +68,16 @@ test_scripts_create() {
 	cat test/e2e/curl.json | $TESTKUBE tests create --name curl-test
 }
 
-test_scripts_run() {
+test_tests_run() {
 	$TESTKUBE tests run kubeshop-site -f       # postman
-	$TESTKUBE tests execution $(script_execution_id kubeshop-site)
+	$TESTKUBE tests execution $(test_execution_id kubeshop-site)
 	$TESTKUBE tests run testkube-dashboard -f  # cypress
-	$TESTKUBE tests execution $(script_execution_id testkube-dashboard) 
+	$TESTKUBE tests execution $(test_execution_id testkube-dashboard) 
 
 	# curl issue #821 - need to be without -f
 	$TESTKUBE tests run curl-test              # curl
 	sleep 5
-	$TESTKUBE tests execution $(script_execution_id curl-test) 
+	$TESTKUBE tests execution $(test_execution_id curl-test) 
 }
 
 
@@ -143,16 +143,16 @@ while test $# != 0
 do
     case "$1" in
     --delete-all-test) 
-		test_scripts_delete_all
+		test_tests_delete_all
 		test_tests_delete_all
 		;;
     esac
     shift
 done
 
-test_scripts_delete
-test_scripts_create
-test_scripts_run
+test_tests_delete
+test_tests_create
+test_tests_run
 
 test_tests_delete
 test_tests_create

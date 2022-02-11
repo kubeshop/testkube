@@ -98,7 +98,6 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 // ListTestSuitesHandler for getting list of all available tests
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		s.Log.Debug("Getting scripts list")
 		namespace := c.Query("namespace", "testkube")
 
 		rawTags := c.Query("tags")

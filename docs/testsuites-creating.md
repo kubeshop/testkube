@@ -5,7 +5,7 @@ deployed on Kubernetes cluster, and each team is responsible for their part of w
 
 There is also some QA leader who is responsible for release trains and wants to be sure that before release all tests are green. The one issue is that he needs to create pipelines that orchestrate all teams tests into some common platform. 
 
-... it would be so easy if all of them have used Testkube. Each team can run their tests against clusters easily on their own, and the QA manager can create Test resources and add test scripts written by all teams.  
+... it would be so easy if all of them have used Testkube. Each team can run their tests against clusters easily on their own, and the QA manager can create Test resources and add test tests written by all teams.  
 
 `TestSuites` stand for orchestration, orchestration of different test steps like e.g. test execution, delay, or other (future) steps. 
 # TestSuites creation
@@ -56,14 +56,14 @@ spec:
   - execute:
       name: test1
       namespace: testkube
-    type: scriptExecution
+    type: testExecution
   - delay:
       duration: 2000
     type: delay
   - execute:
       name: test1
       namespace: testkube
-    type: scriptExecutio
+    type: testExecution
 ```
 
 Your `Test` from now is defined, you can start running testing workflows from now. 

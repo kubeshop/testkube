@@ -54,7 +54,7 @@ type DirectAPIClient struct {
 	client HTTPClient
 }
 
-// scripts and executions -----------------------------------------------------------------------------
+// tests and executions -----------------------------------------------------------------------------
 
 func (c DirectAPIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s?namespace=%s", id, namespace)
@@ -87,12 +87,12 @@ func (c DirectAPIClient) GetExecution(executionID string) (execution testkube.Ex
 }
 
 // ListExecutions list all executions for given test name
-func (c DirectAPIClient) ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+func (c DirectAPIClient) ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := "/executions"
 
-	if scriptID != "" {
-		uri = fmt.Sprintf("/tests/%s/executions", scriptID)
+	if id != "" {
+		uri = fmt.Sprintf("/tests/%s/executions", id)
 	}
 
 	if len(tags) > 0 {
@@ -238,7 +238,7 @@ func (c DirectAPIClient) Logs(id string) (logs chan output.Output, err error) {
 	return
 }
 
-// ListTests list all scripts in given namespace
+// ListTests list all tests in given namespace
 func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
 	var uri string
 	if len(tags) > 0 {
@@ -254,15 +254,15 @@ func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testk
 	defer resp.Body.Close()
 
 	if err := c.responseError(resp); err != nil {
-		return tests, fmt.Errorf("api/list-scripts returned error: %w", err)
+		return tests, fmt.Errorf("api/list-tests returned error: %w", err)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&tests)
 	return
 }
 
-func (c DirectAPIClient) AbortExecution(scriptID, id string) error {
-	uri := c.getURI("/tests/%s/executions/%s", scriptID, id)
+func (c DirectAPIClient) AbortExecution(testID, id string) error {
+	uri := c.getURI("/tests/%s/executions/%s", testID, id)
 	err := c.makeDeleteRequest(uri, false)
 
 	if err != nil {
@@ -601,7 +601,7 @@ func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test t
 	return c.getTestSuiteFromResponse(resp)
 }
 
-// ListTestSuites list all scripts in given namespace
+// ListTestSuites list all tests suites in given namespace
 func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (tests testkube.TestSuites, err error) {
 	var uri string
 	if len(tags) > 0 {

@@ -16,12 +16,12 @@ func (s TestkubeAPI) ListTagsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		scriptsTags, err := s.TestsClient.ListTags(namespace)
+		tagList, err := s.TestsClient.ListTags(namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		tags := append(testsTags, scriptsTags...)
+		tags := append(testsTags, tagList...)
 
 		tags = utils.RemoveDuplicates(tags)
 

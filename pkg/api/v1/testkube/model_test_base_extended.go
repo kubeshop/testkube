@@ -2,9 +2,9 @@ package testkube
 
 type Tests []Test
 
-func (scripts Tests) Table() (header []string, output [][]string) {
+func (t Tests) Table() (header []string, output [][]string) {
 	header = []string{"Name", "Type"}
-	for _, e := range scripts {
+	for _, e := range t {
 		output = append(output, []string{
 			e.Name,
 			e.Type_,
@@ -14,9 +14,9 @@ func (scripts Tests) Table() (header []string, output [][]string) {
 	return
 }
 
-func (s Test) GetObjectRef() *ObjectRef {
+func (t Test) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
-		Name: s.Name,
+		Name: t.Name,
 		// TODO add namespace to test model and all dependencies
 		Namespace: "testkube",
 	}

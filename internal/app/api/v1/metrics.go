@@ -13,17 +13,17 @@ var executionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 
 var creationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_creation_count",
-	Help: "The total number of scripts created by type events",
+	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
 var updatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_updates_count",
-	Help: "The total number of scripts created by type events",
+	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
 var abortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_abort_count",
-	Help: "The total number of scripts created by type events",
+	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
 func NewMetrics() Metrics {
@@ -50,38 +50,38 @@ func (m Metrics) IncExecution(execution testkube.Execution) {
 	}).Inc()
 }
 
-func (m Metrics) IncUpdateTest(scriptType string, err error) {
+func (m Metrics) IncUpdateTest(testType string, err error) {
 	result := "updated"
 	if err != nil {
 		result = "error"
 	}
 
 	m.Updates.With(map[string]string{
-		"type":   scriptType,
+		"type":   testType,
 		"result": result,
 	}).Inc()
 }
 
-func (m Metrics) IncCreateTest(scriptType string, err error) {
+func (m Metrics) IncCreateTest(testType string, err error) {
 	result := "created"
 	if err != nil {
 		result = "error"
 	}
 
 	m.Creations.With(map[string]string{
-		"type":   scriptType,
+		"type":   testType,
 		"result": result,
 	}).Inc()
 }
 
-func (m Metrics) IncAbortTest(scriptType string, err error) {
+func (m Metrics) IncAbortTest(testType string, err error) {
 	status := "aborted"
 	if err != nil {
 		status = "error"
 	}
 
 	m.Creations.With(map[string]string{
-		"type":   scriptType,
+		"type":   testType,
 		"status": status,
 	}).Inc()
 }

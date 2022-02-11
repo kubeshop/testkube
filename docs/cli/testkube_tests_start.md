@@ -1,4 +1,4 @@
-## testkube scripts start
+## testkube tests start
 
 Starts new test
 
@@ -7,7 +7,7 @@ Starts new test
 Starts new test based on Test Custom Resource name, returns results to console
 
 ```sh
-testkube scripts start [flags]
+testkube tests start [flags]
 ```
 
 ### Options

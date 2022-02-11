@@ -227,7 +227,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(1), totals.Pending)
 	})
 
-	t.Run("scripts should be sorted with most recent first", func(t *testing.T) {
+	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter())
 		assert.NoError(err)
 		assert.NotEmpty(executions)

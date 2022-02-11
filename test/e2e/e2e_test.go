@@ -65,7 +65,7 @@ func TestE2E(t *testing.T) {
 		sleep(t, time.Minute)
 	})
 
-	t.Run("scripts management", func(t *testing.T) {
+	t.Run("tests management", func(t *testing.T) {
 		// given
 		out, err := test.CreateTest(testName, collectionFile)
 		a.NoError(err)
@@ -81,7 +81,7 @@ func TestE2E(t *testing.T) {
 		sleep(t, 5*time.Second)
 	})
 
-	t.Run("scripts run", func(t *testing.T) {
+	t.Run("tests run", func(t *testing.T) {
 		// given
 		executionName := rand.Name()
 

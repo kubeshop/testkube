@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const testkubeTestSecretLabel = "scripts-secrets"
+const testkubeTestSecretLabel = "tests-secrets"
 
 // Client provide methods to manage secrets
 type Client struct {

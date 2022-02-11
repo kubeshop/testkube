@@ -30,8 +30,8 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 	return
 }
 
-func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, script string) (result testkube.Execution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": script}).Decode(&result)
+func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
 	return
 }
 
@@ -199,7 +199,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.TypeDefined() {
-		query["scripttype"] = filter.Type()
+		query["testtype"] = filter.Type()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))

@@ -1,6 +1,6 @@
 package testkube
 
-// scripts execution request body
+// test execution request body
 func ExecutorStartRequestToExecution(request ExecutorStartRequest) Execution {
 	return Execution{
 		Id:       request.Id,

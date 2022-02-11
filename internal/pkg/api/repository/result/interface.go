@@ -32,7 +32,7 @@ type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name
-	GetByNameAndTest(ctx context.Context, name, script string) (testkube.Execution, error)
+	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
 	// GetExecutionTotals gets the statistics on number of executions using a filter, but without paging

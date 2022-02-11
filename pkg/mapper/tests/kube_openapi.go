@@ -5,9 +5,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapTestListKubeToAPI(crTests testsv2.TestList) (scripts []testkube.Test) {
+func MapTestListKubeToAPI(crTests testsv2.TestList) (tests []testkube.Test) {
 	for _, item := range crTests.Items {
-		scripts = append(scripts, MapTestCRToAPI(item))
+		tests = append(tests, MapTestCRToAPI(item))
 	}
 
 	return

@@ -33,7 +33,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test request body invalid: %w", err))
 		}
 
-		scriptID := c.Params("id")
+		id := c.Params("id")
 		namespace := request.Namespace
 
 		// generate random execution name in case there is no one set
@@ -43,13 +43,13 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 		}
 
 		// test name + test execution name should be unique
-		execution, _ := s.ExecutionResults.GetByNameAndTest(c.Context(), request.Name, scriptID)
+		execution, _ := s.ExecutionResults.GetByNameAndTest(c.Context(), request.Name, id)
 		if execution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution with name %s already exists", request.Name))
 		}
 
 		// merge available data into execution options test spec, executor spec, request, test id
-		options, err := s.GetExecuteOptions(namespace, scriptID, request)
+		options, err := s.GetExecuteOptions(namespace, id, request)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
 		}
@@ -123,7 +123,7 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /tests/{id}/executions
-		// or should scriptID be a query string as it's some kind of filter?
+		// or should id be a query string as it's some kind of filter?
 
 		filter := getFilterFromRequest(c)
 
@@ -203,13 +203,13 @@ func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		scriptID := c.Params("id", "")
+		id := c.Params("id", "")
 		executionID := c.Params("executionID")
 
 		var execution testkube.Execution
 		var err error
 
-		if scriptID == "" {
+		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
@@ -218,9 +218,9 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, scriptID)
+			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, id)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", scriptID, executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", id, executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -282,9 +282,9 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
-	testCR, err := s.TestsClient.Get(namespace, scriptID)
+	testCR, err := s.TestsClient.Get(namespace, id)
 
 	if err != nil {
 		return options, fmt.Errorf("can't get test custom resource %w", err)
@@ -297,7 +297,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, scriptID string, request testk
 	}
 
 	return client.ExecuteOptions{
-		TestName:     scriptID,
+		TestName:     id,
 		TestSpec:     testCR.Spec,
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,

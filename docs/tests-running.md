@@ -40,10 +40,10 @@ $ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
 
-Testkube will inform us about possible commands to get scripts:
+Testkube will inform us about possible commands to get tests:
 
 - `kubectl testkube tests execution 615d6398b046f8fbd3d955d4` to get execution details
-- `kubectl testkube tests watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when test is completed and is good for long running scripts to lock your terminal until test execution completes)
+- `kubectl testkube tests watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when test is completed and is good for long running tests to lock your terminal until test execution completes)
 
 ## Run with watch for changes
 

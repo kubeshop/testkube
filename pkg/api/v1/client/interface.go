@@ -16,7 +16,7 @@ type HTTPClient interface {
 
 type Client interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 
 	GetTest(id, namespace string) (test testkube.Test, err error)
@@ -39,7 +39,7 @@ type Client interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
 	UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
 	GetTestSuite(id string, namespace string) (test testkube.TestSuite, err error)
-	ListTestSuites(namespace string, tags []string) (scripts testkube.TestSuites, err error)
+	ListTestSuites(namespace string, tags []string) (tests testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
 	DeleteTestSuites(namespace string) error
 	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
@@ -48,7 +48,7 @@ type Client interface {
 	ListTestExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 
-	GetServerInfo() (scripts testkube.ServerInfo, err error)
+	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest

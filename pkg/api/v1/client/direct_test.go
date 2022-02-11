@@ -55,7 +55,7 @@ func TestAPIClient(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("List scripts executions", func(t *testing.T) {
+	t.Run("List executions", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -141,7 +141,7 @@ func TestAPIClient(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("Delete all scripts positive flow", func(t *testing.T) {
+	t.Run("Delete all tests positive flow", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -159,7 +159,7 @@ func TestAPIClient(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Delete all scripts fails", func(t *testing.T) {
+	t.Run("Delete all tests fails", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -177,7 +177,7 @@ func TestAPIClient(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("List scripts", func(t *testing.T) {
+	t.Run("List tests", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -189,11 +189,11 @@ func TestAPIClient(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		scripts, err := client.ListTests("testkube", nil)
+		tests, err := client.ListTests("testkube", nil)
 
 		// then
 		assert.NoError(t, err)
-		assert.Len(t, scripts, 2)
+		assert.Len(t, tests, 2)
 	})
 
 }

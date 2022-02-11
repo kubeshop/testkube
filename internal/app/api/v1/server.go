@@ -117,33 +117,33 @@ func (s TestkubeAPI) Init() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
-	scripts := s.Routes.Group("/tests")
+	tests := s.Routes.Group("/tests")
 
-	scripts.Get("/", s.ListTestsHandler())
-	scripts.Post("/", s.CreateTestHandler())
-	scripts.Patch("/:id", s.UpdateTestHandler())
-	scripts.Delete("/", s.DeleteTestsHandler())
+	tests.Get("/", s.ListTestsHandler())
+	tests.Post("/", s.CreateTestHandler())
+	tests.Patch("/:id", s.UpdateTestHandler())
+	tests.Delete("/", s.DeleteTestsHandler())
 
-	scripts.Get("/:id", s.GetTestHandler())
-	scripts.Delete("/:id", s.DeleteTestHandler())
+	tests.Get("/:id", s.GetTestHandler())
+	tests.Delete("/:id", s.DeleteTestHandler())
 
-	scripts.Post("/:id/executions", s.ExecuteTestHandler())
+	tests.Post("/:id/executions", s.ExecuteTestHandler())
 
-	scripts.Get("/:id/executions", s.ListExecutionsHandler())
-	scripts.Get("/:id/executions/:executionID", s.GetExecutionHandler())
-	scripts.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
+	tests.Get("/:id/executions", s.ListExecutionsHandler())
+	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
+	tests.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
 
-	tests := s.Routes.Group("/test-suites")
+	testsuites := s.Routes.Group("/test-suites")
 
-	tests.Post("/", s.CreateTestSuiteHandler())
-	tests.Get("/", s.ListTestSuitesHandler())
-	tests.Delete("/", s.DeleteTestSuitesHandler())
-	tests.Get("/:id", s.GetTestSuiteHandler())
-	tests.Delete("/:id", s.DeleteTestSuiteHandler())
+	testsuites.Post("/", s.CreateTestSuiteHandler())
+	testsuites.Get("/", s.ListTestSuitesHandler())
+	testsuites.Delete("/", s.DeleteTestSuitesHandler())
+	testsuites.Get("/:id", s.GetTestSuiteHandler())
+	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
 
-	tests.Post("/:id/executions", s.ExecuteTestSuiteHandler())
-	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
-	tests.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+	testsuites.Post("/:id/executions", s.ExecuteTestSuiteHandler())
+	testsuites.Get("/:id/executions", s.ListTestExecutionsHandler())
+	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestExecutionsHandler())
@@ -180,7 +180,7 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 }
 
 // TODO should we use single generic filter for all list based resources ?
-// currently filters for e.g. scripts are done "by hand"
+// currently filters for e.g. tests are done "by hand"
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()

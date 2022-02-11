@@ -149,7 +149,7 @@ kubectl testkube tests watch 611b6da38cd74034e7c9d408
 ## Getting execution details
 
 After test completed with success or error you can go back to test details by running
-scripts execution command:
+tests execution command:
 
 ```sh
 kubectl testkube tests execution 6103a45b7e18c4ea04883866

@@ -7,21 +7,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewExecutionWithID(id, scriptType, testName string) Execution {
+func NewExecutionWithID(id, testType, testName string) Execution {
 	return Execution{
 		Id:              id,
 		ExecutionResult: &ExecutionResult{},
 		TestName:        testName,
-		TestType:        scriptType,
+		TestType:        testType,
 	}
 }
 
-func NewExecution(testName, executionName, scriptType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(testName, executionName, testType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
 		TestName:        testName,
 		Name:            executionName,
-		TestType:        scriptType,
+		TestType:        testType,
 		ExecutionResult: &result,
 		Params:          params,
 		Content:         content,

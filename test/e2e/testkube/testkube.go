@@ -37,19 +37,19 @@ func (k Testkube) Install() ([]byte, error) {
 }
 
 func (k Testkube) CreateTest(name, path string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "create", "--file", path, "--name", name, "--namespace", k.Namespace)
+	return process.Execute("kubectl", "testkube", "tests", "create", "--file", path, "--name", name, "--namespace", k.Namespace)
 }
 
 func (k Testkube) DeleteTest(name string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "delete", "--name", name, "--namespace", k.Namespace)
+	return process.Execute("kubectl", "testkube", "tests", "delete", "--name", name, "--namespace", k.Namespace)
 }
 
 func (k Testkube) DeleteTests() ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "delete", "--all", "--namespace", k.Namespace)
+	return process.Execute("kubectl", "testkube", "tests", "delete", "--all", "--namespace", k.Namespace)
 }
 
 func (k Testkube) StartTest(testName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "start", testName, "--name", executionName, "--namespace", k.Namespace)
+	return process.Execute("kubectl", "testkube", "tests", "start", testName, "--name", executionName, "--namespace", k.Namespace)
 }
 
 func (k Testkube) Version() ([]byte, error) {
@@ -57,13 +57,13 @@ func (k Testkube) Version() ([]byte, error) {
 }
 
 func (k Testkube) List() ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "list", "--namespace", k.Namespace, "--output", k.Output)
+	return process.Execute("kubectl", "testkube", "tests", "list", "--namespace", k.Namespace, "--output", k.Output)
 }
 
 func (k Testkube) Executions(name, path string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "executions", "--namespace", k.Namespace, "--output", k.Output)
+	return process.Execute("kubectl", "testkube", "tests", "executions", "--namespace", k.Namespace, "--output", k.Output)
 }
 
 func (k Testkube) Execution(testName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "execution", "--namespace", k.Namespace, "--output", k.Output, testName, executionName)
+	return process.Execute("kubectl", "testkube", "tests", "execution", "--namespace", k.Namespace, "--output", k.Output, testName, executionName)
 }
