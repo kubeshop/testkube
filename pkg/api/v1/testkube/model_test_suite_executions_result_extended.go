@@ -17,7 +17,7 @@ func (r TestSuiteExecutionsResult) Table() (headers []string, output [][]string)
 	for _, result := range r.Results {
 		output = append(output, []string{
 			result.Id,
-			result.TestName,
+			result.TestSuiteName,
 			result.Name,
 			string(*result.Status),
 			fmt.Sprintf("%d", len(result.Execution)),

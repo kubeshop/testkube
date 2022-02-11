@@ -53,10 +53,10 @@ Output:
                                            /tɛst kjub/ by Kubeshop
 
 
-Script created  🥇
+Test created  🥇
 ```
 
-Script created! Now we can run as many times as we want
+Test created! Now we can run as many times as we want
 
 ## Running test
 
@@ -76,7 +76,7 @@ Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
@@ -135,7 +135,7 @@ API-Health
 ├──────────────────────────────────────────────────────────────────┤
 │ average response time: 297ms [min: 297ms, max: 297ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
-Script execution completed in 598ms
+Test execution completed in 598ms
 ```
 
 ## Summary

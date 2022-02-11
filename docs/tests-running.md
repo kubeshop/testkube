@@ -31,7 +31,7 @@ Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
@@ -69,7 +69,7 @@ Name          : api-incluster-test
 Execution ID  : 615d7e1ab046f8fbd3d955d6
 Execution name: monthly-sure-finch
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
@@ -116,7 +116,7 @@ API-Health
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
-Script execution completed in 595ms
+Test execution completed in 595ms
 ```
 
 As we can see command will wait until test execution completes with error or success
@@ -149,7 +149,7 @@ Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
@@ -221,7 +221,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-Script execution completed in 1m45.405939s
+Test execution completed in 1m45.405939s
 ```
 
 ## Summary

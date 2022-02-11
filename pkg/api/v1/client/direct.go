@@ -36,7 +36,7 @@ var config Config
 func init() {
 	envconfig.Process("TESTKUBE_API", &config)
 }
-func NewDirectScriptsAPI(uri string) DirectAPIClient {
+func NewDirectAPIClient(uri string) DirectAPIClient {
 	return DirectAPIClient{
 		URI: uri,
 		client: &http.Client{
@@ -45,8 +45,8 @@ func NewDirectScriptsAPI(uri string) DirectAPIClient {
 	}
 }
 
-func NewDefaultDirectScriptsAPI() DirectAPIClient {
-	return NewDirectScriptsAPI(config.URI)
+func NewDefaultDirectAPIClient() DirectAPIClient {
+	return NewDirectAPIClient(config.URI)
 }
 
 type DirectAPIClient struct {
@@ -67,7 +67,7 @@ func (c DirectAPIClient) GetTest(id, namespace string) (test testkube.Test, err 
 		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
 func (c DirectAPIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
@@ -126,8 +126,8 @@ func (c DirectAPIClient) DeleteTest(name string, namespace string) error {
 	return c.makeDeleteRequest(uri, true)
 }
 
-// CreateTest creates new Script Custom Resource
-func (c DirectAPIClient) CreateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
+// CreateTest creates new Test Custom Resource
+func (c DirectAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests")
 
 	request := testkube.TestUpsertRequest(options)
@@ -146,11 +146,11 @@ func (c DirectAPIClient) CreateTest(options UpsertScriptOptions) (test testkube.
 		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
-// UpdateTest creates new Script Custom Resource
-func (c DirectAPIClient) UpdateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
+// UpdateTest creates new Test Custom Resource
+func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 	request := testkube.TestUpsertRequest(options)
 
@@ -174,7 +174,7 @@ func (c DirectAPIClient) UpdateTest(options UpsertScriptOptions) (test testkube.
 		return test, fmt.Errorf("api/update-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
 // ExecuteTest starts new external test execution, reads data and returns ID
@@ -378,7 +378,7 @@ func (c DirectAPIClient) getExecutionsFromResponse(resp *http.Response) (executi
 	return
 }
 
-func (c DirectAPIClient) getScriptFromResponse(resp *http.Response) (test testkube.Test, err error) {
+func (c DirectAPIClient) getTestFromResponse(resp *http.Response) (test testkube.Test, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&test)
@@ -508,11 +508,11 @@ func (c DirectAPIClient) GetTestSuite(id, namespace string) (test testkube.TestS
 		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
 // CreateTestSuite creates new Test Custom Resource
-func (c DirectAPIClient) CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -531,7 +531,7 @@ func (c DirectAPIClient) CreateTestSuite(options UpsertTestOptions) (test testku
 		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
 func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
@@ -573,7 +573,7 @@ func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 }
 
 // UpdateTestSuite creates new Test Custom Resource
-func (c DirectAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -598,7 +598,7 @@ func (c DirectAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testku
 		return test, fmt.Errorf("api/update-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
 // ListTestSuites list all scripts in given namespace
@@ -719,7 +719,7 @@ func (c DirectAPIClient) ListTestExecutions(testSuiteName string, limit int, tag
 	return c.getTestExecutionsFromResponse(resp)
 }
 
-func (c DirectAPIClient) getTestFromResponse(resp *http.Response) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) getTestSuiteFromResponse(resp *http.Response) (test testkube.TestSuite, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&test)

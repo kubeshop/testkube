@@ -64,7 +64,7 @@ func NewCRDTestsCmd() *cobra.Command {
 
 var ErrTypeNotDetected = fmt.Errorf("type not detected")
 
-type Script struct {
+type Test struct {
 	Name      string
 	Namespace string
 	Content   string
@@ -77,12 +77,14 @@ func GenerateCRD(namespace, path string) (string, error) {
 	var testType string
 
 	tpl := `apiVersion: tests.testkube.io/v1
-kind: Script
+kind: Test
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
 spec:
-  content: {{ .Content }}
+  content: 
+    type: string
+    data: {{ .Content }}
   type: {{ .Type }}
 `
 
@@ -93,7 +95,7 @@ spec:
 
 	// try to detect type if none passed
 	d := detector.NewDefaultDetector()
-	if detectedType, ok := d.Detect(client.UpsertScriptOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
+	if detectedType, ok := d.Detect(client.UpsertTestOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
 		ui.Debug("Detected test type", detectedType)
 		testType = detectedType
 	} else {
@@ -104,7 +106,7 @@ spec:
 
 	t := template.Must(template.New("test").Parse(tpl))
 	b := bytes.NewBuffer([]byte{})
-	err = t.Execute(b, Script{
+	err = t.Execute(b, Test{
 		Name:      SanitizeName(name),
 		Namespace: namespace,
 		Content:   fmt.Sprintf("%q", strings.TrimSpace(string(content))),

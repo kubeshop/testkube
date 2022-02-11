@@ -159,7 +159,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	return content, nil
 }
 
-func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (options apiclientv1.UpsertScriptOptions, err error) {
+func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (options apiclientv1.UpsertTestOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 
 	ui.ExitOnError("creating content from passed parameters", err)
@@ -172,7 +172,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		return options, err
 	}
 
-	options = apiclientv1.UpsertScriptOptions{
+	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,

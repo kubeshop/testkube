@@ -43,7 +43,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 		}
 
 		// test name + test execution name should be unique
-		execution, _ := s.ExecutionResults.GetByNameAndScript(c.Context(), request.Name, scriptID)
+		execution, _ := s.ExecutionResults.GetByNameAndTest(c.Context(), request.Name, scriptID)
 		if execution.Name == request.Name {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution with name %s already exists", request.Name))
 		}
@@ -54,7 +54,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
 		}
 
-		execution = s.executeScript(ctx, options)
+		execution = s.executeTest(ctx, options)
 		if execution.ExecutionResult.IsFailed() {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf(execution.ExecutionResult.ErrorMessage))
 		}
@@ -63,7 +63,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) executeScript(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
+func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
@@ -218,7 +218,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			execution, err = s.ExecutionResults.GetByNameAndScript(ctx, executionID, scriptID)
+			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, scriptID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", scriptID, executionID))
 			}

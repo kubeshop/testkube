@@ -26,7 +26,7 @@ Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 

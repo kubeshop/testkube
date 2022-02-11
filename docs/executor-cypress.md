@@ -71,7 +71,7 @@ Name          : kubeshop-cypress
 Execution ID  : 615d5265b046f8fbd3d955d0
 Execution name: wildly-popular-worm
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
@@ -175,7 +175,7 @@ output:
 
 
 
-Script execution completed in 1m17s
+Test execution completed in 1m17s
 
 ```
 
@@ -207,7 +207,7 @@ Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
-Script queued for execution
+Test queued for execution
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
@@ -279,7 +279,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
 Use following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-Script execution completed in 1m45.405939s
+Test execution completed in 1m45.405939s
 ```
 
 ## Summary

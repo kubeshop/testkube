@@ -9,7 +9,7 @@
  */
 package testkube
 
-// scripts execution request body
+// test execution request body
 type ExecutionRequest struct {
 	// test execution custom name
 	Name string `json:"name,omitempty"`

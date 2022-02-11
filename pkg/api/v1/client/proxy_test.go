@@ -48,7 +48,7 @@ func (r *Rest) APIVersion() schema.GroupVersion {
 	return schema.GroupVersion{Group: "api", Version: "v1"}
 }
 
-func TestDefaultDirectScriptsAPI(t *testing.T) {
+func TestDefaultDirectAPIClient(t *testing.T) {
 	t.Skip("Implement working test")
 
 	k8sClient := fake.NewSimpleClientset()

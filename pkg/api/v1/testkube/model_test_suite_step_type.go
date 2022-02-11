@@ -13,6 +13,6 @@ type TestSuiteStepType string
 
 // List of TestSuiteStepType
 const (
-	EXECUTE_SCRIPT_TestSuiteStepType TestSuiteStepType = "executeScript"
-	DELAY_TestSuiteStepType          TestSuiteStepType = "delay"
+	EXECUTE_TEST_TestSuiteStepType TestSuiteStepType = "executeTest"
+	DELAY_TestSuiteStepType        TestSuiteStepType = "delay"
 )

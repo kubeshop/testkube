@@ -20,8 +20,8 @@ type Client interface {
 	AbortExecution(test string, id string) error
 
 	GetTest(id, namespace string) (test testkube.Test, err error)
-	CreateTest(options UpsertScriptOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertScriptOptions) (test testkube.Test, err error)
+	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string, namespace string) error
 	DeleteTests(namespace string) error
 	ListTests(namespace string, tags []string) (tests testkube.Tests, err error)
@@ -36,8 +36,8 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
-	CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error)
+	CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
 	GetTestSuite(id string, namespace string) (test testkube.TestSuite, err error)
 	ListTestSuites(namespace string, tags []string) (scripts testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
@@ -51,11 +51,11 @@ type Client interface {
 	GetServerInfo() (scripts testkube.ServerInfo, err error)
 }
 
-type UpsertTestOptions testkube.TestSuiteUpsertRequest
+type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertScriptOptions - is mapping for now to OpenAPI schema for creating request
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct
-type UpsertScriptOptions testkube.TestUpsertRequest
+type UpsertTestOptions testkube.TestUpsertRequest
 
 // CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
 type CreateExecutorOptions testkube.ExecutorCreateRequest

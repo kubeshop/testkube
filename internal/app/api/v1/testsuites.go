@@ -153,7 +153,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 
 		test := testsuitesmapper.MapCRToAPI(*crTest)
 		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
-		results := s.executeTest(ctx, request, test)
+		results := s.executeTestSuite(ctx, request, test)
 
 		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)
@@ -201,7 +201,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) executeTest(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
+func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
 	s.Log.Debugw("Got test to execute", "test", test)
 
 	testExecution = testkube.NewStartedTestSuiteExecution(test, request)
@@ -254,8 +254,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, request testkube.TestSuite
 func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
 
 	var testSuiteName string
-	if testExecution.Test != nil {
-		testSuiteName = testExecution.Test.Name
+	if testExecution.TestSuite != nil {
+		testSuiteName = testExecution.TestSuite.Name
 	}
 
 	step := result.Step
@@ -265,10 +265,10 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 	switch step.Type() {
 
 	case testkube.TestSuiteStepTypeExecuteTest:
-		executeScriptStep := step.Execute
-		options, err := s.GetExecuteOptions(executeScriptStep.Namespace, executeScriptStep.Name, testkube.ExecutionRequest{
-			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeScriptStep.Name, rand.String(5)),
-			Namespace: executeScriptStep.Namespace,
+		executeTestStep := step.Execute
+		options, err := s.GetExecuteOptions(executeTestStep.Namespace, executeTestStep.Name, testkube.ExecutionRequest{
+			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
+			Namespace: executeTestStep.Namespace,
 			Params:    testExecution.Params,
 		})
 
@@ -278,7 +278,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 
 		l.Debug("executing test", "params", testExecution.Params)
 		options.Sync = true
-		execution := s.executeScript(ctx, options)
+		execution := s.executeTest(ctx, options)
 		result.Execution = &execution
 
 	case testkube.TestSuiteStepTypeDelay:
@@ -341,14 +341,14 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 		}
 
 		result[i] = testkube.TestSuiteExecutionSummary{
-			Id:        execution.Id,
-			Name:      execution.Name,
-			TestName:  execution.Test.Name,
-			Status:    execution.Status,
-			StartTime: execution.StartTime,
-			EndTime:   execution.EndTime,
-			Duration:  execution.Duration,
-			Execution: executionsSummary,
+			Id:            execution.Id,
+			Name:          execution.Name,
+			TestSuiteName: execution.TestSuite.Name,
+			Status:        execution.Status,
+			StartTime:     execution.StartTime,
+			EndTime:       execution.EndTime,
+			Duration:      execution.Duration,
+			Execution:     executionsSummary,
 		}
 	}
 

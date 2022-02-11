@@ -4,7 +4,7 @@ Starts new test
 
 ### Synopsis
 
-Starts new test based on Script Custom Resource name, returns results to console
+Starts new test based on Test Custom Resource name, returns results to console
 
 ```sh
 testkube scripts start [flags]

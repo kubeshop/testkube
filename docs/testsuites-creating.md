@@ -21,9 +21,9 @@ echo '
         "namespace": "testkube",
         "description": "Example simple test orchestration",
         "steps": [
-                {"type": "executeScript", "namespace": "testkube", "name": "test1"},
+                {"type": "executeTest", "namespace": "testkube", "name": "test1"},
                 {"type": "delay", "duration": 5000},
-                {"type": "executeScript", "namespace": "testkube", "name": "test1"}
+                {"type": "executeTest", "namespace": "testkube", "name": "test1"}
         ]
 }' | kubectl testkube testsuites create
 ```

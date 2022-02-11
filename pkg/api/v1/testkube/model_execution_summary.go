@@ -21,6 +21,8 @@ type ExecutionSummary struct {
 	Name string `json:"name"`
 	// name of the test
 	TestName string `json:"testName"`
+	// name of the test
+	TestNamespace string `json:"testNamespace,omitempty"`
 	// the type of test for this execution
 	TestType string           `json:"testType"`
 	Status   *ExecutionStatus `json:"status"`

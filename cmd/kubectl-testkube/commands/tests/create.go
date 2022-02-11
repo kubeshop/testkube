@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCreateTestsCmd is a command tp create new Script Custom Resource
+// NewCreateTestsCmd is a command tp create new Test Custom Resource
 func NewCreateTestsCmd() *cobra.Command {
 
 	var (

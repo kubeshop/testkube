@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-// API server test execution
+// Test execution
 type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
-	// unique test name (CRD Script name)
+	// unique test name (CRD Test name)
 	TestName string `json:"testName,omitempty"`
 	// test namespace
 	TestNamespace string `json:"testNamespace,omitempty"`

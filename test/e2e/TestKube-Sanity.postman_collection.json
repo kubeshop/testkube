@@ -93,7 +93,7 @@
 							"    pm.response.to.have.status(200);",
 							"});",
 							"",
-							"pm.test(\"Script is on the list\", function () {",
+							"pm.test(\"Test is on the list\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let contains = false;",
 							"    for (let i=0; i<jsonData.length; i++) {",
@@ -189,7 +189,7 @@
 			"response": []
 		},
 		{
-			"name": "API Start Script",
+			"name": "API Start Test",
 			"event": [
 				{
 					"listen": "test",

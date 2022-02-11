@@ -9,7 +9,7 @@ import (
 type PostmanCollectionAdapter struct {
 }
 
-func (d PostmanCollectionAdapter) Is(options apiClient.UpsertScriptOptions) (name string, ok bool) {
+func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	var data map[string]interface{}
 
 	err := json.Unmarshal([]byte(options.Content.Data), &data)

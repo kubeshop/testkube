@@ -13,14 +13,14 @@ import (
 	"time"
 )
 
-// API server test scripts executions container
+// Test suite executions data
 type TestSuiteExecution struct {
 	// execution id
 	Id string `json:"id"`
 	// execution name
-	Name   string                    `json:"name"`
-	Test   *ObjectRef                `json:"test"`
-	Status *TestSuiteExecutionStatus `json:"status,omitempty"`
+	Name      string                    `json:"name"`
+	TestSuite *ObjectRef                `json:"testSuite,omitempty"`
+	Status    *TestSuiteExecutionStatus `json:"status,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution params passed to executor converted to vars for usage in tests

@@ -82,7 +82,7 @@ func (c ProxyAPIClient) GetTest(id, namespace string) (test testkube.Test, err e
 		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
 func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
@@ -138,8 +138,8 @@ func (c ProxyAPIClient) DeleteTest(name string, namespace string) error {
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-// CreateTest creates new Script Custom Resource
-func (c ProxyAPIClient) CreateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
+// CreateTest creates new Test Custom Resource
+func (c ProxyAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests")
 
 	request := testkube.TestUpsertRequest(options)
@@ -156,11 +156,11 @@ func (c ProxyAPIClient) CreateTest(options UpsertScriptOptions) (test testkube.T
 		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
-// UpdateTest creates new Script Custom Resource
-func (c ProxyAPIClient) UpdateTest(options UpsertScriptOptions) (test testkube.Test, err error) {
+// UpdateTest creates new Test Custom Resource
+func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 
 	request := testkube.TestUpsertRequest(options)
@@ -177,7 +177,7 @@ func (c ProxyAPIClient) UpdateTest(options UpsertScriptOptions) (test testkube.T
 		return test, fmt.Errorf("api/udpate-test returned error: %w", err)
 	}
 
-	return c.getScriptFromResponse(resp)
+	return c.getTestFromResponse(resp)
 }
 
 // ExecuteTest starts new external test execution, reads data and returns ID
@@ -249,7 +249,7 @@ func (c ProxyAPIClient) ListTests(namespace string, tags []string) (scripts test
 		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
 	}
 
-	return c.getScriptsFromResponse(resp)
+	return c.getTestsFromResponse(resp)
 }
 
 // GetExecutions list all executions in given test
@@ -364,7 +364,7 @@ func (c ProxyAPIClient) getExecutionsFromResponse(resp rest.Result) (executions 
 	return executions, err
 }
 
-func (c ProxyAPIClient) getScriptsFromResponse(resp rest.Result) (scripts testkube.Tests, err error) {
+func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (scripts testkube.Tests, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return scripts, err
@@ -386,7 +386,7 @@ func (c ProxyAPIClient) getExecutorsDetailsFromResponse(resp rest.Result) (execu
 	return executors, err
 }
 
-func (c ProxyAPIClient) getScriptFromResponse(resp rest.Result) (test testkube.Test, err error) {
+func (c ProxyAPIClient) getTestFromResponse(resp rest.Result) (test testkube.Test, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return test, err
@@ -538,7 +538,7 @@ func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSu
 		return test, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
 func (c ProxyAPIClient) DeleteTestSuite(name string, namespace string) error {
@@ -570,11 +570,11 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (scripts
 		return scripts, fmt.Errorf("api/list-scripts returned error: %w", err)
 	}
 
-	return c.getTestsFromResponse(resp)
+	return c.getTestSuitesFromResponse(resp)
 }
 
 // CreateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) CreateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -591,11 +591,11 @@ func (c ProxyAPIClient) CreateTestSuite(options UpsertTestOptions) (test testkub
 		return test, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
 // UpdateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -612,10 +612,10 @@ func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestOptions) (test testkub
 		return test, fmt.Errorf("api/udpate-test returned error: %w", err)
 	}
 
-	return c.getTestFromResponse(resp)
+	return c.getTestSuiteFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestFromResponse(resp rest.Result) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (test testkube.TestSuite, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return test, err
@@ -717,7 +717,7 @@ func (c ProxyAPIClient) ListTestExecutions(testID string, limit int, tags []stri
 	return c.getTestExecutionsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (tests testkube.TestSuites, err error) {
+func (c ProxyAPIClient) getTestSuitesFromResponse(resp rest.Result) (tests testkube.TestSuites, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return tests, err

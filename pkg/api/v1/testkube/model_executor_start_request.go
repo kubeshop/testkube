@@ -9,7 +9,7 @@
  */
 package testkube
 
-// scripts execution request body when calling new execution request
+// test execution start request body
 type ExecutorStartRequest struct {
 	// ID of test execution to handle by executor, execution need to be able to return execution info based on this ID
 	Id string `json:"id,omitempty"`

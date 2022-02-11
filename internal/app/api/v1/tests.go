@@ -18,7 +18,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
-		crScript, err := s.TestsClient.Get(namespace, name)
+		crTest, err := s.TestsClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, err)
@@ -27,7 +27,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		tests := testsmapper.MapScriptCRToAPI(*crScript)
+		tests := testsmapper.MapTestCRToAPI(*crTest)
 		return c.JSON(tests)
 	}
 }
@@ -69,7 +69,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 			}
 		}
 
-		tests := testsmapper.MapScriptListKubeToAPI(*crTests)
+		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
 	}
@@ -87,7 +87,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		s.Log.Infow("creating test", "request", request)
 
-		testSpec := testsmapper.MapScriptToScriptSpec(request)
+		testSpec := testsmapper.MapToSpec(request)
 		test, err := s.TestsClient.Create(testSpec)
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
@@ -124,7 +124,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		}
 
 		// map test but load spec only to not override metadata.ResourceVersion
-		testSpec := testsmapper.MapScriptToScriptSpec(request)
+		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
 		test, err = s.TestsClient.Update(test)
 

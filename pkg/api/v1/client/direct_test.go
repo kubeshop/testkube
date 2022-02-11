@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestScriptsAPI(t *testing.T) {
+func TestAPIClient(t *testing.T) {
 
 	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given
@@ -21,7 +21,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -43,7 +43,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -63,7 +63,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -88,11 +88,11 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		response, err := client.CreateTest(UpsertScriptOptions{
+		response, err := client.CreateTest(UpsertTestOptions{
 			Content: testkube.NewStringTestContent("{}"),
 			Name:    "t1",
 			Type_:   "postman/collection",
@@ -113,7 +113,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -131,7 +131,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -149,7 +149,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -167,7 +167,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -185,7 +185,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when

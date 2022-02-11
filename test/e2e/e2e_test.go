@@ -69,7 +69,7 @@ func TestE2E(t *testing.T) {
 		// given
 		out, err := test.CreateTest(testName, collectionFile)
 		a.NoError(err)
-		a.Contains(string(out), "Script created")
+		a.Contains(string(out), "Test created")
 
 		// when
 		out, err = test.List()
@@ -86,7 +86,7 @@ func TestE2E(t *testing.T) {
 		executionName := rand.Name()
 
 		// when
-		out, err := test.StartScript(testName, executionName)
+		out, err := test.StartTest(testName, executionName)
 		a.NoError(err)
 
 		// then check if info about collection steps exists somewhere in output
@@ -94,7 +94,7 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Google")
 
 		// then check if scripts completed with success
-		a.Contains(string(out), "Script execution completed with sucess")
+		a.Contains(string(out), "Test execution completed with sucess")
 
 		executionID := GetExecutionID(out)
 		t.Logf("Execution completed ID: %s", executionID)

@@ -5,19 +5,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func MapScriptListKubeToAPI(crScripts testsv2.TestList) (scripts []testkube.Test) {
-	for _, item := range crScripts.Items {
-		scripts = append(scripts, MapScriptCRToAPI(item))
+func MapTestListKubeToAPI(crTests testsv2.TestList) (scripts []testkube.Test) {
+	for _, item := range crTests.Items {
+		scripts = append(scripts, MapTestCRToAPI(item))
 	}
 
 	return
 }
-func MapScriptCRToAPI(crScript testsv2.Test) (test testkube.Test) {
-	test.Name = crScript.Name
-	test.Content = MapTestContentFromSpec(crScript.Spec.Content)
-	test.Created = crScript.CreationTimestamp.Time
-	test.Type_ = crScript.Spec.Type_
-	test.Tags = crScript.Spec.Tags
+func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
+	test.Name = crTest.Name
+	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
+	test.Created = crTest.CreationTimestamp.Time
+	test.Type_ = crTest.Spec.Type_
+	test.Tags = crTest.Spec.Tags
 	return
 }
 

@@ -43,7 +43,7 @@ Test can be run using `kubectl testkube tests start curl-test` which gives the o
    ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
-Script queued for execution
+Test queued for execution
 
 Use following command to get test execution details:
 $ kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e

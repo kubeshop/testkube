@@ -19,14 +19,14 @@ type TestSuiteExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
-	// name of the test
-	TestName string                    `json:"testSuiteName"`
-	Status   *TestSuiteExecutionStatus `json:"status"`
-	// test execution start time
+	// name of the test suite
+	TestSuiteName string                    `json:"testSuiteName"`
+	Status        *TestSuiteExecutionStatus `json:"status"`
+	// test suite execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
-	// test execution end time
+	// test suite execution end time
 	EndTime time.Time `json:"endTime,omitempty"`
-	// test execution duration
+	// test suite execution duration
 	Duration  string                          `json:"duration,omitempty"`
 	Execution []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
 }

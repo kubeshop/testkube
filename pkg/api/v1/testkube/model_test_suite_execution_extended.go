@@ -15,7 +15,7 @@ func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequ
 		Name:      fmt.Sprintf("%s.%s", test.Name, rand.Name()),
 		Status:    TestSuiteExecutionStatusPending,
 		Params:    request.Params,
-		Test:      test.GetObjectRef(),
+		TestSuite: test.GetObjectRef(),
 	}
 
 	// add queued execution steps

@@ -26,8 +26,8 @@ type Filter interface {
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
-	// GetByNameAndScript gets execution result by name
-	GetByNameAndScript(ctx context.Context, name, script string) (testkube.TestSuiteExecution, error)
+	// GetByNameAndTest gets execution result by name
+	GetByNameAndTest(ctx context.Context, name, script string) (testkube.TestSuiteExecution, error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all

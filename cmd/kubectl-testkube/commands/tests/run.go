@@ -28,7 +28,7 @@ func NewRunTestCmd() *cobra.Command {
 		Use:     "run <testName>",
 		Aliases: []string{"start", "r"},
 		Short:   "Starts new test",
-		Long:    `Starts new test based on Script Custom Resource name, returns results to console`,
+		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -78,15 +78,15 @@ func uiPrintStatus(execution testkube.Execution) {
 
 	switch true {
 	case result.IsQueued():
-		ui.Warn("Script queued for execution")
+		ui.Warn("Test queued for execution")
 
 	case result.IsPending():
-		ui.Warn("Script execution started")
+		ui.Warn("Test execution started")
 
 	case result.IsSuccesful():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Script execution completed with sucess in " + duration.String())
+		ui.Success("Test execution completed with sucess in " + duration.String())
 
 	case result.IsFailed():
 		ui.Warn("Test test execution failed:\n")

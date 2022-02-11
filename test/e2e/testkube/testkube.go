@@ -48,7 +48,7 @@ func (k Testkube) DeleteTests() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "delete", "--all", "--namespace", k.Namespace)
 }
 
-func (k Testkube) StartScript(testName, executionName string) ([]byte, error) {
+func (k Testkube) StartTest(testName, executionName string) ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "scripts", "start", testName, "--name", executionName, "--namespace", k.Namespace)
 }
 

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// scripts create request body
+// test create request body
 type TestUpsertRequest struct {
 	// test name
 	Name string `json:"name,omitempty"`

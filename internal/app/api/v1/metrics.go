@@ -74,7 +74,7 @@ func (m Metrics) IncCreateTest(scriptType string, err error) {
 	}).Inc()
 }
 
-func (m Metrics) IncAbortScript(scriptType string, err error) {
+func (m Metrics) IncAbortTest(scriptType string, err error) {
 	status := "aborted"
 	if err != nil {
 		status = "error"

@@ -38,7 +38,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			var options apiClient.UpsertTestOptions
+			var options apiClient.UpsertTestSuiteOptions
 
 			json.Unmarshal(content, &options)
 

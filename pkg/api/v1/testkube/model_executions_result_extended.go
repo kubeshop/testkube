@@ -1,7 +1,7 @@
 package testkube
 
 func (result ExecutionsResult) Table() (header []string, output [][]string) {
-	header = []string{"Script", "Type", "Name", "ID", "Status"}
+	header = []string{"Name", "Type", "Name", "ID", "Status"}
 
 	for _, e := range result.Results {
 		var status string

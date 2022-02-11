@@ -47,6 +47,7 @@ openapi-generate-model: openapi-generate-model-testkube
 openapi-generate-model-testkube:
 	swagger-codegen generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube
 	mv tmp/api/testkube/model_test.go tmp/api/testkube/model_test_base.go || true
+	mv tmp/api/testkube/model_test_suite_step_execute_test.go tmp/api/testkube/model_test_suite_step_execute_test_base.go || true
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
 	rm -rf tmp
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
