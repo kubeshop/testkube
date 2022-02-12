@@ -183,7 +183,7 @@ kubectl testkube tests list
 kubectl testkube tests executions TEST_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
-|   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
+|   TEST     |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
 +------------+--------------------+--------------------------+---------------------------+----------+
 | parms-test | postman/collection | 611a5a1a910ca385751eb2c6 | pt1                       | success  |
 | parms-test | postman/collection | 611a5a40910ca385751eb2c8 | pt2                       | error    |

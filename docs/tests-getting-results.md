@@ -88,7 +88,7 @@ kubectl testkube tests executions
 Output:
 
 ```sh
-        SCRIPT        |        TYPE        | NAME |            ID            | STATUS   
+        TEST          |        TYPE        | NAME |            ID            | STATUS   
 +---------------------+--------------------+------+--------------------------+---------+
   api-incluster-test  | postman/collection |      | 615d7e1ab046f8fbd3d955d6 | success  
   api-incluster-test  | postman/collection |      | 615d6398b046f8fbd3d955d4 | success  
@@ -144,7 +144,7 @@ kubectl testkube tests executions api-incluster-test
 Output:
 
 ```sh
-        SCRIPT       |        TYPE        | NAME |            ID            | STATUS   
+        TEST         |        TYPE        | NAME |            ID            | STATUS   
 +--------------------+--------------------+------+--------------------------+---------+
   api-incluster-test | postman/collection |      | 615d6398b046f8fbd3d955d4 | success  
   api-incluster-test | postman/collection |      | 615d7e1ab046f8fbd3d955d6 | success  

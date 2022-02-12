@@ -157,14 +157,14 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(1), totals.Pending)
 	})
 
-	t.Run("filter with script name that doesn't exist should return 0 results", func(t *testing.T) {
+	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
 
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName("noneExisting"))
 		assert.NoError(err)
 		assert.Empty(executions)
 	})
 
-	t.Run("getting totals with script name that doesn't exist should return 0 results", func(t *testing.T) {
+	t.Run("getting totals with test name that doesn't exist should return 0 results", func(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
@@ -208,7 +208,7 @@ func TestStorage(t *testing.T) {
 	err = repository.insertExecutionResult(name, testkube.PENDING_ExecutionStatus, twoDaysAgo, nil)
 	assert.NoError(err)
 
-	t.Run("filter with script name should return result only for that script name", func(t *testing.T) {
+	t.Run("filter with test name should return result only for that test name", func(t *testing.T) {
 
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName(name))
 		assert.NoError(err)
@@ -216,7 +216,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(executions[0].TestName, name)
 	})
 
-	t.Run("getting totals with script name should return result only for that script name", func(t *testing.T) {
+	t.Run("getting totals with test name should return result only for that test name", func(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
 
 		assert.NoError(err)

@@ -93,7 +93,7 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Kasia.in Homepage")
 		a.Contains(string(out), "Google")
 
-		// then check if scripts completed with success
+		// then check if tests completed with success
 		a.Contains(string(out), "Test execution completed with sucess")
 
 		executionID := GetExecutionID(out)

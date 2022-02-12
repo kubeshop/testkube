@@ -6,15 +6,15 @@
 	},
 	"item": [
 		{
-			"name": "Create postman/collection script",
+			"name": "Create postman/collection test",
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"",
 							"",
 							"function makeid(length) {",
@@ -41,7 +41,7 @@
 							"    pm.response.to.have.status(200);",
 							"});",
 							"",
-							"pm.test(\"Check if script created successfully\", function () {",
+							"pm.test(\"Check if test created successfully\", function () {",
 							"    let jsonData = pm.response.json();",
 							"    let name = jsonData.metadata.name;",
 							"    let testName = pm.environment.get(\"test_name\");",
@@ -70,7 +70,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts",
+					"raw": "{{api_uri}}/v1/tests",
 					"host": [
 						"{{api_uri}}"
 					],
@@ -83,7 +83,7 @@
 			"response": []
 		},
 		{
-			"name": "List scripts",
+			"name": "List tests",
 			"event": [
 				{
 					"listen": "test",
@@ -127,20 +127,20 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts",
+					"raw": "{{api_uri}}/v1/tests",
 					"host": [
 						"{{api_uri}}"
 					],
 					"path": [
 						"v1",
-						"scripts"
+						"tests"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Get script",
+			"name": "Get test",
 			"event": [
 				{
 					"listen": "test",
@@ -175,7 +175,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts/{{test_name}}",
+					"raw": "{{api_uri}}/v1/tests/{{test_name}}",
 					"host": [
 						"{{api_uri}}"
 					],
@@ -201,7 +201,6 @@
 							"",
 							"pm.test(\"Check execution is created\", function () {",
 							"    let jsonData = pm.response.json();",
-							"    let script = pm.environment.get(\"test_name\")",
 							"    console.log(\"create response\", jsonData);",
 							"",
 							"    let executionName = jsonData.name ",
@@ -238,7 +237,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts/{{test_name}}/executions",
+					"raw": "{{api_uri}}/v1/tests/{{test_name}}/executions",
 					"host": [
 						"{{api_uri}}"
 					],
@@ -253,7 +252,7 @@
 			"response": []
 		},
 		{
-			"name": "Get created script execution by ID",
+			"name": "Get created test execution by ID",
 			"event": [
 				{
 					"listen": "test",
@@ -317,7 +316,7 @@
 			"response": []
 		},
 		{
-			"name": "List script executions",
+			"name": "List test executions",
 			"event": [
 				{
 					"listen": "test",
@@ -360,7 +359,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{api_uri}}/v1/scripts/{{test_name}}/executions",
+					"raw": "{{api_uri}}/v1/tests/{{test_name}}/executions",
 					"host": [
 						"{{api_uri}}"
 					],
@@ -375,7 +374,7 @@
 			"response": []
 		},
 		{
-			"name": "List recent script executions",
+			"name": "List recent test executions",
 			"event": [
 				{
 					"listen": "test",
