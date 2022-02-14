@@ -31,3 +31,7 @@ func (m *Version_0_8_8) Migrate() error {
 func (m *Version_0_8_8) Info() string {
 	return "Adding labels and annotations to Testkube CRDs"
 }
+
+func (m *Version_0_8_8) IsClient() bool {
+	return true
+}

@@ -14,6 +14,7 @@ type Migration interface {
 	Migrate() error
 	Version() string
 	Info() string
+	IsClient() bool
 }
 
 func NewMigrator() *Migrator {
@@ -31,9 +32,9 @@ func (m *Migrator) Add(migration Migration) {
 	m.Migrations = append(m.Migrations, migration)
 }
 
-func (m *Migrator) GetValidMigrations(currentVersion string) (migrations []Migration) {
+func (m *Migrator) GetValidMigrations(currentVersion string, isClient bool) (migrations []Migration) {
 	for _, migration := range m.Migrations {
-		if ok, err := m.IsValid(migration.Version(), currentVersion); ok && err == nil {
+		if ok, err := m.IsValid(migration.Version(), currentVersion); ok && migration.IsClient() == isClient && err == nil {
 			migrations = append(migrations, migration)
 		}
 	}
@@ -41,8 +42,8 @@ func (m *Migrator) GetValidMigrations(currentVersion string) (migrations []Migra
 	return
 }
 
-func (m *Migrator) Run(currentVersion string) error {
-	for _, migration := range m.GetValidMigrations(currentVersion) {
+func (m *Migrator) Run(currentVersion string, isClient bool) error {
+	for _, migration := range m.GetValidMigrations(currentVersion, isClient) {
 		err := migration.Migrate()
 		if err != nil {
 			return err

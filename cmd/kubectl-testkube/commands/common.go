@@ -23,7 +23,7 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 
 	migrator := migrations.Migrator
 	ui.Info("Available migrations for", info.Version)
-	migrations := migrator.GetValidMigrations(info.Version)
+	migrations := migrator.GetValidMigrations(info.Version, true)
 	if len(migrations) == 0 {
 		ui.Warn("No migrations available for", info.Version)
 		return false, nil
@@ -33,7 +33,7 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
 	}
 
-	return true, migrator.Run(info.Version)
+	return true, migrator.Run(info.Version, true)
 }
 
 func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noMinio, noJetstack bool) error {
