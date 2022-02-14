@@ -1,6 +1,6 @@
-# Running `Test`
+# **Running Tests**
 
-To run your tests pass `tests run` command with test name to your `kubectl testkube` plugin. Tests are started asynchronously by default.
+To run tests, pass the `tests run` command with the test name to your `kubectl testkube` plugin. Tests are started asynchronously by default.
 
 ```sh
 kubectl testkube tests run test-example
@@ -21,20 +21,20 @@ Status: pending
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 61e1136165e59a3183465125
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests watch 61e1136165e59a3183465125
 ```
 
-After test start you can check current test status with `tests execution EXECUTION_ID` 
+After the test starts, you can check current test status with `tests execution EXECUTION_ID`. 
 
 
-# Running tests synchronously 
+# Running Tests Synchronously 
 
-You can also start test synchronously by passing `-f` flag (like --follow) to your command
+You can also start tests synchronously by passing the `-f` flag (like --follow) to your command.
 
 ```sh
 kubectl testkube tests run test-example -f
@@ -84,7 +84,7 @@ Status: success
 
 
 
-Use following command to get test execution details:
+Use the following command to get the test execution details:
 $ kubectl testkube tests execution 61e1142465e59a318346512b
 
 ```

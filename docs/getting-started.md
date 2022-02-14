@@ -1,8 +1,8 @@
-# Getting Started
+# **Getting Started**
 
-Please follow [install steps](/docs/installing.md) first for TestKube installation (if not installed already)
+Please follow the [install steps](/docs/installing.md) first for TestKube installation.
 
-## Getting help
+## **Getting Help**
 
 ```sh
 kubectl testkube --help 
@@ -11,18 +11,18 @@ kubectl testkube --help
 kubectl testkube scripts --help 
 ```
 
-## Defining tests
+## **Defining Tests**
 
-After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
-(access to Kubernetes cluster would be also needed)
+After installing, you will need to add Test Scripts to your cluster. Scripts are created as a Custom Resource in Kubernetes
+(access to Kubernetes cluster is required).
 
-For now TestKube only supports  *Postman collections*, *basic CURL execition* and *Cypress* - but we plan to handle more testing tools soon,.
+For now TestKube only supports  *Postman collections*, *basic CURL execution* and *Cypress* - but we plan to handle more testing tools soon.
 
-If you don't want to create Custom Resources "by hand" we have a little helper for this: 
+If you don't want to create Custom Resources "by hand", we have a little helper for this: 
 
-### Creating Postman Collections based tests
+### **Creating Postman Collections Based Tests**
 
-Fist let's create Postman collection:
+First, let's create a Postman collection:
 
 ```bash
 cat <<EOF > my_postman_collection.json
@@ -107,13 +107,13 @@ EOF
 kubectl testkube scripts create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
 ```
 
-**Note**: this is just an example of how it works. For further details you can visit [Postman documentation](executor-postman.md)
+**Note**: This is just an example of how it works. For further details you can visit the [Postman documentation](executor-postman.md).
 
-### Creating Cypress tests
+### **Creating Cypress Tests**
 
-Cypress tests are little more complicated to pass - for now we're supporting Git based paths for Cypress projects.
+Cypress tests are little more complicated to pass. TestKube currently supports Git based paths for Cypress projects.
 
-You can create new test with kubectl testkube plugin:
+You can create new tests with kubectl testkube plugin:
 
 ```sh
  kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
@@ -121,35 +121,40 @@ You can create new test with kubectl testkube plugin:
 
 Where:
 
-- `uri` is git uri where testkube will get cypress project
-- `git-branch` is what branch should he checkout (default - main branch will be used)
-- `git-path` is what path of repository should be checked out (testkube is doing partial git checkout so it'll be fast even for very big monorepos)
-- `name` - is unique Sript Custom Resource name.
-- `type` - cypress/project - for Cypress based project test structure
+- `uri` is the git uri where testkube will get the cypress project.
+- `git-branch` is which branch should be checked out. By default the main branch will be used.
+- `git-path` denotes which path of the repository should be checked out. TestKube is doing a partial git checkout so it should be fast, even for very big monorepos.
+- `name` is the unique Script Custom Resource name.
+- `type` is cypress/project for a Cypress based project test structure.
 
-For now we're supporting only Cypress test runs, but we plan to fully integrate it.
+For now we're supporting only Cypress test runs, but plan to fully integrate it.
 
-## Starting new script execution
+## **Starting a New Script Execution**
 
-When our script is defined as CR we can now run it:
+When our script is defined as CR, we can now run it:
 
 ```shell
 kubectl testkube scripts start my-test-name 
 
 ... some script run data ...
 
-Use following command to get script execution details:
-kubectl testkube scripts execution 611b6da38cd74034e7c9d408
-
-or watch for completition with
-kubectl testkube scripts watch 611b6da38cd74034e7c9d408
-
 ```
 
-## Getting execution details
+Use the following command to get script execution details:
 
-After script completed with success or error you can go back to script details by running
-scripts execution command:
+```shell
+kubectl testkube scripts execution 611b6da38cd74034e7c9d408
+```
+
+Watch for completion with:
+
+```shell
+kubectl testkube scripts watch 611b6da38cd74034e7c9d408
+```
+
+## **Getting Execution Details**
+
+After a script completes with successfully or in error, run the scripts execution command to go back to the details:
 
 ```sh
 kubectl testkube scripts execution 6103a45b7e18c4ea04883866
@@ -158,9 +163,9 @@ kubectl testkube scripts execution 6103a45b7e18c4ea04883866
 some execution details
 ```
 
-## Getting available scripts
+## **Getting Available Scripts**
 
-To run script execution you'll need to know script name
+To run a script execution, you'll need to know the script name:
 
 ```shell
 kubectl testkube scripts list
@@ -177,7 +182,7 @@ kubectl testkube scripts list
 
 ```
 
-## Getting available executions
+## **Getting Available Executions**
 
 ```shell
 kubectl testkube scripts executions SCRIPT_NAME
@@ -194,16 +199,16 @@ kubectl testkube scripts executions SCRIPT_NAME
 +------------+--------------------+--------------------------+---------------------------+----------+
 ```
 
-## Changing output format
+## **Changing the Output Format**
 
-For lists and details you can use different output format (`--output` flag) for now we're supporting following formats:
+For lists and details, you can use different output formats via the `--output` flag. For now we're supporting following formats:
 
-- RAW - it's raw output from given executor (e.g. for Postman collection it's terminal text with colors and tables)
-- JSON - test run data are encoded in JSON
-- GO - go-template formatting (like in Docker and Kubernetes) you'll need to add `--go-template` flag with custom format (defaults to {{ . | printf("%+v") }} will help you check available fields)
+- RAW - Raw output from the given executor (e.g., for Postman collection, it's terminal text with colors and tables).
+- JSON - Test run data are encoded in JSON.
+- GO - For go-template formatting (like in Docker and Kubernetes), you'll need to add the `--go-template` flag with a custom format. The default is **{{ . | printf("%+v") }}**. This will help you check available fields.
 
 (Keep in mind that we have plans for other output formats like junit etc.)
 
-## Deleting a script
+## **Deleting a Script**
 
-For deleting a script there is `kubectl testkube scripts delete SCRIPT_NAME` command and also `--all` flag can be used to delete all.
+The command to delete a script is `kubectl testkube scripts delete SCRIPT_NAME`. The `--all` flag can be used to delete all.

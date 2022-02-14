@@ -1,10 +1,10 @@
-# Getting TestKube scripts execution results
+# Getting TestKube Script Execution Results
 
-We could see how simple it is to create and run TestKube scripts execution. The good news is that getting results is also simple.
+We saw how simple it is to create and run TestKube scripts. Getting results is also simple.
 
-## Getting test executions after script is executed
+## Getting Test Executions
 
-After each run TestKube informs you that you can get results later of given script execution
+After each test script run, TestKube informs you that you can get the results of given script execution.
 
 ```sh
 kubectl testkube scripts run api-incluster-test
@@ -35,17 +35,15 @@ $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 
 ```
 
-`kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` - is for getting string output of script execution.
+The command `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` is for getting the string output of the script execution, where `615d6398b046f8fbd3d955d4` is the script execution ID.
 
-Where `615d6398b046f8fbd3d955d4` is script execution ID.
+## Change the Output Format of Execution Result
 
-## Change output format of execution result
+By default, TestKube returns the string output of a particular executor. It can also return JSON or Go-Template based outputs.
 
-By default testkube returns string output of particular executor. But it can also return JSON or Go-Template based outputs.
+### JSON Output
 
-### JSON output
-
-Sometimes you need to parse test resutls programatically, to simplify this task we're allowing to get results of test execution in JSON format.
+Sometimes you need to parse test results programatically. To simplify this task, you can get results of test execution in JSON format.
 
 ```sh
 
@@ -55,11 +53,11 @@ kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6 -ojson
 
 ```
 
-as we can see now it's quite easy to parse data from test executions with tools like `jq` or in other programmatic ways.
+It's quite easy to parse data from test executions with tools like `jq` or in other programmatic ways.
 
-### Need non-standard output - go-template for the rescue
+### Need Non-Standard Output? Go-Template to the Rescue
 
-If you need some non-standard test execution output you can easily use ouput `-o go` with passed `--go-template` template content.
+For non-standard test execution output, use the ouput parameter `-ogo` with passed `--go-template` template content.
 
 ```sh
 kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6 -ogo --go-template='{{.Name}} {{.Id}} {{.ExecutionResult.Status}}'
@@ -71,15 +69,17 @@ Output:
 monthly-sure-finch 615d7e1ab046f8fbd3d955d6 success  
 ```
 
-## Getting list of test script executions
+## Getting a List of Test Script Executions
 
-You can also check video about getting scripts results in different formats:
+Watch this video to see how to get script results in different formats: 
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/ukHvS5x7TvM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-### Getting list of recent executions
 
-We can get list of current executions with use of `executions` subcommand
+
+### Getting a List of Recent Executions
+
+Get list of current executions by using the `executions` subcommand:
 
 ```sh
 kubectl testkube scripts executions 
@@ -98,19 +98,19 @@ Output:
   cypress-example     | cypress/project    |      | 615d4556b046f8fbd3d955cc | error   
 ```
 
-Now we can get some ID and check it details with
+Select the execution ID and check the details of the result of the test:
 
 ```sh
 kubectl testkube scripts execution 615d5265b046f8fbd3d955d0
 ```
 
-### Getting list of executions in different format
+### Getting a List of Executions in Different Formats
 
-Table data in terminal is not always what we want when processing results in code or shell scripts. To simplify this we've implemented possibility to get JSON or Go-Template based results when getting results lists.
+Table data in terminal mode is not always useful when processing results in code or shell scripts. To simplify this, TestKube allows the use of JSON or Go Template to obtain results in a list.
 
 #### JSON
 
-Getting JSON resutls is quite easy - just pass `-o json` flag to command:
+Getting JSON results is quite easy - just pass `-o json` flag to the test command:
 
 ```sh
 kubectl testkube scripts executions -ojson
@@ -118,11 +118,10 @@ kubectl testkube scripts executions -ojson
 {"totals":{"results":17,"passed":7,"failed":10,"queued":0,"pending":0},"results":[{"id":"615d7e1ab046f8fbd3d955d6","name":"","scriptName":"api-incluster-test","scriptType":"postman/collection","status":"success","startTime":"2021-10-06T10:44:46.338Z","endTime":"2021-10-06T10:44:46.933Z"},{"id":"615d6398b046f8fbd3d955d4","name":"","scriptName":"api-incluster-test","scriptType":"postman/collection","status":"success","startTime":"2021-10-06T08:51:39.834Z","endTime":"2021-10-06T08:51:40.432Z"},{"id":"615d5372b046f8fbd3d955d2","name":"","scriptName":"kubeshop-cypress","scriptType":"cypress/project","status":"success","startTime":"0001-01-01T00:00:00Z","endTime":"2021-10-06T07:44:30.025Z"},{"id":"615d5265b046f8fbd3d955d0","name":"","scriptName":"kubeshop-cypress","scriptType":"cypress/project","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-10-06T07:40:09.261Z"},{"id":"615d4fe6b046f8fbd3d955ce","name":"","scriptName":"cypress-example","scriptType":"cypress/project","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-10-06T07:28:54.579Z"},{"id":"615d4556b046f8fbd3d955cc","name":"","scriptName":"cypress-example","scriptType":"cypress/project","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-10-06T06:43:44.1Z"},{"id":"615d43d3b046f8fbd3d955ca","name":"","scriptName":"cypress-example","scriptType":"cypress/project","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-10-06T06:37:52.601Z"},{"id":"6155cd7db046f8fbd3d955c8","name":"","scriptName":"postman-test-7f6qrm","scriptType":"postman/collection","status":"success","startTime":"2021-09-30T14:45:20.819Z","endTime":"2021-09-30T14:45:21.419Z"},{"id":"6155cd67b046f8fbd3d955c6","name":"","scriptName":"sanity","scriptType":"postman/collection","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-30T14:45:00.135Z"},{"id":"615322f3f47de75f31ae7a06","name":"","scriptName":"long-1","scriptType":"postman/collection","status":"success","startTime":"2021-09-28T14:13:11.293Z","endTime":"2021-09-28T14:13:45.271Z"},{"id":"61532298f47de75f31ae7a04","name":"","scriptName":"long-1","scriptType":"postman/collection","status":"success","startTime":"2021-09-28T14:11:39.179Z","endTime":"2021-09-28T14:12:15.202Z"},{"id":"6151b4b342189df67944968e","name":"","scriptName":"postman-test-7f6qrm","scriptType":"postman/collection","status":"success","startTime":"2021-09-27T12:10:31.581Z","endTime":"2021-09-27T12:10:32.105Z"},{"id":"6151b49d42189df67944968c","name":"","scriptName":"curl-test","scriptType":"curl/test","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-27T12:10:06.954Z"},{"id":"6151b41742189df67944968a","name":"","scriptName":"curl-test","scriptType":"curl/test","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-27T12:07:52.893Z"},{"id":"6151b41342189df679449688","name":"","scriptName":"curl-test","scriptType":"curl/test","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-27T12:07:48.868Z"},{"id":"6151b40f42189df679449686","name":"","scriptName":"curl-test","scriptType":"curl/test","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-27T12:07:44.89Z"},{"id":"6151b40b42189df679449684","name":"","scriptName":"curl-test","scriptType":"curl/test","status":"error","startTime":"0001-01-01T00:00:00Z","endTime":"2021-09-27T12:07:41.168Z"}]}
 ```
 
-as we can see it's very easy to get JSON results from test executions.
 
-#### Go-Template
+#### Go Template
 
-Let's try to get list of script excution IDs with their corresponding statuses - with go-template it's easy:
+To get a simple list of script excution IDs with their corresponding statuses - use a Go template:
 
 ```sh
 kubectl testkube scripts executions -ogo --go-template '{{.Id}}:{{.Status}} '
@@ -131,11 +130,9 @@ kubectl testkube scripts executions -ogo --go-template '{{.Id}}:{{.Status}} '
 
 ```
 
-### Getting list of executions of given test
+### Getting A List of Executions of a Given Test
 
-When there is a lot of test cases you want probably to get executions of particular test
-
-you can do this by passing script name as parameter to:
+When there are multiple test cases, get executions of particular test by passing the script name as a parameter:
 
 ```sh
 kubectl testkube scripts executions api-incluster-test

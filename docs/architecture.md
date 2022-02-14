@@ -2,8 +2,8 @@
 
 ## Info
 
-Diagrams was made with use of C4 diagram technique
-(<https://c4model.com/>)
+These archtecture diagrams were made using the C4 model for visualizing software architecture
+(<https://c4model.com/>).
 
 ## Diagrams
 
