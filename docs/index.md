@@ -1,4 +1,4 @@
-![Testkube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
+![Testkube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-gray.png)
 
 Welcome to Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
 
