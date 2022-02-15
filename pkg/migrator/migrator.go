@@ -49,11 +49,11 @@ func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...M
 	}
 
 	for _, migration := range m.Migrations {
-		//		if ok, err := m.IsValidVersion(migration.Version(), currentVersion); ok && err == nil {
-		if _, ok := types[migration.Type()]; ok {
-			migrations = append(migrations, migration)
+		if ok, err := m.IsValidVersion(migration.Version(), currentVersion); ok && err == nil {
+			if _, ok = types[migration.Type()]; ok {
+				migrations = append(migrations, migration)
+			}
 		}
-		//		}
 	}
 
 	return
