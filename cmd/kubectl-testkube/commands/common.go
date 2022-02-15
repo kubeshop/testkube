@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/internal/migrations"
+	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -21,19 +22,18 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 		ui.Failf("Can't detect cluster version")
 	}
 
-	migrator := migrations.Migrator
 	ui.Info("Available migrations for", info.Version)
-	migrations := migrator.GetValidMigrations(info.Version, true)
-	if len(migrations) == 0 {
+	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
+	if len(results) == 0 {
 		ui.Warn("No migrations available for", info.Version)
 		return false, nil
 	}
 
-	for _, migration := range migrations {
+	for _, migration := range results {
 		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
 	}
 
-	return true, migrator.Run(info.Version, true)
+	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }
 
 func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noMinio, noJetstack bool) error {

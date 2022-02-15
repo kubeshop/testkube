@@ -14,8 +14,18 @@ type Migration interface {
 	Migrate() error
 	Version() string
 	Info() string
-	IsClient() bool
+	Type() MigrationType
 }
+
+// MigrationType is migration type
+type MigrationType int
+
+const (
+	// MigrationTypeClient is client migration type
+	MigrationTypeClient MigrationType = iota + 1
+	// MigrationTypeServer is server migration type
+	MigrationTypeServer
+)
 
 func NewMigrator() *Migrator {
 	return &Migrator{
@@ -32,18 +42,25 @@ func (m *Migrator) Add(migration Migration) {
 	m.Migrations = append(m.Migrations, migration)
 }
 
-func (m *Migrator) GetValidMigrations(currentVersion string, isClient bool) (migrations []Migration) {
+func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...MigrationType) (migrations []Migration) {
+	types := make(map[MigrationType]struct{}, len(migrationTypes))
+	for _, migrationType := range migrationTypes {
+		types[migrationType] = struct{}{}
+	}
+
 	for _, migration := range m.Migrations {
-		if ok, err := m.IsValid(migration.Version(), currentVersion); ok && migration.IsClient() == isClient && err == nil {
+		//		if ok, err := m.IsValidVersion(migration.Version(), currentVersion); ok && err == nil {
+		if _, ok := types[migration.Type()]; ok {
 			migrations = append(migrations, migration)
 		}
+		//		}
 	}
 
 	return
 }
 
-func (m *Migrator) Run(currentVersion string, isClient bool) error {
-	for _, migration := range m.GetValidMigrations(currentVersion, isClient) {
+func (m *Migrator) Run(currentVersion string, migrationTypes ...MigrationType) error {
+	for _, migration := range m.GetValidMigrations(currentVersion, migrationTypes...) {
 		err := migration.Migrate()
 		if err != nil {
 			return err
@@ -53,9 +70,9 @@ func (m *Migrator) Run(currentVersion string, isClient bool) error {
 	return nil
 }
 
-// IsValid checks if versions constraints are met, assuming that currentVersion
+// IsValidVersion checks if versions constraints are met, assuming that currentVersion
 // is just updated version and it should be taken for migration
-func (m Migrator) IsValid(migrationVersion, currentVersion string) (bool, error) {
+func (m Migrator) IsValidVersion(migrationVersion, currentVersion string) (bool, error) {
 
 	// clean possible v prefixes
 	migrationVersion = strings.TrimPrefix(migrationVersion, "v")

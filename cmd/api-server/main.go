@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -40,19 +41,18 @@ func init() {
 }
 
 func runMigrations() (err error) {
-	migrator := migrations.Migrator
 	ui.Info("Available migrations for", api.Version)
-	migrations := migrator.GetValidMigrations(api.Version, false)
-	if len(migrations) == 0 {
+	results := migrations.Migrator.GetValidMigrations(api.Version, migrator.MigrationTypeServer)
+	if len(results) == 0 {
 		ui.Warn("No migrations available for", api.Version)
 		return nil
 	}
 
-	for _, migration := range migrations {
+	for _, migration := range results {
 		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
 	}
 
-	return migrator.Run(api.Version, false)
+	return migrations.Migrator.Run(api.Version, migrator.MigrationTypeServer)
 }
 
 func main() {

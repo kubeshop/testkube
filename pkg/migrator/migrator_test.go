@@ -19,7 +19,7 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&Migr3{})
 
 		// when
-		migrator.Run("0.0.2", true)
+		migrator.Run("0.0.2", MigrationTypeClient)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, false)
@@ -36,7 +36,7 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&Migr1{})
 
 		// when
-		migrator.Run("0.0.2", true)
+		migrator.Run("0.0.2", MigrationTypeClient)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr3).Run, true)
@@ -53,7 +53,7 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&Migr1{})
 
 		// when
-		err := migrator.Run("0.0.1", true)
+		err := migrator.Run("0.0.1", MigrationTypeClient)
 
 		// then
 		assert.Error(t, err, ErrMigrationFailed)
@@ -66,7 +66,7 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&MigrServer{})
 
 		// when
-		migrator.Run("0.0.1", true)
+		migrator.Run("0.0.1", MigrationTypeClient)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, true)
@@ -80,7 +80,7 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&MigrServer{})
 
 		// when
-		migrator.Run("0.0.1", false)
+		migrator.Run("0.0.1", MigrationTypeServer)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, false)
@@ -104,8 +104,8 @@ func (m *Migr1) Info() string {
 	return "some migration description 1"
 }
 
-func (m *Migr1) IsClient() bool {
-	return true
+func (m *Migr1) Type() MigrationType {
+	return MigrationTypeClient
 }
 
 type Migr2 struct {
@@ -122,8 +122,8 @@ func (m *Migr2) Migrate() error {
 func (m *Migr2) Info() string {
 	return "some migration description 2"
 }
-func (m *Migr2) IsClient() bool {
-	return true
+func (m *Migr2) Type() MigrationType {
+	return MigrationTypeClient
 }
 
 type Migr3 struct {
@@ -140,8 +140,8 @@ func (m *Migr3) Migrate() error {
 func (m *Migr3) Info() string {
 	return "some migration description 3"
 }
-func (m *Migr3) IsClient() bool {
-	return true
+func (m *Migr3) Type() MigrationType {
+	return MigrationTypeClient
 }
 
 type MigrFailed struct {
@@ -158,8 +158,8 @@ func (m *MigrFailed) Migrate() error {
 func (m *MigrFailed) Info() string {
 	return "some failed migration"
 }
-func (m *MigrFailed) IsClient() bool {
-	return true
+func (m *MigrFailed) Type() MigrationType {
+	return MigrationTypeClient
 }
 
 type MigrServer struct {
@@ -176,6 +176,6 @@ func (m *MigrServer) Migrate() error {
 func (m *MigrServer) Info() string {
 	return "some server migration"
 }
-func (m *MigrServer) IsClient() bool {
-	return false
+func (m *MigrServer) Type() MigrationType {
+	return MigrationTypeServer
 }

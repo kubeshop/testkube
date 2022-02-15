@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"os"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +14,7 @@ import (
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	"github.com/kubeshop/testkube/pkg/migrator"
 )
 
 func NewVersion_0_9_2(
@@ -90,10 +92,10 @@ func (m *Version_0_9_2) Migrate() error {
 		if _, err = m.testsClientV2.Create(test); err != nil {
 			return err
 		}
-	}
 
-	if err = m.scriptsClient.DeleteAll(namespace); err != nil {
-		return err
+		if err = m.scriptsClient.Delete(namespace, script.Name); err != nil {
+			return err
+		}
 	}
 
 	tests, err := m.testsClientV1.List(namespace, nil)
@@ -101,6 +103,7 @@ func (m *Version_0_9_2) Migrate() error {
 		return err
 	}
 
+OUTER:
 	for _, test := range tests.Items {
 		if _, err = m.testsuitesClient.Get(namespace, test.Name); err != nil && !errors.IsNotFound(err) {
 			return err
@@ -108,6 +111,12 @@ func (m *Version_0_9_2) Migrate() error {
 
 		if err == nil {
 			continue
+		}
+
+		for _, managedField := range test.GetManagedFields() {
+			if !strings.HasSuffix(managedField.APIVersion, "/v1") {
+				continue OUTER
+			}
 		}
 
 		testsuite := &testsuite.TestSuite{
@@ -137,10 +146,10 @@ func (m *Version_0_9_2) Migrate() error {
 		if _, err = m.testsuitesClient.Create(testsuite); err != nil {
 			return err
 		}
-	}
 
-	if err = m.testsClientV1.DeleteAll(namespace); err != nil {
-		return err
+		if err = m.testsClientV1.Delete(namespace, test.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -149,8 +158,8 @@ func (m *Version_0_9_2) Info() string {
 	return "Moving scripts v1 resources to tests v2 ones and tests v1 resources to testsuites v1 ones"
 }
 
-func (m *Version_0_9_2) IsClient() bool {
-	return false
+func (m *Version_0_9_2) Type() migrator.MigrationType {
+	return migrator.MigrationTypeServer
 }
 
 func copyTestStepTest2Testsuite(step testsv1.TestStepSpec) testsuite.TestSuiteStepSpec {
