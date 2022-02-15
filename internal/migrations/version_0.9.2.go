@@ -155,7 +155,7 @@ OUTER:
 	return nil
 }
 func (m *Version_0_9_2) Info() string {
-	return "Moving scripts v1 resources to tests v2 ones and tests v1 resources to testsuites v1 ones"
+	return "Moving scripts v2 resources to tests v2 ones and tests v1 resources to testsuites v1 ones"
 }
 
 func (m *Version_0_9_2) Type() migrator.MigrationType {
