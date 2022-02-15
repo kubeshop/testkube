@@ -49,7 +49,7 @@ func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...M
 	}
 
 	for _, migration := range m.Migrations {
-		if ok, err := m.IsValidVersion(migration.Version(), currentVersion); ok && err == nil {
+		if ok, err := m.IsValid(migration.Version(), currentVersion); ok && err == nil {
 			if _, ok = types[migration.Type()]; ok {
 				migrations = append(migrations, migration)
 			}
@@ -70,9 +70,9 @@ func (m *Migrator) Run(currentVersion string, migrationTypes ...MigrationType) e
 	return nil
 }
 
-// IsValidVersion checks if versions constraints are met, assuming that currentVersion
+// IsValid checks if versions constraints are met, assuming that currentVersion
 // is just updated version and it should be taken for migration
-func (m Migrator) IsValidVersion(migrationVersion, currentVersion string) (bool, error) {
+func (m Migrator) IsValid(migrationVersion, currentVersion string) (bool, error) {
 
 	// clean possible v prefixes
 	migrationVersion = strings.TrimPrefix(migrationVersion, "v")
