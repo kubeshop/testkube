@@ -273,6 +273,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 
 		if err != nil {
 			result.Err(err)
+			return
 		}
 
 		l.Debug("executing test", "params", testExecution.Params)
