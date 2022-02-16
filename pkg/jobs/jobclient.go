@@ -38,6 +38,9 @@ const (
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
+
+	volumeName = "data-volume"
+	volumeDir  = "/data"
 )
 
 type JobClient struct {
@@ -476,6 +479,21 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{
+						{
+							Name:            id + "-init",
+							Image:           image,
+							Command:         []string{"/bin/runner", jsn},
+							ImagePullPolicy: corev1.PullAlways,
+							Env:             append(envVars, secretEnvVars...),
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeName,
+									MountPath: volumeDir,
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            id,
@@ -483,6 +501,17 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 							Command:         []string{"/bin/runner", jsn},
 							ImagePullPolicy: corev1.PullAlways,
 							Env:             append(envVars, secretEnvVars...),
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeName,
+									MountPath: volumeDir,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: volumeName,
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
@@ -525,6 +554,10 @@ var envVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
 		Value: os.Getenv("SCRAPPERENABLED"),
+	},
+	{
+		Name:  "RUNNER_DATADIR",
+		Value: volumeDir,
 	},
 }
 
