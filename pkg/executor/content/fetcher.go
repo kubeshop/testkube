@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,11 +14,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/git"
 )
 
-func NewFetcher() Fetcher {
-	return Fetcher{}
+func NewFetcher(dir string) Fetcher {
+	return Fetcher{
+		dir: dir,
+	}
 }
 
 type Fetcher struct {
+	dir string
 }
 
 func (f Fetcher) Fetch(content *testkube.ScriptContent) (path string, err error) {
@@ -63,10 +67,10 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 
 	// if path not set make full repo checkout
 	if repo.Path == "" {
-		return git.Checkout(uri, repo.Branch)
+		return git.Checkout(uri, repo.Branch, f.dir)
 	}
 
-	return git.PartialCheckout(uri, repo.Path, repo.Branch)
+	return git.PartialCheckout(uri, repo.Path, repo.Branch, f.dir)
 }
 
 // FetchGitFile returns path to git based file saved in local temp directory
@@ -76,7 +80,7 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 		return path, err
 	}
 
-	repoPath, err := git.Checkout(uri, repo.Branch)
+	repoPath, err := git.Checkout(uri, repo.Branch, f.dir)
 	if err != nil {
 		return path, err
 	}
@@ -101,7 +105,13 @@ func (f Fetcher) gitURI(repo *testkube.Repository) (uri string, err error) {
 }
 
 func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {
-	tmpFile, err := ioutil.TempFile("", "fetcher-save-temp-file")
+	var tmpFile *os.File
+	filename := "fetcher-save-temp-file"
+	if f.dir == "" {
+		tmpFile, err = ioutil.TempFile("", filename)
+	} else {
+		tmpFile, err = os.Create(filepath.Join(f.dir, filename))
+	}
 	if err != nil {
 		return "", err
 	}

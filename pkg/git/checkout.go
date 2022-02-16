@@ -10,11 +10,13 @@ import (
 )
 
 // Checkout will checkout directory from Git repository
-func Checkout(uri, branch string) (outputDir string, err error) {
-
-	tmpDir, err := ioutil.TempDir("", "git-checkout")
-	if err != nil {
-		return tmpDir, err
+func Checkout(uri, branch, dir string) (outputDir string, err error) {
+	tmpDir := dir
+	if tmpDir == "" {
+		tmpDir, err = ioutil.TempDir("", "git-checkout")
+		if err != nil {
+			return tmpDir, err
+		}
 	}
 
 	_, err = process.ExecuteInDir(
@@ -32,12 +34,14 @@ func Checkout(uri, branch string) (outputDir string, err error) {
 	return tmpDir + "/repo/", nil
 }
 
-// Partial checkout will checkout only given directory from Git repository
-func PartialCheckout(uri, path, branch string) (outputDir string, err error) {
-
-	tmpDir, err := ioutil.TempDir("", "git-sparse-checkout")
-	if err != nil {
-		return tmpDir, err
+// PartialCheckout will checkout only given directory from Git repository
+func PartialCheckout(uri, path, branch, dir string) (outputDir string, err error) {
+	tmpDir := dir
+	if tmpDir == "" {
+		tmpDir, err := ioutil.TempDir("", "git-sparse-checkout")
+		if err != nil {
+			return tmpDir, err
+		}
 	}
 
 	_, err = process.ExecuteInDir(
