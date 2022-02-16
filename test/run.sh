@@ -7,7 +7,7 @@ test_execution_id() {
 	$TESTKUBE tests executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
 }
 
-test_execution_id() {
+testsuite_execution_id() {
 	$TESTKUBE testsuites executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 2
 }
 
@@ -84,11 +84,11 @@ test_tests_run() {
 test_tests_delete_all() {
 	echo "Tests delete all test"
 	$TESTKUBE testsuites delete-all
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app1
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app2
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app3
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app4
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app5
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app1
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app2
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app3
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app4
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app5
 
 	$TESTKUBE testsuites delete todo-app1
 	$TESTKUBE testsuites list
@@ -97,7 +97,7 @@ test_tests_delete_all() {
 	$TESTKUBE testsuites list
 }
 
-test_tests_delete() {
+test_testsuites_delete() {
 	echo "Tests delete test"
 	$TESTKUBE testsuites delete todo-app1 > /dev/null || true
 	$TESTKUBE testsuites delete todo-app2 > /dev/null || true
@@ -105,11 +105,11 @@ test_tests_delete() {
 	$TESTKUBE testsuites delete todo-app4 > /dev/null || true
 	$TESTKUBE testsuites delete todo-app5 > /dev/null || true
 
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app1
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app2
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app3
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app4
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app5
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app1
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app2
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app3
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app4
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app5
 
 	$TESTKUBE testsuites delete todo-app1
 	$TESTKUBE testsuites list
@@ -123,20 +123,20 @@ test_tests_delete() {
 	$TESTKUBE testsuites list
 }
 
-test_tests_create() {
+test_testsuites_create() {
 	echo "create tests"
 	$TESTKUBE testsuites delete todo-app > /dev/null || true
-	cat test/e2e/test-example-1.json | $TESTKUBE testsuites create --name todo-app
+	cat test/e2e/testsuite-example-1.json | $TESTKUBE testsuites create --name todo-app
 	$TESTKUBE testsuites delete kubeshop > /dev/null || true
-	cat test/e2e/test-example-2.json | $TESTKUBE testsuites create --name kubeshop
+	cat test/e2e/testsuite-example-2.json | $TESTKUBE testsuites create --name kubeshop
 }
 
-test_tests_run() {
+test_testsuites_run() {
 	echo "run tests"
 	$TESTKUBE testsuites run todo-app -f
-	$TESTKUBE testsuites execution $(test_execution_id todo-app)
+	$TESTKUBE testsuites execution $(testsuite_execution_id todo-app)
 	$TESTKUBE testsuites run kubeshop -f
-	$TESTKUBE testsuites execution $(test_execution_id kubeshop)
+	$TESTKUBE testsuites execution $(testsuite_execution_id kubeshop)
 }
 
 while test $# != 0
@@ -154,6 +154,6 @@ test_tests_delete
 test_tests_create
 test_tests_run
 
-test_tests_delete
-test_tests_create
-test_tests_run
+test_testsuites_delete
+test_testsuites_create
+test_testsuites_run
