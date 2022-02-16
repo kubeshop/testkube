@@ -49,9 +49,10 @@ type JobClient struct {
 	Namespace  string
 	Cmd        string
 	Log        *zap.SugaredLogger
+	initImage  string
 }
 
-func NewJobClient() (*JobClient, error) {
+func NewJobClient(initImage string) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
@@ -61,6 +62,7 @@ func NewJobClient() (*JobClient, error) {
 		ClientSet: clientSet,
 		Namespace: "testkube",
 		Log:       log.DefaultLogger,
+		initImage: initImage,
 	}, nil
 }
 
@@ -80,7 +82,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, c.initImage, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -154,7 +156,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, c.initImage, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -437,7 +439,7 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *batchv1.Job {
+func NewJobSpec(id, namespace, image, jsn, scriptName, executorInitImage string, hasSecrets bool) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
 	var backOffLimit int32 = 0
@@ -470,6 +472,25 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 		}
 	}
 
+	var initContainers []corev1.Container
+	if executorInitImage != "" {
+		initContainers = []corev1.Container{
+			{
+				Name:            id + "-init",
+				Image:           executorInitImage,
+				Command:         []string{"/bin/runner", jsn},
+				ImagePullPolicy: corev1.PullAlways,
+				Env:             append(envVars, secretEnvVars...),
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      volumeName,
+						MountPath: volumeDir,
+					},
+				},
+			},
+		}
+	}
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
@@ -479,21 +500,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					InitContainers: []corev1.Container{
-						{
-							Name:            id + "-init",
-							Image:           image,
-							Command:         []string{"/bin/runner", jsn},
-							ImagePullPolicy: corev1.PullAlways,
-							Env:             append(envVars, secretEnvVars...),
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeName,
-									MountPath: volumeDir,
-								},
-							},
-						},
-					},
+					InitContainers: initContainers,
 					Containers: []corev1.Container{
 						{
 							Name:            id,
