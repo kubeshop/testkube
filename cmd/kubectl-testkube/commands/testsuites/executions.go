@@ -30,7 +30,7 @@ func NewTestSuiteExecutionsCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			executions, err := client.ListTestExecutions(testSuiteName, limit, tags)
-			ui.ExitOnError("getting tests executions list", err)
+			ui.ExitOnError("getting test suites executions list", err)
 
 			ui.Table(executions, os.Stdout)
 			ui.NL()
