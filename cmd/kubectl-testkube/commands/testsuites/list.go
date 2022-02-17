@@ -22,7 +22,7 @@ func NewListTestSuitesCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 			tests, err := client.ListTestSuites(namespace, tags)
 
-			ui.ExitOnError("getting all tests in namespace "+namespace, err)
+			ui.ExitOnError("getting all test suites in namespace "+namespace, err)
 
 			ui.Table(tests, os.Stdout)
 		},
