@@ -15,7 +15,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 		Use:     "get <testSuiteName>",
 		Aliases: []string{"g"},
 		Short:   "Get test by name",
-		Long:    `Getting test from given namespace - if no namespace given "testkube" namespace is used`,
+		Long:    `Getting test suite from given namespace - if no namespace given "testkube" namespace is used`,
 		Args:    validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
