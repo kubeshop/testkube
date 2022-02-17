@@ -14,7 +14,7 @@ func NewListTestSuitesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"l"},
-		Short:   "Get all available tests",
+		Short:   "Get all available test suites",
 		Long:    `Getting all available tests from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
