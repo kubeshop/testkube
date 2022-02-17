@@ -76,7 +76,7 @@
 					],
 					"path": [
 						"v1",
-						"scripts"
+						"tests"
 					]
 				}
 			},
@@ -113,8 +113,8 @@
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
 							"",
 							""
@@ -161,8 +161,8 @@
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
 							"",
 							""
@@ -181,7 +181,7 @@
 					],
 					"path": [
 						"v1",
-						"scripts",
+						"tests",
 						"{{test_name}}"
 					]
 				}
@@ -217,7 +217,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
 							""
 						],
 						"type": "text/javascript"
@@ -243,7 +243,7 @@
 					],
 					"path": [
 						"v1",
-						"scripts",
+						"tests",
 						"{{test_name}}",
 						"executions"
 					]
@@ -287,8 +287,8 @@
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
 							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							"",
@@ -345,8 +345,8 @@
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
 							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							""
@@ -365,7 +365,7 @@
 					],
 					"path": [
 						"v1",
-						"scripts",
+						"tests",
 						"{{test_name}}",
 						"executions"
 					]
@@ -398,8 +398,8 @@
 					"script": {
 						"exec": [
 							"console.log(\"uri\", pm.environment.get(\"api_uri\"));",
-							"console.log(\"script name\", pm.environment.get(\"test_name\"))",
-							"console.log(\"script type\", pm.environment.get(\"test_type\"))",
+							"console.log(\"test name\", pm.environment.get(\"test_name\"))",
+							"console.log(\"test type\", pm.environment.get(\"test_type\"))",
 							"console.log(\"exec name\", pm.environment.get(\"execution_name\"))",
 							"console.log(\"exec id\", pm.environment.get(\"execution_id\"))",
 							""

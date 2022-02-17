@@ -20,6 +20,13 @@ test_tests_delete() {
 	$TESTKUBE tests delete kubeshop-site3 > /dev/null || true
 	$TESTKUBE tests delete kubeshop-site4 > /dev/null || true
 	$TESTKUBE tests delete kubeshop-site5 > /dev/null || true
+
+	kubectl delete secrets kubeshop-site1-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site2-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site3-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site4-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site5-secrets > /dev/null || true
+
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site1
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site2
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site3
@@ -27,14 +34,19 @@ test_tests_delete() {
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site5
 	$TESTKUBE tests list 
 	$TESTKUBE tests delete kubeshop-site1
+	kubectl delete secrets kubeshop-site1-secrets > /dev/null || true
 	$TESTKUBE tests list 
 	$TESTKUBE tests delete kubeshop-site2 
+	kubectl delete secrets kubeshop-site2-secrets > /dev/null || true
 	$TESTKUBE tests list 
 	$TESTKUBE tests delete kubeshop-site3 
+	kubectl delete secrets kubeshop-site3-secrets > /dev/null || true
 	$TESTKUBE tests list 
 	$TESTKUBE tests delete kubeshop-site4 
+	kubectl delete secrets kubeshop-site4-secrets > /dev/null || true
 	$TESTKUBE tests list 
 	$TESTKUBE tests delete kubeshop-site5 
+	kubectl delete secrets kubeshop-site5-secrets > /dev/null || true
 	$TESTKUBE tests list 
 }
 
@@ -42,6 +54,15 @@ test_tests_delete_all() {
 	echo "Tests delete all test"
 	$TESTKUBE tests 
 	$TESTKUBE tests delete-all
+
+	# delete secrets (for now manually)
+	# TODO change it after deletion of secrets will arrive to tests delete
+	kubectl delete secrets kubeshop-site1-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site2-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site3-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site4-secrets > /dev/null || true
+	kubectl delete secrets kubeshop-site5-secrets > /dev/null || true
+
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site1
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site2
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site3
@@ -57,14 +78,19 @@ test_tests_delete_all() {
 test_tests_create() {
 	echo "Tests create test"
 	$TESTKUBE tests delete kubeshop-site > /dev/null || true
+	kubectl delete secrets kubeshop-site-secrets > /dev/null || true
 	$TESTKUBE tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site
 	$TESTKUBE tests delete testkube-todo-api > /dev/null || true
+	kubectl delete secrets kubeshop-todo-api-secrets > /dev/null || true
 	$TESTKUBE tests create --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
 	$TESTKUBE tests delete testkube-todo-frontend > /dev/null || true
+	kubectl delete secrets kubeshop-todo-frontend-secrets > /dev/null || true
 	$TESTKUBE tests create --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
 	$TESTKUBE tests delete testkube-dashboard > /dev/null || true
+	kubectl delete secrets kubeshop-dashboard-secrets > /dev/null || true
 	$TESTKUBE tests create --git-uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
 	$TESTKUBE tests delete curl-test > /dev/null || true
+	kubectl delete secrets curl-test-secrets > /dev/null || true
 	cat test/e2e/curl.json | $TESTKUBE tests create --name curl-test
 }
 
