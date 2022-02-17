@@ -18,7 +18,7 @@ func NewTestSuiteExecutionsCmd() *cobra.Command {
 		Use:     "executions [testSuiteName]",
 		Aliases: []string{"el"},
 		Short:   "Gets test suites executions list",
-		Long:    `Gets tests executions list, can be filtered by test name`,
+		Long:    `Gets test suites executions list, can be filtered by test name`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
