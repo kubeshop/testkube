@@ -1,6 +1,6 @@
 # Testkube test tests
 
-Test tests are single executor oriented tests. Test can have different types, which depends what executors are installed in your cluster.
+Tests are single executor oriented objects. Test can have different types, which depends what executors are installed in your cluster.
 
 Testkubes includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during testkube install by default. // provide examples for cypress and  curl
 
