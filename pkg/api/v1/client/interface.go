@@ -36,10 +36,10 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
-	CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error)
-	GetTestSuite(id string, namespace string) (test testkube.TestSuite, err error)
-	ListTestSuites(namespace string, tags []string) (tests testkube.TestSuites, err error)
+	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	GetTestSuite(id string, namespace string) (testSuite testkube.TestSuite, err error)
+	ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
 	DeleteTestSuites(namespace string) error
 	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)

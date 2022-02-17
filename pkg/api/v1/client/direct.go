@@ -497,38 +497,38 @@ func (c DirectAPIClient) DownloadFile(executionID, fileName, destination string)
 	return f.Name(), nil
 }
 
-func (c DirectAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) GetTestSuite(id, namespace string) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
 	resp, err := c.client.Get(uri)
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/get-test returned error: %w", err)
+		return testSuite, fmt.Errorf("api/get-test returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
 }
 
 // CreateTestSuite creates new Test Custom Resource
-func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/create-test returned error: %w", err)
+		return testSuite, fmt.Errorf("api/create-test returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
@@ -573,36 +573,36 @@ func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 }
 
 // UpdateTestSuite creates new Test Custom Resource
-func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	req, err := http.NewRequest("PATCH", uri, bytes.NewReader(body))
 	req.Header.Add("Content-type", "application/json")
 	if err != nil {
-		return test, fmt.Errorf("prepare request error: %w", err)
+		return testSuite, fmt.Errorf("prepare request error: %w", err)
 	}
 	resp, err := c.client.Do(req)
 
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/update-test returned error: %w", err)
+		return testSuite, fmt.Errorf("api/update-test returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
 }
 
 // ListTestSuites list all tests suites in given namespace
-func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (tests testkube.TestSuites, err error) {
+func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error) {
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/test-suites?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
@@ -612,15 +612,15 @@ func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (tests 
 
 	resp, err := c.client.Get(uri)
 	if err != nil {
-		return tests, fmt.Errorf("client.Get error: %w", err)
+		return testSuites, fmt.Errorf("client.Get error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if err := c.responseError(resp); err != nil {
-		return tests, fmt.Errorf("api/list-tests returned error: %w", err)
+		return testSuites, fmt.Errorf("api/list-tests returned error: %w", err)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&tests)
+	err = json.NewDecoder(resp.Body).Decode(&testSuites)
 
 	return
 }

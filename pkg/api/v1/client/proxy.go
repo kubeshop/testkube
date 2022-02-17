@@ -524,7 +524,7 @@ func (c ProxyAPIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []
 	return artifacts, err
 }
 
-// --------------- tests --------------------------
+// --------------- test suites --------------------------
 
 func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
@@ -574,56 +574,56 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (testSui
 }
 
 // CreateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	req := c.GetProxy("POST").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/create-test-suite returned error: %w", err)
+		return testSuite, fmt.Errorf("api/create-test-suite returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
 }
 
 // UpdateTestSuite creates new Test Custom Resource
-func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
 	req := c.GetProxy("PATCH").Suffix(uri).Body(body)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return test, fmt.Errorf("api/udpate-test-suite returned error: %w", err)
+		return testSuite, fmt.Errorf("api/udpate-test-suite returned error: %w", err)
 	}
 
 	return c.getTestSuiteFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (test testkube.TestSuite, err error) {
+func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkube.TestSuite, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
-		return test, err
+		return testSuite, err
 	}
 
-	err = json.Unmarshal(bytes, &test)
+	err = json.Unmarshal(bytes, &testSuite)
 
-	return test, err
+	return testSuite, err
 }
 
 // ExecuteTestSuite starts new external test execution, reads data and returns ID
@@ -717,15 +717,15 @@ func (c ProxyAPIClient) ListTestExecutions(testID string, limit int, tags []stri
 	return c.getTestExecutionsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestSuitesFromResponse(resp rest.Result) (tests testkube.TestSuites, err error) {
+func (c ProxyAPIClient) getTestSuitesFromResponse(resp rest.Result) (testSuites testkube.TestSuites, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
-		return tests, err
+		return testSuites, err
 	}
 
-	err = json.Unmarshal(bytes, &tests)
+	err = json.Unmarshal(bytes, &testSuites)
 
-	return tests, err
+	return testSuites, err
 }
 
 func (c ProxyAPIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
