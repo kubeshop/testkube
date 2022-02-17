@@ -26,7 +26,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update test",
-		Long:  `Update Test Custom Resource, `,
+		Long:  `Update Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			var err error
