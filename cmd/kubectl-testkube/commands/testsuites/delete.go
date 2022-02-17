@@ -20,7 +20,7 @@ func NewDeleteTestSuiteCmd() *cobra.Command {
 
 			name := args[0]
 			err := client.DeleteTestSuite(name, namespace)
-			ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
+			ui.ExitOnError("delete test suite "+name+" from namespace "+namespace, err)
 			ui.Success("Succesfully deleted", name)
 		},
 	}
