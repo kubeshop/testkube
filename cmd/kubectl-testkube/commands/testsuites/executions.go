@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTestExecutionsCmd() *cobra.Command {
+func NewTestSuiteExecutionsCmd() *cobra.Command {
 	var (
 		limit int
 		tags  []string

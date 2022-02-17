@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTestExecutionCmd() *cobra.Command {
+func NewTestSuiteExecutionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "execution <executionID>",
 		Aliases: []string{"e"},
@@ -26,11 +26,11 @@ func NewTestExecutionCmd() *cobra.Command {
 			execution, err := client.GetTestSuiteExecution(executionID)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			printTestExecutionDetails(execution, startTime)
+			printExecution(execution, startTime)
 
-			uiPrintTestStatus(execution)
+			uiPrintExecutionStatus(execution)
 
-			uiShellTestGetCommandBlock(execution.Id)
+			uiShellTestSuiteGetCommandBlock(execution.Id)
 		},
 	}
 

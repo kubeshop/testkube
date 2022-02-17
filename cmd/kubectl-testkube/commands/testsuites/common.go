@@ -8,7 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func printTestExecutionDetails(execution testkube.TestSuiteExecution, startTime time.Time) {
+func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) {
 	ui.Warn("Id:      ", execution.Id)
 	ui.Warn("Name:    ", execution.Name)
 	if execution.Status != nil {
@@ -21,7 +21,7 @@ func printTestExecutionDetails(execution testkube.TestSuiteExecution, startTime 
 	ui.NL()
 }
 
-func uiPrintTestStatus(execution testkube.TestSuiteExecution) {
+func uiPrintExecutionStatus(execution testkube.TestSuiteExecution) {
 	switch execution.Status {
 	case testkube.TestSuiteExecutionStatusQueued:
 		ui.Warn("Test Suite queued for execution")
@@ -40,7 +40,7 @@ func uiPrintTestStatus(execution testkube.TestSuiteExecution) {
 	ui.NL()
 }
 
-func uiShellTestGetCommandBlock(id string) {
+func uiShellTestSuiteGetCommandBlock(id string) {
 	ui.ShellCommand(
 		"Use following command to get test execution details",
 		"kubectl testkube testsuites execution "+id,
@@ -49,7 +49,7 @@ func uiShellTestGetCommandBlock(id string) {
 	ui.NL()
 }
 
-func uiShellTestWatchCommandBlock(id string) {
+func uiShellTestSuiteWatchCommandBlock(id string) {
 	ui.ShellCommand(
 		"Use following command to get test execution details",
 		"kubectl testkube testsuites watch "+id,

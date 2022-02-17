@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewWatchTestExecutionCmd() *cobra.Command {
+func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "watch <executionID>",
 		Aliases: []string{"w"},
@@ -26,16 +26,16 @@ func NewWatchTestExecutionCmd() *cobra.Command {
 			executionCh, err := client.WatchTestExecution(executionID)
 			for execution := range executionCh {
 				ui.ExitOnError("watching test execution", err)
-				printTestExecutionDetails(execution, startTime)
+				printExecution(execution, startTime)
 			}
 
 			execution, err := client.GetTestSuiteExecution(executionID)
 			ui.ExitOnError("getting test excecution", err)
-			printTestExecutionDetails(execution, startTime)
+			printExecution(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			uiPrintTestStatus(execution)
-			uiShellTestGetCommandBlock(execution.Id)
+			uiPrintExecutionStatus(execution)
+			uiShellTestSuiteGetCommandBlock(execution.Id)
 		},
 	}
 
