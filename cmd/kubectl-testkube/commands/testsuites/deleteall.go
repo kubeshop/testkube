@@ -9,7 +9,7 @@ import (
 func NewDeleteTestSuitesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete-all",
-		Short: "Delete all tests in namespace",
+		Short: "Delete all test suites in namespace",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
