@@ -1,6 +1,6 @@
 ## testkube testsuites watch
 
-Watch test
+Watch test suite
 
 ### Synopsis
 
