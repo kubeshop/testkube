@@ -32,9 +32,9 @@ $ kubectl testkube testsuites watch 61e1136165e59a3183465125
 After test start you can check current test status with `tests execution EXECUTION_ID` 
 
 
-# Running tests synchronously 
+# Running tests suites synchronously 
 
-You can also start test synchronously by passing `-f` flag (like --follow) to your command
+You can also start test suite synchronously by passing `-f` flag (like --follow) to your command
 
 ```sh
 kubectl testkube testsuites run test-example -f
