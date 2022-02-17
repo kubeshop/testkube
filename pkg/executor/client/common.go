@@ -4,7 +4,7 @@ import (
 	"time"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	scriptv2 "github.com/kubeshop/testkube-operator/apis/script/v2"
+	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -14,8 +14,8 @@ const (
 
 type ExecuteOptions struct {
 	ID           string
-	ScriptName   string
-	ScriptSpec   scriptv2.ScriptSpec
+	TestName     string
+	TestSpec     testsv2.TestSpec
 	ExecutorName string
 	ExecutorSpec executorv1.ExecutorSpec
 	Request      testkube.ExecutionRequest

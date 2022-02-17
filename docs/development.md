@@ -15,7 +15,7 @@ to install CRD's into your local cluster
 ## Running on local machine
 
 Next critical component is testkube API (<https://github.com/kubeshop/testkube>) and some executor you can build - your
-own tests executor or existing one from TestKube.
+own tests executor or existing one from Testkube.
 
 Checkout testkube project and run local API server:
 
@@ -44,16 +44,16 @@ It'll register Custom Resources for
 - local-cypress/project
 - local-curl/test
 
-script types.
+test types.
 
-You'll need to create `Script` Custom Resource with type from above to
+You'll need to create `Test` Custom Resource with type from above to
 be executed on given executor. e.g.
 
 ```sh
-kubectl testkube scripts create --file my_collection_file.json --name my-test-name --type local-postman/collection
+kubectl testkube tests create --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
-To summarize: `type` is the single relation between `Script` and `Executor`
+To summarize: `type` is the single relation between `Test` and `Executor`
 
 ## Intercepting api server on cluster
 
@@ -68,4 +68,4 @@ You can start API Server with telepresence mode with:
 make run-api-telepresence
 ```
 
-and create/run test scripts pointed to in-cluster executors.
+and create/run tests pointed to in-cluster executors.

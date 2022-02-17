@@ -1,6 +1,6 @@
 # Curl Commands
 
-TestKube is able to run curl commands as tests, there are 2 possibilities to validate the outputs of the curl command, one using the status returned and the other checking the body of the response. Bellow is an example on how to format the tests.
+Testkube is able to run curl commands as tests, there are 2 possibilities to validate the outputs of the curl command, one using the status returned and the other checking the body of the response. Bellow is an example on how to format the tests.
 
 ```js
 {
@@ -23,9 +23,9 @@ The test CRD should be created with the type `curl/test`.
 
 Save a test in a format as described above into let's say `curl-test.json`
 
-Create the test by running `kubectl testkube scripts create --file curl-test.json --name curl-test --type "curl/test"`
+Create the test by running `kubectl testkube tests create --file curl-test.json --name curl-test --type "curl/test"`
 
-Check if it was created using command `kubectl testkube scripts list` it will output something like:
+Check if it was created using command `kubectl testkube tests list` it will output something like:
 
 ```sh
        NAME       |        TYPE         
@@ -33,7 +33,7 @@ Check if it was created using command `kubectl testkube scripts list` it will ou
   curl-test      | curl/test  
 ```
 
-Test can be run using `kubectl testkube scripts start curl-test` which gives the output:
+Test can be run using `kubectl testkube tests start curl-test` which gives the output:
 
 ```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
@@ -43,16 +43,16 @@ Test can be run using `kubectl testkube scripts start curl-test` which gives the
    ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
-Script queued for execution
+Test queued for execution
 
-Use following command to get script execution details:
-$ kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e
+Use following command to get test execution details:
+$ kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e
 
-or watch script execution until complete:
-$ kubectl testkube scripts watch 613a2d7056499e6e3d5b9c3e
+or watch test execution until complete:
+$ kubectl testkube tests watch 613a2d7056499e6e3d5b9c3e
 ```
 
-As in the output is stated results can be checked using `kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e` where the id of the execution is unique for each execution, make sure that the right id is used. Output of that should look something like:
+As in the output is stated results can be checked using `kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e` where the id of the execution is unique for each execution, make sure that the right id is used. Output of that should look something like:
 
 ```sh
 Name: painfully-super-colt,Status: success,Duration: 534ms

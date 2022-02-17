@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const testkubeScriptSecretLabel = "scripts-secrets"
+const testkubeTestSecretLabel = "tests-secrets"
 
 // Client provide methods to manage secrets
 type Client struct {
@@ -58,7 +58,7 @@ func (c *Client) List(namespace string) (map[string]map[string]string, error) {
 	ctx := context.Background()
 
 	secretList, err := secretsClient.List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("testkube=%s", testkubeScriptSecretLabel)})
+		LabelSelector: fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)})
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (c *Client) DeleteAll(namespace string) error {
 	ctx := context.Background()
 
 	if err := secretsClient.DeleteCollection(ctx, metav1.DeleteOptions{},
-		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", testkubeScriptSecretLabel)}); err != nil {
+		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)}); err != nil {
 		return err
 	}
 
@@ -147,7 +147,7 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
 			Namespace: namespace,
-			Labels:    map[string]string{"testkube": testkubeScriptSecretLabel},
+			Labels:    map[string]string{"testkube": testkubeTestSecretLabel},
 		},
 		Type:       v1.SecretTypeOpaque,
 		StringData: stringData,
@@ -157,7 +157,7 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 // NewApplySpec is a method to return secret apply spec
 func NewApplySpec(id, namespace string, stringData map[string]string) *corev1.SecretApplyConfiguration {
 	return corev1.Secret(id, namespace).
-		WithLabels(map[string]string{"testkube": testkubeScriptSecretLabel}).
+		WithLabels(map[string]string{"testkube": testkubeTestSecretLabel}).
 		WithStringData(stringData).
 		WithType(v1.SecretTypeOpaque)
 }

@@ -30,8 +30,8 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 	return
 }
 
-func (r *MongoRepository) GetByNameAndScript(ctx context.Context, name, script string) (result testkube.Execution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "scriptname": script}).Decode(&result)
+func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
 	return
 }
 
@@ -94,14 +94,14 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 	// TODO: statuses are messy e.g. success==passed error==failed
 	for _, o := range result {
 		sum += o.Count
-		switch testkube.TestStatus(o.Status) {
-		case testkube.QUEUED_TestStatus:
+		switch testkube.TestSuiteExecutionStatus(o.Status) {
+		case testkube.QUEUED_TestSuiteExecutionStatus:
 			totals.Queued = o.Count
-		case testkube.PENDING_TestStatus:
+		case testkube.PENDING_TestSuiteExecutionStatus:
 			totals.Pending = o.Count
-		case testkube.SUCCESS_TestStatus:
+		case testkube.SUCCESS_TestSuiteExecutionStatus:
 			totals.Passed = o.Count
-		case testkube.ERROR__TestStatus:
+		case testkube.ERROR__TestSuiteExecutionStatus:
 			totals.Failed = o.Count
 		}
 	}
@@ -169,13 +169,13 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TextSearchDefined() {
 		query["$or"] = bson.A{
-			bson.M{"scriptname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
+			bson.M{"testname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 		}
 	}
 
-	if filter.ScriptNameDefined() {
-		query["scriptname"] = filter.ScriptName()
+	if filter.TestNameDefined() {
+		query["testname"] = filter.TestName()
 	}
 
 	if filter.StartDateDefined() {
@@ -199,7 +199,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.TypeDefined() {
-		query["scripttype"] = filter.Type()
+		query["testtype"] = filter.Type()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))

@@ -21,12 +21,12 @@ func NewListTestsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 			tests, err := client.ListTests(namespace, tags)
-
 			ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
 			ui.Table(tests, os.Stdout)
 		},
 	}
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+
 	return cmd
 }

@@ -25,17 +25,17 @@ type Filter interface {
 
 type Repository interface {
 	// Get gets execution result by id
-	Get(ctx context.Context, id string) (testkube.TestExecution, error)
-	// GetByNameAndScript gets execution result by name
-	GetByNameAndScript(ctx context.Context, name, script string) (testkube.TestExecution, error)
+	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
+	// GetByNameAndTest gets execution result by name
+	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.TestSuiteExecution, error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
-	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestExecution, error)
+	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestSuiteExecution, error)
 	// Insert inserts new execution result
-	Insert(ctx context.Context, result testkube.TestExecution) error
+	Insert(ctx context.Context, result testkube.TestSuiteExecution) error
 	// Update updates execution result
-	Update(ctx context.Context, result testkube.TestExecution) error
+	Update(ctx context.Context, result testkube.TestSuiteExecution) error
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time

@@ -46,7 +46,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "unique script name - mandatory")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test name - mandatory")
 	cmd.Flags().StringArrayVarP(&types, "types", "t", []string{}, "types handled by exeutor")
 	cmd.Flags().StringVar(&executorType, "executor-type", "job", "executor type (defaults to job)")
 

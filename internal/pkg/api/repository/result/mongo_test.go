@@ -157,15 +157,15 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(1), totals.Pending)
 	})
 
-	t.Run("filter with script name that doesn't exist should return 0 results", func(t *testing.T) {
+	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithScriptName("noneExisting"))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName("noneExisting"))
 		assert.NoError(err)
 		assert.Empty(executions)
 	})
 
-	t.Run("getting totals with script name that doesn't exist should return 0 results", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName("noneExisting"))
+	t.Run("getting totals with test name that doesn't exist should return 0 results", func(t *testing.T) {
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
 		assert.Equal(int32(0), totals.Results)
@@ -180,8 +180,10 @@ func TestStorage(t *testing.T) {
 			WithStatus(testkube.SUCCESS_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
-			WithScriptName(defaultName)
+			WithTestName(defaultName)
+
 		executions, err := repository.GetExecutions(context.Background(), filter)
+
 		assert.NoError(err)
 		assert.Len(executions, 2)
 	})
@@ -191,7 +193,7 @@ func TestStorage(t *testing.T) {
 			WithStatus(testkube.SUCCESS_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
-			WithScriptName(defaultName)
+			WithTestName(defaultName)
 		totals, err := repository.GetExecutionTotals(context.Background(), false, filter)
 
 		assert.NoError(err)
@@ -206,16 +208,16 @@ func TestStorage(t *testing.T) {
 	err = repository.insertExecutionResult(name, testkube.PENDING_ExecutionStatus, twoDaysAgo, nil)
 	assert.NoError(err)
 
-	t.Run("filter with script name should return result only for that script name", func(t *testing.T) {
+	t.Run("filter with test name should return result only for that test name", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithScriptName(name))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName(name))
 		assert.NoError(err)
 		assert.Len(executions, 1)
-		assert.Equal(executions[0].ScriptName, name)
+		assert.Equal(executions[0].TestName, name)
 	})
 
-	t.Run("getting totals with script name should return result only for that script name", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithScriptName(name))
+	t.Run("getting totals with test name should return result only for that test name", func(t *testing.T) {
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
 
 		assert.NoError(err)
 		assert.Equal(int32(1), totals.Results)
@@ -225,7 +227,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(1), totals.Pending)
 	})
 
-	t.Run("scripts should be sorted with most recent first", func(t *testing.T) {
+	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter())
 		assert.NoError(err)
 		assert.NotEmpty(executions)
@@ -262,13 +264,13 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
-func (repository *MongoRepository) insertExecutionResult(scriptName string, execStatus testkube.ExecutionStatus, startTime time.Time, tags []string) error {
+func (repository *MongoRepository) insertExecutionResult(testName string, execStatus testkube.ExecutionStatus, startTime time.Time, tags []string) error {
 	return repository.Insert(context.Background(),
 		testkube.Execution{
 			Id:              rand.Name(),
-			ScriptName:      scriptName,
+			TestName:        testName,
 			Name:            "dummyName",
-			ScriptType:      "test/curl",
+			TestType:        "test/curl",
 			StartTime:       startTime,
 			EndTime:         time.Now(),
 			ExecutionResult: &testkube.ExecutionResult{Status: &execStatus},

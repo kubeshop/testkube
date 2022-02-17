@@ -1,7 +1,7 @@
 /*
- * TestKube API
+ * Testkube API
  *
- * TestKube provides a Kubernetes-native framework for test definition, execution and results
+ * Testkube provides a Kubernetes-native framework for test definition, execution and results
  *
  * API version: 1.0.0
  * Contact: testkube@kubeshop.io
@@ -12,7 +12,7 @@ package testkube
 // execution result returned from executor
 type ExecutionResult struct {
 	Status *ExecutionStatus `json:"status"`
-	// RAW Script execution output, depends of reporter used in particular tool
+	// RAW Test execution output, depends of reporter used in particular tool
 	Output string `json:"output,omitempty"`
 	// output type depends of reporter used in partucular tool
 	OutputType string `json:"outputType,omitempty"`

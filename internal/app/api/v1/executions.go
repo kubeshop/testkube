@@ -17,23 +17,23 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	scriptsmapper "github.com/kubeshop/testkube/pkg/mapper/scripts"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
 
-// ExecuteScriptHandler calls particular executor based on execution request content and type
-func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
+// ExecuteTestHandler calls particular executor based on execution request content and type
+func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
 		var request testkube.ExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script request body invalid: %w", err))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test request body invalid: %w", err))
 		}
 
-		scriptID := c.Params("id")
+		id := c.Params("id")
 		namespace := request.Namespace
 
 		// generate random execution name in case there is no one set
@@ -42,19 +42,19 @@ func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
 			request.Name = rand.Name()
 		}
 
-		// script name + script execution name should be unique
-		execution, _ := s.ExecutionResults.GetByNameAndScript(c.Context(), request.Name, scriptID)
+		// test name + test execution name should be unique
+		execution, _ := s.ExecutionResults.GetByNameAndTest(c.Context(), request.Name, id)
 		if execution.Name == request.Name {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("script execution with name %s already exists", request.Name))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution with name %s already exists", request.Name))
 		}
 
-		// merge available data into execution options script spec, executor spec, request, script id
-		options, err := s.GetExecuteOptions(namespace, scriptID, request)
+		// merge available data into execution options test spec, executor spec, request, test id
+		options, err := s.GetExecuteOptions(namespace, id, request)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create valid execution options: %w", err))
 		}
 
-		execution = s.executeScript(ctx, options)
+		execution = s.executeTest(ctx, options)
 		if execution.ExecutionResult.IsFailed() {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf(execution.ExecutionResult.ErrorMessage))
 		}
@@ -63,26 +63,26 @@ func (s TestKubeAPI) ExecuteScriptHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
+func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOptions) (execution testkube.Execution) {
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
-	execution.Tags = options.ScriptSpec.Tags
+	execution.Tags = options.TestSpec.Tags
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
-		return execution.Errw("can't create new script execution, can't insert into storage: %w", err)
+		return execution.Errw("can't create new test execution, can't insert into storage: %w", err)
 	}
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		return execution.Errw("can't execute script, can't insert into storage error: %w", err)
+		return execution.Errw("can't execute test, can't insert into storage error: %w", err)
 	}
 
 	options.HasSecrets = true
-	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.ScriptName), options.Request.Namespace); err != nil {
+	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName), options.Request.Namespace); err != nil {
 		if !errors.IsNotFound(err) {
 			return execution.Errw("can't get secrets: %w", err)
 		}
@@ -92,7 +92,7 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 
 	var result testkube.ExecutionResult
 
-	// sync/async script execution
+	// sync/async test execution
 	if options.Sync {
 		result, err = s.Executor.ExecuteSync(execution, options)
 	} else {
@@ -110,20 +110,20 @@ func (s TestKubeAPI) executeScript(ctx context.Context, options client.ExecuteOp
 	s.Metrics.IncExecution(execution)
 
 	if err != nil {
-		return execution.Errw("script execution failed: %w", err)
+		return execution.Errw("test execution failed: %w", err)
 	}
 
-	s.Log.Infow("script executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	return
 }
 
-// ListExecutionsHandler returns array of available script executions
-func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
+// ListExecutionsHandler returns array of available test executions
+func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO should we split this to separate endpoint? currently this one handles
-		// endpoints from /executions and from /scripts/{id}/executions
-		// or should scriptID be a query string as it's some kind of filter?
+		// endpoints from /executions and from /tests/{id}/executions
+		// or should id be a query string as it's some kind of filter?
 
 		filter := getFilterFromRequest(c)
 
@@ -151,7 +151,7 @@ func (s TestKubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
+func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
@@ -199,48 +199,48 @@ func (s TestKubeAPI) ExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-// GetExecutionHandler returns script execution object for given script and execution id
-func (s TestKubeAPI) GetExecutionHandler() fiber.Handler {
+// GetExecutionHandler returns test execution object for given test and execution id
+func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		scriptID := c.Params("id", "")
+		id := c.Params("id", "")
 		executionID := c.Params("executionID")
 
 		var execution testkube.Execution
 		var err error
 
-		if scriptID == "" {
+		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("script with execution id %s not found", executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			execution, err = s.ExecutionResults.GetByNameAndScript(ctx, executionID, scriptID)
+			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, id)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("script %s/%s not found", scriptID, executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", id, executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
 			}
 		}
 
-		s.Log.Debugw("get script execution request - debug", "execution", execution)
+		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
 	}
 }
 
-func (s TestKubeAPI) AbortExecutionHandler() fiber.Handler {
+func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		return s.Executor.Abort(id)
 	}
 }
 
-func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
+func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
@@ -269,7 +269,7 @@ func (s TestKubeAPI) GetArtifactHandler() fiber.Handler {
 }
 
 // GetArtifacts returns list of files in the given bucket
-func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
+func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
@@ -282,23 +282,23 @@ func (s TestKubeAPI) ListArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) GetExecuteOptions(namespace, scriptID string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
-	// get script content from kubernetes CRs
-	scriptCR, err := s.ScriptsClient.Get(namespace, scriptID)
+func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+	// get test content from kubernetes CRs
+	testCR, err := s.TestsClient.Get(namespace, id)
 
 	if err != nil {
-		return options, fmt.Errorf("can't get script custom resource %w", err)
+		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
 	// get executor from kubernetes CRs
-	executorCR, err := s.ExecutorsClient.GetByType(scriptCR.Spec.Type_)
+	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
 	if err != nil {
 		return options, fmt.Errorf("can't get executor spec: %w", err)
 	}
 
 	return client.ExecuteOptions{
-		ScriptName:   scriptID,
-		ScriptSpec:   scriptCR.Spec,
+		TestName:     id,
+		TestSpec:     testCR.Spec,
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
@@ -307,10 +307,10 @@ func (s TestKubeAPI) GetExecuteOptions(namespace, scriptID string, request testk
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
-		options.ScriptName,
+		options.TestName,
 		options.Request.Name,
-		options.ScriptSpec.Type_,
-		scriptsmapper.MapScriptContentFromSpec(options.ScriptSpec.Content),
+		options.TestSpec.Type_,
+		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
 		options.Request.Tags,
@@ -324,13 +324,13 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:         execution.Id,
-			Name:       execution.Name,
-			ScriptName: execution.ScriptName,
-			ScriptType: execution.ScriptType,
-			Status:     execution.ExecutionResult.Status,
-			StartTime:  execution.StartTime,
-			EndTime:    execution.EndTime,
+			Id:        execution.Id,
+			Name:      execution.Name,
+			TestName:  execution.TestName,
+			TestType:  execution.TestType,
+			Status:    execution.ExecutionResult.Status,
+			StartTime: execution.StartTime,
+			EndTime:   execution.EndTime,
 		}
 	}
 

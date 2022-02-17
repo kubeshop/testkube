@@ -22,7 +22,7 @@ Boundary(kubernetes, "kubnernetes cluster") {
 	System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 
 	Boundary(crds, "CRDs") {
-		System_Ext(testCrds, "Tests CRDs", "kubernetes CRD defined by engineers", "kubernetes")
+		System_Ext(testCrds, "TestSuites CRDs", "kubernetes CRD defined by engineers", "kubernetes")
 		System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
 	}
 
@@ -54,7 +54,7 @@ Boundary(kubernetes, "kubnernetes cluster") {
 
 
 Rel(operator, testCrds, "watch for new crd/changes")
-Rel(testCrds, api, "get scripts content")
+Rel(testCrds, api, "get tests content")
 
 Rel(executorCrds, api, "get executor uri and other details")
 

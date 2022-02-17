@@ -14,12 +14,12 @@ func TestGetClient(t *testing.T) {
 
 		client, err := GetClient(ClientProxy, "testkube")
 		assert.NoError(t, err)
-		assert.Equal(t, "client.ProxyScriptsAPI", fmt.Sprintf("%T", client))
+		assert.Equal(t, "client.ProxyAPIClient", fmt.Sprintf("%T", client))
 	})
 
 	t.Run("get direct client", func(t *testing.T) {
 		client, err := GetClient(ClientDirect, "testkube")
 		assert.NoError(t, err)
-		assert.Equal(t, "client.DirectScriptsAPI", fmt.Sprintf("%T", client))
+		assert.Equal(t, "client.DirectAPIClient", fmt.Sprintf("%T", client))
 	})
 }

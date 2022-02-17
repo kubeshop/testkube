@@ -1,18 +1,13 @@
 package testkube
 
-import (
-	"fmt"
-)
-
 type Tests []Test
 
-func (tests Tests) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Description", "Steps"}
-	for _, e := range tests {
+func (t Tests) Table() (header []string, output [][]string) {
+	header = []string{"Name", "Type"}
+	for _, e := range t {
 		output = append(output, []string{
 			e.Name,
-			e.Description,
-			fmt.Sprintf("%d", len(e.Steps)),
+			e.Type_,
 		})
 	}
 
@@ -21,7 +16,8 @@ func (tests Tests) Table() (header []string, output [][]string) {
 
 func (t Test) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
-		Name:      t.Name,
-		Namespace: t.Namespace,
+		Name: t.Name,
+		// TODO add namespace to test model and all dependencies
+		Namespace: "testkube",
 	}
 }

@@ -6,19 +6,19 @@ Gets executors
 
 Gets executor, you can change output format
 
-```sh
+```
 testkube executors list [flags]
 ```
 
 ### Options
 
-```sh
+```
   -h, --help   help for list
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -28,4 +28,5 @@ testkube executors list [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)  - Executor management commands
+* [testkube executors](testkube_executors.md)	 - Executor management commands
+
