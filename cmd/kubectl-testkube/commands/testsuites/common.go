@@ -24,7 +24,7 @@ func printTestExecutionDetails(execution testkube.TestSuiteExecution, startTime 
 func uiPrintTestStatus(execution testkube.TestSuiteExecution) {
 	switch execution.Status {
 	case testkube.TestSuiteExecutionStatusQueued:
-		ui.Warn("Test queued for execution")
+		ui.Warn("Test Suite queued for execution")
 
 	case testkube.TestSuiteExecutionStatusPending:
 		ui.Warn("Test execution started")
