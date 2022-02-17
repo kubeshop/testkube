@@ -1,4 +1,4 @@
-# Testkube test tests
+# Testkube tests
 
 Tests are single executor oriented objects. Test can have different types, which depends what executors are installed in your cluster.
 
