@@ -664,8 +664,8 @@ func (c ProxyAPIClient) GetTestSuiteExecution(executionID string) (execution tes
 	return c.getTestExecutionFromResponse(resp)
 }
 
-// WatchTestExecution watches for changes in test executions
-func (c ProxyAPIClient) WatchTestExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
+// WatchTestSuiteExecution watches for changes in test executions
+func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
 	executionCh = make(chan testkube.TestSuiteExecution)
 
 	go func() {
@@ -694,7 +694,7 @@ func (c ProxyAPIClient) WatchTestExecution(executionID string) (executionCh chan
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyAPIClient) ListTestExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).

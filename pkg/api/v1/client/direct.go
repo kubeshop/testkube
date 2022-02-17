@@ -652,8 +652,8 @@ func (c DirectAPIClient) ExecuteTestSuite(id, namespace, executionName string, e
 	return c.getTestExecutionFromResponse(resp)
 }
 
-// WatchTestExecution watches for changes in test executions
-func (c DirectAPIClient) WatchTestExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
+// WatchTestSuiteExecution watches for changes in test executions
+func (c DirectAPIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
 	executionCh = make(chan testkube.TestSuiteExecution)
 
 	go func() {
@@ -698,7 +698,7 @@ func (c DirectAPIClient) GetTestSuiteExecution(executionID string) (execution te
 }
 
 // ListExecutions list all executions for given test name
-func (c DirectAPIClient) ListTestExecutions(testSuiteName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c DirectAPIClient) ListTestSuiteExecutions(testSuiteName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	var uri string
 	if len(tags) > 0 {
 		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&tags=%s", testSuiteName, limit, strings.Join(tags, ","))

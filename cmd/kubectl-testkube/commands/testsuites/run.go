@@ -40,7 +40,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			ui.ExitOnError("starting test suite execution "+namespacedName, err)
 
 			if watchEnabled {
-				executionCh, err := client.WatchTestExecution(execution.Id)
+				executionCh, err := client.WatchTestSuiteExecution(execution.Id)
 				for execution := range executionCh {
 					ui.ExitOnError("watching test execution", err)
 					printExecution(execution, startTime)

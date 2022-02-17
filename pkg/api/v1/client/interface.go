@@ -45,8 +45,8 @@ type Client interface {
 	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
-	WatchTestExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
+	ListTestSuiteExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
+	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
