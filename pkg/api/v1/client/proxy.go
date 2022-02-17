@@ -159,7 +159,7 @@ func (c ProxyAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Tes
 	return c.getTestFromResponse(resp)
 }
 
-// UpdateTest creates new Test Custom Resource
+// UpdateTest Test Custom Resource
 func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 
@@ -180,7 +180,7 @@ func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Tes
 	return c.getTestFromResponse(resp)
 }
 
-// ExecuteTest starts new external test execution, reads data and returns ID
+// ExecuteTest starts test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
@@ -573,7 +573,7 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (testSui
 	return c.getTestSuitesFromResponse(resp)
 }
 
-// CreateTestSuite creates new Test Custom Resource
+// CreateTestSuite creates new TestSuite Custom Resource
 func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
@@ -594,7 +594,7 @@ func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSui
 	return c.getTestSuiteFromResponse(resp)
 }
 
-// UpdateTestSuite creates new Test Custom Resource
+// UpdateTestSuite creates new TestSuite Custom Resource
 func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
@@ -626,7 +626,7 @@ func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite te
 	return testSuite, err
 }
 
-// ExecuteTestSuite starts new external test execution, reads data and returns ID
+// ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c ProxyAPIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
@@ -664,7 +664,7 @@ func (c ProxyAPIClient) GetTestSuiteExecution(executionID string) (execution tes
 	return c.getTestExecutionFromResponse(resp)
 }
 
-// WatchTestSuiteExecution watches for changes in test executions
+// WatchTestSuiteExecution watches for changes in channels of test suite executions steps
 func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
 	executionCh = make(chan testkube.TestSuiteExecution)
 
@@ -693,7 +693,7 @@ func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh
 	return
 }
 
-// ListExecutions list all executions for given test name
+// ListExecutions list all executions for given test suite
 func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
@@ -711,7 +711,7 @@ func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, tags [
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
-		return executions, fmt.Errorf("api/get-test-suite-executions returned error: %w", err)
+		return executions, fmt.Errorf("api/list-test-suite-executions returned error: %w", err)
 	}
 
 	return c.getTestExecutionsFromResponse(resp)

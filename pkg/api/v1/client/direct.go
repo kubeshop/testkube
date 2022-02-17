@@ -149,7 +149,7 @@ func (c DirectAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Te
 	return c.getTestFromResponse(resp)
 }
 
-// UpdateTest creates new Test Custom Resource
+// UpdateTest updates Test Custom Resource
 func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 	request := testkube.TestUpsertRequest(options)
@@ -511,7 +511,7 @@ func (c DirectAPIClient) GetTestSuite(id, namespace string) (testSuite testkube.
 	return c.getTestSuiteFromResponse(resp)
 }
 
-// CreateTestSuite creates new Test Custom Resource
+// CreateTestSuite creates new TestSuite Custom Resource
 func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
@@ -572,7 +572,7 @@ func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 	return
 }
 
-// UpdateTestSuite creates new Test Custom Resource
+// UpdateTestSuite updates TestSuite Custom Resource
 func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
@@ -625,7 +625,7 @@ func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (testSu
 	return
 }
 
-// ExecuteTestSuite starts new external test execution, reads data and returns ID
+// ExecuteTestSuite starts test suite execution, reads data and returns ID
 func (c DirectAPIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
@@ -652,7 +652,7 @@ func (c DirectAPIClient) ExecuteTestSuite(id, namespace, executionName string, e
 	return c.getTestExecutionFromResponse(resp)
 }
 
-// WatchTestSuiteExecution watches for changes in test executions
+// WatchTestSuiteExecution watches for changes in test suite executions
 func (c DirectAPIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
 	executionCh = make(chan testkube.TestSuiteExecution)
 
@@ -697,7 +697,7 @@ func (c DirectAPIClient) GetTestSuiteExecution(executionID string) (execution te
 	return c.getTestExecutionFromResponse(resp)
 }
 
-// ListExecutions list all executions for given test name
+// ListExecutions list all executions for given test suite
 func (c DirectAPIClient) ListTestSuiteExecutions(testSuiteName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	var uri string
 	if len(tags) > 0 {
