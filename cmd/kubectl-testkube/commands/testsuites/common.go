@@ -33,7 +33,7 @@ func uiPrintTestStatus(execution testkube.TestSuiteExecution) {
 		ui.Success("Test Suite execution completed with sucess in " + execution.Duration)
 
 	case testkube.TestSuiteExecutionStatusError:
-		ui.Errf("Test execution failed")
+		ui.Errf("Test Suite execution failed")
 		os.Exit(1)
 	}
 
