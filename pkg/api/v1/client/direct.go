@@ -719,10 +719,10 @@ func (c DirectAPIClient) ListTestSuiteExecutions(testSuiteName string, limit int
 	return c.getTestExecutionsFromResponse(resp)
 }
 
-func (c DirectAPIClient) getTestSuiteFromResponse(resp *http.Response) (test testkube.TestSuite, err error) {
+func (c DirectAPIClient) getTestSuiteFromResponse(resp *http.Response) (testSuite testkube.TestSuite, err error) {
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&test)
+	err = json.NewDecoder(resp.Body).Decode(&testSuite)
 	return
 }
 
