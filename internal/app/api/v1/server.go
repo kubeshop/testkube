@@ -294,5 +294,5 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 		}
 	}
 
-	return "", nil
+	return initImage, nil
 }
