@@ -23,10 +23,10 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 			name := args[0]
 			client, _ := common.GetClient(cmd)
-			test, err := client.GetTestSuite(name, namespace)
+			testSuite, err := client.GetTestSuite(name, namespace)
 			ui.ExitOnError("getting test "+name, err)
 
-			out, err := yaml.Marshal(test)
+			out, err := yaml.Marshal(testSuite)
 			ui.ExitOnError("getting yaml ", err)
 
 			fmt.Printf("%s\n", out)
