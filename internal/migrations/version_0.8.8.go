@@ -1,5 +1,7 @@
 package migrations
 
+import "github.com/kubeshop/testkube/pkg/migrator"
+
 // add migration to global migrator
 func init() {
 	Migrator.Add(NewVersion_0_8_8())
@@ -30,4 +32,8 @@ func (m *Version_0_8_8) Migrate() error {
 }
 func (m *Version_0_8_8) Info() string {
 	return "Adding labels and annotations to Testkube CRDs"
+}
+
+func (m *Version_0_8_8) Type() migrator.MigrationType {
+	return migrator.MigrationTypeClient
 }

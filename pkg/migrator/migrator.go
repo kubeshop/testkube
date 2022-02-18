@@ -14,7 +14,18 @@ type Migration interface {
 	Migrate() error
 	Version() string
 	Info() string
+	Type() MigrationType
 }
+
+// MigrationType is migration type
+type MigrationType int
+
+const (
+	// MigrationTypeClient is client migration type
+	MigrationTypeClient MigrationType = iota + 1
+	// MigrationTypeServer is server migration type
+	MigrationTypeServer
+)
 
 func NewMigrator() *Migrator {
 	return &Migrator{
@@ -31,18 +42,25 @@ func (m *Migrator) Add(migration Migration) {
 	m.Migrations = append(m.Migrations, migration)
 }
 
-func (m *Migrator) GetValidMigrations(currentVersion string) (migrations []Migration) {
+func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...MigrationType) (migrations []Migration) {
+	types := make(map[MigrationType]struct{}, len(migrationTypes))
+	for _, migrationType := range migrationTypes {
+		types[migrationType] = struct{}{}
+	}
+
 	for _, migration := range m.Migrations {
 		if ok, err := m.IsValid(migration.Version(), currentVersion); ok && err == nil {
-			migrations = append(migrations, migration)
+			if _, ok = types[migration.Type()]; ok {
+				migrations = append(migrations, migration)
+			}
 		}
 	}
 
 	return
 }
 
-func (m *Migrator) Run(currentVersion string) error {
-	for _, migration := range m.GetValidMigrations(currentVersion) {
+func (m *Migrator) Run(currentVersion string, migrationTypes ...MigrationType) error {
+	for _, migration := range m.GetValidMigrations(currentVersion, migrationTypes...) {
 		err := migration.Migrate()
 		if err != nil {
 			return err

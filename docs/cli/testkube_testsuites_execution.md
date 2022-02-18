@@ -4,7 +4,7 @@ Gets execution details
 
 ### Synopsis
 
-Gets ececution details by ID
+Gets execution details by ID
 
 ```
 testkube testsuites execution <executionID> [flags]
