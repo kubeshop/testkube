@@ -89,7 +89,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the test
+          description: ID of the test suite
       tags:
         - test-suites
         - api
