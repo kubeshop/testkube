@@ -77,7 +77,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -151,7 +151,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -434,7 +434,7 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *batchv1.Job {
+func NewJobSpec(id, namespace, image, jsn, testName string, hasSecrets bool) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
 	var backOffLimit int32 = 0
@@ -447,7 +447,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(scriptName),
+							Name: secret.GetMetadataName(testName),
 						},
 						Key: GitUsernameSecretName,
 					},
@@ -458,7 +458,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(scriptName),
+							Name: secret.GetMetadataName(testName),
 						},
 						Key: GitTokenSecretName,
 					},

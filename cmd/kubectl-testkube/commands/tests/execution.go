@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"time"
+	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
@@ -9,30 +9,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTestExecutionCmd() *cobra.Command {
-	cmd := &cobra.Command{
+func NewGetExecutionCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:     "execution <executionID>",
 		Aliases: []string{"e"},
-		Short:   "Gets execution details",
-		Long:    `Gets ececution details by ID`,
+		Short:   "Gets test execution details",
+		Long:    `Gets test execution details, you can change output format`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-
-			startTime := time.Now()
-			client, _ := common.GetClient(cmd)
 
 			executionID := args[0]
-			execution, err := client.GetTestExecution(executionID)
-			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			printTestExecutionDetails(execution, startTime)
+			client, _ := common.GetClient(cmd)
+			execution, err := client.GetExecution(executionID)
+			ui.ExitOnError("getting test execution: "+executionID, err)
 
-			uiPrintTestStatus(execution)
-
-			uiShellTestGetCommandBlock(execution.Id)
+			render := GetExecutionRenderer(cmd)
+			err = render.Render(execution, os.Stdout)
+			ui.ExitOnError("rendering", err)
 		},
 	}
-
-	return cmd
 }

@@ -7,21 +7,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewExecutionWithID(id, scriptType, scriptName string) Execution {
+func NewExecutionWithID(id, testType, testName string) Execution {
 	return Execution{
 		Id:              id,
 		ExecutionResult: &ExecutionResult{},
-		ScriptName:      scriptName,
-		ScriptType:      scriptType,
+		TestName:        testName,
+		TestType:        testType,
 	}
 }
 
-func NewExecution(scriptName, executionName, scriptType string, content *ScriptContent, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(testName, executionName, testType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
-		ScriptName:      scriptName,
+		TestName:        testName,
 		Name:            executionName,
-		ScriptType:      scriptType,
+		TestType:        testType,
 		ExecutionResult: &result,
 		Params:          params,
 		Content:         content,
@@ -51,7 +51,7 @@ func NewQueuedExecution() *Execution {
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
-	header = []string{"Script", "Type", "Name", "ID", "Status"}
+	header = []string{"Name", "Type", "Name", "ID", "Status"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -60,8 +60,8 @@ func (executions Executions) Table() (header []string, output [][]string) {
 		}
 
 		output = append(output, []string{
-			e.ScriptName,
-			e.ScriptType,
+			e.TestName,
+			e.TestType,
 			e.Name,
 			e.Id,
 			status,
@@ -71,7 +71,7 @@ func (executions Executions) Table() (header []string, output [][]string) {
 	return
 }
 
-func (e *Execution) WithContent(content *ScriptContent) *Execution {
+func (e *Execution) WithContent(content *TestContent) *Execution {
 	e.Content = content
 	return e
 }

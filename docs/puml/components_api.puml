@@ -42,16 +42,16 @@ Container_Boundary(executors, "Test runners") {
     Component(cypressExecutor, "Cypress Projects Job", "Kubernetes Job", "Executes exported postman collections", "go")
     Component(curlExecutor, "CURL executor", "Kubernetes Job", "Executes curl commands", "go")
 
-	Rel(executorClient, cypressExecutor, "executes cypress based scripts")
-	Rel(executorClient, postmanExecutor, "executes postman collections scripts")
-	Rel(executorClient, curlExecutor, "executes curl scripts")
+	Rel(executorClient, cypressExecutor, "executes cypress based tests")
+	Rel(executorClient, postmanExecutor, "executes postman collections tests")
+	Rel(executorClient, curlExecutor, "executes curl tests")
 
 }
 
-Person_Ext(engineer, "Engineer", "kubectl apply -f script.yaml")
+Person_Ext(engineer, "Engineer", "kubectl apply -f test.yaml")
 
 Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
-	System_Ext(scriptsCrds, "Scripts CRD", "YAML", "kubernetes")
+	System_Ext(testsCrds, "Tests CRD", "YAML", "kubernetes")
 	System_Ext(executorsCrds, "Executors CRD", "YAML", "kubernetes")
 
 	Rel(postmanExecutor, executorsCrds, "registers itself in cluster as executor")
@@ -61,11 +61,11 @@ Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
 System_Ext(sut, "SUT", "System Under Test", "html5")
 Rel(executors, sut, "runs test")
 
-Rel(engineer, scriptsCrds, "applying script definition to cluster")
+Rel(engineer, testsCrds, "applying test definition to cluster")
 Rel(kubectl, apiServer, "runs tests, getting results")
 Rel(cicd, apiServer, "runs tests getting results")
 Rel(web, apiServer, "runs tests, getting restuls")
-Rel(apiServer, scriptsCrds, "reads informations about test details from Custom Resources")
+Rel(apiServer, testsCrds, "reads informations about test details from Custom Resources")
 Rel(metricsMiddleware, metrics, "stores test runs metrics")
 Rel(api, logs, "store logs")
 

@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewGetTestCmd() *cobra.Command {
+func NewGetTestsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "get <testName>",
 		Aliases: []string{"g"},
@@ -18,10 +18,11 @@ func NewGetTestCmd() *cobra.Command {
 		Long:    `Getting test from given namespace - if no namespace given "testkube" namespace is used`,
 		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
-			namespace := cmd.Flag("namespace").Value.String()
 			ui.Logo()
 
 			name := args[0]
+			namespace := cmd.Flag("namespace").Value.String()
+
 			client, _ := common.GetClient(cmd)
 			test, err := client.GetTest(name, namespace)
 			ui.ExitOnError("getting test "+name, err)

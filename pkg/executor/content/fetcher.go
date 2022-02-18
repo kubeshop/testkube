@@ -20,18 +20,18 @@ func NewFetcher() Fetcher {
 type Fetcher struct {
 }
 
-func (f Fetcher) Fetch(content *testkube.ScriptContent) (path string, err error) {
+func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 	if content == nil {
-		return "", fmt.Errorf("fetch - empty content, make sure script content has valid data structure and is not nil")
+		return "", fmt.Errorf("fetch - empty content, make sure test content has valid data structure and is not nil")
 	}
-	switch testkube.ScriptContentType(content.Type_) {
-	case testkube.ScriptContentTypeFileURI:
+	switch testkube.TestContentType(content.Type_) {
+	case testkube.TestContentTypeFileURI:
 		return f.FetchURI(content.Uri)
-	case testkube.ScriptContentTypeString:
+	case testkube.TestContentTypeString:
 		return f.FetchString(content.Data)
-	case testkube.ScriptContentTypeGitFile:
+	case testkube.TestContentTypeGitFile:
 		return f.FetchGitFile(content.Repository)
-	case testkube.ScriptContentTypeGitDir:
+	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
 	default:
 		return path, fmt.Errorf("unhandled content type: '%s'", content.Type_)

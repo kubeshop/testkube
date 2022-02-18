@@ -22,11 +22,11 @@ type Executor interface {
 	// Get synnchronous request to executor to get testkubeExecution
 	Get(id string) (execution testkube.ExecutionResult, err error)
 
-	// Execute starts new external script execution, reads data and returns ID
+	// Execute starts new external test execution, reads data and returns ID
 	// execution is started asynchronously client can check later for results
 	Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 
-	// Execute starts new external script execution, reads data and returns ID
+	// Execute starts new external test execution, reads data and returns ID
 	// execution is started synchronously client is blocked
 	ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 

@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (s TestKubeAPI) CreateExecutorHandler() fiber.Handler {
+func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.ExecutorCreateRequest
 		err := c.BodyParser(&request)
@@ -28,7 +28,7 @@ func (s TestKubeAPI) CreateExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) ListExecutorsHandler() fiber.Handler {
+func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ns := c.Query("namespace", "testkube")
 		list, err := s.ExecutorsClient.List(ns)
@@ -45,7 +45,7 @@ func (s TestKubeAPI) ListExecutorsHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) GetExecutorHandler() fiber.Handler {
+func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")
@@ -60,7 +60,7 @@ func (s TestKubeAPI) GetExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) DeleteExecutorHandler() fiber.Handler {
+func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")

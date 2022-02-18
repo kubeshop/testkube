@@ -1,22 +1,22 @@
 # Getting Started
 
-Please follow [install steps](/docs/installing.md) first for TestKube installation (if not installed already)
+Please follow [install steps](/docs/installing.md) first for Testkube installation (if not installed already)
 
 ## Getting help
 
 ```sh
 kubectl testkube --help 
 
-# or for scripts runs
-kubectl testkube scripts --help 
+# or for tests
+kubectl testkube tests --help 
 ```
 
 ## Defining tests
 
-After installing you will need to add Test Scripts to your cluster, scripts are created as Custom Resource in Kubernetes
+After installing you will need to add Tests to your cluster, scripts are created as Custom Resource in Kubernetes
 (access to Kubernetes cluster would be also needed)
 
-For now TestKube only supports  *Postman collections*, *basic CURL execition* and *Cypress* - but we plan to handle more testing tools soon,.
+For now Testkube only supports  *Postman collections*, *basic CURL execition* and *Cypress* - but we plan to handle more testing tools soon,.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
@@ -104,7 +104,7 @@ EOF
 ```
 
 ```sh
-kubectl testkube scripts create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
+kubectl testkube tests create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
 ```
 
 **Note**: this is just an example of how it works. For further details you can visit [Postman documentation](executor-postman.md)
@@ -116,7 +116,7 @@ Cypress tests are little more complicated to pass - for now we're supporting Git
 You can create new test with kubectl testkube plugin:
 
 ```sh
- kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
+ kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
 ```
 
 Where:
@@ -129,41 +129,41 @@ Where:
 
 For now we're supporting only Cypress test runs, but we plan to fully integrate it.
 
-## Starting new script execution
+## Starting new test execution
 
-When our script is defined as CR we can now run it:
+When our test is defined as CR we can now run it:
 
 ```shell
-kubectl testkube scripts start my-test-name 
+kubectl testkube tests start my-test-name 
 
-... some script run data ...
+... some test run data ...
 
-Use following command to get script execution details:
-kubectl testkube scripts execution 611b6da38cd74034e7c9d408
+Use following command to get test execution details:
+kubectl testkube tests execution 611b6da38cd74034e7c9d408
 
 or watch for completition with
-kubectl testkube scripts watch 611b6da38cd74034e7c9d408
+kubectl testkube tests watch 611b6da38cd74034e7c9d408
 
 ```
 
 ## Getting execution details
 
-After script completed with success or error you can go back to script details by running
-scripts execution command:
+After test completed with success or error you can go back to test details by running
+tests execution command:
 
 ```sh
-kubectl testkube scripts execution 6103a45b7e18c4ea04883866
+kubectl testkube tests execution 6103a45b7e18c4ea04883866
 
 ....
 some execution details
 ```
 
-## Getting available scripts
+## Getting available tests
 
-To run script execution you'll need to know script name
+To run test execution you'll need to know test name
 
 ```shell
-kubectl testkube scripts list
+kubectl testkube tests list
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
@@ -180,10 +180,10 @@ kubectl testkube scripts list
 ## Getting available executions
 
 ```shell
-kubectl testkube scripts executions SCRIPT_NAME
+kubectl testkube tests executions TEST_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
-|   SCRIPT   |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
+|   TEST     |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
 +------------+--------------------+--------------------------+---------------------------+----------+
 | parms-test | postman/collection | 611a5a1a910ca385751eb2c6 | pt1                       | success  |
 | parms-test | postman/collection | 611a5a40910ca385751eb2c8 | pt2                       | error    |
@@ -204,6 +204,6 @@ For lists and details you can use different output format (`--output` flag) for 
 
 (Keep in mind that we have plans for other output formats like junit etc.)
 
-## Deleting a script
+## Deleting a test
 
-For deleting a script there is `kubectl testkube scripts delete SCRIPT_NAME` command and also `--all` flag can be used to delete all.
+For deleting a test there is `kubectl testkube tests delete TEST_NAME` command and also `--all` flag can be used to delete all.

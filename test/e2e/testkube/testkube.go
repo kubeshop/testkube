@@ -9,61 +9,61 @@ kubectl testkube install
 kubectl get pods                         # should return 3 pods
 kubectl testkube version
 create new Postman collection (in Postman and save it somewhere)
-kubectl testkube scripts create --name test1 --file jw.postman_collection.json
-kubectl testkube scripts list            # check script name
-kubectl testkube scripts start test1
-kubectl testkube scripts executions      # copy last execution id
-kubectl testkube scripts execution SCRIPT_NAME EXECUTION_ID
+kubectl testkube tests create --name test1 --file jw.postman_collection.json
+kubectl testkube tests list            # check test name
+kubectl testkube tests start test1
+kubectl testkube tests executions      # copy last execution id
+kubectl testkube tests execution TEST_NAME EXECUTION_ID
 ***/
 
-func NewTestKube(namespace string) TestKube {
-	return TestKube{
+func NewTestkube(namespace string) Testkube {
+	return Testkube{
 		Namespace: namespace,
 		Output:    "raw",
 	}
 }
 
-type TestKube struct {
+type Testkube struct {
 	Namespace string
 	Output    string
 }
 
-func (k TestKube) Uninstall() ([]byte, error) {
+func (k Testkube) Uninstall() ([]byte, error) {
 	return process.Execute("helm", "uninstall", "testkube", "--namespace", k.Namespace)
 }
 
-func (k TestKube) Install() ([]byte, error) {
+func (k Testkube) Install() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "install", "--namespace", k.Namespace)
 }
 
-func (k TestKube) CreateScript(name, path string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "create", "--file", path, "--name", name, "--namespace", k.Namespace)
+func (k Testkube) CreateTest(name, path string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "create", "--file", path, "--name", name, "--namespace", k.Namespace)
 }
 
-func (k TestKube) DeleteScript(name string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "delete", "--name", name, "--namespace", k.Namespace)
+func (k Testkube) DeleteTest(name string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "delete", "--name", name, "--namespace", k.Namespace)
 }
 
-func (k TestKube) DeleteScripts() ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "delete", "--all", "--namespace", k.Namespace)
+func (k Testkube) DeleteTests() ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "delete", "--all", "--namespace", k.Namespace)
 }
 
-func (k TestKube) StartScript(scriptName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "start", scriptName, "--name", executionName, "--namespace", k.Namespace)
+func (k Testkube) StartTest(testName, executionName string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "start", testName, "--name", executionName, "--namespace", k.Namespace)
 }
 
-func (k TestKube) Version() ([]byte, error) {
+func (k Testkube) Version() ([]byte, error) {
 	return process.Execute("kubectl", "testkube", "version")
 }
 
-func (k TestKube) List() ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "list", "--namespace", k.Namespace, "--output", k.Output)
+func (k Testkube) List() ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "list", "--namespace", k.Namespace, "--output", k.Output)
 }
 
-func (k TestKube) Executions(name, path string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "executions", "--namespace", k.Namespace, "--output", k.Output)
+func (k Testkube) Executions(name, path string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "executions", "--namespace", k.Namespace, "--output", k.Output)
 }
 
-func (k TestKube) Execution(scriptName, executionName string) ([]byte, error) {
-	return process.Execute("kubectl", "testkube", "scripts", "execution", "--namespace", k.Namespace, "--output", k.Output, scriptName, executionName)
+func (k Testkube) Execution(testName, executionName string) ([]byte, error) {
+	return process.Execute("kubectl", "testkube", "tests", "execution", "--namespace", k.Namespace, "--output", k.Output, testName, executionName)
 }

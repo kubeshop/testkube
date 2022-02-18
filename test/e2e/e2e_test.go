@@ -32,11 +32,11 @@ func TestMain(m *testing.M) {
 }
 func TestE2E(t *testing.T) {
 	a := require.New(t)
-	test := testkube.NewTestKube(namespace)
-	scriptName := fmt.Sprintf("script-%s", rand.Name())
+	test := testkube.NewTestkube(namespace)
+	testName := fmt.Sprintf("test-%s", rand.Name())
 	collectionFile := "test.postman_collection.json"
 
-	t.Logf("Sctipt name: %s", scriptName)
+	t.Logf("Sctipt name: %s", testName)
 	t.Logf("Collection file name: %s", collectionFile)
 	t.Logf("Kubernetes namespace: %s", namespace)
 
@@ -65,42 +65,42 @@ func TestE2E(t *testing.T) {
 		sleep(t, time.Minute)
 	})
 
-	t.Run("scripts management", func(t *testing.T) {
+	t.Run("tests management", func(t *testing.T) {
 		// given
-		out, err := test.CreateScript(scriptName, collectionFile)
+		out, err := test.CreateTest(testName, collectionFile)
 		a.NoError(err)
-		a.Contains(string(out), "Script created")
+		a.Contains(string(out), "Test created")
 
 		// when
 		out, err = test.List()
 		a.NoError(err)
 
 		// then
-		a.Contains(string(out), scriptName)
+		a.Contains(string(out), testName)
 
 		sleep(t, 5*time.Second)
 	})
 
-	t.Run("scripts run", func(t *testing.T) {
+	t.Run("tests run", func(t *testing.T) {
 		// given
 		executionName := rand.Name()
 
 		// when
-		out, err := test.StartScript(scriptName, executionName)
+		out, err := test.StartTest(testName, executionName)
 		a.NoError(err)
 
 		// then check if info about collection steps exists somewhere in output
 		a.Contains(string(out), "Kasia.in Homepage")
 		a.Contains(string(out), "Google")
 
-		// then check if scripts completed with success
-		a.Contains(string(out), "Script execution completed with sucess")
+		// then check if tests completed with success
+		a.Contains(string(out), "Test execution completed with sucess")
 
 		executionID := GetExecutionID(out)
 		t.Logf("Execution completed ID: %s", executionID)
 		a.NotEmpty(executionID)
 
-		out, err = test.Execution(scriptName, executionID)
+		out, err = test.Execution(testName, executionID)
 		// check tests results for postman collection
 		a.Contains(string(out), "Google")
 		a.Contains(string(out), "Successful GET request")
@@ -109,9 +109,9 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Body matches string")
 	})
 
-	t.Run("delete script", func(t *testing.T) {
+	t.Run("delete test", func(t *testing.T) {
 		// given
-		out, err := test.DeleteScript(scriptName)
+		out, err := test.DeleteTest(testName)
 		a.NoError(err)
 		a.Contains(string(out), "Succesfully deleted")
 
@@ -120,7 +120,7 @@ func TestE2E(t *testing.T) {
 		a.NoError(err)
 
 		// then
-		a.NotContains(string(out), scriptName)
+		a.NotContains(string(out), testName)
 	})
 
 	sleep(t, time.Second)
@@ -139,7 +139,7 @@ func sleep(t *testing.T, d time.Duration) {
 }
 
 func GetExecutionID(out []byte) string {
-	r := regexp.MustCompile("kubectl testkube scripts execution test ([0-9a-zA-Z]+)")
+	r := regexp.MustCompile("kubectl testkube tests execution test ([0-9a-zA-Z]+)")
 	matches := r.FindStringSubmatch(string(out))
 	if len(matches) == 2 {
 		return matches[1]

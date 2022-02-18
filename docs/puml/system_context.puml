@@ -20,10 +20,10 @@ System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 
 
 Boundary(kubernetes, "kubnernetes cluster") {
-	System(testkube, "testkube", "Tests stuff inside kuberbetes cluster", "kubernetes")
+	System(testkube, "testkube", "TestSuites stuff inside kuberbetes cluster", "kubernetes")
 
 	Boundary(crds, "Custom Resources") {
-		System_Ext(testCrds, "Tests CRDs", "tests definitions Custom Resources", "kubernetes")
+		System_Ext(testCrds, "TestSuites CRDs", "tests definitions Custom Resources", "kubernetes")
 		System_Ext(executorCrds, "Executors CRDs", "executors CR (internal and custom) Custom Resources", "kubernetes")
 	}
 

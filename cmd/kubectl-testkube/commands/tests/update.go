@@ -1,13 +1,7 @@
 package tests
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"reflect"
-
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -15,60 +9,56 @@ import (
 func NewUpdateTestsCmd() *cobra.Command {
 
 	var (
-		file string
-		tags []string
+		testName        string
+		testNamespace   string
+		testContentType string
+		file            string
+		executorType    string
+		uri             string
+		gitUri          string
+		gitBranch       string
+		gitPath         string
+		gitUsername     string
+		gitToken        string
+		tags            []string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update Test",
-		Long:  `Update Test Custom Resource Definitions, `,
+		Short: "Update test",
+		Long:  `Update Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-
-			var content []byte
 			var err error
 
-			if file != "" {
-				// read test content
-				content, err = ioutil.ReadFile(file)
-				ui.ExitOnError("reading file"+file, err)
-			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-				content, err = ioutil.ReadAll(os.Stdin)
-				ui.ExitOnError("reading stdin", err)
-			}
-
-			var options apiClient.UpsertTestOptions
-
-			json.Unmarshal(content, &options)
-
 			client, _ := common.GetClient(cmd)
-
-			test, _ := client.GetTest(options.Name, options.Namespace)
-			if options.Name == test.Name {
-				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
+			test, _ := client.GetTest(testName, testNamespace)
+			if testName != test.Name {
+				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
 
-			// if tags are passed and are different from the existing overwrite
-			if len(tags) > 0 && !reflect.DeepEqual(test.Tags, tags) {
-				options.Tags = tags
-			} else {
-				options.Tags = test.Tags
-			}
-
-			// if tags are not passed don't overwrite existing tags
-			// TODO: figure out how to remove tags from test
-			if tags != nil {
-				options.Tags = tags
-			}
+			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
+			ui.ExitOnError("getting test options", err)
 
 			test, err = client.UpdateTest(options)
-			ui.ExitOnError("updating test "+options.Name+" in namespace "+options.Namespace, err)
-			ui.Success("Test created", options.Name)
+			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
+
+			ui.Success("Test updated", testNamespace, "/", testName)
 		},
 	}
 
-	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
+	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will try to read content from stdin if not specified")
+	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
+
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman-collection)")
+
+	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
+	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
+	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
+	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
 
 	return cmd

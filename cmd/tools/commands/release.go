@@ -59,12 +59,12 @@ func NewReleaseCmd() *cobra.Command {
 			ui.ExitOnError("getting chart path", err)
 
 			testkubeVersion := helm.GetVersion(chart)
-			nextTestKubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
-			ui.Info("Generated new testkube version", nextTestKubeVersion)
+			nextTestkubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
+			ui.Info("Generated new testkube version", nextTestkubeVersion)
 
 			// bump main testkube chart version
-			helm.SaveString(&chart, "version", nextTestKubeVersion)
-			helm.SaveString(&chart, "appVersion", nextTestKubeVersion)
+			helm.SaveString(&chart, "version", nextTestkubeVersion)
+			helm.SaveString(&chart, "appVersion", nextTestkubeVersion)
 
 			// set app dependency version
 			helm.UpdateDependencyVersion(chart, appName, nextAppVersion)
@@ -72,19 +72,19 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving testkube Chart.yaml file", err)
 
-			gitAddCommitAndPush(dir, "updating testkube to "+nextTestKubeVersion+" and "+appName+" to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating testkube to "+nextTestkubeVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
 				{"testkube previous version", testkubeVersion},
 				{appName + " next version", nextAppVersion},
-				{"testkube next version", nextTestKubeVersion},
+				{"testkube next version", nextTestkubeVersion},
 			})
 
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed - Helm charts: ", "testkube:"+nextTestKubeVersion, appName+":"+nextAppVersion)
+			ui.Completed("Release completed - Helm charts: ", "testkube:"+nextTestkubeVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}
