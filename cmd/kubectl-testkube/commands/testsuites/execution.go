@@ -13,8 +13,8 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "execution <executionID>",
 		Aliases: []string{"e"},
-		Short:   "Gets execution details",
-		Long:    `Gets ececution details by ID`,
+		Short:   "Gets test suite execution details",
+		Long:    `Gets test suite execution details by ID`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -24,7 +24,7 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 
 			executionID := args[0]
 			execution, err := client.GetTestSuiteExecution(executionID)
-			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+			ui.ExitOnError("getting recent test suite execution data id:"+execution.Id, err)
 
 			printExecution(execution, startTime)
 
