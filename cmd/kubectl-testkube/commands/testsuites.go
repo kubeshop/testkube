@@ -44,14 +44,14 @@ func NewTestSuitesCmd() *cobra.Command {
 
 	cmd.AddCommand(testsuites.NewListTestSuitesCmd())
 	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
-	cmd.AddCommand(testsuites.NewStartTestCmd())
+	cmd.AddCommand(testsuites.NewRunTestSuiteCmd())
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 	cmd.AddCommand(testsuites.NewUpdateTestSuitesCmd())
 	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
 	cmd.AddCommand(testsuites.NewDeleteTestSuitesCmd())
-	cmd.AddCommand(testsuites.NewTestExecutionCmd())
-	cmd.AddCommand(testsuites.NewWatchTestExecutionCmd())
-	cmd.AddCommand(testsuites.NewTestExecutionsCmd())
+	cmd.AddCommand(testsuites.NewTestSuiteExecutionCmd())
+	cmd.AddCommand(testsuites.NewWatchTestSuiteExecutionCmd())
+	cmd.AddCommand(testsuites.NewTestSuiteExecutionsCmd())
 
 	return cmd
 }

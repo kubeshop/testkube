@@ -50,7 +50,6 @@ func NewCreateTestsCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will be read from stdin if not specified")
-	cmd.Flags().StringVarP(&testNamespace, "test-namespace", "", "testkube", "namespace where test will be created defaults to 'testkube' namespace")
 	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman/collection)")

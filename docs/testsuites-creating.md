@@ -17,9 +17,9 @@ example test file could look like this:
 ```sh
 echo '
 {
-        "name": "test-example-2",
+        "name": "testsuite-example-2",
         "namespace": "testkube",
-        "description": "Example simple test orchestration",
+        "description": "Example simple tests orchestration",
         "steps": [
                 {"type": "executeTest", "namespace": "testkube", "name": "test1"},
                 {"type": "delay", "duration": 5000},
@@ -28,18 +28,18 @@ echo '
 }' | kubectl testkube testsuites create
 ```
 
-To check if test was created correctly you can look at `Test` Custom Resource in your Kubernetes cluster: 
+To check if test was created correctly you can look at `TestSuite` Custom Resource in your Kubernetes cluster: 
 ```sh
-kubectl get tests -ntestkube
+kubectl get testssuites -ntestkube
 
-NAME             AGE
-test-example     2d21h
-test-example-2   2d21h
+NAME                  AGE
+test-example          2d21h
+testsuite-example-2   2d21h
 ```
 
 and get details of some test: 
 ```sh 
-kubectl get tests -ntestkube test-example -oyaml
+kubectl get testsuites -ntestkube test-example -oyaml
 
 apiVersion: tests.testkube.io/v1
 kind: Test
@@ -51,7 +51,7 @@ metadata:
   resourceVersion: "57695094"
   uid: ea90a79e-bb46-49ee-a3ef-a5d99cee0a2c
 spec:
-  description: Example simple test orchestration
+  description: Example simple tests orchestration
   steps:
   - execute:
       name: test1
@@ -66,4 +66,4 @@ spec:
     type: testExecution
 ```
 
-Your `Test` from now is defined, you can start running testing workflows from now. 
+Your `TestSuite` from now is defined, you can start running testing workflows from now. 

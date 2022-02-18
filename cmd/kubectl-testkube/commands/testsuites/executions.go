@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTestExecutionsCmd() *cobra.Command {
+func NewTestSuiteExecutionsCmd() *cobra.Command {
 	var (
 		limit int
 		tags  []string
@@ -17,8 +17,8 @@ func NewTestExecutionsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "executions [testSuiteName]",
 		Aliases: []string{"el"},
-		Short:   "Gets tests executions list",
-		Long:    `Gets tests executions list, can be filtered by test name`,
+		Short:   "Gets test suites executions list",
+		Long:    `Gets test suites executions list, can be filtered by test name`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
@@ -29,8 +29,8 @@ func NewTestExecutionsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 
-			executions, err := client.ListTestExecutions(testSuiteName, limit, tags)
-			ui.ExitOnError("getting tests executions list", err)
+			executions, err := client.ListTestSuiteExecutions(testSuiteName, limit, tags)
+			ui.ExitOnError("getting test suites executions list", err)
 
 			ui.Table(executions, os.Stdout)
 			ui.NL()

@@ -159,7 +159,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTestExecutionsHandler() fiber.Handler {
+func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		filter := getExecutionsFilterFromRequest(c)

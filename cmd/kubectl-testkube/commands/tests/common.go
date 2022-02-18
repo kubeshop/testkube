@@ -166,7 +166,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 
 	name := cmd.Flag("name").Value.String()
 	executorType := cmd.Flag("type").Value.String()
-	namespace := cmd.Flag("test-namespace").Value.String()
+	namespace := cmd.Flag("namespace").Value.String()
 	tags, err := cmd.Flags().GetStringSlice("tags")
 	if err != nil {
 		return options, err

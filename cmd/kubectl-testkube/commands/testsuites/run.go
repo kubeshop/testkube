@@ -12,7 +12,7 @@ import (
 
 const WatchInterval = 2 * time.Second
 
-func NewStartTestCmd() *cobra.Command {
+func NewRunTestSuiteCmd() *cobra.Command {
 	var (
 		name                     string
 		watchEnabled             bool
@@ -37,25 +37,25 @@ func NewStartTestCmd() *cobra.Command {
 			namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
 			execution, err := client.ExecuteTestSuite(testSuiteName, namespace, name, params)
-			ui.ExitOnError("starting test execution "+namespacedName, err)
+			ui.ExitOnError("starting test suite execution "+namespacedName, err)
 
 			if watchEnabled {
-				executionCh, err := client.WatchTestExecution(execution.Id)
+				executionCh, err := client.WatchTestSuiteExecution(execution.Id)
 				for execution := range executionCh {
 					ui.ExitOnError("watching test execution", err)
-					printTestExecutionDetails(execution, startTime)
+					printExecution(execution, startTime)
 				}
 			}
 
 			execution, err = client.GetTestSuiteExecution(execution.Id)
-			printTestExecutionDetails(execution, startTime)
+			printExecution(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			uiPrintTestStatus(execution)
+			uiPrintExecutionStatus(execution)
 
-			uiShellTestGetCommandBlock(execution.Id)
+			uiShellTestSuiteGetCommandBlock(execution.Id)
 			if !watchEnabled {
-				uiShellTestWatchCommandBlock(execution.Id)
+				uiShellTestSuiteWatchCommandBlock(execution.Id)
 			}
 		},
 	}

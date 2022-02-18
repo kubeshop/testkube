@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	testkubeapiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +21,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update Test",
+		Short: "Update Test Suite",
 		Long:  `Update Test Custom Resource Definitions, `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -38,7 +38,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			var options apiClient.UpsertTestSuiteOptions
+			var options testkubeapiv1.UpsertTestSuiteOptions
 
 			json.Unmarshal(content, &options)
 

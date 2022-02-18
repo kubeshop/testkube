@@ -10,8 +10,8 @@ import (
 func NewDeleteTestSuiteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <testSuiteName>",
-		Short: "Delete tests",
-		Long:  `Delete tests by name`,
+		Short: "Delete test suite",
+		Long:  `Delete test suite by name`,
 		Args:  validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -20,7 +20,7 @@ func NewDeleteTestSuiteCmd() *cobra.Command {
 
 			name := args[0]
 			err := client.DeleteTestSuite(name, namespace)
-			ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
+			ui.ExitOnError("delete test suite "+name+" from namespace "+namespace, err)
 			ui.Success("Succesfully deleted", name)
 		},
 	}

@@ -1,10 +1,10 @@
 ## testkube testsuites watch
 
-Watch test
+Watch test suite
 
 ### Synopsis
 
-Watch test by test execution ID, returns results to console
+Watch test suite by execution ID, returns results to console
 
 ```
 testkube testsuites watch <executionID> [flags]

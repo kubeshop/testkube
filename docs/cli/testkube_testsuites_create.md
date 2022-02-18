@@ -4,7 +4,7 @@ Create new test
 
 ### Synopsis
 
-Create new Test Custom Resource, 
+Create new TestSuite Custom Resource, 
 
 ```
 testkube testsuites create [flags]

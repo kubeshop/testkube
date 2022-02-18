@@ -23,7 +23,6 @@ testkube tests update [flags]
   -n, --name string                unique test name - mandatory
       --tags strings               comma separated list of tags: --tags tag1,tag2,tag3
       --test-content-type string   content type of test one of string|file-uri|git-file|git-dir
-      --test-namespace string      namespace where test will be created defaults to 'testkube' namespace (default "testkube")
   -t, --type string                test type (defaults to postman-collection)
       --uri string                 URI of resource - will be loaded by http GET
 ```

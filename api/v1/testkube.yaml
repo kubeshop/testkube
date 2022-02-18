@@ -58,7 +58,7 @@ paths:
         - test-suites
         - api
       summary: "Get all tests"
-      description: "Returns array of tests"
+      description: "Returns array of test suites"
       operationId: listTestSuites
       parameters:
         - $ref: "#/components/parameters/Tags"
@@ -89,7 +89,7 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the test
+          description: ID of the test suite
       tags:
         - test-suites
         - api
@@ -117,8 +117,8 @@ paths:
       tags:
         - executions
         - api
-      summary: "Get all test executions"
-      description: "Returns array of test executions"
+      summary: "Get all test suites executions"
+      description: "Returns array of test suites executions"
       operationId: listTestSuiteExecutions
       parameters:
         - $ref: "#/components/parameters/TestName"
@@ -152,12 +152,12 @@ paths:
           schema:
             type: string
           required: true
-          description: ID of the test execution
+          description: ID of the test suite execution
       tags:
         - executions
         - api
-      summary: "Get test execution by ID"
-      description: "Returns test execution with given executionID"
+      summary: "Get test suite execution by ID"
+      description: "Returns test suite execution with given executionID"
       operationId: getTestSuiteExecutionByID
       responses:
         200:
@@ -1454,7 +1454,7 @@ components:
             type: string
 
     TestSuiteExecutionRequest:
-      description: test execution request body
+      description: test suite execution request body
       type: object
       properties:
         name:
