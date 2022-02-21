@@ -1396,6 +1396,9 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        paramsFile:
+          type: string
+          description: params file content - need to be in format for particular executor (e.g. postman envs file)
         content:
           $ref: "#/components/schemas/TestContent"
 
@@ -1440,6 +1443,9 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
+        paramsFile:
+          type: string
+          description: params file content - need to be in format for particular executor (e.g. postman envs file)
         params:
           type: object
           description: "execution params passed to executor"
