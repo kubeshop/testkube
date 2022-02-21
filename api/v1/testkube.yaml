@@ -1448,6 +1448,15 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        args:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+            - "--repeats"
+            - "5"
+            - "--insecure"
         tags:
           type: array
           items:
