@@ -11,17 +11,17 @@
 </p>
 
  <p align="center">
- [Website](https://testkube.io) | [Documentation](https://kubeshop.github.io/testkube) | [Discord](https://discord.gg/hfq44wtR6Q) | [Blog](https://kubeshop.io/blog)
+  <a href="https://testkube.io">Website</a>
+  <a href="https://kubeshop.github.io/testkube">Documentation</a>
+  <a href="https://discord.gg/hfq44wtR6Q">Discord</a>
+  <a href="https://kubeshop.io/blog">Blog</a>
 </p>
 
 
-<p align="center">
 ![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube) ![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
-</p>
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
-
 Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkube/badge.svg)](https://snyk.io/test/github/kubeshop/testkube)
 [![testkube-operator](https://snyk.io/test/github/kubeshop/testkube-operator/badge.svg)](https://snyk.io/test/github/kubeshop/testkube-operator)
 [![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)](https://snyk.io/test/github/kubeshop/helm-charts)
