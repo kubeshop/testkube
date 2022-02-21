@@ -316,6 +316,8 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Tags,
 	)
 
+	execution.Args = options.Request.Args
+
 	return execution
 }
 

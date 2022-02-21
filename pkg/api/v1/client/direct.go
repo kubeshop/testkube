@@ -179,7 +179,7 @@ func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Te
 
 // ExecuteTest starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error) {
+func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get test to get test tags
@@ -189,10 +189,12 @@ func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, execut
 	}
 
 	request := testkube.ExecutionRequest{
-		Name:      executionName,
-		Namespace: namespace,
-		Params:    executionParams,
-		Tags:      test.Tags,
+		Name:       executionName,
+		Namespace:  namespace,
+		ParamsFile: executionParamsFileContent,
+		Params:     executionParams,
+		Tags:       test.Tags,
+		Args:       args,
 	}
 
 	body, err := json.Marshal(request)
