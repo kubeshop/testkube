@@ -18,11 +18,14 @@
 
 
 
-<p align="center">
+<div align="center">
   <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
     <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/intro-to-testkube.jpg">
+    <p>
+      Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
+    </p>
   </a>
-</p>
+</div>
 
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
