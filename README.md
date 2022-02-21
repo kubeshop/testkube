@@ -4,12 +4,6 @@
 </p>
 
 
-<p align="center">
-  <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
-    <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/intro-to-testkube.jpg">
-  </a>
-</p>
-
  <p align="center">
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
   <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
@@ -18,8 +12,18 @@
 </p>
 
 
-![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube) ![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
+![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube) 
+![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
+
+
+
+<p align="center">
+  <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
+    <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/intro-to-testkube.jpg">
+  </a>
+</p>
+
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
 Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkube/badge.svg)](https://snyk.io/test/github/kubeshop/testkube)
