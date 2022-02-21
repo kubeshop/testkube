@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-white.png#gh-light-mode-only" alt="Testkube Logo Light"/>
-  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-dark.png#gh-dark-mode-only" alt="Testkube Logo Dark" />
+  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
+  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-light.png#gh-dark-mode-only" alt="Testkube Logo Dark" />
 </p>
 
 
