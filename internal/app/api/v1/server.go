@@ -260,7 +260,7 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 			continue
 		}
 
-		if executor.Executor.ExecutorType == "init" {
+		if executor.Name == "executor-init" {
 			initImage = executor.Executor.Image
 			continue
 		}
