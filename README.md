@@ -14,7 +14,7 @@
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
   <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
   <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
-  <a href="https://kubeshop.io/blog">Blog</a>&nbsp;|&nbsp; 
+  <a href="https://kubeshop.io/blog">Blog</a>
 </p>
 
 
