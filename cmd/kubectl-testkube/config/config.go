@@ -13,10 +13,11 @@ func init() {
 	err := Config.Init()
 	if err != nil {
 		l.Errorw("can't init configuration", "error", err.Error())
+		return
 	}
 	Config.Data, err = Config.Load()
 	if err != nil {
-		l.Errorw("can't init configuration", "error", err.Error())
+		l.Errorw("can't load configuration file", "error", err.Error())
 	}
 }
 
