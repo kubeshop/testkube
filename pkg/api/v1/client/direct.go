@@ -189,11 +189,12 @@ func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, execut
 	}
 
 	request := testkube.ExecutionRequest{
-		Name:      executionName,
-		Namespace: namespace,
-		Params:    executionParams,
-		Tags:      test.Tags,
-		Args:      args,
+		Name:       executionName,
+		Namespace:  namespace,
+		ParamsFile: executionParamsFileContent,
+		Params:     executionParams,
+		Tags:       test.Tags,
+		Args:       args,
 	}
 
 	body, err := json.Marshal(request)
