@@ -66,7 +66,7 @@ func TestDefaultDirectAPIClient(t *testing.T) {
 		defer srv.Close()
 
 		// when
-		execution, err := client.ExecuteTest("test", "testkube", "some name", map[string]string{}, "")
+		execution, err := client.ExecuteTest("test", "testkube", "some name", map[string]string{}, "", []string{})
 
 		// then
 		assert.Equal(t, "1", execution.Id)
