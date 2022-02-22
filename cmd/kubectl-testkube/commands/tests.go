@@ -7,12 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	client    string
-	verbose   bool
-	namespace string
-)
-
 func NewTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tests",
