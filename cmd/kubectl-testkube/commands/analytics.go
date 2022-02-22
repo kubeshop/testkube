@@ -18,6 +18,7 @@ func NewAnalyticsCmd() *cobra.Command {
 
 	cmd.AddCommand(analytics.NewEnableAnalyticsCmd())
 	cmd.AddCommand(analytics.NewDisableAnalyticsCmd())
+	cmd.AddCommand(analytics.NewStatusAnalyticsCmd())
 
 	return cmd
 }
