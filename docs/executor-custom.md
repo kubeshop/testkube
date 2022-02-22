@@ -2,7 +2,7 @@
 
 When your tests are written in other testing frameworks than Testkube supports out-of-the-box, you can write `custom executor`.
 
-Executor is wrapper around testing framework in form of Docker container run as Kubernetes Job.
+Executor is wrapper around testing framework in form of *Docker container* run as *Kubernetes Job*.
 
 
 ## Creating custom executor
@@ -11,15 +11,16 @@ You can create custom executor by your own, or by using our executor template (i
 
 ### Using `testkube-executor-template`
 
-You can check full example implementation here: <https://github.com/exu/testkube-executor-example>
+(You can check full example implementation here: <https://github.com/exu/testkube-executor-example>)
 
 If you're familiar with `go` programming language you can use our template repository for new executors:
 
-- Create new rpository from template [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
-- Clone the newly created repo.
-- Rename the go module from `testkube-executor-template` in whole project to the new name & run `go mod tidy`.
+1. Create new rpository from template [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
+2. Clone the newly created repo.
+3. Rename the go module from `testkube-executor-template` in whole project to the new name & run `go mod tidy`.
 
-[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
+[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement the new runner. 
+`Runner` is a wrapper around testing framework binary responsible for running tests and parsing tests results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
 
 Let's try to create new test runner which test if given URI call is successfull (`status code == 200`)
 
@@ -33,14 +34,23 @@ type Runner interface {
 ```
 
 As we can see we'll get `Execution` in input - this object is managed by testkube API and will be passed
-to your executor - it'll have information about execution id and content which should be run on top of your runner. Example runner is defined in our template - so if you'll use it only thing which need to be done is implementing Run method (you can rename ExampleRunner to whatever you want)
+to your executor - it'll have information about execution id and content which should be run on top of your runner. 
+
+Example runner is defined in our template - so if you'll use it only thing which need to be done is implementing Run method (you can rename ExampleRunner to whatever business name describing your testing framework)
 
 ```go
-// ExampleRunner for template - change me to some valid runner
+// ExampleRunner 
+// TODO: change me to some valid name
 type ExampleRunner struct {
 }
 
 func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
+ 
+  // execution.Content could have git repo data
+  // TODO: change it after Vlad change with volumes
+  // will be something like 
+  path := os.Getenv("RUNNER_DATADIR")
+  // we should get Content files as /data/test file or directory checked out from Git
 	uri := execution.Content.Uri
 	resp, err := http.Get(uri)
 	if err != nil {
