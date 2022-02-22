@@ -1,25 +1,27 @@
-<p align="center">
-  <img src="assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
-  <img src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
-</p>
-
-
- <div align="center">
-  <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-  <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
-  <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
-  <a href="https://twitter.com/thekubeshop"><img title="Twitter" src="https://img.shields.io/twitter/follow/thekubeshop?style=social"/></a>&nbsp;|&nbsp; 
-  <a href="https://discord.gg/hfq44wtR6Q"><img title="Release" src="https://img.shields.io/discord/884464549347074049"/>  </a>&nbsp;|&nbsp;
-  <a href="https://kubeshop.io/blog">Blog</a>
+<div align="center" style="margin-bottom:2rem">
+  <img style="width:66%" src="assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
+  <img style="width:66%" src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
 </div>
 
- <div align="center" style="width:66%">
-  <a href=""><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>&nbsp;|&nbsp;
-  <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>&nbsp;|&nbsp;
-  <a href=""><img title="Go version" src="https://img.shields.io/github/go-mod/go-version/kubeshop/testkube"/></a>&nbsp;|&nbsp;
-  <a href=""><img title="Docker builds" src="https://img.shields.io/docker/automated/kubeshop/testkube-api-server"/></a>&nbsp;|&nbsp;
-  <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>&nbsp;|&nbsp;
-  <a href=""><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>&nbsp;|&nbsp;
+<div>
+  Welcome to Testkube - Your friendly cloud-native testing framework for Kubernetes
+</div>
+
+<div align="center" style="margin-bottom:2rem">
+<a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
+<a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
+<a href="https://kubeshop.io/blog">Blog</a>
+</div>
+
+<div align="center" style="width:66%;margin-bottom:2rem">
+  <a href="https://twitter.com/thekubeshop"><img title="Twitter" src="https://img.shields.io/twitter/follow/thekubeshop?style=social"/></a>
+  <a href="https://discord.gg/hfq44wtR6Q"><img title="Release" src="https://img.shields.io/discord/884464549347074049"/></a>
+  <a href=""><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>
+  <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>
+  <a href=""><img title="Go version" src="https://img.shields.io/github/go-mod/go-version/kubeshop/testkube"/></a>
+  <a href=""><img title="Docker builds" src="https://img.shields.io/docker/automated/kubeshop/testkube-api-server"/></a>
+  <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>
+  <a href=""><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>
 </div>
 
 
