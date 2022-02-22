@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewJobExecutor(repo result.Repository) (client JobExecutor, err error) {
-	jobClient, err := jobs.NewJobClient()
+func NewJobExecutor(repo result.Repository, initImage string) (client JobExecutor, err error) {
+	jobClient, err := jobs.NewJobClient(initImage)
 	if err != nil {
 		return client, fmt.Errorf("can't get k8s jobs client: %w", err)
 	}
