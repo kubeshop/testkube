@@ -19,7 +19,7 @@ const fileContent = `{"some":"json","file":"with content"}
 `
 
 func TestFetcher(t *testing.T) {
-	f := NewFetcher()
+	f := NewFetcher("")
 
 	t.Run("test fetch uri", func(t *testing.T) {
 

@@ -43,16 +43,10 @@ func NewServer(
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
-	executor, err := client.NewJobExecutor(executionsResults)
-	if err != nil {
-		panic(err)
-	}
-
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
 		ExecutionResults:     executionsResults,
-		Executor:             executor,
 		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
@@ -60,8 +54,14 @@ func NewServer(
 		Metrics:              NewMetrics(),
 	}
 
-	if err = s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")); err != nil {
+	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
+	}
+
+	s.Executor, err = client.NewJobExecutor(executionsResults, initImage)
+	if err != nil {
+		panic(err)
 	}
 
 	s.Init()
@@ -239,24 +239,29 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) error {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage string, err error) {
 	var executors []testkube.ExecutorDetails
 
 	if data == "" {
-		return nil
+		return "", nil
 	}
 
 	dataDecoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := json.Unmarshal([]byte(dataDecoded), &executors); err != nil {
-		return err
+		return "", err
 	}
 
 	for _, executor := range executors {
 		if executor.Executor == nil {
+			continue
+		}
+
+		if executor.Name == "executor-init" {
+			initImage = executor.Executor.Image
 			continue
 		}
 
@@ -274,20 +279,20 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) error {
 
 		result, err := s.ExecutorsClient.Get(namespace, executor.Name)
 		if err != nil && !errors.IsNotFound(err) {
-			return err
+			return "", err
 		}
 
 		if err != nil {
 			if _, err = s.ExecutorsClient.Create(obj); err != nil {
-				return err
+				return "", err
 			}
 		} else {
 			result.Spec = obj.Spec
 			if _, err = s.ExecutorsClient.Update(result); err != nil {
-				return err
+				return "", err
 			}
 		}
 	}
 
-	return nil
+	return initImage, nil
 }
