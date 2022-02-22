@@ -1368,40 +1368,6 @@ components:
           type: string
           description: build commit
 
-    #
-    # Requests
-    #
-
-    ExecutorStartRequest:
-      description: test execution start request body
-      type: object
-      properties:
-        id:
-          type: string
-          description: ID of test execution to handle by executor, execution need to be able to return execution info based on this ID
-          example: af7f8afa8bc8ab8ab8a83b8
-        type:
-          type: string
-          description: test type
-          example: postaman/collection
-        name:
-          type: string
-          description: test execution custom name
-          example: testing with 1000 users
-        params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
-        paramsFile:
-          type: string
-          description: params file content - need to be in format for particular executor (e.g. postman envs file)
-        content:
-          $ref: "#/components/schemas/TestContent"
-
     Repository:
       description: repository representation for tests in git repositories
       type: object
