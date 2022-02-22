@@ -2,16 +2,16 @@
 
 Tests are single executor oriented objects. Test can have different types, which depends what executors are installed in your cluster.
 
-Testkubes includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during testkube install by default. // provide examples for cypress and  curl
+Testkubes includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during testkube install by default. // provide examples for cypress and curl
 
 As Testkube was designed with flexibility in mind - you can add your own executor which will handle additional test types.
 
-## Test test source
+## Test source
 
 Tests can be currently created from two sources:
 
 - First one is simple `file` with test content e.g. for postman collections we're exporting collection as json file, or for curl executor we're passing json file with configured curl command.
-- Second source handled by Testkube is `git` - we can pass `repository`, `path` and `branch` where our tests is. This one is used in Cypress executor - as Cypress tests are more like npm-based projects which can have a lot of files. We're handling here sparse checkouts which are fast even in case of huge mono-repos
+- Second source handled by Testkube is `git` - we can pass `repository`, `path` and `branch` where our tests are stored. This one is used in Cypress executor - as Cypress tests are more like npm-based projects which can have a lot of files. We're handling here sparse checkouts which are fast even in case of huge mono-repos
 
 ## Create test
 
@@ -33,11 +33,11 @@ kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -58,11 +58,11 @@ kubectl testkube tests update --file ~/Downloads/TODO.postman_collection.json --
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -77,7 +77,7 @@ Testkube will override all test settings and content with `update` method.
 Let's see what has been created:
 
 ```sh
-kubectl get tests -n testkube
+kubectl get tests -ntestkube
 ```
 
 Output:
@@ -90,11 +90,11 @@ test   32s
 ```sh
 $ kubectl testkube tests get test
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -279,21 +279,21 @@ content: |-
 
 We can see that test resource was created with Postman collection JSON content.
 
-You can also check tests with standard `kubectl` comman which will list Tests Custom Resource
+You can also check tests with standard `kubectl` command which will list Tests Custom Resource
 
 ```sh
-kubectl get tests -ntestkube test -oyaml
+kubectl get tests -n testkube test -oyaml
 ```
 
 ### Create test from git
 
-Some executors can handle files and some could handle only git resources - You'll need to follow particular executor readme file to be aware what tests type does he handle.
+Some executors can handle files and some could handle only git resources - You'll need to follow particular executor readme file to be aware what tests type does the executor handle.
 
-Let's assume that some Cypress project is created in some git repository - Let's assume we've created one in Let's assume we've created one in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples>  
+Let's assume that some Cypress project is created in some git repository - <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples>
 
 Where `examples` is test directory in `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
 
-Now we can create our Cypress based test (in git based tests we need to pass test type)
+Now we can create our Cypress based test as shown below (in git based tests we need to pass test type).
 
 ```sh
 kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
@@ -302,18 +302,18 @@ kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executo
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
 Test created kubeshop-cypress 🥇
 ```
 
-Let's check how created testkube test test is defined on cluster: 
+Let's check how the test created by testkube is defined in the cluster:
 
 ```sh
 $ kubectl get tests -n testkube kubeshop-cypress -o yaml
@@ -339,4 +339,4 @@ As we can see this test has `spec.repository` with git repository data. Those da
 
 ## Summary
 
-Tests are main smallest abstractions over tests in Testkube, they can be created with different sources and used by executors to run on top of particular test framework.
+Tests are main smallest abstractions over testsuites in Testkube, they can be created with different sources and used by executors to run on top of particular test framework.
