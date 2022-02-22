@@ -101,6 +101,7 @@ func uiPrintStatus(execution testkube.Execution) {
 	case result.IsFailed():
 		ui.Warn("Test test execution failed:\n")
 		ui.Errf(result.ErrorMessage)
+		ui.Info(result.Output)
 		os.Exit(1)
 	}
 
