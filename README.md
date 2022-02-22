@@ -1,39 +1,39 @@
-<div align="center" style="margin-bottom:2rem">
+<p align="center">  
   <img style="width:66%" src="assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
   <img style="width:66%" src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
-</div>
+</p>
 
-<div>
+<p align="center">
   Welcome to Testkube - Your friendly cloud-native testing framework for Kubernetes
-</div>
+</p>
 
-<div align="center" style="margin-bottom:2rem">
-<a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-<a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
-<a href="https://kubeshop.io/blog">Blog</a>
-</div>
+<p align="center">
+  <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
+  <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
+  <a href="https://kubeshop.io/blog">Blog</a>
+</p>
 
-<div align="center" style="width:66%;margin-bottom:2rem">
+<p align="center">
   <a href="https://twitter.com/thekubeshop"><img title="Twitter" src="https://img.shields.io/twitter/follow/thekubeshop?style=social"/></a>
   <a href="https://discord.gg/hfq44wtR6Q"><img title="Release" src="https://img.shields.io/discord/884464549347074049"/></a>
   <a href=""><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>
   <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>
+  <br>
   <a href=""><img title="Go version" src="https://img.shields.io/github/go-mod/go-version/kubeshop/testkube"/></a>
   <a href=""><img title="Docker builds" src="https://img.shields.io/docker/automated/kubeshop/testkube-api-server"/></a>
   <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>
   <a href=""><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>
-</div>
+</p>
 
 
-
-<div align="center">
+<p align="center">
   <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
     <img src="assets/intro-to-testkube.jpg" style="width:66%;height:auto">
     <p>
       Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
     </p>
   </a>
-</div>
+</p>
 
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
