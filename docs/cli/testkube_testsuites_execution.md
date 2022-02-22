@@ -1,10 +1,10 @@
 ## testkube testsuites execution
 
-Gets execution details
+Gets test suite execution details
 
 ### Synopsis
 
-Gets execution details by ID
+Gets test suite execution details by ID
 
 ```
 testkube testsuites execution <executionID> [flags]
@@ -19,6 +19,7 @@ testkube testsuites execution <executionID> [flags]
 ### Options inherited from parent commands
 
 ```
+      --analytics-enabled    should analytics be enabled (default true)
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")

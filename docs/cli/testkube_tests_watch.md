@@ -19,6 +19,7 @@ testkube tests watch <executionID> [flags]
 ### Options inherited from parent commands
 
 ```
+      --analytics-enabled    should analytics be enabled (default true)
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
