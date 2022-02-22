@@ -8,8 +8,9 @@ import (
 
 func NewDisableAnalyticsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "disable",
-		Short: "disable collecting of anonymous analytics",
+		Use:     "disable",
+		Aliases: []string{"on", "d", "n"},
+		Short:   "disable collecting of anonymous analytics",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			config.Config.DisableAnalytics()

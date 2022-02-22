@@ -8,8 +8,9 @@ import (
 
 func NewStatusAnalyticsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "status",
-		Short: "Get analytics status",
+		Use:     "status",
+		Aliases: []string{"s"},
+		Short:   "Get analytics status",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			if config.Config.AnalyticsEnabled {
