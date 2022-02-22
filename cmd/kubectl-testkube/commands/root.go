@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Masterminds/semver"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -16,6 +17,11 @@ var (
 	Version string
 	BuiltBy string
 	Date    string
+
+	analyticsEnabled bool
+	client           string
+	verbose          bool
+	namespace        string
 )
 
 func init() {
@@ -31,6 +37,7 @@ func init() {
 	RootCmd.AddCommand(NewArtifactsCmd())
 	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
+	RootCmd.AddCommand(NewAnalyticsCmd())
 }
 
 var RootCmd = &cobra.Command{
@@ -45,7 +52,11 @@ var RootCmd = &cobra.Command{
 
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
-		telemetry.CollectAnonymousCmdInfo()
+
+		if analyticsEnabled {
+			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube anlytics disable`")
+			telemetry.CollectAnonymousCmdInfo()
+		}
 	},
 }
 
@@ -80,6 +91,7 @@ func Execute() {
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
+	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", config.Config.AnalyticsEnabled, "should analytics be enabled")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
