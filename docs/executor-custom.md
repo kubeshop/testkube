@@ -1,25 +1,23 @@
-# Creating your own Executor
+# Custom Executors
 
-Executors are programs which are encapsulated in docker containers.
+When your tests are written in other testing frameworks than Testkube supports out-of-the-box, you can write `custom executor`.
 
-Only one restriction is that they need to implement communication interface:
+Executor is wrapper around testing framework in form of Docker container run as Kubernetes Job.
 
-- INPUT : get JSON (`testube.Execution`) OpenAPI based document,
-- OUTPUT : stream of json output lines (`testkube.ExecutorOutput`) - each output line is simply wrapped in this JSON, like in structured logging idea.
 
-In order to be able to run tests using some new tools for which there is no executor, it is possible to create a custom executor from the [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
+## Creating custom executor
 
-## Steps for creating executor
+You can create custom executor by your own, or by using our executor template (in `go` language):
+
+### Using `testkube-executor-template`
 
 You can check full example implementation here: <https://github.com/exu/testkube-executor-example>
 
-### Setup repository
+If you're familiar with `go` programming language you can use our template repository for new executors:
 
 - Create new rpository from template [testkube-executor-template](https://github.com/kubeshop/testkube-executor-template).
 - Clone the newly created repo.
 - Rename the go module from `testkube-executor-template` in whole project to the new name & run `go mod tidy`.
-
-### Implement Runner Components
 
 [Testkube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
 
@@ -43,10 +41,29 @@ type ExampleRunner struct {
 }
 
 func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
- return testkube.ExecutionResult{
-  Status: testkube.StatusPtr(testkube.SUCCESS_ExecutionStatus),
-  Output: "exmaple test output",
- }, nil
+	uri := execution.Content.Uri
+	resp, err := http.Get(uri)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return result, err
+	}
+
+	// if get is successful return success result
+	if resp.StatusCode == 200 {
+		return testkube.ExecutionResult{
+			Status: testkube.ExecutionStatusSuccess,
+			Output: string(b),
+		}, nil
+	}
+
+	// else we'll return error to simplify example
+	err = fmt.Errorf("invalid status code %d, (uri:%s)", resp.StatusCode, uri)
+	return result.Err(err), nil
 }
 ```
 
@@ -61,7 +78,9 @@ func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.Executio
 }
 ```
 
-### Deploying your executor
+### Using custom language
+
+## Deploying your executor
 
 When everything is completed you'll need to build and deploy your runner into Kubernetes cluster.
 
@@ -105,7 +124,6 @@ That's all for the most basic executor example, you can look our internal projec
 and details how it's implemented:
 
 ## Resources
-
 
 - [OpenaAPI spec details](https://kubeshop.github.io/testkube/openapi/)
 - [Spec in YAML file](https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml)
