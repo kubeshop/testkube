@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
-  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-light.png#gh-dark-mode-only" alt="Testkube Logo Dark" />
+  <img src="assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
+  <img src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
 </p>
 
 
- <p align="center">
+ <div align="center">
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
   <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
   <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
   <a href="https://kubeshop.io/blog">Blog</a>
-</p>
+</div>
 
 
 ![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube) 
@@ -20,7 +20,7 @@
 
 <div align="center">
   <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
-    <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/intro-to-testkube.jpg">
+    <img src="assets/intro-to-testkube.jpg">
     <p>
       Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
     </p>
