@@ -29,7 +29,7 @@ func TestSaveAnalyticsEnabled(t *testing.T) {
 
 	})
 
-	t.Run("check if analytics system is enabled", func(t *testing.T) {
+	t.Run("check if analytics system is disabled", func(t *testing.T) {
 		// given
 		c := config{}
 		c.DisableAnalytics()
