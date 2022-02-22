@@ -1,24 +1,15 @@
-## testkube install
+## testkube analytics
 
-Install Helm chart registry in current kubectl context
-
-### Synopsis
-
-Install can be configured with use of particular 
+Analytics management actions
 
 ```
-testkube install [flags]
+testkube analytics [flags]
 ```
 
 ### Options
 
 ```
-      --chart string   chart name (default "kubeshop/testkube")
-  -h, --help           help for install
-      --name string    installation name (default "testkube")
-      --no-dashboard   don't install dashboard
-      --no-jetstack    don't install Jetstack
-      --no-minio       don't install MinIO
+  -h, --help   help for analytics
 ```
 
 ### Options inherited from parent commands
@@ -33,4 +24,7 @@ testkube install [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [testkube analytics disable](testkube_analytics_disable.md)	 - disable collecting of anonymous analytics
+* [testkube analytics enable](testkube_analytics_enable.md)	 - Enable collecting of anonymous analytics
+* [testkube analytics status](testkube_analytics_status.md)	 - Get analytics status
 

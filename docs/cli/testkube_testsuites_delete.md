@@ -1,10 +1,10 @@
 ## testkube testsuites delete
 
-Delete tests
+Delete test suite
 
 ### Synopsis
 
-Delete tests by name
+Delete test suite by name
 
 ```
 testkube testsuites delete <testSuiteName> [flags]
@@ -19,6 +19,7 @@ testkube testsuites delete <testSuiteName> [flags]
 ### Options inherited from parent commands
 
 ```
+      --analytics-enabled    should analytics be enabled (default true)
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")

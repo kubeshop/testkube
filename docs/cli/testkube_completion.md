@@ -18,9 +18,10 @@ See each sub-command's help for details on how to use the generated script.
 ### Options inherited from parent commands
 
 ```
-  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string   kubernetes namespace (default "testkube")
-  -v, --verbose            should I show additional debug messages
+      --analytics-enabled   should analytics be enabled (default true)
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string    kubernetes namespace (default "testkube")
+  -v, --verbose             should I show additional debug messages
 ```
 
 ### SEE ALSO

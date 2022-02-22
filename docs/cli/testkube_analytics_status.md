@@ -1,19 +1,15 @@
-## testkube crd
+## testkube analytics status
 
-CRDs management commands
-
-### Synopsis
-
-CRD generation tools
+Get analytics status
 
 ```
-testkube crd [flags]
+testkube analytics status [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for crd
+  -h, --help   help for status
 ```
 
 ### Options inherited from parent commands
@@ -27,6 +23,5 @@ testkube crd [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube crd tests](testkube_crd_tests.md)	 - Generate tests CRD file based on directory
+* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
 

@@ -1,10 +1,10 @@
 ## testkube testsuites executions
 
-Gets tests executions list
+Gets test suites executions list
 
 ### Synopsis
 
-Gets tests executions list, can be filtered by test name
+Gets test suites executions list, can be filtered by test name
 
 ```
 testkube testsuites executions [testSuiteName] [flags]
@@ -21,6 +21,7 @@ testkube testsuites executions [testSuiteName] [flags]
 ### Options inherited from parent commands
 
 ```
+      --analytics-enabled    should analytics be enabled (default true)
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")

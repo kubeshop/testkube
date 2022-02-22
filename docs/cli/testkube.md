@@ -13,14 +13,16 @@ testkube [flags]
 ### Options
 
 ```
-  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -h, --help               help for testkube
-  -s, --namespace string   kubernetes namespace (default "testkube")
-  -v, --verbose            should I show additional debug messages
+      --analytics-enabled   should analytics be enabled (default true)
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -h, --help                help for testkube
+  -s, --namespace string    kubernetes namespace (default "testkube")
+  -v, --verbose             should I show additional debug messages
 ```
 
 ### SEE ALSO
 
+* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
 * [testkube artifacts](testkube_artifacts.md)	 - Artifacts management commands
 * [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
 * [testkube crd](testkube_crd.md)	 - CRDs management commands
