@@ -1,19 +1,15 @@
-## testkube crd
+## testkube analytics enable
 
-CRDs management commands
-
-### Synopsis
-
-CRD generation tools
+Enable collecting of anonymous analytics
 
 ```
-testkube crd [flags]
+testkube analytics enable [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for crd
+  -h, --help   help for enable
 ```
 
 ### Options inherited from parent commands
@@ -27,6 +23,5 @@ testkube crd [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube crd tests](testkube_crd_tests.md)	 - Generate tests CRD file based on directory
+* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
 
