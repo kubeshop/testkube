@@ -8,19 +8,25 @@
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
   <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
   <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
+  <a href="https://twitter.com/thekubeshop"><img title="Twitter" src="https://img.shields.io/twitter/follow/thekubeshop?style=social"/></a>&nbsp;|&nbsp; 
+  <a href="https://discord.gg/hfq44wtR6Q"><img title="Release" src="https://img.shields.io/discord/884464549347074049"/>  </a>&nbsp;|&nbsp;
   <a href="https://kubeshop.io/blog">Blog</a>
 </div>
 
-
-![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube) 
-![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
-![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
+ <div align="center" style="width:66%">
+  <a href=""><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>&nbsp;|&nbsp;
+  <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>&nbsp;|&nbsp;
+  <a href=""><img title="Go version" src="https://img.shields.io/github/go-mod/go-version/kubeshop/testkube"/></a>&nbsp;|&nbsp;
+  <a href=""><img title="Docker builds" src="https://img.shields.io/docker/automated/kubeshop/testkube-api-server"/></a>&nbsp;|&nbsp;
+  <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>&nbsp;|&nbsp;
+  <a href=""><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>&nbsp;|&nbsp;
+</div>
 
 
 
 <div align="center">
   <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
-    <img src="assets/intro-to-testkube.jpg">
+    <img src="assets/intro-to-testkube.jpg" style="width:66%;height:auto">
     <p>
       Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
     </p>
