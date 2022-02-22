@@ -20,11 +20,11 @@ Tests can be currently created from two sources:
 To create your first postman collection in Testkube you'll first need to export your collection into a file
 
 Right click on your collection name
-![create postman colletion step 1](img/test-create-1.png)
+![create postman collection step 1](img/test-create-1.png)
 Click "Export" button
-![create postman colletion step 2](img/test-create-1.png)
+![create postman collection step 2](img/test-create-1.png)
 Save in convinient location (We're using `~/Downloads/TODO.postman_collection.json` path)
-![create postman colletion step 3](img/test-create-1.png)
+![create postman collection step 3](img/test-create-1.png)
 
 ```sh
 kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --name test
