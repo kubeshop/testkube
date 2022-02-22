@@ -10,7 +10,7 @@ Testkube is able to run Postman collections inside your Kubernetes cluster, you 
 ## Test environment
 
 Let's assume that our SUT (Service Under Test) is internal Kubernetes service which has
-NodePort `Service` created and is exposed on `8088` port. Service has name `testkube-api-server`
+ClusterIP `Service` created and is exposed on `8088` port. Service has name `testkube-api-server`
 and is exposing `/health` endpoint which we want to test.
 
 So to sum up - inside cluster we can call it like this:
@@ -22,7 +22,7 @@ curl http://testkube-api-server:8088/health
 Output:
 
 ```sh
-200 OK 
+200 OK
 ```
 
 ## Create new Postman test
@@ -39,17 +39,17 @@ Now we can create new testkube based on saved Postman Collection:
 ## Create new Testkube test
 
 ```sh
-kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
+kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -63,11 +63,11 @@ Test created! Now we can run as many times as we want
 ```sh
 kubectl testkube tests run api-incluster-test
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
