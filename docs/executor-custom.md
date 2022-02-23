@@ -92,13 +92,13 @@ spec:
   types:
   - example/test       # your custom type registered (used when creating and running your testkube tests)
   contentTypes:
-	- string             # test content as string 
-	- file-uri           # http based file content
-	- git-file           # file stored in Git
-	- git-dir            # whole dir/project stored in Git
+  - string             # test content as string 
+  - file-uri           # http based file content
+  - git-file           # file stored in Git
+  - git-dir            # whole dir/project stored in Git
   features: 
-	- artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
-	- junit-report       # executor can have junit xml based results
+  - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
+  - junit-report       # executor can have junit xml based results
 
 # remove any contentTypes and features which will be not implemented by your executor
 
@@ -178,6 +178,7 @@ Runner can get data from different sources - for now we're supporting:
 - Git Dir - whole git repo, or git subdirectory (we'll do spatial checkout to save traffic in case of monorepos)
 
 ```go
+
 // TODO: change me to some valid name
 type ExampleRunner struct {
 }
@@ -191,32 +192,31 @@ func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionRes
   // e.g. Cypress test is stored in Git repo so Testkube will checkout it automatically 
   // and allow you to use it easily
 
+  uri := execution.Content.Data
+  resp, err := http.Get(uri)
+  if err != nil {
+    return result, err
+  }
+  defer resp.Body.Close()
 
- 
-	uri := execution.Content.Data
-	resp, err := http.Get(uri)
-	if err != nil {
-		return result, err
-	}
-	defer resp.Body.Close()
+  b, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    return result, err
+  }
 
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return result, err
-	}
+  // if get is successful return success result
+  if resp.StatusCode == 200 {
+    return testkube.ExecutionResult{
+      Status: testkube.ExecutionStatusSuccess,
+      Output: string(b),
+    }, nil
+  }
 
-	// if get is successful return success result
-	if resp.StatusCode == 200 {
-		return testkube.ExecutionResult{
-			Status: testkube.ExecutionStatusSuccess,
-			Output: string(b),
-		}, nil
-	}
-
-	// else we'll return error to simplify example
-	err = fmt.Errorf("invalid status code %d, (uri:%s)", resp.StatusCode, uri)
-	return result.Err(err), nil
+  // else we'll return error to simplify example
+  err = fmt.Errorf("invalid status code %d, (uri:%s)", resp.StatusCode, uri)
+  return result.Err(err), nil
 }
+
 ```
 
 Runner need to return `ExecutionResult` or `error` (in case of runner can't run tests), ExecutionResult
