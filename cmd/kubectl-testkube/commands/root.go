@@ -89,9 +89,7 @@ func ValidateVersions(c apiclient.Client) error {
 
 func Execute() {
 	cfg, err := config.Load()
-	if err != nil {
-		ui.Debug("Config loading error", err.Error())
-	}
+	ui.WarnOnError("Config loading error", err)
 
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
