@@ -66,8 +66,6 @@ func NewRunTestCmd() *cobra.Command {
 			execution, err = client.GetExecution(execution.Id)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			fmt.Printf("%+v\n", execution)
-
 			uiPrintStatus(execution)
 
 			if downloadArtifactsEnabled {
