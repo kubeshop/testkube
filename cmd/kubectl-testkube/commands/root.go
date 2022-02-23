@@ -88,10 +88,16 @@ func ValidateVersions(c apiclient.Client) error {
 }
 
 func Execute() {
+	cfg, err := config.Load()
+	if err != nil {
+		ui.Debug("Config loading error", err.Error())
+	}
+	fmt.Printf("%+v\n", cfg)
+
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
-	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", config.Config.AnalyticsEnabled, "should analytics be enabled")
+	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "should analytics be enabled")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

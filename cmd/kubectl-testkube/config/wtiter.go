@@ -30,7 +30,8 @@ func (c *Storage) Save(data Data) error {
 	return ioutil.WriteFile(c.getPath(), d, 0700)
 }
 
-func (c *Storage) Init(data Data) error {
+func (c *Storage) Init() error {
+	var defaultConfig = Data{AnalyticsEnabled: true}
 	// create ConfigWriter dir if not exists
 	dir := c.getDir()
 	_, err := os.Stat(dir)
@@ -39,6 +40,8 @@ func (c *Storage) Init(data Data) error {
 		if err != nil {
 			return err
 		}
+	} else if err != nil {
+		return err
 	}
 
 	// create empty JSON file if not exists
@@ -51,7 +54,9 @@ func (c *Storage) Init(data Data) error {
 		}
 		defer f.Close()
 
-		return c.Save(data)
+		return c.Save(defaultConfig)
+	} else if err != nil {
+		return err
 	}
 
 	return nil
