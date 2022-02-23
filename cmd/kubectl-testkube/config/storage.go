@@ -66,7 +66,7 @@ func (c *Storage) Init() error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		f.Close()
 
 		return c.Save(defaultConfig)
 	} else if err != nil {
