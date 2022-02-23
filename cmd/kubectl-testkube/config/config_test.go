@@ -11,7 +11,7 @@ func TestSaveAnalyticsEnabled(t *testing.T) {
 	c := config{}
 
 	// create homedir
-	c.Init()
+	c.Init(c.Data)
 
 	c.EnableAnalytics()
 	c.Save(c.Data)
