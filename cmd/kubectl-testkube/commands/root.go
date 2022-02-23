@@ -92,7 +92,6 @@ func Execute() {
 	if err != nil {
 		ui.Debug("Config loading error", err.Error())
 	}
-	fmt.Printf("%+v\n", cfg)
 
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")

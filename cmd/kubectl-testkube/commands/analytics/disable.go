@@ -1,8 +1,6 @@
 package analytics
 
 import (
-	"fmt"
-
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -19,7 +17,6 @@ func NewDisableAnalyticsCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			cfg.DisableAnalytics()
-			fmt.Printf("%+v\n", cfg)
 
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
