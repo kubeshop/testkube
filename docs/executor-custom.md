@@ -168,10 +168,16 @@ type Runner interface {
 As we can see we'll get `Execution` in input - this object is managed by testkube API and will be passed
 to your executor - it'll have information about execution id and content which should be run on top of your runner. 
 
-Example runner is defined in our template - so if you'll use it only thing which need to be done is implementing Run method (you can rename ExampleRunner to whatever business name describing your testing framework)
+Example runner is defined in our template - so if you'll use it only thing which need to be done is implementing Run method (you can rename `ExampleRunner` to whatever business name describing your testing framework)
+
+Runner can get data from different sources - for now we're supporting:
+
+- string content (e.g. Postman JSON file)
+- URI - content stored on webserver
+- Git File - file storeg in Git repo in given path
+- Git Dir - whole git repo, or git subdirectory (we'll do spatial checkout to save traffic in case of monorepos)
 
 ```go
-// ExampleRunner 
 // TODO: change me to some valid name
 type ExampleRunner struct {
 }
@@ -179,11 +185,15 @@ type ExampleRunner struct {
 func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
  
   // execution.Content could have git repo data
-  // TODO: change it after Vlad change with volumes
-  // will be something like 
+  // we're also passing content files/directories as mounted volume in directory
   path := os.Getenv("RUNNER_DATADIR")
-  // we should get Content files as /data/test file or directory checked out from Git
-	uri := execution.Content.Uri
+
+  // e.g. Cypress test is stored in Git repo so Testkube will checkout it automatically 
+  // and allow you to use it easily
+
+
+ 
+	uri := execution.Content.Data
 	resp, err := http.Get(uri)
 	if err != nil {
 		return result, err
@@ -253,7 +263,7 @@ and apply it on your cluster:
 kubectl apply -f executor.yaml
 ```
 
-Now we're ready to create and run your custom tests by passing URI as test content
+Now we're ready to create and run your custom tests by passing URI as test content (keep in mind that in our example we're using simple string content stored in `Content.Data` string)
 
 ```sh
 # create 
