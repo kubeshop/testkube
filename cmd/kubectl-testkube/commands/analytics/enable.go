@@ -9,12 +9,15 @@ import (
 func NewEnableAnalyticsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "enable",
-		Aliases: []string{"off", "e", "y"},
+		Aliases: []string{"on", "e", "y"},
 		Short:   "Enable collecting of anonymous analytics",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			config.Config.EnableAnalytics()
-			err := config.Config.Save(config.Config.Data)
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config file", err)
+
+			cfg.EnableAnalytics()
+			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 			ui.Success("Analytics", "enabled")
 		},

@@ -7,21 +7,14 @@ import (
 )
 
 func TestSaveAnalyticsEnabled(t *testing.T) {
-	// init
-	c := config{}
 
-	// create homedir
-	c.Init()
-
-	c.EnableAnalytics()
-	c.Save(c.Data)
+	// create homedir config file
+	s := Storage{}
+	s.Init()
 
 	t.Run("check if analytics system is enabled", func(t *testing.T) {
-		// given
-		c := config{}
-
-		// when
-		d, err := c.Load()
+		// given / when
+		d, err := Load()
 
 		// then
 		assert.NoError(t, err)
@@ -31,14 +24,15 @@ func TestSaveAnalyticsEnabled(t *testing.T) {
 
 	t.Run("check if analytics system is disabled", func(t *testing.T) {
 		// given
-		c := config{}
-		c.DisableAnalytics()
-		err := c.Save(c.Data)
+		d, err := Load()
+		assert.NoError(t, err)
 
+		d.DisableAnalytics()
+		err = Save(d)
 		assert.NoError(t, err)
 
 		// when
-		d, err := c.Load()
+		d, err = Load()
 
 		// then
 		assert.NoError(t, err)

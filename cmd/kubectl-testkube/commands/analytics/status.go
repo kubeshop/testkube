@@ -13,7 +13,11 @@ func NewStatusAnalyticsCmd() *cobra.Command {
 		Short:   "Get analytics status",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			if config.Config.AnalyticsEnabled {
+
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config file", err)
+
+			if cfg.AnalyticsEnabled {
 				ui.Success("Analytics", "enabled")
 			} else {
 				ui.Success("Analytics", "disabled")
