@@ -7,14 +7,14 @@ import (
 	"path"
 )
 
-const dir = ".testkube"
-const fileName = "config.json"
+const configDirName = ".testkube"
+const configFile = "config.json"
 
 type Storage struct {
 }
 
 func (c *Storage) Load() (data Data, err error) {
-	d, err := ioutil.ReadFile(path.Join(c.getDir(), fileName))
+	d, err := ioutil.ReadFile(c.getPath())
 	if err != nil {
 		return data, err
 	}
@@ -27,26 +27,41 @@ func (c *Storage) Save(data Data) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path.Join(c.getDir(), fileName), d, 0700)
+	return ioutil.WriteFile(c.getPath(), d, 0700)
 }
 
-func (c *Storage) Init() error {
+func (c *Storage) Init(data Data) error {
 	// create ConfigWriter dir if not exists
-	if dir := c.getDir(); dir != "" {
-		_, err := os.Stat(dir)
-		if os.IsNotExist(err) {
-			return os.Mkdir(dir, 0700)
+	dir := c.getDir()
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0700)
+		if err != nil {
+			return err
 		}
 	}
+
+	// create empty JSON file if not exists
+	path := c.getPath()
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		f, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		return c.Save(data)
+	}
+
 	return nil
 }
 
 func (c *Storage) getDir() string {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
+	home, _ := os.UserHomeDir()
+	return path.Join(home, configDirName)
+}
 
-	return path.Join(dirname, dir)
-
+func (c *Storage) getPath() string {
+	return path.Join(c.getDir(), configFile)
 }

@@ -10,7 +10,11 @@ var Config config
 func init() {
 	Config = config{}
 	l := log.DefaultLogger
-	err := Config.Init()
+
+	// set default analytics enabled
+	Config.Data.AnalyticsEnabled = true
+
+	err := Config.Init(Config.Data)
 	if err != nil {
 		l.Errorw("can't init configuration", "error", err.Error())
 		return
