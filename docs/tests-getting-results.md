@@ -1,6 +1,6 @@
-# Getting list of recent test executions
+# Getting a List of Recent Test Executions
 
-To get recent results simply call `tests executions` subcommand 
+To get recent test results, use the `tests executions` subcommand 
 
 ```sh
 
@@ -23,9 +23,9 @@ kubectl testkube tests executions
 ```
 
 
-# Getting single test execution
+## **Getting a Single Test Execution**
 
-Now when you know test execution ID you can get results 
+Use the **Test Execution ID** to get the test results:
 
 ```sh 
 kubectl testkube tests execution 61e1136165e59a3183465125 
@@ -48,11 +48,11 @@ Status: success
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 61e1136165e59a3183465125
 ```
 
-Test steps which are running workflows based on `Scripts` Custom Resources have script execution ID - you can get details of each in separate command: 
+The test steps that are running workflows based on **Scripts Custom Resources** have a **Script Execution ID**. Get the details of each in a separate command: 
 
 ```sh 
 kubectl testkube scripts execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s
@@ -67,7 +67,7 @@ TODO
   ┌
   │ 'creating', 'http://34.74.127.60:8080/todos/50'
   └
-  ✓  Check if todo item craeted successfully
+  ✓  Check if todo item created successfully
   GET http://34.74.127.60:8080/todos/50 [200 OK, 291B, 8ms]
 
 → Complete TODO item

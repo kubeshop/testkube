@@ -1,15 +1,15 @@
-# Running TestKube test scripts
+# Running Testkube Test Scripts
 
-Test scripts are stored in Kubernetes cluster a Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with API.
+Test scripts are stored in Kubernetes cluster as Custom resources. We can run them as many times as we want and get results with use of kubectl testkube plugin or with an API.
 
-## Running
+## **Running Tests**
 
-Running scripts looks the same for any type of script
-Let's assume we've previously created script with name `api-incluster-test`
+Running scripts looks the same for any type of script.
+Let's assume we've previously created a script with the name `api-incluster-test`.
 
-### Standard run comnand
+### **Standard Run Command**
 
-The simplest run command looks like below:
+This is the simplest run command:
 
 ```sh
 kubectl testkube scripts run api-incluster-test
@@ -32,22 +32,22 @@ Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
 Script queued for execution
-Use following command to get script execution details:
+Use the following command to get script execution details:
 $ kubectl testkube scripts execution 615d6398b046f8fbd3d955d4
 
-or watch script execution until complete:
+Or watch script execution until complete:
 $ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
 
 ```
 
-TestKube will inform us about possible commands to get scripts:
+Testkube will inform us about possible commands to get scripts:
 
-- `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details
-- `kubectl testkube scripts watch 615d6398b046f8fbd3d955d4` to watch current pending execution (watch will also get details in case when script is completed and is good for long running scripts to lock your terminal until script execution completes)
+- `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details.
+- `kubectl testkube scripts watch 615d6398b046f8fbd3d955d4` to watch current pending executions. Watch will also get the details when the script is completed and will lock the terminal until long running scripts complete.
 
-## Run with watch for changes
+## **Run with Watch for Changes**
 
-If we want to wait until script execution completes we can pass `-f` flag (follow) to script run command
+If we want to wait until script execution completes, we can pass `-f` flag (follow) to the script run command.
 
 ```sh
 kubectl testkube scripts run api-incluster-test -f
@@ -70,10 +70,11 @@ Execution ID  : 615d7e1ab046f8fbd3d955d6
 Execution name: monthly-sure-finch
 
 Script queued for execution
-Use following command to get script execution details:
+
+Use the following command to get script execution details:
 $ kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6
 
-or watch script execution until complete:
+Or watch script execution until complete:
 $ kubectl testkube scripts watch 615d7e1ab046f8fbd3d955d6
 
 
@@ -119,15 +120,15 @@ $ kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6
 Script execution completed in 595ms
 ```
 
-As we can see command will wait until script execution completes with error or success
+This command will wait until script execution completes with an error or success.
 
-### Passing params
+### **Passing Parameters**
 
-For some 'real world' tests you need to pass some configuration variables to be able to run them on different environments or with different test configuration.
+For some 'real world' tests, you need to pass configuration variables to run them on different environments or with different test configuration.
 
-Let's assume that our example Cypress test need `testparam` parameter with value `testvalue`
+Let's assume that our example Cypress test needs the `testparam` parameter with the value `testvalue`.
 
-To pass it use `-p` param (If you need to pass more params simply pass multiple `-p` flags)
+Use the `-p` parameter to pass this configuration. If you need to pass more than one parameter, simply pass multiple `-p` flags:
 
 ```sh
 kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
@@ -150,10 +151,11 @@ Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
 Script queued for execution
-Use following command to get script execution details:
+
+Use the following command to get script execution details:
 $ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
 
-or watch script execution until complete:
+Or watch script execution until complete:
 $ kubectl testkube scripts watch 615d5372b046f8fbd3d955d2
 
 
@@ -218,12 +220,12 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use following command to get script execution details:
+Use the following command to get script execution details:
 $ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s
 ```
 
-## Summary
+## **Summary**
 
-As we can see running scripts in Kubernetes cluster is really easy with use of TestKube kubectl plugin!
+Running scripts in Kubernetes cluster is really easy with the use of the Testkube kubectl plugin!

@@ -1,18 +1,19 @@
 # Tests
 
-Let's assume a quite big IT department where there is a frontend team and backend team, everything is 
-deployed on Kubernetes cluster, and each team is responsible for their part of work. Frontend engineers test their code with the use of Cypress testing framework, but backend engineers prefer simpler tools like Postman, they have a lot of Postman collections defined and want to run them against Kubernetes cluster, unfortunately, some of their services are not exposed externally.
+Let's assume a large IT department with a frontend team and a backend team, everything is 
+deployed on Kubernetes clusters, and each team is responsible for its own part of the work. The frontend engineers test their code with the use of the Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have a lot of Postman collections defined and want to run them against Kubernetes cluster, but, unfortunately, some of their services are not exposed externally.
 
-There is also some QA leader who is responsible for release trains and wants to be sure that before release all tests are green. The one issue is that he needs to create pipelines that orchestrate all teams tests into some common platform. 
+The Quality Assurance manager is responsible for release success and needs to be sure that all tests are successful before the release. To do this with the above multiple tool testing process, pipelines must be created to orchestrate each team's tests into some common platform. 
 
-... it would be so easy if all of them have used TestKube. Each team can run their tests against clusters easily on their own, and the QA manager can create Test resources and add test scripts written by all teams.  
+Testkube simplifies this process. Each team can run their tests against clusters easily on their own, and the QA manager can create test resources and add test scripts written by all teams. 
 
-`Tests` stand for orchestration, orchestration of different test steps like e.g. script execution, delay, or other (future) steps. 
-# Tests creation
+`Tests` stand for orchestration, orchestration of different test steps like script execution, delay, or other (future) steps. 
 
-Creating tests is really simple - you need to write down test definition in json file and then pass it to `testkube` `kubectl` plugin.
+## **Test Creation**
 
-example test file could look like this: 
+Creating tests is really simple. Define the test in a JSON file and then pass it to the `testkube` `kubectl` plugin.
+
+An example test file might look like this:  
 
 ```sh
 echo '
@@ -28,7 +29,8 @@ echo '
 }' | kubectl testkube tests create
 ```
 
-To check if test was created correctly you can look at `Test` Custom Resource in your Kubernetes cluster: 
+To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster: 
+
 ```sh
 kubectl get tests -ntestkube
 
@@ -37,7 +39,7 @@ test-example     2d21h
 test-example-2   2d21h
 ```
 
-and get details of some test: 
+and get the details of a test: 
 ```sh 
 kubectl get tests -ntestkube test-example -oyaml
 
@@ -66,4 +68,4 @@ spec:
     type: scriptExecutio
 ```
 
-Your `Test` from now is defined, you can start running testing workflows from now. 
+Your `Test` is now defined and you can start running testing workflows. 
