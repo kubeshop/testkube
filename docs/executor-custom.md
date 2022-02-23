@@ -2,11 +2,13 @@
 
 When your tests are written in other testing frameworks than Testkube supports out-of-the-box, you can write `custom executor`.
 
-Executor is wrapper around testing framework in form of *Docker container* run as *Kubernetes Job*.
+Executor is wrapper around testing framework in form of *Docker container* run as *Kubernetes Job*. Usually it'll run particular test framework binary inside container. Additionally it's registered as `Executor` Custom Resource in your Kubernetes cluster with type handler defined (e.g. `postman/collection`).
 
 Testkube API is responsible for running executions, it'll pass test data to executor and get parse results from eecutor output. 
 
-API will pass `testube.Execution` OpenAPI based document as first argument to binary in executor Docker container,
+To create new script user need to pass `--type` - API need it to pair script type with executor (executor have handled `types` array defined in CRD), and API will choose which executor to run based on handled types.
+
+API will pass `testube.Execution` OpenAPI based document as first argument to binary in executors Docker container,
 
 API assume that Executor will output data to `STDOUT` and each line is wrapped in `testkube.ExecutorOutput` (like in structured logging idea).
 
