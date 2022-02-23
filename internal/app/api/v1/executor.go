@@ -83,6 +83,7 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Image:        item.Spec.Image,
 			Types:        item.Spec.Types,
 			Uri:          item.Spec.URI,
+			JobTemplate:  item.Spec.JobTemplate,
 		},
 	}
 }
@@ -98,6 +99,7 @@ func mapExecutorCreateRequestToExecutorCRD(request testkube.ExecutorCreateReques
 			Types:        request.Types,
 			URI:          request.Uri,
 			Image:        request.Image,
+			JobTemplate:  request.JobTemplate,
 		},
 	}
 }
