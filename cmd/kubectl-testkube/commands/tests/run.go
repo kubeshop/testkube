@@ -47,6 +47,13 @@ func NewRunTestCmd() *cobra.Command {
 				paramsFileContent = string(b)
 			}
 
+			_, err := client.GetTest(testName, namespace)
+			if err != nil {
+				ui.Errf("Can't get test with name '%s' not exists in namespace '%s'", testName, namespace)
+				ui.Debug(err.Error())
+				os.Exit(1)
+			}
+
 			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent, binaryArgs)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
@@ -58,6 +65,8 @@ func NewRunTestCmd() *cobra.Command {
 
 			execution, err = client.GetExecution(execution.Id)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+
+			fmt.Printf("%+v\n", execution)
 
 			uiPrintStatus(execution)
 
@@ -83,6 +92,10 @@ func NewRunTestCmd() *cobra.Command {
 
 func uiPrintStatus(execution testkube.Execution) {
 	result := execution.ExecutionResult
+
+	if result == nil {
+		return
+	}
 
 	ui.NL()
 
