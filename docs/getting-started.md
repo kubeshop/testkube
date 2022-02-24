@@ -7,8 +7,9 @@ Please follow [install steps](/docs/installing.md) first for Testkube installati
 ```sh
 kubectl testkube --help 
 
-# or for tests
+# for tests
 kubectl testkube tests --help 
+# or any other command
 kubectl testkube testsuites --help 
 ```
 
