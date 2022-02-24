@@ -7,22 +7,23 @@ Please follow [install steps](/docs/installing.md) first for Testkube installati
 ```sh
 kubectl testkube --help 
 
-# or for tests
+# for tests
 kubectl testkube tests --help 
+# or any other command
+kubectl testkube testsuites --help 
 ```
 
 ## Defining tests
 
-After installing you will need to add Tests to your cluster, scripts are created as Custom Resource in Kubernetes
-(access to Kubernetes cluster would be also needed)
+After installing you will need to add Tests to your cluster, which are created as Custom Resource in Kubernetes (access to Kubernetes cluster would be also needed)
 
-For now Testkube only supports  *Postman collections*, *basic CURL execition* and *Cypress* - but we plan to handle more testing tools soon,.
+For now Testkube only supports  *Postman collections*, *basic CURL execition* and *Cypress* - but we plan to handle more testing tools soon.
 
 If you don't want to create Custom Resources "by hand" we have a little helper for this: 
 
 ### Creating Postman Collections based tests
 
-Fist let's create Postman collection:
+Fist let's export Postman collection from Postman UI (file content should look similar to this one below):
 
 ```bash
 cat <<EOF > my_postman_collection.json
@@ -99,21 +100,18 @@ cat <<EOF > my_postman_collection.json
 		}
 	]
 }
-
 EOF
 ```
 
 ```sh
-kubectl testkube tests create --file my_postman_collection.json --type "postman/collection" --name my-test-name 
+kubectl testkube tests create --file my_postman_collection.json --type postman/collection --name my-test-name 
 ```
 
 **Note**: this is just an example of how it works. For further details you can visit [Postman documentation](executor-postman.md)
 
 ### Creating Cypress tests
 
-Cypress tests are little more complicated to pass - for now we're supporting Git based paths for Cypress projects.
-
-You can create new test with kubectl testkube plugin:
+Cypress are in form of projects, so to run them we need to pass whole directory structure with npm based dependencies. You can create new test with Testkube:
 
 ```sh
  kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
@@ -121,22 +119,20 @@ You can create new test with kubectl testkube plugin:
 
 Where:
 
-- `uri` is git uri where testkube will get cypress project
+- `git-uri` is git uri where testkube will get cypress project
 - `git-branch` is what branch should he checkout (default - main branch will be used)
 - `git-path` is what path of repository should be checked out (testkube is doing partial git checkout so it'll be fast even for very big monorepos)
 - `name` - is unique Sript Custom Resource name.
 - `type` - cypress/project - for Cypress based project test structure
 
-For now we're supporting only Cypress test runs, but we plan to fully integrate it.
-
 ## Starting new test execution
 
-When our test is defined as CR we can now run it:
+When our test is defined as Custom Resource we can now run it:
 
-```shell
-kubectl testkube tests start my-test-name 
+```sh
+kubectl testkube tests run my-test-name 
 
-... some test run data ...
+#  ... some test run output ...
 
 Use following command to get test execution details:
 kubectl testkube tests execution 611b6da38cd74034e7c9d408
@@ -198,11 +194,11 @@ kubectl testkube tests executions TEST_NAME
 
 For lists and details you can use different output format (`--output` flag) for now we're supporting following formats:
 
-- RAW - it's raw output from given executor (e.g. for Postman collection it's terminal text with colors and tables)
-- JSON - test run data are encoded in JSON
-- GO - go-template formatting (like in Docker and Kubernetes) you'll need to add `--go-template` flag with custom format (defaults to {{ . | printf("%+v") }} will help you check available fields)
+- `RAW` - it's raw output from given executor (e.g. for Postman collection it's terminal text with colors and tables)
+- `JSON` - test run data are encoded in JSON
+- `GO` - go-template formatting (like in Docker and Kubernetes) you'll need to add `--go-template` flag with custom format (defaults to {{ . | printf("%+v") }} will help you check available fields)
 
-(Keep in mind that we have plans for other output formats like junit etc.)
+(Keep in mind that we have plans for other output formats like junit etc. if it's something that you need please ping us)
 
 ## Deleting a test
 
