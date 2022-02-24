@@ -106,7 +106,7 @@ func (f Fetcher) gitURI(repo *testkube.Repository) (uri string, err error) {
 
 func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {
 	var tmpFile *os.File
-	filename := "fetcher-save-temp-file"
+	filename := "test-content"
 	if f.dir == "" {
 		tmpFile, err = ioutil.TempFile("", filename)
 	} else {
