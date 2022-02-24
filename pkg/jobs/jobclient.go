@@ -101,7 +101,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 	options.Namespace = c.Namespace
 	options.Jsn = string(jsn)
 	options.Initmage = c.initImage
-	options.TestName = options.TestName
+	options.TestName = execution.TestName
 	if options.JobTemplate == "" {
 		options.JobTemplate = c.jobTemplate
 	}
@@ -187,7 +187,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	options.Namespace = c.Namespace
 	options.Jsn = string(jsn)
 	options.Initmage = c.initImage
-	options.TestName = options.TestName
+	options.TestName = execution.TestName
 	if options.JobTemplate == "" {
 		options.JobTemplate = c.jobTemplate
 	}
