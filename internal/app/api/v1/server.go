@@ -69,7 +69,8 @@ func NewServer(
 		jobTemplate = string(dataDecoded)
 	}
 
-	s.Executor, err = client.NewJobExecutor(executionsResults, initImage, jobTemplate)
+	s.jobTemplate = jobTemplate
+	s.Executor, err = client.NewJobExecutor(executionsResults, initImage, s.jobTemplate)
 	if err != nil {
 		panic(err)
 	}
@@ -90,6 +91,7 @@ type TestkubeAPI struct {
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
+	jobTemplate          string
 }
 
 type storageParams struct {
