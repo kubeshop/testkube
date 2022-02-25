@@ -11,9 +11,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestScriptsAPI(t *testing.T) {
+func TestAPIClient(t *testing.T) {
 
-	t.Run("Execute script with given ID", func(t *testing.T) {
+	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -21,11 +21,11 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		execution, err := client.ExecuteScript("test", "testkube", "some name", map[string]string{}, "")
+		execution, err := client.ExecuteTest("test", "testkube", "some name", map[string]string{}, "", []string{})
 
 		// then
 		assert.Equal(t, "1", execution.Id)
@@ -34,7 +34,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Get executed script details", func(t *testing.T) {
+	t.Run("Get executed test details", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/v1/executions/1", r.URL.Path)
@@ -43,7 +43,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -55,7 +55,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("List scripts executions", func(t *testing.T) {
+	t.Run("List executions", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -63,7 +63,7 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
@@ -80,7 +80,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Create script", func(t *testing.T) {
+	t.Run("Create test", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -88,12 +88,12 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		response, err := client.CreateScript(UpsertScriptOptions{
-			Content: testkube.NewStringScriptContent("{}"),
+		response, err := client.CreateTest(UpsertTestOptions{
+			Content: testkube.NewStringTestContent("{}"),
 			Name:    "t1",
 			Type_:   "postman/collection",
 		})
@@ -105,7 +105,7 @@ func TestScriptsAPI(t *testing.T) {
 		assert.Equal(t, "postman/collection", response.Type_)
 	})
 
-	t.Run("Delete script positive flow", func(t *testing.T) {
+	t.Run("Delete test positive flow", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -113,17 +113,17 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScript("t1", "testkube")
+		err := client.DeleteTest("t1", "testkube")
 
 		// then
 		assert.NoError(t, err)
 	})
 
-	t.Run("Delete script fails", func(t *testing.T) {
+	t.Run("Delete test fails", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -131,17 +131,17 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScript("t1", "testkube")
+		err := client.DeleteTest("t1", "testkube")
 
 		// then
 		assert.Error(t, err)
 	})
 
-	t.Run("Delete all scripts positive flow", func(t *testing.T) {
+	t.Run("Delete all tests positive flow", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -149,17 +149,17 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScripts("testkube")
+		err := client.DeleteTests("testkube")
 
 		// then
 		assert.NoError(t, err)
 	})
 
-	t.Run("Delete all scripts fails", func(t *testing.T) {
+	t.Run("Delete all tests fails", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -167,17 +167,17 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		err := client.DeleteScripts("testkube")
+		err := client.DeleteTests("testkube")
 
 		// then
 		assert.Error(t, err)
 	})
 
-	t.Run("List scripts", func(t *testing.T) {
+	t.Run("List tests", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -185,15 +185,15 @@ func TestScriptsAPI(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		client := NewDefaultDirectScriptsAPI()
+		client := NewDefaultDirectAPIClient()
 		client.URI = srv.URL
 
 		// when
-		scripts, err := client.ListScripts("testkube", nil)
+		tests, err := client.ListTests("testkube", nil)
 
 		// then
 		assert.NoError(t, err)
-		assert.Len(t, scripts, 2)
+		assert.Len(t, tests, 2)
 	})
 
 }

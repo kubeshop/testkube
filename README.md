@@ -1,15 +1,43 @@
-![Testkube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
+<p align="center">  
+  <img style="width:66%" src="assets/testkube-color-white.png#gh-dark-mode-only" alt="Testkube Logo Light"/>
+  <img style="width:66%" src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
+</p>
 
-![Release](https://img.shields.io/github/v/release/kubeshop/testkube) [![Releases](https://img.shields.io/github/downloads/kubeshop/testkube/total.svg)](https://github.com/kubeshop/testkube/tags?label=Downloads) ![Go version](https://img.shields.io/github/go-mod/go-version/kubeshop/testkube)
 
-![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
 
-![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
- #### [Documentation](https://kubeshop.github.io/testkube) | [Discord](https://discord.gg/hfq44wtR6Q) 
+<p align="center">
+  Welcome to Testkube - Your friendly cloud-native testing framework for Kubernetes
+</p>
+
+<p align="center">
+  <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
+  <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
+  <a href="https://twitter.com/thekubeshop">Twitter</a>&nbsp;|&nbsp; 
+  <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
+  <a href="https://kubeshop.io/blog">Blog</a>
+</p>
+
+
+<p align="center">
+  <a href="https://github.com/kubeshop/testkube/releases"><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>
+  <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>
+  <a href=""><img title="Go version" src="https://img.shields.io/github/go-mod/go-version/kubeshop/testkube"/></a>
+  <a href=""><img title="Docker builds" src="https://img.shields.io/docker/automated/kubeshop/testkube-api-server"/></a>
+  <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>
+  <a href="https://github.com/kubeshop/testkube/releases"><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>
+</p>
+
+<p align="center">
+  <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
+    <img src="assets/intro-to-testkube.jpg" style="width:66%;height:auto">
+    <p align="center">
+      Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
+    </p>
+  </a>
+</p>
 
 
 <!-- try to enable it after snyk resolves https://github.com/snyk/snyk/issues/347
-
 Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkube/badge.svg)](https://snyk.io/test/github/kubeshop/testkube)
 [![testkube-operator](https://snyk.io/test/github/kubeshop/testkube-operator/badge.svg)](https://snyk.io/test/github/kubeshop/testkube-operator)
 [![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)](https://snyk.io/test/github/kubeshop/helm-charts)
@@ -28,13 +56,13 @@ Testkube advantages:
 - Makes it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
 - Makes it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
 - Centralizes all test results in a consistent format for "actionable QA analytics"
-- Provides a modular architecture for adding new types of test scripts and executors
+- Provides a modular architecture for adding new types of test tests and executors
 
-Main TestKube components are:
+Main Testkube components are:
 
 - kubectl Testkube plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
 - API Server - work orchestrator, runs executors, gather execution results
-- [CRDs Operator](https://github.com/kubeshop/testkube-operator) - watches TestKube CR, handles changes, communicates with API Server
+- [CRDs Operator](https://github.com/kubeshop/testkube-operator) - watches Testkube CR, handles changes, communicates with API Server
 - Executors - runs tests defined for specific runner
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests

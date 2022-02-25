@@ -1,6 +1,6 @@
-![TestKube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/logo-dark-text-full.png)
+![Testkube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-gray.png)
 
-Welcome to TestKube - your somewhat opinionated and friendly Kubernetes testing framework!
+Welcome to Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
 
 Testkube decouples test artifacts and execution from CI/CD tooling. Tests are meant to be part of a cluster's state and can be executed as needed:
 
@@ -24,15 +24,14 @@ Testkube attempts to:
   in your clusters, without having to wrap them in docker-images or provide network access.
 - Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
 - Centralize all test results in a consistent format for actionable QA analytics.
-
 - Provide a modular architecture for adding new types of test scripts and executors.
 
 ## **Getting Started**
 
-Check out our **Intro video** below and the [Installation](installing.md) and the [Getting Started](getting-started.md) guides to set up Testkube and 
+Check out the [Installation](installing.md) and [Getting Started](getting-started.md) guides to set up Testkube and 
 run your first tests!
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<!---<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> --->
 
 ## **Questions or Comments?**
 

@@ -58,7 +58,7 @@ The above command will install the following components in your Kubernetes clust
 
 1. Testkube API
 2. `testkube` namespace
-3. CRD for scripts
+3. CRD for Tests, TestSuites, Executors
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)

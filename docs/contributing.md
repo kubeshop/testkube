@@ -5,11 +5,11 @@ If you're new in Open-source community there is nice guide how to start contribu
 
 Checkout [development page](development.md) for more details about how to develop and run testkube on your machine.
 
-## General guidance for contributing to TestKube project
+## General guidance for contributing to Testkube project
 
-You're very welcome to help in TestKube development 🔥, there is a lot of incoming work to do :).
+You're very welcome to help in Testkube development 🔥, there is a lot of incoming work to do :).
 
-We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into TestKube repo.
+We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into Testkube repo.
 
 ### For golang based components
 

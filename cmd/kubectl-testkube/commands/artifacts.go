@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/scripts"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -87,7 +86,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			f, err := client.DownloadFile(executionID, filename, destination)
 			ui.ExitOnError("downloading file"+filename, err)
 
-			fmt.Printf("File %s downloaded.\n", f)
+			ui.Info("File %s downloaded.\n", f)
 		},
 	}
 
@@ -110,7 +109,7 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 			client, _ := common.GetClient(cmd)
-			scripts.DownloadArtifacts(executionID, downloadDir, client)
+			tests.DownloadArtifacts(executionID, downloadDir, client)
 		},
 	}
 

@@ -38,6 +38,9 @@ const (
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
+
+	volumeName = "data-volume"
+	volumeDir  = "/data"
 )
 
 type JobClient struct {
@@ -46,9 +49,10 @@ type JobClient struct {
 	Namespace  string
 	Cmd        string
 	Log        *zap.SugaredLogger
+	initImage  string
 }
 
-func NewJobClient() (*JobClient, error) {
+func NewJobClient(initImage string) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
@@ -58,6 +62,7 @@ func NewJobClient() (*JobClient, error) {
 		ClientSet: clientSet,
 		Namespace: "testkube",
 		Log:       log.DefaultLogger,
+		initImage: initImage,
 	}, nil
 }
 
@@ -77,7 +82,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, c.initImage, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -151,7 +156,7 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.ScriptName, hasSecrets)
+	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, c.initImage, hasSecrets)
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -434,7 +439,7 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *batchv1.Job {
+func NewJobSpec(id, namespace, image, jsn, testName, executorInitImage string, hasSecrets bool) *batchv1.Job {
 	var TTLSecondsAfterFinished int32 = 180
 	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
 	var backOffLimit int32 = 0
@@ -447,7 +452,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(scriptName),
+							Name: secret.GetMetadataName(testName),
 						},
 						Key: GitUsernameSecretName,
 					},
@@ -458,9 +463,28 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(scriptName),
+							Name: secret.GetMetadataName(testName),
 						},
 						Key: GitTokenSecretName,
+					},
+				},
+			},
+		}
+	}
+
+	var initContainers []corev1.Container
+	if executorInitImage != "" {
+		initContainers = []corev1.Container{
+			{
+				Name:            id + "-init",
+				Image:           executorInitImage,
+				Command:         []string{"/bin/runner", jsn},
+				ImagePullPolicy: corev1.PullAlways,
+				Env:             append(envVars, secretEnvVars...),
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      volumeName,
+						MountPath: volumeDir,
 					},
 				},
 			},
@@ -476,6 +500,7 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					InitContainers: initContainers,
 					Containers: []corev1.Container{
 						{
 							Name:            id,
@@ -483,6 +508,17 @@ func NewJobSpec(id, namespace, image, jsn, scriptName string, hasSecrets bool) *
 							Command:         []string{"/bin/runner", jsn},
 							ImagePullPolicy: corev1.PullAlways,
 							Env:             append(envVars, secretEnvVars...),
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeName,
+									MountPath: volumeDir,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: volumeName,
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
@@ -525,6 +561,10 @@ var envVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
 		Value: os.Getenv("SCRAPPERENABLED"),
+	},
+	{
+		Name:  "RUNNER_DATADIR",
+		Value: volumeDir,
 	},
 }
 

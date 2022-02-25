@@ -17,7 +17,6 @@ func NewExecutorsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "executors",
 		Short: "Executor management commands",
-		Long:  `All available scripts and scripts executions commands`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},

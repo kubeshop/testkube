@@ -1,6 +1,6 @@
 # Cypress Tests
 
-TestKube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository.
+TestKube makes running Cypress tests simple. As Cypress is organised in projects, Testkube allows tests to be defined in a Github repository.
 
 To create a new Cypress test, you will need a Git repository with an example Cypress project. Please follow the Cypress documentation for details - <https://docs.cypress.io/guides/dashboard/projects>.
 
@@ -24,18 +24,18 @@ describe('The Home Page', () => {
 })
 ```
 
-## **Creating the Testkube Test Script
+## **Creating the Testkube Test Script**
 
-Create the TestKube test script from this example. The parameters passed are **repository**, **branch** and **the path where project exists**. In the case of a mono repository, the parameters are **name** and **type**.
+Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
 
 ```sh
-kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Check that script is created:
 
 ```sh
-kubectl get scripts 
+kubectl get tests 
 ```
 
 Output:
@@ -50,7 +50,7 @@ kubeshop-cypress      51s
 Start the test:
 
 ```sh
-kubectl testkube scripts start kubeshop-cypress
+kubectl testkube tests start kubeshop-cypress
 ```
 
 Output:
@@ -71,20 +71,20 @@ Name          : kubeshop-cypress
 Execution ID  : 615d5265b046f8fbd3d955d0
 Execution name: wildly-popular-worm
 
-Script queued for execution
-Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d5265b046f8fbd3d955d0
+Test queued for execution
+Use the following command to get test execution details:
+$ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
-Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d5265b046f8fbd3d955d0
+or watch test execution until complete:
+$ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
 ```
 
 ## **Getting Execution Results**
 
-Watch the script execution:
+Let's watch our test execution:
 
 ```sh
-kubectl testkube scripts watch 615d43d3b046f8fbd3d955ca
+kubectl testkube tests watch 615d43d3b046f8fbd3d955ca
 ```
 
 Output:
@@ -175,7 +175,7 @@ output:
 
 
 
-Script execution completed in 1m17s
+Test execution completed in 1m17s
 
 ```
 
@@ -188,7 +188,7 @@ The test parameter was not passed into the test script. In this test, the parame
 Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
-kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube tests start kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
@@ -207,13 +207,12 @@ Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
-Script queued for execution
+Test queued for execution
+Use the following command to get test execution details:
+$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
-
-Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d5372b046f8fbd3d955d2
+or watch test execution until complete:
+$ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -277,12 +276,12 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
+Use the following command to get test execution details:
+$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
-Script execution completed in 1m45.405939s
+Test execution completed in 1m45.405939s
 ```
 
 ## **Summary**
 
-Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with TestKube!
+Our first test completed successfully! As we've seen above, it's really easy to run Cypress tests with Testkube!

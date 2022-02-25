@@ -16,8 +16,8 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
-	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
-	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
+	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
+	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
@@ -34,47 +34,47 @@ import (
 func NewServer(
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	scriptsClient *scriptsclientv2.ScriptsClient,
+	testsClient *testsclientv2.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
-	testsClient *testsclientv1.TestsClient,
+	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
-) TestKubeAPI {
+) TestkubeAPI {
 
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
-	executor, err := client.NewJobExecutor(executionsResults)
-	if err != nil {
-		panic(err)
-	}
-
-	s := TestKubeAPI{
+	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
 		ExecutionResults:     executionsResults,
-		Executor:             executor,
-		ScriptsClient:        scriptsClient,
+		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
-		TestsClient:          testsClient,
+		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
 	}
 
-	if err = s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")); err != nil {
+	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
+	}
+
+	s.Executor, err = client.NewJobExecutor(executionsResults, initImage)
+	if err != nil {
+		panic(err)
 	}
 
 	s.Init()
 	return s
 }
 
-type TestKubeAPI struct {
+type TestkubeAPI struct {
 	server.HTTPServer
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsClient          *testsclientv1.TestsClient
-	ScriptsClient        *scriptsclientv2.ScriptsClient
+	TestsSuitesClient    *testsuitesclientv1.TestSuitesClient
+	TestsClient          *testsclientv2.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	Metrics              Metrics
@@ -91,7 +91,7 @@ type storageParams struct {
 	Token           string
 }
 
-func (s TestKubeAPI) Init() {
+func (s TestkubeAPI) Init() {
 	envconfig.Process("STORAGE", &s.storageParams)
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
@@ -117,44 +117,44 @@ func (s TestKubeAPI) Init() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
-	scripts := s.Routes.Group("/scripts")
-
-	scripts.Get("/", s.ListScriptsHandler())
-	scripts.Post("/", s.CreateScriptHandler())
-	scripts.Patch("/:id", s.UpdateScriptHandler())
-	scripts.Delete("/", s.DeleteScriptsHandler())
-
-	scripts.Get("/:id", s.GetScriptHandler())
-	scripts.Delete("/:id", s.DeleteScriptHandler())
-
-	scripts.Post("/:id/executions", s.ExecuteScriptHandler())
-
-	scripts.Get("/:id/executions", s.ListExecutionsHandler())
-	scripts.Get("/:id/executions/:executionID", s.GetExecutionHandler())
-	scripts.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
-
 	tests := s.Routes.Group("/tests")
 
-	tests.Post("/", s.CreateTestHandler())
 	tests.Get("/", s.ListTestsHandler())
+	tests.Post("/", s.CreateTestHandler())
+	tests.Patch("/:id", s.UpdateTestHandler())
 	tests.Delete("/", s.DeleteTestsHandler())
+
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
 
 	tests.Post("/:id/executions", s.ExecuteTestHandler())
-	tests.Get("/:id/executions", s.ListTestExecutionsHandler())
-	tests.Get("/:id/executions/:executionID", s.GetTestExecutionHandler())
 
-	testExecutions := s.Routes.Group("/test-executions")
-	testExecutions.Get("/", s.ListTestExecutionsHandler())
-	testExecutions.Get("/:executionID", s.GetTestExecutionHandler())
+	tests.Get("/:id/executions", s.ListExecutionsHandler())
+	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
+	tests.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
+
+	testsuites := s.Routes.Group("/test-suites")
+
+	testsuites.Post("/", s.CreateTestSuiteHandler())
+	testsuites.Get("/", s.ListTestSuitesHandler())
+	testsuites.Delete("/", s.DeleteTestSuitesHandler())
+	testsuites.Get("/:id", s.GetTestSuiteHandler())
+	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
+
+	testsuites.Post("/:id/executions", s.ExecuteTestSuiteHandler())
+	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
+	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+
+	testExecutions := s.Routes.Group("/test-suite-executions")
+	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
 
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
 
 }
 
-func (s TestKubeAPI) InfoHandler() fiber.Handler {
+func (s TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:  api.Commit,
@@ -163,7 +163,7 @@ func (s TestKubeAPI) InfoHandler() fiber.Handler {
 	}
 }
 
-func (s TestKubeAPI) RoutesHandler() fiber.Handler {
+func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		routes := []fiber.Route{}
 
@@ -180,20 +180,20 @@ func (s TestKubeAPI) RoutesHandler() fiber.Handler {
 }
 
 // TODO should we use single generic filter for all list based resources ?
-// currently filters for e.g. scripts are done "by hand"
+// currently filters for e.g. tests are done "by hand"
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	filter := result.NewExecutionsFilter()
 
-	// id for /scripts/ID/executions
-	scriptName := c.Params("id", "")
-	if scriptName == "" {
-		// query param for /executions?scriptName
-		scriptName = c.Query("scriptName", "")
+	// id for /tests/ID/executions
+	testName := c.Params("id", "")
+	if testName == "" {
+		// query param for /executions?testName
+		testName = c.Query("testName", "")
 	}
 
-	if scriptName != "" {
-		filter = filter.WithScriptName(scriptName)
+	if testName != "" {
+		filter = filter.WithTestName(testName)
 	}
 
 	textSearch := c.Query("textSearch", "")
@@ -239,24 +239,29 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage string, err error) {
 	var executors []testkube.ExecutorDetails
 
 	if data == "" {
-		return nil
+		return "", nil
 	}
 
 	dataDecoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := json.Unmarshal([]byte(dataDecoded), &executors); err != nil {
-		return err
+		return "", err
 	}
 
 	for _, executor := range executors {
 		if executor.Executor == nil {
+			continue
+		}
+
+		if executor.Name == "executor-init" {
+			initImage = executor.Executor.Image
 			continue
 		}
 
@@ -274,20 +279,20 @@ func (s TestKubeAPI) loadDefaultExecutors(namespace, data string) error {
 
 		result, err := s.ExecutorsClient.Get(namespace, executor.Name)
 		if err != nil && !errors.IsNotFound(err) {
-			return err
+			return "", err
 		}
 
 		if err != nil {
 			if _, err = s.ExecutorsClient.Create(obj); err != nil {
-				return err
+				return "", err
 			}
 		} else {
 			result.Spec = obj.Spec
 			if _, err = s.ExecutorsClient.Update(result); err != nil {
-				return err
+				return "", err
 			}
 		}
 	}
 
-	return nil
+	return initImage, nil
 }

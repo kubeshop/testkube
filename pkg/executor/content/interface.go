@@ -8,7 +8,7 @@ type ContentFetcher interface {
 	GitDirFetcher
 	GitFileFetcher
 
-	Fetch(content *testkube.ScriptContent) (path string, err error)
+	Fetch(content *testkube.TestContent) (path string, err error)
 }
 
 type StringFetcher interface {

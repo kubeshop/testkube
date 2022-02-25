@@ -48,16 +48,16 @@ func (r *Rest) APIVersion() schema.GroupVersion {
 	return schema.GroupVersion{Group: "api", Version: "v1"}
 }
 
-func TestDefaultDirectScriptsAPI(t *testing.T) {
+func TestDefaultDirectAPIClient(t *testing.T) {
 	t.Skip("Implement working test")
 
 	k8sClient := fake.NewSimpleClientset()
 	// can't override REST client to change requested URI
 	// k8sClient.CoreV1().RESTCli nt()
 	config := NewProxyConfig("testkube")
-	client := NewProxyScriptsAPI(k8sClient, config)
+	client := NewProxyAPIClient(k8sClient, config)
 
-	t.Run("Execute script with given ID", func(t *testing.T) {
+	t.Run("Execute test with given ID", func(t *testing.T) {
 		// given
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
@@ -66,7 +66,7 @@ func TestDefaultDirectScriptsAPI(t *testing.T) {
 		defer srv.Close()
 
 		// when
-		execution, err := client.ExecuteScript("test", "testkube", "some name", map[string]string{}, "")
+		execution, err := client.ExecuteTest("test", "testkube", "some name", map[string]string{}, "", []string{})
 
 		// then
 		assert.Equal(t, "1", execution.Id)

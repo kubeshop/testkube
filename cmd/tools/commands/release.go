@@ -33,7 +33,7 @@ func NewReleaseCmd() *cobra.Command {
 			pushVersionTag(nextAppVersion)
 
 			// Let's checkout helm chart repo and put changes to particular app
-			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main")
+			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main", "")
 			ui.ExitOnError("checking out "+appName+" chart to "+dir, err)
 
 			chart, path, err := helm.GetChart(dir)
@@ -52,19 +52,19 @@ func NewReleaseCmd() *cobra.Command {
 			gitAddCommitAndPush(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
 			// Checkout main testkube chart and bump main chart with next version
-			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "testkube", "main")
+			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "testkube", "main", "")
 			ui.ExitOnError("checking out testkube chart to "+dir, err)
 
 			chart, path, err = helm.GetChart(dir)
 			ui.ExitOnError("getting chart path", err)
 
 			testkubeVersion := helm.GetVersion(chart)
-			nextTestKubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
-			ui.Info("Generated new testkube version", nextTestKubeVersion)
+			nextTestkubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
+			ui.Info("Generated new testkube version", nextTestkubeVersion)
 
 			// bump main testkube chart version
-			helm.SaveString(&chart, "version", nextTestKubeVersion)
-			helm.SaveString(&chart, "appVersion", nextTestKubeVersion)
+			helm.SaveString(&chart, "version", nextTestkubeVersion)
+			helm.SaveString(&chart, "appVersion", nextTestkubeVersion)
 
 			// set app dependency version
 			helm.UpdateDependencyVersion(chart, appName, nextAppVersion)
@@ -72,19 +72,19 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.Write(path, chart)
 			ui.ExitOnError("saving testkube Chart.yaml file", err)
 
-			gitAddCommitAndPush(dir, "updating testkube to "+nextTestKubeVersion+" and "+appName+" to "+nextAppVersion)
+			gitAddCommitAndPush(dir, "updating testkube to "+nextTestkubeVersion+" and "+appName+" to "+nextAppVersion)
 
 			tab := ui.NewArrayTable([][]string{
 				{appName + " previous version", currentAppVersion},
 				{"testkube previous version", testkubeVersion},
 				{appName + " next version", nextAppVersion},
-				{"testkube next version", nextTestKubeVersion},
+				{"testkube next version", nextTestkubeVersion},
 			})
 
 			ui.NL()
 			ui.Table(tab, os.Stdout)
 
-			ui.Completed("Release completed - Helm charts: ", "testkube:"+nextTestKubeVersion, appName+":"+nextAppVersion)
+			ui.Completed("Release completed - Helm charts: ", "testkube:"+nextTestkubeVersion, appName+":"+nextAppVersion)
 			ui.NL()
 		},
 	}

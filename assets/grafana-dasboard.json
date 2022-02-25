@@ -145,7 +145,7 @@
           "refId": "B"
         }
       ],
-      "title": "SUCCESSFUL scripts executions",
+      "title": "SUCCESSFUL tests executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -234,7 +234,7 @@
           "refId": "B"
         }
       ],
-      "title": "FAILED scripts executions",
+      "title": "FAILED tests executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -289,7 +289,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_scripts_creation_count{}",
+          "expr": "testkube_tests_creation_count{}",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -303,7 +303,7 @@
           "refId": "B"
         }
       ],
-      "title": "Scripts creations",
+      "title": "Tests creations",
       "transparent": true,
       "type": "stat"
     }
@@ -320,7 +320,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TestKube",
+  "title": "Testkube",
   "uid": "jMtrP3nnz",
   "version": 2
 }

@@ -1,10 +1,11 @@
-# Curl Commands
+# cURL Commands
 
-TestKube is able to run curl commands as tests. There are 2 possibilities to validate the outputs of the curl command:
-- By using the status returned.
-- By checking the body of the response. 
+TestKube is able to run cURL commands as tests. There are 2 possibilities to validate the outputs of the cURL command:
 
-Below is an example of how to format the tests.
+ - By using the status returned.
+ - By checking the body of the response. 
+
+Below is an example of how to format the tests:
 
 ```js
 {
@@ -21,9 +22,9 @@ Below is an example of how to format the tests.
 
 The test Custom Resource Definition (CRD) should be created with the type `curl/test`.
 
-## **Running Tests Using Curl Commands**
+## **Running Tests Using cURL Commands**
 
-### **Creating and Running a Curl Test**
+### **Creating and Running a cURL Test**
 
 Save a test in a format as described above. In this example, it is `curl-test.json`.
 
@@ -48,7 +49,7 @@ The test can be run using `kubectl testkube scripts start curl-test` which gives
    ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
-Script queued for execution
+Test queued for execution
 
 Use the following command to get script execution details:
 $ kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e
@@ -81,4 +82,4 @@ alt-svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400, h3-28=":443"; ma=86400, h3
 {"success":"true"}
 ```
 
-There is a generated name for the execution, the status, duration and the output of the curl command.
+There is a generated name for the execution, the status, duration and the output of the cURL command.

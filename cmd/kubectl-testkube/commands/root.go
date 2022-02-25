@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Masterminds/semver"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -16,11 +17,16 @@ var (
 	Version string
 	BuiltBy string
 	Date    string
+
+	analyticsEnabled bool
+	client           string
+	verbose          bool
+	namespace        string
 )
 
 func init() {
 	RootCmd.AddCommand(NewDocsCmd())
-	RootCmd.AddCommand(NewScriptsCmd())
+	RootCmd.AddCommand(NewTestsCmd())
 	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 	RootCmd.AddCommand(NewInstallCmd())
@@ -29,8 +35,9 @@ func init() {
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewExecutorsCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
-	RootCmd.AddCommand(NewTestsCmd())
+	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
+	RootCmd.AddCommand(NewAnalyticsCmd())
 }
 
 var RootCmd = &cobra.Command{
@@ -45,7 +52,11 @@ var RootCmd = &cobra.Command{
 
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
-		telemetry.CollectAnonymousCmdInfo()
+
+		if analyticsEnabled {
+			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube anlytics disable`")
+			telemetry.CollectAnonymousCmdInfo()
+		}
 	},
 }
 
@@ -66,7 +77,7 @@ func ValidateVersions(c apiclient.Client) error {
 	}
 
 	if clientVersion.LessThan(serverVersion) {
-		ui.Warn("Your TestKube API version is newer than your `kubectl testkube` plugin")
+		ui.Warn("Your Testkube API version is newer than your `kubectl testkube` plugin")
 		ui.Info("Testkube API version", serverVersion.String())
 		ui.Info("Testkube kubectl plugin client", clientVersion.String())
 		ui.Info("It's recommended to upgrade client to version close to API server version")
@@ -77,9 +88,13 @@ func ValidateVersions(c apiclient.Client) error {
 }
 
 func Execute() {
+	cfg, err := config.Load()
+	ui.WarnOnError("Config loading error", err)
+
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
+	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "should analytics be enabled")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

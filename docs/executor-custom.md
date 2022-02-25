@@ -21,7 +21,7 @@ You can check full example implementation here: <https://github.com/exu/testkube
 
 ### Implement Runner Components
 
-[TestKube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
+[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement a new runner which is responsible for running and parsing results. But you're not limited to use our components for `go` language - you can you whatever language you want - just remember about managing input and output.
 
 Let's try to create new test runner which test if given URI call is successfull (`status code == 200`)
 
@@ -84,8 +84,6 @@ spec:
   image: kubeshop/testkube-example-executor:0.0.1 # pass your repository and tag
   types:
   - example/test
-  volume_mount_path: /mnt/artifacts-storage
-  volume_quantity: 10Gix
 ```
 
 and apply it on your cluster:
@@ -94,13 +92,13 @@ and apply it on your cluster:
 kubectl apply -f executor.yaml
 ```
 
-Now we're ready to create and run your custom scripts by passing URI as script content
+Now we're ready to create and run your custom tests by passing URI as test content
 
 ```sh
 # create 
-echo "http://google.pl" | kubectl testkube scripts create --name example-google-test --type example/test 
+echo "http://google.pl" | kubectl testkube tests create --name example-google-test --type example/test 
 # and run it in testkube
-kubectl testkube scripts run example-google-test
+kubectl testkube tests run example-google-test
 ```
 
 That's all for the most basic executor example, you can look our internal projects for more examples

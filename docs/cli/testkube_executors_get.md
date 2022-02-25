@@ -6,20 +6,21 @@ Gets executordetails
 
 Gets executor, you can change output format
 
-```sh
-testkube executors get [flags]
+```
+testkube executors get <executorName> [flags]
 ```
 
 ### Options
 
-```sh
+```
   -h, --help          help for get
   -n, --name string   unique executor name, you can also pass it as argument
 ```
 
 ### Options inherited from parent commands
 
-```sh
+```
+      --analytics-enabled    should analytics be enabled (default true)
   -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
   -s, --namespace string     kubernetes namespace (default "testkube")
@@ -29,4 +30,5 @@ testkube executors get [flags]
 
 ### SEE ALSO
 
-* [testkube executors](testkube_executors.md)  - Executor management commands
+* [testkube executors](testkube_executors.md)	 - Executor management commands
+

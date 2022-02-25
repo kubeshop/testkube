@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewJobExecutor(repo result.Repository) (client JobExecutor, err error) {
-	jobClient, err := jobs.NewJobClient()
+func NewJobExecutor(repo result.Repository, initImage string) (client JobExecutor, err error) {
+	jobClient, err := jobs.NewJobClient(initImage)
 	if err != nil {
 		return client, fmt.Errorf("can't get k8s jobs client: %w", err)
 	}
@@ -33,7 +33,7 @@ type JobExecutor struct {
 }
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
-// Worker should set valid state for success or error after script completion
+// Worker should set valid state for success or error after test completion
 // TODO add timeout
 func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
 	events = make(chan ResultEvent)
@@ -95,13 +95,13 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	return
 }
 
-// Execute starts new external script execution, reads data and returns ID
+// Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	return c.Client.LaunchK8sJob(options.ExecutorSpec.Image, c.Repository, execution, options.HasSecrets)
 }
 
-// Execute starts new external script execution, reads data and returns ID
+// Execute starts new external test execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
 func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	return c.Client.LaunchK8sJobSync(options.ExecutorSpec.Image, c.Repository, execution, options.HasSecrets)

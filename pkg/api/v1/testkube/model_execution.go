@@ -1,7 +1,7 @@
 /*
- * TestKube API
+ * Testkube API
  *
- * TestKube provides a Kubernetes-native framework for test definition, execution and results
+ * Testkube provides a Kubernetes-native framework for test definition, execution and results
  *
  * API version: 1.0.0
  * Contact: testkube@kubeshop.io
@@ -13,16 +13,16 @@ import (
 	"time"
 )
 
-// API server script execution
+// Test execution
 type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
-	// unique script name (CRD Script name)
-	ScriptName string `json:"scriptName,omitempty"`
-	// script namespace
-	ScriptNamespace string `json:"scriptNamespace,omitempty"`
-	// script type e.g. postman/collection
-	ScriptType string `json:"scriptType,omitempty"`
+	// unique test name (CRD Test name)
+	TestName string `json:"testName,omitempty"`
+	// test namespace
+	TestNamespace string `json:"testNamespace,omitempty"`
+	// test type e.g. postman/collection
+	TestType string `json:"testType,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
 	// environment variables passed to executor
@@ -32,8 +32,8 @@ type Execution struct {
 	// execution params passed to executor converted to vars for usage in tests
 	Params map[string]string `json:"params,omitempty"`
 	// params file content - need to be in format for particular executor (e.g. postman envs file)
-	ParamsFile string         `json:"paramsFile,omitempty"`
-	Content    *ScriptContent `json:"content,omitempty"`
+	ParamsFile string       `json:"paramsFile,omitempty"`
+	Content    *TestContent `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

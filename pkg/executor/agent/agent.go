@@ -17,18 +17,18 @@ import (
 // - pod:failed,  test execution: failed - this one is unusual behaviour
 func Run(r runner.Runner, args []string) {
 
-	var script []byte
+	var test []byte
 	var err error
 
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		script, err = ioutil.ReadAll(os.Stdin)
+		test, err = ioutil.ReadAll(os.Stdin)
 		if err != nil {
 			output.PrintError(fmt.Errorf("can't read stind input: %w", err))
 			os.Exit(1)
 		}
 	} else if len(args) > 1 {
-		script = []byte(args[1])
+		test = []byte(args[1])
 	} else {
 		output.PrintError(fmt.Errorf("missing input JSON argument or stdin input"))
 		os.Exit(1)
@@ -36,13 +36,13 @@ func Run(r runner.Runner, args []string) {
 
 	e := testkube.Execution{}
 
-	err = json.Unmarshal(script, &e)
+	err = json.Unmarshal(test, &e)
 	if err != nil {
 		output.PrintError(err)
 		os.Exit(1)
 	}
 
-	output.PrintEvent("running test script", e.Id)
+	output.PrintEvent("running test", e.Id)
 
 	result, err := r.Run(e)
 	if err != nil {

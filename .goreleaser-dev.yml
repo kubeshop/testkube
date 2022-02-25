@@ -47,9 +47,7 @@ brews:
     homepage: https://testkube.io
     license: "MIT"
 nfpms:
-  - 
-    maintainer: TestKube team 
+  - maintainer: Testkube team
     license: "MIT"
     formats:
       - deb
-

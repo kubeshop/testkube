@@ -16,16 +16,16 @@ type HTTPClient interface {
 
 type Client interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(scriptID string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
-	AbortExecution(script string, id string) error
+	ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
+	AbortExecution(test string, id string) error
 
-	GetScript(id, namespace string) (script testkube.Script, err error)
-	CreateScript(options UpsertScriptOptions) (script testkube.Script, err error)
-	UpdateScript(options UpsertScriptOptions) (script testkube.Script, err error)
-	DeleteScript(name string, namespace string) error
-	DeleteScripts(namespace string) error
-	ListScripts(namespace string, tags []string) (scripts testkube.Scripts, err error)
-	ExecuteScript(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string) (execution testkube.Execution, err error)
+	GetTest(id, namespace string) (test testkube.Test, err error)
+	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	DeleteTest(name string, namespace string) error
+	DeleteTests(namespace string) error
+	ListTests(namespace string, tags []string) (tests testkube.Tests, err error)
+	ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
@@ -36,26 +36,26 @@ type Client interface {
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
-	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertTestOptions) (script testkube.Test, err error)
-	GetTest(id string, namespace string) (script testkube.Test, err error)
-	ListTests(namespace string, tags []string) (scripts testkube.Tests, err error)
-	DeleteTest(name string, namespace string) error
-	DeleteTests(namespace string) error
-	ExecuteTest(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestExecution, err error)
+	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	GetTestSuite(id string, namespace string) (testSuite testkube.TestSuite, err error)
+	ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error)
+	DeleteTestSuite(name string, namespace string) error
+	DeleteTestSuites(namespace string) error
+	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
 
-	GetTestExecution(executionID string) (execution testkube.TestExecution, err error)
-	ListTestExecutions(test string, limit int, tags []string) (executions testkube.TestExecutionsResult, err error)
-	WatchTestExecution(executionID string) (execution chan testkube.TestExecution, err error)
+	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
+	ListTestSuiteExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
+	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 
-	GetServerInfo() (scripts testkube.ServerInfo, err error)
+	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
-type UpsertTestOptions testkube.TestUpsertRequest
+type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertScriptOptions - is mapping for now to OpenAPI schema for creating request
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating request
 // if needed can beextended to custom struct
-type UpsertScriptOptions testkube.ScriptUpsertRequest
+type UpsertTestOptions testkube.TestUpsertRequest
 
 // CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
 type CreateExecutorOptions testkube.ExecutorCreateRequest

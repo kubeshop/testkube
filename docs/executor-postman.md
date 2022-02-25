@@ -1,6 +1,6 @@
 # Postman Collections
 
-Watch this simple TestKube intro video for Postman collections with Testkube:
+Watch this simple Testkube intro video for Postman collections with Testkube:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
 </iframe>
@@ -10,8 +10,8 @@ Testkube is able to run Postman collections inside your Kubernetes cluster so it
 
 ## **Test Environment**
 
-Let's assume that our SUT (Service Under Test) is an internal Kubernetes service which has a 
-NodePort `Service` created and is exposed on port `8088`. The service name is `testkube-api-server`
+Let's assume that our SUT (Service Under Test) is an internal Kubernetes service which has
+ClusterIP `Service` created and is exposed on port `8088`. The service name is `testkube-api-server`
 and is exposing the `/health` endpoint that we want to test.
 
 To call the SUT inside a cluster:
@@ -23,7 +23,7 @@ curl http://testkube-api-server:8088/health
 Output:
 
 ```sh
-200 OK 
+200 OK
 ```
 
 ## **Create a New Postman Test**
@@ -40,35 +40,35 @@ Now we can create a new TestKube based on the saved Postman Collection.
 ## **Create a New Testkube Test Script**
 
 ```sh
-kubectl testkube scripts create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection 
+kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
-Script created  🥇
+Test created  🥇
 ```
 
-Script created!
+Test created!
 
 ## **Running a Test**
 
 ```sh
-kubectl testkube scripts run api-incluster-test
+kubectl testkube tests run api-incluster-test
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -77,23 +77,23 @@ Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
-Script queued for execution
-Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d6398b046f8fbd3d955d4
+Test queued for execution
+Use the following command to get test execution details:
+$ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
-Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+or watch test execution until complete:
+$ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 
 ```
 
-You can name your test runs. If no name is passed, TestKube will autogenerate a name.
+Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 
 ## **Getting Test Results**
 
-Now we can watch/get script execution details:
+Now we can watch/get test execution details:
 
 ```sh
-kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+kubectl testkube tests watch 615d6398b046f8fbd3d955d4
 ```
 
 Output:
@@ -136,9 +136,9 @@ API-Health
 ├──────────────────────────────────────────────────────────────────┤
 │ average response time: 297ms [min: 297ms, max: 297ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
-Script execution completed in 598ms
+Test execution completed in 598ms
 ```
 
 ## **Summary**
 
-Testkube simplifies running tests inside a cluster and stores our tests and tests results for later use.
+Testkube simplifies running tests inside a cluster and stores tests and tests results for later use.

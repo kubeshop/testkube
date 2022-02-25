@@ -13,13 +13,13 @@ func GetClient(clientType ClientType, namespace string) (client Client, err erro
 	switch clientType {
 
 	case ClientDirect:
-		client = NewDefaultDirectScriptsAPI()
+		client = NewDefaultDirectAPIClient()
 	case ClientProxy:
 		clientset, err := GetClientSet()
 		if err != nil {
 			return client, err
 		}
-		client = NewProxyScriptsAPI(clientset, NewProxyConfig(namespace))
+		client = NewProxyAPIClient(clientset, NewProxyConfig(namespace))
 	default:
 		err = fmt.Errorf("Client %s is not handled by testkube, use one of: %v", clientType, []ClientType{ClientDirect, ClientProxy})
 	}
