@@ -171,7 +171,198 @@ That's all for the most basic executor example, you can look our internal projec
 
 # Creating executor in other programming language (than `go`)
 
-TODO
+([You can find full commented code example here](https://github.com/kubeshop/testkube-executor-example-nodejs/blob/main/app.js))
+
+For go-based executors we've prepared a lot of handy functions (like printing valid outputs or wrappers around calling external processes)
+In other languages (for now) you'll need to manage this by your own. 
+
+One thing which Testkube simplified is test content management. As we're supporting several different test content types (like string,uri,git-file,git-dir)
+The whole complexity of checking out or downloading is covered by Testkube. 
+
+Testkube will store it's files and directories in directory defined by `RUNNER_DATADIR` env 
+And will save `test-content` file for:
+- string content (e.g. postman collection is passed as string content read from json file)
+- uri (testkube will get content of file defined by uri)
+In case of git related content: 
+- testkube will checkout repo content in that directory
+
+We've created simple NodeJS executor (sorry for our Node skills we've tried the best ;) ) 
+
+Executor will get URI and try to call HTTP GET method on passed value, and will return 
+- success - when status code will be 200 
+- failed - otherwise 
+
+```javascript
+"use strict";
+
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+
+const args = process.argv.slice(2);
+if (args.length == 0) {
+  error("Please pass arguments");
+  process.exit(1);
+}
+
+var uri;
+if (!process.env.RUNNER_DATADIR) {
+  error("No valid data directory detected");
+  process.exit(1);
+}
+
+const testContentPath = path.join(process.env.RUNNER_DATADIR, "test-content");
+uri = fs.readFileSync(testContentPath, { encoding: "utf8", flag: "r"});
+
+https.get(uri, (res) => {
+    if (res.statusCode == 200) {
+      successResult("Got valid status code: 200 OK");
+    } else {
+      errorResult("Got invalid status code");
+    }
+  })
+  .on("error", (err) => { error("Error: " + err.message); });
+
+
+function errorResult(message) {
+  console.log(JSON.stringify({ "type": "result", "result": { "status": "error", "errorMessage": message, }}));
+}
+
+function successResult(output) {
+  console.log(JSON.stringify({ "type": "result", "result": { "status": "success", "output": output, }}));
+}
+
+// error will return error info not related to test itself (some issues with executor)
+function error(message) {
+  console.log(JSON.stringify({ "type": "error", "content": message, })); 
+}
+  
+```
+
+Code is ready and working - we're assuming defaults so `RUNNER_DATADIR` will be `/data` and our file will be in `/data/test-content` file.
+
+As we can see we're pushing JSON output to stdin with console.log function (it's based on our [OpenAPI spec - ExecutorOutput](https://kubeshop.github.io/testkube/openapi/))
+
+Two basic output types are handled here:
+- in case of executor failures (non-test related) we should return `error`, 
+- in case of test result we should return `result` with test status (success, error)
+
+
+Now when executor code is ready we need additional steps:
+- Docker image (create image and push)
+- Kubernetes Executor Custom Resource definition
+- Create test
+
+Let's start with Docker: 
+We'll simplify and use latest tag here - but you should use versioning as good practice.
+As for now testkube runs directly command and is passing execution information as argument 
+We need to add runner binary (but we have plans to remove need of this step)
+
+```sh
+#!/usr/bin/env sh
+node app.js "$@"
+```
+
+And add it into our Dockerfile
+
+```Dockerfile
+FROM node:17
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Bundle app source
+COPY runner /bin/runner
+RUN chmod +x /bin/runner
+COPY app.js app.js
+
+EXPOSE 8080
+CMD [ "/bin/runner" ]
+```
+
+Now let's build and push our docker container (change user/repo to your Docker Hub username): 
+```sh
+docker build --platform=linux/amd64 -t USER/testkube-executor-example-nodejs:latest -f Dockerfile .
+docker push USER/testkube-executor-example-nodejs:latest
+```
+
+After we have our image in place where Kubnernetes can load it we need to define our executor: 
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: example-nodejs-executor
+  namespace: testkube
+spec:
+  executor_type: job
+  features: []
+  image: kubeshop/testkube-executor-example-nodejs:latest
+  types:
+    - example/test
+```
+
+Save it somewhere e.g. `example-executor.yaml` and apply into Kubernetes cluster: 
+
+```sh
+kubectl apply -f example-executor.yaml
+```
+
+
+When everything in place we can now start adding our Testkube tests 
+(We'll need testkube for this so head to [installation instructions](/testkube/installing/))
+
+```
+echo "https://httpstat.us/200" | kubectl testkube tests create --name example-test --type example/test
+```
+
+As we can see we need to pass test name and test type (`example/test` which we defined in our executor CRD). 
+
+Now it's finally time to run our test!
+
+```
+kubectl tests run example-test -f
+
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
+                                           /tɛst kjub/ by Kubeshop
+
+
+Type          : example/test
+Name          : example-test-string
+Execution ID  : 6218ccd2a26fa94ee7a7cfd1
+Execution name: moderately-pleasant-labrador
+
+
+Getting pod logs
+Execution completed Got valid status code: 200 OK
+
+.
+Use following command to get test execution details:
+$ kubectl testkube tests execution 6218ccd2a26fa94ee7a7cfd1
+
+
+
+Got valid status code: 200 OK
+Test execution completed with sucess in 6.163s 🥇
+
+Use following command to get test execution details:
+$ kubectl testkube tests execution 6218ccd2a26fa94ee7a7cfd1
+
+
+Watch test execution until complete:
+$ kubectl testkube tests watch 6218ccd2a26fa94ee7a7cfd1
+
+
+```
+
+Yay our test completes with success!
+(you can try to create another test with diferent status code and check how it's failing)
+
+
 
 # Resources
 
