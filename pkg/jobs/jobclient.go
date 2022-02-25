@@ -61,7 +61,7 @@ type JobOptions struct {
 	Image       string
 	Jsn         string
 	TestName    string
-	Initmage    string
+	InitImage   string
 	JobTemplate string
 	HasSecrets  bool
 }
@@ -100,7 +100,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 	options.Name = execution.Id
 	options.Namespace = c.Namespace
 	options.Jsn = string(jsn)
-	options.Initmage = c.initImage
+	options.InitImage = c.initImage
 	options.TestName = execution.TestName
 	if options.JobTemplate == "" {
 		options.JobTemplate = c.jobTemplate
@@ -186,7 +186,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	options.Name = execution.Id
 	options.Namespace = c.Namespace
 	options.Jsn = string(jsn)
-	options.Initmage = c.initImage
+	options.InitImage = c.initImage
 	options.TestName = execution.TestName
 	if options.JobTemplate == "" {
 		options.JobTemplate = c.jobTemplate
