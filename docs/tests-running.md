@@ -219,7 +219,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 61e1142465e59a318346512b
+$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s
 ```

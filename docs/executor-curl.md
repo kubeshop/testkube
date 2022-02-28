@@ -51,8 +51,8 @@ The test can be run using `kubectl testkube scripts start curl-test` which gives
 
 Test queued for execution
 
-Use the following command to get script execution details:
-$ kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e
+Use the following command to get test execution details:
+$ kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e
 
 Or watch the script execution until complete:
 $ kubectl testkube scripts watch 613a2d7056499e6e3d5b9c3e
