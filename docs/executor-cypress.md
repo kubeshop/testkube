@@ -1,14 +1,14 @@
 # Cypress Tests
 
-Testkube is able to make simple runs of Cypress tests. As Cypress is organised in projects we allow to define your tests in Github repository (for now only public one is implemented).
+TestKube makes running Cypress tests simple. As Cypress is organised in projects, Testkube allows tests to be defined in a Github repository.
 
-To create new cypress test you need some Git repository with example cypress project (please follow Cypress docs for details - <https://docs.cypress.io/guides/dashboard/projects>)
+To create a new Cypress test, you will need a Git repository with an example Cypress project. Please follow the Cypress documentation for details - <https://docs.cypress.io/guides/dashboard/projects>.
 
-## Creating new test
+## **Creating a New Test**
 
-Let's assume we've created one in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples>
-which contains really simple test which checks if some string exists on web site, we'll also check
-if env parameter exists - to show how to pass additional parameters into test.
+Let's assume we've created a Cypress project in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples>,
+which contains a really simple test that checks for the existence of a particular string on a web site.  We'll also check
+if the **env** parameter exists to show how to pass additional parameters into the test.
 
 <https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js>
 
@@ -24,15 +24,15 @@ describe('The Home Page', () => {
 })
 ```
 
-## Creating `testkube` test 
+## **Creating the Testkube Test Script**
 
-Now we need to create Testkube test from this example (we need to pass repo, branch, path where project exists - in case of mono repo, name and type)
+Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
 
 ```sh
 kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
-We can check that test is created with:
+Check that script is created:
 
 ```sh
 kubectl get tests 
@@ -45,9 +45,9 @@ NAME                  AGE
 kubeshop-cypress      51s
 ```
 
-## Starting test
+## **Starting the Test**
 
-Now we can start our test
+Start the test:
 
 ```sh
 kubectl testkube tests start kubeshop-cypress
@@ -79,9 +79,9 @@ or watch test execution until complete:
 $ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
 ```
 
-## Getting execution results
+## **Getting Execution Results**
 
-Let's watch our test execution
+Let's watch our test execution:
 
 ```sh
 kubectl testkube tests watch 615d43d3b046f8fbd3d955ca
@@ -179,13 +179,13 @@ Test execution completed in 1m17s
 
 ```
 
-## Adding parameters
+## **Adding Parameters**
 
-We can see that our test was failed because of  `AssertionError: expected undefined to equal 'testvalue'`
+The test failed because of `AssertionError: expected undefined to equal 'testvalue'`.
 
-We forgot to add test param - let's fix that! In our test we assume that param will have name `testparam` and its value will be `testvalue` - so let's add that.  
+The test parameter was not passed into the test script. In this test, the parameter will have the name `testparam` and its value will be `testvalue`.   
 
-We can also add `-f` flag to follow execution (watch for changes) - for now we're only looking for test completion but in future we'll pipe test output in real time (ongoing features)
+Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
 kubectl testkube tests start kubeshop-cypress -p testparam=testvalue -f
@@ -282,6 +282,6 @@ $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 Test execution completed in 1m45.405939s
 ```
 
-## Summary
+## **Summary**
 
-Our first test completed successfully! As we've seen above it's really easy to run Cypress tests with Testkube!
+Our first test completed successfully! As we've seen above, it's really easy to run Cypress tests with Testkube!

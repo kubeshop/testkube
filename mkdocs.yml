@@ -21,11 +21,11 @@ nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
-  - Managing test suites:
+  - Managing Test Suites:
       - Creating: testsuites-creating.md
       - Running: testsuites-running.md
       - Getting results: testsuites-getting-results.md
-  - Managing tests:
+  - Managing Tests:
       - Creating: tests-creating.md
       - Running: tests-running.md
       - Getting results: tests-getting-results.md
@@ -46,7 +46,7 @@ nav:
   - Architecture: architecture.md
   - Contributing: contributing.md
   - Development: development.md
-  - OpenAPI definition: openapi.md
+  - OpenAPI Definition: openapi.md
   - Telemetry: telemetry.md
   - Storage: artifacts-storage.md
 
@@ -63,10 +63,9 @@ extra:
       find what they're searching for. With your consent, you're helping us to
       make our documentation better.
 
-plugins:
-  - render_swagger
-  - search
-
+# plugins:
+# - render_swagger
+  
 # Extensions
 markdown_extensions:
   - pymdownx.highlight

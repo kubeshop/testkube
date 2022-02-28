@@ -1,6 +1,6 @@
-# Getting list of recent test executions
+# Getting a List of Recent Test Executions
 
-To get recent results simply call `tests executions` subcommand 
+To get recent results, call the `tests executions` subcommand:
 
 ```sh
 
@@ -23,9 +23,9 @@ kubectl testkube testsuites executions
 ```
 
 
-# Getting single test execution
+## **Getting a Single Test Execution**
 
-Now when you know test execution ID you can get results 
+With the test execution ID, you can get single test results:
 
 ```sh 
 kubectl testkube testsuites execution 61e1136165e59a3183465125 
@@ -52,7 +52,7 @@ Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 ```
 
-TestSuite steps which are running workflows based on `Test` Custom Resources have test execution ID - you can get details of each in separate command: 
+Test Suite steps that are running workflows based on `Test` Custom Resources have a Test Execution ID. You can get the details of each in a separate command: 
 
 ```sh 
 kubectl testkube tests execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s
