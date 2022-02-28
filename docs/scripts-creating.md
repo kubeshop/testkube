@@ -1,90 +1,89 @@
-# Testkube Tests
+# Teskube Test Scripts
 
-Tests are single executor oriented objects. Test can have different types, which depends on which executors are installed in your cluster.
+Test scripts are single executor oriented tests. The script can have different types, which depends on the types of executors installed in your cluster.
 
-Testkube includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during the Testkube install by default.  // provide examples for Cypress and cURL
+Testkube includes `postman/collection`, `cypress/project` and `curl/test` script types that are auto registered during the Testkube install by default. // provide examples for cypress and  curl
 
-As Testkube was designed with flexibility in mind, you can add your own executors to handle additional test types.
+As Testkube was designed with flexibility in mind - executors may be added for handling additional script types.
 
-## **Test Source**
+## **Script Test Source**
 
-Tests can be currently created from two sources:
+Scripts can currently be created from two sources:
 
-1. A simple `file` with the test content, For example, with Postman collections, we're exporting the collection as a JSON file. For cURL executors, we're passing a JSON file with the configured cURL command.
-2. Git - we can pass `repository`, `path` and `branch` where our tests are stored. This is used in Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
+1. A simple file with test content. For postman collections, we're exporting collection as JSON file.  For curl executor, we're passing JSON file with configured curl command.
+2. `Git` - we can pass `repository`, `path` and `branch` where our test is. This is used in Cypress executor - as Cypress tests are more like npm-based projects which can have a lot of files. Sparse checkouts are handled that are fast even in the case of huge mono-repos.
 
-## **Create a Test**
+## **Create a Script**
 
-### **Create Your First Test from a File (Postman Collection Test)**
+### **Create Your First Script from a File (Postman Collection Test)**
 
-To create your first Postman collection in Testkube, export your collection into a file.
+To create your first postman collection in Testkube, export your collection into a file.
 
-Right click on your collection name:
+- Right click on your collection name:
 
-![create postman collection step 1](img/test-create-1.png)
+![create postman collection step 1](img/script-create-1.png)
 
-Click the **Export** button:
+- Click the **Export** button:
 
-![create postman collection step 2](img/test-create-1.png)
+![create postman collection step 2](img/script-create-1.png)
 
-Save in a convenient location. In this example, we are using `~/Downloads/TODO.postman_collection.json` path.
+- Save in a convenient location (We're using `~/Downloads/TODO.postman_collection.json` path.):
 
-![create postman collection step 3](img/test-create-1.png)
+![create postman collection step 3](img/script-create-1.png)
 
 ```sh
-kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube scripts create --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
 
-Detected test type postman/collection
-Test created test 🥇
+Detected test script type postman/collection
+Script created test 🥇
 ```
 
-Test created! Now we have a reusable test.
+Your reusable script is created!
 
-### **Updating Tests**
+### **Updating Scripts**
 
-If you need to update your test after change in Postman, re-export it to a file and run the update command:
+To update your script after a change in Postman, re-export to a file and run the **update** command:
 
 ```sh
-kubectl testkube tests update --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube scripts update --file ~/Downloads/TODO.postman_collection.json --name test
 ```
-
-To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster: 
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
 
-Detected test test type postman/collection
-Test updated test 🥇
+Detected test script type postman/collection
+Script updated test 🥇
 ```
 
-Testkube will override all test settings and content with the `update` method.
+Testkube will override all script settings and content with **update** method.
 
-### **Checking Test Content**
+
+### **Checking Script Content**
 
 Let's see what has been created:
 
 ```sh
-kubectl get tests -ntestkube
+kubectl get scripts -n testkube
 ```
 
 Output:
@@ -94,18 +93,14 @@ NAME   AGE
 test   32s
 ```
 
-Get the details of a test: 
-
-```sh 
-kubectl get tests -ntestkube test-example -oyaml
 ```sh
-$ kubectl testkube tests get test
+$ kubectl testkube scripts get test
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
 
@@ -226,7 +221,7 @@ content: |-
                                                 "exec": [
                                                         "console.log(\"deleting\", pm.environment.get(\"item\"))"
                                                 ],
-                                                "type": "text/javatest"
+                                                "type": "text/javascript"
                                         }
                                 },
                                 {
@@ -288,46 +283,48 @@ content: |-
 
 ```
 
-We can see that the test resource was created with Postman collection JSON content.
+We can see that the script resource was created with Postman collection JSON content.
 
-You can also check tests with the standard `kubectl` command which will list the tests Custom Resource.
+You can also check scripts with the standard `kubectl` command, which will list the Scripts Custom Resource.
 
 ```sh
-kubectl get tests -n testkube test -oyaml
+kubectl get scripts -ntestkube test -oyaml
 ```
 
-### **Create a Test from Git**
+### **Create a Script from Git**
 
-Some executors can handle files and some can handle only git resources. You'll need to follow the particular executor **readme** file to be aware which test types the executor handles.
+Some executors can handle files and some can handle only Git resources. Consult the executor **readme file** to determine which scripts types are handled.
 
-Let's assume that a Cypress project is created in a git repository - <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples> - where **examples** is a test directory in the `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
+Let's assume that a Cypress project is created in a Git repository and one has been created in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples>.
 
-Now we can create our Cypress-based test as shown below. In git based tests, we need to pass the test type.
+Where **examples** is a test directory in the `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
+
+Now we can create our Cypress based script (in Git based scripts we need to pass the script type)
 
 ```sh
-kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
                                            /tɛst kjub/ by Kubeshop
 
 
-Test created kubeshop-cypress 🥇
+Script created kubeshop-cypress 🥇
 ```
 
-Let's check how the test created by Testkube is defined in the cluster:
+The created Testkube test script is defined on the cluster: 
 
 ```sh
-$ kubectl get tests -n testkube kubeshop-cypress -o yaml
+$ kubectl get scripts -n testkube kubeshop-cypress -o yaml
 apiVersion: tests.testkube.io/v1
-kind: Test
+kind: Script
 metadata:
   creationTimestamp: "2021-11-17T12:29:32Z"
   generation: 1
@@ -344,8 +341,8 @@ spec:
   type: cypress/project
 ```
 
-As we can see, this test has `spec.repository` with git repository data. This data can now be used by the executor to download test data.
+This script has `spec.repository` with Git repository data. Those data can now be used by the executor to download script data.
 
 ## **Summary**
 
-Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
+Scripts are the smallest abstractions over tests in Testkube. They can be created with different sources and used by executors to run on top of a particular test framework.

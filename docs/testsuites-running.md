@@ -1,6 +1,6 @@
-# Running `TestSuite`
+# Running Test Suites
 
-To run your tests suites pass `testsuites run` command with test name to your `kubectl testkube` plugin. TestSuites are started asynchronously by default.
+To run your Tests Suites, pass `testsuites run` command with the test name to your `kubectl testkube` plugin. Test Suites are started asynchronously by default.
 
 ```sh
 kubectl testkube testsuites run test-example
@@ -21,19 +21,19 @@ Status: pending
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites watch 61e1136165e59a3183465125
 ```
 
-After the test is started you can check current status of the test with `tests execution EXECUTION_ID`
+After the test is started, you can check the current status of the test with `tests execution EXECUTION_ID`.
 
-# Running test suites synchronously
+## **Running Testsuites Synchronously**
 
-You can also start test suite synchronously by passing `-f` flag (like --follow) to your command
+You can start a testsuite synchronously by passing the `-f` flag (like --follow) to your command:
 
 ```sh
 kubectl testkube testsuites run test-example -f
@@ -83,7 +83,7 @@ Status: success
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1142465e59a318346512b
 
 ```
