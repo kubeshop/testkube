@@ -23,6 +23,4 @@ type ExecutorCreateRequest struct {
 	Types []string `json:"types"`
 	// URI for rest based executors
 	Uri string `json:"uri,omitempty"`
-	// Job template to launch executor
-	JobTemplate string `json:"jobTemplate,omitempty"`
 }
