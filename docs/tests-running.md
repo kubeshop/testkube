@@ -32,7 +32,7 @@ Execution ID  : 615d6398b046f8fbd3d955d4
 Execution name: openly-full-bream
 
 Test queued for execution
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
 
 or watch test execution until complete:
@@ -70,7 +70,7 @@ Execution ID  : 615d7e1ab046f8fbd3d955d6
 Execution name: monthly-sure-finch
 
 Test queued for execution
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
 or watch test execution until complete:
@@ -113,7 +113,7 @@ API-Health
 ├──────────────────────────────────────────────────────────────────┤
 │ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
 
 Test execution completed in 595ms
@@ -150,7 +150,7 @@ Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
 Test queued for execution
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 or watch test execution until complete:
@@ -218,7 +218,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s

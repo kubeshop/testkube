@@ -48,7 +48,7 @@ Status: success
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 ```
 

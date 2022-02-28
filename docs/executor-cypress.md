@@ -72,7 +72,7 @@ Execution ID  : 615d5265b046f8fbd3d955d0
 Execution name: wildly-popular-worm
 
 Test queued for execution
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
 
 or watch test execution until complete:
@@ -208,7 +208,7 @@ Execution ID  : 615d5372b046f8fbd3d955d2
 Execution name: nominally-able-glider
 
 Test queued for execution
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 or watch test execution until complete:
@@ -276,7 +276,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s

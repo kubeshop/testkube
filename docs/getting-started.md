@@ -134,7 +134,7 @@ kubectl testkube tests run my-test-name
 
 #  ... some test run output ...
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 kubectl testkube tests execution 611b6da38cd74034e7c9d408
 
 or watch for completition with

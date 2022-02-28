@@ -21,11 +21,11 @@ Status: pending
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1136165e59a3183465125
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites watch 61e1136165e59a3183465125
 ```
 
@@ -83,7 +83,7 @@ Status: success
 
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube testsuites execution 61e1142465e59a318346512b
 
 ```
