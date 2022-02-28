@@ -106,7 +106,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 		options.JobTemplate = c.jobTemplate
 	}
 
-	jobSpec, err := NewJobSpec(options)
+	jobSpec, err := NewJobSpec(c.Log, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -192,7 +192,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 		options.JobTemplate = c.jobTemplate
 	}
 
-	jobSpec, err := NewJobSpec(options)
+	jobSpec, err := NewJobSpec(c.Log, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -478,7 +478,7 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(options JobOptions) (*batchv1.Job, error) {
+func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
 	var secretEnvVars []corev1.EnvVar
 	if options.HasSecrets {
 		secretEnvVars = []corev1.EnvVar{
@@ -519,6 +519,7 @@ func NewJobSpec(options JobOptions) (*batchv1.Job, error) {
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
+	log.Debug("job spec", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, err
