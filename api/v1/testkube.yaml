@@ -1505,6 +1505,9 @@ components:
         uri:
           description: URI for rest based executors
           type: string
+        jobTemplate:
+          description: Job template to launch executor
+          type: string        
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
