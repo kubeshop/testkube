@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
+
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
@@ -19,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -58,6 +60,7 @@ func runMigrations() (err error) {
 func main() {
 
 	telemetry.CollectAnonymousInfo()
+	analytics.SendAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
 

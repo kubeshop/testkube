@@ -28,7 +28,7 @@ func CollectAnonymousInfo() {
 	if !isDisabled {
 		client := analytics.New(telemetryToken)
 		client.Enqueue(analytics.Track{
-			AnonymousId: machineID(),
+			AnonymousId: MachineID(),
 			Event:       heartbeatEvent,
 			Timestamp:   time.Now(),
 		})
@@ -48,7 +48,7 @@ func CollectAnonymousCmdInfo() {
 		client := analytics.New(telemetryToken)
 
 		client.Enqueue(analytics.Track{
-			AnonymousId: machineID(),
+			AnonymousId: MachineID(),
 			Event:       cliEvent,
 			MessageId:   strings.Join(os.Args, " "),
 			Timestamp:   time.Now(),
@@ -58,7 +58,7 @@ func CollectAnonymousCmdInfo() {
 	}
 }
 
-func machineID() string {
+func MachineID() string {
 	id, _ := generate()
 	return id
 }
