@@ -1,5 +1,9 @@
 package testkube
 
+func (t *WebhookEventType) String() string {
+	return string(*t)
+}
+
 func WebhookTypePtr(t WebhookEventType) *WebhookEventType {
 	return &t
 }

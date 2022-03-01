@@ -74,10 +74,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err)
 	}
 
-	s.WebhookClient.GetByEvent("")
-
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
+	s.sendEvent(testkube.WebhookTypeStartTest, execution)
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err)
@@ -116,8 +115,27 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.sendEvent(testkube.WebhookTypeEndTest, execution)
 
 	return
+}
+
+func (s TestkubeAPI) sendEvent(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
+	webhookList, err := s.WebhookClient.GetByEvent(eventType.String())
+	if err != nil {
+		return err
+	}
+
+	for _, wh := range webhookList.Items {
+		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
+		s.WebhookSender.Send(testkube.WebhookEvent{
+			Uri:       wh.Spec.Uri,
+			Type_:     eventType,
+			Execution: &execution,
+		})
+	}
+
+	return nil
 }
 
 // ListExecutionsHandler returns array of available test executions

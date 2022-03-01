@@ -29,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
 func NewServer(
@@ -53,6 +54,7 @@ func NewServer(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
+		WebhookSender:        webhook.NewServer(),
 	}
 
 	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -79,6 +81,7 @@ type TestkubeAPI struct {
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhookClient        *executorsclientv1.WebhooksClient
+	WebhookSender        *webhook.Server
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
