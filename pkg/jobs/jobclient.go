@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -512,6 +513,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		return nil, err
 	}
 
+	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
 		return nil, err
@@ -519,8 +521,6 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
-	fmt.Println("job spec", jobSpec)
-	fmt.Println("options", options)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, err
