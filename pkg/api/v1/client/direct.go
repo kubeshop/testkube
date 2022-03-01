@@ -349,6 +349,81 @@ func (c DirectAPIClient) DeleteExecutor(name string) (err error) {
 	return
 }
 
+// webhook --------------------------------------------------------------------------------
+
+func (c DirectAPIClient) CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks")
+
+	request := testkube.WebhookCreateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return webhook, err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return webhook, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return webhook, fmt.Errorf("api/create-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+}
+
+func (c DirectAPIClient) GetWebhook(name string) (webhook testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks/%s", name)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return webhook, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return webhook, fmt.Errorf("api/get-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+
+}
+
+func (c DirectAPIClient) ListWebhooks() (webhooks []testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks?namespace=%s", "testkube")
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return webhooks, fmt.Errorf("client.Get error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return webhooks, fmt.Errorf("api/list-exeutors returned error: %w", err)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&webhooks)
+	return
+
+}
+
+func (c DirectAPIClient) DeleteWebhook(name string) (err error) {
+	uri := c.getURI("/webhooks/%s?namespace=%s", name, "testkube")
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	if err != nil {
+		return fmt.Errorf("prepare request error: %w", err)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client.Do error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/delete-executor returned error: %w", err)
+	}
+
+	return
+}
+
 // maintenance --------------------------------------------------------------------------------------------
 
 func (c DirectAPIClient) GetServerInfo() (info testkube.ServerInfo, err error) {
@@ -391,6 +466,13 @@ func (c DirectAPIClient) getExecutorDetailsFromResponse(resp *http.Response) (ex
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&executor)
+	return
+}
+
+func (c DirectAPIClient) getWebhookFromResponse(resp *http.Response) (webhook testkube.Webhook, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&webhook)
 	return
 }
 
