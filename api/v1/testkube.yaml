@@ -1553,9 +1553,13 @@ components:
         - uri
         - types
       properties:
+        name:
+          type: string
+        namespace:
+          type: string
         uri:
           type: string
-        types:
+        events:
           type: array
           items:
             $ref: "#/components/schemas/WebhookEventType"

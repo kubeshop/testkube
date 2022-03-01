@@ -11,6 +11,8 @@ package testkube
 
 // executor create request body
 type WebhookCreateRequest struct {
-	Uri   string             `json:"uri"`
-	Types []WebhookEventType `json:"types"`
+	Name      string             `json:"name,omitempty"`
+	Namespace string             `json:"namespace,omitempty"`
+	Uri       string             `json:"uri"`
+	Events    []WebhookEventType `json:"events,omitempty"`
 }
