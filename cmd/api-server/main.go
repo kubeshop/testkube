@@ -23,7 +23,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -59,7 +58,6 @@ func runMigrations() (err error) {
 
 func main() {
 
-	telemetry.CollectAnonymousInfo()
 	analytics.SendAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
