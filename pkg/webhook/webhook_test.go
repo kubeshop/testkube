@@ -30,14 +30,11 @@ func TestWebhook(t *testing.T) {
 		s := NewServer()
 		s.RunWorkers()
 
-		execution := testkube.NewQueuedExecution()
-		execution.Id = executionID
-
 		// when
 		s.Send(testkube.WebhookEvent{
 			Type_:     testkube.WebhookTypeStartTest,
 			Uri:       svr.URL,
-			Execution: execution,
+			Execution: exampleExecution(),
 		})
 
 		// then
@@ -58,14 +55,11 @@ func TestWebhook(t *testing.T) {
 		s := NewServer()
 		s.RunWorkers()
 
-		execution := testkube.NewQueuedExecution()
-		execution.Id = executionID
-
 		// when
 		s.Send(testkube.WebhookEvent{
 			Type_:     testkube.WebhookTypeStartTest,
 			Uri:       svr.URL,
-			Execution: execution,
+			Execution: exampleExecution(),
 		})
 
 		// then
@@ -74,4 +68,27 @@ func TestWebhook(t *testing.T) {
 
 	})
 
+	t.Run("send event bad uri", func(t *testing.T) {
+		// given
+		s := NewServer()
+		s.RunWorkers()
+
+		// when
+		s.Send(testkube.WebhookEvent{
+			Type_:     testkube.WebhookTypeStartTest,
+			Uri:       "http://baduri.badbadbad",
+			Execution: exampleExecution(),
+		})
+
+		// then
+		r := <-s.Responses
+		assert.Error(t, r.Error)
+	})
+
+}
+
+func exampleExecution() *testkube.Execution {
+	execution := testkube.NewQueuedExecution()
+	execution.Id = executionID
+	return execution
 }
