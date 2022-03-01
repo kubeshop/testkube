@@ -1540,6 +1540,25 @@ components:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
 
+    WebhookEvent:
+      description: CRD based executor data
+      type: object
+      required:
+        - type
+      properties:
+        uri:
+          type: string
+        type:
+          $ref: "#/components/schemas/WebhookEventType"
+        execution:
+          $ref: "#/components/schemas/Execution"
+
+    WebhookEventType:
+      type: string
+      enum:
+        - start-test
+        - end-test
+
     #
     # Errors
     #

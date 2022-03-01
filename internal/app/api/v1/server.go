@@ -15,7 +15,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
 
@@ -38,6 +38,7 @@ func NewServer(
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
+	webhookClient *executorsclientv1.WebhooksClient,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -77,6 +78,7 @@ type TestkubeAPI struct {
 	TestsClient          *testsclientv2.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
+	WebhookClient        *executorsclientv1.WebhooksClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams

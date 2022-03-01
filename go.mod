@@ -114,4 +114,4 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-// replace github.com/kubeshop/testkube-operator v0.9.1 => ../testkube-operator
+replace github.com/kubeshop/testkube-operator v0.9.7 => ../testkube-operator

@@ -74,6 +74,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err)
 	}
 
+	s.WebhookClient.GetByEvent("")
+
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
