@@ -58,6 +58,8 @@ jobs:
             build.args.VERSION=${{ steps.vars.outputs.tag }}
             build.args.COMMIT=${{ github.sha }}
           push: true
+        env:
+          ANALYTICS_TRACKING_ID: "${{secrets.ANALYTICS_TRACKING_ID}}"
 
 
 
