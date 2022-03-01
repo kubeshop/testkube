@@ -59,7 +59,18 @@ func NewServer(
 		s.Log.Warnf("load default executors %w", err)
 	}
 
-	s.Executor, err = client.NewJobExecutor(executionsResults, initImage)
+	jobTemplate := os.Getenv("TESTKUBE_JOB_TEMPLATE")
+	if jobTemplate != "" {
+		dataDecoded, err := base64.StdEncoding.DecodeString(jobTemplate)
+		if err != nil {
+			s.Log.Warnf("decode job template %w", err)
+		}
+
+		jobTemplate = string(dataDecoded)
+	}
+
+	s.jobTemplate = jobTemplate
+	s.Executor, err = client.NewJobExecutor(executionsResults, initImage, s.jobTemplate)
 	if err != nil {
 		panic(err)
 	}
@@ -80,6 +91,7 @@ type TestkubeAPI struct {
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
+	jobTemplate          string
 }
 
 type storageParams struct {
