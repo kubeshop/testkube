@@ -34,9 +34,9 @@ type Client interface {
 	DeleteExecutor(name string) (err error)
 
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
-	GetWebhook(name string) (webhook testkube.Webhook, err error)
-	ListWebhooks() (executors []testkube.Webhook, err error)
-	DeleteWebhook(name string) (err error)
+	GetWebhook(namespace, name string) (webhook testkube.Webhook, err error)
+	ListWebhooks(namespace string) (executors testkube.Webhooks, err error)
+	DeleteWebhook(namespace, name string) (err error)
 
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)

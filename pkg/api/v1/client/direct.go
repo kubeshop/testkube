@@ -373,7 +373,7 @@ func (c DirectAPIClient) CreateWebhook(options CreateWebhookOptions) (webhook te
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c DirectAPIClient) GetWebhook(name string) (webhook testkube.Webhook, err error) {
+func (c DirectAPIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
 	uri := c.getURI("/webhooks/%s", name)
 	resp, err := c.client.Get(uri)
 	if err != nil {
@@ -388,8 +388,8 @@ func (c DirectAPIClient) GetWebhook(name string) (webhook testkube.Webhook, err 
 
 }
 
-func (c DirectAPIClient) ListWebhooks() (webhooks []testkube.Webhook, err error) {
-	uri := c.getURI("/webhooks?namespace=%s", "testkube")
+func (c DirectAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
+	uri := c.getURI("/webhooks?namespace=%s", namespace)
 	resp, err := c.client.Get(uri)
 	if err != nil {
 		return webhooks, fmt.Errorf("client.Get error: %w", err)
@@ -405,7 +405,7 @@ func (c DirectAPIClient) ListWebhooks() (webhooks []testkube.Webhook, err error)
 
 }
 
-func (c DirectAPIClient) DeleteWebhook(name string) (err error) {
+func (c DirectAPIClient) DeleteWebhook(namespace, name string) (err error) {
 	uri := c.getURI("/webhooks/%s?namespace=%s", name, "testkube")
 	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
 	if err != nil {

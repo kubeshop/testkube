@@ -9,6 +9,8 @@ import (
 )
 
 func NewListWebhookCmd() *cobra.Command {
+	var namespace string
+
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Gets webhooks",
@@ -16,7 +18,7 @@ func NewListWebhookCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			client, _ := common.GetClient(cmd)
-			webhooks, err := client.ListWebhooks()
+			webhooks, err := client.ListWebhooks(namespace)
 			ui.ExitOnError("listing webhooks: ", err)
 
 			render := GetWebhookListRenderer(cmd)
@@ -24,6 +26,8 @@ func NewListWebhookCmd() *cobra.Command {
 			ui.ExitOnError("rendering", err)
 		},
 	}
+
+	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
 
 	return cmd
 }

@@ -4,9 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
 func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
@@ -17,8 +16,8 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		executor := mapWebhookCreateRequestToWebhookCRD(request)
-		created, err := s.WebhookClient.Create(&executor)
+		webhook := webhooksmapper.MapAPIToCRD(request)
+		created, err := s.WebhookClient.Create(&webhook)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -36,9 +35,9 @@ func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		results := []testkube.Webhook{}
+		results := testkube.Webhooks{}
 		for _, item := range list.Items {
-			results = append(results, mapWebhookCRDToWebhook(item))
+			results = append(results, webhooksmapper.MapCRDToAPI(item))
 
 		}
 		return c.JSON(results)
@@ -54,7 +53,7 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		result := mapWebhookCRDToWebhook(*item)
+		result := webhooksmapper.MapCRDToAPI(*item)
 
 		return c.JSON(result)
 	}
@@ -73,40 +72,4 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 		c.Context().SetStatusCode(204)
 		return nil
 	}
-}
-
-func mapWebhookCRDToWebhook(item executorv1.Webhook) testkube.Webhook {
-	return testkube.Webhook{
-		Name:      item.Name,
-		Namespace: item.Namespace,
-		Uri:       item.Spec.Uri,
-		Events:    mapWebhookCRDEventsToWebhookEvents(item.Spec.Events),
-	}
-}
-
-func mapWebhookCRDEventsToWebhookEvents(items []string) (events []testkube.WebhookEventType) {
-	for _, e := range items {
-		events = append(events, testkube.WebhookEventType(e))
-	}
-	return
-}
-
-func mapWebhookCreateRequestToWebhookCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
-	return executorv1.Webhook{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-		},
-		Spec: executorv1.WebhookSpec{
-			Uri:    request.Uri,
-			Events: mapWebhookEventTypesToArrayString(request.Events),
-		},
-	}
-}
-
-func mapWebhookEventTypesToArrayString(eventTypes []testkube.WebhookEventType) (arr []string) {
-	for _, et := range eventTypes {
-		arr = append(arr, string(et))
-	}
-	return
 }

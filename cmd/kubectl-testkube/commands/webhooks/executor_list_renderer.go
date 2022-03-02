@@ -11,13 +11,13 @@ import (
 )
 
 type WebhookListRenderer interface {
-	Render(list testkube.WebhooksDetails, writer io.Writer) error
+	Render(list testkube.Webhooks, writer io.Writer) error
 }
 
 type WebhookJSONListRenderer struct {
 }
 
-func (r WebhookJSONListRenderer) Render(list testkube.WebhooksDetails, writer io.Writer) error {
+func (r WebhookJSONListRenderer) Render(list testkube.Webhooks, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(list)
 }
 
@@ -25,7 +25,7 @@ type WebhookGoTemplateListRenderer struct {
 	Template string
 }
 
-func (r WebhookGoTemplateListRenderer) Render(list testkube.WebhooksDetails, writer io.Writer) error {
+func (r WebhookGoTemplateListRenderer) Render(list testkube.Webhooks, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (r WebhookGoTemplateListRenderer) Render(list testkube.WebhooksDetails, wri
 type WebhookRawListRenderer struct {
 }
 
-func (r WebhookRawListRenderer) Render(list testkube.WebhooksDetails, writer io.Writer) error {
+func (r WebhookRawListRenderer) Render(list testkube.Webhooks, writer io.Writer) error {
 	ui.Table(list, writer)
 	return nil
 }

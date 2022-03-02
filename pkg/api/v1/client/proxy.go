@@ -336,9 +336,12 @@ func (c ProxyAPIClient) CreateWebhook(options CreateWebhookOptions) (executor te
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c ProxyAPIClient) GetWebhook(name string) (webhook testkube.Webhook, err error) {
+func (c ProxyAPIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
 	uri := c.getURI("/webhooks/%s", name)
-	req := c.GetProxy("GET").Suffix(uri)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
@@ -348,11 +351,11 @@ func (c ProxyAPIClient) GetWebhook(name string) (webhook testkube.Webhook, err e
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c ProxyAPIClient) ListWebhooks() (webhooks []testkube.Webhook, err error) {
+func (c ProxyAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
 	uri := c.getURI("/webhooks")
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("namespace", "testkube")
+		Param("namespace", namespace)
 
 	resp := req.Do(context.Background())
 
@@ -363,9 +366,9 @@ func (c ProxyAPIClient) ListWebhooks() (webhooks []testkube.Webhook, err error) 
 	return c.getWebhooksFromResponse(resp)
 }
 
-func (c ProxyAPIClient) DeleteWebhook(name string) (err error) {
+func (c ProxyAPIClient) DeleteWebhook(namespace, name string) (err error) {
 	uri := c.getURI("/webhooks/%s", name)
-	return c.makeDeleteRequest(uri, "testkube", false)
+	return c.makeDeleteRequest(uri, namespace, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -464,7 +467,7 @@ func (c ProxyAPIClient) getWebhookFromResponse(resp rest.Result) (webhook testku
 	return webhook, err
 }
 
-func (c ProxyAPIClient) getWebhooksFromResponse(resp rest.Result) (webhooks []testkube.Webhook, err error) {
+func (c ProxyAPIClient) getWebhooksFromResponse(resp rest.Result) (webhooks testkube.Webhooks, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return webhooks, err

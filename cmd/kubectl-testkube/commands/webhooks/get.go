@@ -10,18 +10,18 @@ import (
 )
 
 func NewGetWebhookCmd() *cobra.Command {
-	var name string
+	var name, namespace string
 
 	cmd := &cobra.Command{
 		Use:   "get <webhookName>",
 		Short: "Gets webhookdetails",
 		Long:  `Gets webhook, you can change output format`,
-		Args:  validator.WebhookName,
+		Args:  validator.DNS1123Subdomain,
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 
 			client, _ := common.GetClient(cmd)
-			webhook, err := client.GetWebhook(name)
+			webhook, err := client.GetWebhook(namespace, name)
 			ui.ExitOnError("getting webhook: "+name, err)
 
 			render := GetWebhookRenderer(cmd)
@@ -31,6 +31,7 @@ func NewGetWebhookCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as argument")
+	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
 
 	return cmd
 }

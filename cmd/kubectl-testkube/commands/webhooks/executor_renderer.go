@@ -11,13 +11,13 @@ import (
 )
 
 type WebhookRenderer interface {
-	Render(result testkube.WebhookDetails, writer io.Writer) error
+	Render(result testkube.Webhook, writer io.Writer) error
 }
 
 type WebhookJSONRenderer struct {
 }
 
-func (r WebhookJSONRenderer) Render(result testkube.WebhookDetails, writer io.Writer) error {
+func (r WebhookJSONRenderer) Render(result testkube.Webhook, writer io.Writer) error {
 	return json.NewEncoder(writer).Encode(result)
 }
 
@@ -25,7 +25,7 @@ type WebhookGoTemplateRenderer struct {
 	Template string
 }
 
-func (r WebhookGoTemplateRenderer) Render(result testkube.WebhookDetails, writer io.Writer) error {
+func (r WebhookGoTemplateRenderer) Render(result testkube.Webhook, writer io.Writer) error {
 	tmpl, err := template.New("result").Parse(r.Template)
 	if err != nil {
 		return err
@@ -37,10 +37,11 @@ func (r WebhookGoTemplateRenderer) Render(result testkube.WebhookDetails, writer
 type WebhookRawRenderer struct {
 }
 
-func (r WebhookRawRenderer) Render(webhook testkube.WebhookDetails, writer io.Writer) error {
-	_, err := fmt.Fprintf(writer, "Name: %s, Image: %s\n",
+func (r WebhookRawRenderer) Render(webhook testkube.Webhook, writer io.Writer) error {
+	_, err := fmt.Fprintf(writer, "Name: %s, URI: %s, Events: %v\n",
 		webhook.Name,
-		webhook.Webhook.Image,
+		webhook.Uri,
+		webhook.Events,
 	)
 
 	return err
