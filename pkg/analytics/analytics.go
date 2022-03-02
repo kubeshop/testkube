@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"os"
+	"strconv"
 
 	"github.com/denisbrodbeck/machineid"
 	v1 "github.com/mjpitz/go-ga/client/v1"
@@ -15,24 +16,31 @@ import (
 const testkubeTrackingID = "UA-221444687-1"
 
 func SendAnonymousInfo() {
-	client := v1.NewClient(testkubeTrackingID, "golang")
-	payload := &gatypes.Payload{
-		HitType:                           "event",
-		NonInteractionHit:                 true,
-		DisableAdvertisingPersonalization: true,
-		Users: gatypes.Users{
-			ClientID: MachineID(),
-		},
-		Event: gatypes.Event{
-			EventCategory: "beacon",
-			EventAction:   "testkube-heartbeat",
-		},
-		Apps: gatypes.Apps{
-			ApplicationName:    "testkube",
-			ApplicationVersion: commands.Version,
-		},
+
+	var isEnabled bool
+	if val, ok := os.LookupEnv("TESTKUBE_ANALYTICS_ENABLED"); ok {
+		isEnabled, _ = strconv.ParseBool(val)
 	}
-	client.SendPost(payload)
+	if isEnabled {
+		client := v1.NewClient(testkubeTrackingID, "golang")
+		payload := &gatypes.Payload{
+			HitType:                           "event",
+			NonInteractionHit:                 true,
+			DisableAdvertisingPersonalization: true,
+			Users: gatypes.Users{
+				ClientID: MachineID(),
+			},
+			Event: gatypes.Event{
+				EventCategory: "beacon",
+				EventAction:   "testkube-heartbeat",
+			},
+			Apps: gatypes.Apps{
+				ApplicationName:    "testkube",
+				ApplicationVersion: commands.Version,
+			},
+		}
+		client.SendPost(payload)
+	}
 }
 
 func SendAnonymouscmdInfo() {
