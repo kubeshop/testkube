@@ -18,6 +18,10 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		executor := mapExecutorCreateRequestToExecutorCRD(request)
+		if executor.Spec.JobTemplate == "" {
+			executor.Spec.JobTemplate = s.jobTemplate
+		}
+
 		created, err := s.ExecutorsClient.Create(&executor)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -83,6 +87,7 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Image:        item.Spec.Image,
 			Types:        item.Spec.Types,
 			Uri:          item.Spec.URI,
+			JobTemplate:  item.Spec.JobTemplate,
 		},
 	}
 }
@@ -98,6 +103,7 @@ func mapExecutorCreateRequestToExecutorCRD(request testkube.ExecutorCreateReques
 			Types:        request.Types,
 			URI:          request.Uri,
 			Image:        request.Image,
+			JobTemplate:  request.JobTemplate,
 		},
 	}
 }

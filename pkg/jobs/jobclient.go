@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"text/template"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -22,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -44,33 +47,46 @@ const (
 )
 
 type JobClient struct {
-	ClientSet  *kubernetes.Clientset
-	Repository result.Repository
-	Namespace  string
-	Cmd        string
-	Log        *zap.SugaredLogger
-	initImage  string
+	ClientSet   *kubernetes.Clientset
+	Repository  result.Repository
+	Namespace   string
+	Cmd         string
+	Log         *zap.SugaredLogger
+	initImage   string
+	jobTemplate string
 }
 
-func NewJobClient(initImage string) (*JobClient, error) {
+type JobOptions struct {
+	Name        string
+	Namespace   string
+	Image       string
+	Jsn         string
+	TestName    string
+	InitImage   string
+	JobTemplate string
+	HasSecrets  bool
+}
+
+func NewJobClient(initImage, jobTemplate string) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
 	}
 
 	return &JobClient{
-		ClientSet: clientSet,
-		Namespace: "testkube",
-		Log:       log.DefaultLogger,
-		initImage: initImage,
+		ClientSet:   clientSet,
+		Namespace:   "testkube",
+		Log:         log.DefaultLogger,
+		initImage:   initImage,
+		jobTemplate: jobTemplate,
 	}, nil
 }
 
 // LaunchK8sJobSync launches new job and run executor of given type
 // TODO Consider moving launch of K8s job as always sync
 // TODO Consider moving storage calls level up (remove dependency from here)
-func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execution testkube.Execution,
-	hasSecrets bool) (result testkube.ExecutionResult, err error) {
+func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.Execution, options JobOptions) (
+	result testkube.ExecutionResult, err error) {
 	result = testkube.NewPendingExecutionResult()
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -82,7 +98,19 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, c.initImage, hasSecrets)
+	options.Name = execution.Id
+	options.Namespace = c.Namespace
+	options.Jsn = string(jsn)
+	options.InitImage = c.initImage
+	options.TestName = execution.TestName
+	if options.JobTemplate == "" {
+		options.JobTemplate = c.jobTemplate
+	}
+
+	jobSpec, err := NewJobSpec(c.Log, options)
+	if err != nil {
+		return result.Err(err), err
+	}
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -141,7 +169,7 @@ func (c *JobClient) LaunchK8sJobSync(image string, repo result.Repository, execu
 // LaunchK8sJob launches new job and run executor of given type
 // TODO consider moving storage based operation up in hierarchy
 // TODO Consider moving launch of K8s job as always sync
-func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution testkube.Execution, hasSecrets bool) (
+func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Execution, options JobOptions) (
 	result testkube.ExecutionResult, err error) {
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -156,7 +184,19 @@ func (c *JobClient) LaunchK8sJob(image string, repo result.Repository, execution
 		return result.Err(err), err
 	}
 
-	jobSpec := NewJobSpec(execution.Id, c.Namespace, image, string(jsn), execution.TestName, c.initImage, hasSecrets)
+	options.Name = execution.Id
+	options.Namespace = c.Namespace
+	options.Jsn = string(jsn)
+	options.InitImage = c.initImage
+	options.TestName = execution.TestName
+	if options.JobTemplate == "" {
+		options.JobTemplate = c.jobTemplate
+	}
+
+	jobSpec, err := NewJobSpec(c.Log, options)
+	if err != nil {
+		return result.Err(err), err
+	}
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
@@ -439,20 +479,16 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 }
 
 // NewJobSpec is a method to create new job spec
-func NewJobSpec(id, namespace, image, jsn, testName, executorInitImage string, hasSecrets bool) *batchv1.Job {
-	var TTLSecondsAfterFinished int32 = 180
-	// TODO backOff need to be handled correctly by Logs and by Running job spec - currently we can get unexpected results
-	var backOffLimit int32 = 0
-
+func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
 	var secretEnvVars []corev1.EnvVar
-	if hasSecrets {
+	if options.HasSecrets {
 		secretEnvVars = []corev1.EnvVar{
 			{
 				Name: GitUsernameEnvVarName,
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(testName),
+							Name: secret.GetMetadataName(options.TestName),
 						},
 						Key: GitUsernameSecretName,
 					},
@@ -463,7 +499,7 @@ func NewJobSpec(id, namespace, image, jsn, testName, executorInitImage string, h
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(testName),
+							Name: secret.GetMetadataName(options.TestName),
 						},
 						Key: GitTokenSecretName,
 					},
@@ -472,61 +508,34 @@ func NewJobSpec(id, namespace, image, jsn, testName, executorInitImage string, h
 		}
 	}
 
-	var initContainers []corev1.Container
-	if executorInitImage != "" {
-		initContainers = []corev1.Container{
-			{
-				Name:            id + "-init",
-				Image:           executorInitImage,
-				Command:         []string{"/bin/runner", jsn},
-				ImagePullPolicy: corev1.PullAlways,
-				Env:             append(envVars, secretEnvVars...),
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      volumeName,
-						MountPath: volumeDir,
-					},
-				},
-			},
-		}
+	tmpl, err := template.New("job").Parse(options.JobTemplate)
+	if err != nil {
+		return nil, err
 	}
 
-	return &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      id,
-			Namespace: namespace,
-		},
-		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &TTLSecondsAfterFinished,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					InitContainers: initContainers,
-					Containers: []corev1.Container{
-						{
-							Name:            id,
-							Image:           image,
-							Command:         []string{"/bin/runner", jsn},
-							ImagePullPolicy: corev1.PullAlways,
-							Env:             append(envVars, secretEnvVars...),
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeName,
-									MountPath: volumeDir,
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: volumeName,
-						},
-					},
-					RestartPolicy: corev1.RestartPolicyNever,
-				},
-			},
-			BackoffLimit: &backOffLimit,
-		},
+	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
+		return nil, err
 	}
+
+	var job batchv1.Job
+	jobSpec := buffer.String()
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
+	if err := decoder.Decode(&job); err != nil {
+		return nil, err
+	}
+
+	env := append(envVars, secretEnvVars...)
+	for i := range job.Spec.Template.Spec.InitContainers {
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
+	}
+
+	for i := range job.Spec.Template.Spec.Containers {
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+	}
+
+	return &job, nil
 }
 
 var envVars = []corev1.EnvVar{

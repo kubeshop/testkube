@@ -76,7 +76,7 @@ type Test struct {
 func GenerateCRD(namespace, path string) (string, error) {
 	var testType string
 
-	tpl := `apiVersion: tests.testkube.io/v1
+	tpl := `apiVersion: tests.testkube.io/v2
 kind: Test
 metadata:
   name: {{ .Name }}
