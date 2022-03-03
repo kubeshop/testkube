@@ -5,11 +5,12 @@ import (
 	"os"
 
 	"github.com/Masterminds/semver"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/analytics"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
@@ -55,7 +56,7 @@ var RootCmd = &cobra.Command{
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube anlytics disable`")
-			telemetry.CollectAnonymousCmdInfo()
+			analytics.SendAnonymouscmdInfo()
 		}
 	},
 }
