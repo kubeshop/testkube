@@ -121,14 +121,14 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 }
 
 func (s TestkubeAPI) sendEvent(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
-	webhookList, err := s.WebhookClient.GetByEvent(eventType.String())
+	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
 	if err != nil {
 		return err
 	}
 
 	for _, wh := range webhookList.Items {
 		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.WebhookSender.Send(testkube.WebhookEvent{
+		s.EventsEmitter.Send(testkube.WebhookEvent{
 			Uri:       wh.Spec.Uri,
 			Type_:     eventType,
 			Execution: &execution,

@@ -54,8 +54,8 @@ func NewServer(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		WebhookSender:        webhook.NewServer(),
-		WebhookClient:        webhookClient,
+		EventsEmitter:        webhook.NewEmitter(),
+		WebhooksClient:       webhookClient,
 	}
 
 	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -92,8 +92,8 @@ type TestkubeAPI struct {
 	TestsClient          *testsclientv2.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
-	WebhookClient        *executorsclientv1.WebhooksClient
-	WebhookSender        *webhook.Server
+	WebhooksClient       *executorsclientv1.WebhooksClient
+	EventsEmitter        *webhook.Emitter
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams

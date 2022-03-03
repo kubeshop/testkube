@@ -27,7 +27,7 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewServer()
+		s := NewEmitter()
 		s.RunWorkers()
 
 		// when
@@ -52,7 +52,7 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewServer()
+		s := NewEmitter()
 		s.RunWorkers()
 
 		// when
@@ -70,7 +70,7 @@ func TestWebhook(t *testing.T) {
 
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
-		s := NewServer()
+		s := NewEmitter()
 		s.RunWorkers()
 
 		// when

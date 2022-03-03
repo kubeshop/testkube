@@ -17,7 +17,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 		}
 
 		webhook := webhooksmapper.MapAPIToCRD(request)
-		created, err := s.WebhookClient.Create(&webhook)
+		created, err := s.WebhooksClient.Create(&webhook)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -30,7 +30,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ns := c.Query("namespace", "testkube")
-		list, err := s.WebhookClient.List(ns)
+		list, err := s.WebhooksClient.List(ns)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -49,7 +49,7 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")
 
-		item, err := s.WebhookClient.Get(ns, name)
+		item, err := s.WebhooksClient.Get(ns, name)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -64,7 +64,7 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 		name := c.Params("name")
 		ns := c.Query("namespace", "testkube")
 
-		err := s.WebhookClient.Delete(name, ns)
+		err := s.WebhooksClient.Delete(name, ns)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
