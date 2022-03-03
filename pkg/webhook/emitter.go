@@ -60,15 +60,17 @@ func (s *Emitter) Send(event testkube.WebhookEvent) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
 
+	l := s.Log.With("event", event)
+
 	if err != nil {
-		s.Log.Errorw("webhook send json encode error", "error", err)
+		l.Errorw("webhook send json encode error", "error", err)
 		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
 
 	request, err := http.NewRequest(http.MethodPost, event.Uri, body)
 	if err != nil {
-		s.Log.Errorw("webhook request creating error", "error", err)
+		l.Errorw("webhook request creating error", "error", err)
 		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
@@ -76,21 +78,21 @@ func (s *Emitter) Send(event testkube.WebhookEvent) {
 	// TODO use custom client with sane timeout values this one can starve queue in case of very slow clients
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
-		s.Log.Errorw("webhook send error", "error", err)
+		l.Errorw("webhook send error", "error", err)
 		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
 
 	d, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		s.Log.Errorw("webhook read response error", "error", err)
+		l.Errorw("webhook read response error", "error", err)
 		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
 	respBody := string(d)
 	status := resp.StatusCode
 
-	result := WebhookResult{Response: WebhookHttpResponse{Body: respBody, StatusCode: status}, Event: event}
-	s.Log.Debugw("got webhook send result", "result", result)
-	s.Responses <- result
+	webhookResponse := WebhookHttpResponse{Body: respBody, StatusCode: status}
+	l.Debugw("got webhook send result", "response", webhookResponse)
+	s.Responses <- WebhookResult{Response: webhookResponse, Event: event}
 }

@@ -15,7 +15,7 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		dump, err := httputil.DumpRequest(r, true)
 		if err != nil {
 			fmt.Println(err)
