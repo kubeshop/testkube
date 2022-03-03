@@ -15,9 +15,9 @@ import (
 func NewCreateTestSuitesCmd() *cobra.Command {
 
 	var (
-		name string
-		file string
-		tags []string
+		name   string
+		file   string
+		labels map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -56,7 +56,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}
 
-			options.Tags = tags
+			options.Labels = labels
 
 			test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
 			ui.ExitOnError("creating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
@@ -66,7 +66,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
 	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

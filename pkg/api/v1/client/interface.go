@@ -16,7 +16,7 @@ type HTTPClient interface {
 
 type Client interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 
 	GetTest(id, namespace string) (test testkube.Test, err error)
@@ -24,7 +24,7 @@ type Client interface {
 	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string, namespace string) error
 	DeleteTests(namespace string) error
-	ListTests(namespace string, tags []string) (tests testkube.Tests, err error)
+	ListTests(namespace string, selector string) (tests testkube.Tests, err error)
 	ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
@@ -39,13 +39,13 @@ type Client interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string, namespace string) (testSuite testkube.TestSuite, err error)
-	ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error)
+	ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
 	DeleteTestSuites(namespace string) error
 	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestSuiteExecutions(test string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error)
+	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 
 	GetServerInfo() (info testkube.ServerInfo, err error)

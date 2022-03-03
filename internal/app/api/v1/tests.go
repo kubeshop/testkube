@@ -36,15 +36,8 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-
-		rawTags := c.Query("tags")
-		var tags []string
-		if rawTags != "" {
-			tags = strings.Split(rawTags, ",")
-		}
-
 		// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
-		crTests, err := s.TestsClient.List(namespace, tags)
+		crTests, err := s.TestsClient.List(namespace, c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}

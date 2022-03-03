@@ -17,7 +17,7 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
 	test.Type_ = crTest.Spec.Type_
-	test.Tags = crTest.Spec.Tags
+	test.Labels = crTest.Labels
 	return
 }
 

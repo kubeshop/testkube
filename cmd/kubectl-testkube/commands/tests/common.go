@@ -167,7 +167,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	name := cmd.Flag("name").Value.String()
 	executorType := cmd.Flag("type").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
-	tags, err := cmd.Flags().GetStringSlice("tags")
+	labels, err := cmd.Flags().GetStringToString("label")
 	if err != nil {
 		return options, err
 	}
@@ -179,11 +179,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		Namespace: namespace,
 	}
 
-	// if tags are passed and are different from the existing overwrite
-	if len(tags) > 0 && !reflect.DeepEqual(test.Tags, tags) {
-		options.Tags = tags
+	// if labels are passed and are different from the existing overwrite
+	if len(labels) > 0 && !reflect.DeepEqual(test.Labels, labels) {
+		options.Labels = labels
 	} else {
-		options.Tags = test.Tags
+		options.Labels = test.Labels
 	}
 
 	// try to detect type if none passed

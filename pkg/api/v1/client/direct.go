@@ -87,7 +87,7 @@ func (c DirectAPIClient) GetExecution(executionID string) (execution testkube.Ex
 }
 
 // ListExecutions list all executions for given test name
-func (c DirectAPIClient) ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+func (c DirectAPIClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := "/executions"
 
@@ -95,8 +95,8 @@ func (c DirectAPIClient) ListExecutions(id string, limit int, tags []string) (ex
 		uri = fmt.Sprintf("/tests/%s/executions", id)
 	}
 
-	if len(tags) > 0 {
-		uri = c.getURI("%s?pageSize=%d&tags=%s", uri, limit, strings.Join(tags, ","))
+	if selector != "" {
+		uri = c.getURI("%s?pageSize=%d&selector=%s", uri, limit, selector)
 	} else {
 		uri = c.getURI("%s?pageSize=%d", uri, limit)
 	}
@@ -182,7 +182,7 @@ func (c DirectAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Te
 func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
-	// get test to get test tags
+	// get test to get test labels
 	test, err := c.GetTest(id, namespace)
 	if err != nil {
 		return execution, nil
@@ -193,7 +193,7 @@ func (c DirectAPIClient) ExecuteTest(id, namespace, executionName string, execut
 		Namespace:  namespace,
 		ParamsFile: executionParamsFileContent,
 		Params:     executionParams,
-		Tags:       test.Tags,
+		Labels:     test.Labels,
 		Args:       args,
 	}
 
@@ -241,10 +241,10 @@ func (c DirectAPIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // ListTests list all tests in given namespace
-func (c DirectAPIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
+func (c DirectAPIClient) ListTests(namespace, selector string) (tests testkube.Tests, err error) {
 	var uri string
-	if len(tags) > 0 {
-		uri = c.getURI("/tests?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
+	if selector != "" {
+		uri = c.getURI("/tests?namespace=%s&selector=%s", namespace, selector)
 	} else {
 		uri = c.getURI("/tests?namespace=%s", namespace)
 	}
@@ -604,10 +604,10 @@ func (c DirectAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSu
 }
 
 // ListTestSuites list all tests suites in given namespace
-func (c DirectAPIClient) ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error) {
+func (c DirectAPIClient) ListTestSuites(namespace, selector string) (testSuites testkube.TestSuites, err error) {
 	var uri string
-	if len(tags) > 0 {
-		uri = c.getURI("/test-suites?namespace=%s&tags=%s", namespace, strings.Join(tags, ","))
+	if selector != "" {
+		uri = c.getURI("/test-suites?namespace=%s&selector=%s", namespace, selector)
 	} else {
 		uri = c.getURI("/test-suites?namespace=%s", namespace)
 	}
@@ -700,10 +700,10 @@ func (c DirectAPIClient) GetTestSuiteExecution(executionID string) (execution te
 }
 
 // ListExecutions list all executions for given test suite
-func (c DirectAPIClient) ListTestSuiteExecutions(testSuiteName string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c DirectAPIClient) ListTestSuiteExecutions(testSuiteName string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	var uri string
-	if len(tags) > 0 {
-		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&tags=%s", testSuiteName, limit, strings.Join(tags, ","))
+	if selector != "" {
+		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d&selector=%s", testSuiteName, limit, selector)
 	} else {
 		uri = c.getURI("/test-suite-executions?id=%s&pageSize=%d", testSuiteName, limit)
 	}

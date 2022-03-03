@@ -99,14 +99,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-
-		rawTags := c.Query("tags")
-		var tags []string
-		if rawTags != "" {
-			tags = strings.Split(rawTags, ",")
-		}
-
-		crTests, err := s.TestsSuitesClient.List(namespace, tags)
+		crTests, err := s.TestsSuitesClient.List(namespace, c.Query("selector"))
 
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -390,11 +383,11 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
+			Labels:    request.Labels,
 		},
 		Spec: testsuitesv1.TestSuiteSpec{
 			Repeats:     int(request.Repeats),
 			Description: request.Description,
-			Tags:        request.Tags,
 			Before:      mapTestStepsToCRD(request.Before),
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),

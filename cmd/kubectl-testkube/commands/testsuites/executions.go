@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -10,8 +11,8 @@ import (
 
 func NewTestSuiteExecutionsCmd() *cobra.Command {
 	var (
-		limit int
-		tags  []string
+		limit     int
+		selectors []string
 	)
 
 	cmd := &cobra.Command{
@@ -29,7 +30,7 @@ func NewTestSuiteExecutionsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 
-			executions, err := client.ListTestSuiteExecutions(testSuiteName, limit, tags)
+			executions, err := client.ListTestSuiteExecutions(testSuiteName, limit, strings.Join(selectors, ","))
 			ui.ExitOnError("getting test suites executions list", err)
 
 			ui.Table(executions, os.Stdout)
@@ -39,7 +40,7 @@ func NewTestSuiteExecutionsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

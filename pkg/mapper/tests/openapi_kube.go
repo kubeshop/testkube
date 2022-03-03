@@ -12,11 +12,11 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
+			Labels:    request.Labels,
 		},
 		Spec: testsv2.TestSpec{
 			Type_:   request.Type_,
 			Content: MapContentToSpecContent(request.Content),
-			Tags:    request.Tags,
 		},
 	}
 

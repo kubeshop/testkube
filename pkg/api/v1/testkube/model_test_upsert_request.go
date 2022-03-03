@@ -23,6 +23,6 @@ type TestUpsertRequest struct {
 	Type_   string       `json:"type,omitempty"`
 	Content *TestContent `json:"content,omitempty"`
 	Created time.Time    `json:"created,omitempty"`
-	// test tags
-	Tags []string `json:"tags,omitempty"`
+	// test labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

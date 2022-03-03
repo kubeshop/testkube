@@ -15,8 +15,8 @@ import (
 func NewUpdateTestSuitesCmd() *cobra.Command {
 
 	var (
-		file string
-		tags []string
+		file   string
+		labels map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -49,17 +49,17 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}
 
-			// if tags are passed and are different from the existing overwrite
-			if len(tags) > 0 && !reflect.DeepEqual(test.Tags, tags) {
-				options.Tags = tags
+			// if labels are passed and are different from the existing overwrite
+			if len(labels) > 0 && !reflect.DeepEqual(test.Labels, labels) {
+				options.Labels = labels
 			} else {
-				options.Tags = test.Tags
+				options.Labels = test.Labels
 			}
 
-			// if tags are not passed don't overwrite existing tags
-			// TODO: figure out how to remove tags from test
-			if tags != nil {
-				options.Tags = tags
+			// if labels are not passed don't overwrite existing labels
+			// TODO: figure out how to remove labels from test
+			if labels != nil {
+				options.Labels = labels
 			}
 
 			test, err = client.UpdateTestSuite(options)
@@ -69,7 +69,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

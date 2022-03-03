@@ -23,7 +23,7 @@ type Filter interface {
 	PageSize() int
 	TextSearchDefined() bool
 	TextSearch() string
-	Tags() []string
+	Selector() string
 	TypeDefined() bool
 	Type() string
 }
@@ -47,6 +47,6 @@ type Repository interface {
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
 	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
-	// GetTags get all available tags
-	GetTags(ctx context.Context) (tags []string, err error)
+	// GetLabels get all available labels
+	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 }

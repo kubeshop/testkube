@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -9,7 +10,7 @@ import (
 )
 
 func NewListTestSuitesCmd() *cobra.Command {
-	var tags []string
+	var selectors []string
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -20,13 +21,13 @@ func NewListTestSuitesCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
-			tests, err := client.ListTestSuites(namespace, tags)
+			tests, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
 
 			ui.ExitOnError("getting all test suites in namespace "+namespace, err)
 
 			ui.Table(tests, os.Stdout)
 		},
 	}
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	return cmd
 }
