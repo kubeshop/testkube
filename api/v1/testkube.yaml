@@ -828,9 +828,11 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
