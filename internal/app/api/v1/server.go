@@ -183,6 +183,8 @@ func (s TestkubeAPI) Init() {
 
 func (s TestkubeAPI) HandleEmitterLogs() {
 	go func() {
+
+		s.Log.Debug("Listening for workers results")
 		for resp := range s.EventsEmitter.Responses {
 			if resp.Error != nil {
 				s.Log.Errorw("got error when sending webhooks", "response", resp)
