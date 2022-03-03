@@ -69,7 +69,7 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Context().SetStatusCode(204)
+		c.Status(204)
 		return nil
 	}
 }
