@@ -177,6 +177,19 @@ func (s TestkubeAPI) Init() {
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
 
+	s.HandleEmitterLogs()
+}
+
+func (s TestkubeAPI) HandleEmitterLogs() {
+	go func() {
+		for resp := range s.EventsEmitter.Responses {
+			if resp.Error != nil {
+				s.Log.Errorw("got error when sending webhooks", "error", resp.Error)
+				continue
+			}
+			s.Log.Debugw("got webhook response", "response", resp)
+		}
+	}()
 }
 
 func (s TestkubeAPI) InfoHandler() fiber.Handler {

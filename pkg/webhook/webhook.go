@@ -24,6 +24,7 @@ type Emitter struct {
 }
 
 type WebhookResult struct {
+	Event    testkube.WebhookEvent
 	Error    error
 	Response *http.Response
 }
@@ -48,17 +49,17 @@ func (s *Emitter) Send(event testkube.WebhookEvent) {
 	b := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(b).Encode(event)
 	if err != nil {
-		s.Responses <- WebhookResult{Error: err}
+		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
 
 	request, err := http.NewRequest(http.MethodPost, event.Uri, b)
 	if err != nil {
-		s.Responses <- WebhookResult{Error: err}
+		s.Responses <- WebhookResult{Error: err, Event: event}
 		return
 	}
 
 	// TODO use custom client with sane timeout values this one can starve queue in case of very slow clients
 	response, err := http.DefaultClient.Do(request)
-	s.Responses <- WebhookResult{Error: err, Response: response}
+	s.Responses <- WebhookResult{Error: err, Response: response, Event: event}
 }
