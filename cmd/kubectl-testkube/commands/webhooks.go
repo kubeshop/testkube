@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -40,10 +40,10 @@ func NewWebhooksCmd() *cobra.Command {
 	cmd.PersistentFlags().StringP("output", "o", "raw", "output type one of raw|json|go ")
 	cmd.PersistentFlags().StringP("go-template", "", "{{ . | printf \"%+v\"  }}", "in case of choosing output==go pass golang template")
 
-	cmd.AddCommand(executors.NewCreateExecutorCmd())
-	cmd.AddCommand(executors.NewGetExecutorCmd())
-	cmd.AddCommand(executors.NewListExecutorCmd())
-	cmd.AddCommand(executors.NewDeleteExecutorCmd())
+	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
+	cmd.AddCommand(webhooks.NewGetWebhookCmd())
+	cmd.AddCommand(webhooks.NewListWebhookCmd())
+	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 
 	return cmd
 }

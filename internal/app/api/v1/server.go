@@ -55,6 +55,7 @@ func NewServer(
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
 		WebhookSender:        webhook.NewServer(),
+		WebhookClient:        webhookClient,
 	}
 
 	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -125,6 +126,13 @@ func (s TestkubeAPI) Init() {
 	executors.Get("/", s.ListExecutorsHandler())
 	executors.Get("/:name", s.GetExecutorHandler())
 	executors.Delete("/:name", s.DeleteExecutorHandler())
+
+	webhooks := s.Routes.Group("/webhooks")
+
+	webhooks.Post("/", s.CreateWebhookHandler())
+	webhooks.Get("/", s.ListWebhooksHandler())
+	webhooks.Get("/:name", s.GetWebhookHandler())
+	webhooks.Delete("/:name", s.DeleteWebhookHandler())
 
 	executions := s.Routes.Group("/executions")
 

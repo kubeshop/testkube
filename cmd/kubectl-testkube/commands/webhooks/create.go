@@ -10,8 +10,8 @@ import (
 
 func NewCreateWebhookCmd() *cobra.Command {
 	var (
-		events                 []string
-		name, webhookType, uri string
+		events    []string
+		name, uri string
 	)
 
 	cmd := &cobra.Command{
@@ -45,11 +45,9 @@ func NewCreateWebhookCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test name - mandatory")
-	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor")
-	cmd.Flags().StringVar(&webhookType, "webhook-type", "job", "webhook type (defaults to job)")
-
-	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
+	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor e.g. start-test|end-test")
+	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 
 	return cmd
 }
