@@ -92,5 +92,5 @@ func (s *Emitter) Send(event testkube.WebhookEvent) {
 
 	result := WebhookResult{Response: WebhookHttpResponse{Body: respBody, StatusCode: status}, Event: event}
 	s.Log.Debugw("got webhook send result", "result", result)
-	s.Responses <- WebhookResult{Response: WebhookHttpResponse{Body: respBody, StatusCode: status}, Event: event}
+	s.Responses <- result
 }
