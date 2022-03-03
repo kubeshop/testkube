@@ -332,7 +332,7 @@ func (c DirectAPIClient) ListExecutors() (executors testkube.ExecutorsDetails, e
 
 func (c DirectAPIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s?namespace=%s", name, "testkube")
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
@@ -407,7 +407,7 @@ func (c DirectAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webho
 
 func (c DirectAPIClient) DeleteWebhook(namespace, name string) (err error) {
 	uri := c.getURI("/webhooks/%s?namespace=%s", name, "testkube")
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
@@ -620,7 +620,7 @@ func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSu
 
 func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
 	uri := c.getURI("/test-suites/%s?namespace=%s", name, namespace)
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
@@ -639,7 +639,7 @@ func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
 
 func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 	uri := c.getURI("/test-suites?namespace=%s", namespace)
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
