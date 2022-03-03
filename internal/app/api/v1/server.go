@@ -177,6 +177,7 @@ func (s TestkubeAPI) Init() {
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
 
+	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 }
 
