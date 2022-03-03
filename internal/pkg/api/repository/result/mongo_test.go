@@ -1,5 +1,3 @@
-//go:build integration
-
 package result
 
 import (
@@ -122,6 +120,13 @@ func TestStorage(t *testing.T) {
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithSelector("key1=value1,key2=value2"))
 		assert.NoError(err)
 		assert.Len(executions, 5)
+	})
+
+	t.Run("filter with labels should return only filters with existing labels", func(t *testing.T) {
+
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithSelector("key1"))
+		assert.NoError(err)
+		assert.Len(executions, 9)
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {

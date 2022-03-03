@@ -205,14 +205,14 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.Selector() != "" {
 		items := strings.Split(filter.Selector(), ",")
-		labels := bson.M{}
 		for _, item := range items {
-			pairs := strings.Split(item, "=")
-			if len(pairs) == 2 {
-				labels[pairs[0]] = pairs[1]
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				query["labels."+elements[0]] = elements[1]
+			} else if len(elements) == 1 {
+				query["labels."+elements[0]] = bson.M{"$exists": true}
 			}
 		}
-		query["labels"] = labels
 	}
 
 	if filter.TypeDefined() {
