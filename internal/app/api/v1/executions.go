@@ -128,7 +128,7 @@ func (s TestkubeAPI) sendEvent(eventType *testkube.WebhookEventType, execution t
 
 	for _, wh := range webhookList.Items {
 		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.EventsEmitter.Send(testkube.WebhookEvent{
+		s.EventsEmitter.Notify(testkube.WebhookEvent{
 			Uri:       wh.Spec.Uri,
 			Type_:     eventType,
 			Execution: &execution,

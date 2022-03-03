@@ -29,7 +29,7 @@ type WebhookResult struct {
 	Response *http.Response
 }
 
-func (s *Emitter) Notify(event testkube.WebhookEvent, uris []string) {
+func (s *Emitter) Notify(event testkube.WebhookEvent) {
 	s.Events <- event
 }
 
