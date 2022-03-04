@@ -68,7 +68,6 @@ func (m *Version_0_9_2) Migrate() error {
 				Type_:  script.Spec.Type_,
 				Name:   script.Spec.Name,
 				Params: script.Spec.Params,
-				Tags:   script.Spec.Tags,
 			},
 		}
 
@@ -127,7 +126,6 @@ OUTER:
 			Spec: testsuite.TestSuiteSpec{
 				Repeats:     test.Spec.Repeats,
 				Description: test.Spec.Description,
-				Tags:        test.Spec.Tags,
 			},
 		}
 

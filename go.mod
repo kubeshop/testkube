@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.22.0
 	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v0.9.9
+	github.com/kubeshop/testkube-operator v0.10.2-beta002
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/mjpitz/go-ga v0.0.7
 	github.com/moogar0880/problems v0.1.1
@@ -47,6 +47,7 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
+	github.com/go-logr/zapr v0.4.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gofiber/utils v0.1.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

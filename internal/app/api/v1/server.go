@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -174,8 +173,8 @@ func (s TestkubeAPI) Init() {
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
 
-	tags := s.Routes.Group("/tags")
-	tags.Get("/", s.ListTagsHandler())
+	labels := s.Routes.Group("/labels")
+	labels.Get("/", s.ListLabelsHandler())
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
@@ -270,9 +269,9 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithEndDate(dFilter.End)
 	}
 
-	rawTags := c.Query("tags")
-	if rawTags != "" {
-		filter = filter.WithTags(strings.Split(rawTags, ","))
+	selector := c.Query("selector")
+	if selector != "" {
+		filter = filter.WithSelector(selector)
 	}
 
 	return filter

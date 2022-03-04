@@ -14,7 +14,7 @@ type filter struct {
 	page       int
 	pageSize   int
 	textSearch string
-	tags       []string
+	selector   string
 	objectType string
 }
 
@@ -58,8 +58,8 @@ func (f *filter) WithTextSearch(textSearch string) *filter {
 	return f
 }
 
-func (f *filter) WithTags(tags []string) *filter {
-	f.tags = tags
+func (f *filter) WithSelector(selector string) *filter {
+	f.selector = selector
 	return f
 }
 
@@ -123,6 +123,6 @@ func (f filter) Type() string {
 	return f.objectType
 }
 
-func (f filter) Tags() []string {
-	return f.tags
+func (f filter) Selector() string {
+	return f.selector
 }

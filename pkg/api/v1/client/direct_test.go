@@ -67,7 +67,7 @@ func TestAPIClient(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		response, err := client.ListExecutions("test", 0, nil)
+		response, err := client.ListExecutions("test", 0, "")
 
 		// then
 		assert.Equal(t, int32(2), response.Totals.Results)
@@ -189,7 +189,7 @@ func TestAPIClient(t *testing.T) {
 		client.URI = srv.URL
 
 		// when
-		tests, err := client.ListTests("testkube", nil)
+		tests, err := client.ListTests("testkube", "")
 
 		// then
 		assert.NoError(t, err)

@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -100,7 +99,7 @@ func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Exe
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyAPIClient) ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+func (c ProxyAPIClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := c.getURI("/executions/")
 
@@ -112,8 +111,8 @@ func (c ProxyAPIClient) ListExecutions(id string, limit int, tags []string) (exe
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -185,7 +184,7 @@ func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Tes
 func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
-	// get test to get test tags
+	// get test to get test labels
 	test, err := c.GetTest(id, namespace)
 	if err != nil {
 		return execution, nil
@@ -196,7 +195,7 @@ func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executi
 		Namespace:  namespace,
 		ParamsFile: executionParamsFileContent,
 		Params:     executionParams,
-		Tags:       test.Tags,
+		Labels:     test.Labels,
 		Args:       args,
 	}
 
@@ -235,14 +234,14 @@ func (c ProxyAPIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given test
-func (c ProxyAPIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
+func (c ProxyAPIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -635,14 +634,14 @@ func (c ProxyAPIClient) DeleteTestSuites(namespace string) error {
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c ProxyAPIClient) ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error) {
+func (c ProxyAPIClient) ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error) {
 	uri := c.getURI("/test-suites")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -775,14 +774,14 @@ func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh
 }
 
 // ListExecutions list all executions for given test suite
-func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	if testID != "" {

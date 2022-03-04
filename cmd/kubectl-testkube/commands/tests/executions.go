@@ -2,6 +2,7 @@ package tests
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -9,7 +10,7 @@ import (
 )
 
 func NewListExecutionsCmd() *cobra.Command {
-	var tags []string
+	var selectors []string
 
 	cmd := &cobra.Command{
 		Use:     "executions [testName]",
@@ -27,7 +28,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			}
 
 			client, _ := common.GetClient(cmd)
-			executions, err := client.ListExecutions(testID, limit, tags)
+			executions, err := client.ListExecutions(testID, limit, strings.Join(selectors, ","))
 			ui.ExitOnError("Getting executions for test: "+testID, err)
 
 			renderer := GetExecutionsListRenderer(cmd)
@@ -36,7 +37,7 @@ func NewListExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("rendering", err)
 		},
 	}
-	cmd.Flags().StringSliceVar(&tags, "tags", nil, "comma separated list of tags: --tags tag1,tag2,tag3")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }
