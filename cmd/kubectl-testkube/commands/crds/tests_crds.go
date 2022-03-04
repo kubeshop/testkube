@@ -20,7 +20,7 @@ import (
 
 func NewCRDTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tests <manifestDirectory>",
+		Use:   "tests-crds <manifestDirectory>",
 		Short: "Generate tests CRD file based on directory",
 		Long:  `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
 		Args:  validator.ManifestsDirectory,

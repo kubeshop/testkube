@@ -1,4 +1,4 @@
-package commands
+package artifacts
 
 import (
 	"os"
@@ -17,36 +17,6 @@ var (
 	downloadDir string
 )
 
-func NewArtifactsCmd() *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:   "artifacts",
-		Short: "Artifacts management commands",
-		Args:  validator.ExecutionID,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
-		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// version validation
-			// if client version is less than server version show warning
-			client, _ := common.GetClient(cmd)
-
-			err := ValidateVersions(client)
-			if err != nil {
-				ui.Warn(err.Error())
-			}
-		},
-	}
-
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
-
-	cmd.AddCommand(NewListArtifactsCmd())
-	cmd.AddCommand(NewDownloadSingleArtifactsCmd())
-	cmd.AddCommand(NewDownloadAllArtifactsCmd())
-
-	return cmd
-}
-
 func NewListArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list <executionID>",
@@ -62,9 +32,6 @@ func NewListArtifactsCmd() *cobra.Command {
 			ui.Table(artifacts, os.Stdout)
 		},
 	}
-
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 
@@ -90,9 +57,6 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
-
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
 	cmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "name of the file")
@@ -112,9 +76,6 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 			tests.DownloadArtifacts(executionID, downloadDir, client)
 		},
 	}
-
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")

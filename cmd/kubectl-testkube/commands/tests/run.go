@@ -27,8 +27,8 @@ func NewRunTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "run <testName>",
-		Aliases: []string{"start", "r"},
+		Use:     "test <testName>",
+		Aliases: []string{"t"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Args:    validator.TestName,

@@ -24,6 +24,7 @@ func NewGetTestsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			client, _ := common.GetClient(cmd)
+
 			test, err := client.GetTest(name, namespace)
 			ui.ExitOnError("getting test "+name, err)
 

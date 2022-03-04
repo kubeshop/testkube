@@ -2,23 +2,19 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
-
 	"github.com/spf13/cobra"
 )
 
-func NewTestSuitesCmd() *cobra.Command {
-	var (
-		client    string
-		verbose   bool
-		namespace string
-	)
+func NewDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "testsuites",
-		Aliases: []string{"testuite", "ts"},
-		Short:   "Test suites management commands",
-		Long:    `All available test suites and test suite executions commands`,
+		Use:     "delete <resourceName>",
+		Aliases: []string{"remove"},
+		Short:   "Runs tests or test suites",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
@@ -38,16 +34,10 @@ func NewTestSuitesCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
-	cmd.AddCommand(testsuites.NewListTestSuitesCmd())
-	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
-	cmd.AddCommand(testsuites.NewRunTestSuiteCmd())
-	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
-	cmd.AddCommand(testsuites.NewUpdateTestSuitesCmd())
-	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
+	cmd.AddCommand(tests.NewDeleteTestsCmd())
 	cmd.AddCommand(testsuites.NewDeleteTestSuitesCmd())
-	cmd.AddCommand(testsuites.NewTestSuiteExecutionCmd())
-	cmd.AddCommand(testsuites.NewWatchTestSuiteExecutionCmd())
-	cmd.AddCommand(testsuites.NewTestSuiteExecutionsCmd())
+	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
+	cmd.AddCommand(executors.NewDeleteExecutorCmd())
 
 	return cmd
 }

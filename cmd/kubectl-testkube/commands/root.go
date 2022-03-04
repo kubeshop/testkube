@@ -27,23 +27,29 @@ var (
 
 func init() {
 
-	RootCmd.AddCommand(NewDocsCmd())
-
 	// New commands
+	RootCmd.AddCommand(NewCreateCmd())
 	RootCmd.AddCommand(NewGetCmd())
+	RootCmd.AddCommand(NewRunCmd())
+	RootCmd.AddCommand(NewDeleteCmd())
+	RootCmd.AddCommand(NewAbortCmd())
+
+	RootCmd.AddCommand(NewEnableCmd())
+	RootCmd.AddCommand(NewDisableCmd())
+	RootCmd.AddCommand(NewStatusCmd())
+
+	RootCmd.AddCommand(NewDownloadCmd())
+	RootCmd.AddCommand(NewGenerateCmd())
 
 	RootCmd.AddCommand(NewTestsCmd())
-	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewExecutorsCmd())
-	RootCmd.AddCommand(NewArtifactsCmd())
 	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
-	RootCmd.AddCommand(NewAnalyticsCmd())
 	RootCmd.AddCommand(NewWebhooksCmd())
 }
 

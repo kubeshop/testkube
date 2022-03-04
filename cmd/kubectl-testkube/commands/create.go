@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/artifacts"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
@@ -11,12 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGetCmd() *cobra.Command {
+func NewCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "get <resourceName>",
-		Aliases: []string{"g"},
-		Short:   "Get resources",
-		Long:    `Get available resources, get single item or list`,
+		Use:     "create <resourceName>",
+		Aliases: []string{"c"},
+		Short:   "Create resource",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
@@ -32,13 +30,12 @@ func NewGetCmd() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(tests.NewGetTestsCmd())
-	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
-	cmd.AddCommand(webhooks.NewGetWebhookCmd())
-	cmd.AddCommand(executors.NewGetExecutorCmd())
-	cmd.AddCommand(tests.NewGetExecutionCmd())
-	cmd.AddCommand(testsuites.NewTestSuiteExecutionsCmd())
-	cmd.AddCommand(artifacts.NewListArtifactsCmd())
+	cmd.AddCommand(tests.NewCreateTestsCmd())
+	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
+	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
+	cmd.AddCommand(executors.NewCreateExecutorCmd())
+	cmd.AddCommand(tests.NewCreateTestsCmd())
+	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 
 	return cmd
 }

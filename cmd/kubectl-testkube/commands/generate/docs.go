@@ -1,4 +1,4 @@
-package commands
+package generate
 
 import (
 	"github.com/spf13/cobra"
@@ -7,9 +7,10 @@ import (
 
 func NewDocsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "doc",
-		Short: "Generate docs for kubectl testkube",
-		Long:  `Generate docs for kubectl testkube`,
+		Use:     "doc",
+		Aliases: []string{"docs"},
+		Short:   "Generate docs for kubectl testkube",
+		Long:    `Generate docs for kubectl testkube`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
 			root.DisableAutoGenTag = true
