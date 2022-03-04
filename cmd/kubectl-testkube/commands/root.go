@@ -39,6 +39,7 @@ func init() {
 	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
 	RootCmd.AddCommand(NewAnalyticsCmd())
+	RootCmd.AddCommand(NewWebhooksCmd())
 }
 
 var RootCmd = &cobra.Command{

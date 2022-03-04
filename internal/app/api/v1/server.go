@@ -15,7 +15,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
 
@@ -29,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
 func NewServer(
@@ -38,6 +39,7 @@ func NewServer(
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
+	webhookClient *executorsclientv1.WebhooksClient,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -52,6 +54,8 @@ func NewServer(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
+		EventsEmitter:        webhook.NewEmitter(),
+		WebhooksClient:       webhookClient,
 	}
 
 	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -88,6 +92,8 @@ type TestkubeAPI struct {
 	TestsClient          *testsclientv2.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
+	WebhooksClient       *executorsclientv1.WebhooksClient
+	EventsEmitter        *webhook.Emitter
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
@@ -120,6 +126,13 @@ func (s TestkubeAPI) Init() {
 	executors.Get("/", s.ListExecutorsHandler())
 	executors.Get("/:name", s.GetExecutorHandler())
 	executors.Delete("/:name", s.DeleteExecutorHandler())
+
+	webhooks := s.Routes.Group("/webhooks")
+
+	webhooks.Post("/", s.CreateWebhookHandler())
+	webhooks.Get("/", s.ListWebhooksHandler())
+	webhooks.Get("/:name", s.GetWebhookHandler())
+	webhooks.Delete("/:name", s.DeleteWebhookHandler())
 
 	executions := s.Routes.Group("/executions")
 
@@ -164,6 +177,21 @@ func (s TestkubeAPI) Init() {
 	tags := s.Routes.Group("/tags")
 	tags.Get("/", s.ListTagsHandler())
 
+	s.EventsEmitter.RunWorkers()
+	s.HandleEmitterLogs()
+}
+
+func (s TestkubeAPI) HandleEmitterLogs() {
+	go func() {
+		s.Log.Debug("Listening for workers results")
+		for resp := range s.EventsEmitter.Responses {
+			if resp.Error != nil {
+				s.Log.Errorw("got error when sending webhooks", "response", resp)
+				continue
+			}
+			s.Log.Debugw("got webhook response", "response", resp)
+		}
+	}()
 }
 
 func (s TestkubeAPI) InfoHandler() fiber.Handler {

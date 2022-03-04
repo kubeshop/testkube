@@ -195,17 +195,17 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 
 	jobSpec, err := NewJobSpec(c.Log, options)
 	if err != nil {
-		return result.Err(err), err
+		return result.Err(err), fmt.Errorf("new job spec error: %w", err)
 	}
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
 	if err != nil {
-		return result.Err(err), err
+		return result.Err(err), fmt.Errorf("job create error: %w", err)
 	}
 
 	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 10)
 	if err != nil {
-		return result.Err(err), err
+		return result.Err(err), fmt.Errorf("get job pods error: %w", err)
 	}
 
 	// get job pod and
@@ -510,20 +510,20 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating job spec from options.JobTemplate error: %w", err)
 	}
 
 	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("executing job spec template: %w", err)
 	}
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding job spec error: %w", err)
 	}
 
 	env := append(envVars, secretEnvVars...)

@@ -33,6 +33,11 @@ type Client interface {
 	ListExecutors() (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
 
+	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
+	GetWebhook(namespace, name string) (webhook testkube.Webhook, err error)
+	ListWebhooks(namespace string) (executors testkube.Webhooks, err error)
+	DeleteWebhook(namespace, name string) (err error)
+
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
@@ -59,3 +64,6 @@ type UpsertTestOptions testkube.TestUpsertRequest
 
 // CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
 type CreateExecutorOptions testkube.ExecutorCreateRequest
+
+// CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
+type CreateWebhookOptions testkube.WebhookCreateRequest

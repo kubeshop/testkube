@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,35 +9,38 @@ import (
 
 func TestSaveAnalyticsEnabled(t *testing.T) {
 
+	dir, err := ioutil.TempDir("", "test-config-save")
+	assert.NoError(t, err)
+
 	// create homedir config file
-	s := Storage{}
+	s := Storage{Dir: dir}
 	s.Init()
 
 	t.Run("check if analytics system is enabled", func(t *testing.T) {
 		// given / when
-		d, err := Load()
+		d, err := s.Load()
 
 		// then
 		assert.NoError(t, err)
-		assert.Equal(t, d.AnalyticsEnabled, true)
+		assert.Equal(t, true, d.AnalyticsEnabled)
 
 	})
 
 	t.Run("check if analytics system is disabled", func(t *testing.T) {
 		// given
-		d, err := Load()
+		d, err := s.Load()
 		assert.NoError(t, err)
 
 		d.DisableAnalytics()
-		err = Save(d)
+		err = s.Save(d)
 		assert.NoError(t, err)
 
 		// when
-		d, err = Load()
+		d, err = s.Load()
 
 		// then
 		assert.NoError(t, err)
-		assert.Equal(t, d.AnalyticsEnabled, false)
+		assert.Equal(t, false, d.AnalyticsEnabled)
 
 	})
 

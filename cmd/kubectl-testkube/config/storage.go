@@ -11,6 +11,7 @@ const configDirName = ".testkube"
 const configFile = "config.json"
 
 type Storage struct {
+	Dir string
 }
 
 func (c *Storage) Load() (data Data, err error) {
@@ -77,11 +78,18 @@ func (c *Storage) Init() error {
 }
 
 func (c *Storage) getDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	var err error
+	var dir string
+	if c.Dir != "" {
+		dir = c.Dir
+	} else {
+		dir, err = os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
 	}
-	return path.Join(home, configDirName), nil
+
+	return path.Join(dir, configDirName), nil
 }
 
 func (c *Storage) getPath() (string, error) {

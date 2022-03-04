@@ -14,7 +14,7 @@ func NewGetExecutorCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "get <executorName>",
-		Short: "Gets executordetails",
+		Short: "Gets executor details",
 		Long:  `Gets executor, you can change output format`,
 		Args:  validator.ExecutorName,
 		Run: func(cmd *cobra.Command, args []string) {
