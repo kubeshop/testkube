@@ -76,14 +76,17 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
+	s.notifyEvents(testkube.WebhookTypeStartTest, execution)
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
+		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err)
 	}
 
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName), options.Request.Namespace); err != nil {
 		if !errors.IsNotFound(err) {
+			s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 			return execution.Errw("can't get secrets: %w", err)
 		}
 
@@ -100,6 +103,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 	}
 
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
+		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 		return execution.Errw("update execution error: %w", uerr)
 	}
 
@@ -110,12 +114,32 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 	s.Metrics.IncExecution(execution)
 
 	if err != nil {
+		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 		return execution.Errw("test execution failed: %w", err)
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 
 	return
+}
+
+func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
+	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
+	if err != nil {
+		return err
+	}
+
+	for _, wh := range webhookList.Items {
+		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
+		s.EventsEmitter.Notify(testkube.WebhookEvent{
+			Uri:       wh.Spec.Uri,
+			Type_:     eventType,
+			Execution: &execution,
+		})
+	}
+
+	return nil
 }
 
 // ListExecutionsHandler returns array of available test executions

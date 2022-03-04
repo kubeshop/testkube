@@ -7,8 +7,9 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
+
 	kubeclient "github.com/kubeshop/testkube-operator/client"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
@@ -19,9 +20,9 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -57,7 +58,7 @@ func runMigrations() (err error) {
 
 func main() {
 
-	telemetry.CollectAnonymousInfo()
+	analytics.SendAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
 
@@ -80,6 +81,7 @@ func main() {
 	testsClientV1 := testsclientv1.NewClient(kubeClient)
 	testsClientV2 := testsclientv2.NewClient(kubeClient)
 	executorsClient := executorsclientv1.NewClient(kubeClient)
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient)
 	testsuitesClient := testsuitesclientv1.NewClient(kubeClient)
 
 	resultsRepository := result.NewMongoRespository(db)
@@ -97,6 +99,7 @@ func main() {
 		executorsClient,
 		testsuitesClient,
 		secretClient,
+		webhooksClient,
 	).Run()
 	ui.ExitOnError("Running API Server", err)
 }

@@ -313,6 +313,63 @@ func (c ProxyAPIClient) DeleteExecutor(name string) (err error) {
 	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
+// webhooks --------------------------------------------------------------------------------
+
+func (c ProxyAPIClient) CreateWebhook(options CreateWebhookOptions) (executor testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks")
+
+	request := testkube.WebhookCreateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executor, err
+	}
+
+	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executor, fmt.Errorf("api/create-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+}
+
+func (c ProxyAPIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks/%s", name)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return webhook, fmt.Errorf("api/get-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+}
+
+func (c ProxyAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
+	uri := c.getURI("/webhooks")
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return webhooks, fmt.Errorf("api/list-webhooks returned error: %w", err)
+	}
+
+	return c.getWebhooksFromResponse(resp)
+}
+
+func (c ProxyAPIClient) DeleteWebhook(namespace, name string) (err error) {
+	uri := c.getURI("/webhooks/%s", name)
+	return c.makeDeleteRequest(uri, namespace, false)
+}
+
 // maintenance --------------------------------------------------------------------------------
 
 func (c ProxyAPIClient) GetServerInfo() (info testkube.ServerInfo, err error) {
@@ -396,6 +453,28 @@ func (c ProxyAPIClient) getTestFromResponse(resp rest.Result) (test testkube.Tes
 	err = json.Unmarshal(bytes, &test)
 
 	return test, err
+}
+
+func (c ProxyAPIClient) getWebhookFromResponse(resp rest.Result) (webhook testkube.Webhook, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return webhook, err
+	}
+
+	err = json.Unmarshal(bytes, &webhook)
+
+	return webhook, err
+}
+
+func (c ProxyAPIClient) getWebhooksFromResponse(resp rest.Result) (webhooks testkube.Webhooks, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return webhooks, err
+	}
+
+	err = json.Unmarshal(bytes, &webhooks)
+
+	return webhooks, err
 }
 
 func (c ProxyAPIClient) getExecutorDetailsFromResponse(resp rest.Result) (executor testkube.ExecutorDetails, err error) {

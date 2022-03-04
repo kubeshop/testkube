@@ -12,8 +12,8 @@ func NewDeleteExecutorCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "delete <executorName>",
-		Short: "Gets executordetails",
-		Long:  `Gets executor, you can change output format`,
+		Short: "Delete executor",
+		Long:  `Delete executor, pass name to delete`,
 		Args:  validator.ExecutorName,
 		Run: func(cmd *cobra.Command, args []string) {
 			name = args[0]

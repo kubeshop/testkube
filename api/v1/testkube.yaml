@@ -1499,6 +1499,12 @@ components:
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 
+    WebhookCreateRequest:
+      description: executor create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Webhook"
+
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
     # TODO we need to sync those in some nice way
@@ -1560,6 +1566,43 @@ components:
         result:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
+
+    Webhook:
+      description: CRD based webhook data
+      type: object
+      required:
+        - uri
+        - types
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+        uri:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+
+    WebhookEvent:
+      description: CRD based executor data
+      type: object
+      required:
+        - type
+      properties:
+        uri:
+          type: string
+        type:
+          $ref: "#/components/schemas/WebhookEventType"
+        execution:
+          $ref: "#/components/schemas/Execution"
+
+    WebhookEventType:
+      type: string
+      enum:
+        - start-test
+        - end-test
 
     #
     # Errors

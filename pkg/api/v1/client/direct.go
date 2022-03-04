@@ -332,7 +332,7 @@ func (c DirectAPIClient) ListExecutors() (executors testkube.ExecutorsDetails, e
 
 func (c DirectAPIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s?namespace=%s", name, "testkube")
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
@@ -344,6 +344,81 @@ func (c DirectAPIClient) DeleteExecutor(name string) (err error) {
 
 	if err := c.responseError(resp); err != nil {
 		return fmt.Errorf("api/list-exeutors returned error: %w", err)
+	}
+
+	return
+}
+
+// webhook --------------------------------------------------------------------------------
+
+func (c DirectAPIClient) CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks")
+
+	request := testkube.WebhookCreateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return webhook, err
+	}
+
+	resp, err := c.client.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return webhook, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return webhook, fmt.Errorf("api/create-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+}
+
+func (c DirectAPIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
+	uri := c.getURI("/webhooks/%s", name)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return webhook, err
+	}
+
+	if err := c.responseError(resp); err != nil {
+		return webhook, fmt.Errorf("api/get-webhook returned error: %w", err)
+	}
+
+	return c.getWebhookFromResponse(resp)
+
+}
+
+func (c DirectAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
+	uri := c.getURI("/webhooks?namespace=%s", namespace)
+	resp, err := c.client.Get(uri)
+	if err != nil {
+		return webhooks, fmt.Errorf("client.Get error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return webhooks, fmt.Errorf("api/list-exeutors returned error: %w", err)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&webhooks)
+	return
+
+}
+
+func (c DirectAPIClient) DeleteWebhook(namespace, name string) (err error) {
+	uri := c.getURI("/webhooks/%s?namespace=%s", name, "testkube")
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
+	if err != nil {
+		return fmt.Errorf("prepare request error: %w", err)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client.Do error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := c.responseError(resp); err != nil {
+		return fmt.Errorf("api/delete-executor returned error: %w", err)
 	}
 
 	return
@@ -391,6 +466,13 @@ func (c DirectAPIClient) getExecutorDetailsFromResponse(resp *http.Response) (ex
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&executor)
+	return
+}
+
+func (c DirectAPIClient) getWebhookFromResponse(resp *http.Response) (webhook testkube.Webhook, err error) {
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&webhook)
 	return
 }
 
@@ -538,7 +620,7 @@ func (c DirectAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSu
 
 func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
 	uri := c.getURI("/test-suites/%s?namespace=%s", name, namespace)
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
@@ -557,7 +639,7 @@ func (c DirectAPIClient) DeleteTestSuite(name, namespace string) (err error) {
 
 func (c DirectAPIClient) DeleteTestSuites(namespace string) (err error) {
 	uri := c.getURI("/test-suites?namespace=%s", namespace)
-	req, err := http.NewRequest("DELETE", uri, bytes.NewReader([]byte("")))
+	req, err := http.NewRequest("DELETE", uri, bytes.NewReader(nil))
 	if err != nil {
 		return fmt.Errorf("prepare request error: %w", err)
 	}
