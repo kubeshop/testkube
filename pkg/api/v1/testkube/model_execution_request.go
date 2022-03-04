@@ -20,6 +20,7 @@ type ExecutionRequest struct {
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
 	// additional executor binary arguments
-	Args   []string          `json:"args,omitempty"`
+	Args []string `json:"args,omitempty"`
+	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }
