@@ -45,7 +45,7 @@ func (s *Emitter) Notify(event testkube.WebhookEvent) {
 }
 
 func (s *Emitter) RunWorkers() {
-	s.Log.Debug("Starting workers", "count", workersCount)
+	s.Log.Debugw("Starting workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
 		go s.Listen(s.Events)
 	}
