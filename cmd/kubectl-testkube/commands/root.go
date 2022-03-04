@@ -26,7 +26,12 @@ var (
 )
 
 func init() {
+
 	RootCmd.AddCommand(NewDocsCmd())
+
+	// New commands
+	RootCmd.AddCommand(NewGetCmd())
+
 	RootCmd.AddCommand(NewTestsCmd())
 	RootCmd.AddCommand(NewCRDsCmd())
 	RootCmd.AddCommand(NewVersionCmd())

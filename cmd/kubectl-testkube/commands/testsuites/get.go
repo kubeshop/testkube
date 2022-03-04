@@ -12,8 +12,8 @@ import (
 
 func NewGetTestSuiteCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "get <testSuiteName>",
-		Aliases: []string{"g"},
+		Use:     "testsuite <testSuiteName>",
+		Aliases: []string{"testsuites"},
 		Short:   "Get test suite by name",
 		Long:    `Getting test suite from given namespace - if no namespace given "testkube" namespace is used`,
 		Args:    validator.TestSuiteName,

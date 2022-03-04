@@ -13,10 +13,11 @@ func NewGetWebhookCmd() *cobra.Command {
 	var name, namespace string
 
 	cmd := &cobra.Command{
-		Use:   "get <webhookName>",
-		Short: "Get webhook details",
-		Long:  `Gets webhook, you can change output format`,
-		Args:  validator.DNS1123Subdomain,
+		Use:     "webhooks <webhookName>",
+		Aliases: []string{"webhook", "wh"},
+		Short:   "Get webhook details",
+		Long:    `Gets webhook, you can change output format`,
+		Args:    validator.DNS1123Subdomain,
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 
