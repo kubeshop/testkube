@@ -60,7 +60,7 @@ func SendAnonymouscmdInfo() {
 			ApplicationName:    "testkube",
 			ApplicationVersion: commands.Version,
 		},
-		CustomDimensions: gatypes.StringList(os.Args),
+		CustomDimensions: gatypes.StringList(os.Args[1:]),
 	}
 	client.SendPost(payload)
 }
