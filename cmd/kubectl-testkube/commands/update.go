@@ -5,7 +5,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )

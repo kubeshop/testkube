@@ -42,15 +42,16 @@ func init() {
 	RootCmd.AddCommand(NewGenerateCmd())
 
 	RootCmd.AddCommand(NewTestsCmd())
-	RootCmd.AddCommand(NewVersionCmd())
+	RootCmd.AddCommand(NewExecutorsCmd())
+	RootCmd.AddCommand(NewTestSuitesCmd())
+	RootCmd.AddCommand(NewWebhooksCmd())
+
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
-	RootCmd.AddCommand(NewExecutorsCmd())
-	RootCmd.AddCommand(NewTestSuitesCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
-	RootCmd.AddCommand(NewWebhooksCmd())
+	RootCmd.AddCommand(NewVersionCmd())
 }
 
 var RootCmd = &cobra.Command{
