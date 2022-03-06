@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 )
 
-const testkubeTrackingID = "UA-221444687-1"
+var testkubeTrackingID = "UA-204665550-8" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeTrackingID=UA-204665550-8
 
 func SendAnonymousInfo() {
 

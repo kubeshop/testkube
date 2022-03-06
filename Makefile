@@ -9,13 +9,21 @@ COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.testkubeTrackingID={{.Env.ANALYTICS_TRACKING_ID}}
 
-run-api: 
+define setup_env
+	$(eval include .env)
+	$(eval export)
+endef
+
+use-env-file: 
+	$(call setup_env)
+
+run-api: use-env-file
 	SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
 
-run-api-race-detector: 
+run-api-race-detector: use-env-file
 	DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
 
-run-api-telepresence: 
+run-api-telepresence: use-env-file
 	DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
