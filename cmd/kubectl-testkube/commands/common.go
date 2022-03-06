@@ -60,8 +60,13 @@ func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noM
 				return err
 			}
 
-			command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace, "--set", "installCRDs=true"}
-			command = append(command, "jetstack", "jetstack/cert-manager")
+			command := []string{"upgrade", "--install",
+				"jetstack", "jetstack/cert-manager",
+				"--namespace", namespace,
+				"--create-namespace",
+				"--version", "v1.7.1",
+				"--set", "installCRDs=true",
+			}
 
 			out, err := process.Execute(helmPath, command...)
 			if err != nil {
