@@ -160,6 +160,7 @@ func (s TestkubeAPI) Init() {
 	testsuites := s.Routes.Group("/test-suites")
 
 	testsuites.Post("/", s.CreateTestSuiteHandler())
+	testsuites.Patch("/:id", s.UpdateTestSuiteHandler())
 	testsuites.Get("/", s.ListTestSuitesHandler())
 	testsuites.Delete("/", s.DeleteTestSuitesHandler())
 	testsuites.Get("/:id", s.GetTestSuiteHandler())
