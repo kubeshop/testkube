@@ -45,6 +45,10 @@ func SendAnonymousInfo() {
 
 func SendAnonymouscmdInfo() {
 	client := v1.NewClient(testkubeTrackingID, "golang")
+	command := []string{}
+	if len(os.Args) > 1 {
+		command = os.Args[1:]
+	}
 	payload := &gatypes.Payload{
 		HitType:                           "event",
 		DataSource:                        "CLI",
@@ -60,7 +64,7 @@ func SendAnonymouscmdInfo() {
 			ApplicationName:    "testkube",
 			ApplicationVersion: commands.Version,
 		},
-		CustomDimensions: gatypes.StringList(os.Args[1:]),
+		CustomDimensions: gatypes.StringList(command),
 	}
 	client.SendPost(payload)
 }
