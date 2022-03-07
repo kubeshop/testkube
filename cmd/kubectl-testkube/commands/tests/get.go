@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func NewGetTestsCmd() *cobra.Command {
 				ui.ExitOnError("getting all tests in namespace "+namespace, err)
 			}
 
-			ui.Table(tests, os.Stdout)
+			renderer.Render(cmd, tests, os.Stdout)
 		},
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
