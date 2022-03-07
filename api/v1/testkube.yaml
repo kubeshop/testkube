@@ -36,7 +36,12 @@ paths:
       description: "Create new test suite action"
       operationId: createTestSuite
       requestBody:
-        $ref: "#/components/schemas/TestSuiteUpsertRequest"
+        description: test details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteUpsertRequest"
       responses:
         200:
           description: successful operation
@@ -380,7 +385,7 @@ paths:
         - api
       summary: "delete test"
       description: "deletes all the tests"
-      operationId: deleteTest
+      operationId: deleteTests
       responses:
         204:
           description: "no content"
@@ -1531,7 +1536,7 @@ components:
           type: string
         jobTemplate:
           description: Job template to launch executor
-          type: string        
+          type: string
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
@@ -1712,5 +1717,7 @@ components:
       in: query
       name: selector
       schema:
-        type: string
-        description: Labels to filter by
+        type: array
+        items:
+          type: string
+        description: Tags to filter tests by
