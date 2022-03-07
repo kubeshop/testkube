@@ -80,14 +80,22 @@ func ValidateVersions(c apiclient.Client) error {
 		return fmt.Errorf("getting server info: %w", err)
 	}
 
+	if info.Version == "" {
+		return fmt.Errorf("server version not set")
+	}
+
 	serverVersion, err := semver.NewVersion(info.Version)
 	if err != nil {
-		return fmt.Errorf("parsing server version - %s: %w", info.Version, err)
+		return fmt.Errorf("parsing server version '%s': %w", info.Version, err)
+	}
+
+	if Version == "" {
+		return fmt.Errorf("client version not set")
 	}
 
 	clientVersion, err := semver.NewVersion(Version)
 	if err != nil {
-		return fmt.Errorf("parsing client version - %s: %w", Version, err)
+		return fmt.Errorf("parsing client version %s: %w", Version, err)
 	}
 
 	if clientVersion.LessThan(serverVersion) {

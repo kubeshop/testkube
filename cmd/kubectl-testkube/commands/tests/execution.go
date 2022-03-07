@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGetExecutionCmd() *cobra.Command {
+func NewGetExecutionOLDCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "execution <executionID>",
 		Aliases: []string{"e"},

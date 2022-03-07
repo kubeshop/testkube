@@ -14,6 +14,9 @@ type TableData interface {
 func (ui *UI) Table(tableData TableData, writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
 	table.SetBorder(false)
+	table.SetHeaderLine(true)
+
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	header, data := tableData.Table()
 
 	if len(header) > 0 {
