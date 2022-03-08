@@ -28,9 +28,9 @@ The test Custom Resource Definition (CRD) should be created with the type `curl/
 
 Save a test in a format as described above. In this example, it is `curl-test.json`.
 
-Create the test by running `kubectl testkube scripts create --file curl-test.json --name curl-test --type "curl/test"`.
+Create the test by running `kubectl testkube create test --file curl-test.json --name curl-test --type "curl/test"`.
 
-Check if the test was created using the command `kubectl testkube scripts list`. The output will be similar to:
+Check if the test was created using the command `kubectl testkube get tests`. The output will be similar to:
 
 
 ```sh
@@ -39,7 +39,7 @@ Check if the test was created using the command `kubectl testkube scripts list`.
   curl-test      | curl/test  
 ```
 
-The test can be run using `kubectl testkube scripts start curl-test` which gives the output:
+The test can be run using `kubectl testkube run test curl-test` which gives the output:
 
 ```sh
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
@@ -52,13 +52,13 @@ The test can be run using `kubectl testkube scripts start curl-test` which gives
 Test queued for execution
 
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 613a2d7056499e6e3d5b9c3e
+$ kubectl testkube get execution 613a2d7056499e6e3d5b9c3e
 
 Or watch the script execution until complete:
-$ kubectl testkube scripts watch 613a2d7056499e6e3d5b9c3e
+$ kubectl testkube watch execution 613a2d7056499e6e3d5b9c3e
 ```
 
-As seen above, results can be checked using `kubectl testkube scripts execution 613a2d7056499e6e3d5b9c3e`, where the id of the execution is unique for each execution. Ensure that the correct id is used. The output will look something like:
+As seen above, results can be checked using `kubectl testkube get execution 613a2d7056499e6e3d5b9c3e`, where the id of the execution is unique for each execution. Ensure that the correct id is used. The output will look something like:
 
 ```sh
 Name: painfully-super-colt,Status: success,Duration: 534ms

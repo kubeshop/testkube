@@ -29,7 +29,7 @@ describe('The Home Page', () => {
 Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
 
 ```sh
-kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Check that script is created:
@@ -50,7 +50,7 @@ kubeshop-cypress      51s
 Start the test:
 
 ```sh
-kubectl testkube tests start kubeshop-cypress
+kubectl testkube start test kubeshop-cypress
 ```
 
 Output:
@@ -73,10 +73,10 @@ Execution name: wildly-popular-worm
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d5265b046f8fbd3d955d0
+$ kubectl testkube get execution 615d5265b046f8fbd3d955d0
 
 or watch test execution until complete:
-$ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
+$ kubectl testkube watch execution 615d5265b046f8fbd3d955d0
 ```
 
 ## **Getting Execution Results**
@@ -84,7 +84,7 @@ $ kubectl testkube tests watch 615d5265b046f8fbd3d955d0
 Let's watch our test execution:
 
 ```sh
-kubectl testkube tests watch 615d43d3b046f8fbd3d955ca
+kubectl testkube watch execution 615d43d3b046f8fbd3d955ca
 ```
 
 Output:
@@ -188,7 +188,7 @@ The test parameter was not passed into the test script. In this test, the parame
 Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
-kubectl testkube tests start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube start test kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
@@ -209,10 +209,10 @@ Execution name: nominally-able-glider
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 or watch test execution until complete:
-$ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
+$ kubectl testkube watch execution 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -277,7 +277,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s
 ```

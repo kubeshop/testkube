@@ -43,7 +43,7 @@ This will register Custom Resources for the following test types:
 Create a `Test` Custom Resource with one of the types above to be executed on given the executor:
 
 ```sh
-kubectl testkube tests create --file my_collection_file.json --name my-test-name --type local-postman/collection
+kubectl testkube create test --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
 To summarize: `type` is the single relation between `Test` and `Executor`.

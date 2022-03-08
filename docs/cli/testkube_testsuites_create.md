@@ -5,7 +5,7 @@
 Create a new Test Suite Custom Resource:
 
 ```
-testkube testsuites create [flags]
+testkube create testsuite [flags]
 ```
 
 ## **Options**

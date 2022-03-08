@@ -9,11 +9,11 @@ kubectl testkube install
 kubectl get pods                         # should return 3 pods
 kubectl testkube version
 create new Postman collection (in Postman and save it somewhere)
-kubectl testkube tests create --name test1 --file jw.postman_collection.json
-kubectl testkube tests list            # check test name
-kubectl testkube tests start test1
-kubectl testkube tests executions      # copy last execution id
-kubectl testkube tests execution TEST_NAME EXECUTION_ID
+kubectl testkube create test --name test1 --file jw.postman_collection.json
+kubectl testkube get tests            # check test name
+kubectl testkube start test test1
+kubectl testkube get executions      # copy last execution id
+kubectl testkube get execution TEST_NAME EXECUTION_ID
 ***/
 
 func NewTestkube(namespace string) Testkube {

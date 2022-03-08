@@ -166,9 +166,9 @@ Finally, create and run your custom tests by passing `URI` as the test content:
 
 ```sh
 # create 
-echo "http://google.pl" | kubectl testkube tests create --name example-google-test --type example/test 
+echo "http://google.pl" | kubectl testkube create test --name example-google-test --type example/test 
 # and run it in testkube
-kubectl testkube tests run example-google-test
+kubectl testkube run test example-google-test
 ```
 
 This is a very basic example of a custom executor. Please visit our internal projects for more examples and the details on implementation:
@@ -317,7 +317,7 @@ kubectl apply -f example-executor.yaml
 When everything is in place, we can add our Testkube tests. Testkube must be installed to add tests. Review the Testkube [installation instructions](/testkube/installing/).
 
 ```
-echo "https://httpstat.us/200" | kubectl testkube tests create --name example-test --type example/test
+echo "https://httpstat.us/200" | kubectl testkube create test --name example-test --type example/test
 ```
 
 As we can see, we need to pass the test name and test type `example/test` (which we defined in our executor CRD). 
@@ -346,7 +346,7 @@ Execution completed Got valid status code: 200 OK
 
 .
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 6218ccd2a26fa94ee7a7cfd1
+$ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
 
 
 
@@ -354,11 +354,11 @@ Got valid status code: 200 OK
 Test execution completed with sucess in 6.163s 🥇
 
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 6218ccd2a26fa94ee7a7cfd1
+$ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
 
 
 Watch the test execution until complete:
-$ kubectl testkube tests watch 6218ccd2a26fa94ee7a7cfd1
+$ kubectl testkube watch execution 6218ccd2a26fa94ee7a7cfd1
 
 
 ```

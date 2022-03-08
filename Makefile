@@ -77,22 +77,22 @@ test-e2e-namespace:
 
 create-examples:
 	kubectl delete test testkube-dashboard -ntestkube || true
-	kubectl testkube tests create --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
+	kubectl testkube create test --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
 	kubectl delete test testkube-todo-frontend -ntestkube || true
-	kubectl testkube tests create --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
+	kubectl testkube create test --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
 	kubectl delete test testkube-todo-api -ntestkube || true
-	kubectl testkube tests create --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
+	kubectl testkube create test --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
 	kubectl delete test kubeshop-site -ntestkube || true
-	kubectl testkube tests create --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
+	kubectl testkube create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
 	kubectl delete test testkube-global-test -ntestkube || true
-	cat test/e2e/test-example-1.json | kubectl testkube testsuites create --name testkube-global-test
+	cat test/e2e/test-example-1.json | kubectl testkube create testsuite --name testkube-global-test
 	kubectl delete test kubeshop-sites-test -ntestkube || true
-	cat test/e2e/test-example-2.json | kubectl testkube testsuites create --name kubeshop-sites-test
+	cat test/e2e/test-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test
 
 
 test-reload-sanity-test:
 	kubectl delete test sanity -ntestkube || true
-	kubectl testkube tests create -f test/e2e/Testkube-Sanity.postman_collection.json --name sanity
+	kubectl testkube create test -f test/e2e/Testkube-Sanity.postman_collection.json --name sanity
 
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
@@ -106,7 +106,7 @@ test-api-port-forwarded:
 
 # run test by testkube plugin
 test-api-on-cluster: 
-	kubectl testkube tests start sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
+	kubectl testkube start test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
 
 
 cover: 

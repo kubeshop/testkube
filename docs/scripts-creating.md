@@ -32,7 +32,7 @@ To create your first postman collection in Testkube, export your collection into
 ![create postman collection step 3](img/script-create-1.png)
 
 ```sh
-kubectl testkube scripts create --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube create test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 Output:
@@ -57,7 +57,7 @@ Your reusable script is created!
 To update your script after a change in Postman, re-export to a file and run the **update** command:
 
 ```sh
-kubectl testkube scripts update --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube update test --file ~/Downloads/TODO.postman_collection.json --name my-test
 ```
 
 Output:
@@ -72,7 +72,7 @@ Output:
 
 
 Detected test script type postman/collection
-Script updated test 🥇
+Script updated my-test 🥇
 ```
 
 Testkube will override all script settings and content with **update** method.
@@ -83,18 +83,18 @@ Testkube will override all script settings and content with **update** method.
 Let's see what has been created:
 
 ```sh
-kubectl get scripts -n testkube
+kubectl get tests -n testkube
 ```
 
 Output:
 
 ```sh
-NAME   AGE
-test   32s
+NAME      AGE
+my-test   32s
 ```
 
 ```sh
-$ kubectl testkube scripts get test
+$ kubectl testkube get test my-test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -104,7 +104,7 @@ $ kubectl testkube scripts get test
                                            /tɛst kjub/ by Kubeshop
 
 
-name: test
+name: my-test
 type_: postman/collection
 content: |-
     {
@@ -288,7 +288,7 @@ We can see that the script resource was created with Postman collection JSON con
 You can also check scripts with the standard `kubectl` command, which will list the Scripts Custom Resource.
 
 ```sh
-kubectl get scripts -ntestkube test -oyaml
+kubectl get tests -ntestkube my-test -oyaml
 ```
 
 ### **Create a Script from Git**
@@ -302,7 +302,7 @@ Where **examples** is a test directory in the `https://github.com/kubeshop/testk
 Now we can create our Cypress based script (in Git based scripts we need to pass the script type)
 
 ```sh
-kubectl testkube scripts create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Output:
@@ -322,7 +322,7 @@ Script created kubeshop-cypress 🥇
 The created Testkube test script is defined on the cluster: 
 
 ```sh
-$ kubectl get scripts -n testkube kubeshop-cypress -o yaml
+$ kubectl get tests -n testkube kubeshop-cypress -o yaml
 apiVersion: tests.testkube.io/v1
 kind: Script
 metadata:

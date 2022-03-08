@@ -12,7 +12,7 @@ Let's assume we've previously created a script with the name `api-incluster-test
 This is the simplest run command:
 
 ```sh
-kubectl testkube scripts run api-incluster-test
+kubectl testkube run test api-incluster-test
 ```
 
 Output:
@@ -33,24 +33,24 @@ Execution name: openly-full-bream
 
 Script queued for execution
 Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d6398b046f8fbd3d955d4
+$ kubectl testkube get execution 615d6398b046f8fbd3d955d4
 
 Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d6398b046f8fbd3d955d4
+$ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 
 ```
 
 Testkube will inform us about possible commands to get scripts:
 
-- `kubectl testkube scripts execution 615d6398b046f8fbd3d955d4` to get execution details.
-- `kubectl testkube scripts watch 615d6398b046f8fbd3d955d4` to watch current pending executions. Watch will also get the details when the script is completed and will lock the terminal until long running scripts complete.
+- `kubectl testkube get execution 615d6398b046f8fbd3d955d4` to get execution details.
+- `kubectl testkube watch execution 615d6398b046f8fbd3d955d4` to watch current pending executions. Watch will also get the details when the script is completed and will lock the terminal until long running scripts complete.
 
 ## **Run with Watch for Changes**
 
 If we want to wait until script execution completes, we can pass `-f` flag (follow) to the script run command.
 
 ```sh
-kubectl testkube scripts run api-incluster-test -f
+kubectl testkube run test api-incluster-test -f
 ```
 
 Output:
@@ -72,10 +72,10 @@ Execution name: monthly-sure-finch
 Script queued for execution
 
 Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube get execution 615d7e1ab046f8fbd3d955d6
 
 Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube watch execution 615d7e1ab046f8fbd3d955d6
 
 
 Watching for changes
@@ -115,7 +115,7 @@ API-Health
 │ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
 Use following command to get script execution details:
-$ kubectl testkube scripts execution 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube get execution 615d7e1ab046f8fbd3d955d6
 
 Script execution completed in 595ms
 ```
@@ -131,7 +131,7 @@ Let's assume that our example Cypress test needs the `testparam` parameter with 
 Use the `-p` parameter to pass this configuration. If you need to pass more than one parameter, simply pass multiple `-p` flags:
 
 ```sh
-kubectl testkube scripts start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
@@ -153,10 +153,10 @@ Execution name: nominally-able-glider
 Script queued for execution
 
 Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Or watch script execution until complete:
-$ kubectl testkube scripts watch 615d5372b046f8fbd3d955d2
+$ kubectl testkube watch execution 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -221,7 +221,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use the following command to get script execution details:
-$ kubectl testkube scripts execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Script execution completed in 1m45.405939s
 ```

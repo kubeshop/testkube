@@ -40,7 +40,7 @@ Now we can create a new TestKube based on the saved Postman Collection.
 ## **Create a New Testkube Test Script**
 
 ```sh
-kubectl testkube tests create --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection
+kubectl testkube create test --name api-incluster-test --file ~/Downloads/API-Health.postman_collection.json --type postman/collection
 ```
 
 Output:
@@ -62,7 +62,7 @@ Test created!
 ## **Running a Test**
 
 ```sh
-kubectl testkube tests run api-incluster-test
+kubectl testkube run test api-incluster-test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
@@ -79,10 +79,10 @@ Execution name: openly-full-bream
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
+$ kubectl testkube get execution 615d6398b046f8fbd3d955d4
 
 or watch test execution until complete:
-$ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
+$ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 
 ```
 
@@ -93,7 +93,7 @@ Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 Now we can watch/get test execution details:
 
 ```sh
-kubectl testkube tests watch 615d6398b046f8fbd3d955d4
+kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 ```
 
 Output:

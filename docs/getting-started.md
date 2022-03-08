@@ -7,10 +7,8 @@ Please follow the [install steps](/docs/installing.md) for the first installatio
 ```sh
 kubectl testkube --help 
 
-# for tests
-kubectl testkube tests --help 
 # or any other command
-kubectl testkube testsuites --help 
+kubectl testkube get --help 
 ```
 
 ## **Defining Tests**
@@ -105,7 +103,7 @@ EOF
 ```
 
 ```sh
-kubectl testkube tests create --file my_postman_collection.json --type postman/collection --name my-test-name 
+kubectl testkube create test --file my_postman_collection.json --type postman/collection --name my-test-name 
 ```
 
 **Note**: This is just an example of how it works. For further details you can visit the [Postman documentation](executor-postman.md).
@@ -115,7 +113,7 @@ kubectl testkube tests create --file my_postman_collection.json --type postman/c
 Cypress is in the form of projects. To run them we need to pass the whole directory structure with the npm based dependencies. You can create a new test with Testkube:
 
 ```sh
- kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
+ kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch jacek/feature/git-checkout --git-path examples --name test-name --type cypress/project
 ```
 
 Where:
@@ -131,15 +129,15 @@ Where:
 When our test is defined as a Custom Resource we can now run it:
 
 ```sh
-kubectl testkube tests run my-test-name 
+kubectl testkube run test my-test-name 
 
 #  ... some test run output ...
 
 Use the following command to get test execution details:
-kubectl testkube tests execution 611b6da38cd74034e7c9d408
+kubectl testkube get execution 611b6da38cd74034e7c9d408
 
 Or watch for completion with
-kubectl testkube tests watch 611b6da38cd74034e7c9d408
+kubectl testkube watch execution 611b6da38cd74034e7c9d408
 
 ```
 
@@ -149,7 +147,7 @@ After the test execution is complete, access the test details by running the
 tests execution command:
 
 ```sh
-kubectl testkube tests execution 6103a45b7e18c4ea04883866
+kubectl testkube get execution 6103a45b7e18c4ea04883866
 
 ....
 some execution details
@@ -160,7 +158,7 @@ some execution details
 To run a test execution, you'll need to know the test name:
 
 ```shell
-kubectl testkube tests list
+kubectl testkube get tests
 
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
@@ -177,7 +175,7 @@ kubectl testkube tests list
 ## **Getting Available Executions**
 
 ```shell
-kubectl testkube tests executions TEST_NAME
+kubectl testkube get executions TEST_NAME
 
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   TEST     |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |

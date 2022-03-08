@@ -26,7 +26,7 @@ echo '
                 {"type": "delay", "duration": 5000},
                 {"type": "executeTest", "namespace": "testkube", "name": "test1"}
         ]
-}' | kubectl testkube testsuites create
+}' | kubectl testkube create testsuite
 ```
 
 To check if the test was created correctly, you can look at `TestSuite` Custom Resource in your Kubernetes cluster:
