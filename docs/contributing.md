@@ -1,31 +1,31 @@
-# Contribution to project
+# Contributing to Projects
 
-If you're new in Open-source community there is nice guide how to start contributing to projects:
+If you are new to the open source community, use this guide to start contributing to projects:
 <https://github.com/firstcontributions/first-contributions>
 
-Checkout [development page](development.md) for more details about how to develop and run testkube on your machine.
+Checkout the [development document](development.md) for more details about how to develop and run testkube on your machine.
 
-## General guidance for contributing to Testkube project
+## **General Guidance for Contributing to a Testkube Project**
 
-You're very welcome to help in Testkube development 🔥, there is a lot of incoming work to do :).
+Anyone is welcome and ecouraged to help in Testkube development; much opportunity for enhancement exists.
 
-We're trying hard to limit technical debt from the beginning so we defined simple rules when putting some code into Testkube repo.
+We would like to limit technical debt from the beginning, so we have defined simple rules when adding code into Testkube repo.
 
-### For golang based components
+### **For Go Programming Language (Golang) Based Components**
 
-- Always use gofmt
-- Follow golang good practices ([proverbs](https://go-proverbs.github.io/)) in your code
-- Tests are your friend (we will target 80% CC in our code)
-- Use clean names, don't brake basic design patterns and rules.
+- Always use gofmt.
+- Follow Golang good practices ([proverbs](https://go-proverbs.github.io/)) in your code.
+- Testing is your friend. We will target 80% CC in our code.
+- Use clean names and don't break basic design patterns and rules.
 
-### For infrastructure / Kubernetes based components
+### **For Infrastructure/Kubernetes Based Components**
 
-- Comment non-obvious decisions
-- Use current Helm/Kubernetes versions
+- Put in comments for non-obvious decisions.
+- Use current Helm/Kubernetes versions.
 
-## Building diagrams
+## **Building Diagrams**
 
-To build diagrams you'll need to install plantuml:
+To build diagrams, install PlantUML:
 
 ```sh
 brew install plantuml # on mac
@@ -39,12 +39,12 @@ sudo apt-get install -y plantuml # on ubuntu linux
 pacman -S plantuml # on arch linux
 ```
 
-Next run
+Then run:
 
 ```sh
 make diagrams
 ```
 
-to generate png files from puml files
+This generates png files from puml files
 
-TIP: If using vscode there is nice extension for live preview of plantuml files.  
+TIP: If using vscode, there is a nice extension for the live preview of PlantUML files.  

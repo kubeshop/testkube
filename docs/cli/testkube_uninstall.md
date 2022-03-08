@@ -1,32 +1,30 @@
-## testkube uninstall
+# Testkube Uninstall
 
-Uninstall Helm chart registry in current kubectl context
+## **Synopsis**
 
-### Synopsis
-
-Uninstall Helm chart registry in current kubectl context
+Uninstall the Helm chart registry in the current kubectl context:
 
 ```
 testkube uninstall [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help          help for uninstall
-      --name string   installation name (default "testkube")
+  -h, --help          Help for uninstall.
+      --name string   Installation name (default "testkube").
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
 

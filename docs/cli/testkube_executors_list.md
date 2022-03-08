@@ -1,33 +1,31 @@
-## testkube executors list
+# Testkube Executors List
 
-Gets executors
+## **Synopsis**
 
-### Synopsis
-
-Gets executor, you can change output format
+Gets a list of executors. The output format can be changed.
 
 ```
 testkube executors list [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for list
+  -h, --help   Help for list.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messagesl
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [Testkube Executors](testkube_executors.md)	 - Executor management commands.
 

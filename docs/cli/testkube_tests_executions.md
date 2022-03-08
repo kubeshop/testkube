@@ -1,34 +1,32 @@
-## testkube tests executions
+# Testkube Tests Executions
 
-List test executions
+## **Synopsis**
 
-### Synopsis
-
-Getting list of execution for given test name or recent executions if there is no test name passed
+Provides a list of executions for a given test name. If no test name is passed, a recent list of test executions will be returned.
 
 ```
 testkube tests executions [testName] [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help           help for executions
-      --tags strings   comma separated list of tags: --tags tag1,tag2,tag3
+  -h, --help           Help for executions.
+      --tags strings   A comma separated list of tags: --tags tag1,tag2,tag3.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube tests](testkube_tests.md)	 - Tests management commands
+* [Testkube Tests](testkube_tests.md)	 - Tests management commands.
 

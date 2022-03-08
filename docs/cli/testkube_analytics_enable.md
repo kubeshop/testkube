@@ -1,27 +1,27 @@
-## testkube analytics enable
+# Testkube Analytics Enable
 
-Enable collecting of anonymous analytics
+Enable collecting of anonymous analytics:
 
 ```
 testkube analytics enable [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for enable
+  -h, --help   Help for enable.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
+* [Testkube Analytics](testkube_analytics.md)	 - Analytics management actions.
 

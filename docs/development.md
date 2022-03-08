@@ -1,71 +1,63 @@
 # Development
 
-## Running with CRDs only on kubernetes cluster
+## **Running with CRDs on Kubernetes Cluster**
 
-The minimial component which must be deployed on your local kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>)
+The minimial component which must be deployed on your local Kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>)
 
-Checkout testkube-operator project and run:
+To install CRDs into your local cluster, checkout the testkube-operator project and run:
 
 ```sh
 make install 
 ```
 
-to install CRD's into your local cluster
+## **Running on a Local Machine**
 
-## Running on local machine
+The next critical components are the Testkube API (<https://github.com/kubeshop/testkube>) and an executor. You can use your own tests executor or an existing one from Testkube.
 
-Next critical component is testkube API (<https://github.com/kubeshop/testkube>) and some executor you can build - your
-own tests executor or existing one from Testkube.
-
-Checkout testkube project and run local API server:
+Checkout the Testkube project and run a local API server:
 
 ```sh
 make run-mongo-dev run-api
 ```
 
-Next go to testkube postman executor (<https://github.com/kubeshop/testkube-executor-postman>), checkout and run it
-(Postman executor is also MongoDB based so it will use MongoDB launched with API server step):
+Next, checkout and run the Testkube Postman executor (<https://github.com/kubeshop/testkube-executor-postman>). The postman executor is MongoDB based so it will launch MongoDB with the API server step:
 
 ```sh
 make run-executor
 ```
 
-### Installing local executors
+### **Installing Local Executors**
 
-You can install development executors by running them from testkube project (<https://github.com/kubeshop/testkube>)
+Install development executors by running them from the Testkube project (<https://github.com/kubeshop/testkube>):
 
 ```sh
 make dev-install-local-executors
 ```
 
-It'll register Custom Resources for
+This will register Custom Resources for the following test types:
 
 - local-postman/collection
 - local-cypress/project
 - local-curl/test
 
-test types.
-
-You'll need to create `Test` Custom Resource with type from above to
-be executed on given executor. e.g.
+Create a `Test` Custom Resource with one of the types above to be executed on given the executor:
 
 ```sh
 kubectl testkube tests create --file my_collection_file.json --name my-test-name --type local-postman/collection
 ```
 
-To summarize: `type` is the single relation between `Test` and `Executor`
+To summarize: `type` is the single relation between `Test` and `Executor`.
 
-## Intercepting api server on cluster
+## **Intercepting an API Server on a Cluster**
 
-In case of debugging on Kubernetes we can intercept whole API Server (or Postman executor) service
-with usage of [Telepresence](https://telepresence.io).
+For debugging on Kubernetes, intercept the whole API Server (or Postman executor) service
+by using [Telepresence](https://telepresence.io).
 
-Simply intercept API server with local instance
+Simply intercept the API server with the local instance.
 
-You can start API Server with telepresence mode with:
+To create/run tests pointed to in-cluster executors, start the API Server with telepresence mode:
 
 ```sh
 make run-api-telepresence
 ```
 
-and create/run tests pointed to in-cluster executors.

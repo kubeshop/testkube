@@ -1,24 +1,24 @@
-## testkube tests
+# Testkube Tests
 
-Tests management commands
+Tests management commands.
 
-### Synopsis
+## **Synopsis**
 
-All available tests and test executions commands
+All available tests and test executions commands:
 
 ```
 testkube tests [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -h, --help                 help for tests
-  -o, --output string        output type one of raw|json|go  (default "raw")
+      --go-template string   When choosing output==go. pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -h, --help                 Help for tests.
+  -o, --output string        Output type. Either raw, json or go  (default "raw").
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
       --analytics-enabled   should analytics be enabled (default true)
@@ -27,18 +27,18 @@ testkube tests [flags]
   -v, --verbose             should I show additional debug messages
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube tests abort](testkube_tests_abort.md)	 - Aborts execution of the test
-* [testkube tests create](testkube_tests_create.md)	 - Create new test
-* [testkube tests delete](testkube_tests_delete.md)	 - Delete tests
-* [testkube tests delete-all](testkube_tests_delete-all.md)	 - Delete all tests
-* [testkube tests execution](testkube_tests_execution.md)	 - Gets test execution details
-* [testkube tests executions](testkube_tests_executions.md)	 - List test executions
-* [testkube tests get](testkube_tests_get.md)	 - Get test by name
-* [testkube tests list](testkube_tests_list.md)	 - Get all available tests
-* [testkube tests run](testkube_tests_run.md)	 - Starts new test
-* [testkube tests update](testkube_tests_update.md)	 - Update test
-* [testkube tests watch](testkube_tests_watch.md)	 - Watch logs output from executor pod
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [Testkube Tests Abort](testkube_tests_abort.md)	 - Abort execution of the test.
+* [Testkube Tests Create](testkube_tests_create.md)	 - Create a new test.
+* [Testkube Tests Delete](testkube_tests_delete.md)	 - Delete tests.
+* [Testkube Tests Delete-all](testkube_tests_delete-all.md)	 - Delete all tests.
+* [Testkube Tests Execution](testkube_tests_execution.md)	 - Get test execution details.
+* [Testkube Tests Executions](testkube_tests_executions.md)	 - List test executions.
+* [Testkube Tests Get](testkube_tests_get.md)	 - Get test by name.
+* [Testkube Tests List](testkube_tests_list.md)	 - Get all available tests.
+* [Testkube Tests Run](testkube_tests_run.md)	 - Start a new test.
+* [Testkube Tests Update](testkube_tests_update.md)	 - Update a test.
+* [Testkube Tests Watch](testkube_tests_watch.md)	 - Watch logs output from the executor pod.
 

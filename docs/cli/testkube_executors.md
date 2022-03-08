@@ -1,33 +1,33 @@
-## testkube executors
+# Testkube Executors
 
-Executor management commands
+Executor management commands.
 
 ```
 testkube executors [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -h, --help                 help for executors
-  -o, --output string        output type one of raw|json|go  (default "raw")
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -h, --help                 Help for executors.
+  -o, --output string        Output type - raw, json or go  (default "raw").
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube executors create](testkube_executors_create.md)	 - Create new Executor
-* [testkube executors delete](testkube_executors_delete.md)	 - Gets executordetails
-* [testkube executors get](testkube_executors_get.md)	 - Gets executordetails
-* [testkube executors list](testkube_executors_list.md)	 - Gets executors
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [Testkube Executors Create](testkube_executors_create.md)	 - Create a new executor.
+* [Testkube Executors Delete](testkube_executors_delete.md)	 - Delete executor.
+* [Testkube Executors Get](testkube_executors_get.md)	 - Get executor details.
+* [Testkube Executors List](testkube_executors_list.md)	 - Get a list of executors.
 

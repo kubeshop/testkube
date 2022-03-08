@@ -1,27 +1,27 @@
-## testkube analytics status
+# Testkube Analytics Status
 
-Get analytics status
+Get analytics status:
 
 ```
 testkube analytics status [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for status
+  -h, --help   Help for status.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
+* [Testkube Analytics](testkube_analytics.md)	 - Analytics management actions.
 
