@@ -19,7 +19,8 @@ func NewInstallCmd() *cobra.Command {
 		Long:  `Install can be configured with use of particular `,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+			err := HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
+			ui.ExitOnError("Installing testkube", err)
 		},
 	}
 

@@ -65,7 +65,7 @@ extra:
 
 plugins:
   - render_swagger
-  
+
 # Extensions
 markdown_extensions:
   - pymdownx.highlight
