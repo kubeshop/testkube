@@ -1,10 +1,10 @@
-## testkube executors delete
+# Testkube Executors Delete
 
-Gets executordetails
+Delete an Executor.
 
 ### Synopsis
 
-Gets executor, you can change output format
+Delete executor:
 
 ```
 testkube executors delete <executorName> [flags]
@@ -13,22 +13,22 @@ testkube executors delete <executorName> [flags]
 ### Options
 
 ```
-  -h, --help          help for delete
-  -n, --name string   unique executor name, you can also pass it as first argument
+  -h, --help          Help for delete.
+  -n, --name string   Unique executor name, can also be passed as the first argument.
 ```
 
-### Options inherited from parent commands
+## Options Inherited from Parent Commands
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [Testkube Executors](testkube_executors.md)	 - Executor management commands.
 

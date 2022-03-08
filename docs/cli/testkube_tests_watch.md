@@ -1,33 +1,33 @@
-## testkube tests watch
+# Testkube Tests Watch
 
-Watch logs output from executor pod
+Watch logs output from executor pod.
 
-### Synopsis
+## **Synopsis**
 
-Gets test execution details, until it's in success/error state, blocks until gets complete state
+Gets test execution details until the return of **success** or **error** and blocks until the state is complete.
 
 ```
 testkube tests watch <executionID> [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for watch
+  -h, --help   Help for watch.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube tests](testkube_tests.md)	 - Tests management commands
+* [Testkube Tests](testkube_tests.md)	 - Tests management commands.
 

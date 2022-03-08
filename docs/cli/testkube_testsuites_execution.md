@@ -1,33 +1,31 @@
-## testkube testsuites execution
+# Testkube Testsuites Execution
 
-Gets test suite execution details
+## **Synopsis**
 
-### Synopsis
-
-Gets test suite execution details by ID
+Get the Test Suite execution details by ID:
 
 ```
 testkube testsuites execution <executionID> [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for execution
+  -h, --help   Help for execution.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
+* [Testkube Testsuites](testkube_testsuites.md)	 - Testsuites management commands.
 
