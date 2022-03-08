@@ -122,7 +122,7 @@ func uiPrintStatus(execution testkube.Execution) {
 func uiShellGetExecution(id string) {
 	ui.ShellCommand(
 		"Use following command to get test execution details",
-		"kubectl testkube tests execution "+id,
+		"kubectl testkube get execution "+id,
 	)
 
 	ui.NL()
@@ -131,7 +131,7 @@ func uiShellGetExecution(id string) {
 func uiShellWatchExecution(id string) {
 	ui.ShellCommand(
 		"Watch test execution until complete",
-		"kubectl testkube tests watch "+id,
+		"kubectl testkube watch execution "+id,
 	)
 
 	ui.NL()

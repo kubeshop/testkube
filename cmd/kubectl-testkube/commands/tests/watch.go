@@ -9,8 +9,8 @@ import (
 
 func NewWatchExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "test <executionID>",
-		Aliases: []string{"t", "tests"},
+		Use:     "execution <executionID>",
+		Aliases: []string{"e", "executions"},
 		Short:   "Watch logs output from executor pod",
 		Long:    `Gets test execution details, until it's in success/error state, blocks until gets complete state`,
 		Args:    validator.ExecutionID,
