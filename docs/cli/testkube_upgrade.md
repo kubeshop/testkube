@@ -1,36 +1,36 @@
-## testkube upgrade
+# Testkube Upgrade
 
-Upgrade Helm chart and run migrations
+Upgrade Helm charts and run migrations.
 
-### Synopsis
+## **Synopsis**
 
-Upgrade can be configured with use of particular 
+The upgrade can be configured with the use of particular flags:
 
 ```
 testkube upgrade [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --chart string   chart name (default "kubeshop/testkube")
-  -h, --help           help for upgrade
-      --name string    installation name (default "testkube")
-      --no-dashboard   don't install dashboard
-      --no-jetstack    don't install Jetstack
-      --no-minio       don't install MinIO
+      --chart string   Chart name (default "kubeshop/testkube").
+  -h, --help           Help for upgrade.
+      --name string    Installation name (default "testkube").
+      --no-dashboard   Don't install dashboard.
+      --no-jetstack    Don't install Jetstack.
+      --no-minio       Don't install MinIO.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
 

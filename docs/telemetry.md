@@ -1,6 +1,6 @@
 # Telemetry
 
-To improve the end-user experience Testkube collects anonymous data about usage and sends it to us.
+To improve the end-user experience, Testkube collects anonymous data about usage.
 
 Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
 

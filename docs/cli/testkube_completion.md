@@ -1,34 +1,31 @@
-## testkube completion
+# Testkube Completion
 
-generate the autocompletion script for the specified shell
-
-### Synopsis
-
+## **Synopsis**
 
 Generate the autocompletion script for testkube for the specified shell.
-See each sub-command's help for details on how to use the generated script.
+See "Help" for each sub-command for details on how to use the generated script.
 
 
-### Options
-
-```
-  -h, --help   help for completion
-```
-
-### Options inherited from parent commands
+## **Options**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+  -h, --help   Help for completion.
+```
+
+## **Options Inherited from Parent Commands**
+
+```
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube completion bash](testkube_completion_bash.md)	 - generate the autocompletion script for bash
-* [testkube completion fish](testkube_completion_fish.md)	 - generate the autocompletion script for fish
-* [testkube completion powershell](testkube_completion_powershell.md)	 - generate the autocompletion script for powershell
-* [testkube completion zsh](testkube_completion_zsh.md)	 - generate the autocompletion script for zsh
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugin.
+* [Testkube Completion Bash](testkube_completion_bash.md)	 - Generate the autocompletion script for Bash.
+* [Testkube Completion Fish](testkube_completion_fish.md)	 - Generate the autocompletion script for fish.
+* [Testkube Completion Powershell](testkube_completion_powershell.md)	 - Generate the autocompletion script for PowerShell.
+* [Testkube Completion Zsh](testkube_completion_zsh.md)	 - Generate the autocompletion script for Zsh.
 

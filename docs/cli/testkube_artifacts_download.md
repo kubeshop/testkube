@@ -1,29 +1,29 @@
-## testkube artifacts download
+# Testkube Artifacts Download
 
-download artifacts
+Download artifacts:
 
 ```
 testkube artifacts download <executionID> [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --download-dir string   download dir (default "artifacts")
-  -e, --execution-id string   ID of the execution
-  -h, --help                  help for download
+      --download-dir string   Download directory (default "artifacts").
+  -e, --execution-id string   ID of the execution.
+  -h, --help                  Help for download.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
 ### SEE ALSO
 
-* [testkube artifacts](testkube_artifacts.md)	 - Artifacts management commands
+* [Testkube Artifacts](testkube_artifacts.md)	 - Artifacts management commands.
 

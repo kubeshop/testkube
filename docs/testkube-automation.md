@@ -1,22 +1,21 @@
 # Integrating with CI/CD
 
-In order to automate Testkube runs the main and the only thing which is required is an `access to a needed K8S cluster`. E.G. Configured environment with the set up context and kubeconfig for communication with the K8S clustrer.
+In order to automate Testkube runs, access to a  K8S cluster is needed, for example, a configured environment with the set up context and kubeconfig for communication with the K8S cluster.  
+Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources, etc.
 
-As Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources etc.
+In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
 
-In the next few sections we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
+## **Configuring your GH Actions for the Access to GKE**
 
-## Configuring your GH actions for the access to GKE
+To obtain set up access to a GKE (Google Kubernetes Engine) from GH (GitHub) actions, please visit the official documentation from GH: <https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine>
 
-To get set up access to a GKE from GH actions please visit official documentation from GH: <https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine>
+1. Create a Service Account (SA).
+2. Save it into GH's **Secrets** of the repository.
+3. Run either `Helm` or `Kubectl kubtest` commands against the set up GKE cluster.
 
-1. Create SA (service account)
-2. Save it into GH's secrets of the repository
-3. Run either `Helm` or `Kubectl kubtest` comamnds against set up GKE cluster.
+## **Main GH Action Section Configuration**
 
-## Main GH's action section configuration
-
-To install on Linux or MacOs run
+To install on Linux or MacOS, run:
 
 ```sh
       # Deploy into configured GKE cluster:
@@ -25,11 +24,13 @@ To install on Linux or MacOs run
           helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
 ```
 
-Instead of Helm you can run any other k8s-native command. In our case: `kubectl kubtest...`
+In addition to Helm, you can run any other K8s-native command. In our case: `kubectl kubtest...`
 
-## Full example of working GH actions workflow and Testkube tests usage. Can be easily re-used with minimal modifications upon your needs
+## **Complete Example of Working GH Actions Workflow and Testkube Tests Usage** 
 
-To Run Tests on Linux or MacOs OS:
+Testkube tests can be easily re-used with minimal modifications according to your needs.
+
+To run tests on Linux or MacOS:
 
 ```sh
 name: Running Testkube Tests.
@@ -92,9 +93,9 @@ jobs:
           kubectl testkube tests run TEST_NAME
 ```
 
-Along with the `kubectl`comand you can pass all the standart K8S parameters like `--namespace` etc.
+Along with the `kubectl` command, you can pass all the standard K8s parameters such as `--namespace`, etc.
 
-If you wish to automate CI/CD part of Testkube's Helm release you can use `Helm` blocks as follow:
+If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` blocks as follow:
 
 ```sh
 ...

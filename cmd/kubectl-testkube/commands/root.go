@@ -64,7 +64,7 @@ var RootCmd = &cobra.Command{
 		cmd.DisableAutoGenTag = true
 	},
 
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
 
 		if analyticsEnabled {
