@@ -13,8 +13,8 @@ func NewGetWebhookCmd() *cobra.Command {
 	var name, namespace string
 
 	cmd := &cobra.Command{
-		Use:     "webhooks <webhookName>",
-		Aliases: []string{"webhook", "wh"},
+		Use:     "webhook <webhookName>",
+		Aliases: []string{"webhooks", "wh"},
 		Short:   "Get webhook details",
 		Long:    `Get webhook, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -16,8 +16,8 @@ func NewGetTestsCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "tests <testName>",
-		Aliases: []string{"test", "t"},
+		Use:     "test <testName>",
+		Aliases: []string{"tests", "t"},
 		Short:   "Get all available tests",
 		Long:    `Getting all available tests from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {

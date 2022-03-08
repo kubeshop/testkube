@@ -19,10 +19,10 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testuiteexecutions <executionID>",
-		Aliases: []string{"testuiteexecution", "tse", "ts-execution", "tsexecution"},
-		Short:   "Gets test suite execution details",
-		Long:    `Gets test suite execution details by ID`,
+		Use:     "testuiteexecution [executionID]",
+		Aliases: []string{"testuiteexecutions", "tse", "ts-execution", "tsexecution"},
+		Short:   "Gets TestSuite Execution details",
+		Long:    `Gets TestSuite Execution details by ID, or list if id is not passed`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 

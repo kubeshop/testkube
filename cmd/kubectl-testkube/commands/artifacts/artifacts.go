@@ -19,9 +19,10 @@ var (
 
 func NewListArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list <executionID>",
-		Short: "List artifacts of the given execution ID",
-		Args:  validator.ExecutionID,
+		Use:     "artifact <executionID>",
+		Aliases: []string{"artifacts"},
+		Short:   "List artifacts of the given execution ID",
+		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID = args[0]
 			cmd.SilenceUsage = true
@@ -41,7 +42,7 @@ func NewListArtifactsCmd() *cobra.Command {
 
 func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "download-one <executionID> <fileName> <destinationDir>",
+		Use:   "single <executionID> <fileName> <destinationDir>",
 		Short: "download artifact",
 		Args:  validator.ExecutionIDAndFileNames,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -67,7 +68,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 
 func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "download <executionID>",
+		Use:   "all <executionID>",
 		Short: "download artifacts",
 		Args:  validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -11,8 +11,8 @@ import (
 
 func NewGetExecutorCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "executors [executorName]",
-		Aliases: []string{"executor", "er"},
+		Use:     "executor [executorName]",
+		Aliases: []string{"executors", "er"},
 		Short:   "Gets executor details",
 		Long:    `Gets executor, you can change output format`,
 		Run: func(cmd *cobra.Command, args []string) {
