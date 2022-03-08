@@ -16,6 +16,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 
 	var (
 		file   string
+		name   string
 		labels map[string]string
 	)
 
@@ -40,35 +41,36 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 
 			var options testkubeapiv1.UpsertTestSuiteOptions
 
-			json.Unmarshal(content, &options)
+			err = json.Unmarshal(content, &options)
+			ui.ExitOnError("Invalid file content", err)
+
+			if name != "" {
+				options.Name = name
+			}
 
 			client, _ := common.GetClient(cmd)
 
-			test, _ := client.GetTestSuite(options.Name, options.Namespace)
-			if options.Name == test.Name {
-				ui.Failf("Test with name '%s' already exists in namespace %s", options.Name, options.Namespace)
+			testSuite, _ := client.GetTestSuite(options.Name, options.Namespace)
+			if options.Name != testSuite.Name {
+				ui.Failf("TestSuite with name '%s' not exists in namespace %s", options.Name, options.Namespace)
 			}
 
 			// if labels are passed and are different from the existing overwrite
-			if len(labels) > 0 && !reflect.DeepEqual(test.Labels, labels) {
+			if len(labels) > 0 && !reflect.DeepEqual(testSuite.Labels, labels) {
 				options.Labels = labels
 			} else {
-				options.Labels = test.Labels
+				options.Labels = testSuite.Labels
 			}
 
-			// if labels are not passed don't overwrite existing labels
-			// TODO: figure out how to remove labels from test
-			if labels != nil {
-				options.Labels = labels
-			}
-
-			test, err = client.UpdateTestSuite(options)
-			ui.ExitOnError("updating test "+options.Name+" in namespace "+options.Namespace, err)
-			ui.Success("Test created", options.Name)
+			// TODO: figure out how to remove labels from test suite
+			testSuite, err = client.UpdateTestSuite(options)
+			ui.ExitOnError("updating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
+			ui.Success("TestSuite updated", options.Name)
 		},
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
+	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd

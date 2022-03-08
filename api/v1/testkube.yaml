@@ -1717,7 +1717,5 @@ components:
       in: query
       name: selector
       schema:
-        type: array
-        items:
-          type: string
-        description: Tags to filter tests by
+        type: string
+        description: Labels to filter by

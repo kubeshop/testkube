@@ -119,6 +119,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		// map test but load spec only to not override metadata.ResourceVersion
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
+		test.Labels = request.Labels
 		test, err = s.TestsClient.Update(test)
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
