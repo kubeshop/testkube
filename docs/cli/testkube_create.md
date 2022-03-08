@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube create
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Create resource
 
 ```
-testkube migrate [flags]
+testkube create <resourceName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for create
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +24,8 @@ testkube migrate [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube create executor](testkube_create_executor.md)	 - Create new Executor
+* [testkube create test](testkube_create_test.md)	 - Create new Test
+* [testkube create testsuite](testkube_create_testsuite.md)	 - Create new TestSuite
+* [testkube create webhook](testkube_create_webhook.md)	 - Create new Webhook
 

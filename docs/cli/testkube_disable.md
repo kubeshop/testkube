@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube disable
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Disable feature
 
 ```
-testkube migrate [flags]
+testkube disable <feature> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for disable
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +24,5 @@ testkube migrate [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube disable analytics](testkube_disable_analytics.md)	 - disable collecting of anonymous analytics
 

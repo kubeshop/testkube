@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube abort execution
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Aborts execution of the test
 
 ```
-testkube migrate [flags]
+testkube abort execution <executionID> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for execution
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +23,5 @@ testkube migrate [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube abort](testkube_abort.md)	 - Abort tests or test suites
 

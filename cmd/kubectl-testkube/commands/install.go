@@ -15,8 +15,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install Helm chart registry in current kubectl context",
-		Long:  `Install can be configured with use of particular `,
+		Short: "Install Helm chart registry in current kubectl context and update dependencies",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			err := HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)

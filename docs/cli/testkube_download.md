@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube download
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Artifacts management commands
 
 ```
-testkube migrate [flags]
+testkube download <resource> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for download
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +24,6 @@ testkube migrate [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube download artifact](testkube_download_artifact.md)	 - download artifact
+* [testkube download artifacts](testkube_download_artifacts.md)	 - download artifacts
 

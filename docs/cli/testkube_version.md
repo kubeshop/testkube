@@ -1,29 +1,31 @@
-# Testkube Version
+## testkube version
 
-## **Synopsis**
+Shows version and build info
 
-Shows version and build info.
+### Synopsis
+
+Shows version and build info
 
 ```
 testkube version [flags]
 ```
 
-## **Options**
+### Options
 
 ```
   -h, --help   help for version
 ```
 
-## **Options Inherited from Parent Commands**
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   Enable analytics (default true).
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
-  -s, --namespace string    Kubernetes namespace (default "testkube").
-  -v, --verbose             Show additional debug messages.
+      --analytics-enabled   Enable analytics (default true)
+  -c, --client string       Client used for connecting to Testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string    Kubernetes namespace (default "testkube")
+  -v, --verbose             Show additional debug messages
 ```
 
-## **SEE ALSO**
+### SEE ALSO
 
-* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

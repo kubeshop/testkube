@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube status analytics
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Get analytics status
 
 ```
-testkube migrate [flags]
+testkube status analytics [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for analytics
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +23,5 @@ testkube migrate [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube status](testkube_status.md)	 - Show status of feature or resource
 

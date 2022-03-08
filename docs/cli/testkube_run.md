@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube run
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Runs tests or test suites
 
 ```
-testkube migrate [flags]
+testkube run <resourceName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for run
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +24,6 @@ testkube migrate [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube run test](testkube_run_test.md)	 - Starts new test
+* [testkube run testsuite](testkube_run_testsuite.md)	 - Starts new test suite
 

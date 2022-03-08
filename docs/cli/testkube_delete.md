@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube delete
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Delete resources
 
 ```
-testkube migrate [flags]
+testkube delete <resourceName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +24,8 @@ testkube migrate [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube delete executor](testkube_delete_executor.md)	 - Delete Executor
+* [testkube delete test](testkube_delete_test.md)	 - Delete Test
+* [testkube delete testsuite](testkube_delete_testsuite.md)	 - Delete test suite
+* [testkube delete webhook](testkube_delete_webhook.md)	 - Delete webhook
 

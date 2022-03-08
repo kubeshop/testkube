@@ -107,10 +107,10 @@ func Execute() {
 	cfg, err := config.Load()
 	ui.WarnOnError("Config loading error", err)
 
-	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
-	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
-	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "should analytics be enabled")
+	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
+	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
+	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "Kubernetes namespace")
+	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show additional debug messages")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

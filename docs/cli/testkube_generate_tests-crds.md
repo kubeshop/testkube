@@ -1,19 +1,19 @@
-## testkube migrate
+## testkube generate tests-crds
 
-manual migrate command
+Generate tests CRD file based on directory
 
 ### Synopsis
 
-migrate command will run migrations greater or equals current version
+Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)
 
 ```
-testkube migrate [flags]
+testkube generate tests-crds <manifestDirectory> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for tests-crds
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +27,5 @@ testkube migrate [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube generate](testkube_generate.md)	 - Generate resources commands
 

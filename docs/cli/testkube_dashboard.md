@@ -1,30 +1,32 @@
-# Testkube Dashboard
+## testkube dashboard
 
-## **Synopsis**
+Open testkube dashboard
 
-Open the Testkube Dashboard:
+### Synopsis
+
+Open testkube dashboard
 
 ```
 testkube dashboard [flags]
 ```
 
-## **Options**
+### Options
 
 ```
-  -h, --help                   Help for dashboard.
-      --use-global-dashboard   Use global dashboard for viewing Testkube results.
+  -h, --help                   help for dashboard
+      --use-global-dashboard   use global dashboard for viewing testkube results
 ```
 
-## **Options Inherited from Parent Commands**
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   Enable analytics (default "true").
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
-  -s, --namespace string    Kubernetes namespace (default "testkube").
-  -v, --verbose             Show additional debug messages.
+      --analytics-enabled   Enable analytics (default true)
+  -c, --client string       Client used for connecting to Testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string    Kubernetes namespace (default "testkube")
+  -v, --verbose             Show additional debug messages
 ```
 
-## **SEE ALSO**
+### SEE ALSO
 
-* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

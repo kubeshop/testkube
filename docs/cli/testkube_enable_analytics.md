@@ -1,19 +1,15 @@
-## testkube migrate
+## testkube enable analytics
 
-manual migrate command
-
-### Synopsis
-
-migrate command will run migrations greater or equals current version
+Enable collecting of anonymous analytics
 
 ```
-testkube migrate [flags]
+testkube enable analytics [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for analytics
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +23,5 @@ testkube migrate [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube enable](testkube_enable.md)	 - Enable feature
 
