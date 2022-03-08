@@ -14,6 +14,7 @@ func NewRunCmd() *cobra.Command {
 		Aliases: []string{"r", "start"},
 		Short:   "Runs tests or test suites",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Logo()
 			cmd.Help()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

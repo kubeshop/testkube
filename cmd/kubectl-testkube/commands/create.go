@@ -16,6 +16,7 @@ func NewCreateCmd() *cobra.Command {
 		Aliases: []string{"c"},
 		Short:   "Create resource",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Logo()
 			cmd.Help()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -34,8 +35,6 @@ func NewCreateCmd() *cobra.Command {
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
 	cmd.AddCommand(executors.NewCreateExecutorCmd())
-	cmd.AddCommand(tests.NewCreateTestsCmd())
-	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 
 	return cmd
 }

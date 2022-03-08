@@ -14,8 +14,9 @@ func NewDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete <resourceName>",
 		Aliases: []string{"remove"},
-		Short:   "Runs tests or test suites",
+		Short:   "Delete resources",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Logo()
 			cmd.Help()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -35,7 +36,7 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
-	cmd.AddCommand(testsuites.NewDeleteTestSuitesCmd())
+	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 	cmd.AddCommand(executors.NewDeleteExecutorCmd())
 

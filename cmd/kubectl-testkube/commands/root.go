@@ -41,11 +41,6 @@ func init() {
 	RootCmd.AddCommand(NewDownloadCmd())
 	RootCmd.AddCommand(NewGenerateCmd())
 
-	RootCmd.AddCommand(NewTestsCmd())
-	RootCmd.AddCommand(NewExecutorsCmd())
-	RootCmd.AddCommand(NewTestSuitesCmd())
-	RootCmd.AddCommand(NewWebhooksCmd())
-
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
@@ -56,8 +51,7 @@ func init() {
 
 var RootCmd = &cobra.Command{
 	Use:   "testkube",
-	Short: "testkube entrypoint for plugin",
-	Long:  `testkube`,
+	Short: "Testkube entrypoint for kubectl plugin",
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
 		cmd.Usage()

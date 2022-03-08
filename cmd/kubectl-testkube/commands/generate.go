@@ -14,6 +14,7 @@ func NewGenerateCmd() *cobra.Command {
 		Aliases: []string{},
 		Short:   "Generate resources commands",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Logo()
 			cmd.Help()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

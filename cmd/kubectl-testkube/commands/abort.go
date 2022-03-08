@@ -12,6 +12,7 @@ func NewAbortCmd() *cobra.Command {
 		Use:   "abort <resourceName>",
 		Short: "Abort tests or test suites",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Logo()
 			cmd.Help()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

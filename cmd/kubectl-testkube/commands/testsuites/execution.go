@@ -19,8 +19,8 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testuiteexecution <executionID>",
-		Aliases: []string{"tse", "ts-execution", "tsexecution"},
+		Use:     "testuiteexecutions <executionID>",
+		Aliases: []string{"testuiteexecution", "tse", "ts-execution", "tsexecution"},
 		Short:   "Gets test suite execution details",
 		Long:    `Gets test suite execution details by ID`,
 		Run: func(cmd *cobra.Command, args []string) {
