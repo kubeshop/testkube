@@ -33,7 +33,7 @@ func NewTestsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
 	cmd.AddCommand(tests.NewAbortExecutionCmd()) //
-	cmd.AddCommand(tests.NewListTestsCmd())
+	// cmd.AddCommand(tests.NewListTestsCmd())
 	cmd.AddCommand(tests.NewGetTestsCmd())       //
 	cmd.AddCommand(tests.NewRunTestCmd())        //
 	cmd.AddCommand(tests.NewGetExecutionCmd())   //

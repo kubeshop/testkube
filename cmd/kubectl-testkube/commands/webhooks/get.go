@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -16,18 +16,23 @@ func NewGetWebhookCmd() *cobra.Command {
 		Use:     "webhooks <webhookName>",
 		Aliases: []string{"webhook", "wh"},
 		Short:   "Get webhook details",
-		Long:    `Gets webhook, you can change output format`,
-		Args:    validator.DNS1123Subdomain,
+		Long:    `Get webhook, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
-			name := args[0]
-
+			namespace := cmd.Flag("namespace").Value.String()
 			client, _ := common.GetClient(cmd)
-			webhook, err := client.GetWebhook(namespace, name)
-			ui.ExitOnError("getting webhook: "+name, err)
 
-			render := GetWebhookRenderer(cmd)
-			err = render.Render(webhook, os.Stdout)
-			ui.ExitOnError("rendering", err)
+			if len(args) > 0 {
+				name := args[0]
+				webhook, err := client.GetWebhook(namespace, name)
+				ui.ExitOnError("getting webhook: "+name, err)
+				err = render.Obj(cmd, webhook, os.Stdout)
+				ui.ExitOnError("rendering obj", err)
+			} else {
+				webhooks, err := client.ListWebhooks(namespace)
+				ui.ExitOnError("getting webhooks", err)
+				err = render.List(cmd, webhooks, os.Stdout)
+				ui.ExitOnError("rendering list", err)
+			}
 		},
 	}
 

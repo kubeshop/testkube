@@ -1,35 +1,44 @@
 package testsuites
 
 import (
-	"fmt"
+	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites/renderer"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func NewGetTestSuiteCmd() *cobra.Command {
-	return &cobra.Command{
+	var selectors []string
+
+	cmd := &cobra.Command{
 		Use:     "testsuite <testSuiteName>",
-		Aliases: []string{"testsuites"},
+		Aliases: []string{"testsuites", "ts"},
 		Short:   "Get test suite by name",
 		Long:    `Getting test suite from given namespace - if no namespace given "testkube" namespace is used`,
-		Args:    validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
-			ui.Logo()
-
-			name := args[0]
 			client, _ := common.GetClient(cmd)
-			testSuite, err := client.GetTestSuite(name, namespace)
-			ui.ExitOnError("getting test "+name, err)
 
-			out, err := yaml.Marshal(testSuite)
-			ui.ExitOnError("getting yaml ", err)
+			if len(args) > 0 {
+				name := args[0]
+				testSuite, err := client.GetTestSuite(name, namespace)
+				ui.ExitOnError("getting test "+name, err)
+				err = render.Obj(cmd, testSuite, os.Stdout, renderer.TestSuiteRenderer)
+				ui.ExitOnError("rendering obj", err)
+			} else {
+				tests, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
+				ui.ExitOnError("getting tests", err)
+				err = render.List(cmd, tests, os.Stdout)
+				ui.ExitOnError("rendering list", err)
+			}
 
-			fmt.Printf("%s\n", out)
 		},
 	}
+
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	return cmd
 }

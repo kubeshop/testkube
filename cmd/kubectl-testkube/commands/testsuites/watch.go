@@ -11,8 +11,8 @@ import (
 
 func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "watch <executionID>",
-		Aliases: []string{"w"},
+		Use:     "testsuite <executionID>",
+		Aliases: []string{"t", "testsuites"},
 		Short:   "Watch test",
 		Long:    `Watch test by test execution ID, returns results to console`,
 		Args:    validator.ExecutionID,

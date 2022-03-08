@@ -19,8 +19,8 @@ func NewGetExecutionCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "executions [testName]",
-		Aliases: []string{"el"},
+		Use:     "executions [executionID]",
+		Aliases: []string{"execution", "e"},
 		Short:   "List test executions",
 		Long:    `Getting list of execution for given test name or recent executions if there is no test name passed`,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -1,38 +1,53 @@
 package testsuites
 
 import (
-	"time"
+	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites/renderer"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewTestSuiteExecutionCmd() *cobra.Command {
+	var (
+		limit         int
+		selectors     []string
+		testSuiteName string
+	)
+
 	cmd := &cobra.Command{
-		Use:     "execution <executionID>",
-		Aliases: []string{"e"},
+		Use:     "testuiteexecution <executionID>",
+		Aliases: []string{"tse", "ts-execution", "tsexecution"},
 		Short:   "Gets test suite execution details",
 		Long:    `Gets test suite execution details by ID`,
-		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-
-			startTime := time.Now()
 			client, _ := common.GetClient(cmd)
 
-			executionID := args[0]
-			execution, err := client.GetTestSuiteExecution(executionID)
-			ui.ExitOnError("getting recent test suite execution data id:"+execution.Id, err)
+			if len(args) > 0 {
+				executionID := args[0]
+				execution, err := client.GetTestSuiteExecution(executionID)
+				ui.ExitOnError("getting recent test suite execution data id:"+execution.Id, err)
+				err = render.Obj(cmd, execution, os.Stdout, renderer.TestSuiteExecutionRenderer)
+				ui.ExitOnError("rendering obj", err)
+				uiShellTestSuiteGetCommandBlock(execution.Id)
+			} else {
+				client, _ := common.GetClient(cmd)
 
-			printExecution(execution, startTime)
+				executions, err := client.ListTestSuiteExecutions(testSuiteName, limit, strings.Join(selectors, ","))
+				ui.ExitOnError("getting test suites executions list", err)
+				render.List(cmd, executions, os.Stdout)
 
-			uiPrintExecutionStatus(execution)
+			}
 
-			uiShellTestSuiteGetCommandBlock(execution.Id)
 		},
 	}
+
+	cmd.Flags().StringVar(&testSuiteName, "test-suite", "", "test suite name")
+	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

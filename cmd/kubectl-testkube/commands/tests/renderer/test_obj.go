@@ -13,10 +13,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		return fmt.Errorf("can't use '%T' as testkube.Test in RenderObj for test", obj)
 	}
 
-	ui.Warn("name:     ", test.Name)
-	ui.Warn("namespace:", test.Name)
-	ui.Warn("created:  ", test.Created.String())
-	ui.Warn("labels:   ", fmt.Sprintf("%v", test.Labels))
+	ui.Warn("Name:     ", test.Name)
+	ui.Warn("Namespace:", test.Name)
+	ui.Warn("Created:  ", test.Created.String())
+	ui.Warn("Labels:   ", fmt.Sprintf("%v", test.Labels))
 
 	if test.Content != nil {
 		ui.NL()

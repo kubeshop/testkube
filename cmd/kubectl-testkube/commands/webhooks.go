@@ -38,7 +38,6 @@ func NewWebhooksCmd() *cobra.Command {
 
 	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
 	cmd.AddCommand(webhooks.NewGetWebhookCmd())
-	cmd.AddCommand(webhooks.NewListWebhookCmd())
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 
 	return cmd

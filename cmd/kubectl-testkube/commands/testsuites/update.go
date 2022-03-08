@@ -20,7 +20,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "update",
+		Use:   "testsuite",
 		Short: "Update Test Suite",
 		Long:  `Update Test Custom Resource Definitions, `,
 		Run: func(cmd *cobra.Command, args []string) {

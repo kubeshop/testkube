@@ -38,7 +38,7 @@ func NewTestSuitesCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "kubernetes namespace")
 
-	cmd.AddCommand(testsuites.NewListTestSuitesCmd())
+	// cmd.AddCommand(testsuites.NewListTestSuitesCmd())
 	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
 	cmd.AddCommand(testsuites.NewRunTestSuiteCmd())
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())

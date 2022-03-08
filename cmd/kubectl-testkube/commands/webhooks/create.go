@@ -15,8 +15,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"c"},
+		Use:     "webhook",
+		Aliases: []string{"wh"},
 		Short:   "Create new Webhook",
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
