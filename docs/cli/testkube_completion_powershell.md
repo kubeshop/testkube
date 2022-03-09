@@ -1,38 +1,40 @@
-# Testkube Completion Powershell
+## testkube completion powershell
 
-## **Synopsis**
+generate the autocompletion script for powershell
 
-Generate the autocompletion script for Powershell.
+### Synopsis
+
+
+Generate the autocompletion script for powershell.
 
 To load completions in your current shell session:
-```
 PS C:\> testkube completion powershell | Out-String | Invoke-Expression
-```
 
-To load completions for every new session, add the output of the above command to your Powershell profile.
+To load completions for every new session, add the output of the above command
+to your powershell profile.
 
 
 ```
 testkube completion powershell [flags]
 ```
 
-## **Options**
+### Options
 
 ```
-  -h, --help              Help for Powershell.
-      --no-descriptions   Disable completion descriptions.
+  -h, --help              help for powershell
+      --no-descriptions   disable completion descriptions
 ```
 
-## **Options Inherited from Parent Commands**
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   Enable analytics (default "true").
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
-  -s, --namespace string    Kubernetes namespace (default "testkube").
-  -v, --verbose             Show additional debug messages.
+      --analytics-enabled   Enable analytics (default true)
+  -c, --client string       Client used for connecting to Testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string    Kubernetes namespace (default "testkube")
+  -v, --verbose             Show additional debug messages
 ```
 
-## **SEE ALSO**
+### SEE ALSO
 
-* [Testkube Completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell.
+* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
 

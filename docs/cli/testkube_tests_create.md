@@ -7,7 +7,7 @@ Create a new test.
 Create a new Test Custom Resource:
 
 ```
-testkube tests create [flags]
+testkube create test [flags]
 ```
 
 ## **Options**

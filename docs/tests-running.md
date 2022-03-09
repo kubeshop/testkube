@@ -12,7 +12,7 @@ In this example, we have previously created a test with the name `api-incluster-
 This is an example of the simplest run command:
 
 ```sh
-kubectl testkube tests run api-incluster-test
+kubectl testkube run test api-incluster-test
 ```
 
 Output:
@@ -33,24 +33,24 @@ Execution name: openly-full-bream
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d6398b046f8fbd3d955d4
+$ kubectl testkube get execution 615d6398b046f8fbd3d955d4
 
 Or watch test execution until complete:
-$ kubectl testkube tests watch 615d6398b046f8fbd3d955d4
+$ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 
 ```
 
 Testkube will inform us about possible commands to get test results:
 
-- `kubectl testkube tests execution 615d6398b046f8fbd3d955d4` to get execution details.
-- `kubectl testkube tests watch 615d6398b046f8fbd3d955d4` to watch the current pending execution. Watch will also get details when a test is completed and is good for long running tests to lock your terminal until test execution completes.
+- `kubectl testkube get execution 615d6398b046f8fbd3d955d4` to get execution details.
+- `kubectl testkube watch execution 615d6398b046f8fbd3d955d4` to watch the current pending execution. Watch will also get details when a test is completed and is good for long running tests to lock your terminal until test execution completes.
 
 ## **Run with Watch for Changes**
 
 If we want to wait until a test execution completes we can pass the `-f` flag (follow) to the test run command:
 
 ```sh
-kubectl testkube tests run api-incluster-test -f
+kubectl testkube run test api-incluster-test -f
 ```
 
 Output:
@@ -71,10 +71,10 @@ Execution name: monthly-sure-finch
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube get execution 615d7e1ab046f8fbd3d955d6
 
 Or watch test execution until complete:
-$ kubectl testkube tests watch 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube watch execution 615d7e1ab046f8fbd3d955d6
 
 
 Watching for changes
@@ -114,7 +114,7 @@ API-Health
 │ average response time: 282ms [min: 282ms, max: 282ms, s.d.: 0µs] │
 └──────────────────────────────────────────────────────────────────┘
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d7e1ab046f8fbd3d955d6
+$ kubectl testkube get execution 615d7e1ab046f8fbd3d955d6
 
 Test execution completed in 595ms
 ```
@@ -130,7 +130,7 @@ Let's assume that our example Cypress test needs the `testparam` parameter with 
 This is done by using the `-p` parameter. If you need to pass more parameters, simply pass multiple `-p` flags.
 
 ```sh
-kubectl testkube tests start kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube start test kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
@@ -151,10 +151,10 @@ Execution name: nominally-able-glider
 
 Test queued for execution
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 or watch test execution until complete:
-$ kubectl testkube tests watch 615d5372b046f8fbd3d955d2
+$ kubectl testkube watch execution 615d5372b046f8fbd3d955d2
 
 
 Watching for changes
@@ -219,7 +219,7 @@ Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
     ✔  All specs passed!                        00:19        1        1        -        -        -
 
 Use the following command to get test execution details:
-$ kubectl testkube tests execution 615d5372b046f8fbd3d955d2
+$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s
 ```

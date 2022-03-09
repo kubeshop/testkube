@@ -139,7 +139,7 @@ func sleep(t *testing.T, d time.Duration) {
 }
 
 func GetExecutionID(out []byte) string {
-	r := regexp.MustCompile("kubectl testkube tests execution test ([0-9a-zA-Z]+)")
+	r := regexp.MustCompile("kubectl testkube get execution test ([0-9a-zA-Z]+)")
 	matches := r.FindStringSubmatch(string(out))
 	if len(matches) == 2 {
 		return matches[1]

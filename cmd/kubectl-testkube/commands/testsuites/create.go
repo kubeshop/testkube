@@ -21,9 +21,9 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"c"},
-		Short:   "Create new test suite",
+		Use:     "testsuite",
+		Aliases: []string{"testsuites", "ts"},
+		Short:   "Create new TestSuite",
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
@@ -38,6 +38,10 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
 				content, err = ioutil.ReadAll(os.Stdin)
 				ui.ExitOnError("reading stdin", err)
+			}
+
+			if name == "" {
+				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
 			var options testkube.TestSuiteUpsertRequest

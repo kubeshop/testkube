@@ -1,31 +1,31 @@
-# Testkube Migrate
+## testkube migrate
 
-The manual migrate command.
+manual migrate command
 
-## **Synopsis**
+### Synopsis
 
-The migrate command will run migrations greater or equal to the current version.
+migrate command will run migrations greater or equals current version
 
 ```
 testkube migrate [flags]
 ```
 
-## **Options**
+### Options
 
 ```
-  -h, --help   Help for migrate.
+  -h, --help   help for migrate
 ```
 
-## **Options Inherited from Parent Commands**
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   Enable analytics (default "true").
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
-  -s, --namespace string    Kubernetes namespace (default "testkube").
-  -v, --verbose             Show additional debug messages.
+      --analytics-enabled   Enable analytics (default true)
+  -c, --client string       Client used for connecting to Testkube API one of proxy|direct (default "proxy")
+  -s, --namespace string    Kubernetes namespace (default "testkube")
+  -v, --verbose             Show additional debug messages
 ```
 
-## **SEE ALSO**
+### SEE ALSO
 
-* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

@@ -15,8 +15,7 @@ func NewUpgradeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "upgrade",
-		Short:   "Upgrade Helm chart and run migrations",
-		Long:    `Upgrade can be configured with use of particular `,
+		Short:   "Upgrade Helm chart, install dependencies and run migrations",
 		Aliases: []string{"update"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()

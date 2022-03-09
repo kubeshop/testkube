@@ -11,7 +11,7 @@ import (
 
 func NewAbortExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "abort <executionID>",
+		Use:   "execution <executionID>",
 		Short: "Aborts execution of the test",
 		Args:  validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {

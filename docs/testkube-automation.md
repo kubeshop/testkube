@@ -90,7 +90,7 @@ jobs:
       # Run Testkube test on a GKE cluster
       - name: Run Tests
         run: |-
-          kubectl testkube tests run TEST_NAME
+          kubectl testkube run test TEST_NAME
 ```
 
 Along with the `kubectl` command, you can pass all the standard K8s parameters such as `--namespace`, etc.

@@ -12,10 +12,11 @@ func NewDeleteWebhookCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 
-		Use:   "delete <webhookName>",
-		Short: "Delete webhook",
-		Long:  `Delete webhook, pass webhook name which should be deleted`,
-		Args:  validator.DNS1123Subdomain,
+		Use:     "webhook <webhookName>",
+		Aliases: []string{"wh"},
+		Short:   "Delete webhook",
+		Long:    `Delete webhook, pass webhook name which should be deleted`,
+		Args:    validator.DNS1123Subdomain,
 		Run: func(cmd *cobra.Command, args []string) {
 			name = args[0]
 

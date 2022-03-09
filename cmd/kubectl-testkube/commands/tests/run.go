@@ -27,8 +27,8 @@ func NewRunTestCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "run <testName>",
-		Aliases: []string{"start", "r"},
+		Use:     "test <testName>",
+		Aliases: []string{"t"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Args:    validator.TestName,
@@ -122,7 +122,7 @@ func uiPrintStatus(execution testkube.Execution) {
 func uiShellGetExecution(id string) {
 	ui.ShellCommand(
 		"Use following command to get test execution details",
-		"kubectl testkube tests execution "+id,
+		"kubectl testkube get execution "+id,
 	)
 
 	ui.NL()
@@ -131,7 +131,7 @@ func uiShellGetExecution(id string) {
 func uiShellWatchExecution(id string) {
 	ui.ShellCommand(
 		"Watch test execution until complete",
-		"kubectl testkube tests watch "+id,
+		"kubectl testkube watch execution "+id,
 	)
 
 	ui.NL()

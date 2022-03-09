@@ -8,9 +8,8 @@ import (
 
 func NewEnableAnalyticsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "enable",
-		Aliases: []string{"on", "e", "y"},
-		Short:   "Enable collecting of anonymous analytics",
+		Use:   "analytics",
+		Short: "Enable collecting of anonymous analytics",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 			cfg, err := config.Load()

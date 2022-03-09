@@ -32,7 +32,7 @@ Save in a convenient location. In this example, we are using `~/Downloads/TODO.p
 ![create postman collection step 3](img/test-create-1.png)
 
 ```sh
-kubectl testkube tests create --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube create test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 Output:
@@ -57,7 +57,7 @@ Test created! Now we have a reusable test.
 If you need to update your test after change in Postman, re-export it to a file and run the update command:
 
 ```sh
-kubectl testkube tests update --file ~/Downloads/TODO.postman_collection.json --name test
+kubectl testkube update test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster: 
@@ -99,7 +99,7 @@ Get the details of a test:
 ```sh 
 kubectl get tests -ntestkube test-example -oyaml
 ```sh
-$ kubectl testkube tests get test
+$ kubectl testkube get test test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
@@ -305,7 +305,7 @@ Let's assume that a Cypress project is created in a git repository - <https://gi
 Now we can create our Cypress-based test as shown below. In git based tests, we need to pass the test type.
 
 ```sh
-kubectl testkube tests create --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Output:

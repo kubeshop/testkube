@@ -23,7 +23,7 @@ func NewDashboardCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "dashboard",
-		Aliases: []string{"d"},
+		Aliases: []string{"d", "open-dashboard"},
 		Short:   "Open testkube dashboard",
 		Long:    `Open testkube dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {

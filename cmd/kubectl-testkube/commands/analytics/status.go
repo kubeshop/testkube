@@ -8,9 +8,8 @@ import (
 
 func NewStatusAnalyticsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "status",
-		Aliases: []string{"s"},
-		Short:   "Get analytics status",
+		Use:   "analytics",
+		Short: "Get analytics status",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 

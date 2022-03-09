@@ -5,7 +5,7 @@
 Starts a new test based on the Test Custom Resource name and returns results to the console.
 
 ```sh
-testkube tests start [flags]
+testkube start test [flags]
 ```
 
 ## **Options**

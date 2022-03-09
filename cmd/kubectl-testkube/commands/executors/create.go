@@ -16,14 +16,18 @@ func NewCreateExecutorCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"c"},
+		Use:     "executor",
+		Aliases: []string{"exec", "ex"},
 		Short:   "Create new Executor",
 		Long:    `Create new Executor Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
 			var err error
+
+			if name == "" {
+				ui.Failf("pass valid name (in '--name' flag)")
+			}
 
 			client, namespace := common.GetClient(cmd)
 

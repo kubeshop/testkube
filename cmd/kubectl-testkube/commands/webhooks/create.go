@@ -15,8 +15,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"c"},
+		Use:     "webhook",
+		Aliases: []string{"wh"},
 		Short:   "Create new Webhook",
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -25,6 +25,10 @@ func NewCreateWebhookCmd() *cobra.Command {
 			var err error
 
 			client, namespace := common.GetClient(cmd)
+
+			if name == "" {
+				ui.Failf("pass valid name (in '--name' flag)")
+			}
 
 			webhook, _ := client.GetWebhook(namespace, name)
 			if name == webhook.Name {
