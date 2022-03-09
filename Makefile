@@ -166,3 +166,6 @@ port-forward-mongo:
 
 port-forward-api: 
 	kubectl port-forward svc/testkube-api-server 8088 -ntestkube
+
+api-proxy: 
+	go run cmd/proxy/main.go
