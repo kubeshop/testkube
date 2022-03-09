@@ -1,6 +1,10 @@
 package client
 
-import "fmt"
+import (
+	"os"
+
+	"k8s.io/client-go/kubernetes"
+)
 
 type ClientType string
 
@@ -10,19 +14,22 @@ const (
 )
 
 func GetClient(clientType ClientType, namespace string) (client Client, err error) {
-	switch clientType {
+	var overrideHost string
+	var clientset kubernetes.Interface
 
-	case ClientDirect:
-		client = NewDefaultDirectAPIClient()
-	case ClientProxy:
-		clientset, err := GetClientSet()
-		if err != nil {
-			return client, err
+	if clientType == ClientDirect {
+		overrideHost = "http://127.0.0.1:8080"
+		if host, ok := os.LookupEnv("TESTKUBE_KUBEPROXY_HOST"); ok {
+			overrideHost = host
 		}
-		client = NewProxyAPIClient(clientset, NewProxyConfig(namespace))
-	default:
-		err = fmt.Errorf("Client %s is not handled by testkube, use one of: %v", clientType, []ClientType{ClientDirect, ClientProxy})
 	}
+
+	clientset, err = GetClientSet(overrideHost)
+	if err != nil {
+		return client, err
+	}
+
+	client = NewProxyAPIClient(clientset, NewProxyConfig(namespace))
 
 	return client, err
 }
