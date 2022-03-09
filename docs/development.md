@@ -26,6 +26,17 @@ Next, checkout and run the Testkube Postman executor (<https://github.com/kubesh
 make run-executor
 ```
 
+### Making calls to local api server instance
+
+If you want to debug api server locally you can run local kube-proxy which make all calls to kube proxy uris directly to api server instances
+
+```sh
+make api-proxy
+```
+
+And when calling any of `kubectl testkube` subcommands just pass direct client flag (`-cdirect`)
+
+
 ### **Installing Local Executors**
 
 Install development executors by running them from the Testkube project (<https://github.com/kubeshop/testkube>):
