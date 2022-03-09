@@ -25,6 +25,10 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 			var err error
 
+			if name == "" {
+				ui.Failf("pass valid name (in '--name' flag)")
+			}
+
 			client, namespace := common.GetClient(cmd)
 
 			executor, _ := client.GetExecutor(name)

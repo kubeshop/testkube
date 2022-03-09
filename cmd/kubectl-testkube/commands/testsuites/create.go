@@ -40,6 +40,10 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
+			if name == "" {
+				ui.Failf("pass valid test suite name (in '--name' flag)")
+			}
+
 			var options testkube.TestSuiteUpsertRequest
 
 			err = json.Unmarshal(content, &options)

@@ -34,6 +34,11 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 			test, _ := client.GetTest(testName, testNamespace)
+
+			if testName == "" {
+				ui.Failf("pass valid test name (in '--name' flag)")
+			}
+
 			if testName == test.Name {
 				ui.Failf("Test with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
