@@ -40,7 +40,35 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	}
 }
 
-// GetTestSuiteHandler for getting test object
+// UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
+func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request testkube.TestSuiteUpsertRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		// we need to get resource first and load its metadata.ResourceVersion
+		testSuite, err := s.TestsSuitesClient.Get(request.Namespace, request.Name)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// map TestSuite but load spec only to not override metadata.ResourceVersion
+		testSuiteSpec := mapTestSuiteUpsertRequestToTestCRD(request)
+		testSuite.Spec = testSuiteSpec.Spec
+		testSuite.Labels = request.Labels
+		testSuite, err = s.TestsSuitesClient.Update(testSuite)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(testSuite)
+	}
+}
+
+// GetTestSuiteHandler for getting TestSuite object
 func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
@@ -60,7 +88,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	}
 }
 
-// DeleteTestSuiteHandler for deleting a test with id
+// DeleteTestSuiteHandler for deleting a TestSuite with id
 func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
@@ -95,18 +123,11 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-// ListTestSuitesHandler for getting list of all available tests
+// ListTestSuitesHandler for getting list of all available TestSuites
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", "testkube")
-
-		rawTags := c.Query("tags")
-		var tags []string
-		if rawTags != "" {
-			tags = strings.Split(rawTags, ",")
-		}
-
-		crTests, err := s.TestsSuitesClient.List(namespace, tags)
+		crTests, err := s.TestsSuitesClient.List(namespace, c.Query("selector"))
 
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
@@ -390,11 +411,11 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
+			Labels:    request.Labels,
 		},
 		Spec: testsuitesv1.TestSuiteSpec{
 			Repeats:     int(request.Repeats),
 			Description: request.Description,
-			Tags:        request.Tags,
 			Before:      mapTestStepsToCRD(request.Before),
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),

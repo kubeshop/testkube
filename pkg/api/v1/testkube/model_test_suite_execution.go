@@ -33,6 +33,6 @@ type TestSuiteExecution struct {
 	Duration string `json:"duration,omitempty"`
 	// steps execution restults
 	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
-	// test execution tags
-	Tags []string `json:"tags,omitempty"`
+	// test suite execution labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

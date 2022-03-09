@@ -16,7 +16,7 @@ func NewExecutionWithID(id, testType, testName string) Execution {
 	}
 }
 
-func NewExecution(testName, executionName, testType string, content *TestContent, result ExecutionResult, params map[string]string, tags []string) Execution {
+func NewExecution(testName, executionName, testType string, content *TestContent, result ExecutionResult, params, labels map[string]string) Execution {
 	return Execution{
 		Id:              primitive.NewObjectID().Hex(),
 		TestName:        testName,
@@ -25,7 +25,7 @@ func NewExecution(testName, executionName, testType string, content *TestContent
 		ExecutionResult: &result,
 		Params:          params,
 		Content:         content,
-		Tags:            tags,
+		Labels:          labels,
 	}
 }
 

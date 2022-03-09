@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -106,7 +105,7 @@ func (c APIClient) GetExecution(executionID string) (execution testkube.Executio
 }
 
 // ListExecutions list all executions for given test name
-func (c APIClient) ListExecutions(id string, limit int, tags []string) (executions testkube.ExecutionsResult, err error) {
+func (c APIClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := c.getURI("/executions/")
 
@@ -118,8 +117,8 @@ func (c APIClient) ListExecutions(id string, limit int, tags []string) (executio
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -191,7 +190,7 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
-	// get test to get test tags
+	// get test to get test labels
 	test, err := c.GetTest(id, namespace)
 	if err != nil {
 		return execution, nil
@@ -202,7 +201,7 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 		Namespace:  namespace,
 		ParamsFile: executionParamsFileContent,
 		Params:     executionParams,
-		Tags:       test.Tags,
+		Labels:     test.Labels,
 		Args:       args,
 	}
 
@@ -241,14 +240,14 @@ func (c APIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given test
-func (c APIClient) ListTests(namespace string, tags []string) (tests testkube.Tests, err error) {
+func (c APIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -641,14 +640,14 @@ func (c APIClient) DeleteTestSuites(namespace string) error {
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c APIClient) ListTestSuites(namespace string, tags []string) (testSuites testkube.TestSuites, err error) {
+func (c APIClient) ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error) {
 	uri := c.getURI("/test-suites")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("namespace", namespace)
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	resp := req.Do(context.Background())
@@ -781,14 +780,14 @@ func (c APIClient) WatchTestSuiteExecution(executionID string) (executionCh chan
 }
 
 // ListExecutions list all executions for given test suite
-func (c APIClient) ListTestSuiteExecutions(testID string, limit int, tags []string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c APIClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).
 		Param("pageSize", fmt.Sprintf("%d", limit))
 
-	if len(tags) > 0 {
-		req.Param("tags", strings.Join(tags, ","))
+	if selector != "" {
+		req.Param("selector", selector)
 	}
 
 	if testID != "" {

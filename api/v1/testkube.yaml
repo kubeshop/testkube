@@ -23,8 +23,8 @@ tags:
     description: "Test suites and tests execution operations"
   - name: test-suites
     description: "Test suites orchestration operations"
-  - name: tags
-    description: "Listing all available tags"
+  - name: labels
+    description: "Listing all available labels"
 
 paths:
   /test-suites:
@@ -66,7 +66,7 @@ paths:
       description: "Returns array of test suites"
       operationId: listTestSuites
       parameters:
-        - $ref: "#/components/parameters/Tags"
+        - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
       responses:
         200:
@@ -197,7 +197,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/StartDateFilter"
         - $ref: "#/components/parameters/EndDateFilter"
-        - $ref: "#/components/parameters/Tags"
+        - $ref: "#/components/parameters/Selector"
       responses:
         200:
           description: successful operation
@@ -321,7 +321,7 @@ paths:
       description: "List available tests"
       operationId: listTests
       parameters:
-        - $ref: "#/components/parameters/Tags"
+        - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
       responses:
         200:
@@ -516,7 +516,7 @@ paths:
             type: integer
           description: kubernetes namespace
           required: false
-        - $ref: "#/components/parameters/Tags"
+        - $ref: "#/components/parameters/Selector"
       tags:
         - api
         - tests
@@ -820,22 +820,24 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /tags:
+  /labels:
     get:
       tags:
-        - tags
-      summary: "List tags"
-      description: "list all available tags"
-      operationId: listTags
+        - labels
+      summary: "List labels"
+      description: "list all available labels"
+      operationId: listLabels
       responses:
         200:
           description: "successful operation"
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -877,11 +879,14 @@ components:
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
-        tags:
-          type: array
-          items:
+        labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
             type: string
-          description: test tags
+          example:
+            env: "prod"
+            app: "backend"
         steps:
           type: array
           items:
@@ -985,11 +990,14 @@ components:
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
             description: test execution results
-        tags:
-          type: array
-          items:
+        labels:
+          type: object
+          description: "test suite execution labels"
+          additionalProperties:
             type: string
-          description: test execution tags
+          example:
+            env: "prod"
+            app: "backend"
 
     TestSuiteExecutionStatus:
       type: string
@@ -1106,11 +1114,14 @@ components:
         created:
           type: string
           format: date-time
-        tags:
-          type: array
-          items:
+        labels:
+          type: object
+          description: "test labels"
+          additionalProperties:
             type: string
-          description: test tags
+          example:
+            env: "prod"
+            app: "backend"
 
     TestContent:
       type: object
@@ -1194,11 +1205,14 @@ components:
           required: true
           description: result get from executor
           $ref: "#/components/schemas/ExecutionResult"
-        tags:
-          type: array
-          items:
+        labels:
+          type: object
+          description: "execution labels"
+          additionalProperties:
             type: string
-          description: execution tags
+          example:
+            env: "prod"
+            app: "backend"
 
     Artifact:
       type: object
@@ -1434,10 +1448,14 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
-        tags:
-          type: array
-          items:
+        labels:
+          type: object
+          description: "execution labels"
+          additionalProperties:
             type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -1695,11 +1713,9 @@ components:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter
       required: false
-    Tags:
+    Selector:
       in: query
-      name: tags
+      name: selector
       schema:
-        type: array
-        items:
-          type: string
-        description: Tags to filter tests by
+        type: string
+        description: Labels to filter by

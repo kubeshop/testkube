@@ -67,7 +67,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
-	execution.Tags = options.TestSpec.Tags
+	execution.Labels = options.Request.Labels
 
 	err := s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -337,7 +337,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
-		options.Request.Tags,
+		options.Request.Labels,
 	)
 
 	execution.Args = options.Request.Args

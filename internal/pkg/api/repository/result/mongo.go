@@ -2,7 +2,8 @@ package result
 
 import (
 	"context"
-	"sort"
+	"fmt"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -110,29 +111,37 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 	return
 }
 
-func (r *MongoRepository) GetTags(ctx context.Context) (tags []string, err error) {
+func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
 	var result []struct {
-		Id   string   `bson:"_id"`
-		Tags []string `bson:"tags"`
+		Labels bson.M `bson:"labels"`
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, mongo.Pipeline{
-		bson.D{{"$unwind", "$tags"}},
-		bson.D{{"$group", bson.D{{"_id", "alltags"}, {"tags", bson.D{{"$addToSet", "$tags"}}}}}},
-	})
+	cursor, err := r.Coll.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
+
 	err = cursor.All(ctx, &result)
 	if err != nil {
 		return nil, err
 	}
-	tags = []string{}
-	if len(result) > 0 {
-		tags = result[0].Tags
-		sort.Sort(sort.StringSlice(tags))
+
+	labels = map[string][]string{}
+	for _, r := range result {
+		for key, value := range r.Labels {
+			if values, ok := labels[key]; !ok {
+				labels[key] = []string{fmt.Sprint(value)}
+			} else {
+				for _, v := range values {
+					if v == value {
+						continue
+					}
+				}
+				labels[key] = append(labels[key], fmt.Sprint(value))
+			}
+		}
 	}
-	return tags, nil
+	return labels, nil
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
@@ -194,8 +203,16 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["executionresult.status"] = filter.Status()
 	}
 
-	if filter.Tags() != nil {
-		query["tags"] = filter.Tags()
+	if filter.Selector() != "" {
+		items := strings.Split(filter.Selector(), ",")
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				query["labels."+elements[0]] = elements[1]
+			} else if len(elements) == 1 {
+				query["labels."+elements[0]] = bson.M{"$exists": true}
+			}
+		}
 	}
 
 	if filter.TypeDefined() {

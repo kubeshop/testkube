@@ -21,5 +21,6 @@ type ExecutionRequest struct {
 	Params map[string]string `json:"params,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
-	Tags []string `json:"tags,omitempty"`
+	// execution labels
+	Labels map[string]string `json:"labels,omitempty"`
 }
