@@ -1,6 +1,8 @@
 package client
 
 import (
+	"os"
+
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -17,6 +19,9 @@ func GetClient(clientType ClientType, namespace string) (client Client, err erro
 
 	if clientType == ClientDirect {
 		overrideHost = "http://127.0.0.1:8080"
+		if host, ok := os.LookupEnv("TESTKUBE_KUBEPROXY_HOST"); ok {
+			overrideHost = host
+		}
 	}
 
 	clientset, err = GetClientSet(overrideHost)
