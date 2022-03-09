@@ -1,4 +1,4 @@
-## testkube get testuiteexecution
+## testkube get testsuiteexecution
 
 Gets TestSuite Execution details
 
@@ -7,13 +7,13 @@ Gets TestSuite Execution details
 Gets TestSuite Execution details by ID, or list if id is not passed
 
 ```
-testkube get testuiteexecution [executionID] [flags]
+testkube get testsuiteexecution [executionID] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help                help for testuiteexecution
+  -h, --help                help for testsuiteexecution
   -l, --label strings       label key value pair: --label key1=value1
       --limit int           max number of records to return (default 1000)
       --test-suite string   test suite name

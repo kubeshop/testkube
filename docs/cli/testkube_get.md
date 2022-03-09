@@ -35,6 +35,6 @@ testkube get <resourceName> [flags]
 * [testkube get executor](testkube_get_executor.md)	 - Gets executor details
 * [testkube get test](testkube_get_test.md)	 - Get all available tests
 * [testkube get testsuite](testkube_get_testsuite.md)	 - Get test suite by name
-* [testkube get testuiteexecution](testkube_get_testuiteexecution.md)	 - Gets TestSuite Execution details
+* [testkube get testsuiteexecution](testkube_get_testsuiteexecution.md)	 - Gets TestSuite Execution details
 * [testkube get webhook](testkube_get_webhook.md)	 - Get webhook details
 
