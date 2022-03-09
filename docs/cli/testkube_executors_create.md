@@ -1,38 +1,38 @@
-## testkube executors create
+# Testkube Executors Create
 
-Create new Executor
+Create a new Executor.
 
-### Synopsis
+## **Synopsis**
 
-Create new Executor Custom Resource
+Create a new Executor Custom Resource:
 
 ```
 testkube executors create [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --executor-type string   executor type (defaults to job) (default "job")
-  -h, --help                   help for create
-  -i, --image string           if uri is git repository we can set additional branch parameter
-  -n, --name string            unique test name - mandatory
-  -t, --types stringArray      types handled by exeutor
-  -u, --uri string             if resource need to be loaded from URI
+      --executor-type string   Executor type (default "job").
+  -h, --help                   Help for create.
+  -i, --image string           If uri is a Git repository, set additional branch parameter.
+  -n, --name string            Unique test name - mandatory.
+  -t, --types stringArray      Types handled by exeutor.
+  -u, --uri string             Load resource from URI.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled    should analytics be enabled (default true)
-  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --go-template string   in case of choosing output==go pass golang template (default "{{ . | printf \"%+v\"  }}")
-  -s, --namespace string     kubernetes namespace (default "testkube")
-  -o, --output string        output type one of raw|json|go  (default "raw")
-  -v, --verbose              should I show additional debug messages
+      --analytics-enabled    Enable analytics (default "true").
+  -c, --client string        Client used for connecting to testkube API one of proxy|direct (default "proxy").
+      --go-template string   When choosing output==go, pass golang template (default "{{ . | printf \"%+v\"  }}").
+  -s, --namespace string     Kubernetes namespace (default "testkube").
+  -o, --output string        Output type - raw, json or go  (default "raw").
+  -v, --verbose              Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube executors](testkube_executors.md)	 - Executor management commands
+* [Testkube Executors](testkube_executors.md)	 - Executor management commands.
 

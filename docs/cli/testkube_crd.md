@@ -1,32 +1,32 @@
-## testkube crd
+# Testkube Custom Resource Definitions (CRD)
 
-CRDs management commands
+CRD Management Commands
 
-### Synopsis
+## **Synopsis**
 
-CRD generation tools
+CRD generation tools:
 
 ```
 testkube crd [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for crd
+  -h, --help   Help for CRD.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
-* [testkube crd tests](testkube_crd_tests.md)	 - Generate tests CRD file based on directory
+* [Testkube](testkube.md)	 - Testkube entrypoint for plugins.
+* [Testkube CRD Tests](testkube_crd_tests.md)	 - Generate tests CRD file based on directory.
 

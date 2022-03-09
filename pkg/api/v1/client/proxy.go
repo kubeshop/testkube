@@ -21,9 +21,9 @@ import (
 )
 
 // check in compile time if interface is implemented
-var _ Client = (*ProxyAPIClient)(nil)
+var _ Client = (*APIClient)(nil)
 
-func GetClientSet() (clientset kubernetes.Interface, err error) {
+func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
 		return clientset, err
@@ -35,11 +35,17 @@ func GetClientSet() (clientset kubernetes.Interface, err error) {
 		return clientset, err
 	}
 
+	// override host is needed to override kubeconfig kubernetes proxy host name
+	// to local proxy passed to API server run local proxy first by `make api-proxy`
+	if overrideHost != "" {
+		restcfg.Host = overrideHost
+	}
+
 	return kubernetes.NewForConfig(restcfg)
 }
 
-func NewProxyAPIClient(client kubernetes.Interface, config ProxyConfig) ProxyAPIClient {
-	return ProxyAPIClient{
+func NewProxyAPIClient(client kubernetes.Interface, config ProxyConfig) APIClient {
+	return APIClient{
 		client: client,
 		config: config,
 	}
@@ -62,14 +68,14 @@ type ProxyConfig struct {
 	ServicePort int
 }
 
-type ProxyAPIClient struct {
+type APIClient struct {
 	client kubernetes.Interface
 	config ProxyConfig
 }
 
 // tests and executions -----------------------------------------------------------------------------
 
-func (c ProxyAPIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
+func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -84,7 +90,7 @@ func (c ProxyAPIClient) GetTest(id, namespace string) (test testkube.Test, err e
 	return c.getTestFromResponse(resp)
 }
 
-func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
+func (c APIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
 
 	uri := c.getURI("/executions/%s", executionID)
 
@@ -99,7 +105,7 @@ func (c ProxyAPIClient) GetExecution(executionID string) (execution testkube.Exe
 }
 
 // ListExecutions list all executions for given test name
-func (c ProxyAPIClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
+func (c APIClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
 
 	uri := c.getURI("/executions/")
 
@@ -124,12 +130,12 @@ func (c ProxyAPIClient) ListExecutions(id string, limit int, selector string) (e
 	return c.getExecutionsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) DeleteTests(namespace string) error {
+func (c APIClient) DeleteTests(namespace string) error {
 	uri := c.getURI("/tests")
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c ProxyAPIClient) DeleteTest(name string, namespace string) error {
+func (c APIClient) DeleteTest(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
@@ -138,7 +144,7 @@ func (c ProxyAPIClient) DeleteTest(name string, namespace string) error {
 }
 
 // CreateTest creates new Test Custom Resource
-func (c ProxyAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Test, err error) {
+func (c APIClient) CreateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests")
 
 	request := testkube.TestUpsertRequest(options)
@@ -159,7 +165,7 @@ func (c ProxyAPIClient) CreateTest(options UpsertTestOptions) (test testkube.Tes
 }
 
 // UpdateTest Test Custom Resource
-func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
+func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 
 	request := testkube.TestUpsertRequest(options)
@@ -181,7 +187,7 @@ func (c ProxyAPIClient) UpdateTest(options UpsertTestOptions) (test testkube.Tes
 
 // ExecuteTest starts test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
+func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get test to get test labels
@@ -214,7 +220,7 @@ func (c ProxyAPIClient) ExecuteTest(id, namespace, executionName string, executi
 	return c.getExecutionFromResponse(resp)
 }
 
-func (c ProxyAPIClient) Logs(id string) (logs chan output.Output, err error) {
+func (c APIClient) Logs(id string) (logs chan output.Output, err error) {
 	logs = make(chan output.Output)
 	uri := c.getURI("/executions/%s/logs", id)
 
@@ -234,7 +240,7 @@ func (c ProxyAPIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given test
-func (c ProxyAPIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
+func (c APIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -254,14 +260,14 @@ func (c ProxyAPIClient) ListTests(namespace string, selector string) (tests test
 }
 
 // GetExecutions list all executions in given test
-func (c ProxyAPIClient) AbortExecution(testID, id string) error {
+func (c APIClient) AbortExecution(testID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", testID, id)
 	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
 // executor --------------------------------------------------------------------------------
 
-func (c ProxyAPIClient) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
+func (c APIClient) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors")
 
 	request := testkube.ExecutorCreateRequest(options)
@@ -281,7 +287,7 @@ func (c ProxyAPIClient) CreateExecutor(options CreateExecutorOptions) (executor 
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
+func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors/%s", name)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -293,7 +299,7 @@ func (c ProxyAPIClient) GetExecutor(name string) (executor testkube.ExecutorDeta
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -308,14 +314,14 @@ func (c ProxyAPIClient) ListExecutors() (executors testkube.ExecutorsDetails, er
 	return c.getExecutorsDetailsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) DeleteExecutor(name string) (err error) {
+func (c APIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s", name)
 	return c.makeDeleteRequest(uri, "testkube", false)
 }
 
 // webhooks --------------------------------------------------------------------------------
 
-func (c ProxyAPIClient) CreateWebhook(options CreateWebhookOptions) (executor testkube.Webhook, err error) {
+func (c APIClient) CreateWebhook(options CreateWebhookOptions) (executor testkube.Webhook, err error) {
 	uri := c.getURI("/webhooks")
 
 	request := testkube.WebhookCreateRequest(options)
@@ -335,7 +341,7 @@ func (c ProxyAPIClient) CreateWebhook(options CreateWebhookOptions) (executor te
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c ProxyAPIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
+func (c APIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
 	uri := c.getURI("/webhooks/%s", name)
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -350,7 +356,7 @@ func (c ProxyAPIClient) GetWebhook(namespace, name string) (webhook testkube.Web
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c ProxyAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
+func (c APIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
 	uri := c.getURI("/webhooks")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -365,14 +371,14 @@ func (c ProxyAPIClient) ListWebhooks(namespace string) (webhooks testkube.Webhoo
 	return c.getWebhooksFromResponse(resp)
 }
 
-func (c ProxyAPIClient) DeleteWebhook(namespace, name string) (err error) {
+func (c APIClient) DeleteWebhook(namespace, name string) (err error) {
 	uri := c.getURI("/webhooks/%s", name)
 	return c.makeDeleteRequest(uri, namespace, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
 
-func (c ProxyAPIClient) GetServerInfo() (info testkube.ServerInfo, err error) {
+func (c APIClient) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.getURI("/info")
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -391,7 +397,7 @@ func (c ProxyAPIClient) GetServerInfo() (info testkube.ServerInfo, err error) {
 
 }
 
-func (c ProxyAPIClient) GetProxy(requestType string) *rest.Request {
+func (c APIClient) GetProxy(requestType string) *rest.Request {
 	return c.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(c.config.Namespace).
 		Resource("services").
@@ -400,7 +406,7 @@ func (c ProxyAPIClient) GetProxy(requestType string) *rest.Request {
 		SubResource("proxy")
 }
 
-func (c ProxyAPIClient) getExecutionFromResponse(resp rest.Result) (execution testkube.Execution, err error) {
+func (c APIClient) getExecutionFromResponse(resp rest.Result) (execution testkube.Execution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return execution, err
@@ -411,7 +417,7 @@ func (c ProxyAPIClient) getExecutionFromResponse(resp rest.Result) (execution te
 	return execution, err
 }
 
-func (c ProxyAPIClient) getExecutionsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
+func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executions, err
@@ -422,7 +428,7 @@ func (c ProxyAPIClient) getExecutionsFromResponse(resp rest.Result) (executions 
 	return executions, err
 }
 
-func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
+func (c APIClient) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return tests, err
@@ -433,7 +439,7 @@ func (c ProxyAPIClient) getTestsFromResponse(resp rest.Result) (tests testkube.T
 	return tests, err
 }
 
-func (c ProxyAPIClient) getExecutorsDetailsFromResponse(resp rest.Result) (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) getExecutorsDetailsFromResponse(resp rest.Result) (executors testkube.ExecutorsDetails, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executors, err
@@ -444,7 +450,7 @@ func (c ProxyAPIClient) getExecutorsDetailsFromResponse(resp rest.Result) (execu
 	return executors, err
 }
 
-func (c ProxyAPIClient) getTestFromResponse(resp rest.Result) (test testkube.Test, err error) {
+func (c APIClient) getTestFromResponse(resp rest.Result) (test testkube.Test, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return test, err
@@ -455,7 +461,7 @@ func (c ProxyAPIClient) getTestFromResponse(resp rest.Result) (test testkube.Tes
 	return test, err
 }
 
-func (c ProxyAPIClient) getWebhookFromResponse(resp rest.Result) (webhook testkube.Webhook, err error) {
+func (c APIClient) getWebhookFromResponse(resp rest.Result) (webhook testkube.Webhook, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return webhook, err
@@ -466,7 +472,7 @@ func (c ProxyAPIClient) getWebhookFromResponse(resp rest.Result) (webhook testku
 	return webhook, err
 }
 
-func (c ProxyAPIClient) getWebhooksFromResponse(resp rest.Result) (webhooks testkube.Webhooks, err error) {
+func (c APIClient) getWebhooksFromResponse(resp rest.Result) (webhooks testkube.Webhooks, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return webhooks, err
@@ -477,7 +483,7 @@ func (c ProxyAPIClient) getWebhooksFromResponse(resp rest.Result) (webhooks test
 	return webhooks, err
 }
 
-func (c ProxyAPIClient) getExecutorDetailsFromResponse(resp rest.Result) (executor testkube.ExecutorDetails, err error) {
+func (c APIClient) getExecutorDetailsFromResponse(resp rest.Result) (executor testkube.ExecutorDetails, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executor, err
@@ -488,7 +494,7 @@ func (c ProxyAPIClient) getExecutorDetailsFromResponse(resp rest.Result) (execut
 	return executor, err
 }
 
-func (c ProxyAPIClient) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
+func (c APIClient) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
 	bytes, respErr := resp.Raw()
 
 	problemResponse := problem.Problem{}
@@ -503,7 +509,7 @@ func (c ProxyAPIClient) getProblemFromResponse(resp rest.Result) (problem.Proble
 }
 
 // responseError tries to lookup if response is of Problem type
-func (c ProxyAPIClient) responseError(resp rest.Result) error {
+func (c APIClient) responseError(resp rest.Result) error {
 	if resp.Error() != nil {
 		pr, err := c.getProblemFromResponse(resp)
 
@@ -519,12 +525,12 @@ func (c ProxyAPIClient) responseError(resp rest.Result) error {
 	return nil
 }
 
-func (c ProxyAPIClient) getURI(pathTemplate string, params ...interface{}) string {
+func (c APIClient) getURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c ProxyAPIClient) makeDeleteRequest(uri string, namespace string, isContentExpected bool) error {
+func (c APIClient) makeDeleteRequest(uri string, namespace string, isContentExpected bool) error {
 
 	req := c.GetProxy("DELETE").
 		Suffix(uri).
@@ -554,7 +560,7 @@ func (c ProxyAPIClient) makeDeleteRequest(uri string, namespace string, isConten
 	return nil
 }
 
-func (c ProxyAPIClient) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+func (c APIClient) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
 	uri := c.getURI("/executions/%s/artifacts", executionID)
 	req := c.GetProxy("GET").
 		Suffix(uri)
@@ -568,7 +574,7 @@ func (c ProxyAPIClient) GetExecutionArtifacts(executionID string) (artifacts tes
 
 }
 
-func (c ProxyAPIClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+func (c APIClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.getURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	req, err := c.GetProxy("GET").
 		Suffix(uri).
@@ -593,7 +599,7 @@ func (c ProxyAPIClient) DownloadFile(executionID, fileName, destination string) 
 	return f.Name(), err
 }
 
-func (c ProxyAPIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
+func (c APIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []testkube.Artifact, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return artifacts, err
@@ -606,7 +612,7 @@ func (c ProxyAPIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []
 
 // --------------- test suites --------------------------
 
-func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
+func (c APIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -621,7 +627,7 @@ func (c ProxyAPIClient) GetTestSuite(id, namespace string) (test testkube.TestSu
 	return c.getTestSuiteFromResponse(resp)
 }
 
-func (c ProxyAPIClient) DeleteTestSuite(name string, namespace string) error {
+func (c APIClient) DeleteTestSuite(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("testsuite name '%s' is not valid", name)
 	}
@@ -629,12 +635,12 @@ func (c ProxyAPIClient) DeleteTestSuite(name string, namespace string) error {
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c ProxyAPIClient) DeleteTestSuites(namespace string) error {
+func (c APIClient) DeleteTestSuites(namespace string) error {
 	uri := c.getURI("/test-suites")
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
-func (c ProxyAPIClient) ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error) {
+func (c APIClient) ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error) {
 	uri := c.getURI("/test-suites")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -654,7 +660,7 @@ func (c ProxyAPIClient) ListTestSuites(namespace string, selector string) (testS
 }
 
 // CreateTestSuite creates new TestSuite Custom Resource
-func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
+func (c APIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -675,7 +681,7 @@ func (c ProxyAPIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSui
 }
 
 // UpdateTestSuite creates new TestSuite Custom Resource
-func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
+func (c APIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", options.Name)
 
 	request := testkube.TestSuiteUpsertRequest(options)
@@ -695,7 +701,7 @@ func (c ProxyAPIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSui
 	return c.getTestSuiteFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkube.TestSuite, err error) {
+func (c APIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkube.TestSuite, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return testSuite, err
@@ -708,7 +714,7 @@ func (c ProxyAPIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite te
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c ProxyAPIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
 	request := testkube.ExecutionRequest{
@@ -732,7 +738,7 @@ func (c ProxyAPIClient) ExecuteTestSuite(id, namespace, executionName string, ex
 	return c.getTestExecutionFromResponse(resp)
 }
 
-func (c ProxyAPIClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions/%s", executionID)
 	req := c.GetProxy("GET").Suffix(uri)
 	resp := req.Do(context.Background())
@@ -745,7 +751,7 @@ func (c ProxyAPIClient) GetTestSuiteExecution(executionID string) (execution tes
 }
 
 // WatchTestSuiteExecution watches for changes in channels of test suite executions steps
-func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
+func (c APIClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
 	executionCh = make(chan testkube.TestSuiteExecution)
 
 	go func() {
@@ -774,7 +780,7 @@ func (c ProxyAPIClient) WatchTestSuiteExecution(executionID string) (executionCh
 }
 
 // ListExecutions list all executions for given test suite
-func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c APIClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.getURI("/test-suite-executions")
 	req := c.GetProxy("GET").
 		Suffix(uri).
@@ -797,7 +803,7 @@ func (c ProxyAPIClient) ListTestSuiteExecutions(testID string, limit int, select
 	return c.getTestExecutionsFromResponse(resp)
 }
 
-func (c ProxyAPIClient) getTestSuitesFromResponse(resp rest.Result) (testSuites testkube.TestSuites, err error) {
+func (c APIClient) getTestSuitesFromResponse(resp rest.Result) (testSuites testkube.TestSuites, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return testSuites, err
@@ -808,7 +814,7 @@ func (c ProxyAPIClient) getTestSuitesFromResponse(resp rest.Result) (testSuites 
 	return testSuites, err
 }
 
-func (c ProxyAPIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return execution, err
@@ -819,7 +825,7 @@ func (c ProxyAPIClient) getTestExecutionFromResponse(resp rest.Result) (executio
 	return execution, err
 }
 
-func (c ProxyAPIClient) getTestExecutionsFromResponse(resp rest.Result) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c APIClient) getTestExecutionsFromResponse(resp rest.Result) (executions testkube.TestSuiteExecutionsResult, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executions, err

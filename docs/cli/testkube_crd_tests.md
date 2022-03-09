@@ -1,31 +1,29 @@
-## testkube crd tests
+# Testkube Custom Resource Definitions (CRD) Tests
 
-Generate tests CRD file based on directory
+## **Synopsis**
 
-### Synopsis
-
-Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)
+Generate a tests manifest based on a directory (e.g. for ArgoCD sync based on tests files).
 
 ```
 testkube crd tests <manifestDirectory> [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help   help for tests
+  -h, --help   Help for tests.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube crd](testkube_crd.md)	 - CRDs management commands
+* [Testkube CRD](testkube_crd.md)	 - CRD management commands.
 

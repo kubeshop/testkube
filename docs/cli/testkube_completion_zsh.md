@@ -1,47 +1,47 @@
-## testkube completion zsh
+# Testkube Completion Zsh
 
-generate the autocompletion script for zsh
-
-### Synopsis
+## **Synopsis**
 
 
-Generate the autocompletion script for the zsh shell.
+Generate the autocompletion script for the Zsh shell.
 
-If shell completion is not already enabled in your environment you will need
+If shell completion is not already enabled in your environment, you will need
 to enable it.  You can execute the following once:
-
+```
 $ echo "autoload -U compinit; compinit" >> ~/.zshrc
-
-To load completions for every new session, execute once:
+```
+To load completions for every new session and execute once:
+```
 # Linux:
 $ testkube completion zsh > "${fpath[1]}/_testkube"
 # macOS:
 $ testkube completion zsh > /usr/local/share/zsh/site-functions/_testkube
+```
 
-You will need to start a new shell for this setup to take effect.
+You will need to start a new shell for this setup to take effect:
 
 
 ```
 testkube completion zsh [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-  -h, --help              help for zsh
-      --no-descriptions   disable completion descriptions
+  -h, --help              Help for Zsh.
+      --no-descriptions   Disable completion descriptions.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
+* [Testkube Completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell.
 

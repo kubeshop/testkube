@@ -1,36 +1,36 @@
-## testkube install
+# Testkube Install
 
-Install Helm chart registry in current kubectl context
+Install the Helm chart registry in the current kubectl context.
 
-### Synopsis
+## **Synopsis**
 
-Install can be configured with use of particular 
+The install can be configured with the use of particular flags passed to the install command:
 
 ```
 testkube install [flags]
 ```
 
-### Options
+## **Options**
 
 ```
-      --chart string   chart name (default "kubeshop/testkube")
-  -h, --help           help for install
-      --name string    installation name (default "testkube")
-      --no-dashboard   don't install dashboard
-      --no-jetstack    don't install Jetstack
-      --no-minio       don't install MinIO
+      --chart string   Chart name (default "kubeshop/testkube").
+  -h, --help           Help for install.
+      --name string    Installation name (default "testkube").
+      --no-dashboard   Don't install dashboard.
+      --no-jetstack    Don't install Jetstack.
+      --no-minio       Don't install MinIO.
 ```
 
-### Options inherited from parent commands
+## **Options Inherited from Parent Commands**
 
 ```
-      --analytics-enabled   should analytics be enabled (default true)
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    kubernetes namespace (default "testkube")
-  -v, --verbose             should I show additional debug messages
+      --analytics-enabled   Enable analytics (default "true").
+  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy").
+  -s, --namespace string    Kubernetes namespace (default "testkube").
+  -v, --verbose             Show additional debug messages.
 ```
 
-### SEE ALSO
+## **SEE ALSO**
 
-* [testkube](testkube.md)	 - testkube entrypoint for plugin
+* [Testkube](testkube.md)	 - The testkube entrypoint for plugins.
 

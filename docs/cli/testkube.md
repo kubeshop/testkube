@@ -1,8 +1,8 @@
-## testkube
+## **Testkube**
 
-testkube entrypoint for plugin
+Testkube entrypoint for plugin.
 
-### Synopsis
+### **Synopsis**
 
 testkube
 
@@ -10,7 +10,7 @@ testkube
 testkube [flags]
 ```
 
-### Options
+### **Options**
 
 ```
       --analytics-enabled   should analytics be enabled (default true)
@@ -20,20 +20,20 @@ testkube [flags]
   -v, --verbose             should I show additional debug messages
 ```
 
-### SEE ALSO
+### **SEE ALSO**
 
-* [testkube analytics](testkube_analytics.md)	 - Analytics management actions
-* [testkube artifacts](testkube_artifacts.md)	 - Artifacts management commands
-* [testkube completion](testkube_completion.md)	 - generate the autocompletion script for the specified shell
-* [testkube crd](testkube_crd.md)	 - CRDs management commands
-* [testkube dashboard](testkube_dashboard.md)	 - Open testkube dashboard
-* [testkube doc](testkube_doc.md)	 - Generate docs for kubectl testkube
-* [testkube executors](testkube_executors.md)	 - Executor management commands
-* [testkube install](testkube_install.md)	 - Install Helm chart registry in current kubectl context
-* [testkube migrate](testkube_migrate.md)	 - manual migrate command
-* [testkube tests](testkube_tests.md)	 - Tests management commands
-* [testkube testsuites](testkube_testsuites.md)	 - Test suites management commands
-* [testkube uninstall](testkube_uninstall.md)	 - Uninstall Helm chart registry in current kubectl context
-* [testkube upgrade](testkube_upgrade.md)	 - Upgrade Helm chart and run migrations
-* [testkube version](testkube_version.md)	 - Shows version and build info
+* [Testkube Analytics](testkube_analytics.md)	 - Analytics management actions.
+* [Testkube Artifacts](testkube_artifacts.md)	 - Artifacts management commands.
+* [Testkube Completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell.
+* [Testkube CRD](testkube_crd.md)	 - CRDs management commands.
+* [Testkube Dashboard](testkube_dashboard.md)	 - Open testkube dashboard.
+* [Testkube Doc](testkube_doc.md)	 - Generate docs for kubectl testkube.
+* [Testkube Executors](testkube_executors.md)	 - Executor management commands.
+* [Testkube Install](testkube_install.md)	 - Install Helm chart registry in current kubectl context.
+* [Testkube Migrate](testkube_migrate.md)	 - Manual migrate command.
+* [Testkube Tests](testkube_tests.md)	 - Tests management commands.
+* [Testkube Test Suites](testkube_testsuites.md)	 - Test suites management commands.
+* [Testkube Uninstall](testkube_uninstall.md)	 - Uninstall Helm chart registry in current kubectl context.
+* [Testkube Upgrade](testkube_upgrade.md)	 - Upgrade Helm chart and run migrations.
+* [Testkube Version](testkube_version.md)	 - Shows version and build info.
 

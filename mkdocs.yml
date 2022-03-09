@@ -28,7 +28,7 @@ nav:
   - Managing Tests:
       - Creating: tests-creating.md
       - Running: tests-running.md
-      - Getting results: tests-getting-results.md
+      - Getting Results: tests-getting-results.md
       - Postman Collections: executor-postman.md
       - Cypress Tests: executor-cypress.md
       - Curl Commands: executor-curl.md
@@ -36,10 +36,10 @@ nav:
       - Creating custom executor: executor-custom.md
   - CLI Reference:
       - Overview: cli/testkube.md
-      - Install Cmd: cli/testkube_install.md
-      - TestSuites Cmd: cli/testkube_testsuites.md
-      - Tests Cmd: cli/testkube_tests.md
-      - Dashboard Cmd: cli/testkube_dashboard.md
+      - Install Command: cli/testkube_install.md
+      - TestSuites Command: cli/testkube_testsuites.md
+      - Tests Command: cli/testkube_tests.md
+      - Dashboard Command: cli/testkube_dashboard.md
   - Integrating with CI/CD: testkube-automation.md
   - Dashboard: dashboard.md
   - Metrics: metrics.md
