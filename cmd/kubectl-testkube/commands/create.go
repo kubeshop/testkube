@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
@@ -19,16 +19,7 @@ func NewCreateCmd() *cobra.Command {
 			ui.Logo()
 			cmd.Help()
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// version validation
-			// if client version is less than server version show warning
-			client, _ := common.GetClient(cmd)
-
-			err := ValidateVersions(client)
-			if err != nil {
-				ui.Warn(err.Error())
-			}
-		},
+		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
 	}
 
 	cmd.AddCommand(tests.NewCreateTestsCmd())

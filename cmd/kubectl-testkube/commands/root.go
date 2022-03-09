@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Masterminds/semver"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/analytics"
-	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -66,41 +64,6 @@ var RootCmd = &cobra.Command{
 			analytics.SendAnonymouscmdInfo()
 		}
 	},
-}
-
-func ValidateVersions(c apiclient.Client) error {
-	info, err := c.GetServerInfo()
-	if err != nil {
-		return fmt.Errorf("getting server info: %w", err)
-	}
-
-	if info.Version == "" {
-		return fmt.Errorf("server version not set")
-	}
-
-	serverVersion, err := semver.NewVersion(info.Version)
-	if err != nil {
-		return fmt.Errorf("parsing server version '%s': %w", info.Version, err)
-	}
-
-	if Version == "" {
-		return fmt.Errorf("client version not set")
-	}
-
-	clientVersion, err := semver.NewVersion(Version)
-	if err != nil {
-		return fmt.Errorf("parsing client version %s: %w", Version, err)
-	}
-
-	if clientVersion.LessThan(serverVersion) {
-		ui.Warn("Your Testkube API version is newer than your `kubectl testkube` plugin")
-		ui.Info("Testkube API version", serverVersion.String())
-		ui.Info("Testkube kubectl plugin client", clientVersion.String())
-		ui.Info("It's recommended to upgrade client to version close to API server version")
-		ui.NL()
-	}
-
-	return nil
 }
 
 func Execute() {

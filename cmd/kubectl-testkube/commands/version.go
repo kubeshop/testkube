@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -27,15 +28,6 @@ func NewVersionCmd() *cobra.Command {
 			ui.Info("Build date", Date)
 
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// version validation
-			// if client version is less than server version show warning
-			client, _ := common.GetClient(cmd)
-
-			err := ValidateVersions(client)
-			if err != nil {
-				ui.Warn(err.Error())
-			}
-		},
+		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
 	}
 }

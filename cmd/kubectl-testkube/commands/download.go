@@ -27,16 +27,7 @@ func NewDownloadCmd() *cobra.Command {
 			ui.Logo()
 			cmd.Help()
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// version validation
-			// if client version is less than server version show warning
-			client, _ := common.GetClient(cmd)
-
-			err := ValidateVersions(client)
-			if err != nil {
-				ui.Warn(err.Error())
-			}
-		},
+		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
 	}
 
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
