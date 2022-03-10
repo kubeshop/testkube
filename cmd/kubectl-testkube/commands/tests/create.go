@@ -84,8 +84,10 @@ func validateExecutorType(executorType string, executors testkube.ExecutorsDetai
 
 	for _, ed := range executors {
 		executorTypes = append(executorTypes, ed.Executor.Types...)
-		if ed.Executor.ExecutorType == executorType {
-			typeValid = true
+		for _, et := range ed.Executor.Types {
+			if et == executorType {
+				typeValid = true
+			}
 		}
 	}
 
