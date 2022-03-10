@@ -1,7 +1,10 @@
 package tests
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +46,11 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
 
+			executors, err := client.ListExecutors()
+			ui.ExitOnError("getting available executors", err)
+			err = validateExecutorType(executorType, executors)
+			ui.ExitOnError("validating executor type", err)
+
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
 
@@ -68,4 +76,24 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
+}
+
+func validateExecutorType(executorType string, executors testkube.ExecutorsDetails) error {
+	typeValid := false
+	executorTypes := []string{}
+
+	for _, ed := range executors {
+		executorTypes = append(executorTypes, ed.Executor.Types...)
+		for _, et := range ed.Executor.Types {
+			if et == executorType {
+				typeValid = true
+			}
+		}
+	}
+
+	if !typeValid {
+		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
+	}
+
+	return nil
 }
