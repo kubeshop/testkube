@@ -48,7 +48,7 @@ func init() {
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "testkube",
+	Use:   "kubectl-testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
