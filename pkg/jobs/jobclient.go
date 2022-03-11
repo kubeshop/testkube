@@ -46,6 +46,7 @@ const (
 	volumeDir  = "/data"
 )
 
+// JobClient data struct for managing running jobs
 type JobClient struct {
 	ClientSet   *kubernetes.Clientset
 	Repository  result.Repository
@@ -56,6 +57,7 @@ type JobClient struct {
 	jobTemplate string
 }
 
+// JobOptions is for configuring JobOptions
 type JobOptions struct {
 	Name        string
 	Namespace   string
@@ -67,6 +69,7 @@ type JobOptions struct {
 	HasSecrets  bool
 }
 
+// NewJobClient returns new JobClient instance
 func NewJobClient(initImage, jobTemplate string) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -74,7 +77,8 @@ func NewJobClient(initImage, jobTemplate string) (*JobClient, error) {
 	}
 
 	return &JobClient{
-		ClientSet:   clientSet,
+		ClientSet: clientSet,
+		// TODO use some namespace
 		Namespace:   "testkube",
 		Log:         log.DefaultLogger,
 		initImage:   initImage,
@@ -254,6 +258,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	return testkube.NewPendingExecutionResult(), nil
 }
 
+// GetJobPods returns job pods
 func (c *JobClient) GetJobPods(podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
 	pods, err := podsClient.List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
@@ -313,6 +318,7 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 	return
 }
 
+// GetLastLogLineError return error if last line is failed
 func (c *JobClient) GetLastLogLineError(ctx context.Context, podNamespace, podName string) error {
 	l := c.Log.With("pod", podName, "namespace", podNamespace)
 	log, err := c.GetPodLogError(ctx, podName)
@@ -330,6 +336,7 @@ func (c *JobClient) GetLastLogLineError(ctx context.Context, podNamespace, podNa
 	return fmt.Errorf("error from last log entry: %s", entry.String())
 }
 
+// GetPodLogs returns pod logs bytes
 func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []byte, err error) {
 	count := int64(100)
 	if len(logLinesCount) > 0 {
@@ -361,11 +368,13 @@ func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []b
 	return buf.Bytes(), nil
 }
 
+// GetPodLogError returns last line as error
 func (c *JobClient) GetPodLogError(ctx context.Context, podName string) (logsBytes []byte, err error) {
 	// error line should be last one
 	return c.GetPodLogs(podName, 1)
 }
 
+// TailPodLogs returns pod logs as channel of bytes
 func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
 	count := int64(1)
 
@@ -404,6 +413,7 @@ func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan [
 	return
 }
 
+// AbortK8sJob aborts K8S by job name
 func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 	var zero int64 = 0
 	bg := metav1.DeletePropagationBackground
@@ -423,6 +433,7 @@ func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 	}
 }
 
+// CreatePersistentVolume creates persistent volume
 func (c *JobClient) CreatePersistentVolume(name string) error {
 	quantity, err := resource.ParseQuantity("10Gi")
 	if err != nil {
@@ -452,6 +463,7 @@ func (c *JobClient) CreatePersistentVolume(name string) error {
 	return nil
 }
 
+// CreatePersistentVolumeClaim creates PVC with given name
 func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 	storageClassName := "manual"
 	quantity, err := resource.ParseQuantity("10Gi")

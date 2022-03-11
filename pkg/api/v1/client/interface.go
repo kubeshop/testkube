@@ -8,12 +8,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
+// HTTPClient abstracts http client methods
 type HTTPClient interface {
 	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
 	Get(url string) (resp *http.Response, err error)
 	Do(req *http.Request) (resp *http.Response, err error)
 }
 
+// Client is the Testkube API client abstraction
 type Client interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
@@ -29,9 +31,9 @@ type Client interface {
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors() (executors testkube.ExecutorsDetails, err error)
-	DeleteExecutor(name string) (err error)
+	GetExecutor(name string, namespace string) (executor testkube.ExecutorDetails, err error)
+	ListExecutors(namespace string) (executors testkube.ExecutorsDetails, err error)
+	DeleteExecutor(name string, namespace string) (err error)
 
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
 	GetWebhook(namespace, name string) (webhook testkube.Webhook, err error)
@@ -56,14 +58,15 @@ type Client interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
+// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertTestOptions - is mapping for now to OpenAPI schema for creating request
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating/changing test
 // if needed can beextended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
-// CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
+// CreateExectorOptions - is mapping for now to OpenAPI schema for creating executor request
 type CreateExecutorOptions testkube.ExecutorCreateRequest
 
-// CreateExectorOptions - is mapping for now to OpenAPI schema for creating request
+// CreateExectorOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest

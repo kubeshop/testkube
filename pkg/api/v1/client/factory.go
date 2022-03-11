@@ -13,6 +13,7 @@ const (
 	ClientProxy  ClientType = "proxy"
 )
 
+// GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
 func GetClient(clientType ClientType, namespace string) (client Client, err error) {
 	var overrideHost string
 	var clientset kubernetes.Interface
@@ -29,7 +30,7 @@ func GetClient(clientType ClientType, namespace string) (client Client, err erro
 		return client, err
 	}
 
-	client = NewProxyAPIClient(clientset, NewProxyConfig(namespace))
+	client = NewAPIClient(clientset, NewAPIConfig(namespace))
 
 	return client, err
 }

@@ -46,7 +46,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
 
-			executors, err := client.ListExecutors()
+			executors, err := client.ListExecutors(test.Namespace)
 			ui.ExitOnError("getting available executors", err)
 			err = validateExecutorType(executorType, executors)
 			ui.ExitOnError("validating executor type", err)

@@ -19,6 +19,7 @@ const (
 	Patch = "patch"
 )
 
+// NextPrerelease returns pre-release version e.g. current -> 0.10.1; nextPrerelease -> 0.10.2-beta001
 func NextPrerelease(currentVersion string) (string, error) {
 	version, err := semver.NewVersion(currentVersion)
 	if err != nil {
@@ -34,6 +35,7 @@ func NextPrerelease(currentVersion string) (string, error) {
 
 }
 
+// IsPrerelease detects if release is prerelease
 func IsPrerelease(currentVersion string) bool {
 	version, err := semver.NewVersion(currentVersion)
 	if err != nil {
@@ -105,6 +107,7 @@ func Lt(version1, version2 string) (bool, error) {
 	return v1.LessThan(v2), nil
 }
 
+// Lt checks if version1 is less-than or equal version2, returns error in case of invalid version string
 func Lte(version1, version2 string) (bool, error) {
 	ok, err := Lt(version1, version2)
 	if err != nil {
@@ -122,6 +125,7 @@ func validateVersionPostion(kind string) error {
 	return fmt.Errorf("invalid version kind: %s: use one of major|minor|patch", kind)
 }
 
+// GetNewest returns greatest version from passed versions list
 func GetNewest(versions []string) string {
 	semversions := []*semver.Version{}
 	for _, ver := range versions {

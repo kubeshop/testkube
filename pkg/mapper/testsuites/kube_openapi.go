@@ -5,6 +5,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
 func MapTestSuiteListKubeToAPI(cr testsuitesv1.TestSuiteList) (tests []testkube.TestSuite) {
 	tests = make([]testkube.TestSuite, len(cr.Items))
 	for i, item := range cr.Items {
@@ -14,6 +15,7 @@ func MapTestSuiteListKubeToAPI(cr testsuitesv1.TestSuiteList) (tests []testkube.
 	return
 }
 
+// MapCRToAPI maps TestSuite CRD to OpenAPI spec TestSuite
 func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Name = cr.Name
 	test.Namespace = cr.Namespace
@@ -36,6 +38,7 @@ func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	return
 }
 
+// mapCRStepToAPI maps CRD TestSuiteStepSpec to OpenAPI spec TestSuiteStep
 func mapCRStepToAPI(crstep testsuitesv1.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {

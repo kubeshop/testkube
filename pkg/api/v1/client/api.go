@@ -23,6 +23,7 @@ import (
 // check in compile time if interface is implemented
 var _ Client = (*APIClient)(nil)
 
+// GetClientSet configures Kube client set, can override host with local proxy
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
@@ -44,37 +45,23 @@ func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err erro
 	return kubernetes.NewForConfig(restcfg)
 }
 
-func NewProxyAPIClient(client kubernetes.Interface, config ProxyConfig) APIClient {
+// NewAPIClient returns
+func NewAPIClient(client kubernetes.Interface, config APIConfig) APIClient {
 	return APIClient{
 		client: client,
 		config: config,
 	}
 }
 
-func NewProxyConfig(namespace string) ProxyConfig {
-	return ProxyConfig{
-		Namespace:   namespace,
-		ServiceName: "testkube-api-server",
-		ServicePort: 8088,
-	}
-}
-
-type ProxyConfig struct {
-	// Namespace where testkube is installed
-	Namespace string
-	// API Server service name
-	ServiceName string
-	// API Server service port
-	ServicePort int
-}
-
+// APIClient struct managing API Client dependencies
 type APIClient struct {
 	client kubernetes.Interface
-	config ProxyConfig
+	config APIConfig
 }
 
 // tests and executions -----------------------------------------------------------------------------
 
+// GetTest returns single test by id and namespace
 func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
 	req := c.GetProxy("GET").
@@ -90,6 +77,7 @@ func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error)
 	return c.getTestFromResponse(resp)
 }
 
+// GetExecution returns test execution by excution id
 func (c APIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
 
 	uri := c.getURI("/executions/%s", executionID)
@@ -130,11 +118,13 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 	return c.getExecutionsFromResponse(resp)
 }
 
+// DeleteTests deletes all tests in given namespace
 func (c APIClient) DeleteTests(namespace string) error {
 	uri := c.getURI("/tests")
 	return c.makeDeleteRequest(uri, namespace, true)
 }
 
+// DeleteTest deletes single test by name and namespace
 func (c APIClient) DeleteTest(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("test name '%s' is not valid", name)
@@ -164,7 +154,7 @@ func (c APIClient) CreateTest(options UpsertTestOptions) (test testkube.Test, er
 	return c.getTestFromResponse(resp)
 }
 
-// UpdateTest Test Custom Resource
+// UpdateTest updates Test Custom Resource
 func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", options.Name)
 
@@ -186,7 +176,7 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 }
 
 // ExecuteTest starts test execution, reads data and returns ID
-// Execution is started asynchronously client can check later for results
+//             execution is started asynchronously client can check later for results
 func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
@@ -220,6 +210,7 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 	return c.getExecutionFromResponse(resp)
 }
 
+// Logs returns logs stream from job pods, based on job pods logs
 func (c APIClient) Logs(id string) (logs chan output.Output, err error) {
 	logs = make(chan output.Output)
 	uri := c.getURI("/executions/%s/logs", id)
@@ -259,7 +250,7 @@ func (c APIClient) ListTests(namespace string, selector string) (tests testkube.
 	return c.getTestsFromResponse(resp)
 }
 
-// GetExecutions list all executions in given test
+// AbortExecution aborts execution by testId and id
 func (c APIClient) AbortExecution(testID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", testID, id)
 	return c.makeDeleteRequest(uri, "testkube", false)
@@ -267,6 +258,7 @@ func (c APIClient) AbortExecution(testID, id string) error {
 
 // executor --------------------------------------------------------------------------------
 
+// CreateExecutor creates new Executor Custom Resource
 func (c APIClient) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors")
 
@@ -287,9 +279,13 @@ func (c APIClient) CreateExecutor(options CreateExecutorOptions) (executor testk
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
+// GetExecutor by name and namespace
+func (c APIClient) GetExecutor(name, namespace string) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors/%s", name)
-	req := c.GetProxy("GET").Suffix(uri)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
@@ -299,11 +295,11 @@ func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, 
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) ListExecutors(namespace string) (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors")
 	req := c.GetProxy("GET").
 		Suffix(uri).
-		Param("namespace", "testkube")
+		Param("namespace", namespace)
 
 	resp := req.Do(context.Background())
 
@@ -314,9 +310,9 @@ func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err err
 	return c.getExecutorsDetailsFromResponse(resp)
 }
 
-func (c APIClient) DeleteExecutor(name string) (err error) {
+func (c APIClient) DeleteExecutor(name, namespace string) (err error) {
 	uri := c.getURI("/executors/%s", name)
-	return c.makeDeleteRequest(uri, "testkube", false)
+	return c.makeDeleteRequest(uri, namespace, false)
 }
 
 // webhooks --------------------------------------------------------------------------------

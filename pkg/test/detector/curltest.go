@@ -6,9 +6,11 @@ import (
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
+// CurlTestAdapter is detector adapter for CURL like tests
 type CurlTestAdapter struct {
 }
 
+// Is detects based on upsert test options what kind of test it is
 func (d CurlTestAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	var data map[string]interface{}
 

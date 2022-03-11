@@ -5,6 +5,7 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// Client is storage client abstraction
 type Client interface {
 	CreateBucket(bucket string) error
 	DeleteBucket(bucket string, force bool) error

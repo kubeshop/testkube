@@ -16,6 +16,7 @@ import (
 
 var _ storage.Client = (*Client)(nil)
 
+// Client for managing MinIO storage server
 type Client struct {
 	Endpoint        string
 	accessKeyID     string
@@ -27,6 +28,7 @@ type Client struct {
 	Log             *zap.SugaredLogger
 }
 
+// NewClient returns new MinIO client
 func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Client {
 	c := &Client{
 		location:        location,
@@ -41,6 +43,7 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, s
 	return c
 }
 
+// Connect connects to MinIO server
 func (c *Client) Connect() error {
 	mclient, err := minio.New(c.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token),
@@ -53,6 +56,7 @@ func (c *Client) Connect() error {
 	return err
 }
 
+// CreateBucket creates new S3 like bucket
 func (c *Client) CreateBucket(bucket string) error {
 	ctx := context.Background()
 	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.location})
@@ -68,10 +72,12 @@ func (c *Client) CreateBucket(bucket string) error {
 	return nil
 }
 
+// DeleteBucket deletes bucket by name
 func (c *Client) DeleteBucket(bucket string, force bool) error {
 	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.BucketOptions{ForceDelete: force})
 }
 
+// ListBuckets lists available buckets
 func (c *Client) ListBuckets() ([]string, error) {
 	toReturn := []string{}
 	if buckets, err := c.minioclient.ListBuckets(context.TODO()); err != nil {
@@ -84,6 +90,7 @@ func (c *Client) ListBuckets() ([]string, error) {
 	return toReturn, nil
 }
 
+// ListFiles lists available files in given bucket
 func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	if err := c.Connect(); err != nil {
 		return nil, err
@@ -100,6 +107,7 @@ func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	return toReturn, nil
 }
 
+// SaveFile saves file defined by local filePath to S3 bucket
 func (c *Client) SaveFile(bucket, filePath string) error {
 	if err := c.Connect(); err != nil {
 		return err
@@ -125,6 +133,7 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 	return nil
 }
 
+// DownloadFile downloads file in bucket
 func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
@@ -143,6 +152,7 @@ func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	return reader, nil
 }
 
+// ScrapeArtefacts pushes local files located in directories to given bucket ID
 func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("minio scrape artefacts connection error: %w", err)

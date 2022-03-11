@@ -15,6 +15,7 @@ import (
 
 var testkubeTrackingID = "UA-204665550-8" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeTrackingID=UA-204665550-8
 
+// SendAnonymousInfo will send event to GA
 func SendAnonymousInfo() {
 
 	var isEnabled bool
@@ -43,6 +44,7 @@ func SendAnonymousInfo() {
 	}
 }
 
+// SendAnonymouscmdInfo will send CLI event to GA
 func SendAnonymouscmdInfo() {
 	client := v1.NewClient(testkubeTrackingID, "golang")
 	command := []string{}
@@ -69,6 +71,7 @@ func SendAnonymouscmdInfo() {
 	client.SendPost(payload)
 }
 
+// MachineID returns unique user machine ID
 func MachineID() string {
 	id, _ := generate()
 	return id
