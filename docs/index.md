@@ -2,6 +2,10 @@
 
 Welcome to Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
 
+<p align="center">
+    <img src="assets/testkube-intro.gif">
+</p>
+
 Testkube decouples test artifacts and execution from CI/CD tooling. Tests are meant to be part of a cluster's state and can be executed as needed:
 
 - Manually via kubectl CLI.

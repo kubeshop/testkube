@@ -46,6 +46,12 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 # Welcome to Testkube
 Your friendly cloud-native testing framework for Kubernetes.
 
+
+
+<p align="center">
+    <img src="assets/testkube-intro.gif">
+</p>
+
 Testkube natively integrates test orchestration and execution into Kubernetes and your CI/CD/GitOps pipeline. It decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
 - Kubectl plugin
 - Externally triggered via API (CI, external tooling, etc)
@@ -66,6 +72,7 @@ Main Testkube components are:
 - Executors - runs tests defined for specific runner
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
+  - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests
   - [Curl Executor](https://github.com/kubeshop/testkube-executor-curl) - runs simple Curl commands
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
