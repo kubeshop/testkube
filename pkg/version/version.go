@@ -107,7 +107,7 @@ func Lt(version1, version2 string) (bool, error) {
 	return v1.LessThan(v2), nil
 }
 
-// Lt checks if version1 is less-than or equal version2, returns error in case of invalid version string
+// Lte checks if version1 is less-than or equal version2, returns error in case of invalid version string
 func Lte(version1, version2 string) (bool, error) {
 	ok, err := Lt(version1, version2)
 	if err != nil {

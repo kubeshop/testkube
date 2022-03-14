@@ -4,7 +4,7 @@ import (
 	petname "github.com/dustinkirkland/golang-petname"
 )
 
-// Return random name similar to Docker separated by `-`
+// Name return random 3 part string similar to Docker image names, separated by `-`
 func Name() string {
 	return petname.Generate(3, "-")
 }
