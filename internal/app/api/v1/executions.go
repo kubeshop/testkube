@@ -357,6 +357,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 			Status:    execution.ExecutionResult.Status,
 			StartTime: execution.StartTime,
 			EndTime:   execution.EndTime,
+			Labels:    execution.Labels,
 		}
 	}
 

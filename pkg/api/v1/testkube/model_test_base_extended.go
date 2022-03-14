@@ -1,7 +1,5 @@
 package testkube
 
-import "fmt"
-
 type Tests []Test
 
 func (t Tests) Table() (header []string, output [][]string) {
@@ -11,7 +9,7 @@ func (t Tests) Table() (header []string, output [][]string) {
 			e.Name,
 			e.Type_,
 			e.Created.String(),
-			fmt.Sprintf("%v", e.Labels),
+			LabelsToString(e.Labels),
 		})
 	}
 
