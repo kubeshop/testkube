@@ -27,21 +27,25 @@ const (
 	MigrationTypeServer
 )
 
+// NewMigrator returns new Migrator instance
 func NewMigrator() *Migrator {
 	return &Migrator{
 		Log: log.DefaultLogger,
 	}
 }
 
+// Migrator struct to manage migrations of Testkube API and CRDs
 type Migrator struct {
 	Migrations []Migration
 	Log        *zap.SugaredLogger
 }
 
+// Add adds new migration
 func (m *Migrator) Add(migration Migration) {
 	m.Migrations = append(m.Migrations, migration)
 }
 
+// GetValidMigrations returns valid migration list for currentVersion
 func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...MigrationType) (migrations []Migration) {
 	types := make(map[MigrationType]struct{}, len(migrationTypes))
 	for _, migrationType := range migrationTypes {
@@ -59,6 +63,7 @@ func (m *Migrator) GetValidMigrations(currentVersion string, migrationTypes ...M
 	return
 }
 
+// Run runs migrations of passed migration types
 func (m *Migrator) Run(currentVersion string, migrationTypes ...MigrationType) error {
 	for _, migration := range m.GetValidMigrations(currentVersion, migrationTypes...) {
 		err := migration.Migrate()
@@ -85,6 +90,7 @@ func (m Migrator) IsValid(migrationVersion, currentVersion string) (bool, error)
 	return version.Lte(currentVersion, migrationVersion)
 }
 
+// ExecuteCommands executes multiple commands returns multiple commands outputs
 func (m Migrator) ExecuteCommands(commands []string) (outputs []string, err error) {
 	for _, command := range commands {
 		out, err := process.ExecuteString(command)

@@ -9,6 +9,7 @@ func NewDefaultDetector() Detector {
 	return d
 }
 
+// Detector is detection orchestrator for possible detectors
 type Detector struct {
 	Adapters []Adapter
 }

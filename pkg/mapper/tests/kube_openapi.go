@@ -5,6 +5,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list
 func MapTestListKubeToAPI(crTests testsv2.TestList) (tests []testkube.Test) {
 	for _, item := range crTests.Items {
 		tests = append(tests, MapTestCRToAPI(item))
@@ -12,6 +13,8 @@ func MapTestListKubeToAPI(crTests testsv2.TestList) (tests []testkube.Test) {
 
 	return
 }
+
+// MapTestCRToAPI maps CRD to OpenAPI spec test
 func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Name = crTest.Name
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
@@ -21,6 +24,7 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	return
 }
 
+// MapTestContentFromSpec maps CRD to OpenAPI spec TestContent
 func MapTestContentFromSpec(specContent *testsv2.TestContent) *testkube.TestContent {
 	content := &testkube.TestContent{
 		Type_: specContent.Type_,

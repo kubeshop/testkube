@@ -126,6 +126,7 @@ func IsPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.Condi
 	}
 }
 
+// HasPodSucceeded custom method for checing if Pod is succeded (handles PodFailed state too)
 func HasPodSucceeded(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})

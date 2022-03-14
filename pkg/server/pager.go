@@ -12,12 +12,14 @@ const (
 	DefaultOffset = 100
 )
 
+// Pager is abstracion to handle data grid like data paging
 type Pager struct {
 	Limit  int
 	Offset int
 	NextID string
 }
 
+// GetPager returns new configured Pager instance
 func (s HTTPServer) GetPager(c *fiber.Ctx) Pager {
 	limit, err := strconv.Atoi(c.Query("limit", "100"))
 	if err != nil || limit < 1 {

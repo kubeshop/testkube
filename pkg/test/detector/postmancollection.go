@@ -6,9 +6,11 @@ import (
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
+// PostmanCollectionAdapter is detector adapter for Postman collection saved as JSON content
 type PostmanCollectionAdapter struct {
 }
 
+// Is detects based on upsert test options what kind of test it is
 func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	var data map[string]interface{}
 

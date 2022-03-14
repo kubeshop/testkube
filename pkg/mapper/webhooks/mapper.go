@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	return testkube.Webhook{
 		Name:      item.Name,
@@ -15,6 +16,7 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	}
 }
 
+// MapStringArrayToCRDEvents maps string array of event types to OpenAPI spec list of WebhookEventType
 func MapStringArrayToCRDEvents(items []string) (events []testkube.WebhookEventType) {
 	for _, e := range items {
 		events = append(events, testkube.WebhookEventType(e))
@@ -22,6 +24,7 @@ func MapStringArrayToCRDEvents(items []string) (events []testkube.WebhookEventTy
 	return
 }
 
+// MapAPIToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
 func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 	return executorv1.Webhook{
 		ObjectMeta: metav1.ObjectMeta{
@@ -35,6 +38,7 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 	}
 }
 
+// MapEventTypesToStringArray maps OpenAPI spec list of WebhookEventType to string array
 func MapEventTypesToStringArray(eventTypes []testkube.WebhookEventType) (arr []string) {
 	for _, et := range eventTypes {
 		arr = append(arr, string(et))

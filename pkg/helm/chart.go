@@ -10,8 +10,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// HelmChart data structure based on map slice
 type HelmChart yaml.MapSlice
 
+// Read reads helm chart based on path
 func Read(filePath string) (helmChart HelmChart, err error) {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -22,6 +24,7 @@ func Read(filePath string) (helmChart HelmChart, err error) {
 	return
 }
 
+// Write writes content of HelmChart to given path
 func Write(filePath string, helmChart HelmChart) (err error) {
 
 	content, err := yaml.Marshal(helmChart)
@@ -31,6 +34,7 @@ func Write(filePath string, helmChart HelmChart) (err error) {
 	return ioutil.WriteFile(filePath, content, 0644)
 }
 
+// UpdateDependencyVersion updates version in HelmChart
 func UpdateDependencyVersion(in HelmChart, dependency, version string) (out HelmChart, err error) {
 	// go through SliceMap
 	for ci, i := range in {
@@ -63,6 +67,7 @@ func UpdateDependencyVersion(in HelmChart, dependency, version string) (out Helm
 	return out, fmt.Errorf("dependency not found")
 }
 
+// GetDependencyVersion returns selected helm chart dependency version
 func GetDependencyVersion(helmChart HelmChart, dependency string) (string, error) {
 	for _, i := range helmChart {
 		if i.Key == "dependencies" {
@@ -93,6 +98,7 @@ func GetDependencyVersion(helmChart HelmChart, dependency string) (string, error
 	return "", fmt.Errorf("version key not found in dependency " + dependency)
 }
 
+// GetVersion returns HelmChart version
 func GetVersion(helmChart HelmChart) string {
 	// go through SliceMap
 	for _, i := range helmChart {
@@ -107,6 +113,7 @@ func GetVersion(helmChart HelmChart) string {
 	return "0.0.0"
 }
 
+// SaveString saves given key with passed value in HelmChart
 func SaveString(helmChart *HelmChart, key, value string) error {
 	for k := range *helmChart {
 		if (*helmChart)[k].Key == key {
@@ -118,6 +125,7 @@ func SaveString(helmChart *HelmChart, key, value string) error {
 	return fmt.Errorf("key %s not found in %+v", key, helmChart)
 }
 
+// GetChart returns Chart based on directory, locates chart automatically
 func GetChart(dir string) (helmChart HelmChart, chartPath string, err error) {
 	chartPath, err = Find(dir)
 	if err != nil {
@@ -128,6 +136,7 @@ func GetChart(dir string) (helmChart HelmChart, chartPath string, err error) {
 	return helmChart, chartPath, err
 }
 
+// Find locates helm chart in given dir
 func Find(dir string) (chartPath string, err error) {
 	dirInfo, err := os.Stat(dir)
 	if err != nil {
@@ -153,6 +162,7 @@ func Find(dir string) (chartPath string, err error) {
 	return
 }
 
+// UpdateValuesImageTag updates values.yaml image tag field
 func UpdateValuesImageTag(path, tag string) error {
 	input, err := ioutil.ReadFile(path)
 	if err != nil {

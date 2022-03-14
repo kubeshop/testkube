@@ -51,7 +51,7 @@ func (s *HTTPServer) Init() {
 	s.Routes = v1
 }
 
-// Error writes rfc-7807 json problem to response
+// Warn writes RFC-7807 json problem to response
 func (s *HTTPServer) Warn(c *fiber.Ctx, status int, err error, context ...interface{}) error {
 	c.Status(status)
 	c.Response().Header.Set("Content-Type", "application/problem+json")
@@ -60,7 +60,7 @@ func (s *HTTPServer) Warn(c *fiber.Ctx, status int, err error, context ...interf
 	return c.JSON(pr)
 }
 
-// Error writes rfc-7807 json problem to response
+// Error writes RFC-7807 json problem to response
 func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error, context ...interface{}) error {
 	c.Status(status)
 	c.Response().Header.Set("Content-Type", "application/problem+json")
@@ -69,6 +69,7 @@ func (s *HTTPServer) Error(c *fiber.Ctx, status int, err error, context ...inter
 	return c.JSON(pr)
 }
 
+// getProblemMessage creates new JSON based problem message and returns it as string
 func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string {
 	message := err.Error()
 	if len(context) > 0 {

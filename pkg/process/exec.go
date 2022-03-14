@@ -74,6 +74,7 @@ func ExecuteAsyncInDir(dir string, command string, arguments ...string) (cmd *ex
 	return cmd, nil
 }
 
+// ExecuteString executes string based command
 func ExecuteString(command string) (out []byte, err error) {
 	parts := strings.Split(command, " ")
 	if len(parts) == 1 {

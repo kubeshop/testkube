@@ -9,7 +9,6 @@ func ContainsTag(tags []string, tag string) bool {
 	return false
 }
 
-// TODO: make a utility library that is shared among the repos
 func RemoveDuplicates(s []string) []string {
 	m := make(map[string]struct{})
 	result := []string{}

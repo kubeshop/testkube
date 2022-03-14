@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 )
 
+// ReaderToTmpfile converts io.Reader to tmp file returns saved file path
 func ReaderToTmpfile(input io.Reader) (path string, err error) {
 	tmpfile, err := ioutil.TempFile("", "testkube-tmp")
 	path = tmpfile.Name()
@@ -19,6 +20,7 @@ func ReaderToTmpfile(input io.Reader) (path string, err error) {
 	return
 }
 
+// Name generate new temp file and returns file path
 func Name() string {
 	tmpfile, _ := ioutil.TempFile("", "testkube-tmp")
 	return tmpfile.Name()

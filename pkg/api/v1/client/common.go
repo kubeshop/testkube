@@ -10,10 +10,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
+// Version is client version literal
 const Version = "v1"
+
+// TestkubeInstallationNamespace where Testkube is installed
 const TestkubeInstallationNamespace = "testkube"
 
-// Converts io.Reader with SSE data like `data: {"type": "event", "message":"something"}`
+// StreamToLogsChannel converts io.Reader with SSE data like `data: {"type": "event", "message":"something"}`
 // to channel of output.Output objects, helps with logs streaming from SSE endpoint (passed from job executor)
 func StreamToLogsChannel(resp io.Reader, logs chan output.Output) {
 
@@ -43,6 +46,7 @@ func StreamToLogsChannel(resp io.Reader, logs chan output.Output) {
 	}
 }
 
+// trimDataChunk remove data: and newlines from incoming SSE data line
 func trimDataChunk(in []byte) []byte {
 	prefix := []byte("data: ")
 	postfix := []byte("\\n\\n")

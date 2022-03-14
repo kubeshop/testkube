@@ -14,6 +14,7 @@ import (
 const eventsBuffer = 10000
 const workersCount = 20
 
+// NewEmitter returns new emitter instance
 func NewEmitter() *Emitter {
 	return &Emitter{
 		Events:    make(chan testkube.WebhookEvent, eventsBuffer),
@@ -22,28 +23,33 @@ func NewEmitter() *Emitter {
 	}
 }
 
+// Emitter handles events emitting for webhooks
 type Emitter struct {
 	Events    chan testkube.WebhookEvent
 	Responses chan WebhookResult
 	Log       *zap.SugaredLogger
 }
 
+// WebhookResult is a wrapper for results from HTTP client for given webhook
 type WebhookResult struct {
 	Event    testkube.WebhookEvent
 	Error    error
 	Response WebhookHttpResponse
 }
 
+// WebhookHttpResponse hold body and result of webhook response
 type WebhookHttpResponse struct {
 	StatusCode int
 	Body       string
 }
 
+// Notify notifies emitter with webhook
 func (s *Emitter) Notify(event testkube.WebhookEvent) {
 	s.Log.Debugw("notifying webhook", "event", event)
 	s.Events <- event
 }
 
+// RunWorkers runs emitter workers responsible for sending HTTP requests
 func (s *Emitter) RunWorkers() {
 	s.Log.Debugw("Starting workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
@@ -51,12 +57,14 @@ func (s *Emitter) RunWorkers() {
 	}
 }
 
+// Listen listens for webhook events
 func (s *Emitter) Listen(events chan testkube.WebhookEvent) {
 	for event := range events {
 		s.Send(event)
 	}
 }
 
+// Send sends new webhook event - should be used when some event occurs
 func (s *Emitter) Send(event testkube.WebhookEvent) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)

@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// NewJobExecutor creates new job executor
 func NewJobExecutor(repo result.Repository, initImage, jobTemplate string) (client JobExecutor, err error) {
 	jobClient, err := jobs.NewJobClient(initImage, jobTemplate)
 	if err != nil {
@@ -26,6 +27,7 @@ func NewJobExecutor(repo result.Repository, initImage, jobTemplate string) (clie
 	}, nil
 }
 
+// JobExecutor is container for managing job executor dependencies
 type JobExecutor struct {
 	Client     *jobs.JobClient
 	Repository result.Repository
@@ -58,6 +60,7 @@ func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
 	return events
 }
 
+// Get returns execution result by execution id
 func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err error) {
 	exec, err := c.Repository.Get(context.Background(), id)
 	if err != nil {
@@ -66,7 +69,7 @@ func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err err
 	return *exec.ExecutionResult, nil
 }
 
-// Logs returns job logs using kubernetes api
+// Logs returns job logs stream channel using kubernetes api
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
 	logs := make(chan []byte)
@@ -107,11 +110,13 @@ func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOp
 	return c.Client.LaunchK8sJobSync(c.Repository, execution, getJobOptions(options))
 }
 
+// Abort aborts job by execution ID
 func (c JobExecutor) Abort(id string) error {
 	c.Client.AbortK8sJob(id)
 	return nil
 }
 
+// getJobOptions compose JobOptions based on ExecutionOptions
 func getJobOptions(options ExecuteOptions) jobs.JobOptions {
 	return jobs.JobOptions{
 		Image:       options.ExecutorSpec.Image,

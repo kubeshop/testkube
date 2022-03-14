@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
+// NewScrapper returns new Scrapper struct
 func NewScrapper(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Scrapper {
 
 	return &Scrapper{
@@ -19,11 +20,13 @@ func NewScrapper(endpoint, accessKeyID, secretAccessKey, location, token string,
 
 }
 
+// Scrapper manages getting artifacts from job pods
 type Scrapper struct {
 	Endpoint, AccessKeyID, SecretAccessKey, Location, Token string
 	Ssl                                                     bool
 }
 
+// Scrape get artifacts from pod based on execution ID and directories list
 func (s Scrapper) Scrape(id string, directories []string) error {
 	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Location, s.Token, s.Ssl) // create storage client
 	err := client.Connect()

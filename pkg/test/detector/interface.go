@@ -5,5 +5,6 @@ import (
 )
 
 type Adapter interface {
+	// Is detects based on upsert test options what kind of test it is
 	Is(options apiClient.UpsertTestOptions) (string, bool)
 }

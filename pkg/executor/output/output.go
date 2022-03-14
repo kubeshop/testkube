@@ -12,6 +12,7 @@ const TypeLogLine = "line"
 const TypeError = "error"
 const TypeResult = "result"
 
+// NewOutputEvent returns new Output struct of type event
 func NewOutputEvent(message string) Output {
 	return Output{
 		Type_:   TypeLogEvent,
@@ -19,6 +20,7 @@ func NewOutputEvent(message string) Output {
 	}
 }
 
+// NewOutputLine returns new Output struct of type line
 func NewOutputLine(content []byte) Output {
 	return Output{
 		Type_:   TypeLogLine,
@@ -26,6 +28,7 @@ func NewOutputLine(content []byte) Output {
 	}
 }
 
+// NewOutputError returns new Output struct of type error
 func NewOutputError(err error) Output {
 	return Output{
 		Type_:   TypeError,
@@ -33,6 +36,7 @@ func NewOutputError(err error) Output {
 	}
 }
 
+// NewOutputResult returns new Output struct of type result - should be last line in stream as it'll stop listening
 func NewOutputResult(result testkube.ExecutionResult) Output {
 	return Output{
 		Type_:  TypeResult,
@@ -40,8 +44,10 @@ func NewOutputResult(result testkube.ExecutionResult) Output {
 	}
 }
 
+// Output generic json based output data structure
 type Output testkube.ExecutorOutput
 
+// String
 func (out Output) String() string {
 	switch out.Type_ {
 	case TypeError, TypeLogLine, TypeLogEvent:
@@ -54,21 +60,25 @@ func (out Output) String() string {
 	return ""
 }
 
+// PrintError - prints error as output json
 func PrintError(err error) {
 	out, _ := json.Marshal(NewOutputError(err))
 	fmt.Printf("%s\n", out)
 }
 
+// PrintLog - prints log line as output json
 func PrintLog(message string) {
 	out, _ := json.Marshal(NewOutputLine([]byte(message)))
 	fmt.Printf("%s\n", out)
 }
 
+// PrintResult - prints result as output json
 func PrintResult(result testkube.ExecutionResult) {
 	out, _ := json.Marshal(NewOutputResult(result))
 	fmt.Printf("%s\n", out)
 }
 
+// PrintEvent - prints event as output json
 func PrintEvent(message string, obj ...interface{}) {
 	out, _ := json.Marshal(NewOutputEvent(fmt.Sprintf("%s %v", message, obj)))
 	fmt.Printf("%s\n", out)

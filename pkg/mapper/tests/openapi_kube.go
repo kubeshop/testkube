@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// MapToSpec maps TestUpsertRequest to Test CRD spec
 func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 
 	test := &testsv2.Test{
@@ -24,6 +25,7 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 
 }
 
+// MapContentToSpecContent maps TestContent OpenAPI spec to TestContent CRD spec
 func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv2.TestContent) {
 	if content == nil {
 		return

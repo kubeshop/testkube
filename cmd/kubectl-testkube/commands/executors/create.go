@@ -31,7 +31,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 			client, namespace := common.GetClient(cmd)
 
-			executor, _ := client.GetExecutor(name)
+			executor, _ := client.GetExecutor(name, namespace)
 			if name == executor.Name {
 				ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
 			}
