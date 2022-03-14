@@ -30,4 +30,6 @@ type ExecutionSummary struct {
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test execution end time
 	EndTime time.Time `json:"endTime,omitempty"`
+	// execution labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -1277,6 +1277,14 @@ components:
           type: string
           description: "test execution end time"
           format: date-time
+        labels:
+          type: object
+          description: "execution labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     ExecutionStatus:
       type: string
