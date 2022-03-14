@@ -27,8 +27,9 @@ func NewDownloadCmd() *cobra.Command {
 			ui.Logo()
 			cmd.Help()
 		},
-		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
-	}
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			validator.PersistentPreRunVersionCheck(cmd, Version)
+		}}
 
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
 

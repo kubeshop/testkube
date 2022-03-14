@@ -28,6 +28,8 @@ func NewVersionCmd() *cobra.Command {
 			ui.Info("Build date", Date)
 
 		},
-		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			validator.PersistentPreRunVersionCheck(cmd, Version)
+		},
 	}
 }
