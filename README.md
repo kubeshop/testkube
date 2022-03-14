@@ -72,6 +72,7 @@ Main Testkube components are:
 - Executors - runs tests defined for specific runner
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
+  - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests
   - [Curl Executor](https://github.com/kubeshop/testkube-executor-curl) - runs simple Curl commands
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
