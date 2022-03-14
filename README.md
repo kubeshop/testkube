@@ -46,6 +46,12 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 # Welcome to Testkube
 Your friendly cloud-native testing framework for Kubernetes.
 
+
+
+<p align="center">
+    <img src="assets/testkube-intro.gif">
+</p>
+
 Testkube natively integrates test orchestration and execution into Kubernetes and your CI/CD/GitOps pipeline. It decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
 - Kubectl plugin
 - Externally triggered via API (CI, external tooling, etc)
