@@ -17,8 +17,9 @@ func NewWatchCmd() *cobra.Command {
 			ui.Logo()
 			cmd.Help()
 		},
-		PersistentPreRun: validator.PersistentPreRunVersionCheckFunc(Version),
-	}
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			validator.PersistentPreRunVersionCheck(cmd, Version)
+		}}
 
 	cmd.AddCommand(tests.NewWatchExecutionCmd())
 	cmd.AddCommand(testsuites.NewWatchTestSuiteExecutionCmd())

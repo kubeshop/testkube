@@ -51,7 +51,7 @@ func NewQueuedExecution() *Execution {
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Type", "Name", "Status", "Labels"}
+	header = []string{"Id", "Name", "Type", "Status", "Labels"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -63,7 +63,6 @@ func (executions Executions) Table() (header []string, output [][]string) {
 			e.Id,
 			e.TestName,
 			e.TestType,
-			e.Name,
 			status,
 			LabelsToString(e.Labels),
 		})

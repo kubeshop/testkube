@@ -10,16 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func PersistentPreRunVersionCheckFunc(version string) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		// version validation
-		// if client version is less than server version show warning
-		client, _ := common.GetClient(cmd)
+func PersistentPreRunVersionCheck(cmd *cobra.Command, version string) {
+	// version validation
+	// if client version is less than server version show warning
+	client, _ := common.GetClient(cmd)
 
-		err := ValidateVersions(client, version)
-		if err != nil {
-			ui.Warn(err.Error())
-		}
+	err := ValidateVersions(client, version)
+	if err != nil {
+		ui.Warn(err.Error())
 	}
 }
 
