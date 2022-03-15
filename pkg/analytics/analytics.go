@@ -26,6 +26,7 @@ func SendAnonymousInfo() {
 		client := v1.NewClient(testkubeTrackingID, "golang")
 		payload := &gatypes.Payload{
 			HitType:                           "event",
+			DataSource:                        "api-server",
 			NonInteractionHit:                 true,
 			DisableAdvertisingPersonalization: true,
 			Users: gatypes.Users{
@@ -47,9 +48,11 @@ func SendAnonymousInfo() {
 // SendAnonymouscmdInfo will send CLI event to GA
 func SendAnonymouscmdInfo() {
 	client := v1.NewClient(testkubeTrackingID, "golang")
+	event := "command"
 	command := []string{}
 	if len(os.Args) > 1 {
 		command = os.Args[1:]
+		event = command[0]
 	}
 	payload := &gatypes.Payload{
 		HitType:                           "event",
@@ -59,8 +62,9 @@ func SendAnonymouscmdInfo() {
 			ClientID: MachineID(),
 		},
 		Event: gatypes.Event{
-			EventCategory: "command",
+			EventCategory: event,
 			EventAction:   "execution",
+			EventLabel:    event,
 		},
 		Apps: gatypes.Apps{
 			ApplicationName:    "testkube",
