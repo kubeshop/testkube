@@ -55,3 +55,11 @@ jobs:
           ANALYTICS_TRACKING_ID: "${{secrets.ANALYTICS_TRACKING_ID}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      -
+        name: Bump formulae
+        uses: Homebrew/actions/bump-formulae@master
+        with:
+          # Custom GitHub access token with only the 'public_repo' scope enabled
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          # Bump only these formulae if outdated
+          formulae: testkube
