@@ -42,6 +42,7 @@ func init() {
 	RootCmd.AddCommand(NewInstallCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewUninstallCmd())
+	RootCmd.AddCommand(NewWatchCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
 	RootCmd.AddCommand(NewVersionCmd())
