@@ -349,6 +349,11 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 		filter = filter.WithEndDate(dFilter.End)
 	}
 
+	selector := c.Query("selector")
+	if selector != "" {
+		filter = filter.WithSelector(selector)
+	}
+
 	return filter
 }
 

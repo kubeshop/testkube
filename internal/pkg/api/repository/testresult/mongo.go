@@ -2,6 +2,7 @@ package testresult
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -153,6 +154,18 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if len(startTimeQuery) > 0 {
 		query["starttime"] = startTimeQuery
+	}
+
+	if filter.Selector() != "" {
+		items := strings.Split(filter.Selector(), ",")
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				query["labels."+elements[0]] = elements[1]
+			} else if len(elements) == 1 {
+				query["labels."+elements[0]] = bson.M{"$exists": true}
+			}
+		}
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))

@@ -16,6 +16,7 @@ func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequ
 		Status:    TestSuiteExecutionStatusPending,
 		Params:    request.Params,
 		TestSuite: test.GetObjectRef(),
+		Labels:    request.Labels,
 	}
 
 	// add queued execution steps

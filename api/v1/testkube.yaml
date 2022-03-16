@@ -133,6 +133,7 @@ paths:
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
         - $ref: "#/components/parameters/StartDateFilter"
         - $ref: "#/components/parameters/EndDateFilter"
+        - $ref: "#/components/parameters/Selector"
       responses:
         200:
           description: successful operation
@@ -1485,6 +1486,14 @@ components:
           example:
             users: "3"
             prefix: "some-"
+        labels:
+          type: object
+          description: "execution labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     TestUpsertRequest:
       description: test create request body

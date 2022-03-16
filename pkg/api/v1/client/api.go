@@ -713,10 +713,17 @@ func (c APIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkub
 func (c APIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
+	// get testsuite to get testsuite labels
+	testsuite, err := c.GetTestSuite(id, namespace)
+	if err != nil {
+		return execution, nil
+	}
+
 	request := testkube.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
+		Labels:    testsuite.Labels,
 	}
 
 	body, err := json.Marshal(request)
