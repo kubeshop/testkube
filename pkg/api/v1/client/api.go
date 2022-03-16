@@ -200,7 +200,10 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 		return execution, err
 	}
 
-	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body).
+		Param("namespace", namespace)
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
