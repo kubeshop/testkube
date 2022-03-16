@@ -189,7 +189,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	}
 
 	options.Name = execution.Id
-	options.Namespace = c.Namespace
+	options.Namespace = execution.TestNamespace
 	options.Jsn = string(jsn)
 	options.InitImage = c.initImage
 	options.TestName = execution.TestName

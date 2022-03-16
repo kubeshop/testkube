@@ -204,6 +204,7 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 		Suffix(uri).
 		Body(body).
 		Param("namespace", namespace)
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
