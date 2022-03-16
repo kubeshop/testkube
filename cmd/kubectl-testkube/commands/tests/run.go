@@ -107,7 +107,7 @@ func uiPrintStatus(execution testkube.Execution) {
 	case result.IsSuccesful():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with sucess in " + duration.String())
+		ui.Success("Test execution completed with success in " + duration.String())
 
 	case result.IsFailed():
 		ui.Warn("Test test execution failed:\n")

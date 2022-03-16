@@ -36,7 +36,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	case result.IsSuccesful():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with sucess in " + duration.String())
+		ui.Success("Test execution completed withc success in " + duration.String())
 
 	case result.IsFailed():
 		ui.Warn("Test test execution failed:\n")

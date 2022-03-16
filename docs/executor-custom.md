@@ -351,7 +351,7 @@ $ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
 
 
 Got valid status code: 200 OK
-Test execution completed with sucess in 6.163s 🥇
+Test execution completed with success in 6.163s 🥇
 
 Use the following command to get test execution details:
 $ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
