@@ -175,8 +175,6 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Execution, options JobOptions) (
 	result testkube.ExecutionResult, err error) {
 
-	fmt.Printf("OPTIONS:%+v\n", options)
-
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
@@ -197,9 +195,6 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	if options.JobTemplate == "" {
 		options.JobTemplate = c.jobTemplate
 	}
-
-	fmt.Printf("%+v\n", execution.TestNamespace)
-	fmt.Printf("%+v\n", options.Namespace)
 
 	jobSpec, err := NewJobSpec(c.Log, options)
 
