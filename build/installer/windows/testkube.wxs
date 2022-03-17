@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="Testkube" Language="1033" Version="0.11.0" Manufacturer="Kubeshop" UpgradeCode="b910c0a2-3dd0-4763-9632-7b1c560a850c">
+		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes"/>
+		
+		<Feature Id="ProductFeature" Title="Testkube" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="Testkube" />
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+			<Component Id="ProductComponent" Guid="932900c1-a727-40c0-a5b6-95c8024b2d3d">
+				<!-- TODO: Insert files, registry keys, and other resources here. -->
+				<File Id='TeskubeEXE' Name='kubectl-testkube.exe' DiskId='1' Source='kubectl-testkube.exe' KeyPath='yes' Vital='yes'/>
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>
