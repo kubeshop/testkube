@@ -29,8 +29,9 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		test := mapTestSuiteUpsertRequestToTestCRD(request)
-		created, err := s.TestsSuitesClient.Create(&test)
+		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
+
+		created, err := s.TestsSuitesClient.Create(&testSuite)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
