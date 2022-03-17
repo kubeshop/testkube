@@ -1,0 +1,32 @@
+name: Upgrade brew kubectl-testkube
+
+on:
+  push:
+    branches: 
+      - "vsukhin/fix/brew-upgrade"
+
+jobs:
+  release:
+    name: Upgrade brew
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup git user
+        uses: actions/checkout@v2
+        run: |
+          git config --global user.name "$(git --no-pager log --format=format:'%an' -n 1)"
+          git config --global user.email "$(git --no-pager log --format=format:'%ae' -n 1)"
+      - 
+        name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - 
+        name: Update brew
+        run: brew update
+      -
+        name: Bump formulae
+        uses: Homebrew/actions/bump-formulae@master
+        with:
+          # Custom GitHub access token with only the 'public_repo' scope enabled
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          # Bump only these formulae if outdated
+          formulae: testkube
