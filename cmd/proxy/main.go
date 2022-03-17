@@ -14,15 +14,16 @@ import (
 
 var port = flag.Int("port", 8080, "HTTP Proxy port")
 var apiPort = flag.Int("apiPort", 8088, "HTTP API port")
-var namespace = flag.String("namespace", "testkube", "namespace")
+var namespace = flag.String("namespace", "testkube", "Testkube installation namespace")
 
 func init() {
 	flag.Parse()
 }
 
 func main() {
-	fmt.Printf("Serve on :%d\n", *port)
-	fmt.Printf("Proxy to :%d\n\n", *apiPort)
+	fmt.Printf("Serve on :%d ==> ", *port)
+	fmt.Printf("Proxy to :%d\n", *apiPort)
+	fmt.Printf("Testkube installed in Kubernetes namespace: %s\n\n", *namespace)
 
 	http.HandleFunc("/", proxyPass)
 	panic(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
