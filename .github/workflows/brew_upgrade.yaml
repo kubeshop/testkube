@@ -3,7 +3,7 @@ name: Upgrade brew kubectl-testkube
 on:
   push:
     branches: 
-      - "vsukhin/fix/brew-upgrade"
+      - "vsukhin/fix/brew"
 
 jobs:
   release:
