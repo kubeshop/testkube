@@ -233,7 +233,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
-			testExecution.Duration = duration.String()
+			testExecution.Duration = duration.Round(100 * time.Millisecond).String()
 
 			err := s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
 			if err != nil {
