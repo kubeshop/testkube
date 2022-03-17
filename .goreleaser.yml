@@ -7,9 +7,9 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
+      #- linux
       - windows
-      - darwin
+      #- darwin
     ldflags:
       - -s -w -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
@@ -39,16 +39,16 @@ release:
   # Other tags will be marked as ready for production
   prerelease: auto
 
-brews:
-  - tap:
-      owner: kubeshop
-      name: homebrew-testkube
-    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
-    homepage: https://testkube.io
-    license: "MIT"
-nfpms:
-  - maintainer: Testkube team
-    license: "MIT"
-    formats:
-      - deb
-    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+# brews:
+#   - tap:
+#       owner: kubeshop
+#       name: homebrew-testkube
+#     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+#     homepage: https://testkube.io
+#     license: "MIT"
+# nfpms:
+#   - maintainer: Testkube team
+#     license: "MIT"
+#     formats:
+#       - deb
+#     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!

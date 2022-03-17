@@ -62,14 +62,14 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1 
-      -
-        name: Bump formulae
-        uses: Homebrew/actions/bump-formulae@master
-        with:
-          # Custom GitHub access token with only the 'public_repo' scope enabled
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          # Bump only these formulae if outdated
-          formulae: testkube
+      # -
+      #   name: Bump formulae
+      #   uses: Homebrew/actions/bump-formulae@master
+      #   with:
+      #     # Custom GitHub access token with only the 'public_repo' scope enabled
+      #     token: ${{ secrets.CI_BOT_TOKEN }}
+      #     # Bump only these formulae if outdated
+      #     formulae: testkube
 
   build-and-publish-windows:
     needs: release
