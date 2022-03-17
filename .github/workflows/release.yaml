@@ -56,7 +56,7 @@ jobs:
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       -
-        name: Set up Homebrew
+        name: Setup Homebrew
         uses: Homebrew/actions/setup-homebrew@master
       -
         name: Update brew
