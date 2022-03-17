@@ -3,7 +3,7 @@ name: Release kubectl-testkube
 on:
   push:
     tags: 
-      - "v[0-9]+.[0-9]+.[0-9]+_testing"
+      - "v[0-9]+.[0-9]+.[0-9]+-beta[0-9]+"
 
 jobs:
 
