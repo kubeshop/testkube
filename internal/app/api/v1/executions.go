@@ -322,6 +322,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	return client.ExecuteOptions{
 		TestName:     id,
+		Namespace:    namespace,
 		TestSpec:     testCR.Spec,
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
@@ -331,6 +332,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
+		options.Namespace,
 		options.TestName,
 		options.Request.Name,
 		options.TestSpec.Type_,

@@ -32,6 +32,7 @@ import (
 )
 
 func NewServer(
+	namespace string,
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
 	testsClient *testsclientv2.TestsClient,
@@ -55,6 +56,7 @@ func NewServer(
 		Metrics:              NewMetrics(),
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
+		Namespace:            namespace,
 	}
 
 	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -73,7 +75,7 @@ func NewServer(
 	}
 
 	s.jobTemplate = jobTemplate
-	s.Executor, err = client.NewJobExecutor(executionsResults, initImage, s.jobTemplate)
+	s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplate)
 	if err != nil {
 		panic(err)
 	}
@@ -97,6 +99,7 @@ type TestkubeAPI struct {
 	Storage              storage.Client
 	storageParams        storageParams
 	jobTemplate          string
+	Namespace            string
 }
 
 type storageParams struct {
@@ -179,6 +182,8 @@ func (s TestkubeAPI) Init() {
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
+
+	s.Log.Infow("configured kubernetes namespace", "namespace", s.Namespace)
 }
 
 func (s TestkubeAPI) HandleEmitterLogs() {

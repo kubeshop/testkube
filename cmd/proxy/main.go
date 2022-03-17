@@ -43,7 +43,6 @@ func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func proxyPass(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("\n-------------\n")
-
 	body, _ := ioutil.ReadAll(req.Body)
 	fmt.Printf("%s\n", body)
 

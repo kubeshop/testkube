@@ -18,13 +18,13 @@ use-env-file:
 	$(call setup_env)
 
 run-api: use-env-file
-	SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
+	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
 
 run-api-race-detector: use-env-file
-	DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
+	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go
 
 run-api-telepresence: use-env-file
-	DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
+	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev: 
 	docker run --name mongodb -p 27017:27017 --rm mongo
@@ -167,5 +167,5 @@ port-forward-mongo:
 port-forward-api: 
 	kubectl port-forward svc/testkube-api-server 8088 -ntestkube
 
-run-api-proxy: 
+run-proxy: 
 	go run cmd/proxy/main.go --namespace $(NAMESPACE)

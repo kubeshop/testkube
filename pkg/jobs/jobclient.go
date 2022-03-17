@@ -70,16 +70,15 @@ type JobOptions struct {
 }
 
 // NewJobClient returns new JobClient instance
-func NewJobClient(initImage, jobTemplate string) (*JobClient, error) {
+func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
 	}
 
 	return &JobClient{
-		ClientSet: clientSet,
-		// TODO use some namespace
-		Namespace:   "testkube",
+		ClientSet:   clientSet,
+		Namespace:   namespace,
 		Log:         log.DefaultLogger,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
@@ -103,7 +102,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 	}
 
 	options.Name = execution.Id
-	options.Namespace = c.Namespace
+	options.Namespace = execution.TestNamespace
 	options.Jsn = string(jsn)
 	options.InitImage = c.initImage
 	options.TestName = execution.TestName
@@ -176,6 +175,8 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Execution, options JobOptions) (
 	result testkube.ExecutionResult, err error) {
 
+	fmt.Printf("OPTIONS:%+v\n", options)
+
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
@@ -197,7 +198,11 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 		options.JobTemplate = c.jobTemplate
 	}
 
+	fmt.Printf("%+v\n", execution.TestNamespace)
+	fmt.Printf("%+v\n", options.Namespace)
+
 	jobSpec, err := NewJobSpec(c.Log, options)
+
 	if err != nil {
 		return result.Err(err), fmt.Errorf("new job spec error: %w", err)
 	}

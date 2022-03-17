@@ -27,6 +27,8 @@ func init() {
 
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
+	RootCmd.AddCommand(NewUpdateCmd())
+
 	RootCmd.AddCommand(NewGetCmd())
 	RootCmd.AddCommand(NewRunCmd())
 	RootCmd.AddCommand(NewDeleteCmd())
