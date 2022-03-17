@@ -92,6 +92,7 @@ jobs:
         uses: timheuer/base64-to-file@v1
         with:
           fileName: 'kubeshop_msft.p12'
+          fileDir: './cert/'
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
       
       - name: Create MSI
