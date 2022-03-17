@@ -100,6 +100,6 @@ jobs:
           Copy-Item 'dist\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
           candle.exe *.wxs
-          light.exe *.wxs
+          light.exe *.wixobj
 
            
