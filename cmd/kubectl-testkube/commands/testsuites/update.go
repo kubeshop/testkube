@@ -15,9 +15,11 @@ import (
 func NewUpdateTestSuitesCmd() *cobra.Command {
 
 	var (
-		file   string
-		name   string
-		labels map[string]string
+		file           string
+		name           string
+		labels         map[string]string
+		schedule       string
+		deleteSchedule bool
 	)
 
 	cmd := &cobra.Command{
@@ -72,6 +74,8 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
 	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
+	cmd.Flags().BoolVar(&deleteSchedule, "delete-schedule", false, "delete test suite schedule")
 
 	return cmd
 }
