@@ -15,14 +15,17 @@ jobs:
         name: Checkout repo
         uses: actions/checkout@v2
       - 
-        name: Setup git user
-        uses: fregante/setup-git-user@v1
-      - 
         name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
       - 
         name: Update brew
         run: brew update
+      - 
+        name: Setup git email
+        run: git config --global user.email "brewbot@kubeshop.io"
+      - 
+        name: Setup git name    
+        run: git config --global user.name "Brew Bot"
       -
         name: Bump formulae
         uses: Homebrew/actions/bump-formulae@master
