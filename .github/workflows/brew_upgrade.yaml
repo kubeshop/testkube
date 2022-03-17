@@ -11,8 +11,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup git user
+      - 
+        name: Checkout
         uses: actions/checkout@v2
+      - 
+        name: Setup git user
+        uses: fregante/setup-git-user@v1
       - 
         name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
