@@ -1,6 +1,5 @@
 {
 	"name": "test-example-2",
-	"namespace": "testkube",
 	"description": "Tests fast first",
 	"steps": [
 		{"execute": {"namespace": "testkube", "name": "testkube-todo-api"}},

@@ -61,6 +61,10 @@ func main() {
 	analytics.SendAnonymousInfo()
 
 	port := os.Getenv("APISERVER_PORT")
+	namespace := "testkube"
+	if ns, ok := os.LookupEnv("TESTKUBE_NAMESPACE"); ok {
+		namespace = ns
+	}
 
 	ln, err := net.Listen("tcp", ":"+port)
 	ui.ExitOnError("Checking if port "+port+"is free", err)
@@ -93,6 +97,7 @@ func main() {
 	}
 
 	err = apiv1.NewServer(
+		namespace,
 		resultsRepository,
 		testResultsRepository,
 		testsClientV2,
@@ -101,5 +106,6 @@ func main() {
 		secretClient,
 		webhooksClient,
 	).Run()
+
 	ui.ExitOnError("Running API Server", err)
 }

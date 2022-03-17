@@ -200,7 +200,11 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 		return execution, err
 	}
 
-	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body).
+		Param("namespace", namespace)
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {
@@ -713,18 +717,22 @@ func (c APIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkub
 func (c APIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
-	request := testkube.ExecutionRequest{
+	executionRequest := testkube.ExecutionRequest{
 		Name:      executionName,
 		Namespace: namespace,
 		Params:    executionParams,
 	}
 
-	body, err := json.Marshal(request)
+	body, err := json.Marshal(executionRequest)
 	if err != nil {
 		return execution, err
 	}
 
-	req := c.GetProxy("POST").Suffix(uri).Body(body)
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body).
+		Param("namespace", namespace)
+
 	resp := req.Do(context.Background())
 
 	if err := c.responseError(resp); err != nil {

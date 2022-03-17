@@ -15,15 +15,11 @@ const (
 type ExecuteOptions struct {
 	ID           string
 	TestName     string
+	Namespace    string
 	TestSpec     testsv2.TestSpec
 	ExecutorName string
 	ExecutorSpec executorv1.ExecutorSpec
 	Request      testkube.ExecutionRequest
 	Sync         bool
 	HasSecrets   bool
-}
-
-func NewExecuteOptions() ExecuteOptions {
-	options := ExecuteOptions{}
-	return options
 }

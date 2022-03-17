@@ -27,6 +27,8 @@ func init() {
 
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
+	RootCmd.AddCommand(NewUpdateCmd())
+
 	RootCmd.AddCommand(NewGetCmd())
 	RootCmd.AddCommand(NewRunCmd())
 	RootCmd.AddCommand(NewDeleteCmd())
@@ -46,6 +48,8 @@ func init() {
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
 	RootCmd.AddCommand(NewVersionCmd())
+
+	RootCmd.AddCommand(NewConfigCmd())
 }
 
 var RootCmd = &cobra.Command{
@@ -71,9 +75,14 @@ func Execute() {
 	cfg, err := config.Load()
 	ui.WarnOnError("Config loading error", err)
 
+	defaultNamespace := "testkube"
+	if cfg.Namespace != "" {
+		defaultNamespace = cfg.Namespace
+	}
+
 	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
-	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", "testkube", "Kubernetes namespace")
+	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show additional debug messages")
 
 	if err := RootCmd.Execute(); err != nil {

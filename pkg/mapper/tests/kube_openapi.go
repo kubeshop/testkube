@@ -7,6 +7,7 @@ import (
 
 // MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list
 func MapTestListKubeToAPI(crTests testsv2.TestList) (tests []testkube.Test) {
+	tests = []testkube.Test{}
 	for _, item := range crTests.Items {
 		tests = append(tests, MapTestCRToAPI(item))
 	}
