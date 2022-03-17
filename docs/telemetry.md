@@ -2,6 +2,10 @@
 
 To improve the end-user experience, Testkube collects anonymous data about usage.
 
+Participation in this program is optional. You may [opt-out](#how-to-opt-out) if you'd prefer not to share any information.
+
+The data collected is always anonymous, not traceable to the source, and only used in aggregate form. 
+
 Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
 
 The collected data looks like this.
@@ -24,4 +28,26 @@ The collected data looks like this.
   "timestamp": "2021-11-04T18:54:41.004Z",
   "type": "track"
 }
+```
+
+## **What We Collect**
+
+Analytics tracked include:
+- The unique id generated from the MAC address.
+- The testkube version.
+- The command being executed.
+
+## **How to Opt Out**
+
+To opt out of the Testkube analytics collection:
+```
+kubectl testkube analytics disable
+```
+To opt in:
+```
+kubectl testkube analytics enable
+```
+To check the current collection status:
+``` 
+kubectl testkube anaytics status
 ```
