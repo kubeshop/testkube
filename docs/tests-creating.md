@@ -25,11 +25,11 @@ Right click on your collection name:
 
 Click the **Export** button:
 
-![create postman collection step 2](img/test-create-1.png)
+![create postman collection step 2](img/test-create-2.png)
 
 Save in a convenient location. In this example, we are using `~/Downloads/TODO.postman_collection.json` path.
 
-![create postman collection step 3](img/test-create-1.png)
+![create postman collection step 3](img/test-create-3.png)
 
 ```sh
 kubectl testkube create test --file ~/Downloads/TODO.postman_collection.json --name test

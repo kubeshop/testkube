@@ -94,7 +94,7 @@ func TestE2E(t *testing.T) {
 		a.Contains(string(out), "Google")
 
 		// then check if tests completed with success
-		a.Contains(string(out), "Test execution completed with sucess")
+		a.Contains(string(out), "Test execution completed with success")
 
 		executionID := GetExecutionID(out)
 		t.Logf("Execution completed ID: %s", executionID)
