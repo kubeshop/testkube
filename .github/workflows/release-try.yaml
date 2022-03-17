@@ -93,12 +93,6 @@ jobs:
         with:
           fileName: 'kubeshop_msft.p12'
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
-          
-      - name: Install chocolatey
-        run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        
-      - name: Install Wix toolset
-        run: choco install wixtoolset -y 
       
       - name: Create MSI
         run: |
