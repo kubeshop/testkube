@@ -1277,6 +1277,9 @@ components:
           type: string
           description: "test execution end time"
           format: date-time
+        duration:
+          type: string
+          description: calculated test duration
         labels:
           type: object
           description: "execution labels"
