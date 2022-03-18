@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
+	"github.com/kubeshop/testkube/pkg/types"
 )
 
 // GetTestSuiteHandler for getting test object
@@ -233,7 +234,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
-			testExecution.Duration = duration.Round(100 * time.Millisecond).String()
+			testExecution.Duration = duration.String()
 
 			err := s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
 			if err != nil {
@@ -369,7 +370,7 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			Status:        execution.Status,
 			StartTime:     execution.StartTime,
 			EndTime:       execution.EndTime,
-			Duration:      execution.Duration,
+			Duration:      types.FormatDuration(execution.Duration),
 			Execution:     executionsSummary,
 		}
 	}
