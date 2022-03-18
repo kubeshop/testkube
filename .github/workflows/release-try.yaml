@@ -101,5 +101,6 @@ jobs:
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
+          dir
 
            
