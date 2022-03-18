@@ -14,8 +14,8 @@ import (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, initImage, jobTemplate string) (client JobExecutor, err error) {
-	jobClient, err := jobs.NewJobClient(initImage, jobTemplate)
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string) (client JobExecutor, err error) {
+	jobClient, err := jobs.NewJobClient(namespace, initImage, jobTemplate)
 	if err != nil {
 		return client, fmt.Errorf("can't get k8s jobs client: %w", err)
 	}
@@ -122,5 +122,7 @@ func getJobOptions(options ExecuteOptions) jobs.JobOptions {
 		Image:       options.ExecutorSpec.Image,
 		HasSecrets:  options.HasSecrets,
 		JobTemplate: options.ExecutorSpec.JobTemplate,
+		TestName:    options.TestName,
+		Namespace:   options.Namespace,
 	}
 }

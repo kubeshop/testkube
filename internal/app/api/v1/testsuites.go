@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
+	"github.com/kubeshop/testkube/pkg/types"
 )
 
 // GetTestSuiteHandler for getting test object
@@ -29,8 +30,9 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		test := mapTestSuiteUpsertRequestToTestCRD(request)
-		created, err := s.TestsSuitesClient.Create(&test)
+		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
+
+		created, err := s.TestsSuitesClient.Create(&testSuite)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -373,7 +375,7 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			Status:        execution.Status,
 			StartTime:     execution.StartTime,
 			EndTime:       execution.EndTime,
-			Duration:      execution.Duration,
+			Duration:      types.FormatDuration(execution.Duration),
 			Execution:     executionsSummary,
 		}
 	}

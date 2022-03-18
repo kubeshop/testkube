@@ -36,6 +36,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
+			testNamespace = cmd.Flag("namespace").Value.String()
 			client, _ := common.GetClient(cmd)
 			test, _ := client.GetTest(testName, testNamespace)
 
@@ -50,7 +51,7 @@ func NewCreateTestsCmd() *cobra.Command {
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
 
-			executors, err := client.ListExecutors(test.Namespace)
+			executors, err := client.ListExecutors(options.Namespace)
 			ui.ExitOnError("getting available executors", err)
 			err = validateExecutorType(options.Type_, executors)
 			ui.ExitOnError("validating executor type", err)

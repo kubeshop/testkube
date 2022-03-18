@@ -20,6 +20,7 @@ import (
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/types"
 )
 
 // ExecuteTestHandler calls particular executor based on execution request content and type
@@ -322,6 +323,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	return client.ExecuteOptions{
 		TestName:     id,
+		Namespace:    namespace,
 		TestSpec:     testCR.Spec,
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
@@ -331,6 +333,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
+		options.Namespace,
 		options.TestName,
 		options.Request.Name,
 		options.TestSpec.Type_,
@@ -357,6 +360,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 			Status:    execution.ExecutionResult.Status,
 			StartTime: execution.StartTime,
 			EndTime:   execution.EndTime,
+			Duration:  types.FormatDuration(execution.Duration),
 			Labels:    execution.Labels,
 		}
 	}

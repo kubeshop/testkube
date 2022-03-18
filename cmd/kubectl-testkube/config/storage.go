@@ -7,6 +7,11 @@ import (
 	"path"
 )
 
+var DefaultConfig = Data{
+	AnalyticsEnabled: true,
+	Namespace:        "testkube",
+}
+
 const configDirName = ".testkube"
 const configFile = "config.json"
 
@@ -40,7 +45,7 @@ func (c *Storage) Save(data Data) error {
 }
 
 func (c *Storage) Init() error {
-	var defaultConfig = Data{AnalyticsEnabled: true}
+	var defaultConfig = DefaultConfig
 	// create ConfigWriter dir if not exists
 	dir, err := c.getDir()
 	if err != nil {
