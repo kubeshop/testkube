@@ -40,6 +40,6 @@ func TestFormatDuration(t *testing.T) {
 		// given / when
 		out := FormatDuration("13123jj1j1j1j1j1")
 		// then
-		assert.Equal(t, "invalid", out)
+		assert.Contains(t, out, InvalidDurationString)
 	})
 }
