@@ -63,6 +63,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			}
 
 			options.Labels = labels
+			options.Schedule = cmd.Flag("schedule").Value.String()
 
 			test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
 			ui.ExitOnError("creating TestSuite "+options.Name+" in namespace "+options.Namespace, err)

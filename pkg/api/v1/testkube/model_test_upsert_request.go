@@ -25,4 +25,6 @@ type TestUpsertRequest struct {
 	Created time.Time    `json:"created,omitempty"`
 	// test labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// schedule to run test
+	Schedule string `json:"schedule,omitempty"`
 }

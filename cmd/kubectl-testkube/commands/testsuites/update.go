@@ -15,11 +15,10 @@ import (
 func NewUpdateTestSuitesCmd() *cobra.Command {
 
 	var (
-		file           string
-		name           string
-		labels         map[string]string
-		schedule       string
-		deleteSchedule bool
+		file     string
+		name     string
+		labels   map[string]string
+		schedule string
 	)
 
 	cmd := &cobra.Command{
@@ -64,6 +63,8 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				options.Labels = testSuite.Labels
 			}
 
+			options.Schedule = cmd.Flag("schedule").Value.String()
+
 			// TODO: figure out how to remove labels from test suite
 			testSuite, err = client.UpdateTestSuite(options)
 			ui.ExitOnError("updating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
@@ -75,7 +76,6 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
-	cmd.Flags().BoolVar(&deleteSchedule, "delete-schedule", false, "delete test suite schedule")
 
 	return cmd
 }

@@ -4,7 +4,8 @@ import "fmt"
 
 // Config for HTTP server
 type Config struct {
-	Port int
+	Port     int
+	Fullname string
 }
 
 // Addr returns port based address
