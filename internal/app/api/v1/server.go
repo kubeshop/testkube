@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -40,6 +41,7 @@ func NewServer(
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	cronjobClient *cronjob.Client,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -56,6 +58,7 @@ func NewServer(
 		Metrics:              NewMetrics(),
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
+		CronJobClient:        cronjobClient,
 		Namespace:            namespace,
 	}
 
@@ -87,6 +90,7 @@ type TestkubeAPI struct {
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	EventsEmitter        *webhook.Emitter
+	CronJobClient        *cronjob.Client
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
@@ -95,14 +99,13 @@ type TestkubeAPI struct {
 }
 
 type jobTemplates struct {
-	job              string
-	cronJobTest      string
-	cronJobTestSuite string
+	job     string
+	cronJob string
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
 	envconfig.Process("TESTKUBE_TEMPLATE", j)
-	templates := []*string{&j.job, &j.cronJobTest, &j.cronJobTestSuite}
+	templates := []*string{&j.job, &j.cronJob}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])

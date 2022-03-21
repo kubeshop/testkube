@@ -9,6 +9,7 @@ import (
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 )
 
@@ -65,6 +66,9 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			options.Labels = labels
 			options.Schedule = cmd.Flag("schedule").Value.String()
 
+			err = validateSchedule(options.Schedule)
+			ui.ExitOnError("validating schedule", err)
+
 			test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
 			ui.ExitOnError("creating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("TestSuite created", options.Name)
@@ -77,4 +81,17 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
 
 	return cmd
+}
+
+func validateSchedule(schedule string) error {
+	if schedule == "" {
+		return nil
+	}
+
+	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := specParser.Parse(schedule); err != nil {
+		return err
+	}
+
+	return nil
 }

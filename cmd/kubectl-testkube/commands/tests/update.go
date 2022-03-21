@@ -41,6 +41,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
 
+			err = validateSchedule(options.Schedule)
+			ui.ExitOnError("validating schedule", err)
+
 			test, err = client.UpdateTest(options)
 			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
 
