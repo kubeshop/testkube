@@ -74,6 +74,9 @@ func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noM
 			}
 
 			ui.Info("Helm install jetstack output", string(out))
+		} else {
+			ui.Info("Found existing crd certificates.cert-manager.io. Assume that jetstack cert manager is already installed. " +
+				"Skip its installation")
 		}
 	}
 
