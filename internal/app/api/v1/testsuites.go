@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/types"
@@ -57,6 +59,15 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		// delete cron job, if schedule is cleaned
+		if testSuite.Spec.Schedule != "" && request.Schedule == "" {
+			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI), request.Namespace); err != nil {
+				if !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+			}
+		}
+
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
 		testSuiteSpec := mapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Spec = testSuiteSpec.Spec
@@ -75,7 +86,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
-		crTest, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -84,9 +95,9 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		test := testsuitesmapper.MapCRToAPI(*crTest)
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 
-		return c.JSON(test)
+		return c.JSON(testSuite)
 	}
 }
 
@@ -104,6 +115,13 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		// delete cron job for test suite
+		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI), namespace); err != nil {
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+		}
+
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 }
@@ -119,6 +137,13 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// delete all cron jobs for test suites
+		if err = s.CronJobClient.DeleteAll(namespace, testSuiteResourceURI); err != nil {
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)
@@ -156,9 +181,9 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 		ctx := context.Background()
 		name := c.Params("id")
 		namespace := c.Query("namespace", "testkube")
-		s.Log.Debugw("getting test", "name", name)
+		s.Log.Debugw("getting test suite", "name", name)
 
-		crTest, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -173,9 +198,27 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
 		}
 
-		test := testsuitesmapper.MapCRToAPI(*crTest)
-		s.Log.Debugw("executing test", "name", name, "test", test, "cr", crTest)
-		results := s.executeTestSuite(ctx, request, test)
+		if crTestSuite.Spec.Schedule != "" {
+			data, err := json.Marshal(request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test suite request: %w", err))
+			}
+
+			options := cronjob.CronJobOptions{
+				Schedule: crTestSuite.Spec.Schedule,
+				Resource: testSuiteResourceURI,
+				Data:     string(data),
+			}
+			if err = s.CronJobClient.Apply(cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), namespace, options); err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
+			}
+
+			return c.JSON(testkube.TestSuiteExecution{Status: testkube.TestSuiteExecutionStatusQueued})
+		}
+
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		s.Log.Debugw("executing test", "name", name, "test suite", testSuite, "cr", crTestSuite)
+		results := s.executeTestSuite(ctx, request, testSuite)
 
 		c.Response().SetStatusCode(fiber.StatusCreated)
 		return c.JSON(results)

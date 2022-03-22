@@ -24,6 +24,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/types"
 )
 
+const (
+	// testResourceURI is test resource uri for cron job call
+	testResourceURI = "tests"
+	// testSuiteResourceURI is test suite resource uri for cron job call
+	testSuiteResourceURI = "test-suites"
+)
+
 // ExecuteTestHandler calls particular executor based on execution request content and type
 func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -51,14 +58,14 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 
 			options := cronjob.CronJobOptions{
 				Schedule: test.Spec.Schedule,
-				Resource: "tests",
+				Resource: testResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(id, namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(cronjob.GetMetadataName(id, testResourceURI), namespace, options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
 			}
 
-			return c.JSON(testkube.Execution{})
+			return c.JSON(testkube.Execution{ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued}})
 		}
 
 		// generate random execution name in case there is no one set

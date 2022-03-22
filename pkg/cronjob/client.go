@@ -17,10 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	testkubeCronJobLabel = "cronjob"
-)
-
 // Client data struct for managing running cron jobs
 type Client struct {
 	ClientSet       *kubernetes.Clientset
@@ -31,10 +27,9 @@ type Client struct {
 }
 
 type CronJobOptions struct {
-	Schedule        string
-	Resource        string
-	CronJobTemplate string
-	Data            string
+	Schedule string
+	Resource string
+	Data     string
 }
 
 type templateParameters struct {
@@ -64,7 +59,7 @@ func NewClient(serviceName string, servicePort int, cronJobTemplate string) (*Cl
 	}, nil
 }
 
-// Get is a method to retrieve an existing secret
+// Get is a method to retrieve an existing cron job
 func (c *Client) Get(id, namespace string) (*v1.CronJob, error) {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(namespace)
 	ctx := context.Background()
@@ -83,13 +78,14 @@ func (c *Client) Apply(id, namespace string, options CronJobOptions) error {
 	ctx := context.Background()
 
 	parameters := templateParameters{
-		Name:        id,
-		Namespace:   namespace,
-		ServiceName: c.serviceName,
-		ServicePort: c.servicePort,
-		Schedule:    options.Schedule,
-		Resource:    options.Resource,
-		Data:        options.Data,
+		Name:            id,
+		Namespace:       namespace,
+		ServiceName:     c.serviceName,
+		ServicePort:     c.servicePort,
+		Schedule:        options.Schedule,
+		Resource:        options.Resource,
+		CronJobTemplate: c.cronJobTemplate,
+		Data:            options.Data,
 	}
 
 	cronJobSpec, err := NewApplySpec(c.Log, parameters)
@@ -97,7 +93,6 @@ func (c *Client) Apply(id, namespace string, options CronJobOptions) error {
 		return err
 	}
 
-	cronJobSpec.Labels = map[string]string{"testkube": testkubeCronJobLabel}
 	if _, err := cronJobClient.Apply(ctx, cronJobSpec, metav1.ApplyOptions{
 		FieldManager: "application/apply-patch"}); err != nil {
 		return err
@@ -119,12 +114,12 @@ func (c *Client) Delete(id, namespace string) error {
 }
 
 // DeleteAll is a method to delete all existing secrets
-func (c *Client) DeleteAll(namespace string) error {
+func (c *Client) DeleteAll(namespace, resource string) error {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(namespace)
 	ctx := context.Background()
 
 	if err := cronJobClient.DeleteCollection(ctx, metav1.DeleteOptions{},
-		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", testkubeCronJobLabel)}); err != nil {
+		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", resource)}); err != nil {
 		return err
 	}
 
@@ -153,4 +148,9 @@ func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batch
 	}
 
 	return &cronJob, nil
+}
+
+// GetMetadataName returns cron job metadata name
+func GetMetadataName(name, resource string) string {
+	return fmt.Sprintf("%s-%s", name, resource)
 }

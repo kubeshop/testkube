@@ -41,7 +41,6 @@ func NewServer(
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
-	cronjobClient *cronjob.Client,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -58,7 +57,6 @@ func NewServer(
 		Metrics:              NewMetrics(),
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
-		CronJobClient:        cronjobClient,
 		Namespace:            namespace,
 	}
 
@@ -72,6 +70,11 @@ func NewServer(
 	}
 
 	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.job); err != nil {
+		panic(err)
+	}
+
+	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.cronJob)
+	if err != nil {
 		panic(err)
 	}
 

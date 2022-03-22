@@ -21,7 +21,6 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/analytics"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -92,9 +91,6 @@ func main() {
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
 
-	cronJobClient, err := cronjob.NewClient("", 0, "")
-	ui.ExitOnError("Getting secret client", err)
-
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV2, testsuitesClient))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
@@ -109,7 +105,6 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
-		cronJobClient,
 	).Run()
 
 	ui.ExitOnError("Running API Server", err)
