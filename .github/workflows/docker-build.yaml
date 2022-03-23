@@ -59,7 +59,8 @@ jobs:
             build.args.COMMIT=${{ github.sha }}
           push: true
         env:
-          ANALYTICS_TRACKING_ID: "${{secrets.ANALYTICS_TRACKING_ID}}"
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_KEY}}"
 
 
 

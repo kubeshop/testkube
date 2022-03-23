@@ -52,6 +52,7 @@ jobs:
           args: release --rm-dist -f .goreleaser-dev.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          ANALYTICS_TRACKING_ID: "${{secrets.ANALYTICS_TRACKING_ID}}"
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_KEY}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
