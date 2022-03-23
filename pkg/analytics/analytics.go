@@ -107,14 +107,13 @@ func sendDataToGA(data Payload) error {
 
 	request.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(request)
+	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode > 300 {
 		return fmt.Errorf("Could not POST, statusCode: %d", resp.StatusCode)
 	}
 	return nil
