@@ -1,16 +1,17 @@
 package analytics
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/denisbrodbeck/machineid"
-	"github.com/go-resty/resty/v2"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 )
@@ -94,25 +95,27 @@ func SendAnonymouscmdInfo() {
 }
 
 func sendDataToGA(data Payload) error {
-
-	jsonbyte, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	json := string(jsonbyte)
-	fmt.Println(json)
-
-	restyClient := resty.New()
-	resp, err := restyClient.R().
-		SetHeader("Content-Type", "application/json").
-		SetBody(data).
-		Post(fmt.Sprintf(gaUrl, testkubeMeasurementID, testkubeApiSecret))
+	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode() >= 400 {
-		return fmt.Errorf("Could not POST, statusCode: %d", resp.StatusCode())
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, testkubeMeasurementID, testkubeApiSecret), bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("Could not POST, statusCode: %d", resp.StatusCode)
 	}
 	return nil
 }
