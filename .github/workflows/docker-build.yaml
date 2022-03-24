@@ -60,7 +60,7 @@ jobs:
           push: true
         env:
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}"
-          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_KEY}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_SECRET}}"
 
 
 
