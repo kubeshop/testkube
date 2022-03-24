@@ -9,30 +9,45 @@ import (
 )
 
 func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) {
-	ui.Warn("Id:      ", execution.Id)
-	ui.Warn("Name:    ", execution.Name)
-	if execution.Status != nil {
-		ui.Warn("Status:  ", string(*execution.Status))
+	if execution.TestSuite != nil {
+		ui.Warn("Name          :", execution.TestSuite.Name)
 	}
-	ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-	ui.Table(execution, os.Stdout)
+
+	if execution.Id != "" {
+		ui.Warn("Execution ID  :", execution.Id)
+		ui.Warn("Execution name:", execution.Name)
+	}
+
+	if execution.Status != nil {
+		ui.Warn("Status        :", string(*execution.Status))
+	}
+
+	if execution.Id != "" {
+		ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
+
+		ui.Table(execution, os.Stdout)
+	}
 
 	ui.NL()
 	ui.NL()
 }
 
 func uiPrintExecutionStatus(execution testkube.TestSuiteExecution) {
-	switch execution.Status {
-	case testkube.TestSuiteExecutionStatusQueued:
+	if execution.Status == nil {
+		return
+	}
+
+	switch true {
+	case execution.IsQueued():
 		ui.Warn("Test Suite queued for execution")
 
-	case testkube.TestSuiteExecutionStatusPending:
+	case execution.IsPending():
 		ui.Warn("Test Suite execution started")
 
-	case testkube.TestSuiteExecutionStatusSuccess:
+	case execution.IsSuccesful():
 		ui.Success("Test Suite execution completed with sucess in " + execution.Duration)
 
-	case testkube.TestSuiteExecutionStatusError:
+	case execution.IsFailed():
 		ui.Errf("Test Suite execution failed")
 		os.Exit(1)
 	}

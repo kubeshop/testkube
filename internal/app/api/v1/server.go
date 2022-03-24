@@ -69,11 +69,11 @@ func NewServer(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.job); err != nil {
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job); err != nil {
 		panic(err)
 	}
 
-	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.cronJob)
+	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob)
 	if err != nil {
 		panic(err)
 	}
@@ -102,13 +102,13 @@ type TestkubeAPI struct {
 }
 
 type jobTemplates struct {
-	job     string
-	cronJob string
+	Job     string
+	Cronjob string
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
 	envconfig.Process("TESTKUBE_TEMPLATE", j)
-	templates := []*string{&j.job, &j.cronJob}
+	templates := []*string{&j.Job, &j.Cronjob}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])

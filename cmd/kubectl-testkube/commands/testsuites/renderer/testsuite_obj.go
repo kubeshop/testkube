@@ -14,8 +14,9 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	}
 
 	ui.Warn("Name:     ", ts.Name)
-	ui.Warn("Namespace:", ts.Name)
-	ui.Warn("Labels:   ", fmt.Sprintf("%v", ts.Labels))
+	ui.Warn("Namespace:", ts.Namespace)
+	ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
+	ui.Warn("Schedule: ", ts.Schedule)
 
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)

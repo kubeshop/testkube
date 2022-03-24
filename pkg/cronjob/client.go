@@ -33,6 +33,7 @@ type CronJobOptions struct {
 }
 
 type templateParameters struct {
+	Id              string
 	Name            string
 	Namespace       string
 	ServiceName     string
@@ -60,11 +61,11 @@ func NewClient(serviceName string, servicePort int, cronJobTemplate string) (*Cl
 }
 
 // Get is a method to retrieve an existing cron job
-func (c *Client) Get(id, namespace string) (*v1.CronJob, error) {
+func (c *Client) Get(name, namespace string) (*v1.CronJob, error) {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(namespace)
 	ctx := context.Background()
 
-	cronJob, err := cronJobClient.Get(ctx, id, metav1.GetOptions{})
+	cronJob, err := cronJobClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +74,13 @@ func (c *Client) Get(id, namespace string) (*v1.CronJob, error) {
 }
 
 // Apply is a method to create or update a cron job
-func (c *Client) Apply(id, namespace string, options CronJobOptions) error {
+func (c *Client) Apply(id, name, namespace string, options CronJobOptions) error {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(namespace)
 	ctx := context.Background()
 
 	parameters := templateParameters{
-		Name:            id,
+		Id:              id,
+		Name:            name,
 		Namespace:       namespace,
 		ServiceName:     c.serviceName,
 		ServicePort:     c.servicePort,
@@ -102,11 +104,11 @@ func (c *Client) Apply(id, namespace string, options CronJobOptions) error {
 }
 
 // Delete is a method to delete an existing secret
-func (c *Client) Delete(id, namespace string) error {
+func (c *Client) Delete(name, namespace string) error {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(namespace)
 	ctx := context.Background()
 
-	if err := cronJobClient.Delete(ctx, id, metav1.DeleteOptions{}); err != nil {
+	if err := cronJobClient.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

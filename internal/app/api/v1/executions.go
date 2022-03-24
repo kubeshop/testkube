@@ -50,7 +50,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test: %w", err))
 		}
 
-		if test.Spec.Schedule != "" {
+		if test.Spec.Schedule != "" && c.Query("callback") == "" {
 			data, err := json.Marshal(request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test request: %w", err))
@@ -61,11 +61,16 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 				Resource: testResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(cronjob.GetMetadataName(id, testResourceURI), namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(id, cronjob.GetMetadataName(id, testResourceURI), namespace, options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
 			}
 
-			return c.JSON(testkube.Execution{ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued}})
+			return c.JSON(testkube.Execution{
+				TestName:        test.Name,
+				TestType:        test.Spec.Type_,
+				TestNamespace:   namespace,
+				ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued},
+			})
 		}
 
 		// generate random execution name in case there is no one set

@@ -16,7 +16,8 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Name:     ", test.Name)
 	ui.Warn("Namespace:", test.Name)
 	ui.Warn("Created:  ", test.Created.String())
-	ui.Warn("Labels:   ", fmt.Sprintf("%v", test.Labels))
+	ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
+	ui.Warn("Schedule: ", test.Schedule)
 
 	if test.Content != nil {
 		ui.NL()

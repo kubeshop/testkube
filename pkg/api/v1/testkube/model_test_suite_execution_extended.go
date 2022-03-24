@@ -77,3 +77,19 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 
 	return
 }
+
+func (e *TestSuiteExecution) IsPending() bool {
+	return *e.Status == PENDING_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsQueued() bool {
+	return *e.Status == QUEUED_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsSuccesful() bool {
+	return *e.Status == SUCCESS_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsFailed() bool {
+	return *e.Status == ERROR__TestSuiteExecutionStatus
+}

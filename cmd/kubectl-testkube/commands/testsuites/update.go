@@ -49,7 +49,8 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				options.Name = name
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, namespace := common.GetClient(cmd)
+			options.Namespace = namespace
 
 			testSuite, _ := client.GetTestSuite(options.Name, options.Namespace)
 			if options.Name != testSuite.Name {

@@ -198,7 +198,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
 		}
 
-		if crTestSuite.Spec.Schedule != "" {
+		if crTestSuite.Spec.Schedule != "" && c.Query("callback") == "" {
 			data, err := json.Marshal(request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test suite request: %w", err))
@@ -209,11 +209,17 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 				Resource: testSuiteResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), namespace, options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
 			}
 
-			return c.JSON(testkube.TestSuiteExecution{Status: testkube.TestSuiteExecutionStatusQueued})
+			return c.JSON(testkube.TestSuiteExecution{
+				TestSuite: &testkube.ObjectRef{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Status: testkube.TestSuiteExecutionStatusQueued,
+			})
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
