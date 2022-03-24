@@ -90,6 +90,7 @@ func SendAnonymouscmdInfo() {
 			}},
 	}
 
+	fmt.Println(testkubeMeasurementID, "   ", testkubeApiSecret)
 	sendDataToGA(payload)
 
 }
