@@ -53,7 +53,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}"
-          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_KEY}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       -
