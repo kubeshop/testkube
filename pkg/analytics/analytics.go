@@ -1,19 +1,42 @@
 package analytics
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/denisbrodbeck/machineid"
-	v1 "github.com/mjpitz/go-ga/client/v1"
-	"github.com/mjpitz/go-ga/client/v1/gatypes"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 )
 
-var testkubeTrackingID = "UA-204665550-8" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeTrackingID=UA-204665550-8
+var testkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
+var testkubeApiSecret = ""
+
+const gaUrl = "https://www.google-analytics.com/mp/collect?measurement_id=%s&api_secret=%s"
+
+type Params struct {
+	EventCount       int64  `json:"event_count,omitempty"`
+	EventCategory    string `json:"even_category,omitempty"`
+	AppVersion       string `json:"app_version,omitempty"`
+	AppName          string `json:"app_name,omitempty"`
+	CustomDimensions string `json:"custom_dimensions,omitempty"`
+	DataSource       string `json:"data_source,omitempty"`
+}
+type Event struct {
+	Name   string `json:"name"`
+	Params Params `json:"params,omitempty"`
+}
+type Payload struct {
+	ClientID string  `json:"client_id"`
+	Events   []Event `json:"events"`
+}
 
 // SendAnonymousInfo will send event to GA
 func SendAnonymousInfo() {
@@ -23,56 +46,77 @@ func SendAnonymousInfo() {
 		isEnabled, _ = strconv.ParseBool(val)
 	}
 	if isEnabled {
-		client := v1.NewClient(testkubeTrackingID, "golang")
-		payload := &gatypes.Payload{
-			HitType:                           "event",
-			DataSource:                        "api-server",
-			NonInteractionHit:                 true,
-			DisableAdvertisingPersonalization: true,
-			Users: gatypes.Users{
-				ClientID: MachineID(),
-			},
-			Event: gatypes.Event{
-				EventCategory: "beacon",
-				EventAction:   "testkube-heartbeat",
-			},
-			Apps: gatypes.Apps{
-				ApplicationName:    "testkube",
-				ApplicationVersion: commands.Version,
-			},
+		payload := Payload{
+			ClientID: MachineID(),
+			Events: []Event{
+				Event{
+					Name: "testkube-heartbeat",
+
+					Params: Params{
+						EventCount:    1,
+						EventCategory: "beacon",
+						AppVersion:    commands.Version,
+						AppName:       "testkube",
+						DataSource:    "api-server",
+					},
+				}},
 		}
-		client.SendPost(payload)
+
+		sendDataToGA(payload)
 	}
 }
 
 // SendAnonymouscmdInfo will send CLI event to GA
 func SendAnonymouscmdInfo() {
-	client := v1.NewClient(testkubeTrackingID, "golang")
 	event := "command"
 	command := []string{}
 	if len(os.Args) > 1 {
 		command = os.Args[1:]
 		event = command[0]
 	}
-	payload := &gatypes.Payload{
-		HitType:                           "event",
-		DataSource:                        "CLI",
-		DisableAdvertisingPersonalization: true,
-		Users: gatypes.Users{
-			ClientID: MachineID(),
-		},
-		Event: gatypes.Event{
-			EventCategory: event,
-			EventAction:   "execution",
-			EventLabel:    event,
-		},
-		Apps: gatypes.Apps{
-			ApplicationName:    "testkube",
-			ApplicationVersion: commands.Version,
-		},
-		CustomDimensions: gatypes.StringList(command),
+
+	payload := Payload{
+		ClientID: MachineID(),
+		Events: []Event{
+			Event{
+				Name: event,
+				Params: Params{
+					EventCount:       1,
+					EventCategory:    "execution",
+					AppVersion:       commands.Version,
+					AppName:          "testkube",
+					CustomDimensions: strings.Join(command, " "),
+				},
+			}},
 	}
-	client.SendPost(payload)
+
+	sendDataToGA(payload)
+
+}
+
+func sendDataToGA(data Payload) error {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, testkubeMeasurementID, testkubeApiSecret), bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 300 {
+		return fmt.Errorf("Could not POST, statusCode: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // MachineID returns unique user machine ID

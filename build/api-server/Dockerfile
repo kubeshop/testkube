@@ -8,9 +8,9 @@ ENV GOOS=linux
 ARG VERSION 
 ARG COMMIT 
 
-RUN cd cmd/api-server;go build -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT -X github.com/kubeshop/testkube/pkg/analytics.testkubeTrackingID={{.Env.ANALYTICS_TRACKING_ID}}" -o /app -mod mod -a .
+RUN cd cmd/api-server;go build -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}} -X github.com/kubeshop/testkube/pkg/analytics.testkubeApiSecret={{.Env.ANALYTICS_API_KEY}}" -o /app -mod mod -a .
 
-FROM alpine:latest  
+FROM alpine:3.15  
 RUN apk --no-cache add ca-certificates libssl1.1
 WORKDIR /root/
 COPY --from=0 /app /bin/app
