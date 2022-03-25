@@ -24,7 +24,6 @@ func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) 
 
 	if execution.Id != "" {
 		ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-
 		ui.Table(execution, os.Stdout)
 	}
 

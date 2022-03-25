@@ -135,7 +135,7 @@ func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batch
 		return nil, fmt.Errorf("creating cron job spec from options.CronJobTemplate error: %w", err)
 	}
 
-	parameters.Data = strings.ReplaceAll(parameters.Data, "'", "''")
+	parameters.Data = strings.ReplaceAll(parameters.Data, "'", "''''")
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "cronjob", parameters); err != nil {
 		return nil, fmt.Errorf("executing cron job spec template: %w", err)
