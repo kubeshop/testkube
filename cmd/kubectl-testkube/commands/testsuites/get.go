@@ -26,13 +26,13 @@ func NewGetTestSuiteCmd() *cobra.Command {
 			if len(args) > 0 {
 				name := args[0]
 				testSuite, err := client.GetTestSuite(name, namespace)
-				ui.ExitOnError("getting test "+name, err)
+				ui.ExitOnError("getting test suite "+name, err)
 				err = render.Obj(cmd, testSuite, os.Stdout, renderer.TestSuiteRenderer)
 				ui.ExitOnError("rendering obj", err)
 			} else {
-				tests, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
-				ui.ExitOnError("getting tests", err)
-				err = render.List(cmd, tests, os.Stdout)
+				testSuites, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
+				ui.ExitOnError("getting test suites", err)
+				err = render.List(cmd, testSuites, os.Stdout)
 				ui.ExitOnError("rendering list", err)
 			}
 

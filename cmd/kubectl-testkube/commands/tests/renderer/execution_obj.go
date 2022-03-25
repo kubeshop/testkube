@@ -19,6 +19,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Name:    ", execution.Name)
 	ui.Warn("Args:    ", execution.Args...)
 	ui.Warn("Duration:", execution.Duration)
+	ui.Warn("Labels:  ", testkube.LabelsToString(execution.Labels))
 
 	if result == nil {
 		return fmt.Errorf("got execution without `Result`")

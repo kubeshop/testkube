@@ -9,15 +9,17 @@ import (
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 )
 
 func NewCreateTestSuitesCmd() *cobra.Command {
 
 	var (
-		name   string
-		file   string
-		labels map[string]string
+		name     string
+		file     string
+		labels   map[string]string
+		schedule string
 	)
 
 	cmd := &cobra.Command{
@@ -62,6 +64,10 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			}
 
 			options.Labels = labels
+			options.Schedule = cmd.Flag("schedule").Value.String()
+
+			err = validateSchedule(options.Schedule)
+			ui.ExitOnError("validating schedule", err)
 
 			test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
 			ui.ExitOnError("creating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
@@ -72,6 +78,20 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
 	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
 
 	return cmd
+}
+
+func validateSchedule(schedule string) error {
+	if schedule == "" {
+		return nil
+	}
+
+	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := specParser.Parse(schedule); err != nil {
+		return err
+	}
+
+	return nil
 }

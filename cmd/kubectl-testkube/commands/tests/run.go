@@ -59,21 +59,26 @@ func NewRunTestCmd() *cobra.Command {
 
 			printExecutionDetails(execution)
 
-			if watchEnabled {
-				watchLogs(execution.Id, client)
-			}
+			if execution.Id != "" {
+				if watchEnabled {
+					watchLogs(execution.Id, client)
+				}
 
-			execution, err = client.GetExecution(execution.Id)
-			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+				execution, err = client.GetExecution(execution.Id)
+				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+			}
 
 			uiPrintStatus(execution)
 
-			if downloadArtifactsEnabled {
-				DownloadArtifacts(execution.Id, downloadDir, client)
+			if execution.Id != "" {
+				if downloadArtifactsEnabled {
+					DownloadArtifacts(execution.Id, downloadDir, client)
+				}
+
+				uiShellWatchExecution(execution.Id)
 			}
 
 			uiShellGetExecution(execution.Id)
-			uiShellWatchExecution(execution.Id)
 		},
 	}
 

@@ -21,6 +21,7 @@ type Filter interface {
 	PageSize() int
 	TextSearchDefined() bool
 	TextSearch() string
+	Selector() string
 }
 
 type Repository interface {

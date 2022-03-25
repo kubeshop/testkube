@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -64,18 +65,15 @@ func NewServer(
 		s.Log.Warnf("load default executors %w", err)
 	}
 
-	jobTemplate := os.Getenv("TESTKUBE_JOB_TEMPLATE")
-	if jobTemplate != "" {
-		dataDecoded, err := base64.StdEncoding.DecodeString(jobTemplate)
-		if err != nil {
-			s.Log.Warnf("decode job template %w", err)
-		}
-
-		jobTemplate = string(dataDecoded)
+	if err = s.jobTemplates.decodeFromEnv(); err != nil {
+		panic(err)
 	}
 
-	s.jobTemplate = jobTemplate
-	s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplate)
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job); err != nil {
+		panic(err)
+	}
+
+	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob)
 	if err != nil {
 		panic(err)
 	}
@@ -95,11 +93,34 @@ type TestkubeAPI struct {
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	EventsEmitter        *webhook.Emitter
+	CronJobClient        *cronjob.Client
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
-	jobTemplate          string
+	jobTemplates         jobTemplates
 	Namespace            string
+}
+
+type jobTemplates struct {
+	Job     string
+	Cronjob string
+}
+
+func (j *jobTemplates) decodeFromEnv() error {
+	envconfig.Process("TESTKUBE_TEMPLATE", j)
+	templates := []*string{&j.Job, &j.Cronjob}
+	for i := range templates {
+		if *templates[i] != "" {
+			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
+			if err != nil {
+				return err
+			}
+
+			*templates[i] = string(dataDecoded)
+		}
+	}
+
+	return nil
 }
 
 type storageParams struct {
@@ -111,6 +132,7 @@ type storageParams struct {
 	Token           string
 }
 
+// Init initializes api server settings
 func (s TestkubeAPI) Init() {
 	envconfig.Process("STORAGE", &s.storageParams)
 

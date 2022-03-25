@@ -15,12 +15,20 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/types"
+)
+
+const (
+	// testResourceURI is test resource uri for cron job call
+	testResourceURI = "tests"
+	// testSuiteResourceURI is test suite resource uri for cron job call
+	testSuiteResourceURI = "test-suites"
 )
 
 // ExecuteTestHandler calls particular executor based on execution request content and type
@@ -36,6 +44,34 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 
 		id := c.Params("id")
 		namespace := request.Namespace
+
+		test, err := s.TestsClient.Get(namespace, id)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test: %w", err))
+		}
+
+		if test.Spec.Schedule != "" && c.Query("callback") == "" {
+			data, err := json.Marshal(request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test request: %w", err))
+			}
+
+			options := cronjob.CronJobOptions{
+				Schedule: test.Spec.Schedule,
+				Resource: testResourceURI,
+				Data:     string(data),
+			}
+			if err = s.CronJobClient.Apply(id, cronjob.GetMetadataName(id, testResourceURI), namespace, options); err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
+			}
+
+			return c.JSON(testkube.Execution{
+				TestName:        test.Name,
+				TestType:        test.Spec.Type_,
+				TestNamespace:   namespace,
+				ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued},
+			})
+		}
 
 		// generate random execution name in case there is no one set
 		// like for docker images

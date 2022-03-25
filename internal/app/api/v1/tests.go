@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
 
@@ -116,6 +117,15 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		// delete cron job, if schedule is cleaned
+		if test.Spec.Schedule != "" && request.Schedule == "" {
+			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI), request.Namespace); err != nil {
+				if !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+			}
+		}
+
 		// map test but load spec only to not override metadata.ResourceVersion
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
@@ -154,11 +164,16 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 
 		// delete secrets for test
 		if err = s.SecretClient.Delete(secret.GetMetadataName(name), namespace); err != nil {
-			if errors.IsNotFound(err) {
-				return c.SendStatus(fiber.StatusNoContent)
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
 			}
+		}
 
-			return s.Error(c, http.StatusBadGateway, err)
+		// delete cron job for test
+		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testResourceURI), namespace); err != nil {
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)
@@ -180,11 +195,16 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 
 		// delete all secrets for tests
 		if err = s.SecretClient.DeleteAll(namespace); err != nil {
-			if errors.IsNotFound(err) {
-				return c.SendStatus(fiber.StatusNoContent)
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
 			}
+		}
 
-			return s.Error(c, http.StatusBadGateway, err)
+		// delete all cron jobs for tests
+		if err = s.CronJobClient.DeleteAll(namespace, testResourceURI); err != nil {
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)

@@ -39,23 +39,28 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			execution, err := client.ExecuteTestSuite(testSuiteName, namespace, name, params)
 			ui.ExitOnError("starting test suite execution "+namespacedName, err)
 
-			if watchEnabled {
-				executionCh, err := client.WatchTestSuiteExecution(execution.Id)
-				for execution := range executionCh {
-					ui.ExitOnError("watching test execution", err)
-					printExecution(execution, startTime)
+			if execution.Id != "" {
+				if watchEnabled {
+					executionCh, err := client.WatchTestSuiteExecution(execution.Id)
+					for execution := range executionCh {
+						ui.ExitOnError("watching test execution", err)
+						printExecution(execution, startTime)
+					}
 				}
+
+				execution, err = client.GetTestSuiteExecution(execution.Id)
 			}
 
-			execution, err = client.GetTestSuiteExecution(execution.Id)
 			printExecution(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 			uiPrintExecutionStatus(execution)
 
 			uiShellTestSuiteGetCommandBlock(execution.Id)
-			if !watchEnabled {
-				uiShellTestSuiteWatchCommandBlock(execution.Id)
+			if execution.Id != "" {
+				if !watchEnabled {
+					uiShellTestSuiteWatchCommandBlock(execution.Id)
+				}
 			}
 		},
 	}

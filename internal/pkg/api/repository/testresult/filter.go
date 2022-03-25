@@ -14,6 +14,7 @@ type filter struct {
 	page       int
 	pageSize   int
 	textSearch string
+	selector   string
 }
 
 func NewExecutionsFilter() *filter {
@@ -53,6 +54,11 @@ func (f *filter) WithPageSize(pageSize int) *filter {
 
 func (f *filter) WithTextSearch(textSearch string) *filter {
 	f.textSearch = textSearch
+	return f
+}
+
+func (f *filter) WithSelector(selector string) *filter {
+	f.selector = selector
 	return f
 }
 
@@ -102,4 +108,8 @@ func (f filter) TextSearchDefined() bool {
 
 func (f filter) TextSearch() string {
 	return f.textSearch
+}
+
+func (f filter) Selector() string {
+	return f.selector
 }

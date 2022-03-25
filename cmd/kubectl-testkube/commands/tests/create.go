@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitUsername     string
 		gitToken        string
 		labels          map[string]string
+		schedule        string
 	)
 
 	cmd := &cobra.Command{
@@ -54,6 +56,8 @@ func NewCreateTestsCmd() *cobra.Command {
 			ui.ExitOnError("getting available executors", err)
 			err = validateExecutorType(options.Type_, executors)
 			ui.ExitOnError("validating executor type", err)
+			err = validateSchedule(options.Schedule)
+			ui.ExitOnError("validating schedule", err)
 
 			test, err = client.CreateTest(options)
 			ui.ExitOnError("creating test "+testName+" in namespace "+testNamespace, err)
@@ -75,6 +79,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
 
 	return cmd
 }
@@ -94,6 +99,19 @@ func validateExecutorType(executorType string, executors testkube.ExecutorsDetai
 
 	if !typeValid {
 		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
+	}
+
+	return nil
+}
+
+func validateSchedule(schedule string) error {
+	if schedule == "" {
+		return nil
+	}
+
+	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := specParser.Parse(schedule); err != nil {
+		return err
 	}
 
 	return nil

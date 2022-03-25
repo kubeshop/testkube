@@ -21,10 +21,11 @@ func NewUpdateTestsCmd() *cobra.Command {
 		gitUsername     string
 		gitToken        string
 		labels          map[string]string
+		schedule        string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "update",
+		Use:   "test",
 		Short: "Update test",
 		Long:  `Update Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -39,6 +40,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
+
+			err = validateSchedule(options.Schedule)
+			ui.ExitOnError("validating schedule", err)
 
 			test, err = client.UpdateTest(options)
 			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
@@ -60,6 +64,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
 
 	return cmd
 }

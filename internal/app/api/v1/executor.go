@@ -19,7 +19,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 		executor := mapExecutorCreateRequestToExecutorCRD(request)
 		if executor.Spec.JobTemplate == "" {
-			executor.Spec.JobTemplate = s.jobTemplate
+			executor.Spec.JobTemplate = s.jobTemplates.Job
 		}
 
 		created, err := s.ExecutorsClient.Create(&executor)

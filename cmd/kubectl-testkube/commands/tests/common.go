@@ -18,8 +18,10 @@ import (
 func printExecutionDetails(execution testkube.Execution) {
 	ui.Warn("Type          :", execution.TestType)
 	ui.Warn("Name          :", execution.TestName)
-	ui.Warn("Execution ID  :", execution.Id)
-	ui.Warn("Execution name:", execution.Name)
+	if execution.Id != "" {
+		ui.Warn("Execution ID  :", execution.Id)
+		ui.Warn("Execution name:", execution.Name)
+	}
 	ui.NL()
 	ui.NL()
 }
@@ -172,11 +174,13 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		return options, err
 	}
 
+	schedule := cmd.Flag("schedule").Value.String()
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,
 		Namespace: namespace,
+		Schedule:  schedule,
 	}
 
 	// if labels are passed and are different from the existing overwrite

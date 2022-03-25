@@ -20,6 +20,8 @@ type TestSuiteUpsertRequest struct {
 	Before []TestSuiteStep `json:"before,omitempty"`
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// schedule to run test suite
+	Schedule string `json:"schedule,omitempty"`
 	// Steps to run
 	Steps []TestSuiteStep `json:"steps"`
 	// Run this step after whole suite
