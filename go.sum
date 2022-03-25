@@ -371,6 +371,8 @@ github.com/kubeshop/testkube-operator v0.10.3 h1:rXCSp3PSmUXxCRuL3QtMShX5fzwe5Rp
 github.com/kubeshop/testkube-operator v0.10.3/go.mod h1:P1LXcaJEt1eVVrdRlDZip9mNHEP7cN64USQ6u/aCOeo=
 github.com/kubeshop/testkube-operator v0.11.1-beta001 h1:cB6Fs4KP7m6GoDTF2hb9d2H98xBcJ1icKhBO0ApyPTU=
 github.com/kubeshop/testkube-operator v0.11.1-beta001/go.mod h1:P1LXcaJEt1eVVrdRlDZip9mNHEP7cN64USQ6u/aCOeo=
+github.com/kubeshop/testkube-operator v0.11.2 h1:fHgWBhwQb/JQXpAmeCMUhfWpyYYvp/ipS1s2vFrAa58=
+github.com/kubeshop/testkube-operator v0.11.2/go.mod h1:P1LXcaJEt1eVVrdRlDZip9mNHEP7cN64USQ6u/aCOeo=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
