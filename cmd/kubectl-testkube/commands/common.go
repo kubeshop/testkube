@@ -37,7 +37,7 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 }
 
 type HelmUpgradeOrInstalTestkubeOptions struct {
-	Name, Namespace, Chart                    string
+	Name, Namespace, Chart, Values            string
 	NoDashboard, NoMinio, NoJetstack, NoMongo bool
 }
 
@@ -100,6 +100,10 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 	command = append(command, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	command = append(command, options.Name, options.Chart)
 
+	if options.Values != "" {
+		command = append(command, "--values", options.Values)
+	}
+
 	out, err := process.Execute(helmPath, command...)
 	if err != nil {
 		return err
@@ -113,6 +117,7 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name")
 	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
+	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
