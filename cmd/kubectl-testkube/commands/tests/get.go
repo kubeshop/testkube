@@ -13,7 +13,10 @@ import (
 )
 
 func NewGetTestsCmd() *cobra.Command {
-	var selectors []string
+	var (
+		selectors   []string
+		noExecution bool
+	)
 
 	cmd := &cobra.Command{
 		Use:     "test <testName>",
@@ -30,9 +33,19 @@ func NewGetTestsCmd() *cobra.Command {
 
 			if len(args) > 0 {
 				name = args[0]
-				test, err := client.GetTest(name, namespace)
+				test, err := client.GetTestWithExecution(name, namespace)
 				ui.ExitOnError("getting test in namespace "+namespace, err)
-				render.Obj(cmd, test, os.Stdout, renderer.TestRenderer)
+
+				if test.Test != nil {
+					err = render.Obj(cmd, test.Test, os.Stdout, renderer.TestRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
+
+				if test.LatestExecution != nil && !noExecution {
+					err = render.Obj(cmd, test.LatestExecution, os.Stdout, renderer.ExecutionRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
+
 			} else {
 				tests, err = client.ListTests(namespace, strings.Join(selectors, ","))
 				ui.ExitOnError("getting all tests in namespace "+namespace, err)
@@ -42,6 +55,7 @@ func NewGetTestsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
 
 	return cmd
 }
