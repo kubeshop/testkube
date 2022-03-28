@@ -77,6 +77,22 @@ func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error)
 	return c.getTestFromResponse(resp)
 }
 
+// GetTestWithExecution returns single test by id and namespace with execution
+func (c APIClient) GetTestWithExecution(id, namespace string) (test testkube.TestWithExecution, err error) {
+	uri := c.getURI("/test-with-executions/%s", id)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return test, fmt.Errorf("api/get-test returned error: %w", err)
+	}
+
+	return c.getTestWithExecutionFromResponse(resp)
+}
+
 // GetExecution returns test execution by excution id
 func (c APIClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
 
@@ -461,6 +477,17 @@ func (c APIClient) getTestFromResponse(resp rest.Result) (test testkube.Test, er
 	return test, err
 }
 
+func (c APIClient) getTestWithExecutionFromResponse(resp rest.Result) (test testkube.TestWithExecution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return test, err
+	}
+
+	err = json.Unmarshal(bytes, &test)
+
+	return test, err
+}
+
 func (c APIClient) getWebhookFromResponse(resp rest.Result) (webhook testkube.Webhook, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
@@ -627,6 +654,21 @@ func (c APIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, 
 	return c.getTestSuiteFromResponse(resp)
 }
 
+func (c APIClient) GetTestSuiteWithExecution(id, namespace string) (test testkube.TestSuiteWithExecution, err error) {
+	uri := c.getURI("/test-suite-with-executions/%s", id)
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return test, fmt.Errorf("api/get-test returned error: %w", err)
+	}
+
+	return c.getTestSuiteWithExecutionFromResponse(resp)
+}
+
 func (c APIClient) DeleteTestSuite(name string, namespace string) error {
 	if name == "" {
 		return fmt.Errorf("testsuite name '%s' is not valid", name)
@@ -702,6 +744,17 @@ func (c APIClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite te
 }
 
 func (c APIClient) getTestSuiteFromResponse(resp rest.Result) (testSuite testkube.TestSuite, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return testSuite, err
+	}
+
+	err = json.Unmarshal(bytes, &testSuite)
+
+	return testSuite, err
+}
+
+func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (testSuite testkube.TestSuiteWithExecution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return testSuite, err

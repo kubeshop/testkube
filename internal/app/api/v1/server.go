@@ -182,6 +182,9 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
 	tests.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
 
+	testWithExecutions := s.Routes.Group("/test-with-executions")
+	testWithExecutions.Get("/:id", s.GetTestWithExecutionHandler())
+
 	testsuites := s.Routes.Group("/test-suites")
 
 	testsuites.Post("/", s.CreateTestSuiteHandler())
@@ -198,6 +201,9 @@ func (s TestkubeAPI) Init() {
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
+
+	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
+	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())

@@ -22,6 +22,7 @@ type Client interface {
 	AbortExecution(test string, id string) error
 
 	GetTest(id, namespace string) (test testkube.Test, err error)
+	GetTestWithExecution(id, namespace string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string, namespace string) error
@@ -46,6 +47,7 @@ type Client interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string, namespace string) (testSuite testkube.TestSuite, err error)
+	GetTestSuiteWithExecution(id string, namespace string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error)
 	DeleteTestSuite(name string, namespace string) error
 	DeleteTestSuites(namespace string) error

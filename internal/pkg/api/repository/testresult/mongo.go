@@ -35,6 +35,13 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	return
 }
 
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.TestSuiteExecution, err error) {
+	findOptions := options.FindOne()
+	findOptions.SetSort(bson.D{{"starttime", -1}})
+	err = r.Coll.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	return
+}
+
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestSuiteExecution, err error) {
 	result = make([]testkube.TestSuiteExecution, 0)
 	resultLimit := int64(limit)

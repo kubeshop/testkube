@@ -9,12 +9,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// GetTestHandler is method for getting an existing tests
+// GetTestHandler is method for getting an existing test
 func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
@@ -28,8 +29,41 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		tests := testsmapper.MapTestCRToAPI(*crTest)
-		return c.JSON(tests)
+		test := testsmapper.MapTestCRToAPI(*crTest)
+
+		return c.JSON(test)
+	}
+}
+
+// GetTestWithExecutionHandler is method for getting an existing test with execution
+func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		crTest, err := s.TestsClient.Get(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		ctx := c.Context()
+		execution, err := s.ExecutionResults.GetLatestByTest(ctx, name)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		test := testsmapper.MapTestCRToAPI(*crTest)
+		testWithExecution := testkube.TestWithExecution{
+			Test: &test,
+		}
+		if err == nil {
+			testWithExecution.LatestExecution = &execution
+		}
+
+		return c.JSON(testWithExecution)
 	}
 }
 

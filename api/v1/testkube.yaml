@@ -107,7 +107,38 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Execution"
+                $ref: "#/components/schemas/TestSuite"
+        500:
+          description: "problem with getting test suite from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-suite-with-executions/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+      tags:
+        - test-suites
+        - api
+      summary: "Get test suite by ID with execution"
+      description: "Returns test suite with given name with execution"
+      operationId: getTestSuiteByIDWithExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSuiteWithExecution"
         500:
           description: "problem with getting test suite from storage"
           content:
@@ -493,6 +524,37 @@ paths:
       responses:
         204:
           description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-with-executions/{id}:
+    get:
+      tags:
+        - tests
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test
+      summary: "Get test with execution"
+      description: "Gets the specified test with execution"
+      operationId: getTestWithExecution
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWithExecution"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1635,6 +1697,28 @@ components:
       enum:
         - start-test
         - end-test
+
+    TestWithExecution:
+      description: Test with latest Execution result
+      type: object
+      required:
+        - test
+      properties:
+        test:
+          $ref: "#/components/schemas/Test"
+        latest_execution:
+          $ref: "#/components/schemas/Execution"
+
+    TestSuiteWithExecution:
+      description: Test suite with latest execution result
+      type: object
+      required:
+        - testSuite
+      properties:
+        testSuite:
+          $ref: "#/components/schemas/TestSuite"
+        latest_execution:
+          $ref: "#/components/schemas/TestSuiteExecution"
 
     #
     # Errors
