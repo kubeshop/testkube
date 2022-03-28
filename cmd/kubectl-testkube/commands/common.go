@@ -36,13 +36,18 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }
 
-func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noMinio, noJetstack bool) error {
+type HelmUpgradeOrInstalTestkubeOptions struct {
+	Name, Namespace, Chart, Values            string
+	NoDashboard, NoMinio, NoJetstack, NoMongo bool
+}
+
+func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) error {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
 	}
 
-	if !noJetstack {
+	if !options.NoJetstack {
 		_, err = process.Execute("kubectl", "get", "crds", "certificates.cert-manager.io")
 		if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
 			return err
@@ -62,7 +67,7 @@ func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noM
 
 			command := []string{"upgrade", "--install",
 				"jetstack", "jetstack/cert-manager",
-				"--namespace", namespace,
+				"--namespace", options.Namespace,
 				"--create-namespace",
 				"--version", "v1.7.1",
 				"--set", "installCRDs=true",
@@ -89,10 +94,15 @@ func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noM
 	_, err = process.Execute(helmPath, "repo", "update")
 	ui.ExitOnError("updating helm repositories", err)
 
-	command := []string{"upgrade", "--install", "--create-namespace", "--namespace", namespace}
-	command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !noMinio))
-	command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !noDashboard))
-	command = append(command, name, chart)
+	command := []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
+	command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !options.NoMinio))
+	command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
+	command = append(command, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
+	command = append(command, options.Name, options.Chart)
+
+	if options.Values != "" {
+		command = append(command, "--values", options.Values)
+	}
 
 	out, err := process.Execute(helmPath, command...)
 	if err != nil {
@@ -101,4 +111,16 @@ func HelmUpgradeOrInstalTestkube(name, namespace, chart string, noDashboard, noM
 
 	ui.Info("Helm install testkube output", string(out))
 	return nil
+}
+
+func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInstalTestkubeOptions) {
+	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name")
+	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
+	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
+
+	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
+	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
+	cmd.Flags().BoolVar(&options.NoJetstack, "no-jetstack", false, "don't install Jetstack")
+	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 }
