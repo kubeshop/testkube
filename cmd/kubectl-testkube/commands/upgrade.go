@@ -6,12 +6,7 @@ import (
 )
 
 func NewUpgradeCmd() *cobra.Command {
-	var (
-		noDashboard            bool
-		noMinio                bool
-		noJetstack             bool
-		chart, name, namespace string
-	)
+	var options HelmUpgradeOrInstalTestkubeOptions
 
 	cmd := &cobra.Command{
 		Use:     "upgrade",
@@ -26,19 +21,13 @@ func NewUpgradeCmd() *cobra.Command {
 				ui.Success("All migrations executed successfully")
 			}
 
-			err = HelmUpgradeOrInstalTestkube(name, namespace, chart, noDashboard, noMinio, noJetstack)
-			ui.ExitOnError("installing Testkube", err)
+			err = HelmUpgradeOrInstalTestkube(options)
+			ui.ExitOnError("upgrading Testkube", err)
 
 		},
 	}
 
-	cmd.Flags().StringVar(&chart, "chart", "kubeshop/testkube", "chart name")
-	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
-	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
-
-	cmd.Flags().BoolVar(&noMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&noDashboard, "no-dashboard", false, "don't install dashboard")
-	cmd.Flags().BoolVar(&noJetstack, "no-jetstack", false, "don't install Jetstack")
+	PopulateUpgradeInstallFlags(cmd, &options)
 
 	return cmd
 }
