@@ -78,18 +78,37 @@ test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
 create-examples:
+	kubectl delete test k6-api-server -ntestkube || true
+	kubectl delete secret k6-api-server-secrets -ntestkube || true
+	kubectl testkube create test --file test/perf/api-server.js --type "k6/script" --name k6-api-server
+
+	kubectl delete test k6-testkube-homepage -ntestkube || true
+	kubectl delete secret k6-testkube-homepage-secrets -ntestkube || true
+	kubectl testkube create test --file test/perf/testkube-homepage.js --type "k6/script" --name k6-testkube-homepage
+
 	kubectl delete test testkube-dashboard -ntestkube || true
+	kubectl delete secret testkube-dashboard-secrets -ntestkube || true
 	kubectl testkube create test --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
+
 	kubectl delete test testkube-todo-frontend -ntestkube || true
+	kubectl delete secret testkube-todo-frontend-secrets -ntestkube || true
 	kubectl testkube create test --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
+
 	kubectl delete test testkube-todo-api -ntestkube || true
+	kubectl delete secret testkube-todo-api-secrets -ntestkube || true
 	kubectl testkube create test --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
+
 	kubectl delete test kubeshop-site -ntestkube || true
+	kubectl delete secret kubeshop-site-secrets -ntestkube || true
 	kubectl testkube create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
+
 	kubectl delete test testkube-global-test -ntestkube || true
-	cat test/e2e/test-example-1.json | kubectl testkube create testsuite --name testkube-global-test
+	kubectl delete secrets testkube-global-test-secrets -ntestkube || true
+	cat test/e2e/testsuite-example-1.json | kubectl testkube create testsuite --name testkube-global-test
+
 	kubectl delete test kubeshop-sites-test -ntestkube || true
-	cat test/e2e/test-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test
+	kubectl delete secrets kubeshop-sites-test-secrets -ntestkube || true
+	cat test/e2e/testsuite-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test
 
 
 test-reload-sanity-test:
