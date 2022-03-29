@@ -96,34 +96,34 @@ create-examples:
 
 	kubectl delete test testkube-todo-api -ntestkube || true
 	kubectl delete secret testkube-todo-api-secrets -ntestkube || true
-	kubectl testkube create test --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
+	kubectl testkube create test --file test/postman/TODO.postman_collection.json --name testkube-todo-api
 
 	kubectl delete test kubeshop-site -ntestkube || true
 	kubectl delete secret kubeshop-site-secrets -ntestkube || true
-	kubectl testkube create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site 
+	kubectl testkube create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site 
 
 	kubectl delete test testkube-global-test -ntestkube || true
 	kubectl delete secrets testkube-global-test-secrets -ntestkube || true
-	cat test/e2e/testsuite-example-1.json | kubectl testkube create testsuite --name testkube-global-test
+	cat test/suites/testsuite-example-1.json | kubectl testkube create testsuite --name testkube-global-test
 
 	kubectl delete test kubeshop-sites-test -ntestkube || true
 	kubectl delete secrets kubeshop-sites-test-secrets -ntestkube || true
-	cat test/e2e/testsuite-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test
+	cat test/suites/testsuite-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test
 
 
 test-reload-sanity-test:
 	kubectl delete test sanity -ntestkube || true
-	kubectl testkube create test -f test/e2e/Testkube-Sanity.postman_collection.json --name sanity
+	kubectl testkube create test -f test/postman/Testkube-Sanity.postman_collection.json --name sanity
 
 
 # test local api server intance - need local-postman/collection type registered to local postman executor
 test-api-local:
-	newman run test/e2e/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var test_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
+	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var test_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
 
 # run by newman but on top of port-forwarded cluster service to api-server 
 # e.g. kubectl port-forward svc/testkube-api-server 8088
 test-api-port-forwarded:
-	newman run test/e2e/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var test_api_uri=http://testkube-api-server:8088 --verbose
+	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var test_api_uri=http://testkube-api-server:8088 --verbose
 
 # run test by testkube plugin
 test-api-on-cluster: 
