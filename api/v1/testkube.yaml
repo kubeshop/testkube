@@ -122,9 +122,9 @@ paths:
       tags:
         - test-suites
         - api
-      summary: "Get all test suites with executions"
-      description: "Returns array of test suites with executions"
-      operationId: listTestSuitesWithExecutions
+      summary: "Get all test suite with executions"
+      description: "Returns array of test suite with executions"
+      operationId: listTestSuiteWithExecutions
       parameters:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
@@ -567,9 +567,9 @@ paths:
       tags:
         - tests
         - api
-      summary: "List tests with executions"
-      description: "List available tests with executions"
-      operationId: listTestsWithExecutions
+      summary: "List test with executions"
+      description: "List available test with executions"
+      operationId: listTestWithExecutions
       parameters:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"

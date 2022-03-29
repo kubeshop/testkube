@@ -7,7 +7,7 @@ import (
 type TestSuiteWithExecutions []TestSuiteWithExecution
 
 func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "status"}
+	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "Status"}
 	for _, e := range testSutes {
 		if e.TestSuite == nil {
 			continue
