@@ -4,7 +4,7 @@ set -e
 TESTKUBE=${TESTKUBE:-$(which kubectl-testkube)}
 
 test_execution_id() {
-	$TESTKUBE get executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 8
+	$TESTKUBE get executions | grep $1 | head -n 1 | tr -s ' ' | cut -d" " -f 2
 }
 
 testsuite_execution_id() {
@@ -26,11 +26,11 @@ test_tests_delete() {
 	kubectl delete secrets kubeshop-site4-secrets > /dev/null || true
 	kubectl delete secrets kubeshop-site5-secrets > /dev/null || true
 
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site1
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site2
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site3
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site4
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site5
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site1
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site2
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site3
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site4
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site5
 	$TESTKUBE get tests
 	$TESTKUBE delete test kubeshop-site1
 	kubectl delete secrets kubeshop-site1-secrets > /dev/null || true
@@ -62,11 +62,11 @@ test_tests_delete_all() {
 	kubectl delete secrets kubeshop-site4-secrets > /dev/null || true
 	kubectl delete secrets kubeshop-site5-secrets > /dev/null || true
 
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site1
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site2
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site3
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site4
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site5
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site1
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site2
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site3
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site4
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site5
 	$TESTKUBE get tests
 	$TESTKUBE delete test kubeshop-site1
 	$TESTKUBE get tests
@@ -78,10 +78,10 @@ test_tests_create() {
 	echo "Tests create test"
 	$TESTKUBE delete test kubeshop-site > /dev/null || true
 	kubectl delete secrets kubeshop-site-secrets > /dev/null || true
-	$TESTKUBE create test --file test/e2e/Kubeshop.postman_collection.json --name kubeshop-site
+	$TESTKUBE create test --file test/postman/Kubeshop.postman_collection.json --name kubeshop-site
 	$TESTKUBE delete test testkube-todo-api > /dev/null || true
 	kubectl delete secrets kubeshop-todo-api-secrets > /dev/null || true
-	$TESTKUBE create test --file test/e2e/TODO.postman_collection.json --name testkube-todo-api
+	$TESTKUBE create test --file test/postman/TODO.postman_collection.json --name testkube-todo-api
 	$TESTKUBE delete test testkube-todo-frontend > /dev/null || true
 	kubectl delete secrets kubeshop-todo-frontend-secrets > /dev/null || true
 	$TESTKUBE create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
@@ -90,7 +90,7 @@ test_tests_create() {
 	$TESTKUBE create test --git-uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
 	$TESTKUBE delete test curl-test > /dev/null || true
 	kubectl delete secrets curl-test-secrets > /dev/null || true
-	cat test/e2e/curl.json | $TESTKUBE create test --name curl-test
+	cat test/curl/curl.json | $TESTKUBE create test --name curl-test
 }
 
 test_tests_run() {
@@ -109,11 +109,11 @@ test_tests_run() {
 test_tests_delete_all() {
 	echo "Tests delete all test"
 	$TESTKUBE delete testsuites --all
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app1
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app2
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app3
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app4
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app5
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app1
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app2
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app3
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app4
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app5
 
 	$TESTKUBE delete testsuites todo-app1
 	$TESTKUBE get testsuites
@@ -130,11 +130,11 @@ test_testsuites_delete() {
 	$TESTKUBE delete testsuites todo-app4 > /dev/null || true
 	$TESTKUBE delete testsuites todo-app5 > /dev/null || true
 
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app1
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app2
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app3
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app4
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app5
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app1
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app2
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app3
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app4
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app5
 
 	$TESTKUBE delete testsuites todo-app1
 	$TESTKUBE get testsuites
@@ -151,9 +151,9 @@ test_testsuites_delete() {
 test_testsuites_create() {
 	echo "create tests"
 	$TESTKUBE delete testsuites todo-app > /dev/null || true
-	cat test/e2e/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app
+	cat test/suites/testsuite-example-1.json | $TESTKUBE create testsuite --name todo-app
 	$TESTKUBE delete testsuites kubeshop > /dev/null || true
-	cat test/e2e/testsuite-example-2.json | $TESTKUBE create testsuite --name kubeshop
+	cat test/suites/testsuite-example-2.json | $TESTKUBE create testsuite --name kubeshop
 }
 
 test_testsuites_run() {
