@@ -122,5 +122,5 @@ func (e Execution) IsFailed() bool {
 		return true
 	}
 
-	return *e.ExecutionResult.Status == ERROR__ExecutionStatus
+	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
 }

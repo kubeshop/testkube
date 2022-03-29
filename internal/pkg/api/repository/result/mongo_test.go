@@ -30,61 +30,61 @@ func TestStorage(t *testing.T) {
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
 	defaultName := "name"
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key4": "value4"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key3": "value3"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, time.Now(), map[string]string{"key5": "value5", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, time.Now(), map[string]string{"key5": "value5", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
+	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
+	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.ERROR__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.SUCCESS_ExecutionStatus, twoDaysAgo, map[string]string{"key3": "value3", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, twoDaysAgo, map[string]string{"key3": "value3", "key6": "value6"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.QUEUED_ExecutionStatus, twoDaysAgo, map[string]string{"key3": "value3", "key5": "value5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.PENDING_ExecutionStatus, twoDaysAgo, map[string]string{"key4": "value4", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, twoDaysAgo, map[string]string{"key4": "value4", "key6": "value6"})
 	assert.NoError(err)
 
 	numberOfLabels := 8
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.ERROR__ExecutionStatus))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
 		assert.NoError(err)
 		assert.Len(executions, 12)
-		assert.Equal(*executions[0].ExecutionResult.Status, testkube.ERROR__ExecutionStatus)
+		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
 	})
 
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.ERROR__ExecutionStatus))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
@@ -182,7 +182,7 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
 		filter := NewExecutionsFilter().
-			WithStatus(testkube.SUCCESS_ExecutionStatus).
+			WithStatus(testkube.PASSED_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
 			WithTestName(defaultName)
@@ -195,7 +195,7 @@ func TestStorage(t *testing.T) {
 
 	t.Run("getting totals with ccombined filter should return corresponding results", func(t *testing.T) {
 		filter := NewExecutionsFilter().
-			WithStatus(testkube.SUCCESS_ExecutionStatus).
+			WithStatus(testkube.PASSED_ExecutionStatus).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
 			WithTestName(defaultName)
@@ -210,7 +210,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	name := "someDifferentName"
-	err = repository.insertExecutionResult(name, testkube.PENDING_ExecutionStatus, twoDaysAgo, nil)
+	err = repository.insertExecutionResult(name, testkube.RUNNING_ExecutionStatus, twoDaysAgo, nil)
 	assert.NoError(err)
 
 	t.Run("filter with test name should return result only for that test name", func(t *testing.T) {

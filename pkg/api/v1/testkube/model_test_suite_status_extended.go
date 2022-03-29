@@ -4,7 +4,7 @@ func TestSuiteExecutionStatusPtr(status TestSuiteExecutionStatus) *TestSuiteExec
 	return &status
 }
 
-var TestSuiteExecutionStatusError = TestSuiteExecutionStatusPtr(ERROR__TestSuiteExecutionStatus)
-var TestSuiteExecutionStatusSuccess = TestSuiteExecutionStatusPtr(SUCCESS_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusFailed = TestSuiteExecutionStatusPtr(FAILED_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusPassed = TestSuiteExecutionStatusPtr(PASSED_TestSuiteExecutionStatus)
 var TestSuiteExecutionStatusQueued = TestSuiteExecutionStatusPtr(QUEUED_TestSuiteExecutionStatus)
-var TestSuiteExecutionStatusPending = TestSuiteExecutionStatusPtr(PENDING_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusRunning = TestSuiteExecutionStatusPtr(RUNNING_TestSuiteExecutionStatus)

@@ -14,7 +14,7 @@ type ExecutionStatus string
 // List of ExecutionStatus
 const (
 	QUEUED_ExecutionStatus  ExecutionStatus = "queued"
-	PENDING_ExecutionStatus ExecutionStatus = "pending"
-	SUCCESS_ExecutionStatus ExecutionStatus = "success"
-	ERROR__ExecutionStatus  ExecutionStatus = "error"
+	RUNNING_ExecutionStatus ExecutionStatus = "running"
+	PASSED_ExecutionStatus  ExecutionStatus = "passed"
+	FAILED_ExecutionStatus  ExecutionStatus = "failed"
 )

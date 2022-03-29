@@ -70,7 +70,7 @@ func TestDefaultDirectAPIClient(t *testing.T) {
 
 		// then
 		assert.Equal(t, "1", execution.Id)
-		assert.Equal(t, testkube.SUCCESS_ExecutionStatus, *execution.ExecutionResult.Status)
+		assert.Equal(t, testkube.PASSED_ExecutionStatus, *execution.ExecutionResult.Status)
 		assert.Equal(t, "execution completed", execution.ExecutionResult.Output)
 		assert.NoError(t, err)
 	})

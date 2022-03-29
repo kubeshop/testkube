@@ -31,10 +31,10 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	case result.IsQueued():
 		ui.Warn("Test queued for execution")
 
-	case result.IsPending():
+	case result.IsRunning():
 		ui.Warn("Test execution started")
 
-	case result.IsSuccesful():
+	case result.IsPassed():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
 		ui.Success("Test execution completed with success in " + duration.String())

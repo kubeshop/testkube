@@ -1007,9 +1007,9 @@ components:
       type: string
       enum:
         - queued
-        - pending
-        - success
-        - error
+        - running
+        - passed
+        - failed
 
     TestSuiteStepExecutionResult:
       description: execution result returned from executor
@@ -1300,9 +1300,9 @@ components:
       type: string
       enum:
         - queued
-        - pending
-        - success
-        - error
+        - running
+        - passed
+        - failed
 
     ExecutionResult:
       description: execution result returned from executor

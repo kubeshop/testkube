@@ -309,9 +309,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.TestExecutionResults.Update(ctx, testExecution)
 		}
 
-		testExecution.Status = testkube.TestSuiteExecutionStatusSuccess
+		testExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		if hasFailedSteps {
-			testExecution.Status = testkube.TestSuiteExecutionStatusError
+			testExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
