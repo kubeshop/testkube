@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -98,6 +99,38 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 
 		return c.JSON(testSuite)
+	}
+}
+
+// GetTestSuiteWithExecutionHandler for getting TestSuite object with execution
+func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		ctx := c.Context()
+		execution, err := s.TestExecutionResults.GetLatestByTest(ctx, name)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		testSuiteWithExecution := testkube.TestSuiteWithExecution{
+			TestSuite: &testSuite,
+		}
+		if err == nil {
+			testSuiteWithExecution.LatestExecution = &execution
+		}
+
+		return c.JSON(testSuiteWithExecution)
 	}
 }
 

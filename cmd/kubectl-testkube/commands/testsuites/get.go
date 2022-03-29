@@ -12,7 +12,10 @@ import (
 )
 
 func NewGetTestSuiteCmd() *cobra.Command {
-	var selectors []string
+	var (
+		selectors   []string
+		noExecution bool
+	)
 
 	cmd := &cobra.Command{
 		Use:     "testsuite <testSuiteName>",
@@ -25,10 +28,19 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 			if len(args) > 0 {
 				name := args[0]
-				testSuite, err := client.GetTestSuite(name, namespace)
+				testSuite, err := client.GetTestSuiteWithExecution(name, namespace)
 				ui.ExitOnError("getting test suite "+name, err)
-				err = render.Obj(cmd, testSuite, os.Stdout, renderer.TestSuiteRenderer)
-				ui.ExitOnError("rendering obj", err)
+				if testSuite.TestSuite != nil {
+					err = render.Obj(cmd, *testSuite.TestSuite, os.Stdout, renderer.TestSuiteRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
+
+				if testSuite.LatestExecution != nil && !noExecution {
+					ui.NL()
+					ui.Info("Latest execution")
+					err = render.Obj(cmd, *testSuite.LatestExecution, os.Stdout, renderer.TestSuiteExecutionRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
 			} else {
 				testSuites, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
 				ui.ExitOnError("getting test suites", err)
@@ -40,5 +52,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
+
 	return cmd
 }
