@@ -61,12 +61,11 @@ type APIClient struct {
 
 // tests and executions -----------------------------------------------------------------------------
 
-// GetTest returns single test by id and namespace
-func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error) {
+// GetTest returns single test by id
+func (c APIClient) GetTest(id string) (test testkube.Test, err error) {
 	uri := c.getURI("/tests/%s", id)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -77,12 +76,11 @@ func (c APIClient) GetTest(id, namespace string) (test testkube.Test, err error)
 	return c.getTestFromResponse(resp)
 }
 
-// GetTestWithExecution returns single test by id and namespace with execution
-func (c APIClient) GetTestWithExecution(id, namespace string) (test testkube.TestWithExecution, err error) {
+// GetTestWithExecution returns single test by id with execution
+func (c APIClient) GetTestWithExecution(id string) (test testkube.TestWithExecution, err error) {
 	uri := c.getURI("/test-with-executions/%s", id)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -134,19 +132,19 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 	return c.getExecutionsFromResponse(resp)
 }
 
-// DeleteTests deletes all tests in given namespace
-func (c APIClient) DeleteTests(namespace string) error {
+// DeleteTests deletes all tests
+func (c APIClient) DeleteTests() error {
 	uri := c.getURI("/tests")
-	return c.makeDeleteRequest(uri, namespace, true)
+	return c.makeDeleteRequest(uri, true)
 }
 
-// DeleteTest deletes single test by name and namespace
-func (c APIClient) DeleteTest(name string, namespace string) error {
+// DeleteTest deletes single test by name
+func (c APIClient) DeleteTest(name string) error {
 	if name == "" {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 	uri := c.getURI("/tests/%s", name)
-	return c.makeDeleteRequest(uri, namespace, true)
+	return c.makeDeleteRequest(uri, true)
 }
 
 // CreateTest creates new Test Custom Resource
@@ -193,18 +191,17 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 
 // ExecuteTest starts test execution, reads data and returns ID
 // execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
+func (c APIClient) ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get test to get test labels
-	test, err := c.GetTest(id, namespace)
+	test, err := c.GetTest(id)
 	if err != nil {
 		return execution, nil
 	}
 
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
-		Namespace:  namespace,
 		ParamsFile: executionParamsFileContent,
 		Params:     executionParams,
 		Labels:     test.Labels,
@@ -218,8 +215,7 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 
 	req := c.GetProxy("POST").
 		Suffix(uri).
-		Body(body).
-		Param("namespace", namespace)
+		Body(body)
 
 	resp := req.Do(context.Background())
 
@@ -251,11 +247,10 @@ func (c APIClient) Logs(id string) (logs chan output.Output, err error) {
 }
 
 // GetExecutions list all executions in given test
-func (c APIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
+func (c APIClient) ListTests(selector string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	if selector != "" {
 		req.Param("selector", selector)
@@ -273,7 +268,7 @@ func (c APIClient) ListTests(namespace string, selector string) (tests testkube.
 // AbortExecution aborts execution by testId and id
 func (c APIClient) AbortExecution(testID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", testID, id)
-	return c.makeDeleteRequest(uri, "testkube", false)
+	return c.makeDeleteRequest(uri, false)
 }
 
 // executor --------------------------------------------------------------------------------
@@ -299,12 +294,11 @@ func (c APIClient) CreateExecutor(options CreateExecutorOptions) (executor testk
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-// GetExecutor by name and namespace
-func (c APIClient) GetExecutor(name, namespace string) (executor testkube.ExecutorDetails, err error) {
+// GetExecutor by name
+func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, err error) {
 	uri := c.getURI("/executors/%s", name)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -315,11 +309,10 @@ func (c APIClient) GetExecutor(name, namespace string) (executor testkube.Execut
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c APIClient) ListExecutors(namespace string) (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -330,9 +323,9 @@ func (c APIClient) ListExecutors(namespace string) (executors testkube.Executors
 	return c.getExecutorsDetailsFromResponse(resp)
 }
 
-func (c APIClient) DeleteExecutor(name, namespace string) (err error) {
+func (c APIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s", name)
-	return c.makeDeleteRequest(uri, namespace, false)
+	return c.makeDeleteRequest(uri, false)
 }
 
 // webhooks --------------------------------------------------------------------------------
@@ -357,11 +350,10 @@ func (c APIClient) CreateWebhook(options CreateWebhookOptions) (executor testkub
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c APIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook, err error) {
+func (c APIClient) GetWebhook(name string) (webhook testkube.Webhook, err error) {
 	uri := c.getURI("/webhooks/%s", name)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -372,11 +364,10 @@ func (c APIClient) GetWebhook(namespace, name string) (webhook testkube.Webhook,
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c APIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, err error) {
+func (c APIClient) ListWebhooks() (webhooks testkube.Webhooks, err error) {
 	uri := c.getURI("/webhooks")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -387,9 +378,9 @@ func (c APIClient) ListWebhooks(namespace string) (webhooks testkube.Webhooks, e
 	return c.getWebhooksFromResponse(resp)
 }
 
-func (c APIClient) DeleteWebhook(namespace, name string) (err error) {
+func (c APIClient) DeleteWebhook(name string) (err error) {
 	uri := c.getURI("/webhooks/%s", name)
-	return c.makeDeleteRequest(uri, namespace, false)
+	return c.makeDeleteRequest(uri, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -557,11 +548,10 @@ func (c APIClient) getURI(pathTemplate string, params ...interface{}) string {
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c APIClient) makeDeleteRequest(uri string, namespace string, isContentExpected bool) error {
+func (c APIClient) makeDeleteRequest(uri string, isContentExpected bool) error {
 
 	req := c.GetProxy("DELETE").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 	resp := req.Do(context.Background())
 
 	if resp.Error() != nil {
@@ -639,11 +629,10 @@ func (c APIClient) getArtifactsFromResponse(resp rest.Result) (artifacts []testk
 
 // --------------- test suites --------------------------
 
-func (c APIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, err error) {
+func (c APIClient) GetTestSuite(id string) (test testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites/%s", id)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -654,11 +643,10 @@ func (c APIClient) GetTestSuite(id, namespace string) (test testkube.TestSuite, 
 	return c.getTestSuiteFromResponse(resp)
 }
 
-func (c APIClient) GetTestSuiteWithExecution(id, namespace string) (test testkube.TestSuiteWithExecution, err error) {
+func (c APIClient) GetTestSuiteWithExecution(id string) (test testkube.TestSuiteWithExecution, err error) {
 	uri := c.getURI("/test-suite-with-executions/%s", id)
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	resp := req.Do(context.Background())
 
@@ -669,24 +657,23 @@ func (c APIClient) GetTestSuiteWithExecution(id, namespace string) (test testkub
 	return c.getTestSuiteWithExecutionFromResponse(resp)
 }
 
-func (c APIClient) DeleteTestSuite(name string, namespace string) error {
+func (c APIClient) DeleteTestSuite(name string) error {
 	if name == "" {
 		return fmt.Errorf("testsuite name '%s' is not valid", name)
 	}
 	uri := c.getURI("/test-suites/%s", name)
-	return c.makeDeleteRequest(uri, namespace, true)
+	return c.makeDeleteRequest(uri, true)
 }
 
-func (c APIClient) DeleteTestSuites(namespace string) error {
+func (c APIClient) DeleteTestSuites() error {
 	uri := c.getURI("/test-suites")
-	return c.makeDeleteRequest(uri, namespace, true)
+	return c.makeDeleteRequest(uri, true)
 }
 
-func (c APIClient) ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error) {
+func (c APIClient) ListTestSuites(selector string) (testSuites testkube.TestSuites, err error) {
 	uri := c.getURI("/test-suites")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	if selector != "" {
 		req.Param("selector", selector)
@@ -767,20 +754,19 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
 	// get testsuite to get testsuite labels
-	testsuite, err := c.GetTestSuite(id, namespace)
+	testsuite, err := c.GetTestSuite(id)
 	if err != nil {
 		return execution, nil
 	}
 
 	executionRequest := testkube.ExecutionRequest{
-		Name:      executionName,
-		Namespace: namespace,
-		Params:    executionParams,
-		Labels:    testsuite.Labels,
+		Name:   executionName,
+		Params: executionParams,
+		Labels: testsuite.Labels,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -790,8 +776,7 @@ func (c APIClient) ExecuteTestSuite(id, namespace, executionName string, executi
 
 	req := c.GetProxy("POST").
 		Suffix(uri).
-		Body(body).
-		Param("namespace", namespace)
+		Body(body)
 
 	resp := req.Do(context.Background())
 

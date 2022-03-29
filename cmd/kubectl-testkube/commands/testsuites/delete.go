@@ -20,12 +20,12 @@ func NewDeleteTestSuiteCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			if deleteAll {
-				err := client.DeleteTestSuites(namespace)
+				err := client.DeleteTestSuites()
 				ui.ExitOnError("delete all tests from namespace "+namespace, err)
 				ui.Success("Succesfully deleted all test suites in namespace", namespace)
 			} else if len(args) > 0 {
 				name := args[0]
-				err := client.DeleteTestSuite(name, namespace)
+				err := client.DeleteTestSuite(name)
 				ui.ExitOnError("delete test suite "+name+" from namespace "+namespace, err)
 				ui.Success("Succesfully deleted", name)
 			} else {
