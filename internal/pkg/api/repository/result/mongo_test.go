@@ -32,13 +32,13 @@ func TestStorage(t *testing.T) {
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
 	defaultName := "name"
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key4": "value4"})
 	assert.NoError(err)
@@ -46,13 +46,13 @@ func TestStorage(t *testing.T) {
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, time.Now(), map[string]string{"key5": "value5", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
@@ -60,13 +60,13 @@ func TestStorage(t *testing.T) {
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, twoDaysAgo, map[string]string{"key3": "value3", "key6": "value6"})
 	assert.NoError(err)
@@ -79,21 +79,21 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED__ExecutionStatus))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
 		assert.NoError(err)
 		assert.Len(executions, 12)
-		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED__ExecutionStatus)
+		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
 	})
 
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED__ExecutionStatus))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
 		assert.Equal(int32(12), filteredTotals.Failed)
 		assert.Equal(int32(0), filteredTotals.Passed)
 		assert.Equal(int32(0), filteredTotals.Queued)
-		assert.Equal(int32(0), filteredTotals.Pending)
+		assert.Equal(int32(0), filteredTotals.Running)
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
@@ -104,7 +104,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(12), totals.Failed)
 		assert.Equal(int32(3), totals.Passed)
 		assert.Equal(int32(3), totals.Queued)
-		assert.Equal(int32(3), totals.Pending)
+		assert.Equal(int32(3), totals.Running)
 	})
 
 	dateFilter := datefilter.NewDateFilter(oneDayAgo.Format(datefilter.DateFormatISO8601), "")
@@ -139,7 +139,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(8), totals.Failed)
 		assert.Equal(int32(2), totals.Passed)
 		assert.Equal(int32(2), totals.Queued)
-		assert.Equal(int32(2), totals.Pending)
+		assert.Equal(int32(2), totals.Running)
 	})
 
 	dateFilter = datefilter.NewDateFilter("", oneDayAgo.Format(datefilter.DateFormatISO8601))
@@ -161,7 +161,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(4), totals.Failed)
 		assert.Equal(int32(1), totals.Passed)
 		assert.Equal(int32(1), totals.Queued)
-		assert.Equal(int32(1), totals.Pending)
+		assert.Equal(int32(1), totals.Running)
 	})
 
 	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(0), totals.Failed)
 		assert.Equal(int32(0), totals.Passed)
 		assert.Equal(int32(0), totals.Queued)
-		assert.Equal(int32(0), totals.Pending)
+		assert.Equal(int32(0), totals.Running)
 	})
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
@@ -208,7 +208,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(0), totals.Failed)
 		assert.Equal(int32(2), totals.Passed)
 		assert.Equal(int32(0), totals.Queued)
-		assert.Equal(int32(0), totals.Pending)
+		assert.Equal(int32(0), totals.Running)
 	})
 
 	name := "someDifferentName"
@@ -231,7 +231,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(int32(0), totals.Failed)
 		assert.Equal(int32(0), totals.Passed)
 		assert.Equal(int32(0), totals.Queued)
-		assert.Equal(int32(1), totals.Pending)
+		assert.Equal(int32(1), totals.Running)
 	})
 
 	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
