@@ -31,12 +31,14 @@ func NewGetTestSuiteCmd() *cobra.Command {
 				testSuite, err := client.GetTestSuiteWithExecution(name, namespace)
 				ui.ExitOnError("getting test suite "+name, err)
 				if testSuite.TestSuite != nil {
-					err = render.Obj(cmd, testSuite.TestSuite, os.Stdout, renderer.TestSuiteRenderer)
+					err = render.Obj(cmd, *testSuite.TestSuite, os.Stdout, renderer.TestSuiteRenderer)
 					ui.ExitOnError("rendering obj", err)
 				}
 
 				if testSuite.LatestExecution != nil && !noExecution {
-					err = render.Obj(cmd, testSuite.LatestExecution, os.Stdout, renderer.TestSuiteExecutionRenderer)
+					ui.NL()
+					ui.Info("Latest execution")
+					err = render.Obj(cmd, *testSuite.LatestExecution, os.Stdout, renderer.TestSuiteExecutionRenderer)
 					ui.ExitOnError("rendering obj", err)
 				}
 			} else {

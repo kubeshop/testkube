@@ -37,12 +37,14 @@ func NewGetTestsCmd() *cobra.Command {
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
 				if test.Test != nil {
-					err = render.Obj(cmd, test.Test, os.Stdout, renderer.TestRenderer)
+					err = render.Obj(cmd, *test.Test, os.Stdout, renderer.TestRenderer)
 					ui.ExitOnError("rendering obj", err)
 				}
 
 				if test.LatestExecution != nil && !noExecution {
-					err = render.Obj(cmd, test.LatestExecution, os.Stdout, renderer.ExecutionRenderer)
+					ui.NL()
+					ui.Info("Latest execution")
+					err = render.Obj(cmd, *test.LatestExecution, os.Stdout, renderer.ExecutionRenderer)
 					ui.ExitOnError("rendering obj", err)
 				}
 

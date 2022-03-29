@@ -31,14 +31,14 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 }
 
 func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.TestSuiteExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testName}).Decode(&result)
 	return
 }
 
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.TestSuiteExecution, err error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{"starttime", -1}})
-	err = r.Coll.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testName}, findOptions).Decode(&result)
 	return
 }
 
@@ -144,7 +144,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	startTimeQuery := bson.M{}
 
 	if filter.NameDefined() {
-		query["test.name"] = filter.Name()
+		query["testsuite.name"] = filter.Name()
 	}
 
 	if filter.TextSearchDefined() {
