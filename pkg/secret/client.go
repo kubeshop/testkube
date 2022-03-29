@@ -19,10 +19,11 @@ const testkubeTestSecretLabel = "tests-secrets"
 type Client struct {
 	ClientSet *kubernetes.Clientset
 	Log       *zap.SugaredLogger
+	Namespace string
 }
 
 // NewClient is a method to create new secret client
-func NewClient() (*Client, error) {
+func NewClient(namespace string) (*Client, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
@@ -35,8 +36,8 @@ func NewClient() (*Client, error) {
 }
 
 // Get is a method to retrieve an existing secret
-func (c *Client) Get(id, namespace string) (map[string]string, error) {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) Get(id string) (map[string]string, error) {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
 	secretSpec, err := secretsClient.Get(ctx, id, metav1.GetOptions{})
@@ -53,8 +54,8 @@ func (c *Client) Get(id, namespace string) (map[string]string, error) {
 }
 
 // List is a method to retrieve all existing secrets
-func (c *Client) List(namespace string) (map[string]map[string]string, error) {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) List() (map[string]map[string]string, error) {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
 	secretList, err := secretsClient.List(ctx, metav1.ListOptions{
@@ -77,11 +78,11 @@ func (c *Client) List(namespace string) (map[string]map[string]string, error) {
 }
 
 // Create is a method to create new secret
-func (c *Client) Create(id, namespace string, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) Create(id string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, namespace, stringData)
+	secretSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}
@@ -90,11 +91,11 @@ func (c *Client) Create(id, namespace string, stringData map[string]string) erro
 }
 
 // Apply is a method to create or update a secret
-func (c *Client) Apply(id, namespace string, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) Apply(id string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewApplySpec(id, namespace, stringData)
+	secretSpec := NewApplySpec(id, c.Namespace, stringData)
 	if _, err := secretsClient.Apply(ctx, secretSpec, metav1.ApplyOptions{
 		FieldManager: "application/apply-patch"}); err != nil {
 		return err
@@ -104,11 +105,11 @@ func (c *Client) Apply(id, namespace string, stringData map[string]string) error
 }
 
 // Update is a method to update an existing secret
-func (c *Client) Update(id, namespace string, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) Update(id string, stringData map[string]string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, namespace, stringData)
+	secretSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := secretsClient.Update(ctx, secretSpec, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
@@ -117,8 +118,8 @@ func (c *Client) Update(id, namespace string, stringData map[string]string) erro
 }
 
 // Delete is a method to delete an existing secret
-func (c *Client) Delete(id, namespace string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) Delete(id string) error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
 	if err := secretsClient.Delete(ctx, id, metav1.DeleteOptions{}); err != nil {
@@ -129,8 +130,8 @@ func (c *Client) Delete(id, namespace string) error {
 }
 
 // DeleteAll is a method to delete all existing secrets
-func (c *Client) DeleteAll(namespace string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(namespace)
+func (c *Client) DeleteAll() error {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
 	if err := secretsClient.DeleteCollection(ctx, metav1.DeleteOptions{},
