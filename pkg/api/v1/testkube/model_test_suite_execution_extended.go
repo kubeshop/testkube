@@ -13,7 +13,7 @@ func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequ
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
 		Name:      fmt.Sprintf("%s.%s", test.Name, rand.Name()),
-		Status:    TestSuiteExecutionStatusPending,
+		Status:    TestSuiteExecutionStatusRunning,
 		Params:    request.Params,
 		TestSuite: test.GetObjectRef(),
 		Labels:    request.Labels,
@@ -31,7 +31,7 @@ func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequ
 }
 
 func (e TestSuiteExecution) IsCompleted() bool {
-	return *e.Status == *TestSuiteExecutionStatusError || *e.Status == *TestSuiteExecutionStatusSuccess
+	return *e.Status == *TestSuiteExecutionStatusFailed || *e.Status == *TestSuiteExecutionStatusPassed
 }
 
 func (e *TestSuiteExecution) CalculateDuration() time.Duration {
@@ -78,18 +78,18 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 	return
 }
 
-func (e *TestSuiteExecution) IsPending() bool {
-	return *e.Status == PENDING_TestSuiteExecutionStatus
+func (e *TestSuiteExecution) IsRunning() bool {
+	return *e.Status == RUNNING_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsQueued() bool {
 	return *e.Status == QUEUED_TestSuiteExecutionStatus
 }
 
-func (e *TestSuiteExecution) IsSuccesful() bool {
-	return *e.Status == SUCCESS_TestSuiteExecutionStatus
+func (e *TestSuiteExecution) IsPassed() bool {
+	return *e.Status == PASSED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsFailed() bool {
-	return *e.Status == ERROR__TestSuiteExecutionStatus
+	return *e.Status == FAILED_TestSuiteExecutionStatus
 }
