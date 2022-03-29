@@ -117,6 +117,35 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-suite-with-executions:
+    get:
+      tags:
+        - test-suites
+        - api
+      summary: "Get all test suites with executions"
+      description: "Returns array of test suites with executions"
+      operationId: listTestSuitesWithExecutions
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TextSearch"
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestSuiteWithExecution"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suite-with-executions/{id}:
     get:
       parameters:
@@ -524,6 +553,35 @@ paths:
       responses:
         204:
           description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-with-executions:
+    get:
+      tags:
+        - tests
+        - api
+      summary: "List tests with executions"
+      description: "List available tests with executions"
+      operationId: listTestsWithExecutions
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TextSearch"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWithExecution"
         502:
           description: "problem with read information from kubernetes cluster"
           content:

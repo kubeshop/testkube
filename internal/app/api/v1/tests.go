@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -67,37 +68,73 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
+	namespace := c.Query("namespace", "testkube")
+	// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
+	crTests, err := s.TestsClient.List(namespace, c.Query("selector"))
+	if err != nil {
+		return nil, err
+	}
+
+	search := c.Query("textSearch")
+	if search != "" {
+		// filter items array
+		for i := len(crTests.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTests.Items[i].Name, search) {
+				crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
+			}
+		}
+	}
+
+	testType := c.Query("type")
+	if testType != "" {
+		// filter items array
+		for i := len(crTests.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTests.Items[i].Spec.Type_, testType) {
+				crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
+			}
+		}
+	}
+
+	return crTests, nil
+}
+
 // ListTestsHandler is a method for getting list of all available tests
 func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
-		crTests, err := s.TestsClient.List(namespace, c.Query("selector"))
+		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		search := c.Query("textSearch")
-		if search != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Name, search) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
-			}
-		}
+		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
-		testType := c.Query("type")
-		if testType != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Spec.Type_, testType) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
-			}
+		return c.JSON(tests)
+	}
+}
+
+// ListTestsWithExecutionsHandler is a method for getting list of all available tests and latest executions
+func (s TestkubeAPI) ListTestsWithExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		crTests, err := s.getFilteredTestList(c)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		ctx := c.Context()
+		testsWithExecutions := make([]testkube.TestWithExecution, len(tests))
+		for i := range tests {
+			execution, err := s.ExecutionResults.GetLatestByTest(ctx, tests[i].Name)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+
+			testsWithExecutions[i].Test = &tests[i]
+			if err == nil {
+				testsWithExecutions[i].LatestExecution = &execution
+			}
+		}
 
 		return c.JSON(tests)
 	}
