@@ -35,7 +35,7 @@ func NewFailedExecution(err error) Execution {
 		Id: primitive.NewObjectID().Hex(),
 		ExecutionResult: &ExecutionResult{
 			ErrorMessage: err.Error(),
-			Status:       ExecutionStatusError,
+			Status:       ExecutionStatusFailed,
 		},
 	}
 }
@@ -94,7 +94,7 @@ func (e Execution) Errw(msg string, err error) Execution {
 func (e *Execution) Start() {
 	e.StartTime = time.Now()
 	if e.ExecutionResult != nil {
-		e.ExecutionResult.Status = ExecutionStatusPending
+		e.ExecutionResult.Status = ExecutionStatusRunning
 	}
 }
 

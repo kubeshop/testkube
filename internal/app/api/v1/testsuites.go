@@ -434,7 +434,7 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 
 func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
+	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
 
 	if r.Test != nil {

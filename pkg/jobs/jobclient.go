@@ -424,12 +424,12 @@ func (c *JobClient) AbortK8sJob(jobName string) *testkube.ExecutionResult {
 	})
 	if err != nil {
 		return &testkube.ExecutionResult{
-			Status: testkube.ExecutionStatusError,
+			Status: testkube.ExecutionStatusFailed,
 			Output: err.Error(),
 		}
 	}
 	return &testkube.ExecutionResult{
-		Status: testkube.ExecutionStatusSuccess,
+		Status: testkube.ExecutionStatusPassed,
 	}
 }
 

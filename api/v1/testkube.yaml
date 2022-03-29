@@ -1374,7 +1374,7 @@ components:
         - passed
         - failed
         - queued
-        - pending
+        - running
       properties:
         results:
           type: integer
@@ -1388,7 +1388,7 @@ components:
         queued:
           type: integer
           description: the total number of queued executions available
-        pending:
+        running:
           type: integer
           description: the total number of running executions available
 

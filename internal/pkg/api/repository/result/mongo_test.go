@@ -1,3 +1,5 @@
+//go:build integration
+
 package result
 
 import (
@@ -30,13 +32,13 @@ func TestStorage(t *testing.T) {
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
 	defaultName := "name"
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, time.Now(), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key4": "value4"})
 	assert.NoError(err)
@@ -44,13 +46,13 @@ func TestStorage(t *testing.T) {
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, time.Now(), map[string]string{"key5": "value5", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key5": "value5"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key1": "value1", "key6": "value6"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key4": "value4"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, oneDayAgo, map[string]string{"key2": "value2", "key5": "value5"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
@@ -58,13 +60,13 @@ func TestStorage(t *testing.T) {
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.RUNNING_ExecutionStatus, oneDayAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key7": "value7", "key8": "value8"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED__ExecutionStatus, twoDaysAgo, map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(defaultName, testkube.PASSED_ExecutionStatus, twoDaysAgo, map[string]string{"key3": "value3", "key6": "value6"})
 	assert.NoError(err)
@@ -77,14 +79,14 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED__ExecutionStatus))
 		assert.NoError(err)
 		assert.Len(executions, 12)
-		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
+		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED__ExecutionStatus)
 	})
 
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED__ExecutionStatus))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)

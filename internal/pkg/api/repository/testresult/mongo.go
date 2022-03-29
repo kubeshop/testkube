@@ -85,7 +85,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		case testkube.QUEUED_TestSuiteExecutionStatus:
 			totals.Queued = o.Count
 		case testkube.RUNNING_TestSuiteExecutionStatus:
-			totals.Pending = o.Count
+			totals.Running = o.Count
 		case testkube.PASSED_TestSuiteExecutionStatus:
 			totals.Passed = o.Count
 		case testkube.FAILED_TestSuiteExecutionStatus:
