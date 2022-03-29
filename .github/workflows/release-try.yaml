@@ -87,13 +87,13 @@ jobs:
           name: bin-artifacts
           path: dist
 
-      # - name: Get MSFT Cert
-      #   id: write_file
-      #   uses: timheuer/base64-to-file@v1.1
-      #   with:
-      #     fileName: 'kubeshop_msft.p12'
-      #     fileDir: './temp/'
-      #     encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
+      - name: Get MSFT Cert
+        id: write_file
+        uses: timheuer/base64-to-file@v1.1
+        with:
+          fileName: 'kubeshop_msft.p12'
+          fileDir: './temp/'
+          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
       
       - name: Create MSI
         run: |
