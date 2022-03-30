@@ -117,6 +117,35 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-suite-with-executions:
+    get:
+      tags:
+        - test-suites
+        - api
+      summary: "Get all test suite with executions"
+      description: "Returns array of test suite with executions"
+      operationId: listTestSuiteWithExecutions
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TextSearch"
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestSuiteWithExecution"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suite-with-executions/{id}:
     get:
       parameters:
@@ -173,7 +202,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecutionsResult"
         500:
-          description: "problem with getting test suite executions from storage"
+          description: "problem with getting test suite with executions from storage"
           content:
             application/problem+json:
               schema:
@@ -204,7 +233,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecution"
         500:
-          description: "problem with getting test suite executions from storage"
+          description: "problem with getting test suite with execution from storage"
           content:
             application/problem+json:
               schema:
@@ -524,6 +553,35 @@ paths:
       responses:
         204:
           description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-with-executions:
+    get:
+      tags:
+        - tests
+        - api
+      summary: "List test with executions"
+      description: "List available test with executions"
+      operationId: listTestWithExecutions
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TextSearch"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWithExecution"
         502:
           description: "problem with read information from kubernetes cluster"
           content:

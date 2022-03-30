@@ -250,7 +250,7 @@ func (c APIClient) Logs(id string) (logs chan output.Output, err error) {
 	return
 }
 
-// GetExecutions list all executions in given test
+// ListTests list all tests
 func (c APIClient) ListTests(namespace string, selector string) (tests testkube.Tests, err error) {
 	uri := c.getURI("/tests")
 	req := c.GetProxy("GET").
@@ -268,6 +268,26 @@ func (c APIClient) ListTests(namespace string, selector string) (tests testkube.
 	}
 
 	return c.getTestsFromResponse(resp)
+}
+
+// ListTestWithExecutions list all test with executions
+func (c APIClient) ListTestWithExecutions(namespace string, selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
+	uri := c.getURI("/test-with-executions")
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return testWithExecutions, fmt.Errorf("api/list-tests returned error: %w", err)
+	}
+
+	return c.getTestWithExecutionsFromResponse(resp)
 }
 
 // AbortExecution aborts execution by testId and id
@@ -445,6 +465,17 @@ func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions testk
 }
 
 func (c APIClient) getTestsFromResponse(resp rest.Result) (tests testkube.Tests, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return tests, err
+	}
+
+	err = json.Unmarshal(bytes, &tests)
+
+	return tests, err
+}
+
+func (c APIClient) getTestWithExecutionsFromResponse(resp rest.Result) (tests testkube.TestWithExecutions, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return tests, err
@@ -701,6 +732,26 @@ func (c APIClient) ListTestSuites(namespace string, selector string) (testSuites
 	return c.getTestSuitesFromResponse(resp)
 }
 
+func (c APIClient) ListTestSuiteWithExecutions(namespace string, selector string) (
+	testSuiteWithExecutions testkube.TestSuiteWithExecutions, err error) {
+	uri := c.getURI("/test-suite-with-executions")
+	req := c.GetProxy("GET").
+		Suffix(uri).
+		Param("namespace", namespace)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return testSuiteWithExecutions, fmt.Errorf("api/list-test-suite-with-executions returned error: %w", err)
+	}
+
+	return c.getTestSuiteWithExecutionsFromResponse(resp)
+}
+
 // CreateTestSuite creates new TestSuite Custom Resource
 func (c APIClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.getURI("/test-suites")
@@ -876,6 +927,17 @@ func (c APIClient) getTestSuitesFromResponse(resp rest.Result) (testSuites testk
 	err = json.Unmarshal(bytes, &testSuites)
 
 	return testSuites, err
+}
+
+func (c APIClient) getTestSuiteWithExecutionsFromResponse(resp rest.Result) (testSuiteWithExecutions testkube.TestSuiteWithExecutions, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return testSuiteWithExecutions, err
+	}
+
+	err = json.Unmarshal(bytes, &testSuiteWithExecutions)
+
+	return testSuiteWithExecutions, err
 }
 
 func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {

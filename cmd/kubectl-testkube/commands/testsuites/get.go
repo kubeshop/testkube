@@ -42,10 +42,17 @@ func NewGetTestSuiteCmd() *cobra.Command {
 					ui.ExitOnError("rendering obj", err)
 				}
 			} else {
-				testSuites, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
-				ui.ExitOnError("getting test suites", err)
-				err = render.List(cmd, testSuites, os.Stdout)
-				ui.ExitOnError("rendering list", err)
+				if noExecution {
+					testSuites, err := client.ListTestSuites(namespace, strings.Join(selectors, ","))
+					ui.ExitOnError("getting test suites", err)
+					err = render.List(cmd, testSuites, os.Stdout)
+					ui.ExitOnError("rendering list", err)
+				} else {
+					testSuites, err := client.ListTestSuiteWithExecutions(namespace, strings.Join(selectors, ","))
+					ui.ExitOnError("getting test suite with executions", err)
+					err = render.List(cmd, testSuites, os.Stdout)
+					ui.ExitOnError("rendering list", err)
+				}
 			}
 
 		},
