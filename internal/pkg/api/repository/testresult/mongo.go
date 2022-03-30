@@ -47,6 +47,10 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		LatestID string `bson:"latest_id"`
 	}
 
+	if len(testNames) == 0 {
+		return executions, nil
+	}
+
 	conditions := bson.A{}
 	for _, testName := range testNames {
 		conditions = append(conditions, bson.M{"testsuite.name": testName})
@@ -54,9 +58,9 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 
 	pipeline := []bson.D{{{"$match", bson.M{"$or": conditions}}}}
 	pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
-
 	pipeline = append(pipeline, bson.D{
 		{"$group", bson.D{{"_id", "$testsuite.name"}, {"latest_id", bson.D{{"$first", "$id"}}}}}})
+
 	cursor, err := r.Coll.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
@@ -64,6 +68,10 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	err = cursor.All(ctx, &results)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(results) == 0 {
+		return executions, nil
 	}
 
 	conditions = bson.A{}
