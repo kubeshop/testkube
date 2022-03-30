@@ -113,8 +113,8 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
-// ListTestsWithExecutionsHandler is a method for getting list of all available tests and latest executions
-func (s TestkubeAPI) ListTestsWithExecutionsHandler() fiber.Handler {
+// ListTestWithExecutionsHandler is a method for getting list of all available test with latest executions
+func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
@@ -123,20 +123,30 @@ func (s TestkubeAPI) ListTestsWithExecutionsHandler() fiber.Handler {
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 		ctx := c.Context()
-		testsWithExecutions := make([]testkube.TestWithExecution, len(tests))
+		testWithExecutions := make([]testkube.TestWithExecution, len(tests))
+		testNames := make([]string, len(tests))
 		for i := range tests {
-			execution, err := s.ExecutionResults.GetLatestByTest(ctx, tests[i].Name)
-			if err != nil && err != mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusInternalServerError, err)
-			}
+			testNames[i] = tests[i].Name
+		}
 
-			testsWithExecutions[i].Test = &tests[i]
-			if err == nil {
-				testsWithExecutions[i].LatestExecution = &execution
+		executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		executionMap := make(map[string]testkube.Execution, len(executions))
+		for i := range executions {
+			executionMap[executions[i].TestName] = executions[i]
+		}
+
+		for i := range tests {
+			testWithExecutions[i].Test = &tests[i]
+			if execution, ok := executionMap[tests[i].Name]; ok {
+				testWithExecutions[i].LatestExecution = &execution
 			}
 		}
 
-		return c.JSON(tests)
+		return c.JSON(testWithExecutions)
 	}
 }
 

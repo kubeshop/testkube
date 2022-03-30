@@ -202,7 +202,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecutionsResult"
         500:
-          description: "problem with getting test suite executions from storage"
+          description: "problem with getting test suite with executions from storage"
           content:
             application/problem+json:
               schema:
@@ -233,7 +233,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecution"
         500:
-          description: "problem with getting test suite executions from storage"
+          description: "problem with getting test suite with execution from storage"
           content:
             application/problem+json:
               schema:

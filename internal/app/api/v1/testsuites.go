@@ -217,8 +217,8 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	}
 }
 
-// ListTestSuitesWithExecutionsHandler for getting list of all available TestSuites with executions
-func (s TestkubeAPI) ListTestSuitesWithExecutionsHandler() fiber.Handler {
+// ListTestSuiteWithExecutionsHandler for getting list of all available TestSuite with latest executions
+func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		crTestSuites, err := s.getFilteredTestSuitesList(c)
 		if err != nil {
@@ -227,20 +227,34 @@ func (s TestkubeAPI) ListTestSuitesWithExecutionsHandler() fiber.Handler {
 
 		ctx := c.Context()
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
-		testSuitesWithExecutions := make([]testkube.TestSuiteWithExecution, len(testSuites))
+		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, len(testSuites))
+		testNames := make([]string, len(testSuites))
 		for i := range testSuites {
-			execution, err := s.TestExecutionResults.GetLatestByTest(ctx, testSuites[i].Name)
-			if err != nil && err != mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusInternalServerError, err)
+			testNames[i] = testSuites[i].Name
+		}
+
+		executions, err := s.TestExecutionResults.GetLatestByTests(ctx, testNames)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		executionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
+		for i := range executions {
+			if executions[i].TestSuite == nil {
+				continue
 			}
 
-			testSuitesWithExecutions[i].TestSuite = &testSuites[i]
-			if err == nil {
-				testSuitesWithExecutions[i].LatestExecution = &execution
+			executionMap[executions[i].TestSuite.Name] = executions[i]
+		}
+
+		for i := range testSuites {
+			testSuiteWithExecutions[i].TestSuite = &testSuites[i]
+			if execution, ok := executionMap[testSuites[i].Name]; ok {
+				testSuiteWithExecutions[i].LatestExecution = &execution
 			}
 		}
 
-		return c.JSON(testSuitesWithExecutions)
+		return c.JSON(testSuiteWithExecutions)
 	}
 }
 

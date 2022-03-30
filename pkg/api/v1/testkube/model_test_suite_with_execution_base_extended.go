@@ -7,15 +7,19 @@ import (
 type TestSuiteWithExecutions []TestSuiteWithExecution
 
 func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "Status"}
+	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "Status", "Execution id"}
 	for _, e := range testSutes {
 		if e.TestSuite == nil {
 			continue
 		}
 
 		status := ""
-		if e.LatestExecution != nil && e.LatestExecution.Status != nil {
-			status = string(*e.LatestExecution.Status)
+		executionID := ""
+		if e.LatestExecution != nil {
+			executionID = e.LatestExecution.Id
+			if e.LatestExecution.Status != nil {
+				status = string(*e.LatestExecution.Status)
+			}
 		}
 
 		output = append(output, []string{
@@ -25,6 +29,7 @@ func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]st
 			LabelsToString(e.TestSuite.Labels),
 			e.TestSuite.Schedule,
 			status,
+			executionID,
 		})
 	}
 
