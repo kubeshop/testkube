@@ -1594,6 +1594,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        secrets:
+          type: object
+          description: "execution params passed to executor from secrets"
+          additionalProperties:
+            type: string
+          example:
+            secret_name1: "kubernetes-secret-name"
+            secret_var1: "secret-variable-name"
 
     TestSuiteExecutionRequest:
       description: test suite execution request body

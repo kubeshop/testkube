@@ -193,7 +193,8 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 
 // ExecuteTest starts test execution, reads data and returns ID
 // execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error) {
+func (c APIClient) ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string,
+	args []string, secrets map[string]string) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get test to get test labels
@@ -209,6 +210,7 @@ func (c APIClient) ExecuteTest(id, namespace, executionName string, executionPar
 		Params:     executionParams,
 		Labels:     test.Labels,
 		Args:       args,
+		Secrets:    secrets,
 	}
 
 	body, err := json.Marshal(request)

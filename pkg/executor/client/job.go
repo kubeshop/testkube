@@ -124,5 +124,6 @@ func getJobOptions(options ExecuteOptions) jobs.JobOptions {
 		JobTemplate: options.ExecutorSpec.JobTemplate,
 		TestName:    options.TestName,
 		Namespace:   options.Namespace,
+		Secrets:     options.Request.Secrets,
 	}
 }

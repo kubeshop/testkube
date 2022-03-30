@@ -23,4 +23,6 @@ type ExecutionRequest struct {
 	Args []string `json:"args,omitempty"`
 	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// execution params passed to executor from secrets
+	Secrets map[string]string `json:"secrets,omitempty"`
 }
