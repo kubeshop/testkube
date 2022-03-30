@@ -30,7 +30,7 @@ type Client interface {
 	ListTests(namespace string, selector string) (tests testkube.Tests, err error)
 	ListTestWithExecutions(namespace string, selector string) (tests testkube.TestWithExecutions, err error)
 	ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string,
-		args []string, secrets map[string]string) (execution testkube.Execution, err error)
+		args []string, secretEnvs map[string]string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)

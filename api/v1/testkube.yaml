@@ -1594,7 +1594,7 @@ components:
           example:
             env: "prod"
             app: "backend"
-        secrets:
+        secretEnvs:
           type: object
           description: "execution params passed to executor from secrets"
           additionalProperties:

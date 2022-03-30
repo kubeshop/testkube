@@ -24,7 +24,7 @@ func NewRunTestCmd() *cobra.Command {
 		paramsFile               string
 		downloadArtifactsEnabled bool
 		downloadDir              string
-		secrets                  map[string]string
+		secretEnvs               map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -55,7 +55,7 @@ func NewRunTestCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent, binaryArgs, secrets)
+			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent, binaryArgs, secretEnvs)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			printExecutionDetails(execution)
@@ -90,7 +90,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
-	cmd.Flags().StringToStringVarP(&secrets, "secret", "s", map[string]string{}, "secret envs in a form of secret_name1=secret_var1 passed to executor")
+	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "s", map[string]string{}, "secret envs in a form of secret_name1=secret_var1 passed to executor")
 
 	return cmd
 }

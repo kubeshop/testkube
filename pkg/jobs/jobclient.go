@@ -67,7 +67,7 @@ type JobOptions struct {
 	InitImage   string
 	JobTemplate string
 	HasSecrets  bool
-	Secrets     map[string]string
+	SecretEnvs  map[string]string
 }
 
 // NewJobClient returns new JobClient instance
@@ -496,9 +496,9 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	var secretEnvVars []corev1.EnvVar
 
 	i := 1
-	for secretName, secretVar := range options.Secrets {
+	for secretName, secretVar := range options.SecretEnvs {
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-			Name: fmt.Sprintf("RUNNER_SECRET_VAR%d", i),
+			Name: fmt.Sprintf("RUNNER_SECRET_ENV%d", i),
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
