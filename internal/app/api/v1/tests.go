@@ -174,6 +174,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		s.Log.Infow("creating test", "request", request)
 
 		testSpec := testsmapper.MapToSpec(request)
+		testSpec.Namespace = s.Namespace
 		test, err := s.TestsClient.Create(testSpec)
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)

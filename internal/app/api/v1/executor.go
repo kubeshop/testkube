@@ -21,6 +21,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		if executor.Spec.JobTemplate == "" {
 			executor.Spec.JobTemplate = s.jobTemplates.Job
 		}
+		executor.Namespace = s.Namespace
 
 		created, err := s.ExecutorsClient.Create(&executor)
 		if err != nil {
