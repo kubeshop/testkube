@@ -266,11 +266,10 @@ func (c APIClient) ListTests(selector string) (tests testkube.Tests, err error) 
 }
 
 // ListTestWithExecutions list all test with executions
-func (c APIClient) ListTestWithExecutions(namespace string, selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
+func (c APIClient) ListTestWithExecutions(selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
 	uri := c.getURI("/test-with-executions")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	if selector != "" {
 		req.Param("selector", selector)
@@ -719,12 +718,11 @@ func (c APIClient) ListTestSuites(selector string) (testSuites testkube.TestSuit
 	return c.getTestSuitesFromResponse(resp)
 }
 
-func (c APIClient) ListTestSuiteWithExecutions(namespace string, selector string) (
+func (c APIClient) ListTestSuiteWithExecutions(selector string) (
 	testSuiteWithExecutions testkube.TestSuiteWithExecutions, err error) {
 	uri := c.getURI("/test-suite-with-executions")
 	req := c.GetProxy("GET").
-		Suffix(uri).
-		Param("namespace", namespace)
+		Suffix(uri)
 
 	if selector != "" {
 		req.Param("selector", selector)
