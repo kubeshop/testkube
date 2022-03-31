@@ -78,15 +78,15 @@ func main() {
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
-	secretClient, err := secret.NewClient()
+	secretClient, err := secret.NewClient(namespace)
 	ui.ExitOnError("Getting secret client", err)
 
-	scriptsClient := scriptsclient.NewClient(kubeClient)
-	testsClientV1 := testsclientv1.NewClient(kubeClient)
-	testsClientV2 := testsclientv2.NewClient(kubeClient)
-	executorsClient := executorsclientv1.NewClient(kubeClient)
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient)
-	testsuitesClient := testsuitesclientv1.NewClient(kubeClient)
+	scriptsClient := scriptsclient.NewClient(kubeClient, namespace)
+	testsClientV1 := testsclientv1.NewClient(kubeClient, namespace)
+	testsClientV2 := testsclientv2.NewClient(kubeClient, namespace)
+	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
+	testsuitesClient := testsuitesclientv1.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
@@ -96,7 +96,7 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
-	err = apiv1.NewServer(
+	err = apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
 		testResultsRepository,

@@ -47,14 +47,14 @@ func NewRunTestCmd() *cobra.Command {
 				paramsFileContent = string(b)
 			}
 
-			_, err := client.GetTest(testName, namespace)
+			_, err := client.GetTest(testName)
 			if err != nil {
 				ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
 				ui.Debug(err.Error())
 				os.Exit(1)
 			}
 
-			execution, err := client.ExecuteTest(testName, namespace, name, params, paramsFileContent, binaryArgs)
+			execution, err := client.ExecuteTest(testName, name, params, paramsFileContent, binaryArgs)
 			ui.ExitOnError("starting test execution "+namespacedName, err)
 
 			printExecutionDetails(execution)

@@ -18,9 +18,9 @@ func NewDeleteExecutorCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			name = args[0]
 
-			client, namespace := common.GetClient(cmd)
+			client, _ := common.GetClient(cmd)
 
-			err := client.DeleteExecutor(name, namespace)
+			err := client.DeleteExecutor(name)
 			ui.ExitOnError("deleting executor: "+name, err)
 
 			ui.Success("Executor deleted")

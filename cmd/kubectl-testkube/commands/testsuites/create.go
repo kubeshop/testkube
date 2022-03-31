@@ -58,7 +58,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			client, namespace := common.GetClient(cmd)
 			options.Namespace = namespace
 
-			test, _ := client.GetTestSuite(options.Name, namespace)
+			test, _ := client.GetTestSuite(options.Name)
 			if options.Name == test.Name {
 				ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, options.Namespace)
 			}

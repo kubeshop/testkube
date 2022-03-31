@@ -45,7 +45,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 		id := c.Params("id")
 		namespace := request.Namespace
 
-		test, err := s.TestsClient.Get(namespace, id)
+		test, err := s.TestsClient.Get(id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test: %w", err))
 		}
@@ -61,7 +61,7 @@ func (s TestkubeAPI) ExecuteTestHandler() fiber.Handler {
 				Resource: testResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(id, cronjob.GetMetadataName(id, testResourceURI), namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(id, cronjob.GetMetadataName(id, testResourceURI), options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
 			}
 
@@ -121,7 +121,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, options client.ExecuteOpti
 	}
 
 	options.HasSecrets = true
-	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName), options.Request.Namespace); err != nil {
+	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
 			s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 			return execution.Errw("can't get secrets: %w", err)
@@ -345,7 +345,7 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 
 func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
-	testCR, err := s.TestsClient.Get(namespace, id)
+	testCR, err := s.TestsClient.Get(id)
 
 	if err != nil {
 		return options, fmt.Errorf("can't get test custom resource %w", err)
