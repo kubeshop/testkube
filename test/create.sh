@@ -4,7 +4,7 @@
 
 kubectl delete test testkube-dashboard -ntestkube || true
 kubectl delete secret testkube-dashboard-secrets -ntestkube || true
-kubectl testkube create test --uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-dashboard.git --git-path test --git-branch main --name testkube-dashboard  --type cypress/project
 
 kubectl delete test testkube-api -ntestkube || true
 kubectl delete secret testkube-api-secrets -ntestkube || true
@@ -23,7 +23,7 @@ kubectl testkube create test --file test/perf/api-server.js --type "k6/script" -
 
 kubectl delete test testkube-todo-frontend -ntestkube || true
 kubectl delete secret testkube-todo-frontend-secrets -ntestkube || true
-kubectl testkube create test --git-branch main --uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
+kubectl testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name testkube-todo-frontend --type cypress/project
 
 kubectl delete test testkube-todo-api -ntestkube || true
 kubectl delete secret testkube-todo-api-secrets -ntestkube || true
