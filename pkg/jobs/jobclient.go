@@ -513,7 +513,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	}
 
 	if options.HasSecrets {
-		secretEnvVars = []corev1.EnvVar{
+		secretEnvVars = append(secretEnvVars, []corev1.EnvVar{
 			{
 				Name: GitUsernameEnvVarName,
 				ValueFrom: &corev1.EnvVarSource{
@@ -536,7 +536,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 					},
 				},
 			},
-		}
+		}...)
 	}
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
