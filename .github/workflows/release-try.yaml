@@ -106,12 +106,51 @@ jobs:
         env:
           P12_CERT: ${{ steps.write_file.outputs.filePath }}
           P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
-      - name: Publish MSI
-        uses: fnkr/github-action-ghr@v1
-        if: startsWith(github.ref, 'refs/tags/')
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          # Optionally strip `v` prefix
+          strip_v: true
+          
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
         env:
-          GHR_PATH: testkube.msi
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Upload release binary
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: testkube.msi
+          asset_name: testkube_${{steps.tag.outputs.tag}}.msi
+          asset_content_type: application/octet-stream
 
+      # - name: Store Artifacts
+      #   uses: actions/upload-artifact@master
+      #   with:
+      #     name: signed-installer
+      #     path: testkube.msi
+      #     retention-days: 10
+      # - name: Get tag
+      #   id: tag
+      #   uses: dawidd6/action-get-tag@v1
+      #   with:
+      #     # Optionally strip `v` prefix
+      #     strip_v: true
+      # - name: release
+      #   uses: actions/create-release@v1
+      #   id: create_release
+      #   with:
+      #     draft: false
+      #     prerelease: false
+      #     release_name: ${{steps.tag.outputs.tag}}
+      #     tag_name: ${{ github.ref }}
+      #     body_path: CHANGELOG.md
+      #   env:
+      #     GITHUB_TOKEN: ${{ github.token }}
            
