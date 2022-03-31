@@ -90,7 +90,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
-	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "s", map[string]string{}, "secret envs in a form of secret_name1=secret_var1 passed to executor")
+	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_name1=secret_var1 passed to executor")
 
 	return cmd
 }
