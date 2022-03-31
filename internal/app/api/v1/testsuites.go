@@ -345,6 +345,8 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		execution.Duration = types.FormatDuration(execution.Duration)
+
 		return c.JSON(execution)
 	}
 }
