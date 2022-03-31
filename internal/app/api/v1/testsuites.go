@@ -55,14 +55,14 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSuite, err := s.TestsSuitesClient.Get(request.Namespace, request.Name)
+		testSuite, err := s.TestsSuitesClient.Get(request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// delete cron job, if schedule is cleaned
 		if testSuite.Spec.Schedule != "" && request.Schedule == "" {
-			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI), request.Namespace); err != nil {
+			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI)); err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
 				}
@@ -86,8 +86,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -106,8 +105,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -138,8 +136,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsSuitesClient.Delete(namespace, name)
+		err := s.TestsSuitesClient.Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -149,7 +146,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 		}
 
 		// delete cron job for test suite
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI), namespace); err != nil {
+		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI)); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
@@ -162,8 +159,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 // DeleteTestSuitesHandler for deleting all TestSuites
 func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsSuitesClient.DeleteAll(namespace)
+		err := s.TestsSuitesClient.DeleteAll()
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -173,7 +169,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		}
 
 		// delete all cron jobs for test suites
-		if err = s.CronJobClient.DeleteAll(namespace, testSuiteResourceURI); err != nil {
+		if err = s.CronJobClient.DeleteAll(testSuiteResourceURI); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
@@ -184,8 +180,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv1.TestSuiteList, error) {
-	namespace := c.Query("namespace", "testkube")
-	crTestSuites, err := s.TestsSuitesClient.List(namespace, c.Query("selector"))
+	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +260,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 		namespace := c.Query("namespace", "testkube")
 		s.Log.Debugw("getting test suite", "name", name)
 
-		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -291,7 +286,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 				Resource: testSuiteResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
 			}
 
@@ -349,6 +344,8 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
+
+		execution.Duration = types.FormatDuration(execution.Duration)
 
 		return c.JSON(execution)
 	}

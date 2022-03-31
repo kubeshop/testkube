@@ -22,7 +22,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 
-			err := client.DeleteWebhook(namespace, name)
+			err := client.DeleteWebhook(name)
 			ui.ExitOnError("deleting webhook: "+name, err)
 
 			ui.Success("Webhook deleted")

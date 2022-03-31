@@ -21,40 +21,40 @@ type Client interface {
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 
-	GetTest(id, namespace string) (test testkube.Test, err error)
-	GetTestWithExecution(id, namespace string) (test testkube.TestWithExecution, err error)
+	GetTest(id string) (test testkube.Test, err error)
+	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	DeleteTest(name string, namespace string) error
-	DeleteTests(namespace string) error
-	ListTests(namespace string, selector string) (tests testkube.Tests, err error)
-	ListTestWithExecutions(namespace string, selector string) (tests testkube.TestWithExecutions, err error)
-	ExecuteTest(id, namespace, executionName string, executionParams map[string]string, executionParamsFileContent string,
+	DeleteTest(name string) error
+	DeleteTests() error
+	ListTests(selector string) (tests testkube.Tests, err error)
+	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
+	ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string,
 		args []string, secretEnvs map[string]string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	GetExecutor(name string, namespace string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors(namespace string) (executors testkube.ExecutorsDetails, err error)
-	DeleteExecutor(name string, namespace string) (err error)
+	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
+	ListExecutors() (executors testkube.ExecutorsDetails, err error)
+	DeleteExecutor(name string) (err error)
 
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
-	GetWebhook(namespace, name string) (webhook testkube.Webhook, err error)
-	ListWebhooks(namespace string) (executors testkube.Webhooks, err error)
-	DeleteWebhook(namespace, name string) (err error)
+	GetWebhook(name string) (webhook testkube.Webhook, err error)
+	ListWebhooks() (executors testkube.Webhooks, err error)
+	DeleteWebhook(name string) (err error)
 
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	GetTestSuite(id string, namespace string) (testSuite testkube.TestSuite, err error)
-	GetTestSuiteWithExecution(id string, namespace string) (testSuite testkube.TestSuiteWithExecution, err error)
-	ListTestSuites(namespace string, selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutions(namespace string, selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
-	DeleteTestSuite(name string, namespace string) error
-	DeleteTestSuites(namespace string) error
-	ExecuteTestSuite(id, namespace, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
+	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
+	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
+	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
+	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	DeleteTestSuite(name string) error
+	DeleteTestSuites() error
+	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)

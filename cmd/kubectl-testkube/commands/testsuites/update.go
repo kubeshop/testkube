@@ -52,7 +52,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 			client, namespace := common.GetClient(cmd)
 			options.Namespace = namespace
 
-			testSuite, _ := client.GetTestSuite(options.Name, options.Namespace)
+			testSuite, _ := client.GetTestSuite(options.Name)
 			if options.Name != testSuite.Name {
 				ui.Failf("TestSuite with name '%s' not exists in namespace %s", options.Name, options.Namespace)
 			}

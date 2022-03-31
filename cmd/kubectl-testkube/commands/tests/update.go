@@ -33,7 +33,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 			var err error
 
 			client, _ := common.GetClient(cmd)
-			test, _ := client.GetTest(testName, testNamespace)
+			test, _ := client.GetTest(testName)
 			if testName != test.Name {
 				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
