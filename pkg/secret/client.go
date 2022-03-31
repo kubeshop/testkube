@@ -32,6 +32,7 @@ func NewClient(namespace string) (*Client, error) {
 	return &Client{
 		ClientSet: clientSet,
 		Log:       log.DefaultLogger,
+		Namespace: namespace,
 	}, nil
 }
 
