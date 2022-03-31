@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"os"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,22 +35,19 @@ type Version_0_9_2 struct {
 	testsClientV1    *testsclientv1.TestsClient
 	testsClientV2    *testsclientv2.TestsClient
 	testsuitesClient *testsuitesclientv1.TestSuitesClient
-	namespace        string
 }
 
 func (m *Version_0_9_2) Version() string {
 	return "0.9.2"
 }
 func (m *Version_0_9_2) Migrate() error {
-	namespace := os.Getenv("TESTKUBE_NAMESPACE")
-
-	scripts, err := m.scriptsClient.List(namespace, nil)
+	scripts, err := m.scriptsClient.List(nil)
 	if err != nil {
 		return err
 	}
 
 	for _, script := range scripts.Items {
-		if _, err = m.testsClientV2.Get(namespace, script.Name); err != nil && !errors.IsNotFound(err) {
+		if _, err = m.testsClientV2.Get(script.Name); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 
@@ -92,19 +88,19 @@ func (m *Version_0_9_2) Migrate() error {
 			return err
 		}
 
-		if err = m.scriptsClient.Delete(namespace, script.Name); err != nil {
+		if err = m.scriptsClient.Delete(script.Name); err != nil {
 			return err
 		}
 	}
 
-	tests, err := m.testsClientV1.List(namespace, nil)
+	tests, err := m.testsClientV1.List(nil)
 	if err != nil {
 		return err
 	}
 
 OUTER:
 	for _, test := range tests.Items {
-		if _, err = m.testsuitesClient.Get(namespace, test.Name); err != nil && !errors.IsNotFound(err) {
+		if _, err = m.testsuitesClient.Get(test.Name); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 
@@ -145,7 +141,7 @@ OUTER:
 			return err
 		}
 
-		if err = m.testsClientV1.Delete(namespace, test.Name); err != nil {
+		if err = m.testsClientV1.Delete(test.Name); err != nil {
 			return err
 		}
 	}

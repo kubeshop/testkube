@@ -30,7 +30,7 @@ func NewGetTestsCmd() *cobra.Command {
 
 			if len(args) > 0 {
 				name = args[0]
-				test, err := client.GetTestWithExecution(name, namespace)
+				test, err := client.GetTestWithExecution(name)
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
 				if test.Test != nil {
@@ -47,11 +47,11 @@ func NewGetTestsCmd() *cobra.Command {
 
 			} else {
 				if noExecution {
-					tests, err := client.ListTests(namespace, strings.Join(selectors, ","))
+					tests, err := client.ListTests(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all tests in namespace "+namespace, err)
 					render.List(cmd, tests, os.Stdout)
 				} else {
-					tests, err := client.ListTestWithExecutions(namespace, strings.Join(selectors, ","))
+					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
 					render.List(cmd, tests, os.Stdout)
 				}
