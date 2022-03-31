@@ -3,7 +3,7 @@ name: Release kubectl-testkube dev
 on:
   push:
     tags: 
-      - "v[0-9]+.[0-9]+.[0-9]+-dummy*"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
 
@@ -56,3 +56,68 @@ jobs:
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      -
+        name: Store Intermediate Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: bin-artifacts
+          path: dist
+          retention-days: 1 
+
+  build-and-publish-windows-installer:
+    needs: release
+    runs-on: windows-latest
+
+    steps:      
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Get Intermediate Artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: bin-artifacts
+          path: dist
+
+      - name: Get MSFT Cert
+        id: write_file
+        uses: timheuer/base64-to-file@v1.1
+        with:
+          fileName: 'kubeshop_msft.p12'
+          fileDir: './temp/'
+          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
+      
+      - name: Create and Sign MSI
+        run: |
+          Copy-Item 'dist\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
+          Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
+          & "$env:WIX\bin\candle.exe" *.wxs
+          & "$env:WIX\bin\light.exe" *.wixobj
+          & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
+        env:
+          P12_CERT: ${{ steps.write_file.outputs.filePath }}
+          P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          # Optionally strip `v` prefix
+          strip_v: true
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload release binary
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: testkube.msi
+          asset_name: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
+          asset_content_type: application/octet-stream
