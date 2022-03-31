@@ -146,6 +146,20 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			}
 		}
 
+		status := c.Query("status")
+		if status != "" {
+			// filter items array
+			for i := len(testWithExecutions) - 1; i >= 0; i-- {
+				if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
+					testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil &&
+					*testWithExecutions[i].LatestExecution.ExecutionResult.Status == testkube.ExecutionStatus(status) {
+					continue
+				}
+
+				testWithExecutions = append(testWithExecutions[:i], testWithExecutions[i+1:]...)
+			}
+		}
+
 		return c.JSON(testWithExecutions)
 	}
 }
