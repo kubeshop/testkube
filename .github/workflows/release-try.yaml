@@ -106,12 +106,12 @@ jobs:
         env:
           P12_CERT: ${{ steps.write_file.outputs.filePath }}
           P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
+      - name: Publish MSI
+        uses: fnkr/github-action-ghr@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GHR_PATH: testkube.msi
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Store Artifacts
-        uses: actions/upload-artifact@master
-        with:
-          name: signed-installer
-          path: testkube.msi
-          retention-days: 10
 
            
