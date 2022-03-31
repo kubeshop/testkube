@@ -28,6 +28,7 @@ type Client interface {
 	DeleteTest(name string) error
 	DeleteTests() error
 	ListTests(selector string) (tests testkube.Tests, err error)
+	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
 	ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string, args []string) (execution testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
@@ -49,6 +50,7 @@ type Client interface {
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
+	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites() error
 	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)

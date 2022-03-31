@@ -42,6 +42,56 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 	return
 }
 
+func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.TestSuiteExecution, err error) {
+	var results []struct {
+		LatestID string `bson:"latest_id"`
+	}
+
+	if len(testNames) == 0 {
+		return executions, nil
+	}
+
+	conditions := bson.A{}
+	for _, testName := range testNames {
+		conditions = append(conditions, bson.M{"testsuite.name": testName})
+	}
+
+	pipeline := []bson.D{{{"$match", bson.M{"$or": conditions}}}}
+	pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
+	pipeline = append(pipeline, bson.D{
+		{"$group", bson.D{{"_id", "$testsuite.name"}, {"latest_id", bson.D{{"$first", "$id"}}}}}})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &results)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return executions, nil
+	}
+
+	conditions = bson.A{}
+	for _, result := range results {
+		conditions = append(conditions, bson.M{"id": result.LatestID})
+	}
+
+	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions})
+	if err != nil {
+		return nil, err
+	}
+
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	return executions, nil
+}
+
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestSuiteExecution, err error) {
 	result = make([]testkube.TestSuiteExecution, 0)
 	resultLimit := int64(limit)

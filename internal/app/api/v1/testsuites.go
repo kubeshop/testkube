@@ -179,28 +179,77 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv1.TestSuiteList, error) {
+	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
+	if err != nil {
+		return nil, err
+	}
+
+	search := c.Query("textSearch")
+	if search != "" {
+		// filter items array
+		for i := len(crTestSuites.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTestSuites.Items[i].Name, search) {
+				crTestSuites.Items = append(crTestSuites.Items[:i], crTestSuites.Items[i+1:]...)
+			}
+		}
+	}
+
+	return crTestSuites, nil
+}
+
 // ListTestSuitesHandler for getting list of all available TestSuites
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		crTests, err := s.TestsSuitesClient.List(c.Query("selector"))
-
+		crTestSuites, err := s.getFilteredTestSuitesList(c)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		search := c.Query("textSearch")
-		if search != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Name, search) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
+		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+
+		return c.JSON(testSuites)
+	}
+}
+
+// ListTestSuiteWithExecutionsHandler for getting list of all available TestSuite with latest executions
+func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		crTestSuites, err := s.getFilteredTestSuitesList(c)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		ctx := c.Context()
+		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, len(testSuites))
+		testNames := make([]string, len(testSuites))
+		for i := range testSuites {
+			testNames[i] = testSuites[i].Name
+		}
+
+		executions, err := s.TestExecutionResults.GetLatestByTests(ctx, testNames)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		executionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
+		for i := range executions {
+			if executions[i].TestSuite == nil {
+				continue
+			}
+
+			executionMap[executions[i].TestSuite.Name] = executions[i]
+		}
+
+		for i := range testSuites {
+			testSuiteWithExecutions[i].TestSuite = &testSuites[i]
+			if execution, ok := executionMap[testSuites[i].Name]; ok {
+				testSuiteWithExecutions[i].LatestExecution = &execution
 			}
 		}
 
-		tests := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTests)
-
-		return c.JSON(tests)
+		return c.JSON(testSuiteWithExecutions)
 	}
 }
 

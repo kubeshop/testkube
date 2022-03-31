@@ -7,7 +7,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests/renderer"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -28,8 +27,6 @@ func NewGetTestsCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			var name string
-			var tests testkube.Tests
-			var err error
 
 			if len(args) > 0 {
 				name = args[0]
@@ -49,11 +46,16 @@ func NewGetTestsCmd() *cobra.Command {
 				}
 
 			} else {
-				tests, err = client.ListTests(strings.Join(selectors, ","))
-				ui.ExitOnError("getting all tests in namespace "+namespace, err)
-				render.List(cmd, tests, os.Stdout)
+				if noExecution {
+					tests, err := client.ListTests(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all tests in namespace "+namespace, err)
+					render.List(cmd, tests, os.Stdout)
+				} else {
+					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					render.List(cmd, tests, os.Stdout)
+				}
 			}
-
 		},
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
