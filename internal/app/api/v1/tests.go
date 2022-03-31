@@ -5,21 +5,22 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// GetTestHandler is method for getting an existing tests
+// GetTestHandler is method for getting an existing test
 func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		crTest, err := s.TestsClient.Get(namespace, name)
+		crTest, err := s.TestsClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, err)
@@ -28,44 +29,121 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		tests := testsmapper.MapTestCRToAPI(*crTest)
-		return c.JSON(tests)
+		test := testsmapper.MapTestCRToAPI(*crTest)
+
+		return c.JSON(test)
 	}
+}
+
+// GetTestWithExecutionHandler is method for getting an existing test with execution
+func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		crTest, err := s.TestsClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		ctx := c.Context()
+		execution, err := s.ExecutionResults.GetLatestByTest(ctx, name)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		test := testsmapper.MapTestCRToAPI(*crTest)
+		testWithExecution := testkube.TestWithExecution{
+			Test: &test,
+		}
+		if err == nil {
+			testWithExecution.LatestExecution = &execution
+		}
+
+		return c.JSON(testWithExecution)
+	}
+}
+
+func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
+	// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
+	crTests, err := s.TestsClient.List(c.Query("selector"))
+	if err != nil {
+		return nil, err
+	}
+
+	search := c.Query("textSearch")
+	if search != "" {
+		// filter items array
+		for i := len(crTests.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTests.Items[i].Name, search) {
+				crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
+			}
+		}
+	}
+
+	testType := c.Query("type")
+	if testType != "" {
+		// filter items array
+		for i := len(crTests.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTests.Items[i].Spec.Type_, testType) {
+				crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
+			}
+		}
+	}
+
+	return crTests, nil
 }
 
 // ListTestsHandler is a method for getting list of all available tests
 func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
-		crTests, err := s.TestsClient.List(namespace, c.Query("selector"))
+		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		search := c.Query("textSearch")
-		if search != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Name, search) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
-			}
-		}
-
-		testType := c.Query("type")
-		if testType != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Spec.Type_, testType) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
-			}
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
+	}
+}
+
+// ListTestWithExecutionsHandler is a method for getting list of all available test with latest executions
+func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		crTests, err := s.getFilteredTestList(c)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		ctx := c.Context()
+		testWithExecutions := make([]testkube.TestWithExecution, len(tests))
+		testNames := make([]string, len(tests))
+		for i := range tests {
+			testNames[i] = tests[i].Name
+		}
+
+		executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		executionMap := make(map[string]testkube.Execution, len(executions))
+		for i := range executions {
+			executionMap[executions[i].TestName] = executions[i]
+		}
+
+		for i := range tests {
+			testWithExecutions[i].Test = &tests[i]
+			if execution, ok := executionMap[tests[i].Name]; ok {
+				testWithExecutions[i].LatestExecution = &execution
+			}
+		}
+
+		return c.JSON(testWithExecutions)
 	}
 }
 
@@ -91,7 +169,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
+		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -112,14 +190,14 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		s.Log.Infow("updating test", "request", request)
 
 		// we need to get resource first and load its metadata.ResourceVersion
-		test, err := s.TestsClient.Get(request.Namespace, request.Name)
+		test, err := s.TestsClient.Get(request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// delete cron job, if schedule is cleaned
 		if test.Spec.Schedule != "" && request.Schedule == "" {
-			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI), request.Namespace); err != nil {
+			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI)); err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
 				}
@@ -140,7 +218,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		// update secrets for scipt
 		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), request.Namespace, stringData); err != nil {
+		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -152,8 +230,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsClient.Delete(namespace, name)
+		err := s.TestsClient.Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -163,14 +240,14 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 		}
 
 		// delete secrets for test
-		if err = s.SecretClient.Delete(secret.GetMetadataName(name), namespace); err != nil {
+		if err = s.SecretClient.Delete(secret.GetMetadataName(name)); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
 		}
 
 		// delete cron job for test
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testResourceURI), namespace); err != nil {
+		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testResourceURI)); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
@@ -183,8 +260,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 // DeleteTestsHandler for deleting all tests
 func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsClient.DeleteAll(namespace)
+		err := s.TestsClient.DeleteAll()
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -194,14 +270,14 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		}
 
 		// delete all secrets for tests
-		if err = s.SecretClient.DeleteAll(namespace); err != nil {
+		if err = s.SecretClient.DeleteAll(); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
 		}
 
 		// delete all cron jobs for tests
-		if err = s.CronJobClient.DeleteAll(namespace, testResourceURI); err != nil {
+		if err = s.CronJobClient.DeleteAll(testResourceURI); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}

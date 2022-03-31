@@ -7,13 +7,15 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests/renderer"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewGetTestsCmd() *cobra.Command {
-	var selectors []string
+	var (
+		selectors   []string
+		noExecution bool
+	)
 
 	cmd := &cobra.Command{
 		Use:     "test <testName>",
@@ -25,23 +27,39 @@ func NewGetTestsCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			var name string
-			var tests testkube.Tests
-			var err error
 
 			if len(args) > 0 {
 				name = args[0]
-				test, err := client.GetTest(name, namespace)
+				test, err := client.GetTestWithExecution(name)
 				ui.ExitOnError("getting test in namespace "+namespace, err)
-				render.Obj(cmd, test, os.Stdout, renderer.TestRenderer)
-			} else {
-				tests, err = client.ListTests(namespace, strings.Join(selectors, ","))
-				ui.ExitOnError("getting all tests in namespace "+namespace, err)
-				render.List(cmd, tests, os.Stdout)
-			}
 
+				if test.Test != nil {
+					err = render.Obj(cmd, *test.Test, os.Stdout, renderer.TestRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
+
+				if test.LatestExecution != nil && !noExecution {
+					ui.NL()
+					ui.Info("Latest execution")
+					err = render.Obj(cmd, *test.LatestExecution, os.Stdout, renderer.ExecutionRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
+
+			} else {
+				if noExecution {
+					tests, err := client.ListTests(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all tests in namespace "+namespace, err)
+					render.List(cmd, tests, os.Stdout)
+				} else {
+					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					render.List(cmd, tests, os.Stdout)
+				}
+			}
 		},
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
 
 	return cmd
 }

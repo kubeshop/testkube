@@ -36,6 +36,63 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	return
 }
 
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.Execution, err error) {
+	findOptions := options.FindOne()
+	findOptions.SetSort(bson.D{{"starttime", -1}})
+	err = r.Coll.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	return
+}
+
+func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
+	var results []struct {
+		LatestID string `bson:"latest_id"`
+	}
+
+	if len(testNames) == 0 {
+		return executions, nil
+	}
+
+	conditions := bson.A{}
+	for _, testName := range testNames {
+		conditions = append(conditions, bson.M{"testname": testName})
+	}
+
+	pipeline := []bson.D{{{"$match", bson.M{"$or": conditions}}}}
+	pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
+	pipeline = append(pipeline, bson.D{
+		{"$group", bson.D{{"_id", "$testname"}, {"latest_id", bson.D{{"$first", "$id"}}}}}})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &results)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return executions, nil
+	}
+
+	conditions = bson.A{}
+	for _, result := range results {
+		conditions = append(conditions, bson.M{"id": result.LatestID})
+	}
+
+	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions})
+	if err != nil {
+		return nil, err
+	}
+
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	return executions, nil
+}
+
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.Execution, err error) {
 	result = make([]testkube.Execution, 0)
 	resultLimit := int64(limit)
@@ -100,11 +157,11 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		switch testkube.TestSuiteExecutionStatus(o.Status) {
 		case testkube.QUEUED_TestSuiteExecutionStatus:
 			totals.Queued = o.Count
-		case testkube.PENDING_TestSuiteExecutionStatus:
-			totals.Pending = o.Count
-		case testkube.SUCCESS_TestSuiteExecutionStatus:
+		case testkube.RUNNING_TestSuiteExecutionStatus:
+			totals.Running = o.Count
+		case testkube.PASSED_TestSuiteExecutionStatus:
 			totals.Passed = o.Count
-		case testkube.ERROR__TestSuiteExecutionStatus:
+		case testkube.FAILED_TestSuiteExecutionStatus:
 			totals.Failed = o.Count
 		}
 	}

@@ -32,7 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
-func NewServer(
+func NewTestkubeAPI(
 	namespace string,
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
@@ -60,7 +60,7 @@ func NewServer(
 		Namespace:            namespace,
 	}
 
-	initImage, err := s.loadDefaultExecutors(os.Getenv("TESTKUBE_NAMESPACE"), os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
 	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
 	}
@@ -73,7 +73,7 @@ func NewServer(
 		panic(err)
 	}
 
-	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob)
+	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob, s.Namespace)
 	if err != nil {
 		panic(err)
 	}
@@ -182,6 +182,10 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
 	tests.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
 
+	testWithExecutions := s.Routes.Group("/test-with-executions")
+	testWithExecutions.Get("/", s.ListTestWithExecutionsHandler())
+	testWithExecutions.Get("/:id", s.GetTestWithExecutionHandler())
+
 	testsuites := s.Routes.Group("/test-suites")
 
 	testsuites.Post("/", s.CreateTestSuiteHandler())
@@ -198,6 +202,10 @@ func (s TestkubeAPI) Init() {
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
+
+	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
+	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
+	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
@@ -344,7 +352,7 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 			},
 		}
 
-		result, err := s.ExecutorsClient.Get(namespace, executor.Name)
+		result, err := s.ExecutorsClient.Get(executor.Name)
 		if err != nil && !errors.IsNotFound(err) {
 			return "", err
 		}

@@ -18,17 +18,16 @@ func NewGetWebhookCmd() *cobra.Command {
 		Short:   "Get webhook details",
 		Long:    `Get webhook, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
-			namespace := cmd.Flag("namespace").Value.String()
 			client, _ := common.GetClient(cmd)
 
 			if len(args) > 0 {
 				name := args[0]
-				webhook, err := client.GetWebhook(namespace, name)
+				webhook, err := client.GetWebhook(name)
 				ui.ExitOnError("getting webhook: "+name, err)
 				err = render.Obj(cmd, webhook, os.Stdout)
 				ui.ExitOnError("rendering obj", err)
 			} else {
-				webhooks, err := client.ListWebhooks(namespace)
+				webhooks, err := client.ListWebhooks()
 				ui.ExitOnError("getting webhooks", err)
 				err = render.List(cmd, webhooks, os.Stdout)
 				ui.ExitOnError("rendering list", err)

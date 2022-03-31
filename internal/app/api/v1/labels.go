@@ -8,13 +8,12 @@ import (
 
 func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		testSuitesLabels, err := s.TestsSuitesClient.ListLabels(namespace)
+		testSuitesLabels, err := s.TestsSuitesClient.ListLabels()
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		labels, err := s.TestsClient.ListLabels(namespace)
+		labels, err := s.TestsClient.ListLabels()
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}

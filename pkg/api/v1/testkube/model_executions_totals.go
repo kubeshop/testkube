@@ -20,5 +20,5 @@ type ExecutionsTotals struct {
 	// the total number of queued executions available
 	Queued int32 `json:"queued"`
 	// the total number of running executions available
-	Pending int32 `json:"pending"`
+	Running int32 `json:"running"`
 }

@@ -4,7 +4,7 @@ func StatusPtr(status ExecutionStatus) *ExecutionStatus {
 	return &status
 }
 
-var ExecutionStatusError = StatusPtr(ERROR__ExecutionStatus)
-var ExecutionStatusSuccess = StatusPtr(SUCCESS_ExecutionStatus)
+var ExecutionStatusFailed = StatusPtr(FAILED_ExecutionStatus)
+var ExecutionStatusPassed = StatusPtr(PASSED_ExecutionStatus)
 var ExecutionStatusQueued = StatusPtr(QUEUED_ExecutionStatus)
-var ExecutionStatusPending = StatusPtr(PENDING_ExecutionStatus)
+var ExecutionStatusRunning = StatusPtr(RUNNING_ExecutionStatus)

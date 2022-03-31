@@ -9,12 +9,8 @@
  */
 package testkube
 
-type ExecutionStatus string
-
-// List of ExecutionStatus
-const (
-	QUEUED_ExecutionStatus  ExecutionStatus = "queued"
-	RUNNING_ExecutionStatus ExecutionStatus = "running"
-	PASSED_ExecutionStatus  ExecutionStatus = "passed"
-	FAILED_ExecutionStatus  ExecutionStatus = "failed"
-)
+// Test with latest Execution result
+type TestWithExecution struct {
+	Test            *Test      `json:"test"`
+	LatestExecution *Execution `json:"latest_execution,omitempty"`
+}

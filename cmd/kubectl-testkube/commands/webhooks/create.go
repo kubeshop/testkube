@@ -30,7 +30,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			webhook, _ := client.GetWebhook(namespace, name)
+			webhook, _ := client.GetWebhook(name)
 			if name == webhook.Name {
 				ui.Failf("Webhook with name '%s' already exists in namespace %s", name, namespace)
 			}

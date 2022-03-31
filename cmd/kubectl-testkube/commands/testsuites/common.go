@@ -40,10 +40,10 @@ func uiPrintExecutionStatus(execution testkube.TestSuiteExecution) {
 	case execution.IsQueued():
 		ui.Warn("Test Suite queued for execution")
 
-	case execution.IsPending():
+	case execution.IsRunning():
 		ui.Warn("Test Suite execution started")
 
-	case execution.IsSuccesful():
+	case execution.IsPassed():
 		ui.Success("Test Suite execution completed with sucess in " + execution.Duration)
 
 	case execution.IsFailed():

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -54,14 +55,14 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSuite, err := s.TestsSuitesClient.Get(request.Namespace, request.Name)
+		testSuite, err := s.TestsSuitesClient.Get(request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// delete cron job, if schedule is cleaned
 		if testSuite.Spec.Schedule != "" && request.Schedule == "" {
-			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI), request.Namespace); err != nil {
+			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI)); err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
 				}
@@ -85,8 +86,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -101,12 +101,42 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	}
 }
 
+// GetTestSuiteWithExecutionHandler for getting TestSuite object with execution
+func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		ctx := c.Context()
+		execution, err := s.TestExecutionResults.GetLatestByTest(ctx, name)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		testSuiteWithExecution := testkube.TestSuiteWithExecution{
+			TestSuite: &testSuite,
+		}
+		if err == nil {
+			testSuiteWithExecution.LatestExecution = &execution
+		}
+
+		return c.JSON(testSuiteWithExecution)
+	}
+}
+
 // DeleteTestSuiteHandler for deleting a TestSuite with id
 func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsSuitesClient.Delete(namespace, name)
+		err := s.TestsSuitesClient.Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -116,7 +146,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 		}
 
 		// delete cron job for test suite
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI), namespace); err != nil {
+		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI)); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
@@ -129,8 +159,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 // DeleteTestSuitesHandler for deleting all TestSuites
 func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		err := s.TestsSuitesClient.DeleteAll(namespace)
+		err := s.TestsSuitesClient.DeleteAll()
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -140,7 +169,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		}
 
 		// delete all cron jobs for test suites
-		if err = s.CronJobClient.DeleteAll(namespace, testSuiteResourceURI); err != nil {
+		if err = s.CronJobClient.DeleteAll(testSuiteResourceURI); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
@@ -150,29 +179,77 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv1.TestSuiteList, error) {
+	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
+	if err != nil {
+		return nil, err
+	}
+
+	search := c.Query("textSearch")
+	if search != "" {
+		// filter items array
+		for i := len(crTestSuites.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crTestSuites.Items[i].Name, search) {
+				crTestSuites.Items = append(crTestSuites.Items[:i], crTestSuites.Items[i+1:]...)
+			}
+		}
+	}
+
+	return crTestSuites, nil
+}
+
 // ListTestSuitesHandler for getting list of all available TestSuites
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		namespace := c.Query("namespace", "testkube")
-		crTests, err := s.TestsSuitesClient.List(namespace, c.Query("selector"))
-
+		crTestSuites, err := s.getFilteredTestSuitesList(c)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		search := c.Query("textSearch")
-		if search != "" {
-			// filter items array
-			for i := len(crTests.Items) - 1; i >= 0; i-- {
-				if !strings.Contains(crTests.Items[i].Name, search) {
-					crTests.Items = append(crTests.Items[:i], crTests.Items[i+1:]...)
-				}
+		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+
+		return c.JSON(testSuites)
+	}
+}
+
+// ListTestSuiteWithExecutionsHandler for getting list of all available TestSuite with latest executions
+func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		crTestSuites, err := s.getFilteredTestSuitesList(c)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		ctx := c.Context()
+		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, len(testSuites))
+		testNames := make([]string, len(testSuites))
+		for i := range testSuites {
+			testNames[i] = testSuites[i].Name
+		}
+
+		executions, err := s.TestExecutionResults.GetLatestByTests(ctx, testNames)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		executionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
+		for i := range executions {
+			if executions[i].TestSuite == nil {
+				continue
+			}
+
+			executionMap[executions[i].TestSuite.Name] = executions[i]
+		}
+
+		for i := range testSuites {
+			testSuiteWithExecutions[i].TestSuite = &testSuites[i]
+			if execution, ok := executionMap[testSuites[i].Name]; ok {
+				testSuiteWithExecutions[i].LatestExecution = &execution
 			}
 		}
 
-		tests := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTests)
-
-		return c.JSON(tests)
+		return c.JSON(testSuiteWithExecutions)
 	}
 }
 
@@ -183,7 +260,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 		namespace := c.Query("namespace", "testkube")
 		s.Log.Debugw("getting test suite", "name", name)
 
-		crTestSuite, err := s.TestsSuitesClient.Get(namespace, name)
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -209,7 +286,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 				Resource: testSuiteResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), namespace, options); err != nil {
+			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
 			}
 
@@ -268,6 +345,8 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		execution.Duration = types.FormatDuration(execution.Duration)
+
 		return c.JSON(execution)
 	}
 }
@@ -309,9 +388,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.TestExecutionResults.Update(ctx, testExecution)
 		}
 
-		testExecution.Status = testkube.TestSuiteExecutionStatusSuccess
+		testExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		if hasFailedSteps {
-			testExecution.Status = testkube.TestSuiteExecutionStatusError
+			testExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		}
 
 		s.TestExecutionResults.Update(ctx, testExecution)
@@ -434,7 +513,7 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 
 func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusSuccess
+	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
 
 	if r.Test != nil {

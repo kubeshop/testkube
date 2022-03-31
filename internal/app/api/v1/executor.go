@@ -34,8 +34,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ns := c.Query("namespace", "testkube")
-		list, err := s.ExecutorsClient.List(ns)
+		list, err := s.ExecutorsClient.List()
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -52,9 +51,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
-		ns := c.Query("namespace", "testkube")
-
-		item, err := s.ExecutorsClient.Get(ns, name)
+		item, err := s.ExecutorsClient.Get(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -67,9 +64,8 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
-		ns := c.Query("namespace", "testkube")
 
-		err := s.ExecutorsClient.Delete(name, ns)
+		err := s.ExecutorsClient.Delete(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
