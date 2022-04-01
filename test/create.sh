@@ -8,7 +8,11 @@ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-dash
 
 kubectl delete test testkube-api -ntestkube || true
 kubectl delete secret testkube-api-secrets -ntestkube || true
-kubectl testkube create test -f test/postman/Testkube-Sanity.postman_collection.json --name testkube-api
+kubectl testkube create test -f test/postman/Testkube-API.postman_collection.json --name testkube-api
+
+kubectl delete test testkube-api-failing -ntestkube || true
+kubectl delete secret testkube-api-failing-secrets -ntestkube || true
+kubectl testkube create test -f test/postman/Testkube-API-Failing.postman_collection.json --name testkube-api-failing
 
 kubectl delete test testkube-homepage-performance -ntestkube || true
 kubectl delete secret testkube-homepage-performance-secrets -ntestkube || true
@@ -37,6 +41,9 @@ kubectl testkube create test --file test/postman/Kubeshop.postman_collection.jso
 
 kubectl delete testsuite testkube -ntestkube || true
 cat test/suites/testsuite-testkube.json | kubectl testkube create testsuite --name testkube --label app=testkube
+
+kubectl delete testsuite testkube-failing -ntestkube || true
+cat test/suites/testsuite-testkube-failing.json | kubectl testkube create testsuite --name testkube-failing --label app=testkube
 
 kubectl delete testsuite testkube-global-test -ntestkube || true
 cat test/suites/testsuite-example-1.json | kubectl testkube create testsuite --name testkube-global-test --label app=mixed
