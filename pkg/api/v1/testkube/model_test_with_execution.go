@@ -12,5 +12,5 @@ package testkube
 // Test with latest Execution result
 type TestWithExecution struct {
 	Test            *Test      `json:"test"`
-	LatestExecution *Execution `json:"latest_execution,omitempty"`
+	LatestExecution *Execution `json:"latestExecution,omitempty"`
 }

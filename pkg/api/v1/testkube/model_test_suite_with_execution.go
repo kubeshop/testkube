@@ -12,5 +12,5 @@ package testkube
 // Test suite with latest execution result
 type TestSuiteWithExecution struct {
 	TestSuite       *TestSuite          `json:"testSuite"`
-	LatestExecution *TestSuiteExecution `json:"latest_execution,omitempty"`
+	LatestExecution *TestSuiteExecution `json:"latestExecution,omitempty"`
 }
