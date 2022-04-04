@@ -392,14 +392,18 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.TestExecutionResults.Update(ctx, testExecution)
 
 			s.executeTestStep(ctx, testExecution, &testExecution.StepResults[i])
+			err := s.TestExecutionResults.Update(ctx, testExecution)
+			if err != nil {
+				s.Log.Errorw("saving test suite execution results error", "error", err)
+				continue
+			}
+
 			if testExecution.StepResults[i].IsFailed() {
 				hasFailedSteps = true
 				if testExecution.StepResults[i].Step.StopTestOnFailure {
 					break
 				}
 			}
-
-			s.TestExecutionResults.Update(ctx, testExecution)
 		}
 
 		testExecution.Status = testkube.TestSuiteExecutionStatusPassed

@@ -18,14 +18,17 @@ An example test file could look like this:
 ```sh
 echo '
 {
-        "name": "testsuite-example-2",
-        "namespace": "testkube",
-        "description": "Example simple tests orchestration",
-        "steps": [
-                {"type": "executeTest", "namespace": "testkube", "name": "test1"},
-                {"type": "delay", "duration": 5000},
-                {"type": "executeTest", "namespace": "testkube", "name": "test1"}
-        ]
+	"name": "testkube-suite",
+	"description": "Testkube test suite, api, dashboard and performance",
+	"steps": [
+		{"execute": {"name": "testkube-api"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-dashboard"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-api-performance"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-homepage-performance"}}
+	]
 }' | kubectl testkube create testsuite
 ```
 
@@ -35,14 +38,14 @@ To check if the test was created correctly, you can look at `TestSuite` Custom R
 kubectl get testsuites -ntestkube
 
 NAME                  AGE
-test-example          2d21h
+testkube-suite           1m
 testsuite-example-2   2d21h
 ```
 
 Get the details of a test:
 
 ```sh
-kubectl get testsuites -ntestkube test-example -oyaml
+kubectl get testsuites -ntestkube testkube-suite -oyaml
 
 apiVersion: tests.testkube.io/v1
 kind: Test
@@ -50,23 +53,27 @@ metadata:
   creationTimestamp: "2022-01-11T07:46:12Z"
   generation: 4
   name: test-example
-  namespace: testkube
+  namespace: testkube-suite
   resourceVersion: "57695094"
   uid: ea90a79e-bb46-49ee-a3ef-a5d99cee0a2c
 spec:
   description: Example simple tests orchestration
   steps:
+  steps:
   - execute:
-      name: test1
-      namespace: testkube
-    type: testExecution
+      name: testkube-api
   - delay:
-      duration: 2000
-    type: delay
+      duration: 1000
   - execute:
-      name: test1
-      namespace: testkube
-    type: testExecution
+      name: testkube-dashboard
+  - delay:
+      duration: 1000
+  - execute:
+      name: testkube-api-performance
+  - delay:
+      duration: 1000
+  - execute:
+      name: testkube-homepage-performance
 ```
 
 Your `Test Suite` is defined and you can start running testing workflows.
