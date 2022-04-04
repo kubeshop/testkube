@@ -67,6 +67,7 @@ type JobOptions struct {
 	InitImage   string
 	JobTemplate string
 	HasSecrets  bool
+	SecretEnvs  map[string]string
 }
 
 // NewJobClient returns new JobClient instance
@@ -493,8 +494,26 @@ func (c *JobClient) CreatePersistentVolumeClaim(name string) error {
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
 	var secretEnvVars []corev1.EnvVar
+
+	i := 1
+	for secretName, secretVar := range options.SecretEnvs {
+		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+			Name: fmt.Sprintf("RUNNER_SECRET_ENV%d", i),
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: secretName,
+					},
+					Key: secretVar,
+				},
+			},
+		})
+
+		i++
+	}
+
 	if options.HasSecrets {
-		secretEnvVars = []corev1.EnvVar{
+		secretEnvVars = append(secretEnvVars, []corev1.EnvVar{
 			{
 				Name: GitUsernameEnvVarName,
 				ValueFrom: &corev1.EnvVarSource{
@@ -517,7 +536,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 					},
 				},
 			},
-		}
+		}...)
 	}
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
