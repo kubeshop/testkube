@@ -17,6 +17,8 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 		}
 
 		webhook := webhooksmapper.MapAPIToCRD(request)
+		webhook.Namespace = s.Namespace
+
 		created, err := s.WebhooksClient.Create(&webhook)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)

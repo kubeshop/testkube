@@ -1,0 +1,13 @@
+{
+	"name": "testkube",
+	"description": "Failing Testkube testsuite",
+	"steps": [
+		{"execute": {"name": "testkube-dashboard"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-api-performance"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-api-failing"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "testkube-homepage-performance"}}
+	]
+}

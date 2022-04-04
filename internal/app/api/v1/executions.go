@@ -288,6 +288,8 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 			}
 		}
 
+		execution.Duration = types.FormatDuration(execution.Duration)
+
 		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
