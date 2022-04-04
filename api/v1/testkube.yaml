@@ -1601,7 +1601,7 @@ components:
             type: string
           example:
             secret_name1: "kubernetes-secret-name"
-            secret_var1: "secret-variable-name"
+            secret_key1: "secret-key-name"
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
