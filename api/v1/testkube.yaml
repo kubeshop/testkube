@@ -1774,7 +1774,7 @@ components:
       properties:
         test:
           $ref: "#/components/schemas/Test"
-        latest_execution:
+        latestExecution:
           $ref: "#/components/schemas/Execution"
 
     TestSuiteWithExecution:
@@ -1785,7 +1785,7 @@ components:
       properties:
         testSuite:
           $ref: "#/components/schemas/TestSuite"
-        latest_execution:
+        latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
 
     #
