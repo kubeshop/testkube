@@ -502,6 +502,11 @@
 			"key": "test_type",
 			"value": "postman/collection",
 			"type": "string"
+		},
+		{
+			"key": "api_uri",
+			"value": "http://testkube-api-server:8088",
+			"type": "string"
 		}
 	]
 }
