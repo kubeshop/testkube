@@ -95,7 +95,7 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 	ui.ExitOnError("updating helm repositories", err)
 
 	command := []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
-	command = append(command, "--set", fmt.Sprintf("api-server.minio.enabled=%t", !options.NoMinio))
+	command = append(command, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
 	command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	command = append(command, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	command = append(command, options.Name, options.Chart)

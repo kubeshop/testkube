@@ -36,7 +36,7 @@ An Ingress controller is needed to expose externally. By default Testkube is usi
 ## **Configure Ingress for Results Endpoint**
 
 ```sh
-helm install testkube kubeshop/testkube --set api-server.ingress.enabled="true"
+helm install testkube kubeshop/testkube --set testkube-api.ingress.enabled="true"
 ```
 
 By default, the results are using the path ```/results```, so the results will be accessible at ```ingress_host/results/```
@@ -48,7 +48,7 @@ The Ingress configuration used is available in the [Testkube Helm Repo](https://
 Ingress can be installed for the dashboard together with api-server Ingress with the usage of a Helm chart:
 
 ```sh
-helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true"
+helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set testkube-api.ingress.enabled="true"
 ```
 
 > Testkube dashboard talks to an api-server via the endpoint. Hence, the api-server will need to be exposed as well.
@@ -96,7 +96,7 @@ If there is no need for TLS (Transport Layer Security) to be enabled, omit the T
 To pass specific values to the Ingress annotations, the Helm "--set" option can be used: 
 
 ```sh
-helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set api-server.ingress.enabled="true" --set api-server.ingress.annotations.kubernetes\\.io/ingress\\.class="anything_needed" 
+helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set testkube-api.ingress.enabled="true" --set testkube-api.ingress.annotations.kubernetes\\.io/ingress\\.class="anything_needed" 
 ```
 
 A better approach is to configure and call a values file with the Ingress custom values:

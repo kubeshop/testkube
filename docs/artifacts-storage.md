@@ -6,15 +6,15 @@ Currently, only the Cypress executor job produces test artifacts. The executor w
 
 The available configuration parameters in Helm charts are:
 
-| Parameter                          | Is optional | Default                              | Default                                              |
-| ---------------------------------- | ----------- | ------------------------------------ | ---------------------------------------------------- |
-| api-server.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 | URL of the S3 bucket                                 |
-| api-server.storage.accessKeyId     | yes         | minio                                | Access Key ID                                        |
-| api-server.storage.accessKey       | yes         | minio123                             | Access Key                                           |
-| api-server.storage.location        | yes         |                                      | Region                                               |
-| api-server.storage.token           | yes         |                                      | S3 Token                                             |
-| api-server.storage.SSL             | yes         | false                                | Indicates whether SSL communication is to be enabled |
-| api-server.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacts  |
+| Parameter                            | Is optional | Default                              | Default                                              |
+| ------------------------------------ | ----------- | ------------------------------------ | ---------------------------------------------------- |
+| testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 | URL of the S3 bucket                                 |
+| testkube-api.storage.accessKeyI      | yes         | minio                                | Access Key ID                                        |
+| testkube-api.storage.accessKey       | yes         | minio123                             | Access Key                                           |
+| testkube-api.storage.location        | yes         |                                      | Region                                               |
+| testkube-api.storage.token           | yes         |                                      | S3 Token                                             |
+| testkube-api.storage.SSL             | yes         | false                                | Indicates whether SSL communication is to be enabled |
+| testkube-api.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacts  |
 
 The API Server accepts the following environment variables:
 
