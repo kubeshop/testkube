@@ -121,3 +121,8 @@ jobs:
           asset_path: testkube.msi
           asset_name: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
           asset_content_type: application/octet-stream
+      
+      - name: Update Checksum
+        run: |
+          & dir
+          & dir dist
