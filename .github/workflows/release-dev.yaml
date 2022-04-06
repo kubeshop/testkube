@@ -122,7 +122,22 @@ jobs:
           asset_name: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
           asset_content_type: application/octet-stream
       
-      - name: Update Checksum
+      - name: Calculate Checksum
         run: |
           & dir
           & dir dist
+          $hash=Get-FileHash 
+          $hash.Hash + " " + $env:MSI_NAME >> dist\checksums.txt
+          Get-Content dist\checksums.txt
+        env:
+          MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
+      
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: dist\checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain
