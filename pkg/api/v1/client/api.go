@@ -112,7 +112,7 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 	uri := c.getURI("/executions/")
 
 	if id != "" {
-		uri = fmt.Sprintf("/tests/%s/executions", id)
+		uri = c.getURI(fmt.Sprintf("/tests/%s/executions", id))
 	}
 
 	req := c.GetProxy("GET").
