@@ -126,7 +126,7 @@ jobs:
         run: |
           & dir
           & dir dist
-          $hash=Get-FileHash 
+          $hash=Get-FileHash testkube.msi
           $hash.Hash + " " + $env:MSI_NAME >> dist\checksums.txt
           Get-Content dist\checksums.txt
         env:
