@@ -132,6 +132,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Calculate Checksum
+        id: checksum
+        run: |
+          $installer_name = $env:MSI_NAME
+          $hash=Get-FileHash testkube.msi
+          $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
+          echo "::set-output name=INSTALLER_NAME::${installer_name}"
+        env:
+          MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
+
       - name: Upload release binary
         uses: actions/upload-release-asset@v1.0.2
         env:
@@ -139,5 +149,15 @@ jobs:
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: testkube.msi
-          asset_name: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
+          asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}.msi
           asset_content_type: application/octet-stream
+      
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: msi_checksum.txt
+          asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}_checksum.txt
+          asset_content_type: text/plain
