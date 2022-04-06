@@ -127,8 +127,8 @@ jobs:
           & dir
           & dir dist
           $hash=Get-FileHash testkube.msi
-          $hash.Hash + " " + $env:MSI_NAME >> dist\checksums.txt
-          Get-Content dist\checksums.txt
+          $hash.Hash + "  " + $env:MSI_NAME >> msi_checksum.txt
+          Get-Content msi_checksum.txt
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
       
@@ -138,6 +138,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: dist\checksums.txt
-          asset_name: checksums.txt
+          asset_path: msi_checksum.txt
+          asset_name: testkube_${{steps.tag.outputs.tag}}_Windows_i386_checksum.txt
           asset_content_type: text/plain
