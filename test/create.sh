@@ -45,6 +45,10 @@ cat test/suites/testsuite-testkube.json | kubectl testkube create testsuite --na
 kubectl delete testsuite testkube-failing -ntestkube || true
 cat test/suites/testsuite-testkube-failing.json | kubectl testkube create testsuite --name testkube-failing --label app=testkube
 
+kubectl delete testsuite testkube-failing-stop -ntestkube || true
+cat test/suites/testsuite-testkube-failing-sof.json | kubectl testkube create testsuite --name testkube-failing-stop --label app=testkube
+
+
 kubectl delete testsuite testkube-global-test -ntestkube || true
 cat test/suites/testsuite-example-1.json | kubectl testkube create testsuite --name testkube-global-test --label app=mixed
 
