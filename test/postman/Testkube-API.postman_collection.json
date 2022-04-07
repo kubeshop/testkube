@@ -272,7 +272,7 @@
 							"        return;",
 							"    } ",
 							"",
-							"    pm.expect(jsonData.executionResult.status).to.eql(\"cpassed\");",
+							"    pm.expect(jsonData.executionResult.status).to.eql(\"passed\");",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
 							"    pm.expect(jsonData.executionResult[\"output\"]).contains(\"Health\");",
 							"    pm.expect(jsonData.executionResult[\"output\"]).contains(\"200 OK\");",
