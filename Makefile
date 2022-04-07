@@ -85,6 +85,7 @@ execute-testkube-cli-test-suite:
 
 
 test-reload-sanity-test:
+	kubectl delete secrets sanity-secrets -ntestkube
 	kubectl delete test sanity -ntestkube || true
 	kubectl testkube create test -f test/postman/Testkube-Sanity.postman_collection.json --name sanity
 
