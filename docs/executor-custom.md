@@ -142,7 +142,7 @@ spec:
   - example/test      
   # your custom type registered (used when creating and running your testkube tests)
 
-  contentTypes:
+  content_types:
   - string             # test content as string 
   - file-uri           # http based file content
   - git-file           # file stored in Git
@@ -152,7 +152,7 @@ spec:
   - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
   - junit-report       # executor can have junit xml based results
 
-# Remove any contentTypes and features which will be not implemented by your executor.
+# Remove any content_types and features which will be not implemented by your executor.
 
 ```
 
