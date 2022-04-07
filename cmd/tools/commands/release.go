@@ -89,7 +89,7 @@ func NewReleaseCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&appName, "app", "a", "api-server", "app name chart")
+	cmd.Flags().StringVarP(&appName, "app", "a", "testkube-api", "app name chart")
 	cmd.Flags().StringVarP(&kind, "kind", "k", "patch", "version kind one of (patch|minor|major")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
 	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")

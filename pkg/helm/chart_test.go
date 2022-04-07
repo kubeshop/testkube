@@ -36,7 +36,7 @@ dependencies:
     version: "10.0.0"
     repository: "https://charts.bitnami.com/bitnami"
 
-  - name: api-server
+  - name: testkube-api
     version: "0.5.8"
     repository: "https://kubeshop.github.io/helm-charts"
     
@@ -62,16 +62,16 @@ func TestGetDependencies(t *testing.T) {
 	yaml.Unmarshal(chartContent, &chart)
 
 	t.Run("test GetDependencyVersion", func(t *testing.T) {
-		version, err := GetDependencyVersion(chart, "api-server")
+		version, err := GetDependencyVersion(chart, "testkube-api")
 		assert.NoError(t, err)
 		assert.Equal(t, "0.5.8", version)
 
 	})
 
 	t.Run("test UpdateDependencyVersion", func(t *testing.T) {
-		chart, err := UpdateDependencyVersion(chart, "api-server", "1.2.3")
+		chart, err := UpdateDependencyVersion(chart, "testkube-api", "1.2.3")
 		assert.NoError(t, err)
-		version, err := GetDependencyVersion(chart, "api-server")
+		version, err := GetDependencyVersion(chart, "testkube-api")
 		assert.NoError(t, err)
 		assert.Equal(t, "1.2.3", version)
 
