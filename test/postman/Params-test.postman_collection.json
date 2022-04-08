@@ -1,0 +1,85 @@
+{
+	"info": {
+		"_postman_id": "2072ef02-487c-472f-a02e-654b3d5aa4ca",
+		"name": "Params-test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Homepage healthcheck",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Environment variables are set\", function () {",
+							"    pm.expect(pm.environment.get(\"env1\"), \"env1 should be equal\").eq(\"val1\");",
+							"    pm.expect(pm.environment.get(\"env2\"), \"env2 should be equal\").eq(\"val2\")",
+							"});",
+							"",
+							"pm.test(\"Response time is less than 200ms\", function () {",
+							"    pm.expect(pm.response.responseTime).to.be.below(200);",
+							"});",
+							"",
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"Hi there\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://wysocki.consulting/",
+					"protocol": "https",
+					"host": [
+						"wysocki",
+						"consulting"
+					],
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Trainings list check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"Golang Trainings\");",
+							"});",
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"Docker Trainings\");",
+							"});",
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"Kubernetes Trainings\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://wysocki.consulting",
+					"protocol": "https",
+					"host": [
+						"wysocki",
+						"consulting"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
