@@ -35,11 +35,27 @@ nav:
   - Executors:
       - Creating custom executor: executor-custom.md
   - CLI Reference:
-      - Overview: cli/testkube.md
-      - Install Command: cli/testkube_install.md
-      - TestSuites Command: cli/testkube_testsuites.md
-      - Tests Command: cli/testkube_tests.md
-      - Dashboard Command: cli/testkube_dashboard.md
+      - Overview: cli/kubectl-testkube.md
+      - Abort Command: cli/kubectl-testkube_abort.md
+      - Completion Command: cli/kubectl-testkube_completion.md
+      - Config Command: cli/kubectl-testkube_config.md
+      - Create Command: cli/kubectl-testkube_create.md
+      - Dashboard Command: cli/kubectl-testkube_dashboard.md
+      - Delete Command: cli/kubectl-testkube_delete.md
+      - Disable Command: cli/kubectl-testkube_disable.md
+      - Download Command: cli/kubectl-testkube_download.md
+      - Enable Command: cli/kubectl-testkube_enable.md
+      - Generate Command: cli/kubectl-testkube_generate.md
+      - Get Command: cli/kubectl-testkube_get.md
+      - Install Command: cli/kubectl-testkube_install.md
+      - Migrate Command: cli/kubectl-testkube_migrate.md
+      - Run Command: cli/kubectl-testkube_run.md
+      - Migrate Command: cli/kubectl-testkube_migrate.md
+      - Status Command: cli/kubectl-testkube_status.md
+      - Update Command: cli/kubectl-testkube_update.md
+      - Upgrade Command: cli/kubectl-testkube_upgrade.md
+      - Version Command: cli/kubectl-testkube_version.md
+      - Watch Command: cli/kubectl-testkube_watch.md
   - Integrating with CI/CD: testkube-automation.md
   - Dashboard: dashboard.md
   - Metrics: metrics.md
