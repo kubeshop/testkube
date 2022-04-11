@@ -81,6 +81,7 @@ extra:
 
 plugins:
   - render_swagger
+  - search
 
 # Extensions
 markdown_extensions:
