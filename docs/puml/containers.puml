@@ -8,7 +8,9 @@
 !include DEVICONS/html5.puml
 !include DEVICONS/go.puml
 !include DEVICONS/mongodb.puml
+!include FONTAWESOME/envelope_open.puml
 !include FONTAWESOME/chart_line.puml
+
 
 LAYOUT_WITH_LEGEND()
 
@@ -16,6 +18,12 @@ Boundary(ext, "external systems") {
 	Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
 	System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
 	System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+
+}
+
+Boundary(webhooks, "Webhook receivers") {
+	System_Ext(webhookevent1, "Webhook event 1", "system1", "envelope_open")
+	System_Ext(webhookevent2, "Webhook event 2", "system2", "envelope_open")
 }
 
 Boundary(kubernetes, "kubnernetes cluster") {
@@ -26,25 +34,26 @@ Boundary(kubernetes, "kubnernetes cluster") {
 		System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
 	}
 
+
+
 	Boundary(executors, "Jobs of any kind, implements testkube runner ") {
 		System_Ext(executorn, "Executor job n", "postman/collection", "kubernetes")
-		System_Ext(executor3, "Executor job 3", "cypress/project", "kubernetes")
 		System_Ext(executor2, "Executor job 2", "postman/collection", "kubernetes")
 		System_Ext(executor1, "Executor job 1", "curl/test", "kubernetes")
 	}
 
-	Boundary(testkube, "testkube") {
-		Container(api, "testkube API", "golang", "Orchestrate incoming test runs", "go")
-		Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
-		ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
-	}
+	Container(api, "testkube API", "golang", "Orchestrate incoming test runs", "go")
+	Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
+	ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
 
 	System_Ext(sut, "SUT", "System Under Test", "html5")
 
 	Rel(executor1, sut, "Runs tests")
 	Rel(executor2, sut, "Runs tests")
-	Rel(executor3, sut, "Runs tests")
 	Rel(executorn, sut, "Runs tests")
+
+	Rel(webhookevent1, api, "calls external systems on Testkube event (e.g. test completed)")
+	Rel(webhookevent2, api, "calls external systems")
 
 	Rel(api, db, "stores results")
 	Rel(api, executor1, "schedules executions as Kuberntetes jobs")
@@ -58,9 +67,9 @@ Rel(testCrds, api, "get tests content")
 
 Rel(executorCrds, api, "get executor uri and other details")
 
-BiRel_L(kubectl, api, "Runs tests, getting results")
-BiRel_L(cicd, api, "Runs tests getting results")
-BiRel_L(web, api, "Runs tests, getting restuls")
+BiRel(kubectl, api, "Runs tests, getting results")
+BiRel(cicd, api, "Runs tests getting results")
+BiRel(web, api, "Runs tests, getting restuls")
 
 
 @enduml
