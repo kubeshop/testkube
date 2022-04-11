@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
-	github.com/gofiber/adaptor/v2 v2.1.14
+	github.com/gofiber/adaptor/v2 v2.1.22
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
