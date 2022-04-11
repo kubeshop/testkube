@@ -7,6 +7,7 @@
 !include DEVICONS/kubernetes.puml
 !include DEVICONS/html5.puml
 !include FONTAWESOME/chart_line.puml
+!include FONTAWESOME/envelope_open.puml
 
 
 
@@ -18,6 +19,9 @@ System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communi
 System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
 System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
 
+System_Ext(webhookevent1, "Webhook receivers", "system1", "envelope_open")
+
+
 
 Boundary(kubernetes, "kubnernetes cluster") {
 	System(testkube, "testkube", "TestSuites stuff inside kuberbetes cluster", "kubernetes")
@@ -27,8 +31,11 @@ Boundary(kubernetes, "kubnernetes cluster") {
 		System_Ext(executorCrds, "Executors CRDs", "executors CR (internal and custom) Custom Resources", "kubernetes")
 	}
 
+	System(operator, "operator", "Manages CRD versioning", "kubernetes")
+
 	System_Ext(sut, "SUT", "System Under Test", "html5")
 
+	Rel_U(testCrds, operator, "Listens for CRDs changes, versioning")
 	Rel_U(testCrds, testkube, "Getting details about tests contents")
 	Rel_D(kubectl, crds, "Creates new Custom Resources")
 
@@ -39,6 +46,7 @@ Boundary(kubernetes, "kubnernetes cluster") {
 Rel(kubectl, testkube, "Runs tests, getting results")
 Rel(cicd, testkube, "Runs tests getting results")
 Rel(web, testkube, "Runs tests, getting restuls")
+Rel(testkube, webhookevent1, "Receives Testkube events")
 
 Rel(metrics, testkube, "Reads business metrics")
 Rel_L(testkube, sut, "Runs test on SUT")

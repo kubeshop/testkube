@@ -12,6 +12,7 @@
 !include DEVICONS/mongodb.puml
 !include FONTAWESOME/chart_line.puml
 !include FONTAWESOME/file_alt.puml
+!include FONTAWESOME/envelope_open.puml
 
 
 LAYOUT_WITH_LEGEND()
@@ -36,6 +37,12 @@ Container_Boundary(api, "API Application") {
     Rel(apiServer, db, "Stores results")
 }
 
+Container_Boundary(webhooks, "Webhooks receivers") {
+    Component(extsystem1 , "External system 1", "webhooks", "Listens for Testkube 'test completed' webhook events", "envelope_open")
+    Component(extsystem2 , "External system 2", "webhooks", "Listens for both Testkube 'test started, test completed'  webhook events", "envelope_open")
+}
+
+
 
 Container_Boundary(executors, "Test runners") {
     Component(postmanExecutor, "Postman Collections Job", "Kubernetes Job", "Executes exported postman collections", "go")
@@ -56,10 +63,14 @@ Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
 
 	Rel(postmanExecutor, executorsCrds, "registers itself in cluster as executor")
 	Rel(curlExecutor, executorsCrds, "registers itself in cluster as executor")
+	Rel(cypressExecutor, executorsCrds, "registers itself in cluster as executor")
 }
 
-System_Ext(sut, "SUT", "System Under Test", "html5")
-Rel(executors, sut, "runs test")
+System_Ext(sut2, "SUT 1", "System Under Test", "html5")
+System_Ext(sut1, "SUT 2", "System Under Test", "html5")
+
+Rel(postmanExecutor, sut1, "runs test")
+Rel(cypressExecutor, sut2, "runs test")
 
 Rel(engineer, testsCrds, "applying test definition to cluster")
 Rel(kubectl, apiServer, "runs tests, getting results")
@@ -67,6 +78,10 @@ Rel(cicd, apiServer, "runs tests getting results")
 Rel(web, apiServer, "runs tests, getting restuls")
 Rel(apiServer, testsCrds, "reads informations about test details from Custom Resources")
 Rel(metricsMiddleware, metrics, "stores test runs metrics")
-Rel(api, logs, "store logs")
+
+Rel(apiServer, extsystem1, "event test start")
+Rel(apiServer, extsystem2, "event test start")
+Rel(apiServer, extsystem2, "event test completed")
+Rel(apiServer, logs, "store logs")
 
 @enduml
