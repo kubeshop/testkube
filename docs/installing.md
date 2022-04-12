@@ -10,7 +10,14 @@ To get Testkube up and running:
 
 ### **Installing on MacOS**
 
-We're building a Homebrew tap for each release, so you can easily install Testkube with Homebrew.
+You can install Testkube from Homebrew (the installed version might be not a latest one, because it's manually approved
+by brew maintainers)
+
+```sh
+brew install testkube
+```
+
+Or we're building our own Homebrew tap for each release, so you can easily install latest Testkube version.
 
 ```sh
 brew tap kubeshop/homebrew-testkube
