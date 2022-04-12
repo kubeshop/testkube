@@ -1,9 +1,9 @@
 # cURL Commands
 
-TestKube is able to run cURL commands as tests. There are 2 possibilities to validate the outputs of the cURL command:
+Testkube is able to run cURL commands as tests. There are 2 possibilities to validate the outputs of the cURL command:
 
- - By using the status returned.
- - By checking the body of the response. 
+- By using the status returned.
+- By checking the body of the response.
 
 Below is an example of how to format the tests:
 

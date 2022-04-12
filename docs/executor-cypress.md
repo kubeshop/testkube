@@ -1,6 +1,6 @@
 # Cypress Tests
 
-TestKube makes running Cypress tests simple. As Cypress is organised in projects, Testkube allows tests to be defined in a Github repository.
+Testkube makes running Cypress tests simple. As Cypress is organised in projects, Testkube allows tests to be defined in a Github repository.
 
 To create a new Cypress test, you will need a Git repository with an example Cypress project. Please follow the Cypress documentation for details - <https://docs.cypress.io/guides/dashboard/projects>.
 

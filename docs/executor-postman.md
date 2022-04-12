@@ -35,7 +35,7 @@ Create a postman collection and export it as JSON:
 Right click and export the given Collection to a file,
 In this example, it is saved into `~/Downloads/API-Health.postman_collection.json`
 
-Now we can create a new TestKube based on the saved Postman Collection.
+Now we can create a new Testkube based on the saved Postman Collection.
 
 ## **Create a New Testkube Test Script**
 
