@@ -17,7 +17,7 @@ by brew maintainers)
 brew install testkube
 ```
 
-Or we're building a our own Homebrew tap for each release, so you can easily install latest Testkube version.
+Or we're building our own Homebrew tap for each release, so you can easily install latest Testkube version.
 
 ```sh
 brew tap kubeshop/homebrew-testkube
