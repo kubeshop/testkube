@@ -32,6 +32,7 @@ nav:
       - Postman Collections: executor-postman.md
       - Cypress Tests: executor-cypress.md
       - Curl Commands: executor-curl.md
+      - SoapUI Tests: executor-soapui.md
   - Executors:
       - Creating custom executor: executor-custom.md
   - CLI Reference:

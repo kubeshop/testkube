@@ -31,7 +31,7 @@ If you are familiar with the `go` programming language, use our template reposit
 2. Clone the newly created repo.
 3. Rename the go module from `testkube-executor-template` to the new name and run `go mod tidy`.
 
-[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement the new runner. 
+[Testkube](https://github.com/kubeshop/testkube) provides the components to help implement the new runner.
 A `Runner` is a wrapper around a testing framework binary responsible for running tests and parsing tests results. You are not limited to use Testkube's components for the `go` language. Use any language - just remember about managing input and output.
 
 Let's try to create a new test runner that tests if a given URI call is successful (`status code == 200`).
@@ -45,7 +45,7 @@ type Runner interface {
 }
 ```
 
-As we can see, `Execution` is the input - this object is managed by the Testkube API and will be passed to your executor. The executor will have information about the execution id and content that should be run on top of your runner. 
+As we can see, `Execution` is the input - this object is managed by the Testkube API and will be passed to your executor. The executor will have information about the execution id and content that should be run on top of your runner.
 
 An example runner is defined in our template. Using this template will only require implementing the Run method (you can rename `ExampleRunner` to the name that best describes your testing framework).
 
@@ -56,7 +56,7 @@ A runner can get data from different sources. Testkube currently supports:
 - Git File - the file stored in the Git repo in the given path.
 - Git Dir - the entire git repo or git subdirectory (Testkube does a spatial checkout to limit traffic in the case of monorepos).
 
-All possible test definitions are already created and mounted as Kubernetes `Volumes` before an executor starts its work. You can get the directory path from the `RUNNER_DATADIR` environment variable. 
+All possible test definitions are already created and mounted as Kubernetes `Volumes` before an executor starts its work. You can get the directory path from the `RUNNER_DATADIR` environment variable.
 
 ```go
 // TODO: change to a valid name
@@ -123,43 +123,10 @@ docker build -t YOUR_USER/testkube-executor-example:1.0.0 .
 docker push YOUR_USER/testkube-executor-example:1.0.0
 ```
 
-When the Docker build completes, register the custom executor and create a yaml file with the definition `executor.yaml`:
-
-```yaml
-apiVersion: executor.testkube.io/v1
-kind: Executor
-metadata:
-  name: example-executor
-  namespace: testkube
-spec:
-  executor_type: job  
-  # 'job' is currently the only type for custom executors
-
-  image: YOUR_USER/testkube-executor-example:1.0.0 
-  # pass your repository and tag
-
-  types:
-  - example/test      
-  # your custom type registered (used when creating and running your testkube tests)
-
-  content_types:
-  - string             # test content as string 
-  - file-uri           # http based file content
-  - git-file           # file stored in Git
-  - git-dir            # entire dir/project stored in Git
-  
-  features: 
-  - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
-  - junit-report       # executor can have junit xml based results
-
-# Remove any content_types and features which will be not implemented by your executor.
-
-```
-
-Apply the custom executor to your cluster:
+When the Docker build completes, register the custom executor using the Testkube cli:
 
 ```sh
-kubectl apply -f executor.yaml
+kubectl testkube create executor --image YOUR_USER/testkube-executor-example:1.0.0 --types "example/test" --name example-executor
 ```
 
 Finally, create and run your custom tests by passing `URI` as the test content:
@@ -185,7 +152,7 @@ This is a very basic example of a custom executor. Please visit our internal pro
 For Go-based executors, we have prepared many handy functions, such as printing valid outputs or wrappers around calling external processes.
 Currently, in other languages, you'll need to manage this on your own.
 
-Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git-file and git-dir. The entire complexity of checking out or downloading test content is covered by Testkube. 
+Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git-file and git-dir. The entire complexity of checking out or downloading test content is covered by Testkube.
 
 Testkube will store its files and directories in a directory defined by the `RUNNER_DATADIR` env and will save the test-content file for:
 
@@ -193,7 +160,9 @@ Testkube will store its files and directories in a directory defined by the `RUN
 - URI - Testkube will get the content of the file defined by the uri.
 - Git related content - Testkube will checkout the repo content in the current directory.
 
-We have created a simple NodeJS executor. 
+To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](/testkube/installing/).
+
+We have created a simple NodeJS executor.
 
 The executor will get the URI and try to call the HTTP GET method on the passed value, and will return:
 
@@ -293,34 +262,19 @@ docker build --platform=linux/amd64 -t USER/testkube-executor-example-nodejs:lat
 docker push USER/testkube-executor-example-nodejs:latest
 ```
 
-4. After the image is in place for Kubnernetes to load, define the executor:
-```yaml
-apiVersion: executor.testkube.io/v1
-kind: Executor
-metadata:
-  name: example-nodejs-executor
-  namespace: testkube
-spec:
-  executor_type: job
-  features: []
-  image: kubeshop/testkube-executor-example-nodejs:latest
-  types:
-    - example/test
-```
-
-5. Save the file to a file name, e.g., `example-executor.yaml`, and apply it into the Kubernetes cluster:
+4. After the image is in place for Kubernetes to load, create the executor:
 ```sh
-kubectl apply -f example-executor.yaml
+kubectl testkube create executor --image kubeshop/testkube-executor-example-nodejs:latest --types "example/test" --name example-nodejs-executor
 ```
 
 
-When everything is in place, we can add our Testkube tests. Testkube must be installed to add tests. Review the Testkube [installation instructions](/testkube/installing/).
+When everything is in place, we can add our Testkube tests.
 
 ```
 echo "https://httpstat.us/200" | kubectl testkube create test --name example-test --type example/test
 ```
 
-As we can see, we need to pass the test name and test type `example/test` (which we defined in our executor CRD). 
+As we can see, we need to pass the test name and test type `example/test` (which we defined in our executor CRD).
 
 Now it's finally time to run our test!
 
