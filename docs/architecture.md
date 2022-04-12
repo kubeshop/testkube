@@ -20,3 +20,10 @@ This diagram was made with the C4 diagram technique
 #### **API**
 
 ![API](img/components_api.png)
+
+### TestSuites and Tests
+
+Params passing through tests suites and tests
+
+
+![params passing](img/params_passing.png)
