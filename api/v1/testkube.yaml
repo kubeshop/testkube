@@ -1002,6 +1002,16 @@ components:
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+          description: Steps to run
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+          description: Run this step after whole suite
         labels:
           type: object
           description: "test suite labels"
@@ -1013,19 +1023,17 @@ components:
         schedule:
           type: string
           description: schedule to run test suite
-        steps:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestSuiteStep"
-          description: Steps to run
-        after:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestSuiteStep"
-          description: Run this step after whole suite
         repeats:
           type: integer
           default: 1
+        params:
+          type: object
+          description: "default test suite params can be overriden by execution params"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
 
     TestSuiteStepType:
       type: string
@@ -1251,6 +1259,14 @@ components:
         schedule:
           type: string
           description: schedule to run test
+        params:
+          type: object
+          description: "default test params can be overriden by execution params or by test suite params"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
 
     TestContent:
       type: object

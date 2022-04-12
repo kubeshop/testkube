@@ -304,13 +304,7 @@ func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
 			}
 
-			return c.JSON(testkube.TestSuiteExecution{
-				TestSuite: &testkube.ObjectRef{
-					Name:      name,
-					Namespace: namespace,
-				},
-				Status: testkube.TestSuiteExecutionStatusQueued,
-			})
+			return c.JSON(testkube.NewQueuedTestSuiteExecution(name, namespace))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
@@ -371,7 +365,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 	testExecution = testkube.NewStartedTestSuiteExecution(test, request)
 	s.TestExecutionResults.Insert(ctx, testExecution)
 
-	go func(testExecution testkube.TestSuiteExecution) {
+	go func(testsuiteExecution testkube.TestSuiteExecution) {
 
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
@@ -382,37 +376,37 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			if err != nil {
 				s.Log.Errorw("error setting end time", "error", err.Error())
 			}
-		}(&testExecution)
+		}(&testsuiteExecution)
 
 		hasFailedSteps := false
-		for i := range testExecution.StepResults {
+		for i := range testsuiteExecution.StepResults {
 
 			// start execution of given step
-			testExecution.StepResults[i].Execution.ExecutionResult.InProgress()
-			s.TestExecutionResults.Update(ctx, testExecution)
+			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
+			s.TestExecutionResults.Update(ctx, testsuiteExecution)
 
-			s.executeTestStep(ctx, testExecution, &testExecution.StepResults[i])
-			err := s.TestExecutionResults.Update(ctx, testExecution)
+			s.executeTestStep(ctx, testsuiteExecution, &testsuiteExecution.StepResults[i])
+			err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
 			if err != nil {
 				hasFailedSteps = true
 				s.Log.Errorw("saving test suite execution results error", "error", err)
 				continue
 			}
 
-			if testExecution.StepResults[i].IsFailed() {
+			if testsuiteExecution.StepResults[i].IsFailed() {
 				hasFailedSteps = true
-				if testExecution.StepResults[i].Step.StopTestOnFailure {
+				if testsuiteExecution.StepResults[i].Step.StopTestOnFailure {
 					break
 				}
 			}
 		}
 
-		testExecution.Status = testkube.TestSuiteExecutionStatusPassed
+		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		if hasFailedSteps {
-			testExecution.Status = testkube.TestSuiteExecutionStatusFailed
+			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		}
 
-		err := s.TestExecutionResults.Update(ctx, testExecution)
+		err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
 		if err != nil {
 			s.Log.Errorw("saving final test suite execution result error", "error", err)
 		}
@@ -423,11 +417,11 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 
 }
 
-func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
+func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
 
 	var testSuiteName string
-	if testExecution.TestSuite != nil {
-		testSuiteName = testExecution.TestSuite.Name
+	if testsuiteExecution.TestSuite != nil {
+		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
 	step := result.Step
@@ -441,7 +435,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 		options, err := s.GetExecuteOptions(executeTestStep.Namespace, executeTestStep.Name, testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
 			Namespace: executeTestStep.Namespace,
-			Params:    testExecution.Params,
+			Params:    testsuiteExecution.Params,
 		})
 
 		if err != nil {
@@ -449,7 +443,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testExecution testkube
 			return
 		}
 
-		l.Debug("executing test", "params", testExecution.Params)
+		l.Debug("executing test", "params", testsuiteExecution.Params)
 		options.Sync = true
 		execution := s.executeTest(ctx, options)
 		result.Execution = &execution
@@ -577,6 +571,7 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),
 			Schedule:    request.Schedule,
+			Params:      request.Params,
 		},
 	}
 }

@@ -8,6 +8,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
+	return TestSuiteExecution{
+		TestSuite: &ObjectRef{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Status: TestSuiteExecutionStatusQueued,
+	}
+}
+
 func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 	testExecution := TestSuiteExecution{
 		Id:        primitive.NewObjectID().Hex(),
