@@ -26,10 +26,12 @@ func NewGetTestSuiteCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			if len(args) > 0 {
+				ui.NL()
 				name := args[0]
 				testSuite, err := client.GetTestSuiteWithExecution(name)
 				ui.ExitOnError("getting test suite "+name, err)
 				if testSuite.TestSuite != nil {
+					ui.Info("Test Suite:")
 					err = render.Obj(cmd, *testSuite.TestSuite, os.Stdout, renderer.TestSuiteRenderer)
 					ui.ExitOnError("rendering obj", err)
 				}
