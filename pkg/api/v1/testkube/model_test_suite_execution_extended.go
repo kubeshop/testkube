@@ -8,20 +8,35 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewStartedTestSuiteExecution(test TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
+func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
+	return TestSuiteExecution{
+		TestSuite: &ObjectRef{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Status: TestSuiteExecutionStatusQueued,
+	}
+}
+
+func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 	testExecution := TestSuiteExecution{
 		Id:        primitive.NewObjectID().Hex(),
 		StartTime: time.Now(),
-		Name:      fmt.Sprintf("%s.%s", test.Name, rand.Name()),
+		Name:      fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
 		Status:    TestSuiteExecutionStatusRunning,
-		Params:    request.Params,
-		TestSuite: test.GetObjectRef(),
+		Params:    testSuite.Params,
+		TestSuite: testSuite.GetObjectRef(),
 		Labels:    request.Labels,
 	}
 
+	// override params from request
+	for k, v := range request.Params {
+		testExecution.Params[k] = v
+	}
+
 	// add queued execution steps
-	steps := append(test.Before, test.Steps...)
-	steps = append(steps, test.After...)
+	steps := append(testSuite.Before, testSuite.Steps...)
+	steps = append(steps, testSuite.After...)
 
 	for i := range steps {
 		testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&steps[i]))

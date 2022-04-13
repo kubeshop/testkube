@@ -19,6 +19,7 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 			Type_:    request.Type_,
 			Content:  MapContentToSpecContent(request.Content),
 			Schedule: request.Schedule,
+			Params:   request.Params,
 		},
 	}
 

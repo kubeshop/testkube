@@ -18,13 +18,15 @@ type TestSuiteUpsertRequest struct {
 	Description string `json:"description,omitempty"`
 	// Run this step before whole suite
 	Before []TestSuiteStep `json:"before,omitempty"`
+	// Steps to run
+	Steps []TestSuiteStep `json:"steps"`
+	// Run this step after whole suite
+	After []TestSuiteStep `json:"after,omitempty"`
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite
 	Schedule string `json:"schedule,omitempty"`
-	// Steps to run
-	Steps []TestSuiteStep `json:"steps"`
-	// Run this step after whole suite
-	After   []TestSuiteStep `json:"after,omitempty"`
-	Repeats int32           `json:"repeats,omitempty"`
+	Repeats  int32  `json:"repeats,omitempty"`
+	// default test suite params can be overriden by execution params
+	Params map[string]string `json:"params,omitempty"`
 }
