@@ -36,6 +36,8 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Namespace = s.Namespace
 
+		s.Log.Infow("creating test suite", "testSuite", testSuite)
+
 		created, err := s.TestsSuitesClient.Create(&testSuite)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)

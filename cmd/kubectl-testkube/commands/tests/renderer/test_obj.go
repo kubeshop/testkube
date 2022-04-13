@@ -19,6 +19,13 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
 	ui.Warn("Schedule: ", test.Schedule)
 
+	if len(test.Params) > 0 {
+		ui.Warn("Params: ")
+		for k, v := range test.Params {
+			ui.Info(k, v)
+		}
+	}
+
 	if test.Content != nil {
 		ui.NL()
 		ui.Info("Content")

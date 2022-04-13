@@ -18,6 +18,13 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
 	ui.Warn("Schedule: ", ts.Schedule)
 
+	if len(ts.Params) > 0 {
+		ui.Warn("Params: ")
+		for k, v := range ts.Params {
+			ui.Info(k, v)
+		}
+	}
+
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)
 

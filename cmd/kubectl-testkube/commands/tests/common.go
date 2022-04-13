@@ -173,6 +173,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	if err != nil {
 		return options, err
 	}
+	params, err := cmd.Flags().GetStringToString("param")
+	if err != nil {
+		return options, err
+	}
 
 	schedule := cmd.Flag("schedule").Value.String()
 	options = apiclientv1.UpsertTestOptions{
@@ -181,6 +185,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		Content:   content,
 		Namespace: namespace,
 		Schedule:  schedule,
+		Params:    params,
 	}
 
 	// if labels are passed and are different from the existing overwrite
