@@ -348,10 +348,16 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
 	testCR, err := s.TestsClient.Get(id)
-
 	if err != nil {
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
+
+	// Test params lowest priority, then test suite, then test suite execution / test execution
+	params := testCR.Spec.Params
+	for k, v := range request.Params {
+		params[k] = v
+	}
+	request.Params = params
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)

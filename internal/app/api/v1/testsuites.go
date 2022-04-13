@@ -359,11 +359,11 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, test testkube.TestSuite) (testExecution testkube.TestSuiteExecution) {
-	s.Log.Debugw("Got test to execute", "test", test)
+func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, testSuite testkube.TestSuite) (testSuiteExecution testkube.TestSuiteExecution) {
+	s.Log.Debugw("Got test to execute", "test", testSuite)
 
-	testExecution = testkube.NewStartedTestSuiteExecution(test, request)
-	s.TestExecutionResults.Insert(ctx, testExecution)
+	testSuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
+	s.TestExecutionResults.Insert(ctx, testSuiteExecution)
 
 	go func(testsuiteExecution testkube.TestSuiteExecution) {
 
@@ -386,6 +386,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.TestExecutionResults.Update(ctx, testsuiteExecution)
 
 			s.executeTestStep(ctx, testsuiteExecution, &testsuiteExecution.StepResults[i])
+
 			err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
 			if err != nil {
 				hasFailedSteps = true
@@ -411,7 +412,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.Log.Errorw("saving final test suite execution result error", "error", err)
 		}
 
-	}(testExecution)
+	}(testSuiteExecution)
 
 	return
 

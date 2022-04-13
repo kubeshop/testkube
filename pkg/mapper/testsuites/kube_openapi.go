@@ -35,6 +35,7 @@ func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Repeats = int32(cr.Spec.Repeats)
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
+	test.Params = cr.Spec.Params
 
 	return
 }
