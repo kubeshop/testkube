@@ -16,13 +16,17 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Name:     ", test.Name)
 	ui.Warn("Namespace:", test.Name)
 	ui.Warn("Created:  ", test.Created.String())
-	ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
-	ui.Warn("Schedule: ", test.Schedule)
+	if len(test.Labels) > 0 {
+		ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
+	}
+	if test.Schedule != "" {
+		ui.Warn("Schedule: ", test.Schedule)
+	}
 
 	if len(test.Params) > 0 {
 		ui.Warn("Params: ")
 		for k, v := range test.Params {
-			ui.Info(k, v)
+			ui.Info("- "+k, v)
 		}
 	}
 

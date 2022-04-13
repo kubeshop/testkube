@@ -21,7 +21,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	if len(ts.Params) > 0 {
 		ui.Warn("Params: ")
 		for k, v := range ts.Params {
-			ui.Info(k, v)
+			ui.Info("- "+k, v)
 		}
 	}
 

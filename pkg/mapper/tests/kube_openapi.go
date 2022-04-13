@@ -22,6 +22,7 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Created = crTest.CreationTimestamp.Time
 	test.Type_ = crTest.Spec.Type_
 	test.Labels = crTest.Labels
+	test.Params = crTest.Spec.Params
 	test.Schedule = crTest.Spec.Schedule
 	return
 }
