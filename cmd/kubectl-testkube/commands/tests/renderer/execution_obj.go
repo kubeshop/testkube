@@ -43,7 +43,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	switch true {
 	case result.IsQueued():
-		ui.Warn("Test queued for execution")
+		ui.Warn("Status", "test queued for execution")
 
 	case result.IsRunning():
 		ui.Warn("Test execution started")
@@ -51,10 +51,16 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	case result.IsPassed():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with success in " + duration.String())
+		ui.Success("Status", "Test execution completed with success in "+duration.String())
 
 	case result.IsFailed():
-		ui.Warn("Test test execution failed:\n")
+		ui.Warn("Status", "test execution failed:\n")
+		ui.Errf(result.ErrorMessage)
+		ui.Info(result.Output)
+		os.Exit(1)
+
+	default:
+		ui.Warn("Status", "test execution status unknown:\n")
 		ui.Errf(result.ErrorMessage)
 		ui.Info(result.Output)
 		os.Exit(1)
