@@ -129,6 +129,32 @@ When the Docker build completes, register the custom executor using the Testkube
 kubectl testkube create executor --image YOUR_USER/testkube-executor-example:1.0.0 --types "example/test" --name example-executor
 ```
 
+An example Executor custom resource deployed by Testkube would look the following in yaml:
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: example-executor
+  namespace: testkube
+spec:
+  executor_type: job  
+  # 'job' is currently the only type for custom executors
+  image: YOUR_USER/testkube-executor-example:1.0.0 
+  # pass your repository and tag
+  types:
+  - example/test      
+  # your custom type registered (used when creating and running your testkube tests)
+  content_types:
+  - string             # test content as string 
+  - file-uri           # http based file content
+  - git-file           # file stored in Git
+  - git-dir            # entire dir/project stored in Git
+  features: 
+  - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
+  - junit-report       # executor can have junit xml based results
+```
+
 Finally, create and run your custom tests by passing `URI` as the test content:
 
 ```sh
