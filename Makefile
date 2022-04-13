@@ -135,7 +135,8 @@ release:
 	go run cmd/tools/main.go release -a $(CHART_NAME)
 
 video: 
-	gource \    -s .5 \
+	gource \
+		-s .5 \
 		-1280x720 \
 		--auto-skip-seconds .1 \
 		--multi-sampling \
@@ -148,9 +149,10 @@ video:
 		--max-files 0  \
 		--background-colour 000000 \
 		--font-size 25 \
-		--output-ppm-stream - \
-		--output-framerate 30 \
-		| ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i - -b 65536K movie.mp4
+		--output-ppm-stream stream.out \
+		--output-framerate 30 
+
+	ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
 
 
 port-forward-minio:

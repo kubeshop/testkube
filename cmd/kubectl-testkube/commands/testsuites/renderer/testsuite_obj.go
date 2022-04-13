@@ -15,13 +15,28 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 
 	ui.Warn("Name:     ", ts.Name)
 	ui.Warn("Namespace:", ts.Namespace)
-	ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
-	ui.Warn("Schedule: ", ts.Schedule)
+	if len(ts.Labels) > 0 {
+		ui.NL()
+		ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
+	}
+	if ts.Schedule != "" {
+		ui.NL()
+		ui.Warn("Schedule: ", ts.Schedule)
+	}
+
+	if len(ts.Params) > 0 {
+		ui.NL()
+		ui.Warn("Params: ", fmt.Sprintf("%d", len(ts.Params)))
+		for k, v := range ts.Params {
+			ui.Info("- "+k, v)
+		}
+	}
 
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)
 
-	ui.Warn("Test steps:   ", fmt.Sprintf("%d", len(steps)))
+	ui.NL()
+	ui.Warn("Test steps:", fmt.Sprintf("%d", len(steps)))
 	d := [][]string{{"Name", "Stop on failure", "Type"}}
 	for _, step := range steps {
 		d = append(d, []string{
@@ -32,6 +47,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	}
 
 	ui.Table(ui.NewArrayTable(d), ui.Writer)
+	ui.NL()
 
 	return nil
 

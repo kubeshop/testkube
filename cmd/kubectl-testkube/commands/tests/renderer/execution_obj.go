@@ -15,11 +15,25 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	}
 	result := execution.ExecutionResult
 
-	ui.Warn("ID:      ", execution.Id)
-	ui.Warn("Name:    ", execution.Name)
-	ui.Warn("Args:    ", execution.Args...)
-	ui.Warn("Duration:", execution.Duration)
-	ui.Warn("Labels:  ", testkube.LabelsToString(execution.Labels))
+	ui.Warn("ID:       ", execution.Id)
+	ui.Warn("Name:     ", execution.Name)
+	ui.Warn("Type:     ", execution.TestType)
+	ui.Warn("Duration: ", execution.Duration)
+
+	if len(execution.Labels) > 0 {
+		ui.Warn("Labels:   ", testkube.LabelsToString(execution.Labels))
+	}
+
+	if len(execution.Params) > 0 {
+		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Params)))
+		for k, v := range execution.Params {
+			ui.Info("- "+k, v)
+		}
+	}
+
+	if len(execution.Args) > 0 {
+		ui.Warn("Args:    ", execution.Args...)
+	}
 
 	if result == nil {
 		return fmt.Errorf("got execution without `Result`")
@@ -29,7 +43,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	switch true {
 	case result.IsQueued():
-		ui.Warn("Test queued for execution")
+		ui.Warn("Status", "test queued for execution")
 
 	case result.IsRunning():
 		ui.Warn("Test execution started")
@@ -37,10 +51,16 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	case result.IsPassed():
 		ui.Info(result.Output)
 		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with success in " + duration.String())
+		ui.Success("Status", "Test execution completed with success in "+duration.String())
 
 	case result.IsFailed():
-		ui.Warn("Test test execution failed:\n")
+		ui.Warn("Status", "test execution failed:\n")
+		ui.Errf(result.ErrorMessage)
+		ui.Info(result.Output)
+		os.Exit(1)
+
+	default:
+		ui.Warn("Status", "test execution status unknown:\n")
 		ui.Errf(result.ErrorMessage)
 		ui.Info(result.Output)
 		os.Exit(1)

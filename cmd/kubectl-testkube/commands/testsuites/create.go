@@ -19,6 +19,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		name     string
 		file     string
 		labels   map[string]string
+		params   map[string]string
 		schedule string
 	)
 
@@ -64,6 +65,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			}
 
 			options.Labels = labels
+			options.Params = params
 			options.Schedule = cmd.Flag("schedule").Value.String()
 
 			err = validateSchedule(options.Schedule)
@@ -78,6 +80,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest")
 	cmd.Flags().StringVar(&name, "name", "", "Set/Override test suite name")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringToStringVarP(&params, "param", "p", nil, "param key value pair: --param key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
 
 	return cmd
