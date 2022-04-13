@@ -15,11 +15,25 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	}
 	result := execution.ExecutionResult
 
-	ui.Warn("ID:      ", execution.Id)
-	ui.Warn("Name:    ", execution.Name)
-	ui.Warn("Args:    ", execution.Args...)
-	ui.Warn("Duration:", execution.Duration)
-	ui.Warn("Labels:  ", testkube.LabelsToString(execution.Labels))
+	ui.Warn("ID:       ", execution.Id)
+	ui.Warn("Name:     ", execution.Name)
+	ui.Warn("Type:     ", execution.TestType)
+	ui.Warn("Duration: ", execution.Duration)
+
+	if len(execution.Labels) > 0 {
+		ui.Warn("Labels:   ", testkube.LabelsToString(execution.Labels))
+	}
+
+	if len(execution.Params) > 0 {
+		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Params)))
+		for k, v := range execution.Params {
+			ui.Info("- "+k, v)
+		}
+	}
+
+	if len(execution.Args) > 0 {
+		ui.Warn("Args:    ", execution.Args...)
+	}
 
 	if result == nil {
 		return fmt.Errorf("got execution without `Result`")

@@ -22,6 +22,12 @@ func printExecutionDetails(execution testkube.Execution) {
 		ui.Warn("Execution ID  :", execution.Id)
 		ui.Warn("Execution name:", execution.Name)
 	}
+	if len(execution.Params) > 0 {
+		ui.Warn("Params        :", fmt.Sprintf("%d", len(execution.Params)))
+		for k, v := range execution.Params {
+			ui.Info("- "+k, v)
+		}
+	}
 	ui.NL()
 	ui.NL()
 }
