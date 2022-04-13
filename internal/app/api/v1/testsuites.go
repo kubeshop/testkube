@@ -359,11 +359,11 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, testSuite testkube.TestSuite) (testSuiteExecution testkube.TestSuiteExecution) {
+func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, testSuite testkube.TestSuite) (testsuiteExecution testkube.TestSuiteExecution) {
 	s.Log.Debugw("Got test to execute", "test", testSuite)
 
-	testSuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
-	s.TestExecutionResults.Insert(ctx, testSuiteExecution)
+	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
+	s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 
 	go func(testsuiteExecution testkube.TestSuiteExecution) {
 
@@ -412,7 +412,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 			s.Log.Errorw("saving final test suite execution result error", "error", err)
 		}
 
-	}(testSuiteExecution)
+	}(testsuiteExecution)
 
 	return
 
