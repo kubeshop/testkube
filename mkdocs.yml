@@ -58,6 +58,7 @@ nav:
       - Version Command: cli/kubectl-testkube_version.md
       - Watch Command: cli/kubectl-testkube_watch.md
   - Integrating with CI/CD: testkube-automation.md
+  - Scheduling: scheduling.md
   - Dashboard: dashboard.md
   - Metrics: metrics.md
   - Architecture: architecture.md
