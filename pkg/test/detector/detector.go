@@ -6,6 +6,7 @@ func NewDefaultDetector() Detector {
 	d := Detector{}
 	d.Add(PostmanCollectionAdapter{})
 	d.Add(CurlTestAdapter{})
+	d.Add(K6Adapter{})
 	return d
 }
 
