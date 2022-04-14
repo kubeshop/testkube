@@ -55,19 +55,23 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use:   "kubectl-testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
-	Run: func(cmd *cobra.Command, args []string) {
-		ui.Logo()
-		cmd.Usage()
-		cmd.DisableAutoGenTag = true
-	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.Verbose = verbose
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			analytics.SendAnonymouscmdInfo()
+			err := analytics.SendAnonymouscmdInfo(cmd)
+			if ui.Verbose && err != nil {
+				ui.Err(err)
+			}
 		}
+	},
+
+	Run: func(cmd *cobra.Command, args []string) {
+		ui.Logo()
+		cmd.Usage()
+		cmd.DisableAutoGenTag = true
 	},
 }
 
