@@ -353,11 +353,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}
 
 	// Test params lowest priority, then test suite, then test suite execution / test execution
-	params := testCR.Spec.Params
-	for k, v := range request.Params {
-		params[k] = v
-	}
-	request.Params = params
+	request.Params = mergeParams(testCR.Spec.Params, request.Params)
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -373,6 +369,18 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
 	}, nil
+}
+
+func mergeParams(params map[string]string, appendParams map[string]string) map[string]string {
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	for k, v := range appendParams {
+		params[k] = v
+	}
+
+	return params
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
