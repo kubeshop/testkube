@@ -27,8 +27,10 @@ export default function () {
 Testkube and the K6 executor accepts a test file as an input.
 
 ```sh
-kubectl testkube create test --file test.js --type "k6/script" --name k6-test
+kubectl testkube create test --file test.js --name k6-test
 ```
+you don't need to pass a type here Testkube will autodetect it. 
+
 
 To run test just pass previously created test name: 
 
