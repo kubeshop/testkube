@@ -56,21 +56,29 @@ const invalidK6Script = `describe('The Home Page', () => {
 func TestK6Adapter(t *testing.T) {
 
 	t.Run("detect valid k6 script", func(t *testing.T) {
+		// given
 		a := K6Adapter{}
+
+		// when
 		name, ok := a.Is(apiClient.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(validK6Script),
 		})
 
+		// then
 		assert.True(t, ok, "K6Adapter should detect valid script")
 		assert.Equal(t, "k6/script", name)
 	})
 
 	t.Run("ignore invalid k6 script", func(t *testing.T) {
+		// given
 		a := K6Adapter{}
+
+		// when
 		name, ok := a.Is(apiClient.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(invalidK6Script),
 		})
 
+		// then
 		assert.False(t, ok, "K6Adapter should detect valid script")
 		assert.Empty(t, name)
 	})
