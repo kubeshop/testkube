@@ -53,7 +53,7 @@ We have plans to build installers for the most popular Operating Systems and sys
 
 ## **Install Testkube Components in Your Cluster**
 
-The Testkube kubectl plugin provides an install command to install Testkube in your cluster.
+The Testkube kubectl plugin provides an install command to install Testkube in your cluster. Note: you must have helm installed
 
 Run:
 
