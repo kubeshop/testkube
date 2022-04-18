@@ -1,6 +1,7 @@
 package testresult
 
 import (
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -10,7 +11,7 @@ type filter struct {
 	name       string
 	startDate  *time.Time
 	endDate    *time.Time
-	status     *testkube.ExecutionStatus
+	statuses   []testkube.TestSuiteExecutionStatus
 	page       int
 	pageSize   int
 	textSearch string
@@ -37,8 +38,12 @@ func (f *filter) WithEndDate(date time.Time) *filter {
 	return f
 }
 
-func (f *filter) WithStatus(status testkube.ExecutionStatus) *filter {
-	f.status = &status
+func (f *filter) WithStatus(status string) *filter {
+	values := strings.Split(status, ",")
+	for _, value := range values {
+		f.statuses = append(f.statuses, testkube.TestSuiteExecutionStatus(value))
+	}
+
 	return f
 }
 
@@ -86,12 +91,12 @@ func (f filter) EndDate() time.Time {
 	return *f.endDate
 }
 
-func (f filter) StatusDefined() bool {
-	return f.status != nil
+func (f filter) StatusesDefined() bool {
+	return len(f.statuses) != 0
 }
 
-func (f filter) Status() testkube.ExecutionStatus {
-	return *f.status
+func (f filter) Statuses() []testkube.TestSuiteExecutionStatus {
+	return f.statuses
 }
 
 func (f filter) Page() int {

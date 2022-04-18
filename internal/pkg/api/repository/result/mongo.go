@@ -232,18 +232,19 @@ func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime t
 
 func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	query := bson.M{}
+	conditions := bson.A{}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
 
 	if filter.TextSearchDefined() {
-		query["$or"] = bson.A{
+		conditions = append(conditions, bson.M{"$or": bson.A{
 			bson.M{"testname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
-		}
+		}})
 	}
 
 	if filter.TestNameDefined() {
-		query["testname"] = filter.TestName()
+		conditions = append(conditions, bson.M{"testname": filter.TestName()})
 	}
 
 	if filter.StartDateDefined() {
@@ -255,11 +256,21 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if len(startTimeQuery) > 0 {
-		query["starttime"] = startTimeQuery
+		conditions = append(conditions, bson.M{"starttime": startTimeQuery})
 	}
 
-	if filter.StatusDefined() {
-		query["executionresult.status"] = filter.Status()
+	if filter.StatusesDefined() {
+		statuses := filter.Statuses()
+		if len(statuses) == 1 {
+			conditions = append(conditions, bson.M{"executionresult.status": statuses[0]})
+		} else {
+			expressions := bson.A{}
+			for _, status := range statuses {
+				expressions = append(expressions, bson.M{"executionresult.status": status})
+			}
+
+			conditions = append(conditions, bson.M{"$or": expressions})
+		}
 	}
 
 	if filter.Selector() != "" {
@@ -267,20 +278,24 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		for _, item := range items {
 			elements := strings.Split(item, "=")
 			if len(elements) == 2 {
-				query["labels."+elements[0]] = elements[1]
+				conditions = append(conditions, bson.M{"labels." + elements[0]: elements[1]})
 			} else if len(elements) == 1 {
-				query["labels."+elements[0]] = bson.M{"$exists": true}
+				conditions = append(conditions, bson.M{"labels." + elements[0]: bson.M{"$exists": true}})
 			}
 		}
 	}
 
 	if filter.TypeDefined() {
-		query["testtype"] = filter.Type()
+		conditions = append(conditions, bson.M{"testtype": filter.Type()})
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{"starttime", -1}})
+
+	if len(conditions) > 0 {
+		query = bson.M{"$and": conditions}
+	}
 
 	return query, opts
 }

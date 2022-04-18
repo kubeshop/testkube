@@ -128,7 +128,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
-        - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/TestExecutionsStatusFilter"
       responses:
         200:
           description: successful operation
@@ -1899,14 +1899,14 @@ components:
       name: status
       schema:
         $ref: "#/components/schemas/TestSuiteExecutionStatus"
-      description: optional status filter
+      description: optional status filter containing multiple values sepaarted by comma
       required: false
     ExecutionsStatusFilter:
       in: query
       name: status
       schema:
         $ref: "#/components/schemas/ExecutionStatus"
-      description: optional status filter
+      description: optional status filter containing multiple values sepaarted by comma
       required: false
     Selector:
       in: query
