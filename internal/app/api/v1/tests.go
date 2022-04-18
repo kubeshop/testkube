@@ -150,18 +150,18 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			for _, value := range values {
 				statusMap[testkube.ExecutionStatus(value)] = struct{}{}
 			}
-		}
 
-		// filter items array
-		for i := len(testWithExecutions) - 1; i >= 0; i-- {
-			if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
-				testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil {
-				if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok || len(statusMap) == 0 {
-					continue
+			// filter items array
+			for i := len(testWithExecutions) - 1; i >= 0; i-- {
+				if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
+					testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil {
+					if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok {
+						continue
+					}
 				}
-			}
 
-			testWithExecutions = append(testWithExecutions[:i], testWithExecutions[i+1:]...)
+				testWithExecutions = append(testWithExecutions[:i], testWithExecutions[i+1:]...)
+			}
 		}
 
 		return c.JSON(testWithExecutions)

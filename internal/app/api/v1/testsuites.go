@@ -259,17 +259,17 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			for _, value := range values {
 				statusMap[testkube.TestSuiteExecutionStatus(value)] = struct{}{}
 			}
-		}
 
-		// filter items array
-		for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
-			if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
-				if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok || len(statusMap) == 0 {
-					continue
+			// filter items array
+			for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
+				if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
+					if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok {
+						continue
+					}
 				}
-			}
 
-			testSuiteWithExecutions = append(testSuiteWithExecutions[:i], testSuiteWithExecutions[i+1:]...)
+				testSuiteWithExecutions = append(testSuiteWithExecutions[:i], testSuiteWithExecutions[i+1:]...)
+			}
 		}
 
 		return c.JSON(testSuiteWithExecutions)
