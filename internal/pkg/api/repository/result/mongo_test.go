@@ -85,7 +85,7 @@ func TestStorage(t *testing.T) {
 		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
 	})
 
-	t.Run("filter with different statuses should return only executions with those statusws", func(t *testing.T) {
+	t.Run("filter with different statuses should return only executions with those statuses", func(t *testing.T) {
 
 		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(
 			string(testkube.FAILED_ExecutionStatus)+","+string(testkube.PASSED_ExecutionStatus)))
