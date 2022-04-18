@@ -264,7 +264,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		// filter items array
 		for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
 			if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
-				if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok {
+				if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok || len(statusMap) == 0 {
 					continue
 				}
 			}

@@ -156,7 +156,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		for i := len(testWithExecutions) - 1; i >= 0; i-- {
 			if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
 				testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil {
-				if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok {
+				if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok || len(statusMap) == 0 {
 					continue
 				}
 			}
