@@ -253,13 +253,13 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		status := c.Query("status")
-		statusMap := make(map[testkube.TestSuiteExecutionStatus]struct{})
 		if status != "" {
-			values := strings.Split(status, ",")
-			for _, value := range values {
-				statusMap[testkube.TestSuiteExecutionStatus(value)] = struct{}{}
+			statusList, err := testkube.ParseTestSuiteExecutionStatusList(status, ",")
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite execution status filter invalid: %w", err))
 			}
 
+			statusMap := statusList.ToMap()
 			// filter items array
 			for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
 				if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
@@ -493,7 +493,7 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	status := c.Query("status", "")
 	if status != "" {
-		filter = filter.WithStatus(status)
+		filter, err = filter.WithStatus(status)
 	}
 
 	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))

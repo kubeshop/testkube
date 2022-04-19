@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -144,13 +145,13 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		status := c.Query("status")
-		statusMap := make(map[testkube.ExecutionStatus]struct{})
 		if status != "" {
-			values := strings.Split(status, ",")
-			for _, value := range values {
-				statusMap[testkube.ExecutionStatus(value)] = struct{}{}
+			statusList, err := testkube.ParseExecutionStatusList(status, ",")
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("execution status filter invalid: %w", err))
 			}
 
+			statusMap := statusList.ToMap()
 			// filter items array
 			for i := len(testWithExecutions) - 1; i >= 0; i-- {
 				if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
