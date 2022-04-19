@@ -493,7 +493,7 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	status := c.Query("status", "")
 	if status != "" {
-		filter, err = filter.WithStatus(status)
+		filter = filter.WithStatus(status)
 	}
 
 	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))

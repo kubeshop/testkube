@@ -38,14 +38,13 @@ func (f *filter) WithEndDate(date time.Time) *filter {
 	return f
 }
 
-func (f *filter) WithStatus(status string) (*filter, error) {
+func (f *filter) WithStatus(status string) *filter {
 	statuses, err := testkube.ParseExecutionStatusList(status, ",")
-	if err != nil {
-		return f, err
+	if err == nil {
+		f.statuses = statuses
 	}
 
-	f.statuses = statuses
-	return f, nil
+	return f
 }
 
 func (f *filter) WithPage(page int) *filter {
