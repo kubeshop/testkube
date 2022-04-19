@@ -67,8 +67,8 @@ func SendAnonymousInfo() {
 	}
 }
 
-// SendAnonymouscmdInfo will send CLI event to GA
-func SendAnonymouscmdInfo(cmd *cobra.Command) error {
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousCmdInfo(cmd *cobra.Command) error {
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -92,6 +92,25 @@ func SendAnonymouscmdInfo(cmd *cobra.Command) error {
 					AppVersion:       commands.Version,
 					AppName:          "testkube",
 					CustomDimensions: strings.Join(args, " "),
+				},
+			}},
+	}
+
+	return sendDataToGA(payload)
+}
+
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousAPIInfo(path string) error {
+	payload := Payload{
+		ClientID: MachineID(),
+		Events: []Event{
+			{
+				Name: path,
+				Params: Params{
+					EventCount:    1,
+					EventCategory: "execution",
+					AppVersion:    commands.Version,
+					AppName:       "testkube",
 				},
 			}},
 	}
