@@ -302,7 +302,7 @@ Where **examples** is a test directory in the `https://github.com/kubeshop/testk
 Now we can create our Cypress based script (in Git based scripts we need to pass the script type)
 
 ```sh
-kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Output:
