@@ -79,14 +79,22 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 		assert.NoError(err)
 		assert.Len(executions, 12)
 		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
 	})
 
+	t.Run("filter with different statuses should return only executions with those statuses", func(t *testing.T) {
+
+		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(
+			string(testkube.FAILED_ExecutionStatus)+","+string(testkube.PASSED_ExecutionStatus)))
+		assert.NoError(err)
+		assert.Len(executions, 15)
+	})
+
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(testkube.FAILED_ExecutionStatus))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
@@ -184,7 +192,7 @@ func TestStorage(t *testing.T) {
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
 		filter := NewExecutionsFilter().
-			WithStatus(testkube.PASSED_ExecutionStatus).
+			WithStatus(string(testkube.PASSED_ExecutionStatus)).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
 			WithTestName(defaultName)
@@ -197,7 +205,7 @@ func TestStorage(t *testing.T) {
 
 	t.Run("getting totals with ccombined filter should return corresponding results", func(t *testing.T) {
 		filter := NewExecutionsFilter().
-			WithStatus(testkube.PASSED_ExecutionStatus).
+			WithStatus(string(testkube.PASSED_ExecutionStatus)).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
 			WithTestName(defaultName)

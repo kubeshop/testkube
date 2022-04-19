@@ -213,6 +213,20 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["starttime"] = startTimeQuery
 	}
 
+	if filter.StatusesDefined() {
+		statuses := filter.Statuses()
+		if len(statuses) == 1 {
+			query["status"] = statuses[0]
+		} else {
+			var conditions bson.A
+			for _, status := range statuses {
+				conditions = append(conditions, bson.M{"status": status})
+			}
+
+			query["$or"] = conditions
+		}
+	}
+
 	if filter.Selector() != "" {
 		items := strings.Split(filter.Selector(), ",")
 		for _, item := range items {
