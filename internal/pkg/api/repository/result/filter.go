@@ -10,7 +10,7 @@ type filter struct {
 	testName   string
 	startDate  *time.Time
 	endDate    *time.Time
-	status     *testkube.ExecutionStatus
+	statuses   testkube.ExecutionStatuses
 	page       int
 	pageSize   int
 	textSearch string
@@ -38,8 +38,12 @@ func (f *filter) WithEndDate(date time.Time) *filter {
 	return f
 }
 
-func (f *filter) WithStatus(status testkube.ExecutionStatus) *filter {
-	f.status = &status
+func (f *filter) WithStatus(status string) *filter {
+	statuses, err := testkube.ParseExecutionStatusList(status, ",")
+	if err == nil {
+		f.statuses = statuses
+	}
+
 	return f
 }
 
@@ -91,12 +95,12 @@ func (f filter) EndDate() time.Time {
 	return *f.endDate
 }
 
-func (f filter) StatusDefined() bool {
-	return f.status != nil
+func (f filter) StatusesDefined() bool {
+	return len(f.statuses) != 0
 }
 
-func (f filter) Status() testkube.ExecutionStatus {
-	return *f.status
+func (f filter) Statuses() testkube.ExecutionStatuses {
+	return *&f.statuses
 }
 
 func (f filter) Page() int {

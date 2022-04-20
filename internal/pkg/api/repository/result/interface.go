@@ -17,8 +17,8 @@ type Filter interface {
 	StartDateDefined() bool
 	EndDate() time.Time
 	EndDateDefined() bool
-	Status() testkube.ExecutionStatus
-	StatusDefined() bool
+	Statuses() testkube.ExecutionStatuses
+	StatusesDefined() bool
 	Page() int
 	PageSize() int
 	TextSearchDefined() bool

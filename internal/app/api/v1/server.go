@@ -288,7 +288,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
 	status := c.Query("status", "")
 	if status != "" {
-		filter = filter.WithStatus(testkube.ExecutionStatus(status))
+		filter = filter.WithStatus(status)
 	}
 
 	objectType := c.Query("type", "")
