@@ -43,6 +43,7 @@ var eventNameFilter = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GAEventName(in string) string {
 	filtered := eventNameFilter.ReplaceAllString(in, "_")
+	filtered = strings.TrimLeft(filtered, "_")
 	if len(filtered) > 40 {
 		return filtered[:40]
 	}
