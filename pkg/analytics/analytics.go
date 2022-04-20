@@ -34,6 +34,7 @@ type Params struct {
 	AppName          string `json:"app_name,omitempty"`
 	CustomDimensions string `json:"custom_dimensions,omitempty"`
 	DataSource       string `json:"data_source,omitempty"`
+	Host             string `json:"host,omitempty"`
 }
 type Event struct {
 	Name   string `json:"name"`
@@ -108,11 +109,11 @@ func SendAnonymousAPIInfo(host, path string) (string, error) {
 			{
 				Name: text.Slug(path),
 				Params: Params{
-					EventCount:       1,
-					EventCategory:    "api-request",
-					AppVersion:       api.Version,
-					AppName:          "testkube-api-server",
-					CustomDimensions: text.Slug(host),
+					EventCount:    1,
+					EventCategory: "api-request",
+					AppVersion:    api.Version,
+					AppName:       "testkube-api-server",
+					Host:          host,
 				},
 			}},
 	}
@@ -159,7 +160,7 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}
