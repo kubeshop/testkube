@@ -54,6 +54,7 @@ func SendServerStartAnonymousInfo() (string, error) {
 	if isEnabled {
 		payload := Payload{
 			ClientID: MachineID(),
+			UserID:   MachineID(),
 			Events: []Event{
 				{
 					Name: "testkube-heartbeat",
