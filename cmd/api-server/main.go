@@ -58,7 +58,7 @@ func runMigrations() (err error) {
 
 func main() {
 
-	out, err := analytics.SendAnonymousInfo()
+	out, err := analytics.SendServerStartAnonymousInfo()
 	if err != nil {
 		ui.Debug("analytics send error", "error", err.Error())
 	}

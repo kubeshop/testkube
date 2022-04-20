@@ -40,12 +40,13 @@ type Event struct {
 	Params Params `json:"params,omitempty"`
 }
 type Payload struct {
-	ClientID string  `json:"client_id"`
-	Events   []Event `json:"events"`
+	UserID   string  `json:"user_id,omitempty"`
+	ClientID string  `json:"client_id,omitempty"`
+	Events   []Event `json:"events,omitempty"`
 }
 
-// SendAnonymousInfo will send event to GA
-func SendAnonymousInfo() (string, error) {
+// SendServerStartAnonymousInfo will send event to GA
+func SendServerStartAnonymousInfo() (string, error) {
 	var isEnabled bool
 	if val, ok := os.LookupEnv("TESTKUBE_ANALYTICS_ENABLED"); ok {
 		isEnabled, _ = strconv.ParseBool(val)
@@ -81,6 +82,7 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 
 	payload := Payload{
 		ClientID: MachineID(),
+		UserID:   MachineID(),
 		Events: []Event{
 			{
 				Name: text.Slug(command),
@@ -100,6 +102,7 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 func SendAnonymousAPIInfo(host, path string) (string, error) {
 	payload := Payload{
 		ClientID: MachineID(),
+		UserID:   MachineID(),
 		Events: []Event{
 			{
 				Name: text.Slug(path),
