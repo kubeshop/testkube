@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
@@ -114,8 +115,10 @@ func SendAnonymousAPIInfo(host, path string) (string, error) {
 	return sendDataToGA(payload)
 }
 
-func sendDataToGA(data Payload) (out string, err error) {
-	jsonData, err := json.Marshal(data)
+func sendDataToGA(payload Payload) (out string, err error) {
+	log.DefaultLogger.Debugw("sending ga payload", "payload", payload)
+
+	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return out, err
 	}
