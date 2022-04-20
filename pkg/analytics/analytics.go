@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 )
 
 var testkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
@@ -108,8 +109,8 @@ func SendAnonymousAPIInfo(path string) error {
 				Name: path,
 				Params: Params{
 					EventCount:    1,
-					EventCategory: "execution",
-					AppVersion:    commands.Version,
+					EventCategory: "api-request",
+					AppVersion:    api.Version,
 					AppName:       "testkube",
 				},
 			}},
