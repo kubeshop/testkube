@@ -12,8 +12,10 @@ import (
 	"strings"
 
 	"github.com/denisbrodbeck/machineid"
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 )
 
 var testkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
@@ -49,7 +51,7 @@ func SendAnonymousInfo() {
 		payload := Payload{
 			ClientID: MachineID(),
 			Events: []Event{
-				Event{
+				{
 					Name: "testkube-heartbeat",
 
 					Params: Params{
@@ -66,32 +68,57 @@ func SendAnonymousInfo() {
 	}
 }
 
-// SendAnonymouscmdInfo will send CLI event to GA
-func SendAnonymouscmdInfo() {
-	event := "command"
-	command := []string{}
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousCmdInfo(cmd *cobra.Command) error {
+
+	// get all sub-commands passed to cli
+	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
+	if command == "" {
+		command = "root"
+	}
+
+	args := []string{}
 	if len(os.Args) > 1 {
-		command = os.Args[1:]
-		event = command[0]
+		args = os.Args[1:]
 	}
 
 	payload := Payload{
 		ClientID: MachineID(),
 		Events: []Event{
-			Event{
-				Name: event,
+			{
+				Name: command,
 				Params: Params{
 					EventCount:       1,
 					EventCategory:    "execution",
 					AppVersion:       commands.Version,
 					AppName:          "testkube",
-					CustomDimensions: strings.Join(command, " "),
+					CustomDimensions: strings.Join(args, " "),
+					DataSource:       "kubectl-testkube",
 				},
 			}},
 	}
 
-	sendDataToGA(payload)
+	return sendDataToGA(payload)
+}
 
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousAPIInfo(path string) error {
+	payload := Payload{
+		ClientID: MachineID(),
+		Events: []Event{
+			{
+				Name: path,
+				Params: Params{
+					EventCount:    1,
+					EventCategory: "api-request",
+					AppVersion:    api.Version,
+					AppName:       "testkube",
+					DataSource:    "api-server",
+				},
+			}},
+	}
+
+	return sendDataToGA(payload)
 }
 
 func sendDataToGA(data Payload) error {
@@ -114,7 +141,7 @@ func sendDataToGA(data Payload) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 300 {
-		return fmt.Errorf("Could not POST, statusCode: %d", resp.StatusCode)
+		return fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
 	}
 	return nil
 }
