@@ -105,13 +105,13 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousAPIRequestInfo(host, path, version string) (string, error) {
+func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, error) {
 	payload := Payload{
 		ClientID: MachineID(),
 		UserID:   MachineID(),
 		Events: []Event{
 			{
-				Name: text.GAEventName(path),
+				Name: text.GAEventName(method + "_" + path),
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "api-request",
