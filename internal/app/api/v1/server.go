@@ -48,10 +48,10 @@ func NewTestkubeAPI(
 	envconfig.Process("APISERVER", &httpConfig)
 
 	// you can disable analytics tracking for API server
-	analyticsDisabledStr := os.Getenv("TESTKUBE_ANALYTICS_DISABLED")
-	analyticsDisabled, err := strconv.ParseBool(analyticsDisabledStr)
+	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
+	analyticsEnabled, err := strconv.ParseBool(analyticsEnabledStr)
 	if err != nil {
-		analyticsDisabled = false
+		analyticsEnabled = true
 	}
 
 	s := TestkubeAPI{
@@ -66,7 +66,7 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		AnalyticsEnabled:     !analyticsDisabled,
+		AnalyticsEnabled:     analyticsEnabled,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))

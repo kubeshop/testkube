@@ -93,6 +93,7 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) error {
 					AppVersion:       commands.Version,
 					AppName:          "testkube",
 					CustomDimensions: strings.Join(args, " "),
+					DataSource:       "kubectl-testkube",
 				},
 			}},
 	}
@@ -112,6 +113,7 @@ func SendAnonymousAPIInfo(path string) error {
 					EventCategory: "api-request",
 					AppVersion:    api.Version,
 					AppName:       "testkube",
+					DataSource:    "api-server",
 				},
 			}},
 	}
