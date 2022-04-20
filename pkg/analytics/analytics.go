@@ -58,7 +58,7 @@ func SendServerStartAnonymousInfo() (string, error) {
 			UserID:   MachineID(),
 			Events: []Event{
 				{
-					Name: "testkube-heartbeat",
+					Name: "testkube_heartbeat",
 					Params: Params{
 						EventCount:    1,
 						EventCategory: "beacon",
@@ -87,7 +87,7 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 		UserID:   MachineID(),
 		Events: []Event{
 			{
-				Name: text.Slug(command),
+				Name: text.GAEventName(command),
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "execution",
@@ -107,7 +107,7 @@ func SendAnonymousAPIInfo(host, path string) (string, error) {
 		UserID:   MachineID(),
 		Events: []Event{
 			{
-				Name: text.Slug(path),
+				Name: text.GAEventName(path),
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "api-request",

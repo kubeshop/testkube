@@ -1,6 +1,7 @@
 package text
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -36,4 +37,14 @@ func Slug(s string) string {
 	}
 
 	return strings.Replace(string(buf), "ł", "l", -1)
+}
+
+var eventNameFilter = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+func GAEventName(in string) string {
+	filtered := eventNameFilter.ReplaceAllString(in, "_")
+	if len(filtered) > 40 {
+		return filtered[:40]
+	}
+	return filtered
 }
