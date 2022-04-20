@@ -154,15 +154,15 @@ func (s TestkubeAPI) Init() {
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
 		s.Routes.Use(func(c *fiber.Ctx) error {
-			go func(path string) {
-				out, err := analytics.SendAnonymousAPIInfo(path)
+			go func(host, path string) {
+				out, err := analytics.SendAnonymousAPIInfo(host, path)
 				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", analytics.TestkubeApiSecret, "path", path)
 				if err != nil {
 					l.Debugw("sending analytics event error", "error", err)
 				} else {
 					l.Debugw("anonymous info to tracker sent", "output", out)
 				}
-			}(c.Path())
+			}(c.Hostname(), c.Path())
 
 			return c.Next()
 		})
