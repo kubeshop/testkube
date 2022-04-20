@@ -29,7 +29,7 @@ const gaValidationUrl = "https://www.google-analytics.com/debug/mp/collect?measu
 
 type Params struct {
 	EventCount       int64  `json:"event_count,omitempty"`
-	EventCategory    string `json:"even_category,omitempty"`
+	EventCategory    string `json:"event_category,omitempty"`
 	AppVersion       string `json:"app_version,omitempty"`
 	AppName          string `json:"app_name,omitempty"`
 	CustomDimensions string `json:"custom_dimensions,omitempty"`
