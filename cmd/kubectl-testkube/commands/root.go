@@ -61,10 +61,11 @@ var RootCmd = &cobra.Command{
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			err := analytics.SendAnonymousCmdInfo(cmd)
+			out, err := analytics.SendAnonymousCmdInfo(cmd)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
+			ui.Debug("analytics response", out)
 		}
 	},
 

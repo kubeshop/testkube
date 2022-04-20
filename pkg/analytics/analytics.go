@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,10 +17,11 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-var testkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
-var testkubeApiSecret = ""
+var TestkubeMeasurementID = "G-B6KY2SF30K" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
+var TestkubeApiSecret = "-7QcAY6UQBignEsO7FTdHg"
 
 const gaUrl = "https://www.google-analytics.com/mp/collect?measurement_id=%s&api_secret=%s"
 
@@ -41,8 +43,7 @@ type Payload struct {
 }
 
 // SendAnonymousInfo will send event to GA
-func SendAnonymousInfo() {
-
+func SendAnonymousInfo() (string, error) {
 	var isEnabled bool
 	if val, ok := os.LookupEnv("TESTKUBE_ANALYTICS_ENABLED"); ok {
 		isEnabled, _ = strconv.ParseBool(val)
@@ -53,23 +54,22 @@ func SendAnonymousInfo() {
 			Events: []Event{
 				{
 					Name: "testkube-heartbeat",
-
 					Params: Params{
 						EventCount:    1,
 						EventCategory: "beacon",
 						AppVersion:    commands.Version,
-						AppName:       "testkube",
-						DataSource:    "api-server",
+						AppName:       "testkube-api-server",
 					},
 				}},
 		}
 
-		sendDataToGA(payload)
+		return sendDataToGA(payload)
 	}
+	return "", nil
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousCmdInfo(cmd *cobra.Command) error {
+func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -77,23 +77,16 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) error {
 		command = "root"
 	}
 
-	args := []string{}
-	if len(os.Args) > 1 {
-		args = os.Args[1:]
-	}
-
 	payload := Payload{
 		ClientID: MachineID(),
 		Events: []Event{
 			{
-				Name: command,
+				Name: text.Slug(command),
 				Params: Params{
-					EventCount:       1,
-					EventCategory:    "execution",
-					AppVersion:       commands.Version,
-					AppName:          "testkube",
-					CustomDimensions: strings.Join(args, " "),
-					DataSource:       "kubectl-testkube",
+					EventCount:    1,
+					EventCategory: "execution",
+					AppVersion:    commands.Version,
+					AppName:       "kubectl-testkube",
 				},
 			}},
 	}
@@ -102,18 +95,17 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) error {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousAPIInfo(path string) error {
+func SendAnonymousAPIInfo(path string) (string, error) {
 	payload := Payload{
 		ClientID: MachineID(),
 		Events: []Event{
 			{
-				Name: path,
+				Name: text.Slug(path),
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "api-request",
 					AppVersion:    api.Version,
-					AppName:       "testkube",
-					DataSource:    "api-server",
+					AppName:       "testkube-api-server",
 				},
 			}},
 	}
@@ -121,29 +113,30 @@ func SendAnonymousAPIInfo(path string) error {
 	return sendDataToGA(payload)
 }
 
-func sendDataToGA(data Payload) error {
+func sendDataToGA(data Payload) (out string, err error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, testkubeMeasurementID, testkubeApiSecret), bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
-		return err
+		return out, err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return err
+		return out, err
 	}
 	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
-		return fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
+		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
 	}
-	return nil
+	return fmt.Sprintf("status: %d - %s", resp.StatusCode, b), err
 }
 
 // MachineID returns unique user machine ID
