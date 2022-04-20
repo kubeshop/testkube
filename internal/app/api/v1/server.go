@@ -162,7 +162,7 @@ func (s TestkubeAPI) Init() {
 				} else {
 					l.Debugw("anonymous info to tracker sent", "output", out)
 				}
-			}(c.Route().Path)
+			}(c.Path())
 
 			return c.Next()
 		})

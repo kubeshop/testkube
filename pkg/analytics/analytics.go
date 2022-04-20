@@ -20,8 +20,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-var TestkubeMeasurementID = "G-B6KY2SF30K" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
-var TestkubeApiSecret = "-7QcAY6UQBignEsO7FTdHg"
+var TestkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.testkubeMeasurementID=G-B6KY2SF30K
+var TestkubeApiSecret = ""
 
 const gaUrl = "https://www.google-analytics.com/mp/collect?measurement_id=%s&api_secret=%s"
 
