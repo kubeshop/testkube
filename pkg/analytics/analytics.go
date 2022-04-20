@@ -25,6 +25,7 @@ var TestkubeMeasurementID = "" //this is default but it can be set using ldflag 
 var TestkubeApiSecret = ""
 
 const gaUrl = "https://www.google-analytics.com/mp/collect?measurement_id=%s&api_secret=%s"
+const gaValidationUrl = "https://www.google-analytics.com/debug/mp/collect?measurement_id=%s&api_secret=%s"
 
 type Params struct {
 	EventCount       int64  `json:"event_count,omitempty"`
@@ -107,16 +108,47 @@ func SendAnonymousAPIInfo(host, path string) (string, error) {
 					EventCategory:    "api-request",
 					AppVersion:       api.Version,
 					AppName:          "testkube-api-server",
-					CustomDimensions: host,
+					CustomDimensions: text.Slug(host),
 				},
 			}},
 	}
+
+	out, err := sendValidationRequest(payload)
+	log.DefaultLogger.Debugw("validation output", "payload", payload, "out", out, "error", err)
 
 	return sendDataToGA(payload)
 }
 
 func sendDataToGA(payload Payload) (out string, err error) {
 	log.DefaultLogger.Debugw("sending ga payload", "payload", payload)
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return out, err
+	}
+
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
+	if err != nil {
+		return out, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return out, err
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode > 300 {
+		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
+	}
+	return fmt.Sprintf("status: %d - %s", resp.StatusCode, b), err
+}
+
+func sendValidationRequest(payload Payload) (out string, err error) {
+	log.DefaultLogger.Debugw("sending ga payload to validate", "payload", payload)
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
