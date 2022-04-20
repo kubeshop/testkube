@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -35,6 +34,7 @@ type Params struct {
 	CustomDimensions string `json:"custom_dimensions,omitempty"`
 	DataSource       string `json:"data_source,omitempty"`
 	Host             string `json:"host,omitempty"`
+	MachineID        string `json:"machine_id,omitempty"`
 }
 type Event struct {
 	Name   string `json:"name"`
@@ -53,9 +53,10 @@ func SendServerStartAnonymousInfo() (string, error) {
 		isEnabled, _ = strconv.ParseBool(val)
 	}
 	if isEnabled {
+		machineID := MachineID()
 		payload := Payload{
-			ClientID: MachineID(),
-			UserID:   MachineID(),
+			ClientID: machineID,
+			UserID:   machineID,
 			Events: []Event{
 				{
 					Name: "testkube_heartbeat",
@@ -64,6 +65,7 @@ func SendServerStartAnonymousInfo() (string, error) {
 						EventCategory: "beacon",
 						AppVersion:    commands.Version,
 						AppName:       "testkube-api-server",
+						MachineID:     machineID,
 					},
 				}},
 		}
@@ -74,7 +76,8 @@ func SendServerStartAnonymousInfo() (string, error) {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
+func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
+	machineID := MachineID()
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -83,16 +86,17 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 	}
 
 	payload := Payload{
-		ClientID: MachineID(),
-		UserID:   MachineID(),
+		ClientID: machineID,
+		UserID:   machineID,
 		Events: []Event{
 			{
 				Name: text.GAEventName(command),
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "execution",
-					AppVersion:    commands.Version,
+					AppVersion:    version,
 					AppName:       "kubectl-testkube",
+					MachineID:     machineID,
 				},
 			}},
 	}
@@ -101,7 +105,7 @@ func SendAnonymousCmdInfo(cmd *cobra.Command) (string, error) {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousAPIInfo(host, path string) (string, error) {
+func SendAnonymousAPIRequestInfo(host, path, version string) (string, error) {
 	payload := Payload{
 		ClientID: MachineID(),
 		UserID:   MachineID(),
@@ -111,7 +115,7 @@ func SendAnonymousAPIInfo(host, path string) (string, error) {
 				Params: Params{
 					EventCount:    1,
 					EventCategory: "api-request",
-					AppVersion:    api.Version,
+					AppVersion:    version,
 					AppName:       "testkube-api-server",
 					Host:          host,
 				},
