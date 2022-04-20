@@ -156,7 +156,7 @@ func (s TestkubeAPI) Init() {
 		s.Routes.Use(func(c *fiber.Ctx) error {
 			go func(path string) {
 				out, err := analytics.SendAnonymousAPIInfo(path)
-				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", analytics.TestkubeApiSecret)
+				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", analytics.TestkubeApiSecret, "path", path)
 				if err != nil {
 					l.Debugw("sending analytics event error", "error", err)
 				} else {
