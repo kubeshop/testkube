@@ -2,11 +2,10 @@ name: Release kubectl-testkube
 
 on:
   push:
-    tags: 
+    tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-
   # release_creation:
   #   name: Prepares Release on GitHub
   #   runs-on: ubuntu-latest
@@ -33,18 +32,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.18
-      - 
-        name: Go Cache
+      - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
@@ -53,8 +49,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      -
-        name: Run GoReleaser
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
           distribution: goreleaser
@@ -62,31 +57,25 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}"
-          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_ANALYTICS_API_SECRET}}"
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-      -
-        name: Store Intermediate Artifacts
+      - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      -
-        name: Setup Homebrew
+      - name: Setup Homebrew
         uses: Homebrew/actions/setup-homebrew@master
-      -
-        name: Update brew
+      - name: Update brew
         run: brew update
-      -
-        name: Setup git email
+      - name: Setup git email
         run: git config --global user.email "brewbot@kubeshop.io"
-      -
-        name: Setup git name    
+      - name: Setup git name
         run: git config --global user.name "Brew Bot"
-      -
-        name: Bump formulae
+      - name: Bump formulae
         uses: Homebrew/actions/bump-formulae@master
         with:
           # Custom GitHub access token with only the 'public_repo' scope enabled
@@ -98,7 +87,7 @@ jobs:
     needs: release
     runs-on: windows-latest
 
-    steps:      
+    steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -114,10 +103,10 @@ jobs:
         id: write_file
         uses: timheuer/base64-to-file@v1.1
         with:
-          fileName: 'kubeshop_msft.p12'
-          fileDir: './temp/'
+          fileName: "kubeshop_msft.p12"
+          fileDir: "./temp/"
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
-      
+
       - name: Create and Sign MSI
         run: |
           Copy-Item 'dist\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
@@ -161,7 +150,7 @@ jobs:
           asset_path: testkube.msi
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}.msi
           asset_content_type: application/octet-stream
-      
+
       - name: Upload Checksum
         uses: actions/upload-release-asset@v1.0.2
         env:

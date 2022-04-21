@@ -30,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
@@ -154,10 +155,15 @@ func (s TestkubeAPI) Init() {
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
 		s.Routes.Use(func(c *fiber.Ctx) error {
-			go func(path string) {
-				s.Log.Debugw("sending anonymous info to tracker")
-				analytics.SendAnonymousAPIInfo(path)
-			}(c.Route().Path)
+			go func(host, path, method string) {
+				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method)
+				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+				if err != nil {
+					l.Debugw("sending analytics event error", "error", err)
+				} else {
+					l.Debugw("anonymous info to tracker sent", "output", out)
+				}
+			}(c.Hostname(), c.Path(), c.Method())
 
 			return c.Next()
 		})
