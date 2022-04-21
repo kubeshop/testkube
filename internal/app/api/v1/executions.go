@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
-
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -176,7 +176,21 @@ func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, executio
 		})
 	}
 
+	s.notifySlack(eventType, execution)
+
 	return nil
+}
+
+func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
+	messageBuilder := strings.Builder{}
+	messageBuilder.WriteString(fmt.Sprintf("Event %s for test %s\n", string(*eventType), execution.TestName))
+	if execution.ExecutionResult != nil {
+		messageBuilder.WriteString(fmt.Sprintf("Status: %s\n", *execution.ExecutionResult.Status))
+		messageBuilder.WriteString(fmt.Sprintf("Duration: %s\n", execution.Duration))
+		if execution.ExecutionResult.Output != "" {
+			messageBuilder.WriteString(fmt.Sprintf("Output:\n %s", execution.ExecutionResult.Output))
+		}
+	}
 }
 
 // ListExecutionsHandler returns array of available test executions

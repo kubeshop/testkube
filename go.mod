@@ -15,6 +15,7 @@ require (
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
 	github.com/prometheus/client_golang v1.11.0
+	github.com/slack-go/slack v0.10.2
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/fasthttp v1.34.0
@@ -25,6 +26,8 @@ require (
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v0.21.2
 )
+
+require github.com/gorilla/websocket v1.4.2 // indirect
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
