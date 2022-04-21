@@ -21,6 +21,7 @@ import (
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/types"
 )
 
@@ -190,6 +191,10 @@ func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution
 		if execution.ExecutionResult.Output != "" {
 			messageBuilder.WriteString(fmt.Sprintf("Output:\n %s", execution.ExecutionResult.Output))
 		}
+	}
+	err := slacknotifier.SendMessage(messageBuilder.String())
+	if err != nil {
+		s.Log.Warnw("notify slack failed", "error", err)
 	}
 }
 
