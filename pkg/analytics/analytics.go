@@ -21,7 +21,7 @@ import (
 )
 
 var TestkubeMeasurementID = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=G-B6KY2SF30K
-var TestkubeApiSecret = ""
+var TestkubeMeasurementSecret = ""
 
 const gaUrl = "https://www.google-analytics.com/mp/collect?measurement_id=%s&api_secret=%s"
 const gaValidationUrl = "https://www.google-analytics.com/debug/mp/collect?measurement_id=%s&api_secret=%s"
@@ -136,7 +136,7 @@ func sendDataToGA(payload Payload) (out string, err error) {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}
@@ -164,7 +164,7 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeApiSecret), bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}

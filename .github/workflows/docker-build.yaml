@@ -67,6 +67,6 @@ jobs:
             build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
             build.args.VERSION=${{ steps.vars.outputs.tag }}
             build.args.COMMIT=${{ github.sha }}
-            build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_ANALYTICS_TRACKING_ID}}
-            build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_ANALYTICS_API_SECRET}}
+            build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+            build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           push: true
