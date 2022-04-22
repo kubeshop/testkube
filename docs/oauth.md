@@ -1,12 +1,12 @@
-# Testkube UI authentication
+# Testkube UI Authentication
 
 Testkube doesn't provide a separate user/role management system to protect access to its UI.
 Users can configure OAuth based authenication module using Testkube Helm chart parameters.
-In order to provide it, Testkube can automatically create OAuth2-Proxy service and deployment integrated 
+Testkube can automatically create OAuth2-Proxy service and deployment integrated 
 with GitHub, as well as properly configure Kubernetes Nginx Ingress Controller and create required 
 ingresses.
 
-# Provide parameters for UI ans API ingresses
+# Provide Parameters for UI and API Ingresses
 
 ## API Ingress
 
@@ -40,24 +40,24 @@ $ openssl rand -hex 16
 48f0a2b815ddc0a437825ccb27548d25
 ```
 
-# Create Github OAuth application
+# Create Github OAuth Application
 
-Register new Github OAuth application for your personal or organization account.
+Register a new Github OAuth application for your personal or organization account.
 
 ![Register new App](img/github_app_request.png)
 
 Pay attention to the usage of the scheme (http or https) in uris.
-Homepage URL
-should be UI home page http://testdash.testkube.io
+The homepage URL
+should be UI home page http://testdash.testkube.io.
 
-Authorization callback URL
-should be prebuilt page at UI website http://testdash.testkube.io/oauth2/callback
+The authorization callback URL
+should be a prebuilt page at the UI website http://testdash.testkube.io/oauth2/callback.
 
 ![View created App](img/github_app_response.png)
 
-Remember generated Client ID and Client Secret
+Remember the generated Client ID and Client Secret.
 
-# OAuth service, deployment and ingresses parameters
+# OAuth Service, Deployment and Ingresses Parameters
 
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
 Pay attention to the usage of the scheme (http or https) in uris.
