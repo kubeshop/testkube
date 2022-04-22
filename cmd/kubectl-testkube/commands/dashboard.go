@@ -2,13 +2,13 @@ package commands
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"runtime"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -97,7 +97,6 @@ func NewDashboardCmd() *cobra.Command {
 
 func readinessCheck(apiURI, dashboardURI string) (bool, error) {
 	const readinessCheckTimeout = 30 * time.Second
-	client := http.NewClient()
 
 	ticker := time.NewTicker(500 * time.Millisecond)
 	go func() {
@@ -106,11 +105,11 @@ func readinessCheck(apiURI, dashboardURI string) (bool, error) {
 	}()
 
 	for range ticker.C {
-		apiResp, err := client.Get(apiURI + "/info")
+		apiResp, err := http.Get(apiURI + "/info")
 		if err != nil {
 			continue
 		}
-		dashboardResp, err := client.Get(dashboardURI)
+		dashboardResp, err := http.Get(dashboardURI)
 		if err != nil {
 			continue
 		}
