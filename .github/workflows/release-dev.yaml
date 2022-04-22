@@ -4,7 +4,6 @@ on:
   push:
     tags: 
       - "v[0-9]+.[0-9]+.[0-9]+-*"
-      - "testing-[0-9]+"
 
 jobs:
 
@@ -189,4 +188,4 @@ jobs:
           curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots
 
           ### Publish repo
-          curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"SourceKind": "snapshot", "Sources": [{"Name": "testkube-'${VERSION}'", "Component": "main"}], "Architectures": ["i386", "amd64", "arm64"], "Distribution": "linux"}' http://${APTLY_URL}/api/publish/linux
+          curl -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
