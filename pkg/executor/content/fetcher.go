@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/git"
+	"github.com/kubeshop/testkube/pkg/http"
 )
 
 // NewFetcher returns new file/dir fetcher based on given directory path
@@ -50,7 +50,8 @@ func (f Fetcher) FetchString(str string) (path string, err error) {
 
 //FetchURI stores uri as local file
 func (f Fetcher) FetchURI(uri string) (path string, err error) {
-	resp, err := http.Get(uri)
+	client := http.NewClient()
+	resp, err := client.Get(uri)
 	if err != nil {
 		return path, err
 	}
