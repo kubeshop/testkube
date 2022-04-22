@@ -48,13 +48,18 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' already exists in namespace %s", testName, testNamespace)
 			}
 
+			err := validateCreateOptions(cmd)
+			ui.ExitOnError("validating passed flags", err)
+
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
 
 			executors, err := client.ListExecutors()
 			ui.ExitOnError("getting available executors", err)
+
 			err = validateExecutorType(options.Type_, executors)
 			ui.ExitOnError("validating executor type", err)
+
 			err = validateSchedule(options.Schedule)
 			ui.ExitOnError("validating schedule", err)
 
@@ -66,11 +71,12 @@ func NewCreateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman/collection)")
 
+	// create options
+	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
@@ -82,6 +88,48 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
 
 	return cmd
+}
+
+func validateCreateOptions(cmd *cobra.Command) error {
+	gitUri := cmd.Flag("git-uri").Value.String()
+	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitPath := cmd.Flag("git-path").Value.String()
+	gitUsername := cmd.Flag("git-username").Value.String()
+	gitToken := cmd.Flag("git-token").Value.String()
+
+	file := cmd.Flag("file").Value.String()
+	uri := cmd.Flag("uri").Value.String()
+
+	hasGitParams := gitBranch != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != ""
+
+	if hasGitParams && uri != "" {
+		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
+	}
+	if hasGitParams && file != "" {
+		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
+	}
+
+	if file != "" && uri != "" {
+		return fmt.Errorf("please pass only one of `--file` and `--uri`")
+	}
+
+	if hasGitParams {
+		if gitUri == "" {
+			return fmt.Errorf("please pass valid `--git-uri` flag")
+		}
+		if gitBranch == "" {
+			return fmt.Errorf("please pass valid `--git-branch` flag")
+		}
+	}
+
+	fmt.Printf("%+v\n", hasGitParams)
+	fmt.Printf("%+v\n", gitPath)
+	fmt.Printf("%+v\n", gitUri)
+	fmt.Printf("%+v\n", gitBranch)
+	fmt.Printf("%+v\n", uri)
+	fmt.Printf("%+v\n", file)
+
+	return nil
 }
 
 func validateExecutorType(executorType string, executors testkube.ExecutorsDetails) error {
