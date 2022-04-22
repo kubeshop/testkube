@@ -122,13 +122,6 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		}
 	}
 
-	fmt.Printf("%+v\n", hasGitParams)
-	fmt.Printf("%+v\n", gitPath)
-	fmt.Printf("%+v\n", gitUri)
-	fmt.Printf("%+v\n", gitBranch)
-	fmt.Printf("%+v\n", uri)
-	fmt.Printf("%+v\n", file)
-
 	return nil
 }
 
