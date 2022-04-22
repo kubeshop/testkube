@@ -133,6 +133,9 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
+We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration. 
+If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).
+
 To install the `testkube` chart:
 
 ```sh
@@ -192,7 +195,5 @@ The following Helm defaults are used in the `testkube` chart:
 Uninstall Testkube using the uninstall command integrated into the Testkube plugin.
 
 ```sh
-kubectl testkube uninstall [--remove-crds]
+kubectl testkube uninstall
 ```
-
-Optionally, you can use the `--remove-crds` flag which will clean all installed Custom Resource Definitions installed by Testkube.
