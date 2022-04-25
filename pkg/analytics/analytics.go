@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -35,6 +36,8 @@ type Params struct {
 	DataSource       string `json:"data_source,omitempty"`
 	Host             string `json:"host,omitempty"`
 	MachineID        string `json:"machine_id,omitempty"`
+	OperatingSystem  string `json:"operating_system,omitempty"`
+	Architecture     string `json:"architecture,omitempty"`
 }
 type Event struct {
 	Name   string `json:"name"`
@@ -61,11 +64,13 @@ func SendServerStartAnonymousInfo() (string, error) {
 				{
 					Name: "testkube_heartbeat",
 					Params: Params{
-						EventCount:    1,
-						EventCategory: "beacon",
-						AppVersion:    commands.Version,
-						AppName:       "testkube-api-server",
-						MachineID:     machineID,
+						EventCount:      1,
+						EventCategory:   "beacon",
+						AppVersion:      commands.Version,
+						AppName:         "testkube-api-server",
+						MachineID:       machineID,
+						OperatingSystem: runtime.GOOS,
+						Architecture:    runtime.GOARCH,
 					},
 				}},
 		}
@@ -92,11 +97,13 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 			{
 				Name: text.GAEventName(command),
 				Params: Params{
-					EventCount:    1,
-					EventCategory: "execution",
-					AppVersion:    version,
-					AppName:       "kubectl-testkube",
-					MachineID:     machineID,
+					EventCount:      1,
+					EventCategory:   "execution",
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       machineID,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
 				},
 			}},
 	}
@@ -113,11 +120,13 @@ func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, er
 			{
 				Name: text.GAEventName(method + "_" + path),
 				Params: Params{
-					EventCount:    1,
-					EventCategory: "api-request",
-					AppVersion:    version,
-					AppName:       "testkube-api-server",
-					Host:          host,
+					EventCount:      1,
+					EventCategory:   "api-request",
+					AppVersion:      version,
+					AppName:         "testkube-api-server",
+					Host:            host,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
 				},
 			}},
 	}
