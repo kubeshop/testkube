@@ -53,6 +53,9 @@ We have plans to build installers for the most popular Operating Systems and sys
 
 ## **Install Testkube Components in Your Cluster**
 
+[Helm](https://helm.sh) must be installed to use charts.  
+Please refer to  Helm's [documentation](https://helm.sh/docs) to get started.
+
 The Testkube kubectl plugin provides an install command to install Testkube in your cluster. Note: you must have helm installed
 
 Run:
