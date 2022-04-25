@@ -149,7 +149,7 @@ An example of an exported SoapUI test looks the following:
 Testkube and the SoapUI executor accepts a project file as input.
 
 ```sh
-$ kubectl testkube create test --file example-project.xml --type soapui/rest --name example-test
+$ kubectl testkube create test --file example-project.xml --type soapui/xml --name example-test
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -166,7 +166,7 @@ Test created  / example-test 🥇
 ### Using strings as input
 
 ```sh
-$ cat example-project.xml | kubectl testkube create test --type soapui/rest --name example-test-string
+$ cat example-project.xml | kubectl testkube create test --type soapui/xml --name example-test-string
 
 ████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
    ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
@@ -195,7 +195,7 @@ $ kubectl testkube run test example-test
                                            /tɛst kjub/ by Kubeshop
 
 
-Type          : soapui/rest
+Type          : soapui/xml
 Name          : example-test
 Execution ID  : 624eedd443ed8485ae9289e2
 Execution name: illegally-credible-mouse
@@ -231,7 +231,7 @@ $ kubectl testkube start test -f example-test --args '-I -c "Testkube TestCase"'
                                            /tɛst kjub/ by Kubeshop
 
 
-Type          : soapui/rest
+Type          : soapui/xml
 Name          : successful-test
 Execution ID  : 625404e5a4cc6d2861193c60
 Execution name: currently-amused-pug
