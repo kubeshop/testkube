@@ -2,6 +2,7 @@ package minio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,9 @@ import (
 )
 
 var _ storage.Client = (*Client)(nil)
+
+// ErrArtifactsNotFound contains error for not existing artifacts
+var ErrArtifactsNotFound = errors.New("Execution doesn't have any artifacts associated with it")
 
 // Client for managing MinIO storage server
 type Client struct {
@@ -97,6 +101,15 @@ func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 	}
 	toReturn := []testkube.Artifact{}
 
+	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, ErrArtifactsNotFound
+	}
+
 	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, minio.ListObjectsOptions{Recursive: true}) {
 		if obj.Err != nil {
 			return nil, obj.Err
@@ -137,6 +150,15 @@ func (c *Client) SaveFile(bucket, filePath string) error {
 func (c *Client) DownloadFile(bucket, file string) (*minio.Object, error) {
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
+	}
+
+	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, ErrArtifactsNotFound
 	}
 
 	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
