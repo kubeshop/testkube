@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -29,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
@@ -46,6 +48,13 @@ func NewTestkubeAPI(
 	var httpConfig server.Config
 	envconfig.Process("APISERVER", &httpConfig)
 
+	// you can disable analytics tracking for API server
+	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
+	analyticsEnabled, err := strconv.ParseBool(analyticsEnabledStr)
+	if err != nil {
+		analyticsEnabled = true
+	}
+
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
@@ -58,6 +67,7 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
+		AnalyticsEnabled:     analyticsEnabled,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -99,6 +109,7 @@ type TestkubeAPI struct {
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
+	AnalyticsEnabled     bool
 }
 
 type jobTemplates struct {
@@ -140,6 +151,23 @@ func (s TestkubeAPI) Init() {
 
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
+
+	if s.AnalyticsEnabled {
+		// global analytics tracking send async
+		s.Routes.Use(func(c *fiber.Ctx) error {
+			go func(host, path, method string) {
+				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method)
+				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+				if err != nil {
+					l.Debugw("sending analytics event error", "error", err)
+				} else {
+					l.Debugw("anonymous info to tracker sent", "output", out)
+				}
+			}(c.Hostname(), c.Path(), c.Method())
+
+			return c.Next()
+		})
+	}
 
 	s.Routes.Get("/info", s.InfoHandler())
 	s.Routes.Get("/routes", s.RoutesHandler())

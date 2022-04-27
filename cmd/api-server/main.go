@@ -58,7 +58,11 @@ func runMigrations() (err error) {
 
 func main() {
 
-	analytics.SendAnonymousInfo()
+	out, err := analytics.SendServerStartAnonymousInfo()
+	if err != nil {
+		ui.Debug("analytics send error", "error", err.Error())
+	}
+	ui.Debug(out)
 
 	port := os.Getenv("APISERVER_PORT")
 	namespace := "testkube"
