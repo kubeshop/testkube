@@ -1,24 +1,51 @@
-# Testkube Dashboard
+# Testkube UI
 
-The Testkube Dashboard provides a simple web-based UI for monitoring Testkube test results via a web browser.
+The Testkube UI provides a simple web-based user interface for monitoring Testkube test results via a web browser.
 
-![img.png](img/dashboard.png)
+![img.png](img/dashboard-1.0.png)
 
-The URL to access the Testkube Dashboard is [https://dashboard.testkube.io](https://dashboard.testkube.io), which will prompt for the results endpoint of your Testkube installation:
+The URL to access the Testkube UI is [https://demo.testkube.io](https://demo.testkube.io), which will prompt for the results endpoint of your Testkube installation:
 
-![dashboard-endpoint-prompt.png](img/dashboard-endpoint-prompt.png)
+![dashboard-endpoint-prompt.png](img/dashboard-endpoint-prompt-1.0.png)
 
-See the Dashboard Results Endpoint section below to find the endpoint to open the dashboard. Once you have the results endpoint, you can append it to the above URL (as an apiEndpoint parameter) for a direct link to the dashboard with your results:
+See the [UI Results Endpoint section](#ui-results-endpoint)  below to find the endpoint to open the dashboard. Once you have the results endpoint, you can append it to the above URL (as an apiEndpoint parameter) for a direct link to the dashboard with your results:
 
-`https://dashboard.testkube.io/?apiEndpoint=...`
+`https://demo.testkube.io/?apiEndpoint=...`
 
-Alternatively, the dashboard can be opened on your local machine using command ```sh kubectl testkube dashboard``` which uses port forwarding for accessing your local results endpoint (see more [here](cli/kubectl-testkube_dashboard.md)).
+Alternatively, the UI can be opened on your local machine using command ```sh kubectl testkube dashboard``` which uses port forwarding for accessing your local results endpoint (see more [here](cli/testkube_dashboard.md)).
 
-## **Dashboard Results Endpoint**
+## **Explore the UI**
 
-To expose the results endpoint to open the dashboard there are two options:
+The Testkube UI displays the current status of Tests and Test Suites executed in your environment.
 
-* Expose the results endpoint using an Ingress controller and use it in the dashboard at [https://dashboard.testkube.io](https://dashboard.testkube.io).
+![Test List](img/test-list.png)
+
+![Test Suites List](img/test-suite-list.png)
+
+After selecting Tests or Test Suites in the left bar, the list of recent runs is displayed. Select any Test or Test Suite to see the recent executions and their statuses. 
+
+![Execution Status](img/execution-status.png)
+
+As shown in the screenshot, under the **Execution** tab, a green checkmark denotes a successful execution, a red 'x' denotes a failed execution and circling dots denotes a current run of a test or test suite.
+
+The **CLI Commands** tab shows the commands used to perform the selected test:
+
+![CLI Commands](img/CLI-commands.png)
+
+The **Definition** tab when **Tests** is selected displays the test code and provides a document icon to copy the code:
+
+![Test Definition](img/definition.png)
+
+The **Definition** tab when **Test Suites** is selected displays the Test Suite steps:
+
+![Test Suite Definition](img/definition-test-suite.png)
+
+
+## **UI Results Endpoint**
+
+To expose the results endpoint to open the UI there are two options:
+
+* Expose the results endpoint using an Ingress controller and use it in the UI at [https://demo.testkube.io](https://demo.testkube.io).
 * Install the dashboard together with Testkube.
 
 This is achieved by installing Testkube using the Helm Charts located at [github.com/kubeshop/helm-charts]().
@@ -43,15 +70,15 @@ By default, the results are using the path ```/results```, so the results will b
 
 The Ingress configuration used is available in the [Testkube Helm Repo](https://github.com/kubeshop/helm-charts).
 
-## **Installing the Testkube Dashboard**
+## **Installing the Testkube UI**
 
-Ingress can be installed for the dashboard together with api-server Ingress with the usage of a Helm chart:
+Ingress can be installed for the UI together with api-server Ingress by using a Helm chart:
 
 ```sh
 helm install testkube kubeshop/testkube --set testkube-dashboard.enabled="true" --set testkube-dashboard.ingress.enabled="true" --set testkube-api.ingress.enabled="true"
 ```
 
-> Testkube dashboard talks to an api-server via the endpoint. Hence, the api-server will need to be exposed as well.
+> The Testkube UI talks to an api-server via the endpoint. Hence, the api-server will need to be exposed as well.
 
 To get the address of Ingress use:
 
@@ -61,7 +88,7 @@ kubectl get ing
 
 ## **HTTPS/TLS Configuration**
 
-To have secure access to the dashboard and the results endpoint, a certificate should be provided. The Helm charts can be configured from the Ingress section of the values file:
+To have secure access to the UI and the results endpoint, a certificate should be provided. The Helm charts can be configured from the Ingress section of the values file:
 
 ```yaml
 ingress:
@@ -91,7 +118,7 @@ Certificates are automatically generated using encrypt and cert-manager, but can
 
 If there is no need for TLS (Transport Layer Security) to be enabled, omit the TLS configuration.
 
-> We highly discourage working in non-safe environment which is exposed without the use of a TLS-based connection. Please do so in a private internal environment for testing or development purposes only.
+> We highly discourage working in a non-safe environment which is exposed without the use of a TLS-based connection. Please do so in a private internal environment for testing or development purposes only.
 
 To pass specific values to the Ingress annotations, the Helm "--set" option can be used: 
 
