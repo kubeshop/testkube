@@ -68,7 +68,7 @@ func TrimPatchVersion(version string) string {
 	fmt.Printf("%+v\n", len(parts))
 
 	if len(parts) == 5 {
-		return fmt.Sprintf("%s.%s.%s%s", parts[1], parts[2], "0", parts[4])
+		return fmt.Sprintf("%s.%s.%s", parts[1], parts[2], "0")
 	}
 
 	return version
