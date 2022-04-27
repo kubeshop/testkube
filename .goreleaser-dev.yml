@@ -2,14 +2,45 @@ before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./cmd/kubectl-testkube
+  -
+    id: "linux"
+    main: ./cmd/kubectl-testkube
     binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
+
+  -
+    id: "darwin"
+    main: ./cmd/kubectl-testkube
+    binary: kubectl-testkube
+    env:
+      - CGO_ENABLED=0
+    goos:
       - darwin
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
+  -
+    id: "windows"
+    main: ./cmd/kubectl-testkube
+    binary: kubectl-testkube
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
     ldflags:
       - -s -w -X main.version={{.Version}}
       - -X main.commit={{.Commit}}

@@ -56,7 +56,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --parallelism=2 --rm-dist -f .goreleaser-dev.yml
+          args: release --rm-dist -f .goreleaser-dev.yml --parallelism=3
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
