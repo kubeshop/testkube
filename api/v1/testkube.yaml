@@ -166,7 +166,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestSuite"
         400:
-          description: "problem with test definition - probably some bad input occurs (invalid JSON body or similar)"
+          description: "problem with test suite definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
@@ -583,7 +583,7 @@ paths:
         - logs
         - executions
         - api
-      summary: "Get execution's los by ID"
+      summary: "Get execution's logs by ID"
       description: "Returns logs of the given executionID"
       operationId: getExecutionLogs
       responses:

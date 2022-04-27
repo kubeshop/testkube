@@ -31,7 +31,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		list, err := s.WebhooksClient.List()
+		list, err := s.WebhooksClient.List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -64,6 +64,18 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 		name := c.Params("name")
 
 		err := s.WebhooksClient.Delete(name)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		c.Status(204)
+		return nil
+	}
+}
+
+func (s TestkubeAPI) DeleteWebhooksHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		err := s.WebhooksClient.DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}

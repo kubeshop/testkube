@@ -30,6 +30,7 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
+			Labels:    request.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
 			Uri:    request.Uri,

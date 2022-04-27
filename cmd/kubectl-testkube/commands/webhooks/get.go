@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
@@ -11,6 +12,7 @@ import (
 
 func NewGetWebhookCmd() *cobra.Command {
 	var name, namespace string
+	var selectors []string
 
 	cmd := &cobra.Command{
 		Use:     "webhook <webhookName>",
@@ -27,7 +29,7 @@ func NewGetWebhookCmd() *cobra.Command {
 				err = render.Obj(cmd, webhook, os.Stdout)
 				ui.ExitOnError("rendering obj", err)
 			} else {
-				webhooks, err := client.ListWebhooks()
+				webhooks, err := client.ListWebhooks(strings.Join(selectors, ","))
 				ui.ExitOnError("getting webhooks", err)
 				err = render.List(cmd, webhooks, os.Stdout)
 				ui.ExitOnError("rendering list", err)
@@ -37,6 +39,7 @@ func NewGetWebhookCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as argument")
 	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

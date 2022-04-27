@@ -133,9 +133,9 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 }
 
 // DeleteTests deletes all tests
-func (c APIClient) DeleteTests() error {
+func (c APIClient) DeleteTests(selector string) error {
 	uri := c.getURI("/tests")
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, selector, true)
 }
 
 // DeleteTest deletes single test by name
@@ -144,7 +144,7 @@ func (c APIClient) DeleteTest(name string) error {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 	uri := c.getURI("/tests/%s", name)
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, "", true)
 }
 
 // CreateTest creates new Test Custom Resource
@@ -289,7 +289,7 @@ func (c APIClient) ListTestWithExecutions(selector string) (testWithExecutions t
 // AbortExecution aborts execution by testId and id
 func (c APIClient) AbortExecution(testID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", testID, id)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
 }
 
 // executor --------------------------------------------------------------------------------
@@ -330,10 +330,14 @@ func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, 
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors")
 	req := c.GetProxy("GET").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
 
 	resp := req.Do(context.Background())
 
@@ -346,7 +350,12 @@ func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err err
 
 func (c APIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s", name)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
+}
+
+func (c APIClient) DeleteExecutors(selector string) (err error) {
+	uri := c.getURI("/executors")
+	return c.makeDeleteRequest(uri, selector, false)
 }
 
 // webhooks --------------------------------------------------------------------------------
@@ -385,10 +394,14 @@ func (c APIClient) GetWebhook(name string) (webhook testkube.Webhook, err error)
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c APIClient) ListWebhooks() (webhooks testkube.Webhooks, err error) {
+func (c APIClient) ListWebhooks(selector string) (webhooks testkube.Webhooks, err error) {
 	uri := c.getURI("/webhooks")
 	req := c.GetProxy("GET").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
 
 	resp := req.Do(context.Background())
 
@@ -401,7 +414,12 @@ func (c APIClient) ListWebhooks() (webhooks testkube.Webhooks, err error) {
 
 func (c APIClient) DeleteWebhook(name string) (err error) {
 	uri := c.getURI("/webhooks/%s", name)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
+}
+
+func (c APIClient) DeleteWebhooks(selector string) (err error) {
+	uri := c.getURI("/webhooks")
+	return c.makeDeleteRequest(uri, selector, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -580,10 +598,15 @@ func (c APIClient) getURI(pathTemplate string, params ...interface{}) string {
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c APIClient) makeDeleteRequest(uri string, isContentExpected bool) error {
+func (c APIClient) makeDeleteRequest(uri, selector string, isContentExpected bool) error {
 
 	req := c.GetProxy("DELETE").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
+
 	resp := req.Do(context.Background())
 
 	if resp.Error() != nil {
@@ -694,12 +717,12 @@ func (c APIClient) DeleteTestSuite(name string) error {
 		return fmt.Errorf("testsuite name '%s' is not valid", name)
 	}
 	uri := c.getURI("/test-suites/%s", name)
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, "", true)
 }
 
-func (c APIClient) DeleteTestSuites() error {
+func (c APIClient) DeleteTestSuites(selector string) error {
 	uri := c.getURI("/test-suites")
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, selector, true)
 }
 
 func (c APIClient) ListTestSuites(selector string) (testSuites testkube.TestSuites, err error) {

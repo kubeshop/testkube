@@ -178,6 +178,7 @@ func (s TestkubeAPI) Init() {
 	executors.Get("/", s.ListExecutorsHandler())
 	executors.Get("/:name", s.GetExecutorHandler())
 	executors.Delete("/:name", s.DeleteExecutorHandler())
+	executors.Delete("/", s.DeleteExecutorsHandler())
 
 	webhooks := s.Routes.Group("/webhooks")
 
@@ -185,6 +186,7 @@ func (s TestkubeAPI) Init() {
 	webhooks.Get("/", s.ListWebhooksHandler())
 	webhooks.Get("/:name", s.GetWebhookHandler())
 	webhooks.Delete("/:name", s.DeleteWebhookHandler())
+	webhooks.Delete("/", s.DeleteWebhooksHandler())
 
 	executions := s.Routes.Group("/executions")
 
