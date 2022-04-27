@@ -65,8 +65,6 @@ func ValidateVersions(c apiclient.Client, version string) error {
 func TrimPatchVersion(version string) string {
 	re := regexp.MustCompile("([0-9]+).([0-9]+).([0-9]+)(.*)")
 	parts := re.FindStringSubmatch(version)
-	fmt.Printf("%+v\n", len(parts))
-
 	if len(parts) == 5 {
 		return fmt.Sprintf("%s.%s.%s", parts[1], parts[2], "0")
 	}
