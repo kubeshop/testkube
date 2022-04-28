@@ -9,7 +9,7 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
+      - darwin
     ldflags:
       - -s -w -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
@@ -19,9 +19,7 @@ builds:
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
 archives:
   - replacements:
-      linux: Linux
-      386: i386
-      amd64: x86_64
+      darwin: macOS
 checksum:
   name_template: "checksums.txt"
 changelog:

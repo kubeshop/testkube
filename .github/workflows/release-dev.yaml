@@ -39,6 +39,8 @@ jobs:
             path: .builds-linux.goreleaser-dev.yml
           - name: "windows_prebuild"
             path: .builds-windows.goreleaser-dev.yml
+          - name: "darwin_prebuild"
+            path: .builds-darwin.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
