@@ -104,7 +104,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"                 
+                  $ref: "#/components/schemas/Problem"
 
   /test-suites/{id}:
     get:
@@ -1198,7 +1198,7 @@ paths:
         - executor
         - api
       summary: "create new executor"
-      description: "create new executor based on params passed in request"
+      description: "create new executor based on variables passed in request"
       operationId: createExecutor
       requestBody:
         description: executor request body data
@@ -1249,7 +1249,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"    
+                  $ref: "#/components/schemas/Problem"
 
   /executors/{name}:
     delete:
@@ -1393,7 +1393,7 @@ paths:
         - webhook
         - api
       summary: "create new webhook"
-      description: "create new webhook based on params passed in request"
+      description: "create new webhook based on variables passed in request"
       operationId: createWebhook
       requestBody:
         description: executor request body data
@@ -1444,7 +1444,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"    
+                  $ref: "#/components/schemas/Problem"
 
   /webhooks/{name}:
     delete:
@@ -1525,6 +1525,27 @@ paths:
 
 components:
   schemas:
+    Variables:
+      type: array
+      items:
+        $ref: "#/components/schemas/Variable"
+
+    Variable:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        type:
+          $ref: "#/components/schemas/VariableType"
+
+    VariableType:
+      type: string
+      enum:
+        - basic
+        - secret
+
     ObjectRef:
       required:
         - name
@@ -1579,14 +1600,8 @@ components:
         repeats:
           type: integer
           default: 1
-        params:
-          type: object
-          description: "default test suite params can be overriden by execution params"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+        variables:
+          $ref: "#/components/schemas/Variables"
 
     TestSuiteStepType:
       type: string
@@ -1652,14 +1667,8 @@ components:
           example:
             record: "true"
             prefix: "some-"
-        params:
-          type: object
-          description: "execution params passed to executor converted to vars for usage in tests"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+        variables:
+          $ref: "#/components/schemas/Variables"
         startTime:
           type: string
           description: "test start time"
@@ -1812,14 +1821,8 @@ components:
         schedule:
           type: string
           description: schedule to run test
-        params:
-          type: object
-          description: "default test params can be overriden by execution params or by test suite params"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+        variables:
+          $ref: "#/components/schemas/Variables"
 
     TestContent:
       type: object
@@ -1875,17 +1878,11 @@ components:
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
-        params:
-          type: object
-          description: "execution params passed to executor converted to vars for usage in tests"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
-        paramsFile:
+        variables:
+          $ref: "#/components/schemas/Variables"
+        variablesFile:
           type: string
-          description: params file content - need to be in format for particular executor (e.g. postman envs file)
+          description: variables file content - need to be in format for particular executor (e.g. postman envs file)
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2137,17 +2134,11 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
-        paramsFile:
+        variablesFile:
           type: string
-          description: params file content - need to be in format for particular executor (e.g. postman envs file)
-        params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          description: variables file content - need to be in format for particular executor (e.g. postman envs file)
+        variables:
+          $ref: "#/components/schemas/Variables"
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2167,7 +2158,7 @@ components:
             app: "backend"
         secretEnvs:
           type: object
-          description: "execution params passed to executor from secrets"
+          description: "execution variables passed to executor from secrets"
           additionalProperties:
             type: string
           example:
@@ -2186,14 +2177,8 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
-        params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+        variables:
+          $ref: "#/components/schemas/Variables"
         labels:
           type: object
           description: "execution labels"
@@ -2270,7 +2255,7 @@ components:
             type: string
           example:
             env: "prod"
-            app: "backend"      
+            app: "backend"
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
@@ -2330,7 +2315,7 @@ components:
             type: string
           example:
             env: "prod"
-            app: "backend"   
+            app: "backend"
 
     WebhookEvent:
       description: CRD based executor data
