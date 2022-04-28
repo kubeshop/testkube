@@ -6,56 +6,59 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
+var ErrOldClientVersion = fmt.Errorf("client version is older than api version, please upgrade")
+
 // PersistentPreRunVersionCheck will check versions based on commands client
-func PersistentPreRunVersionCheck(cmd *cobra.Command, version string) {
+func PersistentPreRunVersionCheck(cmd *cobra.Command, clientVersion string) {
 	// version validation
 	// if client version is less than server version show warning
 	client, _ := common.GetClient(cmd)
-
-	err := ValidateVersions(client, version)
+	info, err := client.GetServerInfo()
 	if err != nil {
 		ui.Warn(err.Error())
+		return
+	}
+
+	err = ValidateVersions(info.Version, clientVersion)
+	if err != nil {
+		ui.Warn(err.Error())
+	} else if err == ErrOldClientVersion {
+		ui.Warn("Your Testkube API version is newer than your `kubectl testkube` plugin")
+		ui.Info("Testkube API version", info.Version)
+		ui.Info("Testkube kubectl plugin client", clientVersion)
+		ui.Info("It's recommended to upgrade client to version close to API server version")
+		ui.NL()
 	}
 }
 
 // ValidateVersions will check if kubectl plugins MINOR version is greater or equal Testkube API version
-func ValidateVersions(c apiclient.Client, version string) error {
-	info, err := c.GetServerInfo()
-	if err != nil {
-		return fmt.Errorf("getting server info: %w", err)
-	}
-
-	if info.Version == "" {
+func ValidateVersions(apiVersionString, clientVersionString string) error {
+	if apiVersionString == "" {
 		return fmt.Errorf("server version not set")
 	}
 
-	apiMinorVersion := TrimPatchVersion(info.Version)
+	apiMinorVersion := TrimPatchVersion(apiVersionString)
 	apiVersion, err := semver.NewVersion(apiMinorVersion)
 	if err != nil {
-		return fmt.Errorf("parsing server version '%s': %w", info.Version, err)
+		return fmt.Errorf("parsing server version '%s': %w", apiVersionString, err)
 	}
 
-	if version == "" {
+	if clientVersionString == "" {
 		return fmt.Errorf("client version not set")
 	}
 
-	minorVersion := TrimPatchVersion(version)
-	clientVersion, err := semver.NewVersion(minorVersion)
+	clientMinorVersion := TrimPatchVersion(clientVersionString)
+	clientVersion, err := semver.NewVersion(clientMinorVersion)
 	if err != nil {
-		return fmt.Errorf("parsing client version %s: %w", version, err)
+		return fmt.Errorf("parsing client version %s: %w", clientVersionString, err)
 	}
 
 	if clientVersion.LessThan(apiVersion) {
-		ui.Warn("Your Testkube API version is newer than your `kubectl testkube` plugin")
-		ui.Info("Testkube API version", apiVersion.String())
-		ui.Info("Testkube kubectl plugin client", clientVersion.String())
-		ui.Info("It's recommended to upgrade client to version close to API server version")
-		ui.NL()
+		return ErrOldClientVersion
 	}
 
 	return nil
