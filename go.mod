@@ -27,10 +27,7 @@ require (
 	k8s.io/client-go v0.21.2
 )
 
-require (
-	github.com/go-logr/zapr v0.4.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
-)
+require github.com/gorilla/websocket v1.4.2 // indirect
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
