@@ -18,10 +18,10 @@ builds:
       - -X main.builtBy=goreleaser
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
-  prebuilt:
+    prebuilt:
     # Path must be the template path to the binaries.
     # This field is required when using the `prebuilt` builder.
-    path: ./tmp/mybin_{{ .Os }}_{{ .Arch }}
+      path: ./tmp/mybin_{{ .Os }}_{{ .Arch }}
 archives:
   - replacements:
       darwin: macOS
