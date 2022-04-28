@@ -31,7 +31,7 @@ func TestWorkerPool(t *testing.T) {
 				continue
 			}
 
-			if r.Result.Id != r.Result.TestName {
+			if r.Result.Id != r.Result.TestName || r.Result.Id == "" || r.Result.TestName == "" {
 				t.Fatalf("wrong value %v; expected %v", r.Result.Id, r.Result.TestName)
 			}
 
@@ -44,10 +44,10 @@ func TestWorkerPool(t *testing.T) {
 
 	if total != requestCount {
 		t.Fatalf("wrong value %v; expected %v", total, requestCount)
-	}	
+	}
 }
 
-var execFn = func(ctx context.Context, object testkube.Test, options  testkube.ExecutionRequest) (result testkube.Execution, err error) {
+var execFn = func(ctx context.Context, object testkube.Test, options testkube.ExecutionRequest) (result testkube.Execution, err error) {
 	return testkube.Execution{Id: options.Name, TestName: object.Name}, nil
 }
 
@@ -58,7 +58,7 @@ func testRequests() []Request[testkube.Test, testkube.ExecutionRequest, testkube
 			Object: testkube.Test{
 				Name: fmt.Sprintf("%v", i),
 			},
-			Options: testkube.ExecutionRequest {
+			Options: testkube.ExecutionRequest{
 				Name: fmt.Sprintf("%v", i),
 			},
 			ExecFn: execFn,

@@ -25,7 +25,7 @@ type Returnable interface {
 // ExecuteFn is a function type for executing runnable and requestable parameters with returnable results
 type ExecuteFn[R Runnable, T Requestable, E Returnable] func(ctx context.Context, object R, options T) (result E, err error)
 
-// Request contains request parameters and invocation method 
+// Request contains request parameters and invocation method
 type Request[R Runnable, T Requestable, E Returnable] struct {
 	Object  R
 	Options T
