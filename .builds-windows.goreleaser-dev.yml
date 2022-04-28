@@ -1,7 +1,7 @@
 before:
   hooks:
     - go mod tidy
-dist: tmp
+dist: temp
 builds:
   -
     main: ./cmd/kubectl-testkube
