@@ -6,6 +6,9 @@ on:
       - 1356_goreleaser
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
+    paths:
+      - '/'
+
 
 jobs:
   # release_creation:
@@ -35,9 +38,9 @@ jobs:
       matrix:
         include:
           - name: "linux_prebuild"
-            path: ".builds-linux.goreleaser-dev.yml"
+            path: .builds-linux.goreleaser-dev.yml
           - name: "windows_prebuild"
-            path: ".builds-windows.goreleaser-dev.yml"
+            path: .builds-windows.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -61,7 +64,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release --rm-dist -f path=${{ matrix.path }} --debug
+          args: release --rm-dist -f path=./${{ matrix.path }} --debug
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
