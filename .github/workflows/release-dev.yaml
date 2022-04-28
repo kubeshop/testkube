@@ -28,11 +28,16 @@ jobs:
   #         draft: false
   #         prerelease: false
 
-  release:
-    name: Create and upload release-artifacts
-    # needs: [release_creation]
+  pre_build:
+    name: Pre-build
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          - name: "linux_prebuild"
+            path: .builds-linux.goreleaser-dev.yml
+          - name: "windows_prebuild"
+            path: .builds-windows.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -54,16 +59,59 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: latest
-          args: release --rm-dist --parallelism=4 -f .goreleaser-dev.yml --debug
-
+          args: release --rm-dist -f path=${{ matrix.path }} --debug
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
+      - name: Store Intermediate Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: bin-artifacts
+          path: dist
+          retention-days: 1
+
+  release:
+    name: Create and upload release-artifacts
+    needs: pre_build
+    # needs: [release_creation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release --rm-dist -f .goreleaser-dev.yml --debug
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
       - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
