@@ -2,8 +2,7 @@ before:
   hooks:
     - go mod tidy
 builds:
-  -
-    builder: prebuilt
+  - builder: prebuilt
     main: ./cmd/kubectl-testkube
     binary: kubectl-testkube
     env:
