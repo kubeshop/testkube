@@ -162,7 +162,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 // DeleteTestSuitesHandler for deleting all TestSuites
 func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		err := s.TestsSuitesClient.DeleteAll()
+		err := s.TestsSuitesClient.DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)

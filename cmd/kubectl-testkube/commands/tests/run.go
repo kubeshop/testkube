@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ func NewRunTestCmd() *cobra.Command {
 		downloadArtifactsEnabled bool
 		downloadDir              string
 		secretEnvs               map[string]string
+		selectors                []string
 	)
 
 	cmd := &cobra.Command{
@@ -32,14 +34,8 @@ func NewRunTestCmd() *cobra.Command {
 		Aliases: []string{"t"},
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
-		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-
-			testName := args[0]
-
-			client, namespace := common.GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
 			paramsFileContent := ""
 			if paramsFile != "" {
@@ -48,38 +44,61 @@ func NewRunTestCmd() *cobra.Command {
 				paramsFileContent = string(b)
 			}
 
-			_, err := client.GetTest(testName)
-			if err != nil {
-				ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
-				ui.Debug(err.Error())
-				os.Exit(1)
+			var executions []testkube.Execution
+			var err error
+			client, namespace := common.GetClient(cmd)
+			options := apiv1.ExecuteTestOptions{
+				ExecutionParams:            params,
+				ExecutionParamsFileContent: paramsFileContent,
+				Args:                       binaryArgs,
+				SecretEnvs:                 secretEnvs,
 			}
+			if len(args) > 0 {
+				testName := args[0]
+				namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-			execution, err := client.ExecuteTest(testName, name, params, paramsFileContent, binaryArgs, secretEnvs)
-			ui.ExitOnError("starting test execution "+namespacedName, err)
-
-			printExecutionDetails(execution)
-
-			if execution.Id != "" {
-				if watchEnabled {
-					watchLogs(execution.Id, client)
+				_, err = client.GetTest(testName)
+				if err != nil {
+					ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
+					ui.Debug(err.Error())
+					os.Exit(1)
 				}
 
-				execution, err = client.GetExecution(execution.Id)
-				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+				execution, err := client.ExecuteTest(testName, name, options)
+				ui.ExitOnError("starting test execution "+namespacedName, err)
+				executions = append(executions, execution)
+			} else if len(selectors) != 0 {
+				selector := strings.Join(selectors, ",")
+				executions, err = client.ExecuteTests(selector, options)
+				ui.ExitOnError("starting test executions "+selector, err)
+			} else {
+				ui.Failf("Pass Test name or labels to run by labels ")
 			}
 
-			uiPrintStatus(execution)
+			for _, execution := range executions {
+				printExecutionDetails(execution)
 
-			if execution.Id != "" {
-				if downloadArtifactsEnabled {
-					DownloadArtifacts(execution.Id, downloadDir, client)
+				if execution.Id != "" {
+					if watchEnabled && len(executions) == 1 {
+						watchLogs(execution.Id, client)
+					}
+
+					execution, err = client.GetExecution(execution.Id)
+					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				uiShellWatchExecution(execution.Id)
-			}
+				uiPrintStatus(execution)
 
-			uiShellGetExecution(execution.Id)
+				if execution.Id != "" {
+					if downloadArtifactsEnabled {
+						DownloadArtifacts(execution.Id, downloadDir, client)
+					}
+
+					uiShellWatchExecution(execution.Id)
+				}
+
+				uiShellGetExecution(execution.Id)
+			}
 		},
 	}
 
@@ -91,6 +110,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

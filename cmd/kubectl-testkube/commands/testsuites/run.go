@@ -2,10 +2,11 @@ package testsuites
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		params                   map[string]string
 		downloadArtifactsEnabled bool
 		downloadDir              string
+		selectors                []string
 	)
 
 	cmd := &cobra.Command{
@@ -26,40 +28,52 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Aliases: []string{"ts"},
 		Short:   "Starts new test suite",
 		Long:    `Starts new test suite based on TestSuite Custom Resource name, returns results to console`,
-		Args:    validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
 
-			testSuiteName := args[0]
 			startTime := time.Now()
-
 			client, namespace := common.GetClient(cmd)
-			namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
-			execution, err := client.ExecuteTestSuite(testSuiteName, name, params)
-			ui.ExitOnError("starting test suite execution "+namespacedName, err)
+			var executions []testkube.TestSuiteExecution
+			var err error
+			if len(args) > 0 {
+				testSuiteName := args[0]
+				namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
-			if execution.Id != "" {
-				if watchEnabled {
-					executionCh, err := client.WatchTestSuiteExecution(execution.Id)
-					for execution := range executionCh {
-						ui.ExitOnError("watching test execution", err)
-						printExecution(execution, startTime)
-					}
-				}
-
-				execution, err = client.GetTestSuiteExecution(execution.Id)
+				execution, err := client.ExecuteTestSuite(testSuiteName, name, params)
+				ui.ExitOnError("starting test suite execution "+namespacedName, err)
+				executions = append(executions, execution)
+			} else if len(selectors) != 0 {
+				selector := strings.Join(selectors, ",")
+				executions, err = client.ExecuteTestSuites(selector, params)
+				ui.ExitOnError("starting test suite executions "+selector, err)
+			} else {
+				ui.Failf("Pass Test suite name or labels to run by labels ")
 			}
 
-			printExecution(execution, startTime)
-			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+			for _, execution := range executions {
+				if execution.Id != "" {
+					if watchEnabled && len(executions) == 1 {
+						executionCh, err := client.WatchTestSuiteExecution(execution.Id)
+						for execution := range executionCh {
+							ui.ExitOnError("watching test execution", err)
+							printExecution(execution, startTime)
+						}
+					}
 
-			uiPrintExecutionStatus(execution)
+					execution, err = client.GetTestSuiteExecution(execution.Id)
+				}
 
-			uiShellTestSuiteGetCommandBlock(execution.Id)
-			if execution.Id != "" {
-				if !watchEnabled {
-					uiShellTestSuiteWatchCommandBlock(execution.Id)
+				printExecution(execution, startTime)
+				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+
+				uiPrintExecutionStatus(execution)
+
+				uiShellTestSuiteGetCommandBlock(execution.Id)
+				if execution.Id != "" {
+					if !watchEnabled || len(executions) != 1 {
+						uiShellTestSuiteWatchCommandBlock(execution.Id)
+					}
 				}
 			}
 		},
@@ -70,6 +84,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

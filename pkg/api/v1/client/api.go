@@ -129,7 +129,7 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 		return executions, fmt.Errorf("api/get-executions returned error: %w", err)
 	}
 
-	return c.getExecutionsFromResponse(resp)
+	return c.getExecutionResultsFromResponse(resp)
 }
 
 // DeleteTests deletes all tests
@@ -191,8 +191,7 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 
 // ExecuteTest starts test execution, reads data and returns ID
 // execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string,
-	args []string, secretEnvs map[string]string) (execution testkube.Execution, err error) {
+func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
 	// get test to get test labels
@@ -203,11 +202,11 @@ func (c APIClient) ExecuteTest(id, executionName string, executionParams map[str
 
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
-		ParamsFile: executionParamsFileContent,
-		Params:     executionParams,
+		ParamsFile: options.ExecutionParamsFileContent,
+		Params:     options.ExecutionParams,
 		Labels:     test.Labels,
-		Args:       args,
-		SecretEnvs: secretEnvs,
+		Args:       options.Args,
+		SecretEnvs: options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)
@@ -226,6 +225,35 @@ func (c APIClient) ExecuteTest(id, executionName string, executionParams map[str
 	}
 
 	return c.getExecutionFromResponse(resp)
+}
+
+// ExecuteTests starts test executions, reads data and returns IDs
+// executions are started asynchronously client can check later for results
+func (c APIClient) ExecuteTests(selector string, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
+	uri := c.getURI("/executions")
+	request := testkube.ExecutionRequest{
+		ParamsFile: options.ExecutionParamsFileContent,
+		Params:     options.ExecutionParams,
+		Args:       options.Args,
+		SecretEnvs: options.SecretEnvs,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executions, err
+	}
+
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/execute-test returned error: %w", err)
+	}
+
+	return c.getExecutionsFromResponse(resp)
 }
 
 // Logs returns logs stream from job pods, based on job pods logs
@@ -463,7 +491,18 @@ func (c APIClient) getExecutionFromResponse(resp rest.Result) (execution testkub
 	return execution, err
 }
 
-func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
+func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions []testkube.Execution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executions, err
+	}
+
+	err = json.Unmarshal(bytes, &executions)
+
+	return executions, err
+}
+
+func (c APIClient) getExecutionResultsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executions, err
@@ -858,7 +897,36 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams ma
 		return execution, fmt.Errorf("api/execute-test-suite returned error: %w", err)
 	}
 
-	return c.getTestExecutionFromResponse(resp)
+	return c.getTestSuiteExecutionFromResponse(resp)
+}
+
+// ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
+// Executions are started asynchronously client can check later for results
+func (c APIClient) ExecuteTestSuites(selector string, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error) {
+	uri := c.getURI("/test-suite-executions")
+
+	executionRequest := testkube.ExecutionRequest{
+		Params: executionParams,
+	}
+
+	body, err := json.Marshal(executionRequest)
+	if err != nil {
+		return executions, err
+	}
+
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body)
+
+	req.Param("selector", selector)
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/execute-test-suites returned error: %w", err)
+	}
+
+	return c.getTestSuiteExecutionsFromResponse(resp)
 }
 
 func (c APIClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
@@ -870,7 +938,7 @@ func (c APIClient) GetTestSuiteExecution(executionID string) (execution testkube
 		return execution, fmt.Errorf("api/get-test-suite-execution returned error: %w", err)
 	}
 
-	return c.getTestExecutionFromResponse(resp)
+	return c.getTestSuiteExecutionFromResponse(resp)
 }
 
 // WatchTestSuiteExecution watches for changes in channels of test suite executions steps
@@ -948,7 +1016,7 @@ func (c APIClient) getTestSuiteWithExecutionsFromResponse(resp rest.Result) (tes
 	return testSuiteWithExecutions, err
 }
 
-func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) getTestSuiteExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return execution, err
@@ -957,6 +1025,17 @@ func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution tes
 	err = json.Unmarshal(bytes, &execution)
 
 	return execution, err
+}
+
+func (c APIClient) getTestSuiteExecutionsFromResponse(resp rest.Result) (executions []testkube.TestSuiteExecution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executions, err
+	}
+
+	err = json.Unmarshal(bytes, &executions)
+
+	return executions, err
 }
 
 func (c APIClient) getTestExecutionsFromResponse(resp rest.Result) (executions testkube.TestSuiteExecutionsResult, err error) {
