@@ -35,9 +35,9 @@ jobs:
       matrix:
         include:
           - name: "linux_prebuild"
-            path: .builds-linux.goreleaser-dev.yml
+            path: ".builds-linux.goreleaser-dev.yml"
           - name: "windows_prebuild"
-            path: .builds-windows.goreleaser-dev.yml
+            path: ".builds-windows.goreleaser-dev.yml"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
