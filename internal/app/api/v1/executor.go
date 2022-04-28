@@ -35,7 +35,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		list, err := s.ExecutorsClient.List()
+		list, err := s.ExecutorsClient.List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -76,6 +76,18 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		err := s.ExecutorsClient.DeleteByLabels(c.Query("selector"))
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		c.Status(204)
+		return nil
+	}
+}
+
 func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.ExecutorDetails {
 	return testkube.ExecutorDetails{
 		Name: item.Name,
@@ -94,6 +106,7 @@ func mapExecutorCreateRequestToExecutorCRD(request testkube.ExecutorCreateReques
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
+			Labels:    request.Labels,
 		},
 		Spec: executorv1.ExecutorSpec{
 			ExecutorType: request.ExecutorType,

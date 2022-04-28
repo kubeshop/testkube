@@ -1,6 +1,8 @@
 package webhooks
 
 import (
+	"strings"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -9,6 +11,7 @@ import (
 
 func NewDeleteWebhookCmd() *cobra.Command {
 	var name, namespace string
+	var selectors []string
 
 	cmd := &cobra.Command{
 
@@ -21,9 +24,16 @@ func NewDeleteWebhookCmd() *cobra.Command {
 			name = args[0]
 
 			client, _ := common.GetClient(cmd)
-
-			err := client.DeleteWebhook(name)
-			ui.ExitOnError("deleting webhook: "+name, err)
+			if name != "" {
+				err := client.DeleteWebhook(name)
+				ui.ExitOnError("deleting webhook: "+name, err)
+			} else if len(selectors) != 0 {
+				selector := strings.Join(selectors, ",")
+				err := client.DeleteWebhooks(selector)
+				ui.ExitOnError("deleting webhooks by labels: "+selector, err)
+			} else {
+				ui.Failf("Pass Webhook name or labels to delete by labels ")
+			}
 
 			ui.Success("Webhook deleted")
 		},
@@ -31,6 +41,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as first argument")
 	cmd.Flags().StringVarP(&namespace, "namespace", "", "", "Kubernetes namespace")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

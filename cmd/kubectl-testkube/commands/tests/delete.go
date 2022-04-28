@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"strings"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -8,6 +10,7 @@ import (
 
 func NewDeleteTestsCmd() *cobra.Command {
 	var deleteAll bool
+	var selectors []string
 
 	cmd := &cobra.Command{
 		Use:     "test [testName]",
@@ -20,7 +23,7 @@ func NewDeleteTestsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 
 			if deleteAll {
-				err := client.DeleteTests()
+				err := client.DeleteTests("")
 				ui.ExitOnError("delete all tests from namespace "+namespace, err)
 				ui.Success("Succesfully deleted all tests in namespace", namespace)
 			} else if len(args) > 0 {
@@ -28,14 +31,19 @@ func NewDeleteTestsCmd() *cobra.Command {
 				err := client.DeleteTest(name)
 				ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
 				ui.Success("Succesfully deleted", name)
+			} else if len(selectors) != 0 {
+				selector := strings.Join(selectors, ",")
+				err := client.DeleteTests(selector)
+				ui.ExitOnError("deleting tests by labels: "+selector, err)
 			} else {
-				ui.Failf("Pass Test name or pass --all flag to delete all")
+				ui.Failf("Pass Test name, --all flag to delete all, labels to delete by labels ")
 			}
 
 		},
 	}
 
 	cmd.Flags().BoolVar(&deleteAll, "all", false, "Delete all tests")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }
