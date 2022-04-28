@@ -184,10 +184,12 @@ func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, executio
 
 func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
 	messageBuilder := strings.Builder{}
-	messageBuilder.WriteString(fmt.Sprintf("Event %s for test %s\n", string(*eventType), execution.TestName))
+	messageBuilder.WriteString(fmt.Sprintf("Processing event %s for test %s\n", string(*eventType), execution.TestName))
 	if execution.ExecutionResult != nil {
 		messageBuilder.WriteString(fmt.Sprintf("Status: %s\n", *execution.ExecutionResult.Status))
-		messageBuilder.WriteString(fmt.Sprintf("Duration: %s\n", execution.Duration))
+		if len(execution.Duration) > 0 {
+			messageBuilder.WriteString(fmt.Sprintf("Duration: %s\n", execution.Duration))
+		}
 		if execution.ExecutionResult.Output != "" {
 			messageBuilder.WriteString(fmt.Sprintf("Output:\n %s", execution.ExecutionResult.Output))
 		}

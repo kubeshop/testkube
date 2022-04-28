@@ -62,6 +62,7 @@ nav:
       - Version Command: cli/kubectl-testkube_version.md
       - Watch Command: cli/kubectl-testkube_watch.md
   - Integrating with CI/CD: testkube-automation.md
+  - Integrating with Slack: slack-integration.md
   - Scheduling: scheduling.md
   - OAuth for UI: oauth.md
   - Metrics: metrics.md
