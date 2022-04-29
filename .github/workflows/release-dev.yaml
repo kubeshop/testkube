@@ -64,20 +64,13 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: build --single-target -f ${{ matrix.path }} --rm-dist  #.builds.goreleaser-dev.yml
+          args: build --single-target -f .builds.goreleaser-dev.yml  --rm-dist  #${{ matrix.path }}
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-
-      - name: Store Intermediate Artifacts
-        uses: actions/upload-artifact@master
-        with:
-          name: bin-artifacts
-          path: tmp
-          retention-days: 1
 
   release:
     name: Create and upload release-artifacts
@@ -107,7 +100,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release --rm-dist -f .goreleaser-dev.yml --debug
+          args: release --rm-dist -f .goreleaser-dev.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
