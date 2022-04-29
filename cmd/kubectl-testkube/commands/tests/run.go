@@ -79,7 +79,7 @@ func NewRunTestCmd() *cobra.Command {
 				printExecutionDetails(execution)
 
 				if execution.Id != "" {
-					if watchEnabled && len(executions) == 1 {
+					if watchEnabled && len(args) > 0 {
 						watchLogs(execution.Id, client)
 					}
 
