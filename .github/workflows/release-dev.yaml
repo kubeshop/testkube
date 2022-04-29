@@ -72,12 +72,12 @@ jobs:
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
 
-#      - name: Store Intermediate Artifacts
-#        uses: actions/upload-artifact@master
-#        with:
-#          name: bin-artifacts
-#          path: dist
-#          retention-days: 1
+      - name: Store Intermediate Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: bin-artifacts
+          path: tmp
+          retention-days: 1
 
   release:
     name: Create and upload release-artifacts
