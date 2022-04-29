@@ -23,7 +23,10 @@ func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, 
 	buffer := new(bytes.Buffer)
 	cmd.Stdout = buffer
 	cmd.Stderr = buffer
-	cmd.Start()
+
+	if err = cmd.Start(); err != nil {
+		return buffer.Bytes(), fmt.Errorf("could not start process: %w", err)
+	}
 
 	if err = cmd.Wait(); err != nil {
 		// TODO clean error output (currently it has buffer too - need to refactor in cmd)
@@ -46,7 +49,9 @@ func LoggedExecuteInDir(dir string, writer io.Writer, command string, arguments 
 	cmd.Stdout = w
 	cmd.Stderr = w
 
-	cmd.Start()
+	if err = cmd.Start(); err != nil {
+		return buffer.Bytes(), fmt.Errorf("could not start process: %w", err)
+	}
 
 	if err = cmd.Wait(); err != nil {
 		return buffer.Bytes(), fmt.Errorf("process error: %w", err)
