@@ -191,6 +191,7 @@ func (s TestkubeAPI) Init() {
 	executions := s.Routes.Group("/executions")
 
 	executions.Get("/", s.ListExecutionsHandler())
+	executions.Post("/", s.ExecuteTestsHandler())
 	executions.Get("/:executionID", s.GetExecutionHandler())
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
@@ -206,7 +207,7 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
 
-	tests.Post("/:id/executions", s.ExecuteTestHandler())
+	tests.Post("/:id/executions", s.ExecuteTestsHandler())
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
@@ -225,12 +226,13 @@ func (s TestkubeAPI) Init() {
 	testsuites.Get("/:id", s.GetTestSuiteHandler())
 	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
 
-	testsuites.Post("/:id/executions", s.ExecuteTestSuiteHandler())
+	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")

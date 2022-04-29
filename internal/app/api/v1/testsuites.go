@@ -22,6 +22,7 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/types"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 // GetTestSuiteHandler for getting test object
@@ -276,53 +277,119 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecuteTestSuiteHandler() fiber.Handler {
+func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
-		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
-		s.Log.Debugw("getting test suite", "name", name)
-
-		crTestSuite, err := s.TestsSuitesClient.Get(name)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
-			}
-
-			return s.Error(c, http.StatusBadGateway, err)
-		}
 
 		var request testkube.TestSuiteExecutionRequest
-		err = c.BodyParser(&request)
+		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
 		}
 
-		if crTestSuite.Spec.Schedule != "" && c.Query("callback") == "" {
+		name := c.Params("id")
+		namespace := c.Query("namespace", "testkube")
+		selector := c.Query("selector")
+		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
+
+		var testSuites []testsuitesv1.TestSuite
+		if name != "" {
+			testSuite, err := s.TestsSuitesClient.Get(name)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return s.Warn(c, http.StatusNotFound, err)
+				}
+
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+
+			testSuites = append(testSuites, *testSuite)
+		} else {
+			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test suites: %w", err))
+			}
+
+			for _, item := range testSuiteList.Items {
+				testSuites = append(testSuites, item)
+			}
+		}
+
+		var results []testkube.TestSuiteExecution
+		var work []testsuitesv1.TestSuite
+		for _, testSuite := range testSuites {
+			if testSuite.Spec.Schedule == "" || c.Query("callback") != "" {
+				work = append(work, testSuite)
+				continue
+			}
+
 			data, err := json.Marshal(request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test suite request: %w", err))
 			}
 
 			options := cronjob.CronJobOptions{
-				Schedule: crTestSuite.Spec.Schedule,
+				Schedule: testSuite.Spec.Schedule,
 				Resource: testSuiteResourceURI,
 				Data:     string(data),
 			}
-			if err = s.CronJobClient.Apply(crTestSuite.Name, cronjob.GetMetadataName(crTestSuite.Name, testSuiteResourceURI), options); err != nil {
+			if err = s.CronJobClient.Apply(testSuite.Name, cronjob.GetMetadataName(testSuite.Name, testSuiteResourceURI), options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
 			}
 
-			return c.JSON(testkube.NewQueuedTestSuiteExecution(name, namespace))
+			results = append(results, testkube.NewQueuedTestSuiteExecution(name, namespace))
 		}
 
-		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
-		s.Log.Debugw("executing test", "name", name, "test suite", testSuite, "cr", crTestSuite)
-		results := s.executeTestSuite(ctx, request, testSuite)
+		if len(work) != 0 {
+			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](len(work))
 
-		c.Response().SetStatusCode(fiber.StatusCreated)
+			cancelCtx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
+			go workerpoolService.Run(cancelCtx)
+
+		OuterLoop:
+			for {
+				select {
+				case r, ok := <-workerpoolService.GetResponses():
+					if !ok {
+						continue
+					}
+
+					results = append(results, r.Result)
+				case <-workerpoolService.Done:
+					break OuterLoop
+				default:
+				}
+			}
+		}
+
+		s.Log.Debugw("executing test", "name", name, "selector", selector)
+		if name != "" && len(results) != 0 {
+			if results[0].IsFailed() {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
+			}
+
+			c.Response().SetStatusCode(fiber.StatusCreated)
+			return c.JSON(results[0])
+		}
+
 		return c.JSON(results)
 	}
+}
+
+func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv1.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+	testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution] {
+	requests := make([]workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution], len(work))
+	for i := range work {
+		requests[i] = workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]{
+			Object:  testsuitesmapper.MapCRToAPI(work[i]),
+			Options: request,
+			ExecFn:  s.executeTestSuite,
+		}
+	}
+	return requests
 }
 
 func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
@@ -368,7 +435,8 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.TestSuiteExecutionRequest, testSuite testkube.TestSuite) (testsuiteExecution testkube.TestSuiteExecution) {
+func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
+	testsuiteExecution testkube.TestSuiteExecution, err error) {
 	s.Log.Debugw("Got test to execute", "test", testSuite)
 
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
@@ -423,8 +491,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 
 	}(testsuiteExecution)
 
-	return
-
+	return testsuiteExecution, nil
 }
 
 func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
@@ -442,20 +509,19 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
-		options, err := s.GetExecuteOptions(executeTestStep.Namespace, executeTestStep.Name, testkube.ExecutionRequest{
+		request := testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
 			Namespace: executeTestStep.Namespace,
 			Params:    testsuiteExecution.Params,
-		})
+		}
 
+		l.Debug("executing test", "params", testsuiteExecution.Params)
+		//		options.Sync = true
+		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)
 			return
 		}
-
-		l.Debug("executing test", "params", testsuiteExecution.Params)
-		options.Sync = true
-		execution := s.executeTest(ctx, options)
 		result.Execution = &execution
 
 	case testkube.TestSuiteStepTypeDelay:
