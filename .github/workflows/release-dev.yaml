@@ -32,15 +32,15 @@ jobs:
   pre_build:
     name: Pre-build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: "linux_prebuild"
-            path: .builds-linux.goreleaser-dev.yml
-          - name: "windows_prebuild"
-            path: .builds-windows.goreleaser-dev.yml
-          - name: "darwin_prebuild"
-            path: .builds-darwin.goreleaser-dev.yml
+#    strategy:
+#      matrix:
+#        include:
+#          - name: "linux_prebuild"
+#            path: .builds-linux.goreleaser-dev.yml
+#          - name: "windows_prebuild"
+#            path: .builds-windows.goreleaser-dev.yml
+#          - name: "darwin_prebuild"
+#            path: .builds-darwin.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
