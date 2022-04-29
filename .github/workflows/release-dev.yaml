@@ -32,15 +32,15 @@ jobs:
   pre_build:
     name: Pre-build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: "linux_prebuild"
-            path: .builds-linux.goreleaser-dev.yml
-          - name: "windows_prebuild"
-            path: .builds-windows.goreleaser-dev.yml
-          - name: "darwin_prebuild"
-            path: .builds-darwin.goreleaser-dev.yml
+#    strategy:
+#      matrix:
+#        include:
+#          - name: "linux_prebuild"
+#            path: .builds-linux.goreleaser-dev.yml
+#          - name: "windows_prebuild"
+#            path: .builds-windows.goreleaser-dev.yml
+#          - name: "darwin_prebuild"
+#            path: .builds-darwin.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -64,7 +64,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: build --single-target -f ${{ matrix.path }} --rm-dist
+          args: build --single-target -f .builds.goreleaser-dev.yml --rm-dist  #${{ matrix.path }}
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
