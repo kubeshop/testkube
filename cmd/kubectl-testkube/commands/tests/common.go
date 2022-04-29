@@ -22,10 +22,12 @@ func printExecutionDetails(execution testkube.Execution) {
 		ui.Warn("Execution ID  :", execution.Id)
 		ui.Warn("Execution name:", execution.Name)
 	}
-	if len(execution.Params) > 0 {
-		ui.Warn("Params        :", fmt.Sprintf("%d", len(execution.Params)))
-		for k, v := range execution.Params {
-			ui.Info("- "+k, v)
+
+	vars := *execution.Variables
+	if len(vars) > 0 {
+		ui.Warn("Variables     :", fmt.Sprintf("%d", len(vars)))
+		for _, v := range *execution.Variables {
+			ui.Info("- "+v.Name, v.Value)
 		}
 	}
 	ui.NL()
@@ -179,7 +181,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	if err != nil {
 		return options, err
 	}
-	params, err := cmd.Flags().GetStringToString("param")
+	variables, err := cmd.Flags().GetStringToString("variable")
 	if err != nil {
 		return options, err
 	}
@@ -191,7 +193,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		Content:   content,
 		Namespace: namespace,
 		Schedule:  schedule,
-		Params:    params,
+		Variables: variables,
 	}
 
 	// if labels are passed and are different from the existing overwrite
@@ -215,5 +217,22 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	}
 
 	return options, nil
+
+}
+
+func GetVariablesFromCmd(cmd *cobra.Command) []testkube.Variable {
+
+	variables, err := cmd.Flags().GetStringToString("variable")
+	secretVariables, err := cmd.Flags().GetStringToString("secret-variable")
+
+	vars := []testkube.Variable{}
+
+	for k, v := range variables {
+		vars = append(vars, testkube.Variable{
+			Name:  k,
+			Value: v,
+			Type_: testkube.BASIC_VariableType,
+		})
+	}
 
 }

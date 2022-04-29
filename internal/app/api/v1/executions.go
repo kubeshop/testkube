@@ -417,7 +417,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	)
 
 	execution.Args = options.Request.Args
-	execution.ParamsFile = options.Request.ParamsFile
+	execution.VariablesFile = options.Request.ParamsFile
 
 	return execution
 }

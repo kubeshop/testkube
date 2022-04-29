@@ -24,9 +24,9 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Labels:   ", testkube.LabelsToString(execution.Labels))
 	}
 
-	if len(execution.Params) > 0 {
-		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Params)))
-		for k, v := range execution.Params {
+	if len(execution.Variables) > 0 {
+		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Variables)))
+		for k, v := range execution.Variables {
 			ui.Info("- "+k, v)
 		}
 	}
