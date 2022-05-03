@@ -192,7 +192,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), stringData); err != nil {
+		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), test.Labels, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -219,10 +219,21 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		}
 
 		// delete cron job, if schedule is cleaned
-		if test.Spec.Schedule != "" && request.Schedule == "" {
-			if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI)); err != nil {
-				if !errors.IsNotFound(err) {
-					return s.Error(c, http.StatusBadGateway, err)
+		if test.Spec.Schedule != "" {
+			cronJob, err := s.CronJobClient.Get(cronjob.GetMetadataName(request.Name, testResourceURI))
+			if err != nil && !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+
+			if cronJob != nil {
+				if request.Schedule == "" {
+					if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI)); err != nil {
+						return s.Error(c, http.StatusBadGateway, err)
+					}
+				} else {
+					if err = s.CronJobClient.UpdateLabels(cronJob, test.Labels, request.Labels); err != nil {
+						return s.Error(c, http.StatusBadGateway, err)
+					}
 				}
 			}
 		}
@@ -241,7 +252,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		// update secrets for scipt
 		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), stringData); err != nil {
+		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), test.Labels, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -283,7 +294,14 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 // DeleteTestsHandler for deleting all tests
 func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		err := s.TestsClient.DeleteByLabels(c.Query("selector"))
+		var err error
+		selector := c.Query("selector")
+		if selector == "" {
+			err = s.TestsClient.DeleteAll()
+		} else {
+			err = s.TestsClient.DeleteByLabels(selector)
+		}
+
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -293,14 +311,14 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		}
 
 		// delete all secrets for tests
-		if err = s.SecretClient.DeleteAll(); err != nil {
+		if err = s.SecretClient.DeleteAll(selector); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
 		}
 
 		// delete all cron jobs for tests
-		if err = s.CronJobClient.DeleteAll(testResourceURI); err != nil {
+		if err = s.CronJobClient.DeleteAll(testResourceURI, selector); err != nil {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
