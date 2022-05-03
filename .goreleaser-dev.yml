@@ -21,7 +21,7 @@ builds:
     prebuilt:
     # Path must be the template path to the binaries.
     # This field is required when using the `prebuilt` builder.
-      path: tmp/testkube_linux_amd64_v1/kubectl-testkube
+      path: tmp/testkube_{{ .Os }}_{{ .Arch }}
 archives:
   - replacements:
       darwin: macOS
