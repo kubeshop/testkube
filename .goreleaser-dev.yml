@@ -3,7 +3,7 @@ before:
     - go mod tidy
 builds:
   - builder: prebuilt
-    main: ./cmd/kubectl-testkube
+  #  main: ./cmd/kubectl-testkube
     binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
