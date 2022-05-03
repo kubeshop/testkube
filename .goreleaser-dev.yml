@@ -4,7 +4,7 @@ before:
 builds:
   - builder: prebuilt
   #  main: ./cmd/kubectl-testkube
-   # binary: kubectl-testkube tmp/testkube_windows_386/kubectl-testkube.exe tmp/testkube_linux_386/kubectl-testkube
+    binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
     goos:
@@ -21,7 +21,7 @@ builds:
     prebuilt:
     # Path must be the template path to the binaries.
     # This field is required when using the `prebuilt` builder.
-      path: ./tmp/testkube_{{ .Os }}_{{ .Arch }}/{{ .Binary }}
+      path: tmp #testkube_{{ .Os }}_{{ .Arch }}/{{ .Binary }}
 archives:
   - replacements:
       darwin: macOS
