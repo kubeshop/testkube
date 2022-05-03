@@ -341,7 +341,12 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		}
 
 		if len(work) != 0 {
-			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](len(work))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
+			}
+
+			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
 			cancelCtx, cancel := context.WithCancel(ctx)
 			defer cancel()

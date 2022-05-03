@@ -21,6 +21,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		downloadArtifactsEnabled bool
 		downloadDir              string
 		selectors                []string
+		concurrencyLevel         int
 	)
 
 	cmd := &cobra.Command{
@@ -45,13 +46,18 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				executions = append(executions, execution)
 			} else if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
-				executions, err = client.ExecuteTestSuites(selector, params)
+				executions, err = client.ExecuteTestSuites(selector, concurrencyLevel, params)
 				ui.ExitOnError("starting test suite executions "+selector, err)
 			} else {
 				ui.Failf("Pass Test suite name or labels to run by labels ")
 			}
 
+			var hasErrors bool
 			for _, execution := range executions {
+				if execution.IsFailed() {
+					hasErrors = true
+				}
+
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						executionCh, err := client.WatchTestSuiteExecution(execution.Id)
@@ -76,6 +82,10 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					}
 				}
 			}
+
+			if hasErrors {
+				ui.ExitOnError("executions contain failed on errors")
+			}
 		},
 	}
 
@@ -83,8 +93,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&params, "param", "p", map[string]string{}, "execution envs passed to executor")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "download artifacts automatically")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test suite execution")
 
 	return cmd
 }

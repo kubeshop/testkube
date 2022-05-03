@@ -27,6 +27,7 @@ func NewRunTestCmd() *cobra.Command {
 		downloadDir              string
 		secretEnvs               map[string]string
 		selectors                []string
+		concurrencyLevel         int
 	)
 
 	cmd := &cobra.Command{
@@ -69,14 +70,19 @@ func NewRunTestCmd() *cobra.Command {
 				executions = append(executions, execution)
 			} else if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
-				executions, err = client.ExecuteTests(selector, options)
+				executions, err = client.ExecuteTests(selector, concurrencyLevel, options)
 				ui.ExitOnError("starting test executions "+selector, err)
 			} else {
 				ui.Failf("Pass Test name or labels to run by labels ")
 			}
 
+			var hasErrors bool
 			for _, execution := range executions {
 				printExecutionDetails(execution)
+
+				if execution.ExecutionResult != nil && execution.ExecutionResult.ErrorMessage != "" {
+					hasErrors = true
+				}
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
@@ -99,6 +105,10 @@ func NewRunTestCmd() *cobra.Command {
 
 				uiShellGetExecution(execution.Id)
 			}
+
+			if hasErrors {
+				ui.ExitOnError("executions contain failed on errors")
+			}
 		},
 	}
 
@@ -111,6 +121,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "downlaod artifacts automatically")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 
 	return cmd
 }

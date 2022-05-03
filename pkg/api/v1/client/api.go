@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -229,7 +230,7 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 
 // ExecuteTests starts test executions, reads data and returns IDs
 // executions are started asynchronously client can check later for results
-func (c APIClient) ExecuteTests(selector string, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
+func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.getURI("/executions")
 	request := testkube.ExecutionRequest{
 		ParamsFile: options.ExecutionParamsFileContent,
@@ -246,6 +247,9 @@ func (c APIClient) ExecuteTests(selector string, options ExecuteTestOptions) (ex
 	req := c.GetProxy("POST").
 		Suffix(uri).
 		Body(body)
+
+	req.Param("selector", selector)
+	req.Param("concurrency", strconv.Itoa(concurrencyLevel))
 
 	resp := req.Do(context.Background())
 
@@ -902,7 +906,7 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams ma
 
 // ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
 // Executions are started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuites(selector string, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions")
 
 	executionRequest := testkube.ExecutionRequest{
@@ -919,6 +923,7 @@ func (c APIClient) ExecuteTestSuites(selector string, executionParams map[string
 		Body(body)
 
 	req.Param("selector", selector)
+	req.Param("concurrency", strconv.Itoa(concurrencyLevel))
 
 	resp := req.Do(context.Background())
 

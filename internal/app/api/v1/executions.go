@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,6 +33,8 @@ const (
 	testResourceURI = "tests"
 	// testSuiteResourceURI is test suite resource uri for cron job call
 	testSuiteResourceURI = "test-suites"
+	// defaultConcurrencyLevel is a default concurrency level for worker pool
+	defaultConcurrencyLevel = "10"
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
@@ -98,7 +101,12 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		if len(work) != 0 {
-			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](len(work))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
+			}
+
+			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
 			cancelCtx, cancel := context.WithCancel(ctx)
 			defer cancel()

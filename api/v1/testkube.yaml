@@ -414,6 +414,7 @@ paths:
           description: kubernetes namespace
           required: false
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
         - api
         - test-suites
@@ -534,6 +535,7 @@ paths:
           description: kubernetes namespace
           required: false
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
         - api
         - tests
@@ -2483,3 +2485,9 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    ConcurrencyLevel:
+      in: query
+      name: concurrency
+      schema:
+        type: integer
+        default: 10

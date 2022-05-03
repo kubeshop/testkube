@@ -30,7 +30,7 @@ type Client interface {
 	ListTests(selector string) (tests testkube.Tests, err error)
 	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
-	ExecuteTests(selector string, options ExecuteTestOptions) (executions []testkube.Execution, err error)
+	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
@@ -57,7 +57,7 @@ type Client interface {
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
 	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (executions testkube.TestSuiteExecution, err error)
-	ExecuteTestSuites(selector string, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error)
+	ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
