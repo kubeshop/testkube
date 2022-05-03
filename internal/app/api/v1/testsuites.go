@@ -537,10 +537,10 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
 			Namespace: executeTestStep.Namespace,
 			Params:    testsuiteExecution.Params,
+			Sync:      true,
 		}
 
 		l.Debug("executing test", "params", testsuiteExecution.Params)
-		//		options.Sync = true
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)

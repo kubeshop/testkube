@@ -2175,6 +2175,9 @@ components:
           example:
             secret_name1: "kubernetes-secret-name"
             secret_key1: "secret-key-name"
+        sync:
+          type: boolean
+          description: whether to start execution sync or async
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
