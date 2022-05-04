@@ -46,7 +46,7 @@ func NewReleaseCmd() *cobra.Command {
 			err = helm.SaveString(&chart, "version", nextAppVersion)
 			ui.PrintOnError("Saving version string", err)
 
-			helm.SaveString(&chart, "appVersion", nextAppVersion)
+			err = helm.SaveString(&chart, "appVersion", nextAppVersion)
 			ui.PrintOnError("Saving appVersion string", err)
 
 			err = helm.UpdateValuesImageTag(valuesPath, nextAppVersion)
@@ -69,10 +69,10 @@ func NewReleaseCmd() *cobra.Command {
 			ui.Info("Generated new testkube version", nextTestkubeVersion)
 
 			// bump main testkube chart version
-			helm.SaveString(&chart, "version", nextTestkubeVersion)
+			err = helm.SaveString(&chart, "version", nextTestkubeVersion)
 			ui.PrintOnError("Saving version string", err)
 
-			helm.SaveString(&chart, "appVersion", nextTestkubeVersion)
+			err = helm.SaveString(&chart, "appVersion", nextTestkubeVersion)
 			ui.PrintOnError("Saving appVersion string", err)
 
 			// set app dependency version
