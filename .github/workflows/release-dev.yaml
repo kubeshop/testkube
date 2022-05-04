@@ -76,7 +76,11 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: bin-artifacts
-          path: tmp
+          path: |
+            tmp/
+            !config.yaml
+            !artifacts.json
+            !metadata.json
           retention-days: 1
 
   release:
