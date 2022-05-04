@@ -4,7 +4,7 @@ In order to receive notifications in slack about the status of the testing proce
 
 ## Create a slack bot for testkube
 
-Go to [https://api.slack.com/apps] and create new app within your namespace, select app to be a Bot type, add within Review Scopes to Add, add chat:write and chat:write.public then Install to Workspace and a bot token will be generated.
+Go to [https://api.slack.com/apps](https://api.slack.com/apps) and create new app within your namespace, select app to be a Bot type, add within Review Scopes to Add, add chat:write and chat:write.public then Install to Workspace and a bot token will be generated.
 
 ![img.gif](img/create-slack-bot.gif)
 
