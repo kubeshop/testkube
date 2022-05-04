@@ -13,7 +13,7 @@ func TestParamsNilAssign(t *testing.T) {
 		p1 := map[string]string{"p1": "1"}
 		p2 := map[string]string{"p2": "2"}
 
-		out := mergeParams(p1, p2)
+		out := mergeVariables(p1, p2)
 
 		assert.Equal(t, map[string]string{"p1": "1", "p2": "2"}, out)
 	})
@@ -22,7 +22,7 @@ func TestParamsNilAssign(t *testing.T) {
 
 		p2 := map[string]string{"p2": "2"}
 
-		out := mergeParams(nil, p2)
+		out := mergeVariables(nil, p2)
 
 		assert.Equal(t, map[string]string{"p2": "2"}, out)
 	})

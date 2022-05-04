@@ -25,10 +25,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	if len(test.Params) > 0 {
+	if len(test.Variables) > 0 {
 		ui.NL()
 		ui.Warn("Params: ")
-		for k, v := range test.Params {
+		for k, v := range test.Variables {
 			ui.Info("- "+k, v)
 		}
 	}

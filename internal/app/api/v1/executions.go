@@ -374,7 +374,8 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}
 
 	// Test params lowest priority, then test suite, then test suite execution / test execution
-	request.Params = mergeParams(testCR.Spec.Params, request.Params)
+	// TODO refactor operator to use new variables structure too
+	request.Variables = testkube.NewVariablesFromMap(testCR.Spec.Params, request.Params)
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -392,12 +393,15 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}, nil
 }
 
-func mergeParams(params map[string]string, appendParams map[string]string) map[string]string {
+func mergeVariables(paramsCollection ...map[string]string) *[]testkube.Variable {
+
+	vars := []testkube.Variable{}
+
 	if params == nil {
 		params = map[string]string{}
 	}
 
-	for k, v := range appendParams {
+	for k, v := range params {
 		params[k] = v
 	}
 

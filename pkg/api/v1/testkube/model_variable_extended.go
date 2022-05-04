@@ -9,6 +9,8 @@
  */
 package testkube
 
+type Variables *[]Variable
+
 func NewBasicVariable(name, value string) Variable {
 	return Variable{
 		Name:  name,
@@ -23,4 +25,23 @@ func NewSecretVariable(name, value string) Variable {
 		Value: value,
 		Type_: VariableTypeSecret,
 	}
+}
+
+func NewVariablesFromMap(paramsCollection ...map[string]string) *[]Variable {
+	vars := []Variable{}
+
+	// flatten first, override duplicates
+	params := map[string]string{}
+	for _, p := range paramsCollection {
+		for k, v := range p {
+			params[k] = v
+		}
+	}
+
+	for k, v := range params {
+		vars = append(vars, NewBasicVariable(k, v))
+
+	}
+
+	return &vars
 }

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/utils/mapper"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -181,10 +182,6 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	if err != nil {
 		return options, err
 	}
-	variables, err := cmd.Flags().GetStringToString("variable")
-	if err != nil {
-		return options, err
-	}
 
 	schedule := cmd.Flag("schedule").Value.String()
 	options = apiclientv1.UpsertTestOptions{
@@ -193,7 +190,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		Content:   content,
 		Namespace: namespace,
 		Schedule:  schedule,
-		Variables: variables,
+		Variables: mapper.NewVariablesFromCmd(cmd),
 	}
 
 	// if labels are passed and are different from the existing overwrite
@@ -217,22 +214,5 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	}
 
 	return options, nil
-
-}
-
-func GetVariablesFromCmd(cmd *cobra.Command) []testkube.Variable {
-
-	variables, err := cmd.Flags().GetStringToString("variable")
-	secretVariables, err := cmd.Flags().GetStringToString("secret-variable")
-
-	vars := []testkube.Variable{}
-
-	for k, v := range variables {
-		vars = append(vars, testkube.Variable{
-			Name:  k,
-			Value: v,
-			Type_: testkube.BASIC_VariableType,
-		})
-	}
 
 }
