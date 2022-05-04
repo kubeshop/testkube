@@ -71,6 +71,7 @@ jobs:
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
       - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
@@ -88,6 +89,11 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Get Intermediate Artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: bin-artifacts
+          path: tmp
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
