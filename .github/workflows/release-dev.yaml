@@ -64,7 +64,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: build -f ${{ matrix.path }}  --rm-dist  #.goreleaser.yml
+          args: release -f ${{ matrix.path }}   #.goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -106,7 +106,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f .goreleaser-dev.yml --debug
+          args: release -f .goreleaser-dev.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
