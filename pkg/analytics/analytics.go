@@ -18,6 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
@@ -111,6 +112,34 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 	return sendDataToGA(payload)
 }
 
+// SendCmdInit will send CLI event to GA
+func SendCmdInit(cmd *cobra.Command, version string) (string, error) {
+	machineID := MachineID()
+
+	payload := Payload{
+		ClientID: machineID,
+		UserID:   machineID,
+		Events: []Event{
+			{
+				Name: "init",
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "execution",
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       machineID,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+				},
+			}},
+	}
+
+	out, err := sendValidationRequest(payload)
+	ui.Debug("init event validation output", out, "error", err.Error())
+
+	return sendDataToGA(payload)
+}
+
 // SendAnonymousCmdInfo will send CLI event to GA
 func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, error) {
 	payload := Payload{
@@ -173,7 +202,9 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
+	uri := fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret)
+
+	request, err := http.NewRequest("POST", uri, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}

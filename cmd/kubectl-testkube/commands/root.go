@@ -24,7 +24,6 @@ var (
 )
 
 func init() {
-
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
 	RootCmd.AddCommand(NewUpdateCmd())
@@ -57,7 +56,7 @@ var RootCmd = &cobra.Command{
 	Short: "Testkube entrypoint for kubectl plugin",
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		ui.Verbose = verbose
+		ui.SetVerbose(verbose)
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
@@ -65,7 +64,26 @@ var RootCmd = &cobra.Command{
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
-			ui.Debug("analytics response", out)
+			ui.Debug("analytics send event response", out)
+
+			// trigger init event only for first run
+			cfg, err := config.Load()
+			ui.WarnOnError("loading config", err)
+
+			if !cfg.Initialized {
+				cfg.SetInitialized()
+				err := config.Save(cfg)
+				ui.WarnOnError("saving config", err)
+
+				ui.Debug("sending 'init' event")
+
+				out, err := analytics.SendCmdInit(cmd, Version)
+				if ui.Verbose && err != nil {
+					ui.Err(err)
+				}
+				ui.Debug("analytics init event response", out)
+			}
+
 		}
 	},
 
@@ -78,7 +96,7 @@ var RootCmd = &cobra.Command{
 
 func Execute() {
 	cfg, err := config.Load()
-	ui.WarnOnError("Config loading error", err)
+	ui.WarnOnError("loading config", err)
 
 	defaultNamespace := "testkube"
 	if cfg.Namespace != "" {
