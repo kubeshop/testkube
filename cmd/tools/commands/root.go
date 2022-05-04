@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
@@ -26,7 +27,8 @@ var RootCmd = &cobra.Command{
 	Long:  `tools command`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
-		cmd.Usage()
+		err := cmd.Usage()
+		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
 	},
 }

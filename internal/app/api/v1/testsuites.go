@@ -372,7 +372,10 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 	s.Log.Debugw("Got test to execute", "test", testSuite)
 
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
-	s.TestExecutionResults.Insert(ctx, testsuiteExecution)
+	err := s.TestExecutionResults.Insert(ctx, testsuiteExecution)
+	if err != nil {
+		s.Log.Infow("Inserting test execution", "error", err)
+	}
 
 	go func(testsuiteExecution testkube.TestSuiteExecution) {
 
@@ -392,7 +395,10 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, request testkube.Test
 
 			// start execution of given step
 			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
-			s.TestExecutionResults.Update(ctx, testsuiteExecution)
+			err = s.TestExecutionResults.Update(ctx, testsuiteExecution)
+			if err != nil {
+				s.Log.Infow("Updating test execution", "error", err)
+			}
 
 			s.executeTestStep(ctx, testsuiteExecution, &testsuiteExecution.StepResults[i])
 

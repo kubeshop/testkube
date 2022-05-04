@@ -16,24 +16,29 @@ func TestJSONWrapWritter(t *testing.T) {
 
 		writer := NewJSONWrapWriter(buff)
 		line1 := "some log line"
-		writer.Write([]byte(line1))
+		_, err := writer.Write([]byte(line1))
+		assert.NoError(t, err)
 		line2 := "second log line"
-		writer.Write([]byte(line2))
+		_, err = writer.Write([]byte(line2))
+		assert.NoError(t, err)
 		line3 := "second log line"
-		writer.Write([]byte(line3))
-
+		_, err = writer.Write([]byte(line3))
+		assert.NoError(t, err)
 		lines := bytes.Split(buff.Bytes(), []byte("\n"))
 
 		var output Output
-		json.Unmarshal(lines[0], &output)
+		err = json.Unmarshal(lines[0], &output)
+		assert.NoError(t, err)
 		assert.Equal(t, line1, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type_)
 
-		json.Unmarshal(lines[1], &output)
+		err = json.Unmarshal(lines[1], &output)
+		assert.NoError(t, err)
 		assert.Equal(t, line2, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type_)
 
-		json.Unmarshal(lines[2], &output)
+		err = json.Unmarshal(lines[2], &output)
+		assert.NoError(t, err)
 		assert.Equal(t, line3, output.Content)
 		assert.Equal(t, TypeLogLine, output.Type_)
 
