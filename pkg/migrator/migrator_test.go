@@ -19,7 +19,8 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&Migr3{})
 
 		// when
-		migrator.Run("0.0.2", MigrationTypeClient)
+		err := migrator.Run("0.0.2", MigrationTypeClient)
+		assert.NoError(t, err)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, false)
@@ -36,7 +37,8 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&Migr1{})
 
 		// when
-		migrator.Run("0.0.2", MigrationTypeClient)
+		err := migrator.Run("0.0.2", MigrationTypeClient)
+		assert.NoError(t, err)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr3).Run, true)
@@ -66,7 +68,8 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&MigrServer{})
 
 		// when
-		migrator.Run("0.0.1", MigrationTypeClient)
+		err := migrator.Run("0.0.1", MigrationTypeClient)
+		assert.NoError(t, err)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, true)
@@ -80,7 +83,8 @@ func TestMigrator(t *testing.T) {
 		migrator.Add(&MigrServer{})
 
 		// when
-		migrator.Run("0.0.1", MigrationTypeServer)
+		err := migrator.Run("0.0.1", MigrationTypeServer)
+		assert.NoError(t, err)
 
 		// then
 		assert.Equal(t, migrator.Migrations[0].(*Migr1).Run, false)

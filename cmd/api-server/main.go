@@ -38,7 +38,8 @@ var verbose = flag.Bool("v", false, "enable verbosity level")
 func init() {
 	flag.Parse()
 	ui.Verbose = *verbose
-	envconfig.Process("mongo", &Config)
+	err := envconfig.Process("mongo", &Config)
+	ui.PrintOnError("Processing mongo environment config", err)
 }
 
 func runMigrations() (err error) {

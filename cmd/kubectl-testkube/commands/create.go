@@ -17,7 +17,8 @@ func NewCreateCmd() *cobra.Command {
 		Short:   "Create resource",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
-			cmd.Help()
+			err := cmd.Help()
+			ui.PrintOnError("Displaying help", err)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			validator.PersistentPreRunVersionCheck(cmd, Version)
