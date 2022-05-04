@@ -156,7 +156,7 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	}
 
 	view := slack.Message{}
-	json.Unmarshal(message.Bytes(), &view)
+	err = json.Unmarshal(message.Bytes(), &view)
 	if err != nil {
 		return err
 	}

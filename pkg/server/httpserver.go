@@ -19,7 +19,7 @@ func NewServer(config Config) HTTPServer {
 		Config: config,
 	}
 
-	s.Init()
+	()
 	return s
 }
 
