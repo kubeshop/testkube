@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -62,7 +61,7 @@ var RootCmd = &cobra.Command{
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, commands.Version)
+			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
