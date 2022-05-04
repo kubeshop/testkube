@@ -3,13 +3,16 @@ before:
     - go mod tidy
 dist: tmp
 builds:
-  -
-    main: ./cmd/kubectl-testkube
+  - main: ./cmd/kubectl-testkube
     binary: kubectl-testkube
     env:
       - CGO_ENABLED=0
     goos:
       - windows
+    goarch:
+      - amd64
+      - arm64
+      - 386
     ldflags:
       - -s -w -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
@@ -18,37 +21,3 @@ builds:
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
 
-#archives:
-#  - replacements:
-#      windows: Windows
-#      386: i386
-#      amd64: x86_64
-
-checksum:
-  name_template: "checksums.txt"
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-release:
-  # Create a thread in the General category in the repo's discussion tab.
-  discussion_category_name: General
-
-  # Tags that have the format v1.0.0-rc1 will mark the release as a pre-release (i.e. not ready for production)
-  # Other tags will be marked as ready for production
-  prerelease: auto
-
-brews:
-  - tap:
-      owner: kubeshop
-      name: homebrew-testkube-dev
-    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
-    homepage: https://testkube.io
-    license: "MIT"
-nfpms:
-  - maintainer: Testkube team
-    license: "MIT"
-    formats:
-      - deb

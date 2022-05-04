@@ -1,16 +1,23 @@
-before:
-  hooks:
-    - go mod tidy
+#before:
+#  hooks:
+#    - go mod tidy
 builds:
   - builder: prebuilt
-  #  main: ./cmd/kubectl-testkube
-    binary: kubectl-testkube
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
+      - 386
+    goamd64:
+      - v1
+    prebuilt:
+      path: tmp/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube
+    binary: kubectl-testkube
+#    env:
+#      - CGO_ENABLED=0
     ldflags:
       - -s -w -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
@@ -18,10 +25,6 @@ builds:
       - -X main.builtBy=goreleaser
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
       - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
-    prebuilt:
-    # Path must be the template path to the binaries.
-    # This field is required when using the `prebuilt` builder.
-      path: tmp #testkube_{{ .Os }}_{{ .Arch }}/{{ .Binary }}
 archives:
   - replacements:
       darwin: macOS
