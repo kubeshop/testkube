@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const CollectionName = "testresults"
@@ -101,7 +101,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	if err != nil {
 		return result, err
 	}
-	cursor.All(ctx, &result)
+	err = cursor.All(ctx, &result)
 	return
 }
 

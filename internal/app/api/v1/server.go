@@ -13,11 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
-
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -46,7 +44,11 @@ func NewTestkubeAPI(
 ) TestkubeAPI {
 
 	var httpConfig server.Config
-	envconfig.Process("APISERVER", &httpConfig)
+	err := envconfig.Process("APISERVER", &httpConfig)
+	// Do we want to panic here or just ignore the err
+	if err != nil {
+		panic(err)
+	}
 
 	// you can disable analytics tracking for API server
 	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
@@ -118,7 +120,10 @@ type jobTemplates struct {
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
-	envconfig.Process("TESTKUBE_TEMPLATE", j)
+	err := envconfig.Process("TESTKUBE_TEMPLATE", j)
+	if err != nil {
+		return err
+	}
 	templates := []*string{&j.Job, &j.Cronjob}
 	for i := range templates {
 		if *templates[i] != "" {
@@ -145,7 +150,10 @@ type storageParams struct {
 
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
-	envconfig.Process("STORAGE", &s.storageParams)
+	err := envconfig.Process("STORAGE", &s.storageParams)
+	if err != nil {
+		s.Log.Infow("Processing STORAGE environment config", err)
+	}
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 

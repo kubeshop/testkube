@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp"
@@ -188,17 +187,27 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
-	s.notifyEvents(testkube.WebhookTypeStartTest, execution)
+
+	err = s.notifyEvents(testkube.WebhookTypeStartTest, execution)
+	if err != nil {
+		s.Log.Infow("Notify events", "error", err)
+	}
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Infow("Notify events", "error", err)
+		}
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+			err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+			if err != nil {
+				s.Log.Infow("Notify events", "error", err)
+			}
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
 
@@ -215,7 +224,10 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Infow("Notify events", "error", err)
+		}
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
@@ -226,12 +238,18 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	s.Metrics.IncExecution(execution)
 
 	if err != nil {
-		s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Infow("Notify events", "error", err)
+		}
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+	err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+	if err != nil {
+		s.Log.Infow("Notify events", "error", err)
+	}
 
 	return execution, nil
 }
@@ -257,16 +275,7 @@ func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, executio
 }
 
 func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
-	messageBuilder := strings.Builder{}
-	messageBuilder.WriteString(fmt.Sprintf("Event %s for test %s\n", string(*eventType), execution.TestName))
-	if execution.ExecutionResult != nil {
-		messageBuilder.WriteString(fmt.Sprintf("Status: %s\n", *execution.ExecutionResult.Status))
-		messageBuilder.WriteString(fmt.Sprintf("Duration: %s\n", execution.Duration))
-		if execution.ExecutionResult.Output != "" {
-			messageBuilder.WriteString(fmt.Sprintf("Output:\n %s", execution.ExecutionResult.Output))
-		}
-	}
-	err := slacknotifier.SendMessage(messageBuilder.String())
+	err := slacknotifier.SendEvent(eventType, execution)
 	if err != nil {
 		s.Log.Warnw("notify slack failed", "error", err)
 	}
@@ -342,7 +351,10 @@ func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			for out := range logs {
 				s.Log.Debugw("got log", "out", out)
 				fmt.Fprintf(w, "data: ")
-				enc.Encode(out)
+				err = enc.Encode(out)
+				if err != nil {
+					s.Log.Infow("Encode", "error", err)
+				}
 				// enc.Encode adds \n and we need \n\n after `data: {}` chunk
 				fmt.Fprintf(w, "\n")
 				w.Flush()

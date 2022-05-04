@@ -31,6 +31,30 @@ brew update
 brew upgrade testkube
 ```
 
+### **Installing on Linux with apt**
+
+You can use apt to install Testkube.
+
+Download our public GPG key, and add them to the trusted keys:
+```sh
+wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+```
+
+Add our repository to your apt sources:
+```sh
+sudo echo "deb https://repo.testkube.io/linux linux main" >> /etc/apt/sources.list
+```
+
+Make sure to get the updates:
+```sh
+sudo apt-get update
+```
+
+Install Testkube:
+```sh
+sudo apt-get install -y testkube
+```
+
 ### **Installing on Linux or MacOS with Install Script**
 
 To install on Linux or MacOs, run
@@ -189,6 +213,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
 | testkube-api.storage.accessKey       | yes         | minio123                             |
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
+| testkube-api.slackToken              | yes         | ""                                   |
+| testkube-api.slackChannelId          | yes         | ""                                   |
 
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>

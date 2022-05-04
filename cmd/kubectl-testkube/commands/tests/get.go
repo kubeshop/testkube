@@ -4,11 +4,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests/renderer"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetTestsCmd() *cobra.Command {
@@ -51,11 +52,13 @@ func NewGetTestsCmd() *cobra.Command {
 				if noExecution {
 					tests, err := client.ListTests(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all tests in namespace "+namespace, err)
-					render.List(cmd, tests, os.Stdout)
+					err = render.List(cmd, tests, os.Stdout)
+					ui.PrintOnError("Rendering list", err)
 				} else {
 					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
-					render.List(cmd, tests, os.Stdout)
+					err = render.List(cmd, tests, os.Stdout)
+					ui.PrintOnError("Rendering list", err)
 				}
 			}
 		},

@@ -12,6 +12,12 @@ The API will pass a `testube.Execution` OpenAPI based document as the first argu
 
 The API assumes that the Executor will output JSON data to `STDOUT` and each line is wrapped in `testkube.ExecutorOutput` (as in structured logging).
 
+## **Contribute to the Testkube Project**
+
+We love to improve Testkube with additional features suggested by our users!
+
+Please visit our [Contribution](contributing.md) page to see the guidelines for contributing to the Testkube project.
+
 
 # Custom Executors
 
