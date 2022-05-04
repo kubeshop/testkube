@@ -157,6 +157,9 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 
 	view := slack.Message{}
 	json.Unmarshal(message.Bytes(), &view)
+	if err != nil {
+		return err
+	}
 	if c != nil && c.SlackClient != nil {
 		_, _, err := c.SlackClient.PostMessage(c.ChannelId, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
 		if err != nil {
