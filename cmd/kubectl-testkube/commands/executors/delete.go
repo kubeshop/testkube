@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -17,13 +16,10 @@ func NewDeleteExecutorCmd() *cobra.Command {
 		Use:   "executor [executorName]",
 		Short: "Delete Executor",
 		Long:  `Delete Executor Resource, pass name to delete by name`,
-		Args:  validator.ExecutorName,
 		Run: func(cmd *cobra.Command, args []string) {
-			name = args[0]
-
 			client, _ := common.GetClient(cmd)
-
-			if name != "" {
+			if len(args) > 0 {
+				name = args[0]
 				err := client.DeleteExecutor(name)
 				ui.ExitOnError("deleting executor: "+name, err)
 			} else if len(selectors) != 0 {

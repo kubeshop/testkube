@@ -97,6 +97,7 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Types:        item.Spec.Types,
 			Uri:          item.Spec.URI,
 			JobTemplate:  item.Spec.JobTemplate,
+			Labels:       item.Labels,
 		},
 	}
 }

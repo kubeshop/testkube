@@ -13,6 +13,7 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 		Namespace: item.Namespace,
 		Uri:       item.Spec.Uri,
 		Events:    MapStringArrayToCRDEvents(item.Spec.Events),
+		Labels:    item.Labels,
 	}
 }
 

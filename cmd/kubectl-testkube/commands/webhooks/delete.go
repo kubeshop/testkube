@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -19,12 +18,10 @@ func NewDeleteWebhookCmd() *cobra.Command {
 		Aliases: []string{"wh"},
 		Short:   "Delete webhook",
 		Long:    `Delete webhook, pass webhook name which should be deleted`,
-		Args:    validator.DNS1123Subdomain,
 		Run: func(cmd *cobra.Command, args []string) {
-			name = args[0]
-
 			client, _ := common.GetClient(cmd)
-			if name != "" {
+			if len(args) > 0 {
+				name = args[0]
 				err := client.DeleteWebhook(name)
 				ui.ExitOnError("deleting webhook: "+name, err)
 			} else if len(selectors) != 0 {
