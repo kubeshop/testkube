@@ -64,7 +64,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f ${{ matrix.path }}   #.goreleaser.yml
+          args: release -f ${{ matrix.path }} --skip-publish   #.goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -78,9 +78,8 @@ jobs:
           name: bin-artifacts
           path: |
             tmp/
-            !config.yaml
-            !artifacts.json
-            !metadata.json
+            !tmp/config.yaml
+            !tmp/*.json
           retention-days: 1
 
   release:
