@@ -27,6 +27,7 @@ type UI struct {
 	Writer  io.Writer
 }
 
+func SetVerbose(verbose bool)                       { ui.Verbose = verbose }
 func ExitOnError(item string, errors ...error)      { ui.ExitOnError(item, errors...) }
 func PrintOnError(item string, errors ...error)     { ui.PrintOnError(item, errors...) }
 func WarnOnError(item string, errors ...error)      { ui.WarnOnError(item, errors...) }
