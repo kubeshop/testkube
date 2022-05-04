@@ -14,7 +14,7 @@ builds:
     goamd64:
       - v1
     prebuilt:
-      path: tmp/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube
+      path: tmp/
     binary: kubectl-testkube
 #    env:
 #      - CGO_ENABLED=0
