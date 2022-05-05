@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+-test*"
 
 
 jobs:
@@ -27,93 +28,91 @@ jobs:
   #         draft: false
   #         prerelease: false
 
-#  pre_build:
-#    name: Pre-build
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        include:
-#          - name: "linux"
-#            path: .builds-linux.goreleaser-dev.yml
-#          - name: "windows"
-#            path: .builds-windows.goreleaser-dev.yml
-#          - name: "darwin"
-#            path: .builds-darwin.goreleaser-dev.yml
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#        with:
-#          fetch-depth: 0
-#      - name: Set up Go
-#        uses: actions/setup-go@v2
-#        with:
-#          go-version: 1.18
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#      - name: Run GoReleaser
-#        uses: goreleaser/goreleaser-action@v2
-#        with:
-#          distribution: goreleaser-pro
-#          version: latest
-#          args: release -f ${{ matrix.path }} --skip-publish   #.goreleaser.yml
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
-#          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
-#          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-#          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-#      - name: Upload Artifacts
-#        uses: actions/upload-artifact@master
-#        with:
-#          name: testkube_${{ matrix.name }}
-#          path: |
-#            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
-#            ${{ matrix.name }}/testkube_*.tar.gz
-##            !tmp/*.txt
-###            !tmp/*.json
-#          retention-days: 1
-
-  release:
-    name: Create and upload release-artifacts
-#    needs: pre_build
-    # needs: [release_creation]
+  pre_build:
+    name: Pre-build
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - name: "linux"
-            path: .goreleaser-linux.yml
+            path: .builds-linux.goreleaser-dev.yml
           - name: "windows"
-            path: .goreleaser-windows.yml
+            path: .builds-windows.goreleaser-dev.yml
           - name: "darwin"
-            path: .goreleaser-darwin.yml
+            path: .builds-darwin.goreleaser-dev.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-#      - name: Download Artifacts for Linux
-#        uses: actions/download-artifact@master
-#        with:
-#          name: testkube_linux
-#          path: tmp
-#      - name: Download Artifacts for Windows
-#        uses: actions/download-artifact@master
-#        with:
-#          name: testkube_windows
-#          path: tmp
-#      - name: Download Artifacts for Darwin
-#        uses: actions/download-artifact@master
-#        with:
-#          name: testkube_darwin
-#          path: tmp
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f ${{ matrix.path }} --skip-publish   #.goreleaser.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: testkube_${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
+            ${{ matrix.name }}/testkube_*.tar.gz
+#            !tmp/*.txt
+##            !tmp/*.json
+          retention-days: 1
+      - name: list files
+        run: find . -type f
+
+  release:
+    name: Create and upload release-artifacts
+    needs: pre_build
+    # needs: [release_creation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Download Artifacts for Linux
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_linux
+          path: tmp
+      - name: list files
+        run: find . -type f
+      - name: Download Artifacts for Windows
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_windows
+          path: tmp
+      - name: list files
+        run: find . -type f
+
+      - name: Download Artifacts for Darwin
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_darwin
+          path: tmp
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -139,21 +138,11 @@ jobs:
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-
-#      - name: Store Intermediate Artifacts
-#        uses: actions/upload-artifact@master
-#        with:
-#          name: bin-artifacts
-#          path: dist
-#          retention-days: 1
-      - name: Upload Artifacts
+      - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
           name: bin-artifacts
-          path: |
-            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
-            ${{ matrix.name }}/testkube_*.tar.gz
-
+          path: dist
           retention-days: 1
 
   build-and-publish-windows-installer:
