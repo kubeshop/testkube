@@ -12,12 +12,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 const (
@@ -41,9 +42,7 @@ const (
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
-
-	volumeName = "data-volume"
-	volumeDir  = "/data"
+	volumeDir    = "/data"
 )
 
 // JobClient data struct for managing running jobs
@@ -134,7 +133,10 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			// save stop time
 			defer func() {
 				execution.Stop()
-				repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+				err = repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+				if err != nil {
+					l.Infow("End execution", "error", err)
+				}
 			}()
 
 			// wait for complete
@@ -149,7 +151,10 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			logs, err = c.GetPodLogs(pod.Name)
 			if err != nil {
 				l.Errorw("get pod logs error", "error", err)
-				repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				if err != nil {
+					l.Infow("Update result", "error", err)
+				}
 				return result, err
 			}
 
@@ -157,12 +162,18 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			result, _, err := output.ParseRunnerOutput(logs)
 			if err != nil {
 				l.Errorw("parse ouput error", "error", err)
-				repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
+				if err != nil {
+					l.Infow("End execution", "error", err)
+				}
 				return result, err
 			}
 
 			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
-			repo.UpdateResult(ctx, execution.Id, result)
+			err = repo.UpdateResult(ctx, execution.Id, result)
+			if err != nil {
+				l.Infow("End execution", "error", err)
+			}
 			return result, nil
 		}
 	}
@@ -223,7 +234,10 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				defer func() {
 					l.Debug("stopping execution")
 					execution.Stop()
-					repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+					err = repo.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+					if err != nil {
+						l.Infow("End execution", "error", err)
+					}
 				}()
 
 				// wait for complete
@@ -238,7 +252,10 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				logs, err = c.GetPodLogs(pod.Name)
 				if err != nil {
 					l.Errorw("get pod logs error", "error", err)
-					repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					if err != nil {
+						l.Infow("End execution", "error", err)
+					}
 					return
 				}
 
@@ -246,12 +263,18 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				result, _, err := output.ParseRunnerOutput(logs)
 				if err != nil {
 					l.Errorw("parse ouput error", "error", err)
-					repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
+					if err != nil {
+						l.Infow("End execution", "error", err)
+					}
 					return
 				}
 
 				l.Infow("execution completed saving result", "status", result.Status)
-				repo.UpdateResult(ctx, execution.Id, result)
+				err = repo.UpdateResult(ctx, execution.Id, result)
+				if err != nil {
+					l.Infow("End execution", "error", err)
+				}
 			}()
 		}
 	}

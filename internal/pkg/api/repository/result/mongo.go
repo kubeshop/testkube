@@ -102,7 +102,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	if err != nil {
 		return result, err
 	}
-	cursor.All(ctx, &result)
+	err = cursor.All(ctx, &result)
 	return
 }
 

@@ -213,6 +213,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
 | testkube-api.storage.accessKey       | yes         | minio123                             |
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
+| testkube-api.slackToken              | yes         | ""                                   |
+| testkube-api.slackChannelId          | yes         | ""                                   |
 
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>

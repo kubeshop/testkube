@@ -7,9 +7,9 @@ NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
-ANALYTICS_TRACKING_ID=""
-ANALYTICS_API_KEY=""
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID) -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
+ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
+ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID) -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
 
 define setup_env
 	$(eval include .env)
@@ -20,10 +20,10 @@ use-env-file:
 	$(call setup_env)
 
 run-api: use-env-file
-	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go 
+	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
 run-api-race-detector: use-env-file
-	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)"  cmd/api-server/main.go
+	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
 
 run-api-telepresence: use-env-file
 	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
