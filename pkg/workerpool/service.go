@@ -57,7 +57,6 @@ type Service[R Runnable, T Requestable, E Returnable] struct {
 	concurrencyLevel int
 	requests         chan Request[R, T, E]
 	responses        chan Response[E]
-	Done             chan struct{}
 }
 
 // New is a constructor for worker pool service
@@ -66,7 +65,6 @@ func New[R Runnable, T Requestable, E Returnable](concurrencyLevel int) Service[
 		concurrencyLevel: concurrencyLevel,
 		requests:         make(chan Request[R, T, E], concurrencyLevel),
 		responses:        make(chan Response[E], concurrencyLevel),
-		Done:             make(chan struct{}),
 	}
 }
 
@@ -80,7 +78,6 @@ func (s Service[R, T, E]) Run(ctx context.Context) {
 	}
 
 	wg.Wait()
-	close(s.Done)
 	close(s.responses)
 }
 

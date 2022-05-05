@@ -114,19 +114,8 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			go workerpoolService.SendRequests(s.prepareTestRequests(work, request))
 			go workerpoolService.Run(cancelCtx)
 
-		OuterLoop:
-			for {
-				select {
-				case r, ok := <-workerpoolService.GetResponses():
-					if !ok {
-						continue
-					}
-
-					results = append(results, r.Result)
-				case <-workerpoolService.Done:
-					break OuterLoop
-				default:
-				}
+			for r := range workerpoolService.GetResponses() {
+				results = append(results, r.Result)
 			}
 		}
 
@@ -473,7 +462,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		ExecutorName: executorCR.ObjectMeta.Name,
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
-		Sync: 	      request.Sync,
+		Sync:         request.Sync,
 	}, nil
 }
 

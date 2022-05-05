@@ -24,22 +24,12 @@ func TestWorkerPool(t *testing.T) {
 	go service.Run(ctx)
 
 	total := 0
-	for {
-		select {
-		case r, ok := <-service.GetResponses():
-			if !ok {
-				continue
-			}
-
-			if r.Result.Id != r.Result.TestName || r.Result.Id == "" || r.Result.TestName == "" {
-				t.Fatalf("wrong value %v; expected %v", r.Result.Id, r.Result.TestName)
-			}
-
-			total++
-		case <-service.Done:
-			return
-		default:
+	for r := range service.GetResponses() {
+		if r.Result.Id != r.Result.TestName || r.Result.Id == "" || r.Result.TestName == "" {
+			t.Fatalf("wrong value %v; expected %v", r.Result.Id, r.Result.TestName)
 		}
+
+		total++
 	}
 
 	if total != requestCount {

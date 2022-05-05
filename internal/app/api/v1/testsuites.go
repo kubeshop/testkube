@@ -373,19 +373,8 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
 			go workerpoolService.Run(cancelCtx)
 
-		OuterLoop:
-			for {
-				select {
-				case r, ok := <-workerpoolService.GetResponses():
-					if !ok {
-						continue
-					}
-
-					results = append(results, r.Result)
-				case <-workerpoolService.Done:
-					break OuterLoop
-				default:
-				}
+			for r := range workerpoolService.GetResponses() {
+				results = append(results, r.Result)
 			}
 		}
 
