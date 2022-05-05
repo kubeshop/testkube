@@ -75,7 +75,7 @@ jobs:
       - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
-          name: bin-artifacts
+          name: prebuilt-artifacts
           path: |
             tmp/
             !tmp/config.yaml
@@ -95,8 +95,8 @@ jobs:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
-          name: bin-artifacts
-          path: tmp
+          name: prebuilt-artifacts
+          path: tmp/
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
