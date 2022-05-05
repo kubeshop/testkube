@@ -88,7 +88,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				Data:     string(data),
 				Labels:   test.Labels,
 			}
-			if err = s.CronJobClient.Apply(id, cronjob.GetMetadataName(id, testResourceURI), options); err != nil {
+			if err = s.CronJobClient.Apply(test.Name, cronjob.GetMetadataName(test.Name, testResourceURI), options); err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
 			}
 
