@@ -114,7 +114,7 @@ jobs:
           name: testkube_darwin
           path: tmp
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+        run: find . -type f -not -path "./pkg/*"
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -133,7 +133,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f .goreleaser-dev.yml
+          args: release -f .goreleaser-dev.yml --debug
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -165,7 +165,7 @@ jobs:
           name: bin-artifacts
           path: dist
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+        run: dir /s /b /o:gn
 
       - name: Get MSFT Cert
         id: write_file
@@ -175,8 +175,7 @@ jobs:
           fileDir: "./temp/"
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
-
+        run: dir /s /b /o:gn
 
       - name: Create and Sign MSI
         run: |
