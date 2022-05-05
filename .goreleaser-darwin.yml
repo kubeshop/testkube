@@ -7,8 +7,6 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
-      - windows
       - darwin
     ldflags:
       - -s -w -X main.version={{.Version}}
@@ -25,7 +23,7 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: "checksums.txt"
+  name_template: "checksums-darwin.txt"
 changelog:
   sort: asc
   filters:
