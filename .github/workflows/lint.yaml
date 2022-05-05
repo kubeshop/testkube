@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   prlint:
-    name: Linting
+    name: Lint PR
     runs-on: ubuntu-latest
     steps:
       # Please look up the latest version from
@@ -23,7 +23,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   golangci:
-    name: Linting
+    name: Lint Go
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
