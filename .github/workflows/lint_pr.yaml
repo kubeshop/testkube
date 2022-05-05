@@ -6,7 +6,6 @@ on:
       - opened
       - edited
       - synchronize
-      
 jobs:
   prlint:
     name: Lint PR
