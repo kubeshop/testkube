@@ -85,15 +85,15 @@ jobs:
 #    needs: pre_build
     # needs: [release_creation]
     runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          include:
-            - name: "linux"
-              path: .goreleaser-linux.yml
-            - name: "windows"
-              path: .goreleaser-windows.yml
-            - name: "darwin"
-              path: .goreleaser-darwin.yml
+    strategy:
+      matrix:
+        include:
+          - name: "linux"
+            path: .goreleaser-linux.yml
+          - name: "windows"
+            path: .goreleaser-windows.yml
+          - name: "darwin"
+            path: .goreleaser-darwin.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
