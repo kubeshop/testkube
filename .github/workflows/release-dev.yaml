@@ -87,12 +87,6 @@ jobs:
     needs: pre_build
     # needs: [release_creation]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: "linux"
-          - name: "windows"
-          - name: "darwin"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -101,7 +95,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@master
         with:
-          name: testkube_${{ matrix.name }}
+          name: pre-built-artifact
           path: tmp
       - name: Set up Go
         uses: actions/setup-go@v2
