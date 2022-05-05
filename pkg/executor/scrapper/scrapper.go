@@ -6,6 +6,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
+// ContainerScraper is responsible for collecting and persisting the necessary artifacts
+type ContainerScraper interface {
+	Scrape(id string, directories []string) error
+}
+
 // NewScrapper returns new Scrapper struct
 func NewScrapper(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *Scrapper {
 
