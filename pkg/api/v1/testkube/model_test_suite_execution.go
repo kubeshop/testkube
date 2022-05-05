@@ -22,8 +22,8 @@ type TestSuiteExecution struct {
 	TestSuite *ObjectRef                `json:"testSuite,omitempty"`
 	Status    *TestSuiteExecutionStatus `json:"status,omitempty"`
 	// environment variables passed to executor
-	Envs   map[string]string    `json:"envs,omitempty"`
-	Params *map[string]Variable `json:"params,omitempty"`
+	Envs   map[string]string   `json:"envs,omitempty"`
+	Params map[string]Variable `json:"params,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

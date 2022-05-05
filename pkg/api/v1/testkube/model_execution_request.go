@@ -16,8 +16,8 @@ type ExecutionRequest struct {
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
 	// params file content - need to be in format for particular executor (e.g. postman envs file)
-	ParamsFile string               `json:"paramsFile,omitempty"`
-	Params     *map[string]Variable `json:"params,omitempty"`
+	ParamsFile string              `json:"paramsFile,omitempty"`
+	Params     map[string]Variable `json:"params,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// execution labels

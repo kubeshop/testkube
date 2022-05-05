@@ -61,6 +61,7 @@ openapi-generate-model-testkube:
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
 	rm -rf tmp
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
+	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/\*map\[string\]/map[string]/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 	
 

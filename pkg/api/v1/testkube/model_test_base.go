@@ -25,6 +25,6 @@ type Test struct {
 	// test labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test
-	Schedule string               `json:"schedule,omitempty"`
-	Params   *map[string]Variable `json:"params,omitempty"`
+	Schedule string              `json:"schedule,omitempty"`
+	Params   map[string]Variable `json:"params,omitempty"`
 }
