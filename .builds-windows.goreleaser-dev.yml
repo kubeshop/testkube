@@ -1,7 +1,7 @@
 before:
   hooks:
     - go mod tidy
-dist: tmp
+dist: windows
 builds:
   - main: ./cmd/kubectl-testkube
     binary: kubectl-testkube

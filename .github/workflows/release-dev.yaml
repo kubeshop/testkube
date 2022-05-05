@@ -35,11 +35,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: "linux_prebuild"
+          - name: "linux"
             path: .builds-linux.goreleaser-dev.yml
-          - name: "windows_prebuild"
+          - name: "windows"
             path: .builds-windows.goreleaser-dev.yml
-          - name: "darwin_prebuild"
+          - name: "darwin"
             path: .builds-darwin.goreleaser-dev.yml
     steps:
       - name: Checkout
@@ -71,15 +71,15 @@ jobs:
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-
-      - name: Store Intermediate Artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
-          name: prebuilt-artifacts
+          name: testkube_${{ matrix.name }}
           path: |
-            tmp/
-            !tmp/config.yaml
-            !tmp/*.json
+            tmp/testkube_${{ matrix.name }}_*
+            tmp/testkube_*.tar.gz
+#            !tmp/*.txt
+##            !tmp/*.json
           retention-days: 1
 
   release:
@@ -87,16 +87,22 @@ jobs:
     needs: pre_build
     # needs: [release_creation]
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: "linux"
+          - name: "windows"
+          - name: "darwin"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Get Intermediate Artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@master
         with:
-          name: prebuilt-artifacts
-          path: tmp/
+          name: testkube_${{ matrix.name }}
+          path: tmp
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
