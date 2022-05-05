@@ -972,6 +972,28 @@ paths:
 
 components:
   schemas:
+    Variables:
+      type: object
+      description: "execution params passed to executor converted to vars for usage in tests"
+      additionalProperties:
+        $ref: "#/components/schemas/Variable" # prepared to refactor params -> variables
+
+    Variable:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        type:
+          $ref: "#/components/schemas/VariableType"
+
+    VariableType:
+      type: string
+      enum:
+        - basic
+        - secret
+
     ObjectRef:
       required:
         - name
@@ -1027,13 +1049,7 @@ components:
           type: integer
           default: 1
         params:
-          type: object
-          description: "default test suite params can be overriden by execution params"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
 
     TestSuiteStepType:
       type: string
@@ -1100,13 +1116,7 @@ components:
             record: "true"
             prefix: "some-"
         params:
-          type: object
-          description: "execution params passed to executor converted to vars for usage in tests"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
         startTime:
           type: string
           description: "test start time"
@@ -1260,13 +1270,7 @@ components:
           type: string
           description: schedule to run test
         params:
-          type: object
-          description: "default test params can be overriden by execution params or by test suite params"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
 
     TestContent:
       type: object
@@ -1323,13 +1327,7 @@ components:
           items:
             type: string
         params:
-          type: object
-          description: "execution params passed to executor converted to vars for usage in tests"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
         paramsFile:
           type: string
           description: params file content - need to be in format for particular executor (e.g. postman envs file)
@@ -1588,13 +1586,7 @@ components:
           type: string
           description: params file content - need to be in format for particular executor (e.g. postman envs file)
         params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
         args:
           type: array
           description: "additional executor binary arguments"
@@ -1634,13 +1626,7 @@ components:
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
         params:
-          type: object
-          description: "execution params passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            users: "3"
-            prefix: "some-"
+          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
         labels:
           type: object
           description: "execution labels"
