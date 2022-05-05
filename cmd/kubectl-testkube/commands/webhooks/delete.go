@@ -9,7 +9,7 @@ import (
 )
 
 func NewDeleteWebhookCmd() *cobra.Command {
-	var name, namespace string
+	var name string
 	var selectors []string
 
 	cmd := &cobra.Command{
@@ -37,7 +37,6 @@ func NewDeleteWebhookCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as first argument")
-	cmd.Flags().StringVarP(&namespace, "namespace", "", "", "Kubernetes namespace")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
