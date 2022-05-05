@@ -135,7 +135,10 @@ func SendCmdInit(cmd *cobra.Command, version string) (string, error) {
 	}
 
 	out, err := sendValidationRequest(payload)
-	ui.Debug("init event validation output", out, "error", err.Error())
+	ui.Debug("init event validation output", out)
+	if err != nil {
+		ui.Debug("init event validation error", err.Error())
+	}
 
 	return sendDataToGA(payload)
 }
