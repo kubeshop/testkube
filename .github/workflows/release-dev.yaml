@@ -76,8 +76,8 @@ jobs:
         with:
           name: testkube_${{ matrix.name }}
           path: |
-            tmp/testkube_${{ matrix.name }}_*
-            tmp/testkube_*.tar.gz
+            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
+            ${{ matrix.name }}/testkube_*.tar.gz
 #            !tmp/*.txt
 ##            !tmp/*.json
           retention-days: 1
