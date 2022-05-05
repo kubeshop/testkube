@@ -81,7 +81,7 @@ jobs:
 ##            !tmp/*.json
           retention-days: 1
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+        run: find . -type f -not -path "./pkg/*"
 
   release:
     name: Create and upload release-artifacts
@@ -147,7 +147,7 @@ jobs:
           path: dist
           retention-days: 1
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+        run: find . -type f -not -path "./pkg/*"
 
   build-and-publish-windows-installer:
     needs: release
@@ -164,8 +164,6 @@ jobs:
         with:
           name: bin-artifacts
           path: dist
-      - name: list files
-        run: dir /s /b /o:gn
 
       - name: Get MSFT Cert
         id: write_file
@@ -174,8 +172,6 @@ jobs:
           fileName: "kubeshop_msft.p12"
           fileDir: "./temp/"
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
-      - name: list files
-        run: dir /s /b /o:gn
 
       - name: Create and Sign MSI
         run: |
@@ -242,7 +238,7 @@ jobs:
           name: bin-artifacts
           path: dist
       - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+        run: find . -type f -not -path "./pkg/*"
 
       - name: Get tag
         id: tag
