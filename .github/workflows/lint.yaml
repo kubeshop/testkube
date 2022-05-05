@@ -36,5 +36,5 @@ jobs:
       - name: Linting GO code
         uses: golangci/golangci-lint-action@v3
         with:
-          args: --enable revive --timeout=5m
+          args: --disable-all #--enable revive --timeout=5m
           only-new-issues: true
