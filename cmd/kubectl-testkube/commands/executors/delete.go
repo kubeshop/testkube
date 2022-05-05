@@ -22,15 +22,17 @@ func NewDeleteExecutorCmd() *cobra.Command {
 				name = args[0]
 				err := client.DeleteExecutor(name)
 				ui.ExitOnError("deleting executor: "+name, err)
-			} else if len(selectors) != 0 {
+				ui.SuccessAndExit("Succesfully deleted executor", name)
+			}
+
+			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteExecutors(selector)
 				ui.ExitOnError("deleting executors by labels: "+selector, err)
-			} else {
-				ui.Failf("Pass Executor name or labels to delete by labels ")
+				ui.SuccessAndExit("Succesfully deleted executors by labels", selector)
 			}
 
-			ui.Success("Executor deleted")
+			ui.Failf("Pass Executor name or labels to delete by labels")
 		},
 	}
 

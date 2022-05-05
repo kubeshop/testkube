@@ -37,18 +37,20 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 			var err error
-			if len(args) > 0 {
+
+			switch {
+			case len(args) > 0:
 				testSuiteName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
 				execution, err := client.ExecuteTestSuite(testSuiteName, name, params)
 				ui.ExitOnError("starting test suite execution "+namespacedName, err)
 				executions = append(executions, execution)
-			} else if len(selectors) != 0 {
+			case len(selectors) != 0:
 				selector := strings.Join(selectors, ",")
 				executions, err = client.ExecuteTestSuites(selector, concurrencyLevel, params)
 				ui.ExitOnError("starting test suite executions "+selector, err)
-			} else {
+			default:
 				ui.Failf("Pass Test suite name or labels to run by labels ")
 			}
 

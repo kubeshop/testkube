@@ -116,7 +116,7 @@ func (c JobExecutor) Abort(id string) error {
 	return nil
 }
 
-// getJobOptions compose JobOptions based on ExecutionOptions
+// getJobOptions compose JobOptions based on ExecuteOptions
 func getJobOptions(options ExecuteOptions) jobs.JobOptions {
 	return jobs.JobOptions{
 		Image:       options.ExecutorSpec.Image,

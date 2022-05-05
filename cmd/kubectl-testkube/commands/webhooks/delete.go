@@ -24,15 +24,17 @@ func NewDeleteWebhookCmd() *cobra.Command {
 				name = args[0]
 				err := client.DeleteWebhook(name)
 				ui.ExitOnError("deleting webhook: "+name, err)
-			} else if len(selectors) != 0 {
+				ui.SuccessAndExit("Succesfully deleted webhook", name)
+			}
+
+			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteWebhooks(selector)
 				ui.ExitOnError("deleting webhooks by labels: "+selector, err)
-			} else {
-				ui.Failf("Pass Webhook name or labels to delete by labels ")
+				ui.SuccessAndExit("Succesfully deleted webhooks by labels", selector)
 			}
 
-			ui.Success("Webhook deleted")
+			ui.Failf("Pass Webhook name or labels to delete by labels")
 		},
 	}
 

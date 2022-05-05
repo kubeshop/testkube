@@ -54,7 +54,9 @@ func NewRunTestCmd() *cobra.Command {
 				Args:                       binaryArgs,
 				SecretEnvs:                 secretEnvs,
 			}
-			if len(args) > 0 {
+
+			switch {
+			case len(args) > 0:
 				testName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
@@ -68,11 +70,11 @@ func NewRunTestCmd() *cobra.Command {
 				execution, err := client.ExecuteTest(testName, name, options)
 				ui.ExitOnError("starting test execution "+namespacedName, err)
 				executions = append(executions, execution)
-			} else if len(selectors) != 0 {
+			case len(selectors) != 0:
 				selector := strings.Join(selectors, ",")
 				executions, err = client.ExecuteTests(selector, concurrencyLevel, options)
 				ui.ExitOnError("starting test executions "+selector, err)
-			} else {
+			default:
 				ui.Failf("Pass Test name or labels to run by labels ")
 			}
 

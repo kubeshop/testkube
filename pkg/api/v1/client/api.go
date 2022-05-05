@@ -195,17 +195,10 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
 
-	// get test to get test labels
-	test, err := c.GetTest(id)
-	if err != nil {
-		return execution, nil
-	}
-
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
 		ParamsFile: options.ExecutionParamsFileContent,
 		Params:     options.ExecutionParams,
-		Labels:     test.Labels,
 		Args:       options.Args,
 		SecretEnvs: options.SecretEnvs,
 	}
@@ -874,16 +867,9 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
-	// get testsuite to get testsuite labels
-	testsuite, err := c.GetTestSuite(id)
-	if err != nil {
-		return execution, nil
-	}
-
 	executionRequest := testkube.ExecutionRequest{
 		Name:   executionName,
 		Params: executionParams,
-		Labels: testsuite.Labels,
 	}
 
 	body, err := json.Marshal(executionRequest)

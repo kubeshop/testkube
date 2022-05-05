@@ -22,4 +22,5 @@ type ExecuteOptions struct {
 	Request      testkube.ExecutionRequest
 	Sync         bool
 	HasSecrets   bool
+	Labels       map[string]string
 }

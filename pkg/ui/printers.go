@@ -10,7 +10,7 @@ func (ui *UI) NL() {
 	fmt.Fprintln(ui.Writer)
 }
 
-// Warn shows warning in terminal
+// Success shows success in terminal
 func (ui *UI) Success(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", LightYellow(message))
 	for _, sub := range subMessages {
@@ -18,6 +18,12 @@ func (ui *UI) Success(message string, subMessages ...string) {
 	}
 	fmt.Fprintf(ui.Writer, " "+IconMedal)
 	fmt.Fprintln(ui.Writer)
+}
+
+// SuccessAndExit shows success in terminal and exit
+func (ui *UI) SuccessAndExit(message string, subMessages ...string) {
+	ui.Success(message, subMessages...)
+	os.Exit(0)
 }
 
 // Warn shows warning in terminal

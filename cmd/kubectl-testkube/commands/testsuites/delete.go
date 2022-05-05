@@ -19,25 +19,30 @@ func NewDeleteTestSuiteCmd() *cobra.Command {
 		Long:    `Delete test suite by name`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Logo()
+
 			client, _ := common.GetClient(cmd)
 			namespace := cmd.Flag("namespace").Value.String()
-
 			if deleteAll {
 				err := client.DeleteTestSuites("")
 				ui.ExitOnError("delete all tests from namespace "+namespace, err)
-				ui.Success("Succesfully deleted all test suites in namespace", namespace)
-			} else if len(args) > 0 {
+				ui.SuccessAndExit("Succesfully deleted all test suites in namespace", namespace)
+			}
+
+			if len(args) > 0 {
 				name := args[0]
 				err := client.DeleteTestSuite(name)
 				ui.ExitOnError("delete test suite "+name+" from namespace "+namespace, err)
-				ui.Success("Succesfully deleted", name)
-			} else if len(selectors) != 0 {
+				ui.SuccessAndExit("Succesfully deleted test suite", name)
+			}
+
+			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteTestSuites(selector)
 				ui.ExitOnError("deleting test suites by labels: "+selector, err)
-			} else {
-				ui.Failf("Pass TestSuite name, --all flag to delete all, labels to delete by labels")
+				ui.SuccessAndExit("Succesfully deleted test suites by labels", selector)
 			}
+
+			ui.Failf("Pass TestSuite name, --all flag to delete all or labels to delete by labels")
 		},
 	}
 

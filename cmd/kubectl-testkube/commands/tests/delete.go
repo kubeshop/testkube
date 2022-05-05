@@ -21,24 +21,27 @@ func NewDeleteTestsCmd() *cobra.Command {
 
 			client, _ := common.GetClient(cmd)
 			namespace := cmd.Flag("namespace").Value.String()
-
 			if deleteAll {
 				err := client.DeleteTests("")
 				ui.ExitOnError("delete all tests from namespace "+namespace, err)
-				ui.Success("Succesfully deleted all tests in namespace", namespace)
-			} else if len(args) > 0 {
+				ui.SuccessAndExit("Succesfully deleted all tests in namespace", namespace)
+			}
+
+			if len(args) > 0 {
 				name := args[0]
 				err := client.DeleteTest(name)
 				ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
-				ui.Success("Succesfully deleted", name)
-			} else if len(selectors) != 0 {
+				ui.SuccessAndExit("Succesfully deleted test", name)
+			}
+
+			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteTests(selector)
 				ui.ExitOnError("deleting tests by labels: "+selector, err)
-			} else {
-				ui.Failf("Pass Test name, --all flag to delete all, labels to delete by labels ")
+				ui.SuccessAndExit("Succesfully deleted tests by labels", selector)
 			}
 
+			ui.Failf("Pass Test name, --all flag to delete all or labels to delete by labels")
 		},
 	}
 

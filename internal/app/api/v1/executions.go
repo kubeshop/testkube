@@ -167,7 +167,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	// store execution in storage, can be get from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
-	execution.Labels = options.Request.Labels
 
 	err = s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -463,6 +462,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		ExecutorSpec: executorCR.Spec,
 		Request:      request,
 		Sync:         request.Sync,
+		Labels:       testCR.Labels,
 	}, nil
 }
 
@@ -487,7 +487,8 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
-		options.Request.Labels,
+		options.Labels,
+
 	)
 
 	execution.Args = options.Request.Args

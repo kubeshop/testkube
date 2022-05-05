@@ -2159,14 +2159,6 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
-        labels:
-          type: object
-          description: "execution labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
         secretEnvs:
           type: object
           description: "execution params passed to executor from secrets"
@@ -2199,14 +2191,6 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        labels:
-          type: object
-          description: "execution labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
 
     TestUpsertRequest:
       description: test create request body
