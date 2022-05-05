@@ -113,6 +113,8 @@ jobs:
         with:
           name: testkube_darwin
           path: tmp
+      - name: list files
+        run: find . -type f
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -144,6 +146,8 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
+      - name: list files
+        run: find . -type f
 
   build-and-publish-windows-installer:
     needs: release
