@@ -153,8 +153,7 @@ jobs:
           path: |
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
             ${{ matrix.name }}/testkube_*.tar.gz
-#            !tmp/*.txt
-##            !tmp/*.json
+
           retention-days: 1
 
   build-and-publish-windows-installer:
