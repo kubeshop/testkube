@@ -151,8 +151,8 @@ jobs:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
-          name: bin-artifacts
-          path: dist
+          name: testkube_windows
+          path: windows
 
       - name: Get MSFT Cert
         id: write_file
@@ -164,7 +164,7 @@ jobs:
 
       - name: Create and Sign MSI
         run: |
-          Copy-Item 'dist\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
+          Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
@@ -226,8 +226,6 @@ jobs:
         with:
           name: bin-artifacts
           path: dist
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"
 
       - name: Get tag
         id: tag
