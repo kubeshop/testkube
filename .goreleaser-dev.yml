@@ -1,6 +1,3 @@
-#before:
-#  hooks:
-#    - go mod tidy
 builds:
   - builder: prebuilt
     goos:
@@ -14,15 +11,10 @@ builds:
     goamd64:
       - v1
     prebuilt:
-      path: ./tmp
+      path: '{{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
     binary: kubectl-testkube
-#    env:
-#      - CGO_ENABLED=0
-    ldflags:
-      - -s -w -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-      - -X main.builtBy=goreleaser
+    hooks:
+      pre: 'du -hs {{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
 archives:
   - replacements:
       darwin: macOS
