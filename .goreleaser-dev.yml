@@ -13,8 +13,8 @@ builds:
     prebuilt:
       path: '{{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
     binary: kubectl-testkube
-    hooks:
-      pre: 'du -hs {{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
+#    hooks:
+#      pre: 'du -hs {{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
 archives:
   - replacements:
       darwin: macOS
