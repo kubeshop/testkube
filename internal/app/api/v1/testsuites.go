@@ -367,10 +367,8 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			backgroundCtx := context.Background()
-
 			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
-			go workerpoolService.Run(backgroundCtx)
+			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
