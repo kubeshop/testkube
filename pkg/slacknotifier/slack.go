@@ -177,3 +177,32 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	}
 	return nil
 }
+
+func DummyFunc(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
+
+	t, err := template.New("message").Parse(messageTemplate)
+	if err != nil {
+		return err
+	}
+
+	args := messageArgs{
+		EventType: string(*eventType),
+		Namespace: execution.TestNamespace,
+		TestName:  execution.TestName,
+		TestType:  execution.TestType,
+		Status:    string(*execution.ExecutionResult.Status),
+		StartTime: execution.StartTime.String(),
+		EndTime:   execution.EndTime.String(),
+		Duration:  execution.Duration,
+		Output:    execution.ExecutionResult.Output}
+
+	var message bytes.Buffer
+	t.Execute(&message, args)
+
+	view := slack.Message{}
+	json.Unmarshal(message.Bytes(), &view)
+	if c != nil && c.SlackClient != nil {
+		c.SlackClient.PostMessage(c.ChannelId, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+	}
+	return nil
+}
