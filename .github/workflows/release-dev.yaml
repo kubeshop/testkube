@@ -78,9 +78,6 @@ jobs:
           name: testkube_${{ matrix.name }}
           path: |
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
-            ${{ matrix.name }}/testkube_*.tar.gz
-#            !tmp/*.txt
-##            !tmp/*.json
           retention-days: 1
       - name: list files
         run: find . -type f -not -path "./pkg/*"
