@@ -17,6 +17,7 @@ kubectl-testkube create executor [flags]
   -h, --help                   help for executor
   -i, --image string           if uri is git repository we can set additional branch parameter
   -j, --job-template string    if executor needs to be launched using custom job specification
+  -l, --label stringToString   label key value pair: --label key1=value1 (default [])
   -n, --name string            unique test name - mandatory
   -t, --types stringArray      types handled by executor
   -u, --uri string             if resource need to be loaded from URI
@@ -25,7 +26,7 @@ kubectl-testkube create executor [flags]
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -s, --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
   -v, --verbose             show additional debug messages
