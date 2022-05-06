@@ -1,4 +1,4 @@
-// TODO //go:build integration
+//go:build integration
 
 package config
 
