@@ -8,7 +8,7 @@ import (
 
 type Repository interface {
 	// GetUniqueClusterId gets unique cluster based ID
-	GetUniuqueClusterId(ctx context.Context) (string, error)
+	GetUniqueClusterId(ctx context.Context) (string, error)
 
 	// Get gets execution result by id
 	Get(ctx context.Context) (testkube.Config, error)
