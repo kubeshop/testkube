@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.0.10-beta002
+	github.com/kubeshop/testkube-operator v1.0.20
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
@@ -27,10 +27,7 @@ require (
 	k8s.io/client-go v0.21.2
 )
 
-require (
-	github.com/go-logr/zapr v0.4.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
-)
+require github.com/gorilla/websocket v1.4.2 // indirect
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
