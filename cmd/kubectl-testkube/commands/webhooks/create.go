@@ -12,6 +12,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	var (
 		events    []string
 		name, uri string
+		labels    map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -40,6 +41,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 				Namespace: namespace,
 				Events:    webhooksmapper.MapStringArrayToCRDEvents(events),
 				Uri:       uri,
+				Labels:    labels,
 			}
 
 			_, err = client.CreateWebhook(options)
@@ -52,6 +54,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor e.g. start-test|end-test")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
+	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

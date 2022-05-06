@@ -79,11 +79,11 @@ func (c *Client) List() (map[string]map[string]string, error) {
 }
 
 // Create is a method to create new secret
-func (c *Client) Create(id string, stringData map[string]string) error {
+func (c *Client) Create(id string, labels, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, c.Namespace, stringData)
+	secretSpec := NewSpec(id, c.Namespace, labels, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}
@@ -92,11 +92,11 @@ func (c *Client) Create(id string, stringData map[string]string) error {
 }
 
 // Apply is a method to create or update a secret
-func (c *Client) Apply(id string, stringData map[string]string) error {
+func (c *Client) Apply(id string, labels, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewApplySpec(id, c.Namespace, stringData)
+	secretSpec := NewApplySpec(id, c.Namespace, labels, stringData)
 	if _, err := secretsClient.Apply(ctx, secretSpec, metav1.ApplyOptions{
 		FieldManager: "application/apply-patch"}); err != nil {
 		return err
@@ -106,11 +106,11 @@ func (c *Client) Apply(id string, stringData map[string]string) error {
 }
 
 // Update is a method to update an existing secret
-func (c *Client) Update(id string, stringData map[string]string) error {
+func (c *Client) Update(id string, labels, stringData map[string]string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, c.Namespace, stringData)
+	secretSpec := NewSpec(id, c.Namespace, labels, stringData)
 	if _, err := secretsClient.Update(ctx, secretSpec, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
@@ -131,12 +131,17 @@ func (c *Client) Delete(id string) error {
 }
 
 // DeleteAll is a method to delete all existing secrets
-func (c *Client) DeleteAll() error {
+func (c *Client) DeleteAll(selector string) error {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
+	filter := fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)
+	if selector != "" {
+		filter += "," + selector
+	}
+
 	if err := secretsClient.DeleteCollection(ctx, metav1.DeleteOptions{},
-		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)}); err != nil {
+		metav1.ListOptions{LabelSelector: filter}); err != nil {
 		return err
 	}
 
@@ -144,8 +149,8 @@ func (c *Client) DeleteAll() error {
 }
 
 // NewSpec is a method to return secret spec
-func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
-	return &v1.Secret{
+func NewSpec(id, namespace string, labels, stringData map[string]string) *v1.Secret {
+	configuration := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
 			Namespace: namespace,
@@ -154,14 +159,26 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.Secret {
 		Type:       v1.SecretTypeOpaque,
 		StringData: stringData,
 	}
+
+	for key, value := range labels {
+		configuration.Labels[key] = value
+	}
+
+	return configuration
 }
 
 // NewApplySpec is a method to return secret apply spec
-func NewApplySpec(id, namespace string, stringData map[string]string) *corev1.SecretApplyConfiguration {
-	return corev1.Secret(id, namespace).
+func NewApplySpec(id, namespace string, labels, stringData map[string]string) *corev1.SecretApplyConfiguration {
+	configuration := corev1.Secret(id, namespace).
 		WithLabels(map[string]string{"testkube": testkubeTestSecretLabel}).
 		WithStringData(stringData).
 		WithType(v1.SecretTypeOpaque)
+
+	for key, value := range labels {
+		configuration.Labels[key] = value
+	}
+
+	return configuration
 }
 
 // GetMetadataName returns secret metadata name

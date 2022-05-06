@@ -13,16 +13,17 @@ kubectl-testkube create webhook [flags]
 ### Options
 
 ```
-  -e, --events stringArray   event types handled by executor e.g. start-test|end-test
-  -h, --help                 help for webhook
-  -n, --name string          unique webhook name - mandatory
-  -u, --uri string           URI which should be called when given event occurs
+  -e, --events stringArray     event types handled by executor e.g. start-test|end-test
+  -h, --help                   help for webhook
+  -l, --label stringToString   label key value pair: --label key1=value1 (default [])
+  -n, --name string            unique webhook name - mandatory
+  -u, --uri string             URI which should be called when given event occurs
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -s, --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
   -v, --verbose             show additional debug messages

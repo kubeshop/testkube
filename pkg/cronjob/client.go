@@ -31,6 +31,7 @@ type CronJobOptions struct {
 	Schedule string
 	Resource string
 	Data     string
+	Labels   map[string]string
 }
 
 type templateParameters struct {
@@ -43,6 +44,7 @@ type templateParameters struct {
 	Resource        string
 	CronJobTemplate string
 	Data            string
+	Labels          map[string]string
 }
 
 // NewClient is a method to create new cron job client
@@ -90,6 +92,7 @@ func (c *Client) Apply(id, name string, options CronJobOptions) error {
 		Resource:        options.Resource,
 		CronJobTemplate: c.cronJobTemplate,
 		Data:            options.Data,
+		Labels:          options.Labels,
 	}
 
 	cronJobSpec, err := NewApplySpec(c.Log, parameters)
@@ -105,7 +108,27 @@ func (c *Client) Apply(id, name string, options CronJobOptions) error {
 	return nil
 }
 
-// Delete is a method to delete an existing secret
+// UpdateLabels is a method to update an existing cron job labels
+func (c *Client) UpdateLabels(cronJobSpec *v1.CronJob, oldLabels, newLabels map[string]string) error {
+	cronJobClient := c.ClientSet.BatchV1().CronJobs(c.Namespace)
+	ctx := context.Background()
+
+	for key := range oldLabels {
+		delete(cronJobSpec.Labels, key)
+	}
+
+	for key, value := range newLabels {
+		cronJobSpec.Labels[key] = value
+	}
+
+	if _, err := cronJobClient.Update(ctx, cronJobSpec, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Delete is a method to delete an existing cron job
 func (c *Client) Delete(name string) error {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(c.Namespace)
 	ctx := context.Background()
@@ -117,13 +140,18 @@ func (c *Client) Delete(name string) error {
 	return nil
 }
 
-// DeleteAll is a method to delete all existing secrets
-func (c *Client) DeleteAll(resource string) error {
+// DeleteAll is a method to delete all existing cron jobs
+func (c *Client) DeleteAll(resource, selector string) error {
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(c.Namespace)
 	ctx := context.Background()
 
+	filter := fmt.Sprintf("testkube=%s", resource)
+	if selector != "" {
+		filter += "," + selector
+	}
+
 	if err := cronJobClient.DeleteCollection(ctx, metav1.DeleteOptions{},
-		metav1.ListOptions{LabelSelector: fmt.Sprintf("testkube=%s", resource)}); err != nil {
+		metav1.ListOptions{LabelSelector: filter}); err != nil {
 		return err
 	}
 
@@ -149,6 +177,10 @@ func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batch
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(cronJobSpec), len(cronJobSpec))
 	if err := decoder.Decode(&cronJob); err != nil {
 		return nil, fmt.Errorf("decoding cron job spec error: %w", err)
+	}
+
+	for key, value := range parameters.Labels {
+		cronJob.Labels[key] = value
 	}
 
 	return &cronJob, nil
