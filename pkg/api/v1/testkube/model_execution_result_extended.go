@@ -45,18 +45,18 @@ func (e *ExecutionResult) IsFailed() bool {
 	return *e.Status == FAILED_ExecutionStatus
 }
 
-func (r *ExecutionResult) Err(err error) ExecutionResult {
-	r.Status = ExecutionStatusFailed
-	r.ErrorMessage = err.Error()
-	return *r
+func (e *ExecutionResult) Err(err error) ExecutionResult {
+	e.Status = ExecutionStatusFailed
+	e.ErrorMessage = err.Error()
+	return *e
 }
 
 // Errs return error result if any of passed errors is not nil
-func (r *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
+func (e *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
 	for _, err := range errors {
 		if err != nil {
-			return r.Err(err)
+			return e.Err(err)
 		}
 	}
-	return *r
+	return *e
 }
