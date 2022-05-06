@@ -18,7 +18,7 @@ const messageTemplate string = `{
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": "New Event",
+				"text": "Teskube activity",
 				"emoji": true
 			}
 		},
@@ -28,11 +28,14 @@ const messageTemplate string = `{
 				{
 					"type": "mrkdwn",
 					"text": "*Event Type:*\n{{ .EventType }}"
-				},
+				}
+				{{ if .Namespace }}
+				,
 				{
 					"type": "mrkdwn",
 					"text": "*Namespace:*\n{{ .Namespace }}"
 				}
+				{{ end }}
 			]
 		},
 		{
@@ -69,7 +72,9 @@ const messageTemplate string = `{
 					"text": "*End Time:*\n{{ .EndTime }}"
 				}
 			]
-		},
+		}
+		{{ if .Duration }}
+		,
 		{
 			"type": "section",
 			"fields": [
@@ -78,7 +83,10 @@ const messageTemplate string = `{
 					"text": "*Duration:*\n{{ .Duration }}"
 				}
 			]
-		},
+		}
+		{{ end }}
+		{{ if .Output }}
+		,
 		{
 			"type": "section",
 			"fields": [
@@ -88,6 +96,7 @@ const messageTemplate string = `{
 				}
 			]
 		}
+		{{ end }}
 	]
 }`
 

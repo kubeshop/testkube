@@ -1,7 +1,7 @@
 name: "Linting"
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - edited
@@ -12,16 +12,6 @@ permissions:
   pull-requests: read
 
 jobs:
-  prlint:
-    name: Lint PR
-    runs-on: ubuntu-latest
-    steps:
-      # Please look up the latest version from
-      # https://github.com/amannn/action-semantic-pull-request/releases
-      - name: Lint PR
-        uses: amannn/action-semantic-pull-request@v3.4.6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   golangci:
     name: Lint Go
     runs-on: ubuntu-latest
