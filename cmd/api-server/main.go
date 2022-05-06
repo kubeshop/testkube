@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -17,6 +18,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -95,6 +97,10 @@ func main() {
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
+	configRepository := config.NewMongoRespository(db)
+
+	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
+	ui.WarnOnError("Getting uniqe clusterId", err)
 
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV2, testsuitesClient))
 	if err := runMigrations(); err != nil {
@@ -110,6 +116,7 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		clusterId,
 	).Run()
 
 	ui.ExitOnError("Running API Server", err)

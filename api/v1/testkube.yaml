@@ -2362,6 +2362,18 @@ components:
         latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
 
+    Config:
+      description: Testkube API config data structure
+      type: object
+      required:
+        - id
+        - clusterId
+      properties:
+        id:
+          type: string
+        clusterId:
+          type: string
+
     #
     # Errors
     #
