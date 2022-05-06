@@ -79,8 +79,7 @@ jobs:
           path: |
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
           retention-days: 1
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"
+
 
   release:
     name: Create and upload release-artifacts
@@ -96,24 +95,17 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: testkube_linux
-          path: tmp
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
+          path: linux
       - name: Download Artifacts for Windows
         uses: actions/download-artifact@master
         with:
           name: testkube_windows
-          path: tmp
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"  -not -path "./docs/*" -not -path "./assets/*" -not -path "./git/*"
-
+          path: windows
       - name: Download Artifacts for Darwin
         uses: actions/download-artifact@master
         with:
           name: testkube_darwin
-          path: tmp
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"
+          path: darwin
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -132,7 +124,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f .goreleaser-dev.yml --debug
+          args: release -f .goreleaser-dev.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -145,8 +137,6 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      - name: list files
-        run: find . -type f -not -path "./pkg/*"
 
   build-and-publish-windows-installer:
     needs: release
