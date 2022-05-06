@@ -41,6 +41,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	clusterId string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -70,6 +71,7 @@ func NewTestkubeAPI(
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 		AnalyticsEnabled:     analyticsEnabled,
+		ClusterID:            clusterId,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -112,6 +114,7 @@ type TestkubeAPI struct {
 	jobTemplates         jobTemplates
 	Namespace            string
 	AnalyticsEnabled     bool
+	ClusterID            string
 }
 
 type jobTemplates struct {
@@ -164,7 +167,7 @@ func (s TestkubeAPI) Init() {
 		// global analytics tracking send async
 		s.Routes.Use(func(c *fiber.Ctx) error {
 			go func(host, path, method string) {
-				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method)
+				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
 				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
 				if err != nil {
 					l.Debugw("sending analytics event error", "error", err)
@@ -249,7 +252,7 @@ func (s TestkubeAPI) Init() {
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 
-	s.Log.Infow("configured kubernetes namespace", "namespace", s.Namespace)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
 }
 
 func (s TestkubeAPI) HandleEmitterLogs() {

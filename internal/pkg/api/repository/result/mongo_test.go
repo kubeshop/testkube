@@ -17,7 +17,7 @@ import (
 
 const (
 	mongoDns    = "mongodb://localhost:27017"
-	mongoDbName = "testkube"
+	mongoDbName = "testkube-test"
 )
 
 func TestStorage(t *testing.T) {

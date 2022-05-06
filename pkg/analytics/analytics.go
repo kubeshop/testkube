@@ -37,6 +37,7 @@ type Params struct {
 	DataSource       string `json:"data_source,omitempty"`
 	Host             string `json:"host,omitempty"`
 	MachineID        string `json:"machine_id,omitempty"`
+	ClusterID        string `json:"cluster_id,omitempty"`
 	OperatingSystem  string `json:"operating_system,omitempty"`
 	Architecture     string `json:"architecture,omitempty"`
 }
@@ -144,10 +145,10 @@ func SendCmdInit(cmd *cobra.Command, version string) (string, error) {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, error) {
+func SendAnonymousAPIRequestInfo(host, path, version, method, clusterId string) (string, error) {
 	payload := Payload{
-		ClientID: MachineID(),
-		UserID:   MachineID(),
+		ClientID: clusterId,
+		UserID:   clusterId,
 		Events: []Event{
 			{
 				Name: text.GAEventName(method + "_" + path),
@@ -159,6 +160,8 @@ func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, er
 					Host:            host,
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
+					MachineID:       MachineID(),
+					ClusterID:       clusterId,
 				},
 			}},
 	}
