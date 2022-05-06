@@ -14,10 +14,7 @@ builds:
     goamd64:
       - v1
     prebuilt:
-      path: |
-        ./tmp/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube
-        ./tmp/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube.exe
-
+      path: ./tmp
     binary: kubectl-testkube
 #    env:
 #      - CGO_ENABLED=0
@@ -26,8 +23,6 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
       - -X main.builtBy=goreleaser
-      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
-      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
 archives:
   - replacements:
       darwin: macOS

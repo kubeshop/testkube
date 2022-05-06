@@ -30,3 +30,7 @@ site
 /artifacts
 movie.mp4
 /tmp
+/linux
+/windows
+/darwin
+/dist
