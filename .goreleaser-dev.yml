@@ -11,7 +11,7 @@ builds:
     goamd64:
       - v1
     prebuilt:
-      path: '{{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
+      path: '{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
     binary: kubectl-testkube
 #    hooks:
 #      pre: 'du -hs {{ .Os }}/kubectl-testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
