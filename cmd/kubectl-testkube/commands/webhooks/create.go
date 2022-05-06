@@ -20,7 +20,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 		Short:   "Create new Webhook",
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			var err error
 

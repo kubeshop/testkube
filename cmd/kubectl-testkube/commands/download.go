@@ -24,7 +24,6 @@ func NewDownloadCmd() *cobra.Command {
 		Short: "Artifacts management commands",
 		Args:  validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

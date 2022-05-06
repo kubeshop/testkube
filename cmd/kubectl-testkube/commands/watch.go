@@ -15,7 +15,6 @@ func NewWatchCmd() *cobra.Command {
 		Aliases: []string{"r", "start"},
 		Short:   "Watch tests or test suites",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

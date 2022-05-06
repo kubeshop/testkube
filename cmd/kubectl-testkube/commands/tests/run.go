@@ -34,7 +34,6 @@ func NewRunTestCmd() *cobra.Command {
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Args:    validator.TestName,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			testName := args[0]
 

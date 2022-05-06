@@ -28,7 +28,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Long:    `Starts new test suite based on TestSuite Custom Resource name, returns results to console`,
 		Args:    validator.TestSuiteName,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			testSuiteName := args[0]
 			startTime := time.Now()

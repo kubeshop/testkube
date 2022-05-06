@@ -29,7 +29,6 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		Short:   "Create new TestSuite",
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			var content []byte
 			var err error

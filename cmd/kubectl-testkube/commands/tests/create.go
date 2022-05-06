@@ -35,7 +35,6 @@ func NewCreateTestsCmd() *cobra.Command {
 		Short:   "Create new Test",
 		Long:    `Create new Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			client, testNamespace := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)

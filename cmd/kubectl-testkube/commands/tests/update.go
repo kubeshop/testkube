@@ -29,7 +29,6 @@ func NewUpdateTestsCmd() *cobra.Command {
 		Short: "Update test",
 		Long:  `Update Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			var err error
 
 			client, _ := common.GetClient(cmd)

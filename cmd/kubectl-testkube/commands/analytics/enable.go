@@ -11,7 +11,6 @@ func NewEnableAnalyticsCmd() *cobra.Command {
 		Use:   "analytics",
 		Short: "Enable collecting of anonymous analytics",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 

@@ -14,7 +14,6 @@ func NewDeleteTestsCmd() *cobra.Command {
 		Aliases: []string{"t", "tests"},
 		Short:   "Delete Test",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			client, _ := common.GetClient(cmd)
 			namespace := cmd.Flag("namespace").Value.String()

@@ -12,7 +12,6 @@ func NewMigrateCmd() *cobra.Command {
 		Short: "manual migrate command",
 		Long:  `migrate command will run migrations greater or equals current version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			hasMigrations, err := RunMigrations(cmd)
 			ui.ExitOnError("Running migrations", err)
 			if hasMigrations {
