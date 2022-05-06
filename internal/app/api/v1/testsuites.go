@@ -367,11 +367,10 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			cancelCtx, cancel := context.WithCancel(ctx)
-			defer cancel()
+			backgroundCtx := context.Background()
 
 			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
-			go workerpoolService.Run(cancelCtx)
+			go workerpoolService.Run(backgroundCtx)
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
@@ -616,6 +615,7 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			EndTime:       execution.EndTime,
 			Duration:      types.FormatDuration(execution.Duration),
 			Execution:     executionsSummary,
+			Labels:        execution.Labels,
 		}
 	}
 

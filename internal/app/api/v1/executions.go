@@ -108,11 +108,10 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-			cancelCtx, cancel := context.WithCancel(ctx)
-			defer cancel()
+			backgroundCtx := context.Background()
 
 			go workerpoolService.SendRequests(s.prepareTestRequests(work, request))
-			go workerpoolService.Run(cancelCtx)
+			go workerpoolService.Run(backgroundCtx)
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
@@ -488,7 +487,6 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		testkube.NewPendingExecutionResult(),
 		options.Request.Params,
 		options.Labels,
-
 	)
 
 	execution.Args = options.Request.Args

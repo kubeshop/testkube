@@ -1763,6 +1763,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
+        labels:
+          type: object
+          description: "test suite execution labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     TestSuiteStepExecutionSummary:
       description: test suite execution summary
