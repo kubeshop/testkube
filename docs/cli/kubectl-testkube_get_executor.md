@@ -13,13 +13,14 @@ kubectl-testkube get executor [executorName] [flags]
 ### Options
 
 ```
-  -h, --help   help for executor
+  -h, --help            help for executor
+  -l, --label strings   label key value pair: --label key1=value1
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled    enable analytics (default true)
+      --analytics-enabled    enable analytics
   -c, --client string        client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --go-template string   go template to render (default "{{.}}")
   -s, --namespace string     Kubernetes namespace, default value read from config if set (default "testkube")

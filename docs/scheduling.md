@@ -248,11 +248,11 @@ kubectl testkube get tse
 Output:
 
 ```sh
-  ID                       | TEST SUITE NAME     | EXECUTION NAME                             | STATUS | STEPS  
-+--------------------------+---------------------+--------------------------------------------+--------+-------+
-  6256ce3f418062706814e210 | scheduled-testsuite | scheduled-testsuite.abnormally-in-lark     | passed |     2  
-  6256ce04418062706814e20c | scheduled-testsuite | scheduled-testsuite.kindly-evolved-primate | passed |     2  
-  6256cdcc418062706814e208 | scheduled-testsuite | scheduled-testsuite.formerly-champion-dodo | passed |     2
+  ID                       | TEST SUITE NAME     | EXECUTION NAME                             | STATUS | STEPS | LABELS  
++--------------------------+---------------------+--------------------------------------------+--------+-------+--------+
+  6256ce3f418062706814e210 | scheduled-testsuite | scheduled-testsuite.abnormally-in-lark     | passed |     2 |
+  6256ce04418062706814e20c | scheduled-testsuite | scheduled-testsuite.kindly-evolved-primate | passed |     2 |
+  6256cdcc418062706814e208 | scheduled-testsuite | scheduled-testsuite.formerly-champion-dodo | passed |     2 |
 ```
 
 The test suite is successfully executed according to the schedule set.

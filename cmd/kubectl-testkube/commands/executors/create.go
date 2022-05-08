@@ -13,6 +13,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 	var (
 		types                                       []string
 		name, executorType, image, uri, jobTemplate string
+		labels                                      map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -50,6 +51,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 				Image:        image,
 				Uri:          uri,
 				JobTemplate:  jobTemplateContent,
+				Labels:       labels,
 			}
 
 			_, err = client.CreateExecutor(options)
@@ -66,6 +68,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification")
+	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
 }

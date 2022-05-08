@@ -25,4 +25,6 @@ type ExecutorCreateRequest struct {
 	Uri string `json:"uri,omitempty"`
 	// Job template to launch executor
 	JobTemplate string `json:"jobTemplate,omitempty"`
+	// executor labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -17,6 +17,4 @@ type TestSuiteExecutionRequest struct {
 	Namespace string `json:"namespace,omitempty"`
 	// execution params passed to executor
 	Params map[string]string `json:"params,omitempty"`
-	// execution labels
-	Labels map[string]string `json:"labels,omitempty"`
 }
