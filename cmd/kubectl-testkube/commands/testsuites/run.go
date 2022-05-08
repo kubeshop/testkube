@@ -30,7 +30,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Short:   "Starts new test suite",
 		Long:    `Starts new test suite based on TestSuite Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			startTime := time.Now()
 			client, namespace := common.GetClient(cmd)

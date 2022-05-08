@@ -22,7 +22,6 @@ func NewCreateExecutorCmd() *cobra.Command {
 		Short:   "Create new Executor",
 		Long:    `Create new Executor Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			var err error
 

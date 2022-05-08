@@ -14,7 +14,6 @@ func NewGenerateCmd() *cobra.Command {
 		Aliases: []string{},
 		Short:   "Generate resources commands",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

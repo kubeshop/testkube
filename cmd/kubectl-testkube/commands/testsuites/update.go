@@ -26,7 +26,6 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 		Short: "Update Test Suite",
 		Long:  `Update Test Custom Resource Definitions, `,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			var content []byte
 			var err error

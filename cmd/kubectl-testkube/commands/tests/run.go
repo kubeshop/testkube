@@ -36,7 +36,6 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			paramsFileContent := ""
 			if paramsFile != "" {

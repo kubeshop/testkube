@@ -13,7 +13,6 @@ func NewAbortCmd() *cobra.Command {
 		Use:   "abort <resourceName>",
 		Short: "Abort tests or test suites",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

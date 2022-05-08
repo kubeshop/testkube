@@ -16,7 +16,6 @@ func NewUninstallCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			ui.Verbose = true
-			ui.Logo()
 
 			_, err := process.Execute("helm", "uninstall", "--namespace", namespace, name)
 			ui.PrintOnError("uninstalling testkube", err)
