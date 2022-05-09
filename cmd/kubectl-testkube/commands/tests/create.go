@@ -35,7 +35,6 @@ func NewCreateTestsCmd() *cobra.Command {
 		Short:   "Create new Test",
 		Long:    `Create new Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			client, testNamespace := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)
@@ -54,7 +53,7 @@ func NewCreateTestsCmd() *cobra.Command {
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
 			ui.ExitOnError("getting test options", err)
 
-			executors, err := client.ListExecutors()
+			executors, err := client.ListExecutors("")
 			ui.ExitOnError("getting available executors", err)
 
 			err = validateExecutorType(options.Type_, executors)

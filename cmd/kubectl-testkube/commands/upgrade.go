@@ -13,7 +13,6 @@ func NewUpgradeCmd() *cobra.Command {
 		Short:   "Upgrade Helm chart, install dependencies and run migrations",
 		Aliases: []string{"update"},
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			hasMigrations, err := RunMigrations(cmd)
 			ui.ExitOnError("Running migrations", err)

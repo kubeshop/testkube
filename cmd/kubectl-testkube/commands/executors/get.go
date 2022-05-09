@@ -2,6 +2,7 @@ package executors
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
@@ -10,6 +11,8 @@ import (
 )
 
 func NewGetExecutorCmd() *cobra.Command {
+	var selectors []string
+
 	cmd := &cobra.Command{
 		Use:     "executor [executorName]",
 		Aliases: []string{"executors", "er"},
@@ -27,7 +30,7 @@ func NewGetExecutorCmd() *cobra.Command {
 				ui.ExitOnError("rendering executor", err)
 
 			} else {
-				executors, err := client.ListExecutors()
+				executors, err := client.ListExecutors(strings.Join(selectors, ","))
 				ui.ExitOnError("listing executors: ", err)
 				err = render.List(cmd, executors, os.Stdout)
 				ui.ExitOnError("rendering executors", err)
@@ -35,5 +38,6 @@ func NewGetExecutorCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	return cmd
 }

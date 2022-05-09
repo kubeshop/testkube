@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -129,13 +130,13 @@ func (c APIClient) ListExecutions(id string, limit int, selector string) (execut
 		return executions, fmt.Errorf("api/get-executions returned error: %w", err)
 	}
 
-	return c.getExecutionsFromResponse(resp)
+	return c.getExecutionResultsFromResponse(resp)
 }
 
 // DeleteTests deletes all tests
-func (c APIClient) DeleteTests() error {
+func (c APIClient) DeleteTests(selector string) error {
 	uri := c.getURI("/tests")
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, selector, true)
 }
 
 // DeleteTest deletes single test by name
@@ -144,7 +145,7 @@ func (c APIClient) DeleteTest(name string) error {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 	uri := c.getURI("/tests/%s", name)
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, "", true)
 }
 
 // CreateTest creates new Test Custom Resource
@@ -191,23 +192,15 @@ func (c APIClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, er
 
 // ExecuteTest starts test execution, reads data and returns ID
 // execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string,
-	args []string, secretEnvs map[string]string) (execution testkube.Execution, err error) {
+func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := c.getURI("/tests/%s/executions", id)
-
-	// get test to get test labels
-	test, err := c.GetTest(id)
-	if err != nil {
-		return execution, nil
-	}
 
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
-		ParamsFile: executionParamsFileContent,
-		Params:     executionParams,
-		Labels:     test.Labels,
-		Args:       args,
-		SecretEnvs: secretEnvs,
+		ParamsFile: options.ExecutionParamsFileContent,
+		Params:     options.ExecutionParams,
+		Args:       options.Args,
+		SecretEnvs: options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)
@@ -226,6 +219,38 @@ func (c APIClient) ExecuteTest(id, executionName string, executionParams map[str
 	}
 
 	return c.getExecutionFromResponse(resp)
+}
+
+// ExecuteTests starts test executions, reads data and returns IDs
+// executions are started asynchronously client can check later for results
+func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
+	uri := c.getURI("/executions")
+	request := testkube.ExecutionRequest{
+		ParamsFile: options.ExecutionParamsFileContent,
+		Params:     options.ExecutionParams,
+		Args:       options.Args,
+		SecretEnvs: options.SecretEnvs,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executions, err
+	}
+
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body)
+
+	req.Param("selector", selector)
+	req.Param("concurrency", strconv.Itoa(concurrencyLevel))
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/execute-test returned error: %w", err)
+	}
+
+	return c.getExecutionsFromResponse(resp)
 }
 
 // Logs returns logs stream from job pods, based on job pods logs
@@ -289,7 +314,7 @@ func (c APIClient) ListTestWithExecutions(selector string) (testWithExecutions t
 // AbortExecution aborts execution by testId and id
 func (c APIClient) AbortExecution(testID, id string) error {
 	uri := c.getURI("/tests/%s/executions/%s", testID, id)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
 }
 
 // executor --------------------------------------------------------------------------------
@@ -330,10 +355,14 @@ func (c APIClient) GetExecutor(name string) (executor testkube.ExecutorDetails, 
 	return c.getExecutorDetailsFromResponse(resp)
 }
 
-func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err error) {
+func (c APIClient) ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error) {
 	uri := c.getURI("/executors")
 	req := c.GetProxy("GET").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
 
 	resp := req.Do(context.Background())
 
@@ -346,7 +375,12 @@ func (c APIClient) ListExecutors() (executors testkube.ExecutorsDetails, err err
 
 func (c APIClient) DeleteExecutor(name string) (err error) {
 	uri := c.getURI("/executors/%s", name)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
+}
+
+func (c APIClient) DeleteExecutors(selector string) (err error) {
+	uri := c.getURI("/executors")
+	return c.makeDeleteRequest(uri, selector, false)
 }
 
 // webhooks --------------------------------------------------------------------------------
@@ -385,10 +419,14 @@ func (c APIClient) GetWebhook(name string) (webhook testkube.Webhook, err error)
 	return c.getWebhookFromResponse(resp)
 }
 
-func (c APIClient) ListWebhooks() (webhooks testkube.Webhooks, err error) {
+func (c APIClient) ListWebhooks(selector string) (webhooks testkube.Webhooks, err error) {
 	uri := c.getURI("/webhooks")
 	req := c.GetProxy("GET").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
 
 	resp := req.Do(context.Background())
 
@@ -401,7 +439,12 @@ func (c APIClient) ListWebhooks() (webhooks testkube.Webhooks, err error) {
 
 func (c APIClient) DeleteWebhook(name string) (err error) {
 	uri := c.getURI("/webhooks/%s", name)
-	return c.makeDeleteRequest(uri, false)
+	return c.makeDeleteRequest(uri, "", false)
+}
+
+func (c APIClient) DeleteWebhooks(selector string) (err error) {
+	uri := c.getURI("/webhooks")
+	return c.makeDeleteRequest(uri, selector, false)
 }
 
 // maintenance --------------------------------------------------------------------------------
@@ -445,7 +488,18 @@ func (c APIClient) getExecutionFromResponse(resp rest.Result) (execution testkub
 	return execution, err
 }
 
-func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
+func (c APIClient) getExecutionsFromResponse(resp rest.Result) (executions []testkube.Execution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executions, err
+	}
+
+	err = json.Unmarshal(bytes, &executions)
+
+	return executions, err
+}
+
+func (c APIClient) getExecutionResultsFromResponse(resp rest.Result) (executions testkube.ExecutionsResult, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return executions, err
@@ -580,10 +634,15 @@ func (c APIClient) getURI(pathTemplate string, params ...interface{}) string {
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
-func (c APIClient) makeDeleteRequest(uri string, isContentExpected bool) error {
+func (c APIClient) makeDeleteRequest(uri, selector string, isContentExpected bool) error {
 
 	req := c.GetProxy("DELETE").
 		Suffix(uri)
+
+	if selector != "" {
+		req.Param("selector", selector)
+	}
+
 	resp := req.Do(context.Background())
 
 	if resp.Error() != nil {
@@ -694,12 +753,12 @@ func (c APIClient) DeleteTestSuite(name string) error {
 		return fmt.Errorf("testsuite name '%s' is not valid", name)
 	}
 	uri := c.getURI("/test-suites/%s", name)
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, "", true)
 }
 
-func (c APIClient) DeleteTestSuites() error {
+func (c APIClient) DeleteTestSuites(selector string) error {
 	uri := c.getURI("/test-suites")
-	return c.makeDeleteRequest(uri, true)
+	return c.makeDeleteRequest(uri, selector, true)
 }
 
 func (c APIClient) ListTestSuites(selector string) (testSuites testkube.TestSuites, err error) {
@@ -808,16 +867,9 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
-	// get testsuite to get testsuite labels
-	testsuite, err := c.GetTestSuite(id)
-	if err != nil {
-		return execution, nil
-	}
-
 	executionRequest := testkube.ExecutionRequest{
 		Name:   executionName,
 		Params: executionParams,
-		Labels: testsuite.Labels,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -835,7 +887,37 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams ma
 		return execution, fmt.Errorf("api/execute-test-suite returned error: %w", err)
 	}
 
-	return c.getTestExecutionFromResponse(resp)
+	return c.getTestSuiteExecutionFromResponse(resp)
+}
+
+// ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
+// Executions are started asynchronously client can check later for results
+func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error) {
+	uri := c.getURI("/test-suite-executions")
+
+	executionRequest := testkube.ExecutionRequest{
+		Params: executionParams,
+	}
+
+	body, err := json.Marshal(executionRequest)
+	if err != nil {
+		return executions, err
+	}
+
+	req := c.GetProxy("POST").
+		Suffix(uri).
+		Body(body)
+
+	req.Param("selector", selector)
+	req.Param("concurrency", strconv.Itoa(concurrencyLevel))
+
+	resp := req.Do(context.Background())
+
+	if err := c.responseError(resp); err != nil {
+		return executions, fmt.Errorf("api/execute-test-suites returned error: %w", err)
+	}
+
+	return c.getTestSuiteExecutionsFromResponse(resp)
 }
 
 func (c APIClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
@@ -847,7 +929,7 @@ func (c APIClient) GetTestSuiteExecution(executionID string) (execution testkube
 		return execution, fmt.Errorf("api/get-test-suite-execution returned error: %w", err)
 	}
 
-	return c.getTestExecutionFromResponse(resp)
+	return c.getTestSuiteExecutionFromResponse(resp)
 }
 
 // WatchTestSuiteExecution watches for changes in channels of test suite executions steps
@@ -925,7 +1007,7 @@ func (c APIClient) getTestSuiteWithExecutionsFromResponse(resp rest.Result) (tes
 	return testSuiteWithExecutions, err
 }
 
-func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) getTestSuiteExecutionFromResponse(resp rest.Result) (execution testkube.TestSuiteExecution, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return execution, err
@@ -934,6 +1016,17 @@ func (c APIClient) getTestExecutionFromResponse(resp rest.Result) (execution tes
 	err = json.Unmarshal(bytes, &execution)
 
 	return execution, err
+}
+
+func (c APIClient) getTestSuiteExecutionsFromResponse(resp rest.Result) (executions []testkube.TestSuiteExecution, err error) {
+	bytes, err := resp.Raw()
+	if err != nil {
+		return executions, err
+	}
+
+	err = json.Unmarshal(bytes, &executions)
+
+	return executions, err
 }
 
 func (c APIClient) getTestExecutionsFromResponse(resp rest.Result) (executions testkube.TestSuiteExecutionsResult, err error) {

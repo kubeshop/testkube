@@ -18,7 +18,6 @@ func NewGetCmd() *cobra.Command {
 		Short:   "Get resources",
 		Long:    `Get available resources, get single item or list`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

@@ -27,7 +27,6 @@ func NewDashboardCmd() *cobra.Command {
 		Short:   "Open testkube dashboard",
 		Long:    `Open testkube dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			uri := fmt.Sprintf("http://localhost:%d", DashboardLocalPort)
 			if useGlobalDashboard {

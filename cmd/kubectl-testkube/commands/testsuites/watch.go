@@ -17,7 +17,6 @@ func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 		Long:    `Watch test by test execution ID, returns results to console`,
 		Args:    validator.ExecutionID,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 
 			client, _ := common.GetClient(cmd)
 			startTime := time.Now()

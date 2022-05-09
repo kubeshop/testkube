@@ -15,4 +15,6 @@ type Webhook struct {
 	Namespace string             `json:"namespace,omitempty"`
 	Uri       string             `json:"uri"`
 	Events    []WebhookEventType `json:"events,omitempty"`
+	// webhook labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

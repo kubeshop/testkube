@@ -88,7 +88,6 @@ var RootCmd = &cobra.Command{
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ui.Logo()
 		err := cmd.Usage()
 		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true

@@ -16,7 +16,6 @@ func NewDeleteCmd() *cobra.Command {
 		Aliases: []string{"remove"},
 		Short:   "Delete resources",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

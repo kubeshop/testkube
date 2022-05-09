@@ -14,7 +14,6 @@ func NewUpdateCmd() *cobra.Command {
 		Aliases: []string{"u"},
 		Short:   "Update resource",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
 		},

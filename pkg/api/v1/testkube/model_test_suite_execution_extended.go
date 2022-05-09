@@ -26,7 +26,7 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		Status:    TestSuiteExecutionStatusRunning,
 		Params:    testSuite.Params,
 		TestSuite: testSuite.GetObjectRef(),
-		Labels:    request.Labels,
+		Labels:    testSuite.Labels,
 	}
 
 	// override params from request

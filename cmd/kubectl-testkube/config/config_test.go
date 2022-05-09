@@ -14,7 +14,8 @@ func TestSaveAnalyticsEnabled(t *testing.T) {
 
 	// create homedir config file
 	s := Storage{Dir: dir}
-	s.Init()
+	err = s.Init()
+	assert.NoError(t, err)
 
 	t.Run("check if analytics system is enabled", func(t *testing.T) {
 		// given / when

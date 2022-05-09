@@ -37,7 +37,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.TestSuiteExecution, err error) {
 	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{"starttime", -1}})
+	findOptions.SetSort(bson.D{{Key: "starttime", Value: -1}})
 	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testName}, findOptions).Decode(&result)
 	return
 }
@@ -56,10 +56,10 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		conditions = append(conditions, bson.M{"testsuite.name": testName})
 	}
 
-	pipeline := []bson.D{{{"$match", bson.M{"$or": conditions}}}}
-	pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
+	pipeline := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
+	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 	pipeline = append(pipeline, bson.D{
-		{"$group", bson.D{{"_id", "$testsuite.name"}, {"latest_id", bson.D{{"$first", "$id"}}}}}})
+		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testsuite.name"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
 
 	cursor, err := r.Coll.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -116,14 +116,15 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
-	pipeline := []bson.D{{{"$match", query}}}
+	pipeline := []bson.D{{{Key: "$match", Value: query}}}
 	if len(filter) > 0 {
-		pipeline = append(pipeline, bson.D{{"$sort", bson.D{{"starttime", -1}}}})
-		pipeline = append(pipeline, bson.D{{"$skip", int64(filter[0].Page() * filter[0].PageSize())}})
-		pipeline = append(pipeline, bson.D{{"$limit", int64(filter[0].PageSize())}})
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
+		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: int64(filter[0].PageSize())}})
 	}
 
-	pipeline = append(pipeline, bson.D{{"$group", bson.D{{"_id", "$status"}, {"count", bson.D{{"$sum", 1}}}}}})
+	pipeline = append(pipeline, bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$status"},
+		{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}}}}})
 	cursor, err := r.Coll.Aggregate(ctx, pipeline)
 	if err != nil {
 		return totals, err
@@ -241,7 +242,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
-	opts.SetSort(bson.D{{"starttime", -1}})
+	opts.SetSort(bson.D{{Key: "starttime", Value: -1}})
 
 	return query, opts
 }
