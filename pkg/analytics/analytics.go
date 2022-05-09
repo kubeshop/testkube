@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
@@ -35,6 +37,9 @@ type Params struct {
 	DataSource       string `json:"data_source,omitempty"`
 	Host             string `json:"host,omitempty"`
 	MachineID        string `json:"machine_id,omitempty"`
+	ClusterID        string `json:"cluster_id,omitempty"`
+	OperatingSystem  string `json:"operating_system,omitempty"`
+	Architecture     string `json:"architecture,omitempty"`
 }
 type Event struct {
 	Name   string `json:"name"`
@@ -61,11 +66,13 @@ func SendServerStartAnonymousInfo() (string, error) {
 				{
 					Name: "testkube_heartbeat",
 					Params: Params{
-						EventCount:    1,
-						EventCategory: "beacon",
-						AppVersion:    commands.Version,
-						AppName:       "testkube-api-server",
-						MachineID:     machineID,
+						EventCount:      1,
+						EventCategory:   "beacon",
+						AppVersion:      commands.Version,
+						AppName:         "testkube-api-server",
+						MachineID:       machineID,
+						OperatingSystem: runtime.GOOS,
+						Architecture:    runtime.GOARCH,
 					},
 				}},
 		}
@@ -92,11 +99,13 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 			{
 				Name: text.GAEventName(command),
 				Params: Params{
-					EventCount:    1,
-					EventCategory: "execution",
-					AppVersion:    version,
-					AppName:       "kubectl-testkube",
-					MachineID:     machineID,
+					EventCount:      1,
+					EventCategory:   "execution",
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       machineID,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
 				},
 			}},
 	}
@@ -104,20 +113,55 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 	return sendDataToGA(payload)
 }
 
-// SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousAPIRequestInfo(host, path, version, method string) (string, error) {
+// SendCmdInit will send CLI event to GA
+func SendCmdInit(cmd *cobra.Command, version string) (string, error) {
+	machineID := MachineID()
+
 	payload := Payload{
-		ClientID: MachineID(),
-		UserID:   MachineID(),
+		ClientID: machineID,
+		UserID:   machineID,
+		Events: []Event{
+			{
+				Name: "init",
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "execution",
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       machineID,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+				},
+			}},
+	}
+
+	out, err := sendValidationRequest(payload)
+	ui.Debug("init event validation output", out)
+	if err != nil {
+		ui.Debug("init event validation error", err.Error())
+	}
+
+	return sendDataToGA(payload)
+}
+
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousAPIRequestInfo(host, path, version, method, clusterId string) (string, error) {
+	payload := Payload{
+		ClientID: clusterId,
+		UserID:   clusterId,
 		Events: []Event{
 			{
 				Name: text.GAEventName(method + "_" + path),
 				Params: Params{
-					EventCount:    1,
-					EventCategory: "api-request",
-					AppVersion:    version,
-					AppName:       "testkube-api-server",
-					Host:          host,
+					EventCount:      1,
+					EventCategory:   "api-request",
+					AppVersion:      version,
+					AppName:         "testkube-api-server",
+					Host:            host,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					MachineID:       MachineID(),
+					ClusterID:       clusterId,
 				},
 			}},
 	}
@@ -164,7 +208,9 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
+	uri := fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret)
+
+	request, err := http.NewRequest("POST", uri, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}

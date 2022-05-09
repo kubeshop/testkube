@@ -12,7 +12,7 @@ package testkube
 import "fmt"
 
 func (r TestSuiteExecutionsResult) Table() (headers []string, output [][]string) {
-	headers = []string{"ID", "Test Suite Name", "Execution Name", "Status", "Steps"}
+	headers = []string{"ID", "Test Suite Name", "Execution Name", "Status", "Steps", "Labels"}
 
 	for _, result := range r.Results {
 		output = append(output, []string{
@@ -21,6 +21,7 @@ func (r TestSuiteExecutionsResult) Table() (headers []string, output [][]string)
 			result.Name,
 			string(*result.Status),
 			fmt.Sprintf("%d", len(result.Execution)),
+			LabelsToString(result.Labels),
 		})
 	}
 

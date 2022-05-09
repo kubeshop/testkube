@@ -85,6 +85,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - test-suites
+        - api
+      summary: "delete test suites"
+      description: "deletes all or labeled test suites"
+      operationId: deleteTestSuites
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"                 
 
   /test-suites/{id}:
     get:
@@ -110,6 +130,77 @@ paths:
                 $ref: "#/components/schemas/TestSuite"
         500:
           description: "problem with getting test suite from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    patch:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+      tags:
+        - test-suites
+        - api
+      summary: "update test suite"
+      description: "update test based on test suite content or git based data"
+      operationId: updateTestSuite
+      requestBody:
+        description: test suite details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSuite"
+        400:
+          description: "problem with test suite definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    delete:
+      tags:
+        - test-suites
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+      summary: "delete test suite"
+      description: "deletes a test suite"
+      operationId: deleteTestSuite
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -178,14 +269,206 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-suites/{id}/executions:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          description: kubernetes namespace
+          required: false
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Starts new test suite execution"
+      description: "New test suite execution returns new execution details on successful execution start"
+      operationId: executeTestSuite
+      requestBody:
+        description: body passed to configure execution
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteExecutionRequest"
+      responses:
+        201:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSuiteExecutionsResult"
+        400:
+          description: "problem with request body"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with test suite execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
+        - $ref: "#/components/parameters/TestExecutionsStatusFilter"
+        - $ref: "#/components/parameters/StartDateFilter"
+        - $ref: "#/components/parameters/EndDateFilter"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get all test suite executions"
+      description: "Returns array of all available test suite executions"
+      operationId: listTestSuiteExecutions
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSuiteExecutionsResult"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-suites/{id}/executions/{executionID}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite
+        - in: path
+          name: executionID
+          schema:
+            type: string
+          required: true
+          description: ID of the test suite execution
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get test suite execution"
+      description: "Returns test suite execution with given executionID"
+      operationId: getTestSuiteExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSuiteExecution"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suite-executions:
+    post:
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          description: kubernetes namespace
+          required: false
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ConcurrencyLevel"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Starts new test suite executions"
+      description: "New test suite executions returns new executions details on successful executions start"
+      operationId: executeTestSuites
+      requestBody:
+        description: body passed to configure executions
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteExecutionRequest"
+      responses:
+        201:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestSuiteExecutionsResult"
+        400:
+          description: "problem with request body"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with test suites executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
     get:
       tags:
         - executions
         - api
       summary: "Get all test suite executions"
       description: "Returns array of test suite executions"
-      operationId: listTestSuiteExecutions
+      operationId: listAllTestSuiteExecutions
       parameters:
         - $ref: "#/components/parameters/TestName"
         - $ref: "#/components/parameters/TextSearch"
@@ -243,6 +526,63 @@ paths:
                   $ref: "#/components/schemas/Problem"
 
   /executions:
+    post:
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          description: kubernetes namespace
+          required: false
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ConcurrencyLevel"
+      tags:
+        - api
+        - tests
+        - executions
+      summary: "Starts new test executions"
+      description: "New test executions returns new executions details on successful executions start"
+      operationId: executeTests
+      requestBody:
+        description: body passed to configure executions
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionRequest"
+      responses:
+        201:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionResult"
+        400:
+          description: "problem with request body"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with test executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
     get:
       tags:
         - executions
@@ -341,6 +681,40 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /executions/{id}/logs:
+    get:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test execution
+      tags:
+        - logs
+        - executions
+        - api
+      summary: "Get execution's logs by ID"
+      description: "Returns logs of the given executionID"
+      operationId: getExecutionLogs
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutorOutput"
+        500:
+          description: "problem with getting execution's logs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /executions/{id}/artifacts/{filename}:
     get:
       parameters:
@@ -356,6 +730,10 @@ paths:
             type: string
           required: true
           description: name of the file in the bucket
+      tags:
+        - artifacts
+        - executions
+        - api
       operationId: downloadFile
       responses:
         200:
@@ -422,9 +800,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Test"
+                $ref: "#/components/schemas/Test"
         400:
           description: "problem with test definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -445,9 +821,11 @@ paths:
       tags:
         - tests
         - api
-      summary: "delete test"
-      description: "deletes all the tests"
+      summary: "delete tests"
+      description: "deletes all or labeled tests"
       operationId: deleteTests
+      parameters:
+        - $ref: "#/components/parameters/Selector"
       responses:
         204:
           description: "no content"
@@ -488,9 +866,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Test"
+                $ref: "#/components/schemas/Test"
         400:
           description: "problem with test definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -636,10 +1012,9 @@ paths:
         - in: query
           name: namespace
           schema:
-            type: integer
+            type: string
           description: kubernetes namespace
           required: false
-        - $ref: "#/components/parameters/Selector"
       tags:
         - api
         - tests
@@ -660,9 +1035,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  $ref: "#/components/schemas/ExecutionResult"
+                $ref: "#/components/schemas/ExecutionResult"
         400:
           description: "problem with request body"
           content:
@@ -687,7 +1060,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-
     get:
       parameters:
         - in: path
@@ -788,9 +1160,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  $ref: "#/components/schemas/ExecutionResult"
+                $ref: "#/components/schemas/ExecutionResult"
 
   /executors:
     get:
@@ -804,9 +1174,10 @@ paths:
         - in: query
           name: namespace
           schema:
-            type: integer
+            type: string
           description: kubernetes namespace
           required: false
+        - $ref: "#/components/parameters/Selector"
       responses:
         200:
           description: "successful operation"
@@ -826,7 +1197,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
     post:
       tags:
-        - tests
+        - executor
         - api
       summary: "create new executor"
       description: "create new executor based on params passed in request"
@@ -844,9 +1215,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ExecutorDetails"
+                $ref: "#/components/schemas/ExecutorDetails"
         400:
           description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -863,6 +1232,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - executor
+        - api
+      summary: "delete executors"
+      description: "deletes labeled executors"
+      operationId: deleteExecutors
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"    
 
   /executors/{name}:
     delete:
@@ -908,7 +1297,7 @@ paths:
         - in: query
           name: namespace
           schema:
-            type: integer
+            type: string
           description: kubernetes namespace
           required: false
       tags:
@@ -923,9 +1312,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  $ref: "#/components/schemas/ExecutorDetails"
+                $ref: "#/components/schemas/ExecutorDetails"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -963,6 +1350,174 @@ paths:
                     type: string
         502:
           description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /webhooks:
+    get:
+      tags:
+        - webhook
+        - api
+      summary: "List webhooks"
+      description: "List webhooks available in cluster"
+      operationId: listWebhooks
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          description: kubernetes namespace
+          required: false
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Webhook"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - webhook
+        - api
+      summary: "create new webhook"
+      description: "create new webhook based on params passed in request"
+      operationId: createWebhook
+      requestBody:
+        description: executor request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreateRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        400:
+          description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - webhook
+        - api
+      summary: "delete webhooks"
+      description: "deletes labeled webhooks"
+      operationId: deleteWebhooks
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"    
+
+  /webhooks/{name}:
+    delete:
+      parameters:
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: Webhook CRD name
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          required: true
+          description: CRD namespace
+      tags:
+        - api
+        - webhook
+      summary: "Delete webhook"
+      description: "Deletes webhook by its name"
+      operationId: deleteWebhook
+      responses:
+        204:
+          description: webhook deleted successfuly
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    get:
+      parameters:
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: Webhook CRD name
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          description: kubernetes namespace
+          required: false
+      tags:
+        - api
+        - webhook
+      summary: "Get webhook details"
+      description: "Returns webhook"
+      operationId: getWebhook
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting webhook data"
           content:
             application/problem+json:
               schema:
@@ -1208,6 +1763,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
+        labels:
+          type: object
+          description: "test suite execution labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     TestSuiteStepExecutionSummary:
       description: test suite execution summary
@@ -1604,14 +2167,6 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
-        labels:
-          type: object
-          description: "execution labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
         secretEnvs:
           type: object
           description: "execution params passed to executor from secrets"
@@ -1620,6 +2175,9 @@ components:
           example:
             secret_name1: "kubernetes-secret-name"
             secret_key1: "secret-key-name"
+        sync:
+          type: boolean
+          description: whether to start execution sync or async
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -1641,14 +2199,6 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        labels:
-          type: object
-          description: "execution labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
 
     TestUpsertRequest:
       description: test create request body
@@ -1710,6 +2260,14 @@ components:
         jobTemplate:
           description: Job template to launch executor
           type: string
+        labels:
+          type: object
+          description: "executor labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"      
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
@@ -1762,6 +2320,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookEventType"
+        labels:
+          type: object
+          description: "webhook labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"   
 
     WebhookEvent:
       description: CRD based executor data
@@ -1803,6 +2369,18 @@ components:
           $ref: "#/components/schemas/TestSuite"
         latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+
+    Config:
+      description: Testkube API config data structure
+      type: object
+      required:
+        - id
+        - clusterId
+      properties:
+        id:
+          type: string
+        clusterId:
+          type: string
 
     #
     # Errors
@@ -1914,3 +2492,9 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    ConcurrencyLevel:
+      in: query
+      name: concurrency
+      schema:
+        type: integer
+        default: 10

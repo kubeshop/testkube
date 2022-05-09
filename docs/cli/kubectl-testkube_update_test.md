@@ -22,6 +22,7 @@ kubectl-testkube update test [flags]
   -h, --help                       help for test
   -l, --label stringToString       label key value pair: --label key1=value1 (default [])
   -n, --name string                unique test name - mandatory
+  -p, --param stringToString       param key value pair: --param key1=value1 (default [])
       --schedule string            test schedule in a cronjob form: * * * * *
       --test-content-type string   content type of test one of string|file-uri|git-file|git-dir
   -t, --type string                test type (defaults to postman-collection)
@@ -31,7 +32,7 @@ kubectl-testkube update test [flags]
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -s, --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
   -v, --verbose             show additional debug messages

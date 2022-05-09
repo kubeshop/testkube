@@ -1,4 +1,4 @@
-name: "Lint PR"
+name: "Linting"
 
 on:
   pull_request_target:
@@ -6,14 +6,15 @@ on:
       - opened
       - edited
       - synchronize
-
+      
 jobs:
-  main:
-    name: Validate PR title
+  prlint:
+    name: Lint PR
     runs-on: ubuntu-latest
     steps:
       # Please look up the latest version from
       # https://github.com/amannn/action-semantic-pull-request/releases
-      - uses: amannn/action-semantic-pull-request@v3.4.6
+      - name: Lint PR
+        uses: amannn/action-semantic-pull-request@v3.4.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

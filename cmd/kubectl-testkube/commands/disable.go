@@ -12,8 +12,8 @@ func NewDisableCmd() *cobra.Command {
 		Aliases: []string{"off"},
 		Short:   "Disable feature",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-			cmd.Help()
+			err := cmd.Help()
+			ui.PrintOnError("Displaying help", err)
 		},
 	}
 

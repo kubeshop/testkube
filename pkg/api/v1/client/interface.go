@@ -26,22 +26,24 @@ type Client interface {
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string) error
-	DeleteTests() error
+	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
 	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
-	ExecuteTest(id, executionName string, executionParams map[string]string, executionParamsFileContent string,
-		args []string, secretEnvs map[string]string) (execution testkube.Execution, err error)
+	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
+	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
 
 	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors() (executors testkube.ExecutorsDetails, err error)
+	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
+	DeleteExecutors(selector string) (err error)
 
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
 	GetWebhook(name string) (webhook testkube.Webhook, err error)
-	ListWebhooks() (executors testkube.Webhooks, err error)
+	ListWebhooks(selector string) (executors testkube.Webhooks, err error)
 	DeleteWebhook(name string) (err error)
+	DeleteWebhooks(selector string) (err error)
 
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
@@ -53,8 +55,9 @@ type Client interface {
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
 	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
 	DeleteTestSuite(name string) error
-	DeleteTestSuites() error
-	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error)
+	DeleteTestSuites(selector string) error
+	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (executions testkube.TestSuiteExecution, err error)
+	ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
@@ -70,8 +73,16 @@ type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 // if needed can beextended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
-// CreateExectorOptions - is mapping for now to OpenAPI schema for creating executor request
+// CreateExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
 type CreateExecutorOptions testkube.ExecutorCreateRequest
 
-// CreateExectorOptions - is mapping for now to OpenAPI schema for creating/changing webhook
+// CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
+
+// ExecuteTestOptions contains run test options
+type ExecuteTestOptions struct {
+	ExecutionParams            map[string]string
+	ExecutionParamsFileContent string
+	Args                       []string
+	SecretEnvs                 map[string]string
+}

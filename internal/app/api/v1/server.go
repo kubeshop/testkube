@@ -13,11 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
-
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -43,10 +41,15 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	clusterId string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
-	envconfig.Process("APISERVER", &httpConfig)
+	err := envconfig.Process("APISERVER", &httpConfig)
+	// Do we want to panic here or just ignore the err
+	if err != nil {
+		panic(err)
+	}
 
 	// you can disable analytics tracking for API server
 	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
@@ -68,6 +71,7 @@ func NewTestkubeAPI(
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 		AnalyticsEnabled:     analyticsEnabled,
+		ClusterID:            clusterId,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -110,6 +114,7 @@ type TestkubeAPI struct {
 	jobTemplates         jobTemplates
 	Namespace            string
 	AnalyticsEnabled     bool
+	ClusterID            string
 }
 
 type jobTemplates struct {
@@ -118,7 +123,10 @@ type jobTemplates struct {
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
-	envconfig.Process("TESTKUBE_TEMPLATE", j)
+	err := envconfig.Process("TESTKUBE_TEMPLATE", j)
+	if err != nil {
+		return err
+	}
 	templates := []*string{&j.Job, &j.Cronjob}
 	for i := range templates {
 		if *templates[i] != "" {
@@ -145,7 +153,10 @@ type storageParams struct {
 
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
-	envconfig.Process("STORAGE", &s.storageParams)
+	err := envconfig.Process("STORAGE", &s.storageParams)
+	if err != nil {
+		s.Log.Infow("Processing STORAGE environment config", err)
+	}
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 
@@ -156,7 +167,7 @@ func (s TestkubeAPI) Init() {
 		// global analytics tracking send async
 		s.Routes.Use(func(c *fiber.Ctx) error {
 			go func(host, path, method string) {
-				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method)
+				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
 				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
 				if err != nil {
 					l.Debugw("sending analytics event error", "error", err)
@@ -178,6 +189,7 @@ func (s TestkubeAPI) Init() {
 	executors.Get("/", s.ListExecutorsHandler())
 	executors.Get("/:name", s.GetExecutorHandler())
 	executors.Delete("/:name", s.DeleteExecutorHandler())
+	executors.Delete("/", s.DeleteExecutorsHandler())
 
 	webhooks := s.Routes.Group("/webhooks")
 
@@ -185,10 +197,12 @@ func (s TestkubeAPI) Init() {
 	webhooks.Get("/", s.ListWebhooksHandler())
 	webhooks.Get("/:name", s.GetWebhookHandler())
 	webhooks.Delete("/:name", s.DeleteWebhookHandler())
+	webhooks.Delete("/", s.DeleteWebhooksHandler())
 
 	executions := s.Routes.Group("/executions")
 
 	executions.Get("/", s.ListExecutionsHandler())
+	executions.Post("/", s.ExecuteTestsHandler())
 	executions.Get("/:executionID", s.GetExecutionHandler())
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
@@ -204,7 +218,7 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
 
-	tests.Post("/:id/executions", s.ExecuteTestHandler())
+	tests.Post("/:id/executions", s.ExecuteTestsHandler())
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
@@ -223,12 +237,13 @@ func (s TestkubeAPI) Init() {
 	testsuites.Get("/:id", s.GetTestSuiteHandler())
 	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
 
-	testsuites.Post("/:id/executions", s.ExecuteTestSuiteHandler())
+	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
@@ -241,7 +256,7 @@ func (s TestkubeAPI) Init() {
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 
-	s.Log.Infow("configured kubernetes namespace", "namespace", s.Namespace)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
 }
 
 func (s TestkubeAPI) HandleEmitterLogs() {

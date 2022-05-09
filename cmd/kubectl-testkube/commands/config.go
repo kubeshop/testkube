@@ -12,8 +12,8 @@ func NewConfigCmd() *cobra.Command {
 		Aliases: []string{"set", "configure"},
 		Short:   "Set feature configuration value",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-			cmd.Help()
+			err := cmd.Help()
+			ui.PrintOnError("Displaying help", err)
 		},
 	}
 

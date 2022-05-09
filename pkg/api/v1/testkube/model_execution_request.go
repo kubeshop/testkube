@@ -21,8 +21,8 @@ type ExecutionRequest struct {
 	Params map[string]string `json:"params,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
-	// execution labels
-	Labels map[string]string `json:"labels,omitempty"`
 	// execution params passed to executor from secrets
 	SecretEnvs map[string]string `json:"secretEnvs,omitempty"`
+	// whether to start execution sync or async
+	Sync bool `json:"sync,omitempty"`
 }

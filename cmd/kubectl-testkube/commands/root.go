@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/cmd/tools/commands"
 	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -25,7 +24,6 @@ var (
 )
 
 func init() {
-
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
 	RootCmd.AddCommand(NewUpdateCmd())
@@ -58,28 +56,47 @@ var RootCmd = &cobra.Command{
 	Short: "Testkube entrypoint for kubectl plugin",
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		ui.Verbose = verbose
+		ui.SetVerbose(verbose)
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, commands.Version)
+			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
-			ui.Debug("analytics response", out)
+			ui.Debug("analytics send event response", out)
+
+			// trigger init event only for first run
+			cfg, err := config.Load()
+			ui.WarnOnError("loading config", err)
+
+			if !cfg.Initialized {
+				cfg.SetInitialized()
+				err := config.Save(cfg)
+				ui.WarnOnError("saving config", err)
+
+				ui.Debug("sending 'init' event")
+
+				out, err := analytics.SendCmdInit(cmd, Version)
+				if ui.Verbose && err != nil {
+					ui.Err(err)
+				}
+				ui.Debug("analytics init event response", out)
+			}
+
 		}
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ui.Logo()
-		cmd.Usage()
+		err := cmd.Usage()
+		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
 	},
 }
 
 func Execute() {
 	cfg, err := config.Load()
-	ui.WarnOnError("Config loading error", err)
+	ui.WarnOnError("loading config", err)
 
 	defaultNamespace := "testkube"
 	if cfg.Namespace != "" {

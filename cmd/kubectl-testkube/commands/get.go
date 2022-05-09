@@ -18,8 +18,8 @@ func NewGetCmd() *cobra.Command {
 		Short:   "Get resources",
 		Long:    `Get available resources, get single item or list`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Logo()
-			cmd.Help()
+			err := cmd.Help()
+			ui.PrintOnError("Displaying help", err)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			validator.PersistentPreRunVersionCheck(cmd, Version)

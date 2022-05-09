@@ -59,7 +59,8 @@ dependencies:
 func TestGetDependencies(t *testing.T) {
 
 	var chart HelmChart
-	yaml.Unmarshal(chartContent, &chart)
+	err := yaml.Unmarshal(chartContent, &chart)
+	assert.NoError(t, err)
 
 	t.Run("test GetDependencyVersion", func(t *testing.T) {
 		version, err := GetDependencyVersion(chart, "testkube-api")

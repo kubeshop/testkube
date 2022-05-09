@@ -146,7 +146,7 @@ func Find(dir string) (chartPath string, err error) {
 		return "", fmt.Errorf("passed '%s' path is not directory", dir)
 	}
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}

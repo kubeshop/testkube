@@ -31,6 +31,30 @@ brew update
 brew upgrade testkube
 ```
 
+### **Installing on Linux with apt**
+
+You can use apt to install Testkube.
+
+Download our public GPG key, and add them to the trusted keys:
+```sh
+wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+```
+
+Add our repository to your apt sources:
+```sh
+sudo echo "deb https://repo.testkube.io/linux linux main" >> /etc/apt/sources.list
+```
+
+Make sure to get the updates:
+```sh
+sudo apt-get update
+```
+
+Install Testkube:
+```sh
+sudo apt-get install -y testkube
+```
+
 ### **Installing on Linux or MacOS with Install Script**
 
 To install on Linux or MacOs, run
@@ -52,6 +76,9 @@ For Windows, download the binary [here](https://github.com/kubeshop/testkube/rel
 We have plans to build installers for the most popular Operating Systems and system distros [#161](https://github.com/kubeshop/testkube/issues/161).
 
 ## **Install Testkube Components in Your Cluster**
+
+[Helm](https://helm.sh) must be installed to use charts.  
+Please refer to  Helm's [documentation](https://helm.sh/docs) to get started.
 
 The Testkube kubectl plugin provides an install command to install Testkube in your cluster. Note: you must have helm installed
 
@@ -133,6 +160,9 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
+We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration. 
+If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).
+
 To install the `testkube` chart:
 
 ```sh
@@ -183,6 +213,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
 | testkube-api.storage.accessKey       | yes         | minio123                             |
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
+| testkube-api.slackToken              | yes         | ""                                   |
+| testkube-api.slackChannelId          | yes         | ""                                   |
 
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
@@ -192,7 +224,5 @@ The following Helm defaults are used in the `testkube` chart:
 Uninstall Testkube using the uninstall command integrated into the Testkube plugin.
 
 ```sh
-kubectl testkube uninstall [--remove-crds]
+kubectl testkube uninstall
 ```
-
-Optionally, you can use the `--remove-crds` flag which will clean all installed Custom Resource Definitions installed by Testkube.
