@@ -25,7 +25,8 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitUsername     string
 		gitToken        string
 		labels          map[string]string
-		params          map[string]string
+		variables       map[string]string
+		secretVariables map[string]string
 		schedule        string
 	)
 
@@ -83,7 +84,8 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringToStringVarP(&params, "param", "p", nil, "param key value pair: --param key1=value1")
+	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --param key1=value1")
+	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --param key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
 
 	return cmd

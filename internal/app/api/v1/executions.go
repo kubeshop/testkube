@@ -442,8 +442,8 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
-	// Test params lowest priority, then test suite, then test suite execution / test execution
-	request.Params = mergeParams(testCR.Spec.Params, request.Params)
+	// Test variables lowest priority, then test suite, then test suite execution / test execution
+	request.Variables = mergeVariables(testCR.Spec.Params, request.Variables)
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -463,16 +463,19 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}, nil
 }
 
-func mergeParams(params map[string]string, appendParams map[string]string) map[string]string {
-	if params == nil {
-		params = map[string]string{}
+// TODO change vars1 after CR refactor
+func mergeVariables(vars1 map[string]string, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
+	variables := map[string]testkube.Variable{}
+
+	for k, v := range vars1 {
+		vars1[k] = v
 	}
 
-	for k, v := range appendParams {
-		params[k] = v
+	for k, v := range vars2 {
+		vars1[k] = v.Value
 	}
 
-	return params
+	return variables
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
@@ -483,12 +486,12 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewPendingExecutionResult(),
-		options.Request.Params,
+		options.Request.Variables,
 		options.Labels,
 	)
 
 	execution.Args = options.Request.Args
-	execution.ParamsFile = options.Request.ParamsFile
+	execution.VariablesFile = options.Request.VariableFile
 
 	return execution
 }

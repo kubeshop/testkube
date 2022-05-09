@@ -528,11 +528,11 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 		request := testkube.ExecutionRequest{
 			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
 			Namespace: executeTestStep.Namespace,
-			Params:    testsuiteExecution.Params,
+			Variables: testsuiteExecution.Variables,
 			Sync:      true,
 		}
 
-		l.Debug("executing test", "params", testsuiteExecution.Params)
+		l.Debug("executing test", "variables", testsuiteExecution.Variables)
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)
@@ -664,7 +664,7 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),
 			Schedule:    request.Schedule,
-			Params:      request.Params,
+			Params:      testsuitesmapper.MapDepratcatedParams(request.Variables),
 		},
 	}
 }

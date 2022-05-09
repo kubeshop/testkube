@@ -35,9 +35,17 @@ func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Repeats = int32(cr.Spec.Repeats)
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
-	test.Params = cr.Spec.Params
+	test.Variables = MapVariables(cr.Spec.Params)
 
 	return
+}
+
+func MapVariables(in map[string]string) map[string]testkube.Variable {
+	out := map[string]testkube.Variable{}
+	for k, v := range in {
+		out[k] = testkube.NewBasicVariable(k, v)
+	}
+	return out
 }
 
 // mapCRStepToAPI maps CRD TestSuiteStepSpec to OpenAPI spec TestSuiteStep
@@ -62,4 +70,14 @@ func mapCRStepToAPI(crstep testsuitesv1.TestSuiteStepSpec) (teststep testkube.Te
 	}
 
 	return
+}
+
+// @Depracated
+// MapDepratcatedParams maps old params to new variables data structure
+func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
+	out := map[string]string{}
+	for k, v := range in {
+		out[k] = v.Value
+	}
+	return out
 }

@@ -15,7 +15,7 @@ type TestSuiteExecutionRequest struct {
 	Name string `json:"name,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string              `json:"namespace,omitempty"`
-	Params    map[string]Variable `json:"params,omitempty"`
+	Variables map[string]Variable `json:"params,omitempty"`
 	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

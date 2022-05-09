@@ -22,9 +22,17 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Created = crTest.CreationTimestamp.Time
 	test.Type_ = crTest.Spec.Type_
 	test.Labels = crTest.Labels
-	test.Params = crTest.Spec.Params
+	test.Variables = MapVariables(crTest.Spec.Params)
 	test.Schedule = crTest.Spec.Schedule
 	return
+}
+
+func MapVariables(in map[string]string) map[string]testkube.Variable {
+	out := map[string]testkube.Variable{}
+	for k, v := range in {
+		out[k] = testkube.NewBasicVariable(k, v)
+	}
+	return out
 }
 
 // MapTestContentFromSpec maps CRD to OpenAPI spec TestContent

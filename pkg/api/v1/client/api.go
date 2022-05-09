@@ -196,11 +196,11 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 	uri := c.getURI("/tests/%s/executions", id)
 
 	request := testkube.ExecutionRequest{
-		Name:       executionName,
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
+		Name:         executionName,
+		VariableFile: options.ExecutionVariablesFileContent,
+		Variables:    options.ExecutionVariables,
+		Args:         options.Args,
+		SecretEnvs:   options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)
@@ -226,10 +226,10 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.getURI("/executions")
 	request := testkube.ExecutionRequest{
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
+		VariableFile: options.ExecutionVariablesFileContent,
+		Variables:    options.ExecutionVariables,
+		Args:         options.Args,
+		SecretEnvs:   options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)
@@ -864,12 +864,12 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams map[string]string) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuite(id, executionName string, executionVariables map[string]testkube.Variable) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
 	executionRequest := testkube.ExecutionRequest{
-		Name:   executionName,
-		Params: executionParams,
+		Name:      executionName,
+		Variables: executionVariables,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -892,11 +892,11 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, executionParams ma
 
 // ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
 // Executions are started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, executionVariables map[string]testkube.Variable) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions")
 
 	executionRequest := testkube.ExecutionRequest{
-		Params: executionParams,
+		Variables: executionVariables,
 	}
 
 	body, err := json.Marshal(executionRequest)

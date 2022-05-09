@@ -19,12 +19,22 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 			Type_:    request.Type_,
 			Content:  MapContentToSpecContent(request.Content),
 			Schedule: request.Schedule,
-			Params:   request.Params,
+			Params:   MapDepratcatedParams(request.Variables),
 		},
 	}
 
 	return test
 
+}
+
+// @Depracated
+// MapDepratcatedParams maps old params to new variables data structure
+func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
+	out := map[string]string{}
+	for k, v := range in {
+		out[k] = v.Value
+	}
+	return out
 }
 
 // MapContentToSpecContent maps TestContent OpenAPI spec to TestContent CRD spec

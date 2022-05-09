@@ -24,11 +24,11 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", ts.Schedule)
 	}
 
-	if len(ts.Params) > 0 {
+	if len(ts.Variables) > 0 {
 		ui.NL()
-		ui.Warn("Params: ", fmt.Sprintf("%d", len(ts.Params)))
-		for k, v := range ts.Params {
-			ui.Info("- "+k, v)
+		ui.Warn("Params: ", fmt.Sprintf("%d", len(ts.Variables)))
+		for k, v := range ts.Variables {
+			ui.Info("- "+k, v.Value)
 		}
 	}
 

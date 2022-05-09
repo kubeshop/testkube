@@ -24,14 +24,14 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		StartTime: time.Now(),
 		Name:      fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
 		Status:    TestSuiteExecutionStatusRunning,
-		Params:    testSuite.Params,
+		Variables: testSuite.Variables,
 		TestSuite: testSuite.GetObjectRef(),
 		Labels:    testSuite.Labels,
 	}
 
 	// override params from request
-	for k, v := range request.Params {
-		testExecution.Params[k] = v
+	for k, v := range request.Variables {
+		testExecution.Variables[k] = v
 	}
 
 	// add queued execution steps

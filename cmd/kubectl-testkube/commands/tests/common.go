@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -22,10 +23,10 @@ func printExecutionDetails(execution testkube.Execution) {
 		ui.Warn("Execution ID  :", execution.Id)
 		ui.Warn("Execution name:", execution.Name)
 	}
-	if len(execution.Params) > 0 {
-		ui.Warn("Params        :", fmt.Sprintf("%d", len(execution.Params)))
-		for k, v := range execution.Params {
-			ui.Info("- "+k, v)
+	if len(execution.Variables) > 0 {
+		ui.Warn("Params        :", fmt.Sprintf("%d", len(execution.Variables)))
+		for k, v := range execution.Variables {
+			ui.Info("- "+k, v.Value)
 		}
 	}
 	ui.NL()
@@ -179,7 +180,8 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	if err != nil {
 		return options, err
 	}
-	params, err := cmd.Flags().GetStringToString("param")
+
+	variables, err := common.CreateVariables(cmd)
 	if err != nil {
 		return options, err
 	}
@@ -191,7 +193,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 		Content:   content,
 		Namespace: namespace,
 		Schedule:  schedule,
-		Params:    params,
+		Variables: variables,
 	}
 
 	// if labels are passed and are different from the existing overwrite

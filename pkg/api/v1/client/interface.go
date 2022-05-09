@@ -56,8 +56,8 @@ type Client interface {
 	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
-	ExecuteTestSuite(id, executionName string, executionParams map[string]string) (executions testkube.TestSuiteExecution, err error)
-	ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]string) (executions []testkube.TestSuiteExecution, err error)
+	ExecuteTestSuite(id, executionName string, executionParams map[string]testkube.Variable) (executions testkube.TestSuiteExecution, err error)
+	ExecuteTestSuites(selector string, concurrencyLevel int, executionParams map[string]testkube.Variable) (executions []testkube.TestSuiteExecution, err error)
 
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
@@ -81,8 +81,8 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 
 // ExecuteTestOptions contains run test options
 type ExecuteTestOptions struct {
-	ExecutionParams            map[string]string
-	ExecutionParamsFileContent string
-	Args                       []string
-	SecretEnvs                 map[string]string
+	ExecutionVariables            map[string]testkube.Variable
+	ExecutionVariablesFileContent string
+	Args                          []string
+	SecretEnvs                    map[string]string
 }

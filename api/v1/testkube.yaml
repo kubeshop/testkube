@@ -1200,7 +1200,7 @@ paths:
         - executor
         - api
       summary: "create new executor"
-      description: "create new executor based on params passed in request"
+      description: "create new executor based on variables passed in request"
       operationId: createExecutor
       requestBody:
         description: executor request body data
@@ -1395,7 +1395,7 @@ paths:
         - webhook
         - api
       summary: "create new webhook"
-      description: "create new webhook based on params passed in request"
+      description: "create new webhook based on variables passed in request"
       operationId: createWebhook
       requestBody:
         description: executor request body data
@@ -1529,9 +1529,9 @@ components:
   schemas:
     Variables:
       type: object
-      description: "execution params passed to executor converted to vars for usage in tests"
+      description: "execution variables passed to executor converted to vars for usage in tests"
       additionalProperties:
-        $ref: "#/components/schemas/Variable" # prepared to refactor params -> variables
+        $ref: "#/components/schemas/Variable"
 
     Variable:
       type: object
@@ -1603,8 +1603,8 @@ components:
         repeats:
           type: integer
           default: 1
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
+        variables:
+          $ref: "#/components/schemas/Variables"
 
     TestSuiteStepType:
       type: string
@@ -1670,8 +1670,8 @@ components:
           example:
             record: "true"
             prefix: "some-"
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
+        variables:
+          $ref: "#/components/schemas/Variables"
         startTime:
           type: string
           description: "test start time"
@@ -1832,8 +1832,8 @@ components:
         schedule:
           type: string
           description: schedule to run test
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
+        variables:
+          $ref: "#/components/schemas/Variables"
 
     TestContent:
       type: object
@@ -1889,11 +1889,11 @@ components:
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
-        paramsFile:
+        variables:
+          $ref: "#/components/schemas/Variables"
+        variablesFile:
           type: string
-          description: params file content - need to be in format for particular executor (e.g. postman envs file)
+          description: variables file content - need to be in format for particular executor (e.g. postman envs file)
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2145,11 +2145,11 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
-        paramsFile:
+        variablesFile:
           type: string
-          description: params file content - need to be in format for particular executor (e.g. postman envs file)
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
+          description: variables file content - need to be in format for particular executor (e.g. postman envs file)
+        variables:
+          $ref: "#/components/schemas/Variables"
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2161,7 +2161,7 @@ components:
             - "--insecure"
         secretEnvs:
           type: object
-          description: "execution params passed to executor from secrets"
+          description: "execution variables passed to executor from secrets"
           additionalProperties:
             type: string
           example:
@@ -2183,8 +2183,8 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
-        params:
-          $ref: "#/components/schemas/Variables" # prepared to refactor params -> variables
+        variables:
+          $ref: "#/components/schemas/Variables"
         labels:
           type: object
           description: "execution labels"
