@@ -27,7 +27,7 @@ func TestParamsNilAssign(t *testing.T) {
 		out := mergeVariables(nil, p2)
 
 		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "1", out["p1"].Value)
+		assert.Equal(t, "2", out["p2"].Value)
 	})
 
 }

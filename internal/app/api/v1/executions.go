@@ -468,11 +468,11 @@ func mergeVariables(vars1 map[string]string, vars2 map[string]testkube.Variable)
 	variables := map[string]testkube.Variable{}
 
 	for k, v := range vars1 {
-		vars1[k] = v
+		variables[k] = testkube.NewBasicVariable(k, v)
 	}
 
 	for k, v := range vars2 {
-		vars1[k] = v.Value
+		variables[k] = v
 	}
 
 	return variables
