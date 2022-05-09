@@ -19,7 +19,7 @@ The main Testkube components are:
 - Custom Resource Descriptors (CRD) Operator - Watches Testkube Custom Resources (CR), handles changes, communicates with API Server.
 - Executors - Run tests defined for specific runner, currently available for [Postman](executor-postman.md), [Cypress](executor-cypress.md), [K6](executor-k6.md) and [Curl](executor-curl.md).
 - Results DB - For centralized test results management.
-- A simple browser-based [Dashboard](dashboard.md) for monitoring test results.
+- A simple browser-based [User Interface](UI.md) for monitoring test results.
 
 Testkube attempts to:
 
