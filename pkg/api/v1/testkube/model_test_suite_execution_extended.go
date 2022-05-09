@@ -29,7 +29,7 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		Labels:    testSuite.Labels,
 	}
 
-	// override params from request
+	// override variables from request
 	for k, v := range request.Variables {
 		testExecution.Variables[k] = v
 	}
