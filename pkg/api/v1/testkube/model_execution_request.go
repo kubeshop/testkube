@@ -16,11 +16,11 @@ type ExecutionRequest struct {
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
-	VariableFile string              `json:"paramsFile,omitempty"`
-	Variables    map[string]Variable `json:"params,omitempty"`
+	VariablesFile string              `json:"variablesFile,omitempty"`
+	Variables     map[string]Variable `json:"variables,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
-	// execution params passed to executor from secrets
+	// execution variables passed to executor from secrets
 	SecretEnvs map[string]string `json:"secretEnvs,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`

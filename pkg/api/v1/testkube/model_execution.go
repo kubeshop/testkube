@@ -29,9 +29,9 @@ type Execution struct {
 	Envs map[string]string `json:"envs,omitempty"`
 	// additional arguments/flags passed to executor binary
 	Args      []string            `json:"args,omitempty"`
-	Variables map[string]Variable `json:"params,omitempty"`
+	Variables map[string]Variable `json:"variables,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
-	VariablesFile string       `json:"paramsFile,omitempty"`
+	VariablesFile string       `json:"variablesFile,omitempty"`
 	Content       *TestContent `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`

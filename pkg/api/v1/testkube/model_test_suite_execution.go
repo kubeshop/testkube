@@ -23,7 +23,7 @@ type TestSuiteExecution struct {
 	Status    *TestSuiteExecutionStatus `json:"status,omitempty"`
 	// environment variables passed to executor
 	Envs      map[string]string   `json:"envs,omitempty"`
-	Variables map[string]Variable `json:"params,omitempty"`
+	Variables map[string]Variable `json:"variables,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

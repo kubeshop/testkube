@@ -24,5 +24,5 @@ type TestSuite struct {
 	// schedule to run test suite
 	Schedule  string              `json:"schedule,omitempty"`
 	Repeats   int32               `json:"repeats,omitempty"`
-	Variables map[string]Variable `json:"params,omitempty"`
+	Variables map[string]Variable `json:"variables,omitempty"`
 }

@@ -196,11 +196,11 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 	uri := c.getURI("/tests/%s/executions", id)
 
 	request := testkube.ExecutionRequest{
-		Name:         executionName,
-		VariableFile: options.ExecutionVariablesFileContent,
-		Variables:    options.ExecutionVariables,
-		Args:         options.Args,
-		SecretEnvs:   options.SecretEnvs,
+		Name:          executionName,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)
@@ -226,10 +226,10 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.getURI("/executions")
 	request := testkube.ExecutionRequest{
-		VariableFile: options.ExecutionVariablesFileContent,
-		Variables:    options.ExecutionVariables,
-		Args:         options.Args,
-		SecretEnvs:   options.SecretEnvs,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
 	}
 
 	body, err := json.Marshal(request)

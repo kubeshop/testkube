@@ -27,5 +27,5 @@ type TestUpsertRequest struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test
 	Schedule  string              `json:"schedule,omitempty"`
-	Variables map[string]Variable `json:"params,omitempty"`
+	Variables map[string]Variable `json:"variables,omitempty"`
 }
