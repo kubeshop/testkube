@@ -1,5 +1,5 @@
 package commands
 
-var verbose bool
+var debug bool
 var kind string
 var dev bool

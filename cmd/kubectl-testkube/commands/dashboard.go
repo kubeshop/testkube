@@ -89,7 +89,7 @@ func NewDashboardCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "s", "testkube", "namespace where the testkube is installed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "namespace where the testkube is installed")
 	cmd.Flags().BoolVar(&useGlobalDashboard, "use-global-dashboard", false, "use global dashboard for viewing testkube results")
 	return cmd
 }

@@ -51,7 +51,7 @@ func NewVersionBumpCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&kind, "kind", "k", "patch", "version kind one of (patch|minor|major")
-	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbosity level")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "", false, "verbosity level")
 	cmd.Flags().BoolVarP(&dev, "dev", "d", false, "generate beta increment")
 
 	return cmd
