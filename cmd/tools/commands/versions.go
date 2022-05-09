@@ -10,6 +10,7 @@ import (
 )
 
 func NewVersionBumpCmd() *cobra.Command {
+	var verbose bool
 
 	cmd := &cobra.Command{
 		Use:   "bump",
