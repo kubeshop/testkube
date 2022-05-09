@@ -6,7 +6,7 @@ import (
 )
 
 func CreateVariables(cmd *cobra.Command) (vars map[string]testkube.Variable, err error) {
-	basicParams, err := cmd.Flags().GetStringToString("param")
+	basicParams, err := cmd.Flags().GetStringToString("variable")
 	if err != nil {
 		return vars, err
 	}
@@ -17,7 +17,7 @@ func CreateVariables(cmd *cobra.Command) (vars map[string]testkube.Variable, err
 		vars[k] = testkube.NewBasicVariable(k, v)
 	}
 
-	secretParams, err := cmd.Flags().GetStringToString("secret-param")
+	secretParams, err := cmd.Flags().GetStringToString("secret-variable")
 	if err != nil {
 		return vars, err
 	}
