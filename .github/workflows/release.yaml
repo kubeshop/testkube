@@ -77,6 +77,27 @@ jobs:
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
           retention-days: 1
 
+      - name: Setup Homebrew
+        if: ${{ matrix.name }} == 'darwin'
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Update brew
+        if: ${{ matrix.name }} == 'darwin'
+        run: brew update
+      - name: Setup git email
+        if: ${{ matrix.name }} == 'darwin'
+        run: git config --global user.email "brewbot@kubeshop.io"
+      - name: Setup git name
+        if: ${{ matrix.name }} == 'darwin'
+        run: git config --global user.name "Brew Bot"
+      - name: Bump formulae
+        if: ${{ matrix.name }} == 'darwin'
+        uses: Homebrew/actions/bump-formulae@master
+        with:
+          # Custom GitHub access token with only the 'public_repo' scope enabled
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          # Bump only these formulae if outdated
+          formulae: testkube
+
   release:
     name: Create and upload release-artifacts
     needs: pre_build
@@ -134,21 +155,21 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      - name: Setup Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      - name: Update brew
-        run: brew update
-      - name: Setup git email
-        run: git config --global user.email "brewbot@kubeshop.io"
-      - name: Setup git name
-        run: git config --global user.name "Brew Bot"
-      - name: Bump formulae
-        uses: Homebrew/actions/bump-formulae@master
-        with:
-          # Custom GitHub access token with only the 'public_repo' scope enabled
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          # Bump only these formulae if outdated
-          formulae: testkube
+#      - name: Setup Homebrew
+#        uses: Homebrew/actions/setup-homebrew@master
+#      - name: Update brew
+#        run: brew update
+#      - name: Setup git email
+#        run: git config --global user.email "brewbot@kubeshop.io"
+#      - name: Setup git name
+#        run: git config --global user.name "Brew Bot"
+#      - name: Bump formulae
+#        uses: Homebrew/actions/bump-formulae@master
+#        with:
+#          # Custom GitHub access token with only the 'public_repo' scope enabled
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          # Bump only these formulae if outdated
+#          formulae: testkube
 
   build-and-publish-windows-installer:
     needs: release
