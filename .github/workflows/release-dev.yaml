@@ -102,6 +102,8 @@ jobs:
         with:
           name: testkube_darwin
           path: darwin
+      - name: Add executable mode
+        run: chmod -R +x linux/ darwin/
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
