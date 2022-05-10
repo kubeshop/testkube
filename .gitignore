@@ -30,3 +30,6 @@ dist/
 
 /artifacts
 movie.mp4
+darwin/
+linux/
+windows/
