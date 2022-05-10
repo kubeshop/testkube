@@ -35,4 +35,8 @@ type TestSuiteExecution struct {
 	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
 	// test suite execution labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// http proxy for executor containers
+	HttpProxy string `json:"httpProxy,omitempty"`
+	// https proxy for executor containers
+	HttpsProxy string `json:"httpsProxy,omitempty"`
 }

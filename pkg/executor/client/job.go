@@ -125,5 +125,7 @@ func getJobOptions(options ExecuteOptions) jobs.JobOptions {
 		TestName:    options.TestName,
 		Namespace:   options.Namespace,
 		SecretEnvs:  options.Request.SecretEnvs,
+		HTTPProxy:   options.Request.HttpProxy,
+		HTTPSProxy:  options.Request.HttpsProxy,
 	}
 }
