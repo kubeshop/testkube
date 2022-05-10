@@ -871,7 +871,7 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 func (c APIClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
-	executionRequest := testkube.ExecutionRequest{
+	executionRequest := testkube.TestSuiteExecutionRequest{
 		Name:       executionName,
 		Params:     options.ExecutionParams,
 		HttpProxy:  options.HTTPProxy,
@@ -901,7 +901,7 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, options ExecuteTes
 func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions")
 
-	executionRequest := testkube.ExecutionRequest{
+	executionRequest := testkube.TestSuiteExecutionRequest{
 		Params:     options.ExecutionParams,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
