@@ -33,11 +33,11 @@ jobs:
       matrix:
         include:
           - name: "linux"
-            path: .builds-linux.goreleaser-dev.yml
+            path: .builds-linux.goreleaser.yml
           - name: "windows"
-            path: .builds-windows.goreleaser-dev.yml
+            path: .builds-windows.goreleaser.yml
           - name: "darwin"
-            path: .builds-darwin.goreleaser-dev.yml
+            path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
