@@ -222,8 +222,8 @@ jobs:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
-          name: testkube_linux
-          path: linux
+          name: bin-artifacts
+          path: dist
 
       - name: Get tag
         id: tag
