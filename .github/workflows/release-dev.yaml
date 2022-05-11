@@ -79,7 +79,6 @@ jobs:
   release:
     name: Create and upload release-artifacts
     needs: pre_build
-    # needs: [release_creation]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -101,6 +100,8 @@ jobs:
         with:
           name: testkube_darwin
           path: darwin
+      # Added as a workaround since files lose their permissions when being moved from one stage to another in GH. A bug was reported
+      # and will be fixed in the next release of GoReleaser, thus we will be able to remove this code.
       - name: Add executable mode
         run: chmod -R +x linux/ darwin/
       - name: Set up Go
@@ -221,8 +222,8 @@ jobs:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
-          name: bin-artifacts
-          path: dist
+          name: testkube_linux
+          path: linux
 
       - name: Get tag
         id: tag
