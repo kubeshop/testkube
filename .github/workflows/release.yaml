@@ -256,9 +256,9 @@ jobs:
           VERSION: ${{steps.tag.outputs.tag}}
         run: |
           ### Upload files
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@linux/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@linux/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@linux/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
           curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube
