@@ -26,11 +26,18 @@ jobs:
   #         draft: false
   #         prerelease: false
 
-  release:
-    name: Create and upload release-artifacts
-    # needs: [release_creation]
+  pre_build:
+    name: Pre-build
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          - name: "linux"
+            path: .builds-linux.goreleaser.yml
+          - name: "windows"
+            path: .builds-windows.goreleaser.yml
+          - name: "darwin"
+            path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -52,15 +59,76 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: latest
-          args: release --rm-dist -f .goreleaser-dev.yml
+          args: release -f ${{ matrix.path }} --skip-publish
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: testkube_${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
+          retention-days: 1
+
+  release:
+    name: Create and upload release-artifacts
+    needs: pre_build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Download Artifacts for Linux
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_linux
+          path: linux
+      - name: Download Artifacts for Windows
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_windows
+          path: windows
+      - name: Download Artifacts for Darwin
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_darwin
+          path: darwin
+      # Added as a workaround since files lose their permissions when being moved from one stage to another in GH. A bug was reported
+      # and will be fixed in the next release of GoReleaser, thus we will be able to remove this code.
+      - name: Add executable mode
+        run: chmod -R +x linux/ darwin/
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f .goreleaser-dev.yml --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:
@@ -81,8 +149,8 @@ jobs:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
-          name: bin-artifacts
-          path: dist
+          name: testkube_windows
+          path: windows
 
       - name: Get MSFT Cert
         id: write_file
@@ -94,7 +162,7 @@ jobs:
 
       - name: Create and Sign MSI
         run: |
-          Copy-Item 'dist\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
+          Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj

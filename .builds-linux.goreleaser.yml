@@ -1,0 +1,24 @@
+before:
+  hooks:
+    - go mod tidy
+dist: linux
+builds:
+  - main: ./cmd/kubectl-testkube
+    binary: kubectl-testkube
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - 386
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
+      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
+archives:
+  - format: binary
