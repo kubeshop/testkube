@@ -67,6 +67,8 @@ type JobOptions struct {
 	JobTemplate string
 	HasSecrets  bool
 	SecretEnvs  map[string]string
+	HTTPProxy   string
+	HTTPSProxy  string
 }
 
 // NewJobClient returns new JobClient instance
@@ -582,6 +584,14 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	}
 
 	env := append(envVars, secretEnvVars...)
+	if options.HTTPProxy != "" {
+		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+	}
+
+	if options.HTTPSProxy != "" {
+		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+	}
+
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
 	}

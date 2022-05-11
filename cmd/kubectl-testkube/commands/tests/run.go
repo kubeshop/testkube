@@ -28,6 +28,7 @@ func NewRunTestCmd() *cobra.Command {
 		secretEnvs               map[string]string
 		selectors                []string
 		concurrencyLevel         int
+		httpProxy, httpsProxy    string
 	)
 
 	cmd := &cobra.Command{
@@ -52,6 +53,8 @@ func NewRunTestCmd() *cobra.Command {
 				ExecutionParamsFileContent: paramsFileContent,
 				Args:                       binaryArgs,
 				SecretEnvs:                 secretEnvs,
+				HTTPProxy:                  httpProxy,
+				HTTPSProxy:                 httpsProxy,
 			}
 
 			switch {
@@ -123,6 +126,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
+	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
+	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 
 	return cmd
 }

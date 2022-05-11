@@ -455,7 +455,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		s.Log.Infow("Inserting test execution", "error", err)
 	}
 
-	go func(testsuiteExecution testkube.TestSuiteExecution) {
+	go func(testsuiteExecution testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
 
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
@@ -478,7 +478,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 				s.Log.Infow("Updating test execution", "error", err)
 			}
 
-			s.executeTestStep(ctx, testsuiteExecution, &testsuiteExecution.StepResults[i])
+			s.executeTestStep(ctx, testsuiteExecution, request, &testsuiteExecution.StepResults[i])
 
 			err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
 			if err != nil {
@@ -505,12 +505,13 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			s.Log.Errorw("saving final test suite execution result error", "error", err)
 		}
 
-	}(testsuiteExecution)
+	}(testsuiteExecution, request)
 
 	return testsuiteExecution, nil
 }
 
-func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution, result *testkube.TestSuiteStepExecutionResult) {
+func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
+	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
@@ -526,10 +527,12 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:      fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
-			Namespace: executeTestStep.Namespace,
-			Params:    testsuiteExecution.Params,
-			Sync:      true,
+			Name:       fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
+			Namespace:  executeTestStep.Namespace,
+			Params:     testsuiteExecution.Params,
+			Sync:       true,
+			HttpProxy:  request.HttpProxy,
+			HttpsProxy: request.HttpsProxy,
 		}
 
 		l.Debug("executing test", "params", testsuiteExecution.Params)

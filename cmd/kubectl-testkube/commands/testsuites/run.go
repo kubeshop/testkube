@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -22,6 +23,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		downloadDir              string
 		selectors                []string
 		concurrencyLevel         int
+		httpProxy, httpsProxy    string
 	)
 
 	cmd := &cobra.Command{
@@ -37,17 +39,23 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			var executions []testkube.TestSuiteExecution
 			var err error
 
+			options := apiv1.ExecuteTestSuiteOptions{
+				ExecutionParams: params,
+				HTTPProxy:       httpProxy,
+				HTTPSProxy:      httpsProxy,
+			}
+
 			switch {
 			case len(args) > 0:
 				testSuiteName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testSuiteName)
 
-				execution, err := client.ExecuteTestSuite(testSuiteName, name, params)
+				execution, err := client.ExecuteTestSuite(testSuiteName, name, options)
 				ui.ExitOnError("starting test suite execution "+namespacedName, err)
 				executions = append(executions, execution)
 			case len(selectors) != 0:
 				selector := strings.Join(selectors, ",")
-				executions, err = client.ExecuteTestSuites(selector, concurrencyLevel, params)
+				executions, err = client.ExecuteTestSuites(selector, concurrencyLevel, options)
 				ui.ExitOnError("starting test suite executions "+selector, err)
 			default:
 				ui.Failf("Pass Test suite name or labels to run by labels ")
@@ -97,6 +105,8 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "a", false, "download artifacts automatically")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test suite execution")
+	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
+	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 
 	return cmd
 }
