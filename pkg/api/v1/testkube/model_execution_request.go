@@ -24,4 +24,8 @@ type ExecutionRequest struct {
 	SecretEnvs map[string]string `json:"secretEnvs,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`
+	// http proxy for executor containers
+	HttpProxy string `json:"httpProxy,omitempty"`
+	// https proxy for executor containers
+	HttpsProxy string `json:"httpsProxy,omitempty"`
 }

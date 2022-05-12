@@ -201,6 +201,8 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 		Variables:     options.ExecutionVariables,
 		Args:          options.Args,
 		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)
@@ -230,6 +232,8 @@ func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options E
 		Variables:     options.ExecutionVariables,
 		Args:          options.Args,
 		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)
@@ -864,12 +868,14 @@ func (c APIClient) getTestSuiteWithExecutionFromResponse(resp rest.Result) (test
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuite(id, executionName string, executionVariables map[string]testkube.Variable) (execution testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suites/%s/executions", id)
 
-	executionRequest := testkube.ExecutionRequest{
-		Name:      executionName,
-		Variables: executionVariables,
+	executionRequest := testkube.TestSuiteExecutionRequest{
+		Name:       executionName,
+		Variables:  options.ExecutionVariables,
+		HttpProxy:  options.HTTPProxy,
+		HttpsProxy: options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -892,11 +898,13 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, executionVariables
 
 // ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
 // Executions are started asynchronously client can check later for results
-func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, executionVariables map[string]testkube.Variable) (executions []testkube.TestSuiteExecution, err error) {
+func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.getURI("/test-suite-executions")
 
-	executionRequest := testkube.ExecutionRequest{
-		Variables: executionVariables,
+	executionRequest := testkube.TestSuiteExecutionRequest{
+		Variables:  executionVariables,
+		HttpProxy:  options.HTTPProxy,
+		HttpsProxy: options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(executionRequest)

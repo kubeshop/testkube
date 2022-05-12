@@ -1,6 +1,6 @@
 # Getting Started
 
-Please follow the [install steps](/docs/installing.md) for the first installation of Testkube.
+Please follow the [install steps](installing.md) for the first installation of Testkube.
 
 ## **Getting Help**
 

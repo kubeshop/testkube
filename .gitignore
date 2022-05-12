@@ -26,7 +26,11 @@ Chart.lock
 .DS_Store
 bin/
 site
-dist/
 
 /artifacts
 movie.mp4
+/tmp
+/linux
+/windows
+/darwin
+/dist
