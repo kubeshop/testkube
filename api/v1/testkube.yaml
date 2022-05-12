@@ -2178,11 +2178,11 @@ components:
         sync:
           type: boolean
           description: whether to start execution sync or async
-        httoProxy:
+        httpProxy:
           type: string
           description: http proxy for executor containers
           example: user:pass@my.proxy.server:8080
-        httosProxy:
+        httpsProxy:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
@@ -2207,11 +2207,11 @@ components:
           example:
             users: "3"
             prefix: "some-"
-        httoProxy:
+        httpProxy:
           type: string
           description: http proxy for executor containers
           example: user:pass@my.proxy.server:8080
-        httosProxy:
+        httpsProxy:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
