@@ -2,16 +2,20 @@
 
 Tests are single executor oriented objects. Test can have different types, which depends on which executors are installed in your cluster.
 
-Testkube includes `postman/collection`, `cypress/project` and `curl/test` test types which are auto registered during the Testkube install by default.  // provide examples for Cypress and cURL
+Testkube includes `postman/collection`, `cypress/project`, `curl/test`, `k6/script` and `soapui/xml` test types which are auto registered during the Testkube install by default.
 
 As Testkube was designed with flexibility in mind, you can add your own executors to handle additional test types.
 
 ## **Test Source**
 
-Tests can be currently created from two sources:
+Tests can be currently created from multiple sources:
 
 1. A simple `file` with the test content, For example, with Postman collections, we're exporting the collection as a JSON file. For cURL executors, we're passing a JSON file with the configured cURL command.
-2. Git - we can pass `repository`, `path` and `branch` where our tests are stored. This is used in Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
+2. String - we can also define the content of the test as a string
+3. Git directory - we can pass `repository`, `path` and `branch` where our tests are stored. This is used in Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
+4. Git file - similarly to Git directories, we can use files located on Git by specifying `git-uri` and `branch`.
+
+Note: not all executors support all input types. Please refer to the individual executors' documentation to see which options are available.
 
 ## **Create a Test**
 
@@ -30,6 +34,8 @@ Click the **Export** button:
 Save in a convenient location. In this example, we are using `~/Downloads/TODO.postman_collection.json` path.
 
 ![create postman collection step 3](img/test-create-3.png)
+
+Create a Testkube test using the exported JSON and give it a unique and fitting name. For simplicity's sake we used `test` in this example.
 
 ```sh
 kubectl testkube create test --file ~/Downloads/TODO.postman_collection.json --name test
