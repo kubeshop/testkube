@@ -16,7 +16,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Step
-        run: echo ${GITHUB_SHA::7}
+        id: github_sha
+        run: "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Check outputs
+        run: echo "sha-${{ steps.github_sha.outputs.sha_short }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -77,11 +81,12 @@ jobs:
             build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           push: true
       - name: Step
-        run: echo ${GITHUB_SHA::7}
+        id: github_sha
+        run: "::set-output name=sha_short::${GITHUB_SHA::7}"
 #      - name: Repository Dispatch
 #        uses: peter-evans/repository-dispatch@v2
 #        with:
 #          token: ${{ secrets.CI_BOT_TOKEN }}
 #          repository: kubeshop/helm-charts
 #          event-type: trigger-workflow
-#          client-payload: '{"image_tag": "${{ github.sha }}"}'
+#          client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
