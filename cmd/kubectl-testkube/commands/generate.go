@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/crds"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/generate"
 	"github.com/kubeshop/testkube/pkg/ui"
