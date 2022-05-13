@@ -3,8 +3,10 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -175,7 +177,7 @@ func (s TestkubeAPI) Init() {
 				} else {
 					l.Debugw("anonymous info to tracker sent", "output", out)
 				}
-			}(c.Hostname(), c.Path(), c.Method())
+			}(c.Hostname(), AnonymyzePath(c.Path()), c.Method())
 
 			return c.Next()
 		})
@@ -417,4 +419,16 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 	}
 
 	return initImage, nil
+}
+
+func AnonymyzePath(path string) string {
+	parts := strings.Split(path, "/")
+
+	// get only 0="/ 1-v1 / 2-tests"
+	// TODO figure out how to get defined routes from Fiber
+	if len(parts) >= 3 {
+		return fmt.Sprintf("%s/%s", parts[1], parts[2])
+	}
+
+	return path
 }
