@@ -62,7 +62,7 @@ jobs:
 
       - name: Step
         id: github_sha
-        run: "::set-output name=sha_short::${GITHUB_SHA::7}"
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"  #echo "::set-output name=github-sha-short::$(echo $GITHUB_SHA | cut -c 1-16)"
       - name: Check outputs
         run: echo "sha-${{ steps.github_sha.outputs.sha_short }}"
 
