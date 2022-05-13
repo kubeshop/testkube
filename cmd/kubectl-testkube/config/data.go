@@ -32,7 +32,7 @@ type OAuth2Data struct {
 	Enabled      bool            `json:"enabled,omitempty"`
 	Endpoint     oauth2.Endpoint `json:"endpoint,omitempty"`
 	Token        *oauth2.Token   `json:"token,omitempty"`
-	CliendID     string          `json:"clientID,omitempty"`
+	ClientID     string          `json:"clientID,omitempty"`
 	ClientSecret string          `json:"clientSecret,omitempty"`
 	Scopes       []string        `json:"scopes,omitempty"`
 }
