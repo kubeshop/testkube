@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
+	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/utils/text"
@@ -252,6 +253,9 @@ func (s TestkubeAPI) Init() {
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
+
+	slack := s.Routes.Group("/slack")
+	slack.Get("/", slacknotifier.OauthHandler())
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
