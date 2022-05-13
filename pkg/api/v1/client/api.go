@@ -902,7 +902,7 @@ func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, opti
 	uri := c.getURI("/test-suite-executions")
 
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Variables:  executionVariables,
+		Variables:  options.ExecutionVariables,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
 	}
