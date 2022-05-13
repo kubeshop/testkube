@@ -80,9 +80,6 @@ jobs:
             build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
             build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           push: true
-      - name: Step
-        id: github_sha
-        run: "::set-output name=sha_short::${GITHUB_SHA::7}"
 #      - name: Repository Dispatch
 #        uses: peter-evans/repository-dispatch@v2
 #        with:
