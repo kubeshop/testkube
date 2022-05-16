@@ -118,6 +118,15 @@ type ExecutorAPI interface {
 	DeleteExecutors(selector string) (err error)
 }
 
+// WebhookAPI describes webhook api methods
+type WebhookAPI interface {
+	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
+	GetWebhook(name string) (webhook testkube.Webhook, err error)
+	ListWebhooks(selector string) (executors testkube.Webhooks, err error)
+	DeleteWebhook(name string) (err error)
+	DeleteWebhooks(selector string) (err error)
+}
+
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 

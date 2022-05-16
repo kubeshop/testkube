@@ -16,7 +16,7 @@ import (
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails
+	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails | testkube.Webhook
 }
 
 // Executable is an interface of executable objects
