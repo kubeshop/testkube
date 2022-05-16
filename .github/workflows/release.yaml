@@ -128,6 +128,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          SLACK_BOT_CLIENT_ID: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}"
+          SLACK_BOT_CLIENT_SECRET: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       - name: Store Intermediate Artifacts
