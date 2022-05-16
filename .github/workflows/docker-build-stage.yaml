@@ -2,8 +2,7 @@ name: Docker images
 on:
   push:
     branches:
- #     - main
-      - deploy_to-stage-cluster
+      - main
 
 jobs:
   docker:
