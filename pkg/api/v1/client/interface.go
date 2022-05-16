@@ -66,6 +66,49 @@ type Client interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
+// TestAPI describes test api methods
+type TestAPI interface {
+	GetTest(id string) (test testkube.Test, err error)
+	//	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
+	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	DeleteTest(name string) error
+	DeleteTests(selector string) error
+	ListTests(selector string) (tests testkube.Tests, err error)
+	//	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
+	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
+	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
+	//	Logs(id string) (logs chan output.Output, err error)
+}
+
+// ExecutionAPI describes execution api methods
+type ExecutionAPI interface {
+	GetExecution(executionID string) (execution testkube.Execution, err error)
+	//	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
+	AbortExecution(test string, id string) error
+}
+
+// TestSuiteAPI describes test suite api methods
+type TestSuiteAPI interface {
+	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
+	//	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
+	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
+	//	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	DeleteTestSuite(name string) error
+	DeleteTestSuites(selector string) error
+	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
+	ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error)
+}
+
+// TestSuiteExecutionAPI describes test suite execution api methods
+type TestSuiteExecutionAPI interface {
+	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
+	//	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
+	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
+}
+
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
