@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -23,28 +22,6 @@ import (
 
 // check in compile time if interface is implemented
 var _ Client = (*APIClient)(nil)
-
-// GetClientSet configures Kube client set, can override host with local proxy
-func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
-	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	if err != nil {
-		return clientset, err
-	}
-
-	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
-		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
-	if err != nil {
-		return clientset, err
-	}
-
-	// override host is needed to override kubeconfig kubernetes proxy host name
-	// to local proxy passed to API server run local proxy first by `make api-proxy`
-	if overrideHost != "" {
-		restcfg.Host = overrideHost
-	}
-
-	return kubernetes.NewForConfig(restcfg)
-}
 
 // NewAPIClient returns
 func NewAPIClient(client kubernetes.Interface, config APIConfig) APIClient {

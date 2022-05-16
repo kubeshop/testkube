@@ -8,7 +8,8 @@ type Data struct {
 	AnalyticsEnabled bool       `json:"analyticsEnabled,omitempty"`
 	Namespace        string     `json:"namespace,omitempty"`
 	Initialized      bool       `json:"initialized,omitempty"`
-	OAuth2Data       OAuth2Data `json:"oauth2_data"`
+	APIURL           string     `json:"apiURL,omitempty"`
+	OAuth2Data       OAuth2Data `json:"oauth2Data"`
 }
 
 func (c *Data) EnableAnalytics() {
