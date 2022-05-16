@@ -109,6 +109,15 @@ type TestSuiteExecutionAPI interface {
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 }
 
+// ExecutorAPI describes executor api methods
+type ExecutorAPI interface {
+	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
+	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
+	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
+	DeleteExecutor(name string) (err error)
+	DeleteExecutors(selector string) (err error)
+}
+
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 

@@ -34,7 +34,6 @@ func (c TestSuiteClient) GetTestSuite(id string) (testSuite testkube.TestSuite, 
 // ListTestSuites list all test suites
 func (c TestSuiteClient) ListTestSuites(selector string) (testSuites testkube.TestSuites, err error) {
 	uri := getURI("/test-suites")
-
 	params := map[string]string{
 		"selector": selector,
 	}
@@ -79,6 +78,7 @@ func (c TestSuiteClient) DeleteTestSuite(name string) error {
 	if name == "" {
 		return fmt.Errorf("test suite name '%s' is not valid", name)
 	}
+
 	uri := getURI("/test-suites/%s", name)
 	return c.testSuiteTransport.Delete(uri, "", true)
 }
@@ -93,7 +93,6 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 // Execution is started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := getURI("/test-suites/%s/executions", id)
-
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Name:       executionName,
 		Params:     options.ExecutionParams,
@@ -113,7 +112,6 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 // Executions are started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := getURI("/test-suite-executions")
-
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Params:     options.ExecutionParams,
 		HttpProxy:  options.HTTPProxy,
@@ -143,6 +141,7 @@ func (c TestSuiteClient) WatchTestSuiteExecution(executionID string) (executionC
 			close(executionCh)
 			return
 		}
+
 		executionCh <- execution
 		for range time.NewTicker(time.Second).C {
 			execution, err = c.GetTestSuiteExecution(executionID)

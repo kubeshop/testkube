@@ -32,7 +32,6 @@ func (c TestClient) GetTest(id string) (test testkube.Test, err error) {
 // ListTests list all tests
 func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error) {
 	uri := getURI("/tests")
-
 	params := map[string]string{
 		"selector": selector,
 	}
@@ -77,6 +76,7 @@ func (c TestClient) DeleteTest(name string) error {
 	if name == "" {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
+
 	uri := getURI("/tests/%s", name)
 	return c.testTransport.Delete(uri, "", true)
 }
@@ -91,7 +91,6 @@ func (c TestClient) GetExecution(executionID string) (execution testkube.Executi
 // execution is started asynchronously client can check later for results
 func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := getURI("/tests/%s/executions", id)
-
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
 		ParamsFile: options.ExecutionParamsFileContent,
