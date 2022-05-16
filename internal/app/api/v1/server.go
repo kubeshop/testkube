@@ -3,10 +3,8 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -168,19 +166,7 @@ func (s TestkubeAPI) Init() {
 
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
-		s.Routes.Use(func(c *fiber.Ctx) error {
-			go func(host, path, method string) {
-				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
-				if err != nil {
-					l.Debugw("sending analytics event error", "error", err)
-				} else {
-					l.Debugw("anonymous info to tracker sent", "output", out)
-				}
-			}(c.Hostname(), AnonymyzePath(c.Path()), c.Method())
-
-			return c.Next()
-		})
+		s.Routes.Use(s.AnalyticsHandler())
 	}
 
 	s.Routes.Get("/info", s.InfoHandler())
@@ -276,6 +262,22 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 			s.Log.Debugw("got webhook response", "response", resp)
 		}
 	}()
+}
+
+func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		go func(host, path, method string) {
+			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
+			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+			if err != nil {
+				l.Debugw("sending analytics event error", "error", err)
+			} else {
+				l.Debugw("anonymous info to tracker sent", "output", out)
+			}
+		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+
+		return c.Next()
+	}
 }
 
 func (s TestkubeAPI) InfoHandler() fiber.Handler {
@@ -419,16 +421,4 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 	}
 
 	return initImage, nil
-}
-
-func AnonymyzePath(path string) string {
-	parts := strings.Split(path, "/")
-
-	// get only 0="/ 1-v1 / 2-tests"
-	// TODO figure out how to get defined routes from Fiber
-	if len(parts) >= 3 {
-		return fmt.Sprintf("%s/%s", parts[1], parts[2])
-	}
-
-	return path
 }
