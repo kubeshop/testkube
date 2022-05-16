@@ -61,10 +61,6 @@ jobs:
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
-      - name: Check outputs
-        id: output_github_sha
-        run: echo "sha-${{ steps.github_sha.outputs.sha_short }}"
-
       - name: Build API Server
         uses: docker/bake-action@v1
         with:
