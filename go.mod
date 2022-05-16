@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.0.20
+	github.com/kubeshop/testkube-operator v1.0.21-beta001
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
@@ -92,7 +92,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect
+	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
@@ -114,4 +114,4 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-replace github.com/kubeshop/testkube-operator v1.0.20 => ../testkube-operator
+// replace github.com/kubeshop/testkube-operator v1.0.20 => ../testkube-operator
