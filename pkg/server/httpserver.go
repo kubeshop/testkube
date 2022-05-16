@@ -49,6 +49,7 @@ func (s *HTTPServer) Init() {
 	v1.Static("/api-docs", "./api/v1")
 
 	s.Routes = v1
+
 }
 
 // Warn writes RFC-7807 json problem to response
