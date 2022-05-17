@@ -667,7 +667,7 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),
 			Schedule:    request.Schedule,
-			Params:      testsuitesmapper.MapDepratcatedParams(request.Variables),
+			Variables:   testsuitesmapper.MapCRDVariables(request.Variables),
 		},
 	}
 }

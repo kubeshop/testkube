@@ -27,9 +27,13 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(test.Variables) > 0 {
 		ui.NL()
-		ui.Warn("Params: ")
-		for k, v := range test.Variables {
-			ui.Info("- "+k, v.Value)
+		ui.Warn("Variables: ")
+		for _, v := range test.Variables {
+			t := ""
+			if *v.Type_ == *testkube.VariableTypeSecret {
+				t = "🔒"
+			}
+			ui.Info("-", fmt.Sprintf("%s='%s' %s", v.Name, v.Value, t))
 		}
 	}
 

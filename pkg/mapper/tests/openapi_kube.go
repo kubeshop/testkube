@@ -16,10 +16,10 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 			Labels:    request.Labels,
 		},
 		Spec: testsv2.TestSpec{
-			Type_:    request.Type_,
-			Content:  MapContentToSpecContent(request.Content),
-			Schedule: request.Schedule,
-			Params:   MapDepratcatedParams(request.Variables),
+			Type_:     request.Type_,
+			Content:   MapContentToSpecContent(request.Content),
+			Schedule:  request.Schedule,
+			Variables: MapCRDVariables(request.Variables),
 		},
 	}
 
@@ -33,6 +33,20 @@ func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
 	out := map[string]string{}
 	for k, v := range in {
 		out[k] = v.Value
+	}
+	return out
+}
+
+// MapCRDVariables maps variables between API and operator CRDs
+// TODO if we could merge operator into testkube repository we would get rid of those mappings
+func MapCRDVariables(in map[string]testkube.Variable) map[string]testsv2.Variable {
+	out := map[string]testsv2.Variable{}
+	for k, v := range in {
+		out[k] = testsv2.Variable{
+			Name:  v.Name,
+			Type_: string(*v.Type_),
+			Value: v.Value,
+		}
 	}
 	return out
 }

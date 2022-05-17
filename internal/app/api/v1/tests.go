@@ -56,6 +56,9 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
+
+		fmt.Printf("%+v\n", test)
+
 		testWithExecution := testkube.TestWithExecution{
 			Test: &test,
 		}

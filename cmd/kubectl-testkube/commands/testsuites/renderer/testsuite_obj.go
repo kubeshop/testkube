@@ -26,10 +26,15 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(ts.Variables) > 0 {
 		ui.NL()
-		ui.Warn("Params: ", fmt.Sprintf("%d", len(ts.Variables)))
-		for k, v := range ts.Variables {
-			ui.Info("- "+k, v.Value)
+		ui.Warn("Variables: ", fmt.Sprintf("%d", len(ts.Variables)))
+		for _, v := range ts.Variables {
+			t := ""
+			if *v.Type_ == *testkube.VariableTypeSecret {
+				t = "🔒"
+			}
+			ui.Info("-", fmt.Sprintf("%s='%s' %s", v.Name, v.Value, t))
 		}
+
 	}
 
 	steps := append(ts.Before, ts.Steps...)
