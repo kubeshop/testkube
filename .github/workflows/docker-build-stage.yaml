@@ -81,7 +81,7 @@ jobs:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           repository: kubeshop/helm-charts
           event-type: trigger-workflow
           client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
