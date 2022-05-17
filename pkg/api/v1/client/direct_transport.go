@@ -1,12 +1,15 @@
 package client
 
 import (
-	"io"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	phttp "github.com/kubeshop/testkube/pkg/http"
@@ -157,6 +160,36 @@ func (t DirectTransport[A]) GetLogs(uri string, logs chan output.Output) error {
 	}()
 
 	return nil
+}
+
+// GetFile returns file artifact
+func (t DirectTransport[A]) GetFile(uri, fileName, destination string) (name string, err error) {
+	resp, err := t.client.Get(uri)
+	if err != nil {
+		return name, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		return name, fmt.Errorf("error: %d", resp.StatusCode)
+	}
+
+	split := strings.Split(fileName, "/")
+	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
+	if err != nil {
+		return name, err
+	}
+
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		return name, err
+	}
+
+	if err = t.responseError(resp); err != nil {
+		return name, fmt.Errorf("api/download-file returned error: %w", err)
+	}
+
+	return f.Name(), nil
 }
 
 func (t DirectTransport[A]) getFromResponse(resp *http.Response) (result A, err error) {

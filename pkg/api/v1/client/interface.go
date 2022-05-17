@@ -24,7 +24,6 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 
-	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
@@ -49,6 +48,7 @@ type ExecutionAPI interface {
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
+	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 }
 
 // TestSuiteAPI describes test suite api methods
@@ -144,4 +144,5 @@ type Transport[A All] interface {
 	Delete(uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
+	GetFile(uri, fileName, destination string) (name string, err error)
 }

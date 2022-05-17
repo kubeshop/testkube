@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -154,6 +156,31 @@ func (t ProxyTransport[A]) GetLogs(uri string, logs chan output.Output) error {
 	}()
 
 	return nil
+}
+
+// GetFile returns file artifact
+func (t ProxyTransport[A]) GetFile(uri, fileName, destination string) (name string, err error) {
+	req, err := t.getProxy(http.MethodGet).
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+	if err != nil {
+		return name, err
+	}
+
+	defer req.Close()
+
+	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))
+	if err != nil {
+		return name, err
+	}
+
+	if _, err = f.ReadFrom(req); err != nil {
+		return name, err
+	}
+
+	defer f.Close()
+	return f.Name(), err
 }
 
 func (t ProxyTransport[A]) getProxy(requestType string) *rest.Request {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -197,4 +198,10 @@ func (c TestClient) Logs(id string) (logs chan output.Output, err error) {
 func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
 	uri := c.artifactTransport.GetURI("/executions/%s/artifacts", executionID)
 	return c.artifactTransport.ExecuteMultiple(http.MethodGet, uri, nil, nil)
+}
+
+// DownloadFile downloads file
+func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+	uri := c.executionTransport.GetURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
+	return c.executionTransport.GetFile(uri, fileName, destination)
 }
