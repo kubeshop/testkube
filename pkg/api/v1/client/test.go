@@ -18,6 +18,7 @@ func NewTestClient(
 	testWithExecutionTransport Transport[testkube.TestWithExecution],
 	executionsResultTransport Transport[testkube.ExecutionsResult],
 	artifactTransport Transport[testkube.Artifact],
+	serverInfoTransport Transport[testkube.ServerInfo],
 ) TestClient {
 	return TestClient{
 		testTransport:              testTransport,
@@ -25,6 +26,7 @@ func NewTestClient(
 		testWithExecutionTransport: testWithExecutionTransport,
 		executionsResultTransport:  executionsResultTransport,
 		artifactTransport:          artifactTransport,
+		serverInfoTransport:        serverInfoTransport,
 	}
 }
 
@@ -35,6 +37,7 @@ type TestClient struct {
 	testWithExecutionTransport Transport[testkube.TestWithExecution]
 	executionsResultTransport  Transport[testkube.ExecutionsResult]
 	artifactTransport          Transport[testkube.Artifact]
+	serverInfoTransport        Transport[testkube.ServerInfo]
 }
 
 // GetTest returns single test by id
@@ -204,4 +207,10 @@ func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkub
 func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.executionTransport.GetURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	return c.executionTransport.GetFile(uri, fileName, destination)
+}
+
+// GetServerInfo returns server info
+func (c TestClient) GetServerInfo() (info testkube.ServerInfo, err error) {
+	uri := c.serverInfoTransport.GetURI("/info")
+	return c.serverInfoTransport.Execute(http.MethodGet, uri, nil, nil)
 }

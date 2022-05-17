@@ -109,10 +109,6 @@ func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) 
 
 	resp := req.Do(context.Background())
 
-	if resp.Error() != nil {
-		return resp.Error()
-	}
-
 	if err := t.responseError(resp); err != nil {
 		return err
 	}
@@ -167,7 +163,6 @@ func (t ProxyTransport[A]) GetFile(uri, fileName, destination string) (name stri
 	if err != nil {
 		return name, err
 	}
-
 	defer req.Close()
 
 	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))

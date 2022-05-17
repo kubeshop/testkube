@@ -168,7 +168,6 @@ func (t DirectTransport[A]) GetFile(uri, fileName, destination string) (name str
 	if err != nil {
 		return name, err
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {

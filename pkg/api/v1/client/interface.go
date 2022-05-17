@@ -23,8 +23,7 @@ type Client interface {
 	TestSuiteExecutionAPI
 	ExecutorAPI
 	WebhookAPI
-
-	GetServerInfo() (info testkube.ServerInfo, err error)
+	ServiceAPI
 }
 
 // TestAPI describes test api methods
@@ -90,6 +89,11 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// ServiceAPI describes service api methods
+type ServiceAPI interface {
+	GetServerInfo() (info testkube.ServerInfo, err error)
+}
+
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
@@ -124,7 +128,8 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.Artifact
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult |
+		testkube.Artifact | testkube.ServerInfo
 }
 
 // Executable is an interface of executable objects
