@@ -10,36 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
-
-// Gettable is an interface of gettable objects
-type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails | testkube.Webhook
-}
-
-// Executable is an interface of executable objects
-type Executable interface {
-	testkube.Execution | testkube.TestSuiteExecution
-}
-
-// All is an interface of all objects
-type All interface {
-	Gettable | Executable
-}
-
-// Transport provides methods to execute api calls
-type Transport[A All] interface {
-	Execute(method, uri string, body []byte, params map[string]string) (result A, err error)
-	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
-	Delete(uri, selector string, isContentExpected bool) error
-}
-
-func getURI(pathTemplate string, params ...interface{}) string {
-	path := fmt.Sprintf(pathTemplate, params...)
-	return fmt.Sprintf("%s%s", Version, path)
-}
 
 // GetClientSet configures Kube client set, can override host with local proxy
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
@@ -151,6 +123,12 @@ func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) 
 	}
 
 	return nil
+}
+
+// GetURI returns uri for api method
+func (t ProxyTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
+	path := fmt.Sprintf(pathTemplate, params...)
+	return fmt.Sprintf("%s%s", Version, path)
 }
 
 func (t ProxyTransport[A]) getProxy(requestType string) *rest.Request {

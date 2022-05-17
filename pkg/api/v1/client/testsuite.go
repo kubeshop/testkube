@@ -27,13 +27,13 @@ type TestSuiteClient struct {
 
 // GetTestSuite returns single test suite by id
 func (c TestSuiteClient) GetTestSuite(id string) (testSuite testkube.TestSuite, err error) {
-	uri := getURI("/test-suites/%s", id)
+	uri := c.testSuiteTransport.GetURI("/test-suites/%s", id)
 	return c.testSuiteTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ListTestSuites list all test suites
 func (c TestSuiteClient) ListTestSuites(selector string) (testSuites testkube.TestSuites, err error) {
-	uri := getURI("/test-suites")
+	uri := c.testSuiteTransport.GetURI("/test-suites")
 	params := map[string]string{
 		"selector": selector,
 	}
@@ -43,7 +43,7 @@ func (c TestSuiteClient) ListTestSuites(selector string) (testSuites testkube.Te
 
 // CreateTestSuite creates new TestSuite Custom Resource
 func (c TestSuiteClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
-	uri := getURI("/test-suites")
+	uri := c.testSuiteTransport.GetURI("/test-suites")
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
@@ -56,7 +56,7 @@ func (c TestSuiteClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSu
 
 // UpdateTestSuite updates TestSuite Custom Resource
 func (c TestSuiteClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
-	uri := getURI("/test-suites/%s", options.Name)
+	uri := c.testSuiteTransport.GetURI("/test-suites/%s", options.Name)
 	request := testkube.TestSuiteUpsertRequest(options)
 
 	body, err := json.Marshal(request)
@@ -69,7 +69,7 @@ func (c TestSuiteClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSu
 
 // DeleteTestSuites deletes all test suites
 func (c TestSuiteClient) DeleteTestSuites(selector string) error {
-	uri := getURI("/test-suites")
+	uri := c.testSuiteTransport.GetURI("/test-suites")
 	return c.testSuiteTransport.Delete(uri, selector, true)
 }
 
@@ -79,20 +79,20 @@ func (c TestSuiteClient) DeleteTestSuite(name string) error {
 		return fmt.Errorf("test suite name '%s' is not valid", name)
 	}
 
-	uri := getURI("/test-suites/%s", name)
+	uri := c.testSuiteTransport.GetURI("/test-suites/%s", name)
 	return c.testSuiteTransport.Delete(uri, "", true)
 }
 
 // GetTestSuiteExecution returns test suite execution by excution id
 func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error) {
-	uri := getURI("/test-suite-executions/%s", executionID)
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions/%s", executionID)
 	return c.testSuiteExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
-	uri := getURI("/test-suites/%s/executions", id)
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Name:       executionName,
 		Params:     options.ExecutionParams,
@@ -111,7 +111,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 // ExecuteTestSuites starts new external test suite executions, reads data and returns IDs
 // Executions are started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
-	uri := getURI("/test-suite-executions")
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Params:     options.ExecutionParams,
 		HttpProxy:  options.HTTPProxy,

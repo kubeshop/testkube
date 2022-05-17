@@ -21,13 +21,13 @@ type WebhookClient struct {
 
 // GetWebhook gets webhook by name
 func (c WebhookClient) GetWebhook(name string) (webhook testkube.Webhook, err error) {
-	uri := getURI("/webhooks/%s", name)
+	uri := c.webhookTransport.GetURI("/webhooks/%s", name)
 	return c.webhookTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ListWebhooks list all webhooks
 func (c WebhookClient) ListWebhooks(selector string) (webhooks testkube.Webhooks, err error) {
-	uri := getURI("/webhooks")
+	uri := c.webhookTransport.GetURI("/webhooks")
 	params := map[string]string{
 		"selector": selector,
 	}
@@ -37,7 +37,7 @@ func (c WebhookClient) ListWebhooks(selector string) (webhooks testkube.Webhooks
 
 // CreateWebhook creates new Webhook Custom Resource
 func (c WebhookClient) CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error) {
-	uri := getURI("/webhooks")
+	uri := c.webhookTransport.GetURI("/webhooks")
 	request := testkube.WebhookCreateRequest(options)
 
 	body, err := json.Marshal(request)
@@ -50,12 +50,12 @@ func (c WebhookClient) CreateWebhook(options CreateWebhookOptions) (webhook test
 
 // DeleteWebhooks deletes all webhooks
 func (c WebhookClient) DeleteWebhooks(selector string) (err error) {
-	uri := getURI("/webhooks")
+	uri := c.webhookTransport.GetURI("/webhooks")
 	return c.webhookTransport.Delete(uri, selector, true)
 }
 
 // DeleteWebhook deletes single webhook by name
 func (c WebhookClient) DeleteWebhook(name string) (err error) {
-	uri := getURI("/webhooks/%s", name)
+	uri := c.webhookTransport.GetURI("/webhooks/%s", name)
 	return c.webhookTransport.Delete(uri, "", true)
 }

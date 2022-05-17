@@ -25,13 +25,13 @@ type TestClient struct {
 
 // GetTest returns single test by id
 func (c TestClient) GetTest(id string) (test testkube.Test, err error) {
-	uri := getURI("/tests/%s", id)
+	uri := c.testTransport.GetURI("/tests/%s", id)
 	return c.testTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ListTests list all tests
 func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error) {
-	uri := getURI("/tests")
+	uri := c.testTransport.GetURI("/tests")
 	params := map[string]string{
 		"selector": selector,
 	}
@@ -41,7 +41,7 @@ func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error)
 
 // CreateTest creates new Test Custom Resource
 func (c TestClient) CreateTest(options UpsertTestOptions) (test testkube.Test, err error) {
-	uri := getURI("/tests")
+	uri := c.testTransport.GetURI("/tests")
 	request := testkube.TestUpsertRequest(options)
 
 	body, err := json.Marshal(request)
@@ -54,7 +54,7 @@ func (c TestClient) CreateTest(options UpsertTestOptions) (test testkube.Test, e
 
 // UpdateTest updates Test Custom Resource
 func (c TestClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
-	uri := getURI("/tests/%s", options.Name)
+	uri := c.testTransport.GetURI("/tests/%s", options.Name)
 	request := testkube.TestUpsertRequest(options)
 
 	body, err := json.Marshal(request)
@@ -67,7 +67,7 @@ func (c TestClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, e
 
 // DeleteTests deletes all tests
 func (c TestClient) DeleteTests(selector string) error {
-	uri := getURI("/tests")
+	uri := c.testTransport.GetURI("/tests")
 	return c.testTransport.Delete(uri, selector, true)
 }
 
@@ -77,20 +77,20 @@ func (c TestClient) DeleteTest(name string) error {
 		return fmt.Errorf("test name '%s' is not valid", name)
 	}
 
-	uri := getURI("/tests/%s", name)
+	uri := c.testTransport.GetURI("/tests/%s", name)
 	return c.testTransport.Delete(uri, "", true)
 }
 
 // GetExecution returns test execution by excution id
 func (c TestClient) GetExecution(executionID string) (execution testkube.Execution, err error) {
-	uri := getURI("/executions/%s", executionID)
+	uri := c.executionTransport.GetURI("/executions/%s", executionID)
 	return c.executionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ExecuteTest starts test execution, reads data and returns ID
 // execution is started asynchronously client can check later for results
 func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
-	uri := getURI("/tests/%s/executions", id)
+	uri := c.executionTransport.GetURI("/tests/%s/executions", id)
 	request := testkube.ExecutionRequest{
 		Name:       executionName,
 		ParamsFile: options.ExecutionParamsFileContent,
@@ -112,7 +112,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 // ExecuteTests starts test executions, reads data and returns IDs
 // executions are started asynchronously client can check later for results
 func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
-	uri := getURI("/executions")
+	uri := c.executionTransport.GetURI("/executions")
 	request := testkube.ExecutionRequest{
 		ParamsFile: options.ExecutionParamsFileContent,
 		Params:     options.ExecutionParams,
@@ -137,6 +137,6 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 
 // AbortExecution aborts execution by testId and id
 func (c TestClient) AbortExecution(testID, id string) error {
-	uri := getURI("/tests/%s/executions/%s", testID, id)
+	uri := c.executionTransport.GetURI("/tests/%s/executions/%s", testID, id)
 	return c.executionTransport.Delete(uri, "", false)
 }

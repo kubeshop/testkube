@@ -156,3 +156,26 @@ type ExecuteTestSuiteOptions struct {
 	HTTPProxy       string
 	HTTPSProxy      string
 }
+
+// Gettable is an interface of gettable objects
+type Gettable interface {
+	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails | testkube.Webhook
+}
+
+// Executable is an interface of executable objects
+type Executable interface {
+	testkube.Execution | testkube.TestSuiteExecution
+}
+
+// All is an interface of all objects
+type All interface {
+	Gettable | Executable
+}
+
+// Transport provides methods to execute api calls
+type Transport[A All] interface {
+	Execute(method, uri string, body []byte, params map[string]string) (result A, err error)
+	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
+	Delete(uri, selector string, isContentExpected bool) error
+	GetURI(pathTemplate string, params ...interface{}) string
+}
