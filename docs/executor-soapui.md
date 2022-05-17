@@ -150,15 +150,6 @@ Testkube and the SoapUI executor accepts a project file as input.
 
 ```sh
 $ kubectl testkube create test --file example-project.xml --type soapui/xml --name example-test
-
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
 Test created  / example-test 🥇
 
 ```
@@ -167,15 +158,6 @@ Test created  / example-test 🥇
 
 ```sh
 $ cat example-project.xml | kubectl testkube create test --type soapui/xml --name example-test-string
-
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
 Test created  / example-test-string 🥇
 
 ```
@@ -186,14 +168,6 @@ To run the created test, use:
 
 ```sh
 $ kubectl testkube run test example-test
-
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
 
 Type          : soapui/xml
 Name          : example-test
@@ -217,19 +191,11 @@ $ kubectl testkube get execution 624eedd443ed8485ae9289e2
 
 SoapUI lets you configure your test runs using different parameters. To see all available command line arguments, check the [official SoapUI docs](https://www.soapui.org/docs/test-automation/running-functional-tests/).
 
-When working with Testkube, the way to use the parameters is by using the `kubectl testkube start` command with the `--args` parameter.
+When working with Testkube, the way to use the parameters is by using the `kubectl testkube run` command with the `--args` parameter.
 An example would be:
 
 ```sh
-$ kubectl testkube start test -f example-test --args '-I -c "Testkube TestCase"'
-
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
+$ kubectl testkube run test -f example-test --args '-I -c "Testkube TestCase"'
 
 Type          : soapui/xml
 Name          : successful-test
@@ -261,8 +227,6 @@ SoapUI 5.7.0 TestCase Runner
 Use following command to get test execution details:
 $ kubectl testkube get execution 625404e5a4cc6d2861193c60
 ```
-
-Usage of the `-I` argument is highly suggested to get cleaner results.
 
 ## Reports, plugins and extensions
 

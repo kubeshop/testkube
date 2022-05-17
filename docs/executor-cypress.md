@@ -50,21 +50,12 @@ kubeshop-cypress      51s
 Start the test:
 
 ```sh
-kubectl testkube start test kubeshop-cypress
+kubectl testkube run test kubeshop-cypress
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
-
 
 Type          : cypress/project
 Name          : kubeshop-cypress
@@ -188,19 +179,12 @@ The test parameter was not passed into the test script. In this test, the parame
 Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
-kubectl testkube start test kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
 
 Type          : cypress/project
 Name          : kubeshop-cypress
