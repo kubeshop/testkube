@@ -328,9 +328,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test suites: %w", err))
 			}
 
-			for _, item := range testSuiteList.Items {
-				testSuites = append(testSuites, item)
-			}
+			testSuites = append(testSuites, testSuiteList.Items...)
 		}
 
 		var results []testkube.TestSuiteExecution

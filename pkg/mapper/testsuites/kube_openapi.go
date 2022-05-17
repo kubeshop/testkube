@@ -92,8 +92,6 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv1.Va
 }
 
 func MergeVariablesAndParams(variables map[string]testsuitesv1.Variable, params map[string]string) map[string]testkube.Variable {
-	fmt.Printf("AAAAAAAAAAAAA%+v\n", variables)
-
 	out := map[string]testkube.Variable{}
 	for k, v := range params {
 		out[k] = testkube.NewBasicVariable(k, v)
