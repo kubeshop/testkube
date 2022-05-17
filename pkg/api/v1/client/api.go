@@ -9,7 +9,7 @@ import (
 // check in compile time if interface is implemented
 var _ Client = (*APIClient)(nil)
 
-// NewProxyAPIClient returns
+// NewProxyAPIClient returns proxy api client
 func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
@@ -28,6 +28,28 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 		),
 		ExecutorClient: NewExecutorClient(NewProxyTransport[testkube.ExecutorDetails](client, config)),
 		WebhookClient:  NewWebhookClient(NewProxyTransport[testkube.Webhook](client, config)),
+	}
+}
+
+// NewDirectAPIClient returns direct api client
+func NewDirectAPIClient(apiURL string) APIClient {
+	return APIClient{
+		TestClient: NewTestClient(
+			NewDirectTransport[testkube.Test](apiURL),
+			NewDirectTransport[testkube.Execution](apiURL),
+			NewDirectTransport[testkube.TestWithExecution](apiURL),
+			NewDirectTransport[testkube.ExecutionsResult](apiURL),
+			NewDirectTransport[testkube.Artifact](apiURL),
+			NewDirectTransport[testkube.ServerInfo](apiURL),
+		),
+		TestSuiteClient: NewTestSuiteClient(
+			NewDirectTransport[testkube.TestSuite](apiURL),
+			NewDirectTransport[testkube.TestSuiteExecution](apiURL),
+			NewDirectTransport[testkube.TestSuiteWithExecution](apiURL),
+			NewDirectTransport[testkube.TestSuiteExecutionsResult](apiURL),
+		),
+		ExecutorClient: NewExecutorClient(NewDirectTransport[testkube.ExecutorDetails](apiURL)),
+		WebhookClient:  NewWebhookClient(NewDirectTransport[testkube.Webhook](apiURL)),
 	}
 }
 
