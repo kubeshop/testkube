@@ -1,15 +1,16 @@
 package client
 
 import (
+	"io"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 // NewDirectTransport returns new proxy transport
@@ -28,7 +29,12 @@ type DirectTransport[A All] struct {
 
 // Execute is a method to make an api call for a single object
 func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
-	req, err := http.NewRequest(method, uri, bytes.NewBuffer(body))
+	var buffer io.Reader
+	if body != nil {
+		buffer = bytes.NewBuffer(body)
+	}
+
+	req, err := http.NewRequest(method, uri, buffer)
 	if err != nil {
 		return result, err
 	}
@@ -57,7 +63,12 @@ func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[
 
 // ExecuteMultiple is a method to make an api call for multiple objects
 func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
-	req, err := http.NewRequest(method, uri, bytes.NewBuffer(body))
+	var buffer io.Reader
+	if body != nil {
+		buffer = bytes.NewBuffer(body)
+	}
+
+	req, err := http.NewRequest(method, uri, buffer)
 	if err != nil {
 		return result, err
 	}

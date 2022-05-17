@@ -15,21 +15,21 @@ func NewTestSuiteClient(
 	testSuiteTransport Transport[testkube.TestSuite],
 	testSuiteExecutionTransport Transport[testkube.TestSuiteExecution],
 	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution],
-	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult],	
-	) TestSuiteClient {
+	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult],
+) TestSuiteClient {
 	return TestSuiteClient{
-		testSuiteTransport:              testSuiteTransport,
-		testSuiteExecutionTransport:     testSuiteExecutionTransport,
-		testSuiteWithExecutionTransport: testSuiteWithExecutionTransport,
+		testSuiteTransport:                 testSuiteTransport,
+		testSuiteExecutionTransport:        testSuiteExecutionTransport,
+		testSuiteWithExecutionTransport:    testSuiteWithExecutionTransport,
 		testSuiteExecutionsResultTransport: testSuiteExecutionsResultTransport,
 	}
 }
 
 // TestSuiteClient is a client for test suites
 type TestSuiteClient struct {
-	testSuiteTransport              Transport[testkube.TestSuite]
-	testSuiteExecutionTransport     Transport[testkube.TestSuiteExecution]
-	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution]
+	testSuiteTransport                 Transport[testkube.TestSuite]
+	testSuiteExecutionTransport        Transport[testkube.TestSuiteExecution]
+	testSuiteWithExecutionTransport    Transport[testkube.TestSuiteWithExecution]
 	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult]
 }
 
@@ -191,8 +191,8 @@ func (c TestSuiteClient) ListTestSuiteExecutions(testID string, limit int, selec
 	uri := c.testSuiteExecutionsResultTransport.GetURI("/test-suite-executions")
 	params := map[string]string{
 		"selector": selector,
-		"pageSize": fmt.Sprintf("%d", limit),		
-		"id": testID,
+		"pageSize": fmt.Sprintf("%d", limit),
+		"id":       testID,
 	}
 
 	return c.testSuiteExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)

@@ -16,12 +16,14 @@ func NewTestClient(
 	executionTransport Transport[testkube.Execution],
 	testWithExecutionTransport Transport[testkube.TestWithExecution],
 	executionsResultTransport Transport[testkube.ExecutionsResult],
+	artifactTransport Transport[testkube.Artifact],
 ) TestClient {
 	return TestClient{
 		testTransport:              testTransport,
 		executionTransport:         executionTransport,
 		testWithExecutionTransport: testWithExecutionTransport,
-		executionsResultTransport:   executionsResultTransport,
+		executionsResultTransport:  executionsResultTransport,
+		artifactTransport:          artifactTransport,
 	}
 }
 
@@ -30,7 +32,8 @@ type TestClient struct {
 	testTransport              Transport[testkube.Test]
 	executionTransport         Transport[testkube.Execution]
 	testWithExecutionTransport Transport[testkube.TestWithExecution]
-	executionsResultTransport   Transport[testkube.ExecutionsResult]
+	executionsResultTransport  Transport[testkube.ExecutionsResult]
+	artifactTransport          Transport[testkube.Artifact]
 }
 
 // GetTest returns single test by id
@@ -188,4 +191,10 @@ func (c TestClient) Logs(id string) (logs chan output.Output, err error) {
 	uri := c.testTransport.GetURI("/executions/%s/logs", id)
 	err = c.testTransport.GetLogs(uri, logs)
 	return logs, err
+}
+
+// GetExecutionArtifacts returns execution artifacts
+func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.artifactTransport.GetURI("/executions/%s/artifacts", executionID)
+	return c.artifactTransport.ExecuteMultiple(http.MethodGet, uri, nil, nil)
 }

@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/executor/output"	
 )
 
 // GetClientSet configures Kube client set, can override host with local proxy

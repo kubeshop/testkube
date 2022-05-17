@@ -24,7 +24,6 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 
-	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
@@ -49,6 +48,7 @@ type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
+	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 }
 
 // TestSuiteAPI describes test suite api methods
@@ -124,7 +124,7 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.Artifact
 }
 
 // Executable is an interface of executable objects
