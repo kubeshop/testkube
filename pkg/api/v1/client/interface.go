@@ -118,13 +118,13 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult |
 		testkube.Artifact | testkube.ServerInfo
 }
 
 // Executable is an interface of executable objects
 type Executable interface {
-	testkube.Execution | testkube.TestSuiteExecution
+	testkube.Execution | testkube.TestSuiteExecution |
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult
 }
 
 // All is an interface of all objects
