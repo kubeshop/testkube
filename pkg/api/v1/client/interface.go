@@ -17,10 +17,23 @@ type HTTPClient interface {
 
 // Client is the Testkube API client abstraction
 type Client interface {
-	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
-	AbortExecution(test string, id string) error
+	TestAPI
+	ExecutionAPI
+	TestSuiteAPI
+	TestSuiteExecutionAPI
+	ExecutorAPI
+	WebhookAPI
 
+	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
+	Logs(id string) (logs chan output.Output, err error)
+	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
+	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
+	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
+	GetServerInfo() (info testkube.ServerInfo, err error)
+}
+
+// TestAPI describes test api methods
+type TestAPI interface {
 	GetTest(id string) (test testkube.Test, err error)
 	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
@@ -29,53 +42,6 @@ type Client interface {
 	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
 	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
-	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
-	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
-	Logs(id string) (logs chan output.Output, err error)
-
-	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
-	DeleteExecutor(name string) (err error)
-	DeleteExecutors(selector string) (err error)
-
-	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
-	GetWebhook(name string) (webhook testkube.Webhook, err error)
-	ListWebhooks(selector string) (executors testkube.Webhooks, err error)
-	DeleteWebhook(name string) (err error)
-	DeleteWebhooks(selector string) (err error)
-
-	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
-	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
-
-	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
-	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
-	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
-	DeleteTestSuite(name string) error
-	DeleteTestSuites(selector string) error
-	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
-	ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error)
-
-	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
-	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
-
-	GetServerInfo() (info testkube.ServerInfo, err error)
-}
-
-// TestAPI describes test api methods
-type TestAPI interface {
-	GetTest(id string) (test testkube.Test, err error)
-	//	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
-	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	DeleteTest(name string) error
-	DeleteTests(selector string) error
-	ListTests(selector string) (tests testkube.Tests, err error)
-	//	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
 	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	//	Logs(id string) (logs chan output.Output, err error)
@@ -93,9 +59,9 @@ type TestSuiteAPI interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
-	//	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
+	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	//	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
 	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
@@ -159,7 +125,8 @@ type ExecuteTestSuiteOptions struct {
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails | testkube.Webhook
+	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
+		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution
 }
 
 // Executable is an interface of executable objects

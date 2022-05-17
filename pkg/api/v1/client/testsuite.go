@@ -12,23 +12,32 @@ import (
 
 // NewTestSuiteClient creates new TestSuite client
 func NewTestSuiteClient(testSuiteTransport Transport[testkube.TestSuite],
-	testSuiteExecutionTransport Transport[testkube.TestSuiteExecution]) TestSuiteClient {
+	testSuiteExecutionTransport Transport[testkube.TestSuiteExecution],
+	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution]) TestSuiteClient {
 	return TestSuiteClient{
-		testSuiteTransport:          testSuiteTransport,
-		testSuiteExecutionTransport: testSuiteExecutionTransport,
+		testSuiteTransport:              testSuiteTransport,
+		testSuiteExecutionTransport:     testSuiteExecutionTransport,
+		testSuiteWithExecutionTransport: testSuiteWithExecutionTransport,
 	}
 }
 
 // TestSuiteClient is a client for test suites
 type TestSuiteClient struct {
-	testSuiteTransport          Transport[testkube.TestSuite]
-	testSuiteExecutionTransport Transport[testkube.TestSuiteExecution]
+	testSuiteTransport              Transport[testkube.TestSuite]
+	testSuiteExecutionTransport     Transport[testkube.TestSuiteExecution]
+	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution]
 }
 
 // GetTestSuite returns single test suite by id
 func (c TestSuiteClient) GetTestSuite(id string) (testSuite testkube.TestSuite, err error) {
 	uri := c.testSuiteTransport.GetURI("/test-suites/%s", id)
 	return c.testSuiteTransport.Execute(http.MethodGet, uri, nil, nil)
+}
+
+// GetTestSuitWithExecution returns single test suite by id with execution
+func (c TestSuiteClient) GetTestSuiteWithExecution(id string) (test testkube.TestSuiteWithExecution, err error) {
+	uri := c.testSuiteWithExecutionTransport.GetURI("/test-suite-with-executions/%s", id)
+	return c.testSuiteWithExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ListTestSuites list all test suites
@@ -39,6 +48,17 @@ func (c TestSuiteClient) ListTestSuites(selector string) (testSuites testkube.Te
 	}
 
 	return c.testSuiteTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+}
+
+// ListTestSuiteWithExecutions list all test suite with executions
+func (c TestSuiteClient) ListTestSuiteWithExecutions(selector string) (
+	testSuiteWithExecutions testkube.TestSuiteWithExecutions, err error) {
+	uri := c.testSuiteWithExecutionTransport.GetURI("/test-suite-with-executions")
+	params := map[string]string{
+		"selector": selector,
+	}
+
+	return c.testSuiteWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // CreateTestSuite creates new TestSuite Custom Resource

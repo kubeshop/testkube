@@ -35,7 +35,9 @@ func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[
 	req.Header.Set("Content-Type", "application/json")
 	q := req.URL.Query()
 	for key, value := range params {
-		q.Add(key, value)
+		if value != "" {
+			q.Add(key, value)
+		}
 	}
 	req.URL.RawQuery = q.Encode()
 
@@ -62,7 +64,9 @@ func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, par
 	req.Header.Set("Content-Type", "application/json")
 	q := req.URL.Query()
 	for key, value := range params {
-		q.Add(key, value)
+		if value != "" {
+			q.Add(key, value)
+		}
 	}
 	req.URL.RawQuery = q.Encode()
 

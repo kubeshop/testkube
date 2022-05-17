@@ -58,7 +58,9 @@ func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[s
 	}
 
 	for key, value := range params {
-		req.Param(key, value)
+		if value != "" {
+			req.Param(key, value)
+		}
 	}
 
 	resp := req.Do(context.Background())
@@ -79,7 +81,9 @@ func (t ProxyTransport[A]) ExecuteMultiple(method, uri string, body []byte, para
 	}
 
 	for key, value := range params {
-		req.Param(key, value)
+		if value != "" {
+			req.Param(key, value)
+		}
 	}
 
 	resp := req.Do(context.Background())

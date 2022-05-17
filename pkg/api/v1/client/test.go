@@ -10,23 +10,32 @@ import (
 )
 
 // NewTestClient creates new Test client
-func NewTestClient(testTransport Transport[testkube.Test], executionTransport Transport[testkube.Execution]) TestClient {
+func NewTestClient(testTransport Transport[testkube.Test], executionTransport Transport[testkube.Execution],
+	testWithExecutionTransport Transport[testkube.TestWithExecution]) TestClient {
 	return TestClient{
-		testTransport:      testTransport,
-		executionTransport: executionTransport,
+		testTransport:              testTransport,
+		executionTransport:         executionTransport,
+		testWithExecutionTransport: testWithExecutionTransport,
 	}
 }
 
 // TestClient is a client for tests
 type TestClient struct {
-	testTransport      Transport[testkube.Test]
-	executionTransport Transport[testkube.Execution]
+	testTransport              Transport[testkube.Test]
+	executionTransport         Transport[testkube.Execution]
+	testWithExecutionTransport Transport[testkube.TestWithExecution]
 }
 
 // GetTest returns single test by id
 func (c TestClient) GetTest(id string) (test testkube.Test, err error) {
 	uri := c.testTransport.GetURI("/tests/%s", id)
 	return c.testTransport.Execute(http.MethodGet, uri, nil, nil)
+}
+
+// GetTestWithExecution returns single test by id with execution
+func (c TestClient) GetTestWithExecution(id string) (test testkube.TestWithExecution, err error) {
+	uri := c.testWithExecutionTransport.GetURI("/test-with-executions/%s", id)
+	return c.testWithExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
 // ListTests list all tests
@@ -37,6 +46,16 @@ func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error)
 	}
 
 	return c.testTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+}
+
+// ListTestWithExecutions list all test with executions
+func (c TestClient) ListTestWithExecutions(selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
+	uri := c.testWithExecutionTransport.GetURI("/test-with-executions")
+	params := map[string]string{
+		"selector": selector,
+	}
+
+	return c.testWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // CreateTest creates new Test Custom Resource
