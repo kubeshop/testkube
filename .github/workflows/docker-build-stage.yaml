@@ -69,7 +69,7 @@ jobs:
             ${{ steps.meta_api_server.outputs.bake-file }}
           targets: build
           set: |
-            build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+            build.args.TOKEN=${{ secrets.DEVOPS_GITHUB_TOKEN }}
             build.args.VERSION=${{ steps.vars.outputs.tag }}
             build.args.COMMIT=${{ github.sha }}
             build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
@@ -80,7 +80,7 @@ jobs:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          token: ${{ secrets.DEVOPS_GITHUB_TOKEN }}
           repository: kubeshop/helm-charts
           event-type: trigger-workflow
           client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
