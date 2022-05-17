@@ -10,12 +10,17 @@ import (
 )
 
 // NewTestClient creates new Test client
-func NewTestClient(testTransport Transport[testkube.Test], executionTransport Transport[testkube.Execution],
-	testWithExecutionTransport Transport[testkube.TestWithExecution]) TestClient {
+func NewTestClient(
+	testTransport Transport[testkube.Test],
+	executionTransport Transport[testkube.Execution],
+	testWithExecutionTransport Transport[testkube.TestWithExecution],
+	executionsResultTransport Transport[testkube.ExecutionsResult],
+) TestClient {
 	return TestClient{
 		testTransport:              testTransport,
 		executionTransport:         executionTransport,
 		testWithExecutionTransport: testWithExecutionTransport,
+		executionsResultTransport:   executionsResultTransport,
 	}
 }
 
@@ -24,6 +29,7 @@ type TestClient struct {
 	testTransport              Transport[testkube.Test]
 	executionTransport         Transport[testkube.Execution]
 	testWithExecutionTransport Transport[testkube.TestWithExecution]
+	executionsResultTransport   Transport[testkube.ExecutionsResult]
 }
 
 // GetTest returns single test by id
@@ -158,4 +164,19 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 func (c TestClient) AbortExecution(testID, id string) error {
 	uri := c.executionTransport.GetURI("/tests/%s/executions/%s", testID, id)
 	return c.executionTransport.Delete(uri, "", false)
+}
+
+// ListExecutions list all executions for given test name
+func (c TestClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
+	uri := c.executionsResultTransport.GetURI("/executions/")
+	if id != "" {
+		uri = c.executionsResultTransport.GetURI(fmt.Sprintf("/tests/%s/executions", id))
+	}
+
+	params := map[string]string{
+		"selector": selector,
+		"pageSize": fmt.Sprintf("%d", limit),
+	}
+
+	return c.executionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }

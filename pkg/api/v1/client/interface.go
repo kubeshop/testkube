@@ -24,11 +24,9 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 
-	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	Logs(id string) (logs chan output.Output, err error)
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
-	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
@@ -50,7 +48,7 @@ type TestAPI interface {
 // ExecutionAPI describes execution api methods
 type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	//	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 }
 
@@ -71,7 +69,7 @@ type TestSuiteAPI interface {
 // TestSuiteExecutionAPI describes test suite execution api methods
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	//	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
+	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 }
 
@@ -126,7 +124,8 @@ type ExecuteTestSuiteOptions struct {
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
-		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution
+		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult
 }
 
 // Executable is an interface of executable objects
