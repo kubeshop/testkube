@@ -30,7 +30,7 @@ func GetClient(clientType ClientType, namespace string) (client Client, err erro
 		return client, err
 	}
 
-	client = NewAPIClient(clientset, NewAPIConfig(namespace))
+	client = NewProxyAPIClient(clientset, NewAPIConfig(namespace))
 
 	return client, err
 }
