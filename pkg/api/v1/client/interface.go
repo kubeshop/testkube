@@ -24,7 +24,6 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 
-	Logs(id string) (logs chan output.Output, err error)
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 	GetServerInfo() (info testkube.ServerInfo, err error)
@@ -42,7 +41,7 @@ type TestAPI interface {
 	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
 	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
-	//	Logs(id string) (logs chan output.Output, err error)
+	Logs(id string) (logs chan output.Output, err error)
 }
 
 // ExecutionAPI describes execution api methods
@@ -144,4 +143,5 @@ type Transport[A All] interface {
 	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
 	Delete(uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
+	GetLogs(uri string, logs chan output.Output) error
 }

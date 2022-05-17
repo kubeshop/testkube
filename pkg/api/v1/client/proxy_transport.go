@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/executor/output"	
 )
 
 // GetClientSet configures Kube client set, can override host with local proxy
@@ -133,6 +134,26 @@ func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) 
 func (t ProxyTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s%s", Version, path)
+}
+
+// GetLogs returns logs stream from job pods, based on job pods logs
+func (t ProxyTransport[A]) GetLogs(uri string, logs chan output.Output) error {
+	resp, err := t.getProxy(http.MethodGet).
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer close(logs)
+		defer resp.Close()
+
+		StreamToLogsChannel(resp, logs)
+	}()
+
+	return nil
 }
 
 func (t ProxyTransport[A]) getProxy(requestType string) *rest.Request {

@@ -9,6 +9,7 @@ import (
 
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 // NewDirectTransport returns new proxy transport
@@ -122,6 +123,29 @@ func (t DirectTransport[A]) Delete(uri, selector string, isContentExpected bool)
 func (t DirectTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s/%s%s", t.apiURL, Version, path)
+}
+
+// GetLogs returns logs stream from job pods, based on job pods logs
+func (t DirectTransport[A]) GetLogs(uri string, logs chan output.Output) error {
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := t.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer close(logs)
+		defer resp.Body.Close()
+
+		StreamToLogsChannel(resp.Body, logs)
+	}()
+
+	return nil
 }
 
 func (t DirectTransport[A]) getFromResponse(resp *http.Response) (result A, err error) {

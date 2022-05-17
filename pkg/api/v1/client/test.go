@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 // NewTestClient creates new Test client
@@ -179,4 +180,12 @@ func (c TestClient) ListExecutions(id string, limit int, selector string) (execu
 	}
 
 	return c.executionsResultTransport.Execute(http.MethodGet, uri, nil, params)
+}
+
+// Logs returns logs stream from job pods, based on job pods logs
+func (c TestClient) Logs(id string) (logs chan output.Output, err error) {
+	logs = make(chan output.Output)
+	uri := c.testTransport.GetURI("/executions/%s/logs", id)
+	err = c.testTransport.GetLogs(uri, logs)
+	return logs, err
 }
