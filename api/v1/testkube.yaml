@@ -1542,6 +1542,8 @@ components:
           type: string
         type:
           $ref: "#/components/schemas/VariableType"
+        secretRef:
+          $ref: "#/components/schemas/SecretRef"
 
     VariableType:
       type: string
@@ -1558,6 +1560,22 @@ components:
           type: string
           description: object kubernetes namespace
         name:
+          type: string
+          description: object name
+
+    SecretRef:
+      required:
+        - name
+        - key
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: object kubernetes namespace
+        name:
+          type: string
+          description: object name
+        key:
           type: string
           description: object name
 

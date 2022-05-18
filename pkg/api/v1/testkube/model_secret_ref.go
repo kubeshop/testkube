@@ -9,9 +9,11 @@
  */
 package testkube
 
-type Variable struct {
-	Name      string        `json:"name,omitempty"`
-	Value     string        `json:"value,omitempty"`
-	Type_     *VariableType `json:"type,omitempty"`
-	SecretRef *SecretRef    `json:"secretRef,omitempty"`
+type SecretRef struct {
+	// object kubernetes namespace
+	Namespace string `json:"namespace,omitempty"`
+	// object name
+	Name string `json:"name"`
+	// object name
+	Key string `json:"key"`
 }

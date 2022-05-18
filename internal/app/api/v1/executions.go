@@ -165,6 +165,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
+	s.stripSecretsToReference(&execution)
+
 	err = s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
@@ -237,6 +239,35 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	return execution, nil
+}
+
+// stripSecretsToReference strips secrets from text and store it inside model as reference to secret
+func (s TestkubeAPI) stripSecretsToReference(execution *testkube.Execution) {
+	secrets := map[string]string{}
+	secretName := execution.Id + "-vars"
+
+	for k, v := range execution.Variables {
+		if *v.Type_ == *testkube.VariableTypeSecret {
+			variable := execution.Variables[k]
+			variable.Value = ""
+			variable.SecretRef = &testkube.SecretRef{
+				Namespace: execution.TestNamespace,
+				Name:      secretName,
+				Key:       v.Name,
+			}
+			execution.Variables[k] = variable
+			secrets[v.Name] = v.Value
+		}
+	}
+
+	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
+
+	s.SecretClient.Create(
+		secretName,
+		labels,
+		secrets,
+	)
+
 }
 
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {

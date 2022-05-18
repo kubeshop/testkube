@@ -24,3 +24,7 @@ func NewSecretVariable(name, value string) Variable {
 		Type_: VariableTypeSecret,
 	}
 }
+
+func (v *Variable) IsSecret() bool {
+	return *v.Type_ == *VariableTypeSecret
+}

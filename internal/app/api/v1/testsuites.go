@@ -596,6 +596,7 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	return filter
 }
 
+// TODO move to testuites mapper
 func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testkube.TestSuiteExecutionSummary {
 	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
 
