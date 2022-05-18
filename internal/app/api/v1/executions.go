@@ -343,11 +343,12 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
+// ExecutionLogsHandler streams the logs from a test execution
+func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
-		s.Log.Debug("getting logs", "executionID", executionID)
+		s.Log.Debug("getting logs ", "executionID", executionID)
 
 		ctx := c.Context()
 
@@ -359,35 +360,26 @@ func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 			s.Log.Debug("starting stream writer")
 			w.Flush()
-			enc := json.NewEncoder(w)
 
-			// get logs from job executor pods
-			s.Log.Debug("getting logs")
-			var logs chan output.Output
-			var err error
-
-			logs, err = s.Executor.Logs(executionID)
-			s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
+			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {
-				output.PrintError(err)
-				s.Log.Errorw("getting logs error", "error", err)
+				output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+				s.Log.Errorw("getting execution error", "error", err)
 				w.Flush()
 				return
 			}
 
-			// loop through pods log lines - it's blocking channel
-			// and pass single log output as sse data chunk
-			for out := range logs {
-				s.Log.Debugw("got log", "out", out)
-				fmt.Fprintf(w, "data: ")
-				err = enc.Encode(out)
+			if isExecutionFinished(execution) {
+				err := s.streamLogsFromStorage(execution.ExecutionResult, w)
 				if err != nil {
-					s.Log.Infow("Encode", "error", err)
+					output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+					s.Log.Errorw("getting execution error", "error", err)
+					w.Flush()
 				}
-				// enc.Encode adds \n and we need \n\n after `data: {}` chunk
-				fmt.Fprintf(w, "\n")
-				w.Flush()
+				return
 			}
+
+			s.streamLogsFromJob(executionID, w)
 		}))
 
 		return nil
@@ -509,6 +501,50 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}, nil
 }
 
+// streamLogsFromStorage writes logs from the output of executionResult to the writer
+func (s *TestkubeAPI) streamLogsFromStorage(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
+	enc := json.NewEncoder(w)
+	s.Log.Debug("getting logs from storage")
+	fmt.Fprintf(w, "data: ")
+	err := enc.Encode(executionResult.Output)
+	if err != nil {
+		s.Log.Infow("Encode", "error", err)
+		return err
+	}
+	fmt.Fprintf(w, "\n")
+	w.Flush()
+	return nil
+}
+
+// streamLogsFromJob streams logs in chunks to writer from the running execution
+func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
+	enc := json.NewEncoder(w)
+	s.Log.Debug("getting logs from Kubernetes job")
+
+	logs, err := s.Executor.Logs(executionID)
+	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
+	if err != nil {
+		output.PrintError(err)
+		s.Log.Errorw("getting logs error", "error", err)
+		w.Flush()
+		return
+	}
+
+	// loop through pods log lines - it's blocking channel
+	// and pass single log output as sse data chunk
+	for out := range logs {
+		s.Log.Debugw("got log", "out", out)
+		fmt.Fprintf(w, "data: ")
+		err = enc.Encode(out)
+		if err != nil {
+			s.Log.Infow("Encode", "error", err)
+		}
+		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+		fmt.Fprintf(w, "\n")
+		w.Flush()
+	}
+}
+
 // TODO change vars1 after CR refactor
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
 	variables := map[string]testkube.Variable{}
@@ -558,4 +594,12 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 	}
 
 	return result
+}
+
+// isExecutionFinished decides if an execution is done running
+func isExecutionFinished(execution testkube.Execution) bool {
+	return *execution.ExecutionResult.Status == testkube.FAILED_ExecutionStatus ||
+		*execution.ExecutionResult.Status == testkube.PASSED_ExecutionStatus ||
+		string(*execution.ExecutionResult.Status) == string(testkube.SUCCESS_Status) ||
+		string(*execution.ExecutionResult.Status) == string(testkube.ERROR__Status)
 }
