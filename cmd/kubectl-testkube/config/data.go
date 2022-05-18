@@ -8,7 +8,7 @@ type Data struct {
 	AnalyticsEnabled bool       `json:"analyticsEnabled,omitempty"`
 	Namespace        string     `json:"namespace,omitempty"`
 	Initialized      bool       `json:"initialized,omitempty"`
-	APIURL           string     `json:"apiURL,omitempty"`
+	APIURI           string     `json:"apiURI,omitempty"`
 	OAuth2Data       OAuth2Data `json:"oauth2Data"`
 }
 

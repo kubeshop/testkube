@@ -17,17 +17,17 @@ import (
 )
 
 // NewDirectTransport returns new proxy transport
-func NewDirectTransport[A All](apiURL string) DirectTransport[A] {
+func NewDirectTransport[A All](apiURI string) DirectTransport[A] {
 	return DirectTransport[A]{
 		client: phttp.NewClient(),
-		apiURL: apiURL,
+		apiURI: apiURI,
 	}
 }
 
 // DirectTransport implements proxy transport
 type DirectTransport[A All] struct {
 	client *http.Client
-	apiURL string
+	apiURI string
 }
 
 // Execute is a method to make an api call for a single object
@@ -136,7 +136,7 @@ func (t DirectTransport[A]) Delete(uri, selector string, isContentExpected bool)
 // GetURI returns uri for api method
 func (t DirectTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
-	return fmt.Sprintf("%s/%s%s", t.apiURL, Version, path)
+	return fmt.Sprintf("%s/%s%s", t.apiURI, Version, path)
 }
 
 // GetLogs returns logs stream from job pods, based on job pods logs

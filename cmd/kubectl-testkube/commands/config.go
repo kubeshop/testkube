@@ -18,6 +18,7 @@ func NewConfigCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(config.NewConfigureNamespaceCmd())
+	cmd.AddCommand(config.NewConfigureAPIURICmd())
 
 	return cmd
 }
