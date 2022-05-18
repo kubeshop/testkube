@@ -92,7 +92,7 @@ func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, par
 	defer resp.Body.Close()
 
 	if err := t.responseError(resp); err != nil {
-		return result, fmt.Errorf("api/%s-%T returned error: %w", method, result, err)
+		return result, fmt.Errorf("api/%ss-%T returned error: %w", method, result, err)
 	}
 
 	return t.getFromResponses(resp)
