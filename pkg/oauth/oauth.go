@@ -32,9 +32,9 @@ const (
 	// randomLength is a length of a random string
 	randomLength = 8
 	// successPage is a page to show for success authentication
-	successPage = `<h1>Success!</h1>
+	successPage = `<html><body><h1>Success!</h1>
 		<p>You are authenticated, you can now return to the program. This will auto-close</p>
-		<script>window.onload=function(){setTimeout(this.close, 5000)}</script>`
+		<script>window.onload=function(){setTimeout(this.close, 5000)}</script></body></html>`
 )
 
 // NewProvider returns new provider
@@ -95,7 +95,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 
 	p.startHTTPServer(ctx, clientChan, shutdownChan, cancelChan)
 
-	ui.Info("You will be redirected to your browser for authentication or you can open the url below manually.")
+	ui.Info("You will be redirected to your browser for authentication or you can open the url below manually")
 	ui.Info(authURL)
 
 	time.Sleep(redirectDelay)
@@ -156,14 +156,14 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestState, ok := ctx.Value(oauthStateStringContextKey).(string)
 		if !ok {
-			ui.Errf("unknown oauth state '%s'\n", ctx.Value(oauthStateStringContextKey))
+			ui.Errf("unknown oauth state: %v", ctx.Value(oauthStateStringContextKey))
 			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 			return
 		}
 
 		responseState := r.FormValue("state")
 		if responseState != requestState {
-			ui.Errf("invalid oauth state, expected '%s', got '%s'\n", requestState, responseState)
+			ui.Errf("invalid oauth state, expected %s, got %s", requestState, responseState)
 			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 			return
 		}
@@ -171,12 +171,16 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 		code := r.FormValue("code")
 		token, err := p.oauthConfig.Exchange(ctx, code)
 		if err != nil {
-			ui.Errf("oauth exchange failed with '%s'\n", err)
+			ui.Errf("exchanging oauth code: %v", err)
 			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 			return
 		}
 
-		fmt.Fprintf(w, successPage)
+		if _, err = fmt.Fprint(w, successPage); err != nil {
+			ui.Errf("showing success page: %v", err)
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			return
+		}
 
 		clientChan <- &AuthorizedClient{
 			Client: p.oauthConfig.Client(ctx, token),
