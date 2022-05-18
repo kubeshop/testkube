@@ -25,8 +25,6 @@ type Execution struct {
 	TestType string `json:"testType,omitempty"`
 	// execution name
 	Name string `json:"name,omitempty"`
-	// environment variables passed to executor
-	Envs map[string]string `json:"envs,omitempty"`
 	// additional arguments/flags passed to executor binary
 	Args      []string            `json:"args,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
