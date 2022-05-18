@@ -44,7 +44,7 @@ func NewProvider(oauthConfig *oauth2.Config, port int) Provider {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	oauthConfig.RedirectURL = fmt.Sprintf("http://%s:%d"+callbackPath, localIP, port)
+	oauthConfig.RedirectURL = fmt.Sprintf("http://%s:%d%s", localIP, port, callbackPath)
 	return Provider{
 		oauthConfig: oauthConfig,
 		client:      &http.Client{Transport: tr},
@@ -115,12 +115,11 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 	// wait for an authenticated client or cancel authentication
 	select {
 	case client = <-clientChan:
-		shutdownChan <- struct{}{}
 	case <-cancelChan:
 		err = fmt.Errorf("authentication timed out and was cancelled")
-		shutdownChan <- struct{}{}
 	}
 
+	shutdownChan <- struct{}{}
 	return client, err
 }
 
@@ -150,8 +149,6 @@ func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *Authoriz
 
 		ui.Info("Server gracefully stopped")
 	}()
-
-	return
 }
 
 // CallbackHandler is oauth callback handler
