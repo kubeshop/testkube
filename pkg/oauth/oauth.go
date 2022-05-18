@@ -59,6 +59,7 @@ type Provider struct {
 	port        int
 }
 
+// AuthorizedClient is authorized client and token
 type AuthorizedClient struct {
 	Client *http.Client
 	Token  *oauth2.Token
