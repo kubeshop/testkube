@@ -531,7 +531,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Name,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
-		testkube.NewPendingExecutionResult(),
+		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
 		options.Labels,
 	)

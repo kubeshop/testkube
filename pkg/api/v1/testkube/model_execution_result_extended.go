@@ -1,5 +1,12 @@
 package testkube
 
+func NewRunningExecutionResult() ExecutionResult {
+	return ExecutionResult{
+		Status: StatusPtr(RUNNING_ExecutionStatus),
+	}
+}
+
+// NewPendingExecutionResult DEPRECATED since testkube@1.0.0
 func NewPendingExecutionResult() ExecutionResult {
 	return ExecutionResult{
 		Status: StatusPtr(RUNNING_ExecutionStatus),
