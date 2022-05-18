@@ -16,13 +16,16 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+// key is context key
+type key int
+
 const (
 	// localIP to open local website
 	localIP = "127.0.0.1"
 	// authTimeout is time to wait for authentication completed
 	authTimeout = 120
 	// oauthStateStringContextKey is a context key for oauth strategy
-	oauthStateStringContextKey = 987
+	oauthStateStringContextKey key = 987
 	// callbackPath is a path to callback handler
 	callbackPath = "/oauth/callback"
 	// redirectDelay is redirect delay
