@@ -165,12 +165,19 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	s.creaeteSecretsReferences(&execution)
+	// store secret values before saving to storage - storage will have secretRef only
+	secretVariables, err := s.createSecretsReferences(&execution)
+	if err != nil {
+		return execution.Errw("can't create secret variables `Secret` references: %w", err), nil
+	}
 
 	err = s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
 	}
+
+	// restore secret values back - now they can be passed to execution - it'll be not saved anywhere
+	execution.Variables = secretVariables
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
@@ -179,6 +186,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	if err != nil {
 		s.Log.Infow("Notify events", "error", err)
 	}
+
+	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
@@ -210,6 +219,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		result, err = s.Executor.Execute(execution, options)
 	}
 
+	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
@@ -241,21 +251,23 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	return execution, nil
 }
 
-// creaeteSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s TestkubeAPI) creaeteSecretsReferences(execution *testkube.Execution) error {
+// createSecretsReferences strips secrets from text and store it inside model as reference to secret
+func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (secretVariables map[string]testkube.Variable, err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
+	secretVariables = make(map[string]testkube.Variable, len(execution.Variables))
 
 	for k, v := range execution.Variables {
-		if *v.Type_ == *testkube.VariableTypeSecret {
-			variable := execution.Variables[k]
-			// TODO should we strip execution data? variable.Value = ""
-			variable.SecretRef = &testkube.SecretRef{
+		secretVariables[k] = execution.Variables[k]
+		if v.IsSecret() {
+			obfuscated := execution.Variables[k]
+			obfuscated.Value = ""
+			obfuscated.SecretRef = &testkube.SecretRef{
 				Namespace: execution.TestNamespace,
 				Name:      secretName,
 				Key:       v.Name,
 			}
-			execution.Variables[k] = variable
+			execution.Variables[k] = obfuscated
 			secrets[v.Name] = v.Value
 		}
 	}
@@ -263,14 +275,14 @@ func (s TestkubeAPI) creaeteSecretsReferences(execution *testkube.Execution) err
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
 	if len(secrets) > 0 {
-		return s.SecretClient.Create(
+		return secretVariables, s.SecretClient.Create(
 			secretName,
 			labels,
 			secrets,
 		)
 	}
 
-	return nil
+	return secretVariables, nil
 }
 
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
