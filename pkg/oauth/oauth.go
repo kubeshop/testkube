@@ -97,6 +97,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 
 	ui.Info("You will be redirected to your browser for authentication or you can open the url below manually.")
 	ui.Info(authURL)
+
 	time.Sleep(redirectDelay)
 
 	if err = open.Run(authURL); err != nil {
@@ -108,7 +109,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 		ui.Info(fmt.Sprintf("Authentication will be cancelled in %d seconds", authTimeout))
 		time.Sleep(authTimeout * time.Second)
 
-		shutdownChan <- struct{}{}
+		cancelChan <- struct{}{}
 	}()
 
 	// wait for an authenticated client or cancel authentication
@@ -117,6 +118,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 		shutdownChan <- struct{}{}
 	case <-cancelChan:
 		err = fmt.Errorf("authentication timed out and was cancelled")
+		shutdownChan <- struct{}{}
 	}
 
 	return client, err
@@ -138,8 +140,6 @@ func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *Authoriz
 		if err := srv.Shutdown(ctx); err != nil {
 			ui.Errf("stopping http server: %v", err)
 		}
-
-		cancelChan <- struct{}{}
 	}()
 
 	// handle callback request
