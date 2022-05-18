@@ -96,7 +96,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 	shutdownChan := make(chan struct{})
 	cancelChan := make(chan struct{})
 
-	p.startHTTPServer(ctx, clientChan, shutdownChan, cancelChan)
+	p.startHTTPServer(ctx, clientChan, shutdownChan)
 
 	ui.Info("You will be redirected to your browser for authentication or you can open the url below manually")
 	ui.Info(authURL)
@@ -127,7 +127,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 }
 
 func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *AuthorizedClient,
-	shutdownChan chan struct{}, cancelChan chan struct{}) {
+	shutdownChan chan struct{}) {
 	http.HandleFunc(callbackPath, p.CallbackHandler(ctx, clientChan))
 	srv := &http.Server{Addr: ":" + strconv.Itoa(p.port)}
 
