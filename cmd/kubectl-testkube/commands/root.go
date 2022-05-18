@@ -108,7 +108,7 @@ func Execute() {
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show additional debug messages")
-	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "api", cfg.APIURI, "api uri, default value read from config if set")
+	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "w", cfg.APIURI, "api uri, default value read from config if set")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
