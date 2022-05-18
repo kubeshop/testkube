@@ -1893,6 +1893,14 @@ components:
         name:
           type: string
           description: "execution name"
+        envs:
+          type: object
+          description: "environment variables passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            record: "true"
+            prefix: "some-"
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
