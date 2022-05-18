@@ -23,10 +23,17 @@ func printExecutionDetails(execution testkube.Execution) {
 		ui.Warn("Execution ID  :", execution.Id)
 		ui.Warn("Execution name:", execution.Name)
 	}
+
 	if len(execution.Variables) > 0 {
+		t := ""
 		ui.Warn("Params        :", fmt.Sprintf("%d", len(execution.Variables)))
-		for k, v := range execution.Variables {
-			ui.Info("- "+k, v.Value)
+		for _, v := range execution.Variables {
+			if v.IsSecret() && v.SecretRef != nil {
+				t = fmt.Sprintf("%s/%s:%s=%s ", v.SecretRef.Namespace, v.SecretRef.Name, v.SecretRef.Key, v.Value)
+			} else {
+				t = v.Value
+			}
+			ui.Info("-", fmt.Sprintf("%s=%s", v.Name, t))
 		}
 	}
 	ui.NL()

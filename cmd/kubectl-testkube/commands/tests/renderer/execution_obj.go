@@ -26,8 +26,14 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(execution.Variables) > 0 {
 		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Variables)))
-		for k, v := range execution.Variables {
-			ui.Info("- "+k, v.Value)
+		for _, v := range execution.Variables {
+			t := ""
+			if v.IsSecret() && v.SecretRef != nil {
+				t = fmt.Sprintf("🔒 %s/%s:%s", v.SecretRef.Namespace, v.SecretRef.Name, v.SecretRef.Key)
+			} else {
+				t = v.Value
+			}
+			ui.Info("-", fmt.Sprintf("%s=%s", v.Name, t))
 		}
 	}
 

@@ -30,7 +30,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Variables: ")
 		for _, v := range test.Variables {
 			t := ""
-			if *v.Type_ == *testkube.VariableTypeSecret {
+			if v.IsSecret() {
 				t = "🔒"
 			}
 			ui.Info("-", fmt.Sprintf("%s='%s' %s", v.Name, v.Value, t))

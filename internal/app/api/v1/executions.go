@@ -156,7 +156,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	// merge available data into execution options test spec, executor spec, request, test id
-	options, err := s.GetExecuteOptions(request.Namespace, test.Name, request)
+	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
 		return execution.Errw("can't create valid execution options: %w", err), nil
 	}
@@ -165,7 +165,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	s.stripSecretsToReference(&execution)
+	s.creaeteSecretsReferences(&execution)
 
 	err = s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
@@ -241,15 +241,15 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	return execution, nil
 }
 
-// stripSecretsToReference strips secrets from text and store it inside model as reference to secret
-func (s TestkubeAPI) stripSecretsToReference(execution *testkube.Execution) {
+// creaeteSecretsReferences strips secrets from text and store it inside model as reference to secret
+func (s TestkubeAPI) creaeteSecretsReferences(execution *testkube.Execution) error {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
 
 	for k, v := range execution.Variables {
 		if *v.Type_ == *testkube.VariableTypeSecret {
 			variable := execution.Variables[k]
-			variable.Value = ""
+			// TODO should we strip execution data? variable.Value = ""
 			variable.SecretRef = &testkube.SecretRef{
 				Namespace: execution.TestNamespace,
 				Name:      secretName,
@@ -262,12 +262,15 @@ func (s TestkubeAPI) stripSecretsToReference(execution *testkube.Execution) {
 
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
-	s.SecretClient.Create(
-		secretName,
-		labels,
-		secrets,
-	)
+	if len(secrets) > 0 {
+		return s.SecretClient.Create(
+			secretName,
+			labels,
+			secrets,
+		)
+	}
 
+	return nil
 }
 
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
