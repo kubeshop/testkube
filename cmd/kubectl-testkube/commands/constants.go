@@ -13,4 +13,5 @@ const (
 	DashboardName      string = "testkube-dashboard"
 	DashboardPort      int    = 80
 	DashboardLocalPort int    = 8080
+	OAuthLocalPort     int    = 13254
 )
