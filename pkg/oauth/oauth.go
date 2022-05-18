@@ -75,8 +75,8 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 		return nil, err
 	}
 
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, p.client)
-	ctx = context.WithValue(ctx, oauthStateStringContextKey, oauthStateString)
+	ctx := context.WithValue(context.WithValue(context.Background(), oauth2.HTTPClient, p.client),
+		oauthStateStringContextKey, oauthStateString)
 
 	authURL := p.oauthConfig.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
 	parsedURL, err := url.Parse(authURL)
@@ -150,7 +150,7 @@ func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *Authoriz
 			ui.ExitOnError("starting http server", err)
 		}
 
-		ui.Info("Server gracefully stopped")
+		ui.Success("Server gracefully stopped")
 	}()
 }
 
