@@ -6,7 +6,7 @@ USER ?= $(USER)
 NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
-VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
+VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
 ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
 ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 

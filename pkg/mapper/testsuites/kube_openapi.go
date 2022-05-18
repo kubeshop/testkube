@@ -1,8 +1,6 @@
 package testsuites
 
 import (
-	"fmt"
-
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
