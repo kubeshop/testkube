@@ -2177,6 +2177,14 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
+        envs:
+          type: object
+          description: "environment variables passed to executor"
+          additionalProperties:
+            type: string
+          example:
+            record: "true"
+            prefix: "some-"
         secretEnvs:
           type: object
           description: "execution variables passed to executor from secrets"

@@ -66,6 +66,8 @@ type Client interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
 }
 
+// TODO consider replacing below types by testkube.*
+
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
@@ -79,11 +81,13 @@ type CreateExecutorOptions testkube.ExecutorCreateRequest
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
 
+// TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
 	Args                          []string
+	Envs                          map[string]string
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string
 	HTTPSProxy                    string

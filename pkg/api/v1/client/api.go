@@ -199,6 +199,7 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 		Name:          executionName,
 		VariablesFile: options.ExecutionVariablesFileContent,
 		Variables:     options.ExecutionVariables,
+		Envs:          options.Envs,
 		Args:          options.Args,
 		SecretEnvs:    options.SecretEnvs,
 		HttpProxy:     options.HTTPProxy,
