@@ -125,13 +125,14 @@ func (c TestClient) GetExecution(executionID string) (execution testkube.Executi
 func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := c.executionTransport.GetURI("/tests/%s/executions", id)
 	request := testkube.ExecutionRequest{
-		Name:       executionName,
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Name:          executionName,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Envs:          options.Envs,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)
@@ -147,12 +148,12 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.executionTransport.GetURI("/executions")
 	request := testkube.ExecutionRequest{
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)

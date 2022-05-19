@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -18,20 +19,14 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Created:  ", test.Created.String())
 	if len(test.Labels) > 0 {
 		ui.NL()
-		ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
+		ui.Warn("Labels:   ", testkube.MapToString(test.Labels))
 	}
 	if test.Schedule != "" {
 		ui.NL()
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	if len(test.Params) > 0 {
-		ui.NL()
-		ui.Warn("Params: ")
-		for k, v := range test.Params {
-			ui.Info("- "+k, v)
-		}
-	}
+	renderer.RenderVariables(test.Variables)
 
 	if test.Content != nil {
 		ui.NL()

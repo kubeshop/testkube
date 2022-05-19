@@ -92,7 +92,7 @@ func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) 
 // TODO Consider moving storage calls level up (remove dependency from here)
 func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.Execution, options JobOptions) (
 	result testkube.ExecutionResult, err error) {
-	result = testkube.NewPendingExecutionResult()
+	result = testkube.NewRunningExecutionResult()
 
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
@@ -143,7 +143,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 
 			// wait for complete
 			l.Debug("poll immediate waiting for pod to succeed")
-			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+			if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				// continue on poll err and try to get logs later
 				l.Errorw("waiting for pod complete error", "error", err)
 			}
@@ -194,7 +194,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 	ctx := context.Background()
 
 	// init result
-	result = testkube.NewPendingExecutionResult()
+	result = testkube.NewRunningExecutionResult()
 
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -244,7 +244,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 
 				// wait for complete
 				l.Debug("poll immediate waiting for pod to succeed")
-				if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("poll immediate error", "error", err)
 				}
@@ -281,7 +281,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 		}
 	}
 
-	return testkube.NewPendingExecutionResult(), nil
+	return testkube.NewRunningExecutionResult(), nil
 }
 
 // GetJobPods returns job pods

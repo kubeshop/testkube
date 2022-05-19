@@ -1,0 +1,85 @@
+{
+	"info": {
+		"_postman_id": "7c98d039-2401-4d12-85c4-11980b829a23",
+		"name": "Variables test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Homepage healthcheck",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Environment variables are set\", function () {",
+							"    pm.expect(pm.environment.get(\"var1\"), \"var1 should be equal to val1\").eq(\"val1\");",
+							"    pm.expect(pm.environment.get(\"sec1\"), \"sec1 should be equal to pass1\").eq(\"pass1\")",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(\"VAR var1\", pm.environment.get(\"var1\"));",
+							"console.log(\"VAR sec1\", pm.environment.get(\"sec1\"));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://wysocki.consulting/",
+					"protocol": "https",
+					"host": [
+						"wysocki",
+						"consulting"
+					],
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "env1",
+			"value": "val1",
+			"type": "string"
+		},
+		{
+			"key": "env2",
+			"value": "val2",
+			"type": "string"
+		}
+	]
+}

@@ -64,9 +64,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get tests: %w", err))
 			}
 
-			for _, item := range testList.Items {
-				tests = append(tests, item)
-			}
+			tests = append(tests, testList.Items...)
 		}
 
 		var results []testkube.Execution
@@ -156,7 +154,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	// merge available data into execution options test spec, executor spec, request, test id
-	options, err := s.GetExecuteOptions(request.Namespace, test.Name, request)
+	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
 		return execution.Errw("can't create valid execution options: %w", err), nil
 	}
@@ -165,10 +163,19 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
+	// store secret values before saving to storage - storage will have secretRef only
+	secretVariables, err := s.createSecretsReferences(&execution)
+	if err != nil {
+		return execution.Errw("can't create secret variables `Secret` references: %w", err), nil
+	}
+
 	err = s.ExecutionResults.Insert(ctx, execution)
 	if err != nil {
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
 	}
+
+	// restore secret values back - now they can be passed to execution - it'll be not saved anywhere
+	execution.Variables = secretVariables
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
@@ -177,6 +184,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	if err != nil {
 		s.Log.Infow("Notify events", "error", err)
 	}
+
+	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
@@ -208,6 +217,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		result, err = s.Executor.Execute(execution, options)
 	}
 
+	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
@@ -237,6 +247,40 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	return execution, nil
+}
+
+// createSecretsReferences strips secrets from text and store it inside model as reference to secret
+func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (secretVariables map[string]testkube.Variable, err error) {
+	secrets := map[string]string{}
+	secretName := execution.Id + "-vars"
+	secretVariables = make(map[string]testkube.Variable, len(execution.Variables))
+
+	for k, v := range execution.Variables {
+		secretVariables[k] = execution.Variables[k]
+		if v.IsSecret() {
+			obfuscated := execution.Variables[k]
+			obfuscated.Value = ""
+			obfuscated.SecretRef = &testkube.SecretRef{
+				Namespace: execution.TestNamespace,
+				Name:      secretName,
+				Key:       v.Name,
+			}
+			execution.Variables[k] = obfuscated
+			secrets[v.Name] = v.Value
+		}
+	}
+
+	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
+
+	if len(secrets) > 0 {
+		return secretVariables, s.SecretClient.Create(
+			secretName,
+			labels,
+			secrets,
+		)
+	}
+
+	return secretVariables, nil
 }
 
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
@@ -442,8 +486,10 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
-	// Test params lowest priority, then test suite, then test suite execution / test execution
-	request.Params = mergeParams(testCR.Spec.Params, request.Params)
+	test := testsmapper.MapTestCRToAPI(*testCR)
+
+	// Test variables lowest priority, then test suite, then test suite execution / test execution
+	request.Variables = mergeVariables(test.Variables, request.Variables)
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -463,16 +509,17 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}, nil
 }
 
-func mergeParams(params map[string]string, appendParams map[string]string) map[string]string {
-	if params == nil {
-		params = map[string]string{}
+// TODO change vars1 after CR refactor
+func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
+	variables := map[string]testkube.Variable{}
+	for k, v := range vars1 {
+		variables[k] = v
+	}
+	for k, v := range vars2 {
+		variables[k] = v
 	}
 
-	for k, v := range appendParams {
-		params[k] = v
-	}
-
-	return params
+	return variables
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
@@ -482,13 +529,13 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Name,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
-		testkube.NewPendingExecutionResult(),
-		options.Request.Params,
+		testkube.NewRunningExecutionResult(),
+		options.Request.Variables,
 		options.Labels,
 	)
 
 	execution.Args = options.Request.Args
-	execution.ParamsFile = options.Request.ParamsFile
+	execution.VariablesFile = options.Request.VariablesFile
 
 	return execution
 }

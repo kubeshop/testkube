@@ -328,9 +328,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test suites: %w", err))
 			}
 
-			for _, item := range testSuiteList.Items {
-				testSuites = append(testSuites, item)
-			}
+			testSuites = append(testSuites, testSuiteList.Items...)
 		}
 
 		var results []testkube.TestSuiteExecution
@@ -462,7 +460,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			testExecution.EndTime = time.Now()
 			testExecution.Duration = duration.String()
 
-			err := s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
+			err = s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
 			if err != nil {
 				s.Log.Errorw("error setting end time", "error", err.Error())
 			}
@@ -529,13 +527,13 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 		request := testkube.ExecutionRequest{
 			Name:       fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
 			Namespace:  executeTestStep.Namespace,
-			Params:     testsuiteExecution.Params,
+			Variables:  testsuiteExecution.Variables,
 			Sync:       true,
 			HttpProxy:  request.HttpProxy,
 			HttpsProxy: request.HttpsProxy,
 		}
 
-		l.Debug("executing test", "params", testsuiteExecution.Params)
+		l.Debug("executing test", "variables", testsuiteExecution.Variables)
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)
@@ -598,6 +596,7 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	return filter
 }
 
+// TODO move to testuites mapper
 func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testkube.TestSuiteExecutionSummary {
 	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
 
@@ -667,7 +666,7 @@ func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 			Steps:       mapTestStepsToCRD(request.Steps),
 			After:       mapTestStepsToCRD(request.After),
 			Schedule:    request.Schedule,
-			Params:      request.Params,
+			Variables:   testsuitesmapper.MapCRDVariables(request.Variables),
 		},
 	}
 }

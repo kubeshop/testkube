@@ -166,19 +166,7 @@ func (s TestkubeAPI) Init() {
 
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
-		s.Routes.Use(func(c *fiber.Ctx) error {
-			go func(host, path, method string) {
-				out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-				l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
-				if err != nil {
-					l.Debugw("sending analytics event error", "error", err)
-				} else {
-					l.Debugw("anonymous info to tracker sent", "output", out)
-				}
-			}(c.Hostname(), c.Path(), c.Method())
-
-			return c.Next()
-		})
+		s.Routes.Use(s.AnalyticsHandler())
 	}
 
 	s.Routes.Get("/info", s.InfoHandler())
@@ -274,6 +262,22 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 			s.Log.Debugw("got webhook response", "response", resp)
 		}
 	}()
+}
+
+func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		go func(host, path, method string) {
+			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
+			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+			if err != nil {
+				l.Debugw("sending analytics event error", "error", err)
+			} else {
+				l.Debugw("anonymous info to tracker sent", "output", out)
+			}
+		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+
+		return c.Next()
+	}
 }
 
 func (s TestkubeAPI) InfoHandler() fiber.Handler {

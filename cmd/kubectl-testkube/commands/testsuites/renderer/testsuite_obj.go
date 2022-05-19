@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -17,20 +18,14 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Namespace:", ts.Namespace)
 	if len(ts.Labels) > 0 {
 		ui.NL()
-		ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
+		ui.Warn("Labels:   ", testkube.MapToString(ts.Labels))
 	}
 	if ts.Schedule != "" {
 		ui.NL()
 		ui.Warn("Schedule: ", ts.Schedule)
 	}
 
-	if len(ts.Params) > 0 {
-		ui.NL()
-		ui.Warn("Params: ", fmt.Sprintf("%d", len(ts.Params)))
-		for k, v := range ts.Params {
-			ui.Info("- "+k, v)
-		}
-	}
+	renderer.RenderVariables(ts.Variables)
 
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)

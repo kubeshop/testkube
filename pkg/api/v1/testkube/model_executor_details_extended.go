@@ -9,7 +9,7 @@ func (list ExecutorsDetails) Table() (header []string, output [][]string) {
 		output = append(output, []string{
 			e.Name,
 			e.Executor.Uri,
-			LabelsToString(e.Executor.Labels),
+			MapToString(e.Executor.Labels),
 		})
 	}
 

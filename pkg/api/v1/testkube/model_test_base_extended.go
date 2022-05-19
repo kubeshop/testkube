@@ -9,7 +9,7 @@ func (t Tests) Table() (header []string, output [][]string) {
 			e.Name,
 			e.Type_,
 			e.Created.String(),
-			LabelsToString(e.Labels),
+			MapToString(e.Labels),
 			e.Schedule,
 		})
 	}

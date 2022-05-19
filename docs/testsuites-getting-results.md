@@ -5,13 +5,6 @@ To get recent results, call the `tests executions` subcommand:
 ```sh
 
 kubectl testkube get tse
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
 
              ID            |  TEST NAME   |           EXECUTION NAME            | STATUS  | STEPS  
 +--------------------------+--------------+-------------------------------------+---------+-------+
@@ -29,13 +22,6 @@ With the test execution ID, you can get single test results:
 
 ```sh 
 kubectl testkube get tse 61e1136165e59a3183465125 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
 
 Name: test-example.fairly-humble-tick
 Status: success

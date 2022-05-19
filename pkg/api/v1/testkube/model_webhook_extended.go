@@ -21,7 +21,7 @@ func (list Webhooks) Table() (header []string, output [][]string) {
 			e.Name,
 			e.Uri,
 			fmt.Sprintf("%v", e.Events),
-			LabelsToString(e.Labels),
+			MapToString(e.Labels),
 		})
 	}
 

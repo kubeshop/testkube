@@ -11,8 +11,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	// kubernetes client auth provider 
-	_ "k8s.io/client-go/plugin/pkg/client/auth"	
+	// kubernetes client auth provider
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"

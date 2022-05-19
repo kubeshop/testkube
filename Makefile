@@ -6,7 +6,8 @@ USER ?= $(USER)
 NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
-VERSION ?= 0.0.0-$(shell git log -1 --pretty=format:"%h")
+VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
+ANALYTICS_TRACKING_ID ?= $(DEBUG)
 ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
 ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
@@ -25,7 +26,7 @@ use-env-file:
 	$(call setup_env)
 
 run-api: use-env-file
-	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=1 APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
+	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
 run-api-race-detector: use-env-file
 	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
@@ -87,6 +88,7 @@ openapi-generate-model-testkube:
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
 	rm -rf tmp
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
+	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/\*map\[string\]/map[string]/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 	
 
@@ -127,7 +129,7 @@ test-api-port-forwarded:
 
 # run test by testkube plugin
 test-api-on-cluster: 
-	kubectl testkube start test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
+	kubectl testkube run test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
 
 
 cover: 
@@ -152,7 +154,9 @@ version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
 commands-reference: 
-	go run cmd/kubectl-testkube/main.go doc > ./docs/reference.md
+	go run cmd/kubectl-testkube/main.go generate doc
+
+docs: commands-reference
 
 prerelease: 
 	go run cmd/tools/main.go release -d -a $(CHART_NAME)

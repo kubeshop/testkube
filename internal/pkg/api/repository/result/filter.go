@@ -100,7 +100,7 @@ func (f filter) StatusesDefined() bool {
 }
 
 func (f filter) Statuses() testkube.ExecutionStatuses {
-	return *&f.statuses
+	return f.statuses
 }
 
 func (f filter) Page() int {

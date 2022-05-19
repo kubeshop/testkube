@@ -13,7 +13,7 @@ func (result ExecutionsResult) Table() (header []string, output [][]string) {
 			e.TestName,
 			e.TestType,
 			status,
-			LabelsToString(e.Labels),
+			MapToString(e.Labels),
 		})
 	}
 

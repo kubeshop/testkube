@@ -12,7 +12,8 @@ To create a new Cypress test, you will need a Git repository with an example Cyp
 
 Let's assume we've created a Cypress project in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples>,
 which contains a really simple test that checks for the existence of a particular string on a web site.  We'll also check
-if the **env** parameter exists to show how to pass additional parameters into the test.
+if the Cypress **env** parameter exists to show how to pass additional parameters into the test. 
+particular executor.
 
 <https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js>
 
@@ -21,7 +22,7 @@ describe('The Home Page', () => {
   it('successfully loads', () => {
     cy.visit('https://testkube.io') 
 
-    expect(Cypress.env('testparam')).to.equal('testvalue')
+    expect(Cypress.env('testvariable')).to.equal('testvalue')
 
     cy.contains('Efficient testing of k8s applications')
   })
@@ -33,7 +34,7 @@ describe('The Home Page', () => {
 Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
 
 ```sh
-kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
 Check that script is created:
@@ -54,22 +55,12 @@ kubeshop-cypress      51s
 Start the test:
 
 ```sh
-kubectl testkube start test kubeshop-cypress
+kubectl testkube run test kubeshop-cypress
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
-
-
 Type          : cypress/project
 Name          : kubeshop-cypress
 Execution ID  : 615d5265b046f8fbd3d955d0
@@ -187,25 +178,17 @@ Test execution completed in 1m17s
 
 The test failed because of `AssertionError: expected undefined to equal 'testvalue'`.
 
-The test parameter was not passed into the test script. In this test, the parameter will have the name `testparam` and its value will be `testvalue`.   
+The test variable was not passed into the test script. In this test, the parameter will have the name `testvariable` and its value will be `testvalue`.   
 
 Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
-kubectl testkube start test kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube run test kubeshop-cypress -v testvariable=testvalue -f
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
 Type          : cypress/project
 Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2
@@ -285,6 +268,44 @@ $ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s
 ```
+
+
+## Passing secret variables to tests
+
+You can pass secret variables to test run, just use `-s` flag for that
+
+```sh
+kubectl testkube run test kubeshop-cypress -s secretvariable=S3cretv4lue -f
+```
+
+Testkube will create Kubernetes `Secret` resource corresponding to that value based on `executionId` 
+
+```sh
+
+kubectl testkube run test vartest2 -cdirect -f -s sec1=aaaa -s sec2=cnjksnkjsdncjksd
+
+kubectl get secret -ntestkube 6284bc254ce130c4bd2fdc53-vars -oyaml
+
+apiVersion: v1
+data:
+  sec1: YWFhYQ==
+  sec2: Y25qa3Nua2pzZG5jamtzZA==
+kind: Secret
+metadata:
+  creationTimestamp: "2022-05-19T06:25:41Z"
+  labels:
+    executionID: 6285e2e54403fb203d7e3ac0
+    testName: vartest2
+    testkube: tests-secrets
+  name: 6285e2e54403fb203d7e3ac0-vars
+  namespace: testkube
+  resourceVersion: "64289430"
+  uid: ef22268b-e1a9-4046-a1d1-3fb8c37dfb9e
+type: Opaque
+```
+
+Only reference to this secret will be stored in Testkube internal storage.
+
 
 ## **Summary**
 

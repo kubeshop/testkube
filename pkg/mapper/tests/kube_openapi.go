@@ -1,6 +1,7 @@
 package tests
 
 import (
+	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -22,9 +23,27 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Created = crTest.CreationTimestamp.Time
 	test.Type_ = crTest.Spec.Type_
 	test.Labels = crTest.Labels
-	test.Params = crTest.Spec.Params
+	test.Variables = MergeVariablesAndParams(crTest.Spec.Variables, crTest.Spec.Params)
 	test.Schedule = crTest.Spec.Schedule
 	return
+}
+
+func MergeVariablesAndParams(variables map[string]testsv2.Variable, params map[string]string) map[string]testkube.Variable {
+	out := map[string]testkube.Variable{}
+	for k, v := range params {
+		out[k] = testkube.NewBasicVariable(k, v)
+	}
+
+	for k, v := range variables {
+		if v.Type_ == commonv1.VariableTypeSecret {
+			out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+		}
+		if v.Type_ == commonv1.VariableTypeBasic {
+			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+		}
+	}
+
+	return out
 }
 
 // MapTestContentFromSpec maps CRD to OpenAPI spec TestContent

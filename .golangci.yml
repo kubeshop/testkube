@@ -1,0 +1,18 @@
+# .golangci.yml
+
+linters:
+  disable-all: true
+  enable:
+    - goimports
+    - revive
+    - govet
+    - unused
+
+linters-settings:
+  govet:
+    check-shadowing: false
+  revive:
+    ignore-generated-header: true
+
+issues:
+  exclude-use-default: false

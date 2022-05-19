@@ -313,14 +313,6 @@ Now it's finally time to run our test!
 ```
 kubectl tests run example-test -f
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
-
-
 Type          : example/test
 Name          : example-test-string
 Execution ID  : 6218ccd2a26fa94ee7a7cfd1

@@ -21,7 +21,7 @@ func (r TestSuiteExecutionsResult) Table() (headers []string, output [][]string)
 			result.Name,
 			string(*result.Status),
 			fmt.Sprintf("%d", len(result.Execution)),
-			LabelsToString(result.Labels),
+			MapToString(result.Labels),
 		})
 	}
 

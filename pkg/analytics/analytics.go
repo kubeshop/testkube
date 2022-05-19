@@ -157,7 +157,7 @@ func SendAnonymousAPIRequestInfo(host, path, version, method, clusterId string) 
 					EventCategory:   "api-request",
 					AppVersion:      version,
 					AppName:         "testkube-api-server",
-					Host:            host,
+					Host:            AnonymizeHost(host),
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					MachineID:       MachineID(),
@@ -170,6 +170,22 @@ func SendAnonymousAPIRequestInfo(host, path, version, method, clusterId string) 
 	log.DefaultLogger.Debugw("validation output", "payload", payload, "out", out, "error", err)
 
 	return sendDataToGA(payload)
+}
+
+const (
+	APIHostLocal            = "local"
+	APIHostExternal         = "external"
+	APIHostTestkubeInternal = "testkube-internal"
+)
+
+func AnonymizeHost(host string) string {
+	if strings.Contains(host, "testkube.io") {
+		return APIHostTestkubeInternal
+	} else if strings.Contains(host, "localhost:8088") {
+		return APIHostLocal
+	}
+
+	return APIHostExternal
 }
 
 func sendDataToGA(payload Payload) (out string, err error) {

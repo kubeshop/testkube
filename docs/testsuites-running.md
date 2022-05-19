@@ -5,14 +5,6 @@ To run your Tests Suites, pass `testsuites run` command with the test name to yo
 ```sh
 kubectl testkube run testsuite test-example
 
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
-                                           /tɛst kjub/ by Kubeshop
-
-
 Name: test-example.fairly-humble-tick
 Status: pending
 
@@ -37,14 +29,6 @@ You can start a testsuite synchronously by passing the `-f` flag (like --follow)
 
 ```sh
 kubectl testkube run testsuite test-example -f
-
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
-                                           /tɛst kjub/ by Kubeshop
-
 
 Name: test-example.equally-enabled-heron
 Status: pending

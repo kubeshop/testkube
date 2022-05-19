@@ -120,7 +120,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Name:       executionName,
-		Params:     options.ExecutionParams,
+		Variables:  options.ExecutionVariables,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
 	}
@@ -138,7 +138,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Params:     options.ExecutionParams,
+		Variables:  options.ExecutionVariables,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
 	}
