@@ -343,7 +343,8 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
+// ExecutionLogsHandler streams the logs from a test execution
+func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
@@ -359,35 +360,26 @@ func (s TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 			s.Log.Debug("starting stream writer")
 			w.Flush()
-			enc := json.NewEncoder(w)
 
-			// get logs from job executor pods
-			s.Log.Debug("getting logs")
-			var logs chan output.Output
-			var err error
-
-			logs, err = s.Executor.Logs(executionID)
-			s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
+			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {
-				output.PrintError(err)
-				s.Log.Errorw("getting logs error", "error", err)
+				output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+				s.Log.Errorw("getting execution error", "error", err)
 				w.Flush()
 				return
 			}
 
-			// loop through pods log lines - it's blocking channel
-			// and pass single log output as sse data chunk
-			for out := range logs {
-				s.Log.Debugw("got log", "out", out)
-				fmt.Fprintf(w, "data: ")
-				err = enc.Encode(out)
+			if execution.ExecutionResult.IsCompleted() {
+				err := s.streamLogsFromResult(execution.ExecutionResult, w)
 				if err != nil {
-					s.Log.Infow("Encode", "error", err)
+					output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+					s.Log.Errorw("getting execution error", "error", err)
+					w.Flush()
 				}
-				// enc.Encode adds \n and we need \n\n after `data: {}` chunk
-				fmt.Fprintf(w, "\n")
-				w.Flush()
+				return
 			}
+
+			s.streamLogsFromJob(executionID, w)
 		}))
 
 		return nil
@@ -507,6 +499,55 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		Sync:         request.Sync,
 		Labels:       testCR.Labels,
 	}, nil
+}
+
+// streamLogsFromResult writes logs from the output of executionResult to the writer
+func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
+	enc := json.NewEncoder(w)
+	fmt.Fprintf(w, "data: ")
+	s.Log.Debug("using logs from result")
+	output := testkube.ExecutorOutput{
+		Type_:   output.TypeResult,
+		Content: executionResult.Output,
+		Result:  executionResult,
+	}
+	err := enc.Encode(output)
+	if err != nil {
+		s.Log.Infow("Encode", "error", err)
+		return err
+	}
+	fmt.Fprintf(w, "\n")
+	w.Flush()
+	return nil
+}
+
+// streamLogsFromJob streams logs in chunks to writer from the running execution
+func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
+	enc := json.NewEncoder(w)
+	s.Log.Debug("getting logs from Kubernetes job")
+
+	logs, err := s.Executor.Logs(executionID)
+	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
+	if err != nil {
+		output.PrintError(err)
+		s.Log.Errorw("getting logs error", "error", err)
+		w.Flush()
+		return
+	}
+
+	// loop through pods log lines - it's blocking channel
+	// and pass single log output as sse data chunk
+	for out := range logs {
+		s.Log.Debugw("got log", "out", out)
+		fmt.Fprintf(w, "data: ")
+		err = enc.Encode(out)
+		if err != nil {
+			s.Log.Infow("Encode", "error", err)
+		}
+		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+		fmt.Fprintf(w, "\n")
+		w.Flush()
+	}
 }
 
 // TODO change vars1 after CR refactor
