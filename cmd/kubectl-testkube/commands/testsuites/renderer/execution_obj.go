@@ -20,7 +20,7 @@ func TestSuiteExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Status:  ", string(*execution.Status))
 	}
 	ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-	ui.Warn("Labels:  ", testkube.LabelsToString(execution.Labels))
+	ui.Warn("Labels:  ", testkube.MapToString(execution.Labels))
 	ui.Table(execution, os.Stdout)
 
 	ui.NL()

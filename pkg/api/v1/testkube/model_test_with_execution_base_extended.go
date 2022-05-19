@@ -22,7 +22,7 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 			e.Test.Name,
 			e.Test.Type_,
 			e.Test.Created.String(),
-			LabelsToString(e.Test.Labels),
+			MapToString(e.Test.Labels),
 			e.Test.Schedule,
 			status,
 			executionID,

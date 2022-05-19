@@ -19,7 +19,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Created:  ", test.Created.String())
 	if len(test.Labels) > 0 {
 		ui.NL()
-		ui.Warn("Labels:   ", testkube.LabelsToString(test.Labels))
+		ui.Warn("Labels:   ", testkube.MapToString(test.Labels))
 	}
 	if test.Schedule != "" {
 		ui.NL()

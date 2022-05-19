@@ -18,7 +18,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Namespace:", ts.Namespace)
 	if len(ts.Labels) > 0 {
 		ui.NL()
-		ui.Warn("Labels:   ", testkube.LabelsToString(ts.Labels))
+		ui.Warn("Labels:   ", testkube.MapToString(ts.Labels))
 	}
 	if ts.Schedule != "" {
 		ui.NL()

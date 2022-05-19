@@ -13,7 +13,7 @@ func (tests TestSuites) Table() (header []string, output [][]string) {
 			e.Name,
 			e.Description,
 			fmt.Sprintf("%d", len(e.Steps)),
-			LabelsToString(e.Labels),
+			MapToString(e.Labels),
 			e.Schedule,
 		})
 	}
