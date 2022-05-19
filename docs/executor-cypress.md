@@ -179,8 +179,11 @@ The test parameter was not passed into the test script. In this test, the parame
 Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
 
 ```sh
-kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube run test kubeshop-cypress -v testparam=testvalue -f
 ```
+
+Tip: If you want to pass secret variables pass `-s somesecretvar=secretvalue` (or `--secret-variable`)
+Testkube will convert value of this variable into Kubernetes `Secret` rescource.
 
 Output:
 

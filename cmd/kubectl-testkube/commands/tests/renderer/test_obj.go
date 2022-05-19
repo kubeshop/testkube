@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -25,17 +26,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	if len(test.Variables) > 0 {
-		ui.NL()
-		ui.Warn("Variables: ")
-		for _, v := range test.Variables {
-			t := ""
-			if v.IsSecret() {
-				t = "🔒"
-			}
-			ui.Info("-", fmt.Sprintf("%s='%s' %s", v.Name, v.Value, t))
-		}
-	}
+	renderer.RenderVariables(test.Variables)
 
 	if test.Content != nil {
 		ui.NL()

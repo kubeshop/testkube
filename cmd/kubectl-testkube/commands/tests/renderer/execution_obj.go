@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -24,18 +25,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Labels:   ", testkube.LabelsToString(execution.Labels))
 	}
 
-	if len(execution.Variables) > 0 {
-		ui.Warn("Params:   ", fmt.Sprintf("%d", len(execution.Variables)))
-		for _, v := range execution.Variables {
-			t := ""
-			if v.IsSecret() && v.SecretRef != nil {
-				t = fmt.Sprintf("🔒 %s/%s:%s", v.SecretRef.Namespace, v.SecretRef.Name, v.SecretRef.Key)
-			} else {
-				t = v.Value
-			}
-			ui.Info("-", fmt.Sprintf("%s=%s", v.Name, t))
-		}
-	}
+	renderer.RenderVariables(execution.Variables)
 
 	if len(execution.Args) > 0 {
 		ui.Warn("Args:    ", execution.Args...)

@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -24,17 +25,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", ts.Schedule)
 	}
 
-	if len(ts.Variables) > 0 {
-		ui.NL()
-		ui.Warn("Variables: ", fmt.Sprintf("%d", len(ts.Variables)))
-		for _, v := range ts.Variables {
-			t := ""
-			if v.IsSecret() {
-				t = "🔒"
-			}
-			ui.Info("-", fmt.Sprintf("%s='%s' %s", v.Name, v.Value, t))
-		}
-	}
+	renderer.RenderVariables(ts.Variables)
 
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)
