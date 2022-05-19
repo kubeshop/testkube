@@ -13,27 +13,34 @@ const (
 	ClientProxy  ClientType = "proxy"
 )
 
+// Options contains client options
+type Options struct {
+	Namespace string
+	APIURI    string
+	Token     *oauth2.Token
+	Config    *oauth2.Config
+}
+
 // GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
-func GetClient(clientType ClientType, namespace, apiURI string, token *oauth2.Token, config *oauth2.Config) (client Client, err error) {
+func GetClient(clientType ClientType, options Options) (client Client, err error) {
 	switch clientType {
 	case ClientDirect:
-		var validToken *oauth2.Token
-		if token != nil {
-			source := oauth2.ReuseTokenSource(token, oauth2.StaticTokenSource(token))
-			validToken, err = source.Token()
-			if err != nil {
+		var token *oauth2.Token
+		if options.Token != nil {
+			source := oauth2.ReuseTokenSource(nil, oauth2.StaticTokenSource(options.Token))
+			if token, err = source.Token(); err != nil {
 				return client, err
 			}
 		}
 
-		client = NewDirectAPIClient(apiURI, validToken, config)
+		client = NewDirectAPIClient(options.APIURI, token, options.Config)
 	case ClientProxy:
 		clientset, err := GetClientSet("")
 		if err != nil {
 			return client, err
 		}
 
-		client = NewProxyAPIClient(clientset, NewAPIConfig(namespace))
+		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace))
 	default:
 		return client, fmt.Errorf("unsupported client type %s", clientType)
 	}
