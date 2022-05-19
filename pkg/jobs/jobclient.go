@@ -143,7 +143,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 
 			// wait for complete
 			l.Debug("poll immediate waiting for pod to succeed")
-			if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+			if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 				// continue on poll err and try to get logs later
 				l.Errorw("waiting for pod complete error", "error", err)
 			}
@@ -244,7 +244,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 
 				// wait for complete
 				l.Debug("poll immediate waiting for pod to succeed")
-				if err := wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("poll immediate error", "error", err)
 				}
