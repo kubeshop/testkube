@@ -504,9 +504,14 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 // streamLogsFromStorage writes logs from the output of executionResult to the writer
 func (s *TestkubeAPI) streamLogsFromStorage(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
 	enc := json.NewEncoder(w)
-	s.Log.Debug("getting logs from storage")
 	fmt.Fprintf(w, "data: ")
-	err := enc.Encode(executionResult.Output)
+	s.Log.Debug("getting logs from storage")
+	output := testkube.ExecutorOutput{
+		Type_:   output.TypeResult,
+		Content: executionResult.Output,
+		Result:  executionResult,
+	}
+	err := enc.Encode(output)
 	if err != nil {
 		s.Log.Infow("Encode", "error", err)
 		return err
@@ -598,8 +603,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 // isExecutionFinished decides if an execution is done running
 func isExecutionFinished(execution testkube.Execution) bool {
-	return *execution.ExecutionResult.Status == testkube.FAILED_ExecutionStatus ||
-		*execution.ExecutionResult.Status == testkube.PASSED_ExecutionStatus ||
+	return execution.ExecutionResult.IsCompleted() ||
 		string(*execution.ExecutionResult.Status) == string(testkube.SUCCESS_Status) ||
 		string(*execution.ExecutionResult.Status) == string(testkube.ERROR__Status)
 }
