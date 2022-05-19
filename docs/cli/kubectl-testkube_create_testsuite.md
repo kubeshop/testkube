@@ -13,12 +13,13 @@ kubectl-testkube create testsuite [flags]
 ### Options
 
 ```
-  -f, --file string               JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
-  -h, --help                      help for testsuite
-  -l, --label stringToString      label key value pair: --label key1=value1 (default [])
-      --name string               Set/Override test suite name
-      --schedule string           test suite schedule in a cronjob form: * * * * *
-  -p, --variable stringToString   param key value pair: --variable key1=value1 (default [])
+  -f, --file string                      JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
+  -h, --help                             help for testsuite
+  -l, --label stringToString             label key value pair: --label key1=value1 (default [])
+      --name string                      Set/Override test suite name
+      --schedule string                  test suite schedule in a cronjob form: * * * * *
+  -s, --secret-variable stringToString   secret variable key value pair: --secret-variable key1=value1 (default [])
+  -v, --variable stringToString          param key value pair: --variable key1=value1 (default [])
 ```
 
 ### Options inherited from parent commands

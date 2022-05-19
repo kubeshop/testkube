@@ -26,6 +26,7 @@ func NewRunTestCmd() *cobra.Command {
 		variablesFile            string
 		downloadArtifactsEnabled bool
 		downloadDir              string
+		envs                     map[string]string
 		secretEnvs               map[string]string
 		selectors                []string
 		concurrencyLevel         int

@@ -156,6 +156,8 @@ version-bump-dev:
 commands-reference: 
 	go run cmd/kubectl-testkube/main.go generate doc > ./docs/reference.md
 
+docs: commands-reference
+
 prerelease: 
 	go run cmd/tools/main.go release -d -a $(CHART_NAME)
 
