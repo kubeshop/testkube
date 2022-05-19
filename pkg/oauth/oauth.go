@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/utils"
+	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/oauth2"
 
-	"github.com/skratchdot/open-golang/open"
+	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // key is context key
@@ -79,6 +79,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 		oauthStateStringContextKey, oauthStateString)
 
 	authURL := p.oauthConfig.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
+
 	parsedURL, err := url.Parse(authURL)
 	if err != nil {
 		return nil, err
@@ -126,6 +127,7 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 	return client, err
 }
 
+// startHTTPServer starts http server
 func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *AuthorizedClient,
 	shutdownChan chan struct{}) {
 	http.HandleFunc(callbackPath, p.CallbackHandler(ctx, clientChan))
