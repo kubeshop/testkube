@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"context"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	phttp "github.com/kubeshop/testkube/pkg/http"
