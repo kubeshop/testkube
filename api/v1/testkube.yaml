@@ -1577,7 +1577,7 @@ components:
           description: object name
         key:
           type: string
-          description: object name
+          description: object key
 
     TestSuite:
       type: object

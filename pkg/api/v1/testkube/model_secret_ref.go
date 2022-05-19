@@ -14,6 +14,6 @@ type SecretRef struct {
 	Namespace string `json:"namespace,omitempty"`
 	// object name
 	Name string `json:"name"`
-	// object name
+	// object key
 	Key string `json:"key"`
 }
