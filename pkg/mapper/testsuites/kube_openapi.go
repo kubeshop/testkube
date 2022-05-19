@@ -1,6 +1,7 @@
 package testsuites
 
 import (
+	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -35,7 +36,7 @@ func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Repeats = int32(cr.Spec.Repeats)
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
-	test.Params = cr.Spec.Params
+	test.Variables = MergeVariablesAndParams(cr.Spec.Variables, cr.Spec.Params)
 
 	return
 }
@@ -62,4 +63,46 @@ func mapCRStepToAPI(crstep testsuitesv1.TestSuiteStepSpec) (teststep testkube.Te
 	}
 
 	return
+}
+
+// @Depracated
+// MapDepratcatedParams maps old params to new variables data structure
+func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
+	out := map[string]string{}
+	for k, v := range in {
+		out[k] = v.Value
+	}
+	return out
+}
+
+// MapCRDVariables maps variables between API and operator CRDs
+// TODO if we could merge operator into testkube repository we would get rid of those mappings
+func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv1.Variable {
+	out := map[string]testsuitesv1.Variable{}
+	for k, v := range in {
+		out[k] = testsuitesv1.Variable{
+			Name:  v.Name,
+			Type_: string(*v.Type_),
+			Value: v.Value,
+		}
+	}
+	return out
+}
+
+func MergeVariablesAndParams(variables map[string]testsuitesv1.Variable, params map[string]string) map[string]testkube.Variable {
+	out := map[string]testkube.Variable{}
+	for k, v := range params {
+		out[k] = testkube.NewBasicVariable(k, v)
+	}
+
+	for k, v := range variables {
+		if v.Type_ == commonv1.VariableTypeSecret {
+			out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+		}
+		if v.Type_ == commonv1.VariableTypeBasic {
+			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+		}
+	}
+
+	return out
 }

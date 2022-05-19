@@ -110,12 +110,12 @@ This command will wait until script execution completes with an error or success
 
 For some 'real world' tests, you need to pass configuration variables to run them on different environments or with different test configuration.
 
-Let's assume that our example Cypress test needs the `testparam` parameter with the value `testvalue`.
+Let's assume that our example Cypress test needs the `testvariable` parameter with the value `testvalue`.
 
-Use the `-p` parameter to pass this configuration. If you need to pass more than one parameter, simply pass multiple `-p` flags:
+Use the `-v` variable to pass this configuration. If you need to pass more than one parameter, simply pass multiple `-v` flags:
 
 ```sh
-kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f
+kubectl testkube run test kubeshop-cypress -v testvariable=testvalue -f
 ```
 
 Output:

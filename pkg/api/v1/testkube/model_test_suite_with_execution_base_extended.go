@@ -26,7 +26,7 @@ func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]st
 			e.TestSuite.Name,
 			e.TestSuite.Description,
 			fmt.Sprintf("%d", len(e.TestSuite.Steps)),
-			LabelsToString(e.TestSuite.Labels),
+			MapToString(e.TestSuite.Labels),
 			e.TestSuite.Schedule,
 			status,
 			executionID,

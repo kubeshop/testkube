@@ -196,13 +196,14 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 	uri := c.getURI("/tests/%s/executions", id)
 
 	request := testkube.ExecutionRequest{
-		Name:       executionName,
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Name:          executionName,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Envs:          options.Envs,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)
@@ -228,12 +229,12 @@ func (c APIClient) ExecuteTest(id, executionName string, options ExecuteTestOpti
 func (c APIClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.getURI("/executions")
 	request := testkube.ExecutionRequest{
-		ParamsFile: options.ExecutionParamsFileContent,
-		Params:     options.ExecutionParams,
-		Args:       options.Args,
-		SecretEnvs: options.SecretEnvs,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		VariablesFile: options.ExecutionVariablesFileContent,
+		Variables:     options.ExecutionVariables,
+		Args:          options.Args,
+		SecretEnvs:    options.SecretEnvs,
+		HttpProxy:     options.HTTPProxy,
+		HttpsProxy:    options.HTTPSProxy,
 	}
 
 	body, err := json.Marshal(request)
@@ -873,7 +874,7 @@ func (c APIClient) ExecuteTestSuite(id, executionName string, options ExecuteTes
 
 	executionRequest := testkube.TestSuiteExecutionRequest{
 		Name:       executionName,
-		Params:     options.ExecutionParams,
+		Variables:  options.ExecutionVariables,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
 	}
@@ -902,7 +903,7 @@ func (c APIClient) ExecuteTestSuites(selector string, concurrencyLevel int, opti
 	uri := c.getURI("/test-suite-executions")
 
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Params:     options.ExecutionParams,
+		Variables:  options.ExecutionVariables,
 		HttpProxy:  options.HTTPProxy,
 		HttpsProxy: options.HTTPSProxy,
 	}

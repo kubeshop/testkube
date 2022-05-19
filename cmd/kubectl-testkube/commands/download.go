@@ -31,7 +31,7 @@ func NewDownloadCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, Version)
 		}}
 
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.AddCommand(NewDownloadSingleArtifactsCmd())
 	cmd.AddCommand(NewDownloadAllArtifactsCmd())
@@ -56,7 +56,7 @@ func NewListArtifactsCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 
@@ -83,7 +83,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.PersistentFlags().StringVarP(&filename, "filename", "f", "", "name of the file")
@@ -107,7 +107,7 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "should I show additional debug messages")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")

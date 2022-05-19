@@ -9,11 +9,11 @@ kubectl-testkube [flags]
 ### Options
 
 ```
-      --analytics-enabled   enable analytics
+      --analytics-enabled   enable analytics (default true)
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help                help for kubectl-testkube
-  -s, --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
-  -v, --verbose             show additional debug messages
+      --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
+      --verbose             show additional debug messages
 ```
 
 ### SEE ALSO

@@ -25,8 +25,7 @@ type TestSuiteUpsertRequest struct {
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite
-	Schedule string `json:"schedule,omitempty"`
-	Repeats  int32  `json:"repeats,omitempty"`
-	// default test suite params can be overriden by execution params
-	Params map[string]string `json:"params,omitempty"`
+	Schedule  string              `json:"schedule,omitempty"`
+	Repeats   int32               `json:"repeats,omitempty"`
+	Variables map[string]Variable `json:"variables,omitempty"`
 }

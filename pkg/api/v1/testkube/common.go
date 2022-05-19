@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-func LabelsToString(labelsMap map[string]string) string {
+func MapToString(m map[string]string) string {
 	labels := []string{}
-	for k, v := range labelsMap {
+	for k, v := range m {
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 

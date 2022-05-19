@@ -88,6 +88,7 @@ var RootCmd = &cobra.Command{
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
+		ui.Logo()
 		err := cmd.Usage()
 		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
@@ -105,8 +106,8 @@ func Execute() {
 
 	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
-	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "s", defaultNamespace, "Kubernetes namespace, default value read from config if set")
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show additional debug messages")
+	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
+	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

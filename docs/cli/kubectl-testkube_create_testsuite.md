@@ -13,21 +13,22 @@ kubectl-testkube create testsuite [flags]
 ### Options
 
 ```
-  -f, --file string            JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
-  -h, --help                   help for testsuite
-  -l, --label stringToString   label key value pair: --label key1=value1 (default [])
-      --name string            Set/Override test suite name
-  -p, --param stringToString   param key value pair: --param key1=value1 (default [])
-      --schedule string        test suite schedule in a cronjob form: * * * * *
+  -f, --file string                      JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
+  -h, --help                             help for testsuite
+  -l, --label stringToString             label key value pair: --label key1=value1 (default [])
+      --name string                      Set/Override test suite name
+      --schedule string                  test suite schedule in a cronjob form: * * * * *
+  -s, --secret-variable stringToString   secret variable key value pair: --secret-variable key1=value1 (default [])
+  -v, --variable stringToString          param key value pair: --variable key1=value1 (default [])
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics
+      --analytics-enabled   enable analytics (default true)
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
-  -s, --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
-  -v, --verbose             show additional debug messages
+      --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
+      --verbose             show additional debug messages
 ```
 
 ### SEE ALSO

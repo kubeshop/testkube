@@ -24,7 +24,7 @@ func ConnectToK8s() (*kubernetes.Clientset, error) {
 	homeDir, _ := os.UserHomeDir()
 	cubeConfigPath := path.Join(homeDir, ".kube/config")
 
-	if _, err := os.Stat(cubeConfigPath); err == nil {
+	if _, err = os.Stat(cubeConfigPath); err == nil {
 		k8sConfigExists = true
 	}
 

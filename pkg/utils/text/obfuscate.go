@@ -13,11 +13,24 @@ func Obfuscate(in string) string {
 }
 
 func ObfuscateLR(in string, keepLeft, keepRight int) (out string) {
+	if len(in) <= 0 {
+		return ""
+	}
 	if keepLeft > len(in) {
 		return strings.Repeat("*", len(in))
 	}
 	if keepRight > len(in) {
 		return strings.Repeat("*", len(in))
 	}
-	return in[:keepLeft] + strings.Repeat("*", len(in)-keepLeft-keepRight) + in[len(in)-keepRight:]
+
+	if keepLeft+keepRight > len(in) {
+		return strings.Repeat("*", len(in))
+	}
+
+	repeatCount := len(in) - keepLeft - keepRight
+	if repeatCount > 0 {
+		return in[:keepLeft] + strings.Repeat("*", repeatCount) + in[len(in)-keepRight:]
+	}
+
+	return "***"
 }
