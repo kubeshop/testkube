@@ -3,6 +3,8 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
@@ -163,6 +166,7 @@ func (s TestkubeAPI) Init() {
 
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
+	s.Routes.Use(s.AuthHandler)
 
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
@@ -264,17 +268,33 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 	}()
 }
 
-func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
+// AuthHandler is auth middleware
+func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		go func(host, path, method string) {
-			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+		if c.Get("X-CLI-Ingress", "") != "" {
+			client := phttp.NewClient()
+			req, err := http.NewRequest(http.MethodGet, os.Getenv("TESTKUBE_USERINFO_URI"), nil)
 			if err != nil {
-				l.Debugw("sending analytics event error", "error", err)
-			} else {
-				l.Debugw("anonymous info to tracker sent", "output", out)
+				s.Log.Errorf("error preparing oauth request", "error", err)
+				c.Status(http.StatusUnauthorized)
+				return err
 			}
-		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+
+			req.Header.Add("Authorization", c.Get("Authorization", ""))
+			resp, err := client.Do(req)
+			if err != nil {
+				s.Log.Errorf("error sending oauth request", "error", err)
+				c.Status(http.StatusUnauthorized)
+				return err
+			}
+			defer resp.Body.Close()
+
+			if _, err = ioutil.ReadAll(resp.Body); err != nil {
+				s.Log.Errorf("error reading oauth response", "error", err)
+				c.Status(http.StatusUnauthorized)
+				return err
+			}
+		}
 
 		return c.Next()
 	}
@@ -302,6 +322,22 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 		}
 
 		return c.JSON(routes)
+	}
+}
+
+func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		go func(host, path, method string) {
+			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
+			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+			if err != nil {
+				l.Debugw("sending analytics event error", "error", err)
+			} else {
+				l.Debugw("anonymous info to tracker sent", "output", out)
+			}
+		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+
+		return c.Next()
 	}
 }
 
