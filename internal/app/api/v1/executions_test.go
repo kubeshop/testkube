@@ -164,52 +164,42 @@ func (r MockExecutionResultsRepository) GetByNameAndTest(ctx context.Context, na
 	panic("not implemented")
 }
 
-// GetLatestByTest gets latest execution result by test
 func (r MockExecutionResultsRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
 	panic("not implemented")
 }
 
-// GetLatestByTests gets latest execution results by test names
 func (r MockExecutionResultsRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
 	panic("not implemented")
 }
 
-// GetExecutions gets executions using a filter, use filter with no data for all
 func (r MockExecutionResultsRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
 	panic("not implemented")
 }
 
-// GetExecutionTotals gets the statistics on number of executions using a filter, but without paging
 func (r MockExecutionResultsRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (result testkube.ExecutionsTotals, err error) {
 	panic("not implemented")
 }
 
-// Insert inserts new execution result
 func (r MockExecutionResultsRepository) Insert(ctx context.Context, result testkube.Execution) error {
 	panic("not implemented")
 }
 
-// Update updates execution result
 func (r MockExecutionResultsRepository) Update(ctx context.Context, result testkube.Execution) error {
 	panic("not implemented")
 }
 
-// UpdateExecution updates result in execution
 func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
 	panic("not implemented")
 }
 
-// StartExecution updates execution start time
 func (r MockExecutionResultsRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {
 	panic("not implemented")
 }
 
-// EndExecution updates execution end time
 func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
 	panic("not implemented")
 }
 
-// GetLabels get all available labels
 func (r MockExecutionResultsRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
 	panic("not implemented")
 }

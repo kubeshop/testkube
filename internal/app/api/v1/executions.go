@@ -348,7 +348,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 
-		s.Log.Debug("getting logs ", "executionID", executionID)
+		s.Log.Debug("getting logs", "executionID", executionID)
 
 		ctx := c.Context()
 
