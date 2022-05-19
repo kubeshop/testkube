@@ -22,6 +22,7 @@ var (
 	verbose          bool
 	namespace        string
 	apiURI           string
+	oauthEnabled     bool
 )
 
 func init() {
@@ -110,6 +111,7 @@ func Execute() {
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "w", cfg.APIURI, "api uri, default value read from config if set")
+	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

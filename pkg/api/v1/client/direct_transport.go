@@ -10,16 +10,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"context"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"golang.org/x/oauth2"
 )
 
 // NewDirectTransport returns new proxy transport
-func NewDirectTransport[A All](apiURI string) DirectTransport[A] {
+func NewDirectTransport[A All](apiURI string, token *oauth2.Token, config *oauth2.Config) DirectTransport[A] {
+	httpClient := phttp.NewClient()
+	if token != nil && config != nil {
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+		httpClient = config.Client(ctx, token)
+	}
+
 	return DirectTransport[A]{
-		client: phttp.NewClient(),
+		client: httpClient,
 		apiURI: apiURI,
 	}
 }

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"golang.org/x/oauth2"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -32,24 +33,24 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 }
 
 // NewDirectAPIClient returns direct api client
-func NewDirectAPIClient(apiURI string) APIClient {
+func NewDirectAPIClient(apiURI string, token *oauth2.Token, config *oauth2.Config) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewDirectTransport[testkube.Test](apiURI),
-			NewDirectTransport[testkube.Execution](apiURI),
-			NewDirectTransport[testkube.TestWithExecution](apiURI),
-			NewDirectTransport[testkube.ExecutionsResult](apiURI),
-			NewDirectTransport[testkube.Artifact](apiURI),
-			NewDirectTransport[testkube.ServerInfo](apiURI),
+			NewDirectTransport[testkube.Test](apiURI, token, config),
+			NewDirectTransport[testkube.Execution](apiURI, token, config),
+			NewDirectTransport[testkube.TestWithExecution](apiURI, token, config),
+			NewDirectTransport[testkube.ExecutionsResult](apiURI, token, config),
+			NewDirectTransport[testkube.Artifact](apiURI, token, config),
+			NewDirectTransport[testkube.ServerInfo](apiURI, token, config),
 		),
 		TestSuiteClient: NewTestSuiteClient(
-			NewDirectTransport[testkube.TestSuite](apiURI),
-			NewDirectTransport[testkube.TestSuiteExecution](apiURI),
-			NewDirectTransport[testkube.TestSuiteWithExecution](apiURI),
-			NewDirectTransport[testkube.TestSuiteExecutionsResult](apiURI),
+			NewDirectTransport[testkube.TestSuite](apiURI, token, config),
+			NewDirectTransport[testkube.TestSuiteExecution](apiURI, token, config),
+			NewDirectTransport[testkube.TestSuiteWithExecution](apiURI, token, config),
+			NewDirectTransport[testkube.TestSuiteExecutionsResult](apiURI, token, config),
 		),
-		ExecutorClient: NewExecutorClient(NewDirectTransport[testkube.ExecutorDetails](apiURI)),
-		WebhookClient:  NewWebhookClient(NewDirectTransport[testkube.Webhook](apiURI)),
+		ExecutorClient: NewExecutorClient(NewDirectTransport[testkube.ExecutorDetails](apiURI, token, config)),
+		WebhookClient:  NewWebhookClient(NewDirectTransport[testkube.Webhook](apiURI, token, config)),
 	}
 }
 
