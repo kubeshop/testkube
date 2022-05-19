@@ -1,15 +1,15 @@
-## kubectl-testkube disable analytics
+## kubectl-testkube config api-uri
 
-disable collecting of anonymous analytics
+Set api uri for testkube client
 
 ```
-kubectl-testkube disable analytics [flags]
+kubectl-testkube config api-uri <value> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for analytics
+  -h, --help   help for api-uri
 ```
 
 ### Options inherited from parent commands
@@ -25,5 +25,5 @@ kubectl-testkube disable analytics [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube disable](kubectl-testkube_disable.md)	 - Disable feature
+* [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
 

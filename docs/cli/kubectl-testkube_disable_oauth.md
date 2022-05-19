@@ -1,15 +1,15 @@
-## kubectl-testkube disable analytics
+## kubectl-testkube disable oauth
 
-disable collecting of anonymous analytics
+disable oauth authentication for direct api
 
 ```
-kubectl-testkube disable analytics [flags]
+kubectl-testkube disable oauth [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for analytics
+  -h, --help   help for oauth
 ```
 
 ### Options inherited from parent commands

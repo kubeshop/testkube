@@ -21,9 +21,11 @@ kubectl-testkube delete executor [executorName] [flags]
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
+  -w, --api-uri string      api uri, default value read from config if set (default "http://testdash.testkube.io/api")
   -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string    kubernetes namespace (default "testkube")
+      --oauth-enabled       enable oauth (default true)
       --verbose             should I show additional debug messages
 ```
 
