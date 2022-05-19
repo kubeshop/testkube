@@ -64,9 +64,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get tests: %w", err))
 			}
 
-			for _, item := range testList.Items {
-				tests = append(tests, item)
-			}
+			tests = append(tests, testList.Items...)
 		}
 
 		var results []testkube.Execution
