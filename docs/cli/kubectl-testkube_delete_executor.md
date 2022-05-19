@@ -25,7 +25,7 @@ kubectl-testkube delete executor [executorName] [flags]
   -w, --api-uri string      api uri, default value read from config if set (default "http://testdash.testkube.io/api")
   -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string    kubernetes namespace (default "testkube")
-      --oauth-enabled       enable oauth (default true)
+      --oauth-enabled       enable oauth
       --verbose             should I show additional debug messages
 ```
 

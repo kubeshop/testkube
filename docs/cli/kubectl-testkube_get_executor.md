@@ -25,7 +25,7 @@ kubectl-testkube get executor [executorName] [flags]
   -c, --client string        client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --go-template string   go template to render (default "{{.}}")
       --namespace string     Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled        enable oauth (default true)
+      --oauth-enabled        enable oauth
   -o, --output string        output type can be one of json|yaml|pretty|go-template (default "pretty")
       --verbose              show additional debug messages
 ```
