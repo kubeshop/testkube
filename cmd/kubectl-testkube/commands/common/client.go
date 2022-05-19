@@ -29,7 +29,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		options.Config = &cfg.OAuth2Data.Config
 		options.Token = cfg.OAuth2Data.Token
 		if options.Token == nil {
-			ui.ExitOnError("oauth token is empty")
+			ui.ExitOnError("oauth token is empty, please configure your oauth settings first")
 		}
 	}
 
