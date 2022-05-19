@@ -18,14 +18,6 @@ kubectl testkube run test api-incluster-test
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
-                                           /tɛst kjub/ by Kubeshop
-
-
 Type          : postman/collection
 Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
@@ -56,14 +48,6 @@ kubectl testkube run test api-incluster-test -f
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
-                                           /tɛst kjub/ by Kubeshop
-
-
 Type          : postman/collection
 Name          : api-incluster-test
 Execution ID  : 615d7e1ab046f8fbd3d955d6
@@ -135,20 +119,12 @@ Pass it multiple times if needed.
 
 
 ```sh
-kubectl testkube start test kubeshop-cypress -p testparam=testvalue -f --secret secret-name=secret-key
+kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f --secret secret-name=secret-key
 ```
 
 Output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
-                                           /tɛst kjub/ by Kubeshop
-
-
 Type          : cypress/project
 Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2

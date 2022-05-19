@@ -129,7 +129,7 @@ test-api-port-forwarded:
 
 # run test by testkube plugin
 test-api-on-cluster: 
-	kubectl testkube start test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
+	kubectl testkube run test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
 
 
 cover: 

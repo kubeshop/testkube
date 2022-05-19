@@ -42,12 +42,10 @@ Check if the test was created using the command `kubectl testkube get tests`. Th
 The test can be run using `kubectl testkube run test curl-test` which gives the output:
 
 ```sh
-████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████ 
-   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    █████   ███████    ██    █████   ██    ██ ██████  █████   
-   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██      
-   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████ 
-                                           /tɛst kjub/ by Kubeshop
+Type          : curl/test
+Name          : curl-test
+Execution ID  : 613a2d7056499e6e3d5b9c3e
+Execution name: sadly-optimal-ram
 
 Test queued for execution
 
