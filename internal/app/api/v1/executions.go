@@ -370,7 +370,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			}
 
 			if execution.ExecutionResult.IsCompleted() {
-				err := s.streamLogsFromStorage(execution.ExecutionResult, w)
+				err := s.streamLogsFromResult(execution.ExecutionResult, w)
 				if err != nil {
 					output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 					s.Log.Errorw("getting execution error", "error", err)
@@ -501,11 +501,11 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	}, nil
 }
 
-// streamLogsFromStorage writes logs from the output of executionResult to the writer
-func (s *TestkubeAPI) streamLogsFromStorage(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
+// streamLogsFromResult writes logs from the output of executionResult to the writer
+func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
 	enc := json.NewEncoder(w)
 	fmt.Fprintf(w, "data: ")
-	s.Log.Debug("getting logs from storage")
+	s.Log.Debug("using logs from result")
 	output := testkube.ExecutorOutput{
 		Type_:   output.TypeResult,
 		Content: executionResult.Output,
