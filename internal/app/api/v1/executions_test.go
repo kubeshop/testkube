@@ -3,21 +3,19 @@ package v1
 import (
 	"context"
 	"encoding/json"
+	"net/http/httptest"
+	"testing"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
-
-	"net/http/httptest"
-	"testing"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/server"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParamsNilAssign(t *testing.T) {
