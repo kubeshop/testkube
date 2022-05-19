@@ -38,8 +38,8 @@ type DirectTransport[A All] struct {
 	apiURI string
 }
 
-// Execute is a method to make an api call for a single object
-func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+// baseExecute is base execute method
+func (t DirectTransport[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp *http.Response, err error) {
 	var buffer io.Reader
 	if body != nil {
 		buffer = bytes.NewBuffer(body)
@@ -47,7 +47,7 @@ func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[
 
 	req, err := http.NewRequest(method, uri, buffer)
 	if err != nil {
-		return result, err
+		return resp, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -59,75 +59,47 @@ func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[
 	}
 	req.URL.RawQuery = q.Encode()
 
-	resp, err := t.client.Do(req)
+	resp, err = t.client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if err = t.responseError(resp); err != nil {
+		return resp, fmt.Errorf("api/%s-%s returned error: %w", method, resource, err)
+	}
+
+	return resp, nil
+}
+
+// Execute is a method to make an api call for a single object
+func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
 	}
 	defer resp.Body.Close()
-
-	if err := t.responseError(resp); err != nil {
-		return result, fmt.Errorf("api/%s-%T returned error: %w", method, result, err)
-	}
 
 	return t.getFromResponse(resp)
 }
 
 // ExecuteMultiple is a method to make an api call for multiple objects
 func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
-	var buffer io.Reader
-	if body != nil {
-		buffer = bytes.NewBuffer(body)
-	}
-
-	req, err := http.NewRequest(method, uri, buffer)
-	if err != nil {
-		return result, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	q := req.URL.Query()
-	for key, value := range params {
-		if value != "" {
-			q.Add(key, value)
-		}
-	}
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := t.client.Do(req)
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
 	}
 	defer resp.Body.Close()
-
-	if err := t.responseError(resp); err != nil {
-		return result, fmt.Errorf("api/%ss-%T returned error: %w", method, result, err)
-	}
 
 	return t.getFromResponses(resp)
 }
 
 // Delete is a method to make delete api call
 func (t DirectTransport[A]) Delete(uri, selector string, isContentExpected bool) error {
-	req, err := http.NewRequest(http.MethodDelete, uri, nil)
-	if err != nil {
-		return err
-	}
-
-	if selector != "" {
-		q := req.URL.Query()
-		q.Add("selector", selector)
-		req.URL.RawQuery = q.Encode()
-	}
-
-	resp, err := t.client.Do(req)
+	resp, err := t.baseExec(http.MethodDelete, uri, uri, nil, map[string]string{"selector": selector})
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-
-	if err := t.responseError(resp); err != nil {
-		return err
-	}
 
 	if isContentExpected && resp.StatusCode != http.StatusNoContent {
 		respBody, err := ioutil.ReadAll(resp.Body)

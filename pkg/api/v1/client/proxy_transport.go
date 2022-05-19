@@ -53,8 +53,8 @@ type ProxyTransport[A All] struct {
 	config APIConfig
 }
 
-// Execute is a method to make an api call for a single object
-func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+// baseExecute is base execute method
+func (t ProxyTransport[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp rest.Result, err error) {
 	req := t.getProxy(method).
 		Suffix(uri)
 	if body != nil {
@@ -67,10 +67,20 @@ func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[s
 		}
 	}
 
-	resp := req.Do(context.Background())
+	resp = req.Do(context.Background())
 
-	if err := t.responseError(resp); err != nil {
-		return result, fmt.Errorf("api/%s-%T returned error: %w", method, result, err)
+	if err = t.responseError(resp); err != nil {
+		return resp, fmt.Errorf("api/%s-%s returned error: %w", method, resource, err)
+	}
+
+	return resp, nil
+}
+
+// Execute is a method to make an api call for a single object
+func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
 	}
 
 	return t.getFromResponse(resp)
@@ -78,22 +88,9 @@ func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[s
 
 // ExecuteMultiple is a method to make an api call for multiple objects
 func (t ProxyTransport[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
-	req := t.getProxy(method).
-		Suffix(uri)
-	if body != nil {
-		req.Body(body)
-	}
-
-	for key, value := range params {
-		if value != "" {
-			req.Param(key, value)
-		}
-	}
-
-	resp := req.Do(context.Background())
-
-	if err := t.responseError(resp); err != nil {
-		return result, fmt.Errorf("api/%ss-%T returned error: %w", method, result, err)
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
 	}
 
 	return t.getFromResponses(resp)
@@ -101,16 +98,8 @@ func (t ProxyTransport[A]) ExecuteMultiple(method, uri string, body []byte, para
 
 // Delete is a method to make delete api call
 func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) error {
-	req := t.getProxy(http.MethodDelete).
-		Suffix(uri)
-
-	if selector != "" {
-		req.Param("selector", selector)
-	}
-
-	resp := req.Do(context.Background())
-
-	if err := t.responseError(resp); err != nil {
+	resp, err := t.baseExec(http.MethodDelete, uri, uri, nil, map[string]string{"selector": selector})
+	if err != nil {
 		return err
 	}
 
