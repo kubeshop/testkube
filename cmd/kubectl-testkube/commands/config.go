@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/config"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,7 @@ func NewConfigCmd() *cobra.Command {
 
 	cmd.AddCommand(config.NewConfigureNamespaceCmd())
 	cmd.AddCommand(config.NewConfigureAPIURICmd())
+	cmd.AddCommand(oauth.NewConfigureOAuthCmd(OAuthLocalPort))
 
 	return cmd
 }

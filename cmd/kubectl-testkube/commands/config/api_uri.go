@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewConfigureAPIURICmd is api uri config command
 func NewConfigureAPIURICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-uri <value>",
@@ -20,7 +21,6 @@ func NewConfigureAPIURICmd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 

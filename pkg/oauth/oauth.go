@@ -23,21 +23,25 @@ const (
 	// localIP to open local website
 	localIP = "127.0.0.1"
 	// authTimeout is time to wait for authentication completed
-	authTimeout = 120
+	authTimeout = 60
 	// oauthStateStringContextKey is a context key for oauth strategy
 	oauthStateStringContextKey key = 987
 	// callbackPath is a path to callback handler
 	callbackPath = "/oauth/callback"
+	// errorPath is a path to error handler
+	errorPath = "/oauth/error"
 	// redirectDelay is redirect delay
-	redirectDelay = 15 * time.Second
+	redirectDelay = 10 * time.Second
 	// shutdownTimeout is shutdown timeout
 	shutdownTimeout = 5 * time.Second
 	// randomLength is a length of a random string
 	randomLength = 8
 	// successPage is a page to show for success authentication
-	successPage = `<html><body><h1>Success!</h1>
-		<p>You are authenticated, you can now return to the program. This will auto-close</p>
-		<script>window.onload=function(){setTimeout(this.close, 5000)}</script></body></html>`
+	successPage = `<html><body><h2>Success!</h2>
+		<p>You are authenticated, you can now return to the program.</p></body></html>`
+	// errorPage is a page to show for failed authentication
+	errorPage = `<html><body><h2>Error!</h2>
+		<p>Authentication was failed, please check the program logs.</p></body</html>`
 )
 
 // NewProvider returns new provider
@@ -131,11 +135,13 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *AuthorizedClient,
 	shutdownChan chan struct{}) {
 	http.HandleFunc(callbackPath, p.CallbackHandler(ctx, clientChan))
+	http.HandleFunc(errorPath, p.ErrorHandler())
 	srv := &http.Server{Addr: ":" + strconv.Itoa(p.port)}
 
 	// handle server shutdown signal
 	go func() {
 		<-shutdownChan
+
 		ui.Info("Shutting down server...")
 
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(shutdownTimeout))
@@ -162,14 +168,14 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 		requestState, ok := ctx.Value(oauthStateStringContextKey).(string)
 		if !ok {
 			ui.Errf("unknown oauth state: %v", ctx.Value(oauthStateStringContextKey))
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
 			return
 		}
 
 		responseState := r.FormValue("state")
 		if responseState != requestState {
 			ui.Errf("invalid oauth state, expected %s, got %s", requestState, responseState)
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -177,19 +183,29 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 		token, err := p.oauthConfig.Exchange(ctx, code)
 		if err != nil {
 			ui.Errf("exchanging oauth code: %v", err)
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
 			return
 		}
 
 		if _, err = fmt.Fprint(w, successPage); err != nil {
 			ui.Errf("showing success page: %v", err)
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
 			return
 		}
 
 		clientChan <- &AuthorizedClient{
 			Client: p.oauthConfig.Client(ctx, token),
 			Token:  token,
+		}
+	}
+}
+
+// ErrorHandler is oauth error handler
+func (p Provider) ErrorHandler() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := fmt.Fprint(w, errorPage); err != nil {
+			ui.Errf("showing success page: %v", err)
+			return
 		}
 	}
 }
