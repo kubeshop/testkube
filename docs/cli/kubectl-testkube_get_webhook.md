@@ -22,7 +22,7 @@ kubectl-testkube get webhook <webhookName> [flags]
 
 ```
       --analytics-enabled    enable analytics
-  -w, --api-uri string       api uri, default value read from config if set (default "http://testdash.testkube.io/api")
+  -w, --api-uri string       api uri, default value read from config if set
   -c, --client string        client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --go-template string   go template to render (default "{{.}}")
       --namespace string     Kubernetes namespace, default value read from config if set (default "testkube")

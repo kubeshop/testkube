@@ -18,7 +18,7 @@ kubectl-testkube delete test [testName] [flags]
 
 ```
       --analytics-enabled   enable analytics
-  -w, --api-uri string      api uri, default value read from config if set (default "http://testdash.testkube.io/api")
+  -w, --api-uri string      api uri, default value read from config if set
   -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string    kubernetes namespace (default "testkube")
       --oauth-enabled       enable oauth
