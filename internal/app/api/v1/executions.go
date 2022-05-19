@@ -369,7 +369,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 				return
 			}
 
-			if isExecutionFinished(execution) {
+			if execution.ExecutionResult.IsCompleted() {
 				err := s.streamLogsFromStorage(execution.ExecutionResult, w)
 				if err != nil {
 					output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
@@ -599,11 +599,4 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 	}
 
 	return result
-}
-
-// isExecutionFinished decides if an execution is done running
-func isExecutionFinished(execution testkube.Execution) bool {
-	return execution.ExecutionResult.IsCompleted() ||
-		string(*execution.ExecutionResult.Status) == string(testkube.SUCCESS_Status) ||
-		string(*execution.ExecutionResult.Status) == string(testkube.ERROR__Status)
 }
