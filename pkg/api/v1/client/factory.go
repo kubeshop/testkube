@@ -33,7 +33,8 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			}
 		}
 
-		client = NewDirectAPIClient(options.APIURI, token, options.Config)
+		httpClient := GetHTTTPClient(token, options.Config)
+		client = NewDirectAPIClient(httpClient, options.APIURI)
 	case ClientProxy:
 		clientset, err := GetClientSet("")
 		if err != nil {

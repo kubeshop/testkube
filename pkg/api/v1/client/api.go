@@ -1,7 +1,8 @@
 package client
 
 import (
-	"golang.org/x/oauth2"
+	"net/http"
+
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -33,24 +34,24 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 }
 
 // NewDirectAPIClient returns direct api client
-func NewDirectAPIClient(apiURI string, token *oauth2.Token, config *oauth2.Config) APIClient {
+func NewDirectAPIClient(httpClient *http.Client, apiURI string) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewDirectClient[testkube.Test](apiURI, token, config),
-			NewDirectClient[testkube.Execution](apiURI, token, config),
-			NewDirectClient[testkube.TestWithExecution](apiURI, token, config),
-			NewDirectClient[testkube.ExecutionsResult](apiURI, token, config),
-			NewDirectClient[testkube.Artifact](apiURI, token, config),
-			NewDirectClient[testkube.ServerInfo](apiURI, token, config),
+			NewDirectClient[testkube.Test](httpClient, apiURI),
+			NewDirectClient[testkube.Execution](httpClient, apiURI),
+			NewDirectClient[testkube.TestWithExecution](httpClient, apiURI),
+			NewDirectClient[testkube.ExecutionsResult](httpClient, apiURI),
+			NewDirectClient[testkube.Artifact](httpClient, apiURI),
+			NewDirectClient[testkube.ServerInfo](httpClient, apiURI),
 		),
 		TestSuiteClient: NewTestSuiteClient(
-			NewDirectClient[testkube.TestSuite](apiURI, token, config),
-			NewDirectClient[testkube.TestSuiteExecution](apiURI, token, config),
-			NewDirectClient[testkube.TestSuiteWithExecution](apiURI, token, config),
-			NewDirectClient[testkube.TestSuiteExecutionsResult](apiURI, token, config),
+			NewDirectClient[testkube.TestSuite](httpClient, apiURI),
+			NewDirectClient[testkube.TestSuiteExecution](httpClient, apiURI),
+			NewDirectClient[testkube.TestSuiteWithExecution](httpClient, apiURI),
+			NewDirectClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI),
 		),
-		ExecutorClient: NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](apiURI, token, config)),
-		WebhookClient:  NewWebhookClient(NewDirectClient[testkube.Webhook](apiURI, token, config)),
+		ExecutorClient: NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI)),
+		WebhookClient:  NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI)),
 	}
 }
 

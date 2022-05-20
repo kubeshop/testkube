@@ -18,14 +18,19 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// NewDirectClient returns new direct client
-func NewDirectClient[A All](apiURI string, token *oauth2.Token, config *oauth2.Config) DirectClient[A] {
+// GetHTTPClient prepares http client
+func GetHTTTPClient(token *oauth2.Token, config *oauth2.Config) *http.Client {
 	httpClient := phttp.NewClient()
 	if token != nil && config != nil {
 		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 		httpClient = config.Client(ctx, token)
 	}
 
+	return httpClient
+}
+
+// NewDirectClient returns new direct client
+func NewDirectClient[A All](httpClient *http.Client, apiURI string) DirectClient[A] {
 	return DirectClient[A]{
 		client: httpClient,
 		apiURI: apiURI,
