@@ -28,20 +28,17 @@ func NewConfigureOAuthCmd(port int) *cobra.Command {
 				return fmt.Errorf("please pass valid api uri value")
 			}
 
-			if authURI == "" {
-				return fmt.Errorf("please pass valid auth uri value")
+			values := map[string]string{
+				"auth uri":      authURI,
+				"token uri":     tokenURI,
+				"client id":     clientID,
+				"client secret": clientSecret,
 			}
 
-			if tokenURI == "" {
-				return fmt.Errorf("please pass valid token uri value")
-			}
-
-			if clientID == "" {
-				return fmt.Errorf("please pass valid client id value")
-			}
-
-			if clientSecret == "" {
-				return fmt.Errorf("please pass valid client secret value")
+			for key, value := range values {
+				if value == "" {
+					return fmt.Errorf("please pass valid %s value", key)
+				}
 			}
 
 			return nil
