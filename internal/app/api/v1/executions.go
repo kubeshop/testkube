@@ -250,13 +250,13 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 }
 
 // createSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (secretVariables map[string]testkube.Variable, err error) {
+func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (vars map[string]testkube.Variable, err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
-	secretVariables = make(map[string]testkube.Variable, len(execution.Variables))
+	vars = make(map[string]testkube.Variable, len(execution.Variables))
 
 	for k, v := range execution.Variables {
-		secretVariables[k] = execution.Variables[k]
+		vars[k] = execution.Variables[k]
 		if v.IsSecret() {
 			obfuscated := execution.Variables[k]
 			obfuscated.Value = ""
@@ -273,14 +273,14 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (sec
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
 	if len(secrets) > 0 {
-		return secretVariables, s.SecretClient.Create(
+		return vars, s.SecretClient.Create(
 			secretName,
 			labels,
 			secrets,
 		)
 	}
 
-	return secretVariables, nil
+	return vars, nil
 }
 
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
