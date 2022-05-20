@@ -18,28 +18,28 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// NewDirectTransport returns new proxy transport
-func NewDirectTransport[A All](apiURI string, token *oauth2.Token, config *oauth2.Config) DirectTransport[A] {
+// NewDirectClient returns new direct client
+func NewDirectClient[A All](apiURI string, token *oauth2.Token, config *oauth2.Config) DirectClient[A] {
 	httpClient := phttp.NewClient()
 	if token != nil && config != nil {
 		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 		httpClient = config.Client(ctx, token)
 	}
 
-	return DirectTransport[A]{
+	return DirectClient[A]{
 		client: httpClient,
 		apiURI: apiURI,
 	}
 }
 
-// DirectTransport implements proxy transport
-type DirectTransport[A All] struct {
+// DirectClient implements direct client
+type DirectClient[A All] struct {
 	client *http.Client
 	apiURI string
 }
 
 // baseExecute is base execute method
-func (t DirectTransport[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp *http.Response, err error) {
+func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp *http.Response, err error) {
 	var buffer io.Reader
 	if body != nil {
 		buffer = bytes.NewBuffer(body)
@@ -72,7 +72,7 @@ func (t DirectTransport[A]) baseExec(method, uri, resource string, body []byte, 
 }
 
 // Execute is a method to make an api call for a single object
-func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+func (t DirectClient[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
@@ -83,7 +83,7 @@ func (t DirectTransport[A]) Execute(method, uri string, body []byte, params map[
 }
 
 // ExecuteMultiple is a method to make an api call for multiple objects
-func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
+func (t DirectClient[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
@@ -94,7 +94,7 @@ func (t DirectTransport[A]) ExecuteMultiple(method, uri string, body []byte, par
 }
 
 // Delete is a method to make delete api call
-func (t DirectTransport[A]) Delete(uri, selector string, isContentExpected bool) error {
+func (t DirectClient[A]) Delete(uri, selector string, isContentExpected bool) error {
 	resp, err := t.baseExec(http.MethodDelete, uri, uri, nil, map[string]string{"selector": selector})
 	if err != nil {
 		return err
@@ -114,13 +114,13 @@ func (t DirectTransport[A]) Delete(uri, selector string, isContentExpected bool)
 }
 
 // GetURI returns uri for api method
-func (t DirectTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
+func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s/%s%s", t.apiURI, Version, path)
 }
 
 // GetLogs returns logs stream from job pods, based on job pods logs
-func (t DirectTransport[A]) GetLogs(uri string, logs chan output.Output) error {
+func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		return err
@@ -143,7 +143,7 @@ func (t DirectTransport[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t DirectTransport[A]) GetFile(uri, fileName, destination string) (name string, err error) {
+func (t DirectClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
 	resp, err := t.client.Get(uri)
 	if err != nil {
 		return name, err
@@ -171,18 +171,18 @@ func (t DirectTransport[A]) GetFile(uri, fileName, destination string) (name str
 	return f.Name(), nil
 }
 
-func (t DirectTransport[A]) getFromResponse(resp *http.Response) (result A, err error) {
+func (t DirectClient[A]) getFromResponse(resp *http.Response) (result A, err error) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	return
 }
 
-func (t DirectTransport[A]) getFromResponses(resp *http.Response) (result []A, err error) {
+func (t DirectClient[A]) getFromResponses(resp *http.Response) (result []A, err error) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	return
 }
 
 // responseError tries to lookup if response is of Problem type
-func (t DirectTransport[A]) responseError(resp *http.Response) error {
+func (t DirectClient[A]) responseError(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		var pr problem.Problem
 

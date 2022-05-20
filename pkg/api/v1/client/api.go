@@ -14,21 +14,21 @@ var _ Client = (*APIClient)(nil)
 func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewProxyTransport[testkube.Test](client, config),
-			NewProxyTransport[testkube.Execution](client, config),
-			NewProxyTransport[testkube.TestWithExecution](client, config),
-			NewProxyTransport[testkube.ExecutionsResult](client, config),
-			NewProxyTransport[testkube.Artifact](client, config),
-			NewProxyTransport[testkube.ServerInfo](client, config),
+			NewProxyClient[testkube.Test](client, config),
+			NewProxyClient[testkube.Execution](client, config),
+			NewProxyClient[testkube.TestWithExecution](client, config),
+			NewProxyClient[testkube.ExecutionsResult](client, config),
+			NewProxyClient[testkube.Artifact](client, config),
+			NewProxyClient[testkube.ServerInfo](client, config),
 		),
 		TestSuiteClient: NewTestSuiteClient(
-			NewProxyTransport[testkube.TestSuite](client, config),
-			NewProxyTransport[testkube.TestSuiteExecution](client, config),
-			NewProxyTransport[testkube.TestSuiteWithExecution](client, config),
-			NewProxyTransport[testkube.TestSuiteExecutionsResult](client, config),
+			NewProxyClient[testkube.TestSuite](client, config),
+			NewProxyClient[testkube.TestSuiteExecution](client, config),
+			NewProxyClient[testkube.TestSuiteWithExecution](client, config),
+			NewProxyClient[testkube.TestSuiteExecutionsResult](client, config),
 		),
-		ExecutorClient: NewExecutorClient(NewProxyTransport[testkube.ExecutorDetails](client, config)),
-		WebhookClient:  NewWebhookClient(NewProxyTransport[testkube.Webhook](client, config)),
+		ExecutorClient: NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
+		WebhookClient:  NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
 	}
 }
 
@@ -36,21 +36,21 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 func NewDirectAPIClient(apiURI string, token *oauth2.Token, config *oauth2.Config) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewDirectTransport[testkube.Test](apiURI, token, config),
-			NewDirectTransport[testkube.Execution](apiURI, token, config),
-			NewDirectTransport[testkube.TestWithExecution](apiURI, token, config),
-			NewDirectTransport[testkube.ExecutionsResult](apiURI, token, config),
-			NewDirectTransport[testkube.Artifact](apiURI, token, config),
-			NewDirectTransport[testkube.ServerInfo](apiURI, token, config),
+			NewDirectClient[testkube.Test](apiURI, token, config),
+			NewDirectClient[testkube.Execution](apiURI, token, config),
+			NewDirectClient[testkube.TestWithExecution](apiURI, token, config),
+			NewDirectClient[testkube.ExecutionsResult](apiURI, token, config),
+			NewDirectClient[testkube.Artifact](apiURI, token, config),
+			NewDirectClient[testkube.ServerInfo](apiURI, token, config),
 		),
 		TestSuiteClient: NewTestSuiteClient(
-			NewDirectTransport[testkube.TestSuite](apiURI, token, config),
-			NewDirectTransport[testkube.TestSuiteExecution](apiURI, token, config),
-			NewDirectTransport[testkube.TestSuiteWithExecution](apiURI, token, config),
-			NewDirectTransport[testkube.TestSuiteExecutionsResult](apiURI, token, config),
+			NewDirectClient[testkube.TestSuite](apiURI, token, config),
+			NewDirectClient[testkube.TestSuiteExecution](apiURI, token, config),
+			NewDirectClient[testkube.TestSuiteWithExecution](apiURI, token, config),
+			NewDirectClient[testkube.TestSuiteExecutionsResult](apiURI, token, config),
 		),
-		ExecutorClient: NewExecutorClient(NewDirectTransport[testkube.ExecutorDetails](apiURI, token, config)),
-		WebhookClient:  NewWebhookClient(NewDirectTransport[testkube.Webhook](apiURI, token, config)),
+		ExecutorClient: NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](apiURI, token, config)),
+		WebhookClient:  NewWebhookClient(NewDirectClient[testkube.Webhook](apiURI, token, config)),
 	}
 }
 

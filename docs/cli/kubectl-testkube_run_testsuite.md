@@ -14,7 +14,7 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
 
 ```
       --concurrency int                 concurrency level for multiple test suite execution (default 10)
-  -a, --download-artifacts              download artifacts automatically
+  -d, --download-artifacts              download artifacts automatically
       --download-dir string             download dir (default "artifacts")
   -h, --help                            help for testsuite
       --http-proxy string               http proxy for executor containers
@@ -30,7 +30,7 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
 
 ```
       --analytics-enabled   enable analytics
-  -w, --api-uri string      api uri, default value read from config if set
+  -a, --api-uri string      api uri, default value read from config if set
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth

@@ -39,22 +39,22 @@ func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err erro
 	return kubernetes.NewForConfig(restcfg)
 }
 
-// NewProxyTransport returns new proxy transport
-func NewProxyTransport[A All](client kubernetes.Interface, config APIConfig) ProxyTransport[A] {
-	return ProxyTransport[A]{
+// NewProxyClient returns new proxy client
+func NewProxyClient[A All](client kubernetes.Interface, config APIConfig) ProxyClient[A] {
+	return ProxyClient[A]{
 		client: client,
 		config: config,
 	}
 }
 
-// ProxyTransport implements proxy transport
-type ProxyTransport[A All] struct {
+// ProxyClient implements proxy client
+type ProxyClient[A All] struct {
 	client kubernetes.Interface
 	config APIConfig
 }
 
 // baseExecute is base execute method
-func (t ProxyTransport[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp rest.Result, err error) {
+func (t ProxyClient[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp rest.Result, err error) {
 	req := t.getProxy(method).
 		Suffix(uri)
 	if body != nil {
@@ -77,7 +77,7 @@ func (t ProxyTransport[A]) baseExec(method, uri, resource string, body []byte, p
 }
 
 // Execute is a method to make an api call for a single object
-func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
+func (t ProxyClient[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
@@ -87,7 +87,7 @@ func (t ProxyTransport[A]) Execute(method, uri string, body []byte, params map[s
 }
 
 // ExecuteMultiple is a method to make an api call for multiple objects
-func (t ProxyTransport[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
+func (t ProxyClient[A]) ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
@@ -97,7 +97,7 @@ func (t ProxyTransport[A]) ExecuteMultiple(method, uri string, body []byte, para
 }
 
 // Delete is a method to make delete api call
-func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) error {
+func (t ProxyClient[A]) Delete(uri, selector string, isContentExpected bool) error {
 	resp, err := t.baseExec(http.MethodDelete, uri, uri, nil, map[string]string{"selector": selector})
 	if err != nil {
 		return err
@@ -119,13 +119,13 @@ func (t ProxyTransport[A]) Delete(uri, selector string, isContentExpected bool) 
 }
 
 // GetURI returns uri for api method
-func (t ProxyTransport[A]) GetURI(pathTemplate string, params ...interface{}) string {
+func (t ProxyClient[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s%s", Version, path)
 }
 
 // GetLogs returns logs stream from job pods, based on job pods logs
-func (t ProxyTransport[A]) GetLogs(uri string, logs chan output.Output) error {
+func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
 	resp, err := t.getProxy(http.MethodGet).
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
@@ -145,7 +145,7 @@ func (t ProxyTransport[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t ProxyTransport[A]) GetFile(uri, fileName, destination string) (name string, err error) {
+func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
 	req, err := t.getProxy(http.MethodGet).
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
@@ -168,7 +168,7 @@ func (t ProxyTransport[A]) GetFile(uri, fileName, destination string) (name stri
 	return f.Name(), err
 }
 
-func (t ProxyTransport[A]) getProxy(requestType string) *rest.Request {
+func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
 	return t.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(t.config.Namespace).
 		Resource("services").
@@ -177,7 +177,7 @@ func (t ProxyTransport[A]) getProxy(requestType string) *rest.Request {
 		SubResource("proxy")
 }
 
-func (t ProxyTransport[A]) getFromResponse(resp rest.Result) (result A, err error) {
+func (t ProxyClient[A]) getFromResponse(resp rest.Result) (result A, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return result, err
@@ -187,7 +187,7 @@ func (t ProxyTransport[A]) getFromResponse(resp rest.Result) (result A, err erro
 	return result, err
 }
 
-func (t ProxyTransport[A]) getFromResponses(resp rest.Result) (result []A, err error) {
+func (t ProxyClient[A]) getFromResponses(resp rest.Result) (result []A, err error) {
 	bytes, err := resp.Raw()
 	if err != nil {
 		return result, err
@@ -197,7 +197,7 @@ func (t ProxyTransport[A]) getFromResponses(resp rest.Result) (result []A, err e
 	return result, err
 }
 
-func (t ProxyTransport[A]) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
+func (t ProxyClient[A]) getProblemFromResponse(resp rest.Result) (problem.Problem, error) {
 	bytes, respErr := resp.Raw()
 
 	problemResponse := problem.Problem{}
@@ -212,7 +212,7 @@ func (t ProxyTransport[A]) getProblemFromResponse(resp rest.Result) (problem.Pro
 }
 
 // responseError tries to lookup if response is of Problem type
-func (t ProxyTransport[A]) responseError(resp rest.Result) error {
+func (t ProxyClient[A]) responseError(resp rest.Result) error {
 	if resp.Error() != nil {
 		pr, err := t.getProblemFromResponse(resp)
 

@@ -10,7 +10,7 @@ kubectl-testkube [flags]
 
 ```
       --analytics-enabled   enable analytics
-  -w, --api-uri string      api uri, default value read from config if set
+  -a, --api-uri string      api uri, default value read from config if set
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help                help for kubectl-testkube
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
