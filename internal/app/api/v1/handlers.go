@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -12,6 +13,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/utils/text"
+)
+
+const (
+	// cliIngressHeader is cli ingress header
+	cliIngressHeader = "X-CLI-Ingress"
 )
 
 // HandleEmitterLogs is a handler to emit logs
@@ -31,7 +37,7 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 // AuthHandler is auth middleware
 func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if c.Get("X-CLI-Ingress", "") != "" {
+		if c.Get(cliIngressHeader, "") != "" {
 			client := phttp.NewClient()
 			req, err := http.NewRequest(http.MethodGet, os.Getenv("TESTKUBE_USERINFO_URI"), nil)
 			if err != nil {
@@ -48,6 +54,10 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 				return err
 			}
 			defer resp.Body.Close()
+
+			if resp.StatusCode >= 400 {
+				return fmt.Errorf("status: %s", resp.Status)
+			}
 
 			if _, err = ioutil.ReadAll(resp.Body); err != nil {
 				s.Log.Errorf("error reading oauth response", "error", err)

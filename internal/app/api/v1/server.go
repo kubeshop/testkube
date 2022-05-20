@@ -160,7 +160,7 @@ func (s TestkubeAPI) Init() {
 
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
-	s.Routes.Use(s.AuthHandler)
+	s.Routes.Use(s.AuthHandler())
 
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
