@@ -3,8 +3,6 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -18,21 +16,17 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
@@ -253,92 +247,6 @@ func (s TestkubeAPI) Init() {
 	s.HandleEmitterLogs()
 
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
-}
-
-func (s TestkubeAPI) HandleEmitterLogs() {
-	go func() {
-		s.Log.Debug("Listening for workers results")
-		for resp := range s.EventsEmitter.Responses {
-			if resp.Error != nil {
-				s.Log.Errorw("got error when sending webhooks", "response", resp)
-				continue
-			}
-			s.Log.Debugw("got webhook response", "response", resp)
-		}
-	}()
-}
-
-// AuthHandler is auth middleware
-func (s TestkubeAPI) AuthHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		if c.Get("X-CLI-Ingress", "") != "" {
-			client := phttp.NewClient()
-			req, err := http.NewRequest(http.MethodGet, os.Getenv("TESTKUBE_USERINFO_URI"), nil)
-			if err != nil {
-				s.Log.Errorf("error preparing oauth request", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
-			}
-
-			req.Header.Add("Authorization", c.Get("Authorization", ""))
-			resp, err := client.Do(req)
-			if err != nil {
-				s.Log.Errorf("error sending oauth request", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
-			}
-			defer resp.Body.Close()
-
-			if _, err = ioutil.ReadAll(resp.Body); err != nil {
-				s.Log.Errorf("error reading oauth response", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
-			}
-		}
-
-		return c.Next()
-	}
-}
-
-func (s TestkubeAPI) InfoHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(testkube.ServerInfo{
-			Commit:  api.Commit,
-			Version: api.Version,
-		})
-	}
-}
-
-func (s TestkubeAPI) RoutesHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		routes := []fiber.Route{}
-
-		stack := s.Mux.Stack()
-		for _, e := range stack {
-			for _, s := range e {
-				route := *s
-				routes = append(routes, route)
-			}
-		}
-
-		return c.JSON(routes)
-	}
-}
-
-func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		go func(host, path, method string) {
-			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
-			if err != nil {
-				l.Debugw("sending analytics event error", "error", err)
-			} else {
-				l.Debugw("anonymous info to tracker sent", "output", out)
-			}
-		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
-
-		return c.Next()
-	}
 }
 
 // TODO should we use single generic filter for all list based resources ?
