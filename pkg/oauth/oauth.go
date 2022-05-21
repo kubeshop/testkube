@@ -72,7 +72,7 @@ type AuthorizedClient struct {
 	Token  *oauth2.Token
 }
 
-// ValidateTokens validates token
+// ValidateToken validates token
 func (p Provider) ValidateToken(token *oauth2.Token) (*oauth2.Token, error) {
 	tokenSource := p.oauthConfig.TokenSource(context.Background(), token)
 	return tokenSource.Token()
