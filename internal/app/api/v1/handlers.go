@@ -1,17 +1,19 @@
 package v1
 
 import (
-	"fmt"
-	"io/ioutil"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	phttp "github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
@@ -38,29 +40,33 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Get(cliIngressHeader, "") != "" {
-			client := phttp.NewClient()
-			req, err := http.NewRequest(http.MethodGet, os.Getenv("TESTKUBE_USERINFO_URI"), nil)
+			authorization := strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix+" ")
+			data, err := base64.StdEncoding.DecodeString(authorization)
 			if err != nil {
-				s.Log.Errorf("error preparing oauth request", "error", err)
+				s.Log.Errorf("error decoding string", "error", err)
 				c.Status(http.StatusUnauthorized)
 				return err
 			}
 
-			req.Header.Add("Authorization", c.Get("Authorization", ""))
-			resp, err := client.Do(req)
-			if err != nil {
-				s.Log.Errorf("error sending oauth request", "error", err)
+			var token oauth2.Token
+			if err = json.Unmarshal(data, &token); err != nil {
+				s.Log.Errorf("error unmarshaling json", "error", err)
 				c.Status(http.StatusUnauthorized)
 				return err
 			}
-			defer resp.Body.Close()
 
-			if resp.StatusCode >= 400 {
-				return fmt.Errorf("status: %s", resp.Status)
+			config := &oauth2.Config{
+				ClientID:     os.Getenv("TESTKUBE_OAUTH_CLIENT_ID"),
+				ClientSecret: os.Getenv("TESTKUBE_OAUTH_CLIENT_SECRET"),
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  os.Getenv("TESTKUBE_OAUTH_AUTH_URL"),
+					TokenURL: os.Getenv("TESTKUBE_OAUTH_TOKEN_URL"),
+				},
+				Scopes: strings.Split(os.Getenv("TESTKUBE_OAUTH_SCOPES"), ","),
 			}
-
-			if _, err = ioutil.ReadAll(resp.Body); err != nil {
-				s.Log.Errorf("error reading oauth response", "error", err)
+			provider := oauth.NewProvider(config)
+			if _, err = provider.ValidateToken(&token); err != nil {
+				s.Log.Errorf("error validating token", "error", err)
 				c.Status(http.StatusUnauthorized)
 				return err
 			}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	phttp "github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
 	"golang.org/x/oauth2"
 )
@@ -46,7 +47,8 @@ func GetHTTTPClient(token *oauth2.Token) (*http.Client, error) {
 			return nil, err
 		}
 
-		httpClient.Transport = &transport{headers: map[string]string{"Authorization": "Bearer " + base64.StdEncoding.EncodeToString(data)}}
+		httpClient.Transport = &transport{headers: map[string]string{"Authorization": oauth.AuthorizationPrefix + " " +
+			base64.StdEncoding.EncodeToString(data)}}
 	}
 
 	return httpClient, nil

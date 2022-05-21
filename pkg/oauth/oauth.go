@@ -20,8 +20,10 @@ import (
 type key int
 
 const (
-	// localIP to open local website
+	// localIP is ip uo open local website
 	localIP = "127.0.0.1"
+	// localPort is port to open local website
+	localPort = 13254
 	// authTimeout is time to wait for authentication completed
 	authTimeout = 60
 	// oauthStateStringContextKey is a context key for oauth strategy
@@ -42,20 +44,22 @@ const (
 	// errorPage is a page to show for failed authentication
 	errorPage = `<html><body><h2>Error!</h2>
 		<p>Authentication was failed, please check the program logs.</p></body</html>`
+	// AuthorizationPrefix is authorization prefix
+	AuthorizationPrefix = "Bearer"
 )
 
 // NewProvider returns new provider
-func NewProvider(oauthConfig *oauth2.Config, port int) Provider {
+func NewProvider(oauthConfig *oauth2.Config) Provider {
 	// add transport for self-signed certificate to context
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	oauthConfig.RedirectURL = fmt.Sprintf("http://%s:%d%s", localIP, port, callbackPath)
+	oauthConfig.RedirectURL = fmt.Sprintf("http://%s:%d%s", localIP, localPort, callbackPath)
 	return Provider{
 		oauthConfig: oauthConfig,
 		client:      &http.Client{Transport: tr},
-		port:        port,
+		port:        localPort,
 	}
 }
 

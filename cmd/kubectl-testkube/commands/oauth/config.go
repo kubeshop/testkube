@@ -10,9 +10,6 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-// LocalPort is oauth local port
-const LocalPort = 13254
-
 // NewConfigureOAuthCmd is oauth config config cmd
 func NewConfigureOAuthCmd() *cobra.Command {
 	var (
@@ -57,7 +54,7 @@ func NewConfigureOAuthCmd() *cobra.Command {
 			cfg.OAuth2Data.Config.ClientSecret = clientSecret
 			cfg.OAuth2Data.Config.Scopes = scopes
 
-			provider := poauth.NewProvider(&cfg.OAuth2Data.Config, LocalPort)
+			provider := poauth.NewProvider(&cfg.OAuth2Data.Config)
 			client, err := provider.AuthenticateUser(nil)
 			ui.ExitOnError("authenticating user", err)
 
