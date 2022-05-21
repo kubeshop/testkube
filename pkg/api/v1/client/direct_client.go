@@ -19,22 +19,22 @@ import (
 )
 
 type transport struct {
-    headers map[string]string
-    base    http.RoundTripper
+	headers map[string]string
+	base    http.RoundTripper
 }
 
 // RoundTrip is a method to adjust http request
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-    for k, v := range t.headers {
-        req.Header.Add(k, v)
+	for k, v := range t.headers {
+		req.Header.Add(k, v)
 	}
-	
-    base := t.base
-    if base == nil {
-        base = http.DefaultTransport
+
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
 	}
-	
-    return base.RoundTrip(req)
+
+	return base.RoundTrip(req)
 }
 
 // GetHTTPClient prepares http client
