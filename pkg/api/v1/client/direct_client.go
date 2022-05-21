@@ -2,7 +2,7 @@ package client
 
 import (
 	"bytes"
-	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,15 +18,38 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type transport struct {
+    headers map[string]string
+    base    http.RoundTripper
+}
+
+// RoundTrip is a method to adjust http request
+func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
+    for k, v := range t.headers {
+        req.Header.Add(k, v)
+	}
+	
+    base := t.base
+    if base == nil {
+        base = http.DefaultTransport
+	}
+	
+    return base.RoundTrip(req)
+}
+
 // GetHTTPClient prepares http client
-func GetHTTTPClient(token *oauth2.Token, config *oauth2.Config) *http.Client {
+func GetHTTTPClient(token *oauth2.Token) (*http.Client, error) {
 	httpClient := phttp.NewClient()
-	if token != nil && config != nil {
-		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-		httpClient = config.Client(ctx, token)
+	if token != nil {
+		data, err := json.Marshal(token)
+		if err != nil {
+			return nil, err
+		}
+
+		httpClient.Transport = &transport{headers: map[string]string{"Authorization": "Bearer " + base64.StdEncoding.EncodeToString(data)}}
 	}
 
-	return httpClient
+	return httpClient, nil
 }
 
 // NewDirectClient returns new direct client

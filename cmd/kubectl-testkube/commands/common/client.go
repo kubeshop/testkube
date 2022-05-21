@@ -3,6 +3,7 @@ package common
 import (
 	"strconv"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -18,8 +19,9 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	ui.ExitOnError("parsing flag value", err)
 
 	options := client.Options{
-		Namespace: namespace,
-		APIURI:    apiURI,
+		Namespace:      namespace,
+		APIURI:         apiURI,
+		OAuthLocalPort: oauth.LocalPort,
 	}
 
 	if oauthEnabled {

@@ -20,7 +20,7 @@ func NewConfigCmd() *cobra.Command {
 
 	cmd.AddCommand(config.NewConfigureNamespaceCmd())
 	cmd.AddCommand(config.NewConfigureAPIURICmd())
-	cmd.AddCommand(oauth.NewConfigureOAuthCmd(OAuthLocalPort))
+	cmd.AddCommand(oauth.NewConfigureOAuthCmd())
 
 	return cmd
 }

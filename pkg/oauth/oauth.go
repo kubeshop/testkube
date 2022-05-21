@@ -72,6 +72,12 @@ type AuthorizedClient struct {
 	Token  *oauth2.Token
 }
 
+// ValidateTokens validates token
+func (p Provider) ValidateToken(token *oauth2.Token) (*oauth2.Token, error) {
+	tokenSource := p.oauthConfig.TokenSource(context.Background(), token)
+	return tokenSource.Token()
+}
+
 // AuthenticateUser starts the login process
 func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient, err error) {
 	oauthStateString, err := utils.NewRandomString(randomLength)
