@@ -18,9 +18,11 @@ kubectl-testkube download artifact <executionID> <fileName> <destinationDir> [fl
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
+  -a, --api-uri string      api uri, default value read from config if set
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
+      --oauth-enabled       enable oauth
       --verbose             should I show additional debug messages
 ```
 

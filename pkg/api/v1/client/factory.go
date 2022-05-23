@@ -1,9 +1,10 @@
 package client
 
 import (
-	"os"
+	"fmt"
 
-	"k8s.io/client-go/kubernetes"
+	"github.com/kubeshop/testkube/pkg/oauth"
+	"golang.org/x/oauth2"
 )
 
 type ClientType string
@@ -13,24 +14,42 @@ const (
 	ClientProxy  ClientType = "proxy"
 )
 
+// Options contains client options
+type Options struct {
+	Namespace string
+	APIURI    string
+	Token     *oauth2.Token
+	Config    *oauth2.Config
+}
+
 // GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
-func GetClient(clientType ClientType, namespace string) (client Client, err error) {
-	var overrideHost string
-	var clientset kubernetes.Interface
-
-	if clientType == ClientDirect {
-		overrideHost = "http://127.0.0.1:8080"
-		if host, ok := os.LookupEnv("TESTKUBE_KUBEPROXY_HOST"); ok {
-			overrideHost = host
+func GetClient(clientType ClientType, options Options) (client Client, err error) {
+	switch clientType {
+	case ClientDirect:
+		var token *oauth2.Token
+		if options.Token != nil {
+			provider := oauth.NewProvider(options.Config)
+			if token, err = provider.ValidateToken(options.Token); err != nil {
+				return client, err
+			}
 		}
-	}
 
-	clientset, err = GetClientSet(overrideHost)
-	if err != nil {
-		return client, err
-	}
+		httpClient, err := GetHTTTPClient(token)
+		if err != nil {
+			return client, err
+		}
 
-	client = NewAPIClient(clientset, NewAPIConfig(namespace))
+		client = NewDirectAPIClient(httpClient, options.APIURI)
+	case ClientProxy:
+		clientset, err := GetClientSet("")
+		if err != nil {
+			return client, err
+		}
+
+		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace))
+	default:
+		return client, fmt.Errorf("unsupported client type %s", clientType)
+	}
 
 	return client, err
 }

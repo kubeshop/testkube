@@ -14,10 +14,10 @@ Pass values to Testkube Helm chart during installation or upgrade (they are empt
 Pay attention to the usage of the scheme (http or https) in uris.
 
 ```sh
---set testkube-api.ingress.enabled=true \
---set testkube-api.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
---set testkube-api.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri" \
---set testkube-api.ingress.annotations."nginx\.ingress\.kubernetes\.io/access-control-allow-origin" = "*"
+--set testkube-api.uiIngress.enabled=true \
+--set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
+--set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri" \
+--set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/access-control-allow-origin" = "*"
 ```
 
 ## UI Ingress

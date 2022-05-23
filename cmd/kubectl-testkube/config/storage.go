@@ -5,11 +5,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 )
 
 var DefaultConfig = Data{
 	AnalyticsEnabled: true,
 	Namespace:        "testkube",
+	OAuth2Data: OAuth2Data{
+		Config: oauth2.Config{
+			Endpoint: github.Endpoint,
+		},
+	},
 }
 
 const configDirName = ".testkube"
