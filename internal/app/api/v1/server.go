@@ -160,13 +160,11 @@ type oauthParams struct {
 
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
-	err := envconfig.Process("STORAGE", &s.storageParams)
-	if err != nil {
+	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
 	}
 
-	err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams)
-	if err != nil {
+	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
 		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
 
