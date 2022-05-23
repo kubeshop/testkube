@@ -13,6 +13,7 @@ var TestSuiteExecutionStatusFailed = TestSuiteExecutionStatusPtr(FAILED_TestSuit
 var TestSuiteExecutionStatusPassed = TestSuiteExecutionStatusPtr(PASSED_TestSuiteExecutionStatus)
 var TestSuiteExecutionStatusQueued = TestSuiteExecutionStatusPtr(QUEUED_TestSuiteExecutionStatus)
 var TestSuiteExecutionStatusRunning = TestSuiteExecutionStatusPtr(RUNNING_TestSuiteExecutionStatus)
+var TestSuiteExecutionStatusCancelled = TestSuiteExecutionStatusPtr(CANCELLED_TestSuiteExecutionStatus)
 
 // TestSuiteExecutionStatuses is an array of TestSuiteExecutionStatus
 type TestSuiteExecutionStatuses []TestSuiteExecutionStatus

@@ -13,8 +13,9 @@ type TestSuiteExecutionStatus string
 
 // List of TestSuiteExecutionStatus
 const (
-	QUEUED_TestSuiteExecutionStatus  TestSuiteExecutionStatus = "queued"
-	RUNNING_TestSuiteExecutionStatus TestSuiteExecutionStatus = "running"
-	PASSED_TestSuiteExecutionStatus  TestSuiteExecutionStatus = "passed"
-	FAILED_TestSuiteExecutionStatus  TestSuiteExecutionStatus = "failed"
+	QUEUED_TestSuiteExecutionStatus    TestSuiteExecutionStatus = "queued"
+	RUNNING_TestSuiteExecutionStatus   TestSuiteExecutionStatus = "running"
+	PASSED_TestSuiteExecutionStatus    TestSuiteExecutionStatus = "passed"
+	FAILED_TestSuiteExecutionStatus    TestSuiteExecutionStatus = "failed"
+	CANCELLED_TestSuiteExecutionStatus TestSuiteExecutionStatus = "cancelled"
 )
