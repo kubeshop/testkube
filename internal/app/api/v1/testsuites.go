@@ -467,7 +467,12 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		}(&testsuiteExecution)
 
 		hasFailedSteps := false
+		cancellSteps := false
 		for i := range testsuiteExecution.StepResults {
+			if cancellSteps {
+				testsuiteExecution.StepResults[i].Execution.ExecutionResult.Cancel()
+				continue
+			}
 
 			// start execution of given step
 			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
@@ -488,7 +493,8 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			if testsuiteExecution.StepResults[i].IsFailed() {
 				hasFailedSteps = true
 				if testsuiteExecution.StepResults[i].Step.StopTestOnFailure {
-					break
+					cancellSteps = true
+					continue
 				}
 			}
 		}
