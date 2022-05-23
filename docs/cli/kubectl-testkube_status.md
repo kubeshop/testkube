@@ -15,9 +15,11 @@ kubectl-testkube status <feature|resource> [flags]
 ### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics (default true)
+      --analytics-enabled   enable analytics
+  -a, --api-uri string      api uri, default value read from config if set
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
+      --oauth-enabled       enable oauth
       --verbose             show additional debug messages
 ```
 
@@ -25,4 +27,5 @@ kubectl-testkube status <feature|resource> [flags]
 
 * [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [kubectl-testkube status analytics](kubectl-testkube_status_analytics.md)	 - Get analytics status
+* [kubectl-testkube status oauth](kubectl-testkube_status_oauth.md)	 - Get oauth status
 

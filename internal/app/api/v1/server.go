@@ -16,11 +16,9 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -29,7 +27,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
@@ -116,6 +113,7 @@ type TestkubeAPI struct {
 	Namespace            string
 	AnalyticsEnabled     bool
 	ClusterID            string
+	oauthParams          oauthParams
 }
 
 type jobTemplates struct {
@@ -152,17 +150,29 @@ type storageParams struct {
 	Token           string
 }
 
+type oauthParams struct {
+	ClientID     string
+	ClientSecret string
+	AuthURL      string
+	TokenURL     string
+	Scopes       string
+}
+
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
-	err := envconfig.Process("STORAGE", &s.storageParams)
-	if err != nil {
+	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
+	}
+
+	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
+		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
 
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
+	s.Routes.Use(s.AuthHandler())
 
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
@@ -249,60 +259,6 @@ func (s TestkubeAPI) Init() {
 	s.HandleEmitterLogs()
 
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
-}
-
-func (s TestkubeAPI) HandleEmitterLogs() {
-	go func() {
-		s.Log.Debug("Listening for workers results")
-		for resp := range s.EventsEmitter.Responses {
-			if resp.Error != nil {
-				s.Log.Errorw("got error when sending webhooks", "response", resp)
-				continue
-			}
-			s.Log.Debugw("got webhook response", "response", resp)
-		}
-	}()
-}
-
-func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		go func(host, path, method string) {
-			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
-			if err != nil {
-				l.Debugw("sending analytics event error", "error", err)
-			} else {
-				l.Debugw("anonymous info to tracker sent", "output", out)
-			}
-		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
-
-		return c.Next()
-	}
-}
-
-func (s TestkubeAPI) InfoHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(testkube.ServerInfo{
-			Commit:  api.Commit,
-			Version: api.Version,
-		})
-	}
-}
-
-func (s TestkubeAPI) RoutesHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		routes := []fiber.Route{}
-
-		stack := s.Mux.Stack()
-		for _, e := range stack {
-			for _, s := range e {
-				route := *s
-				routes = append(routes, route)
-			}
-		}
-
-		return c.JSON(routes)
-	}
 }
 
 // TODO should we use single generic filter for all list based resources ?
