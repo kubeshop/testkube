@@ -113,6 +113,7 @@ type TestkubeAPI struct {
 	Namespace            string
 	AnalyticsEnabled     bool
 	ClusterID            string
+	oauthParams          oauthParams
 }
 
 type jobTemplates struct {
@@ -149,11 +150,24 @@ type storageParams struct {
 	Token           string
 }
 
+type oauthParams struct {
+	ClientID     string
+	ClientSecret string
+	AuthURL      string
+	TokenURL     string
+	Scopes       string
+}
+
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
 	err := envconfig.Process("STORAGE", &s.storageParams)
 	if err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
+	}
+
+	err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams)
+	if err != nil {
+		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
 
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)

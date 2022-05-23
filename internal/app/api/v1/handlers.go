@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,7 +39,7 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Get(cliIngressHeader, "") != "" {
-			authorization := strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix+" ")
+			authorization := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix))
 			data, err := base64.StdEncoding.DecodeString(authorization)
 			if err != nil {
 				s.Log.Errorf("error decoding string", "error", err)
@@ -56,14 +55,15 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 			}
 
 			config := &oauth2.Config{
-				ClientID:     os.Getenv("TESTKUBE_OAUTH_CLIENT_ID"),
-				ClientSecret: os.Getenv("TESTKUBE_OAUTH_CLIENT_SECRET"),
+				ClientID:     s.oauthParams.ClientID,
+				ClientSecret: s.oauthParams.ClientSecret,
 				Endpoint: oauth2.Endpoint{
-					AuthURL:  os.Getenv("TESTKUBE_OAUTH_AUTH_URL"),
-					TokenURL: os.Getenv("TESTKUBE_OAUTH_TOKEN_URL"),
+					AuthURL:  s.oauthParams.AuthURL,
+					TokenURL: s.oauthParams.TokenURL,
 				},
-				Scopes: strings.Split(os.Getenv("TESTKUBE_OAUTH_SCOPES"), ","),
+				Scopes: strings.Split(s.oauthParams.Scopes, ","),
 			}
+
 			provider := oauth.NewProvider(config)
 			if _, err = provider.ValidateToken(&token); err != nil {
 				s.Log.Errorf("error validating token", "error", err)
