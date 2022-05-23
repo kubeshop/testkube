@@ -42,7 +42,7 @@ wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
 
 Add our repository to your apt sources:
 ```sh
-sudo echo "deb https://repo.testkube.io/linux linux main" >> /etc/apt/sources.list
+echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
 ```
 
 Make sure to get the updates:

@@ -20,6 +20,10 @@ func NewErrorExecutionResult(err error) ExecutionResult {
 	}
 }
 
+func (e *ExecutionResult) Cancel() {
+	e.Status = StatusPtr(CANCELLED_ExecutionStatus)
+}
+
 func (e *ExecutionResult) InProgress() {
 	e.Status = StatusPtr(RUNNING_ExecutionStatus)
 }
