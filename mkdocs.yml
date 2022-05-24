@@ -68,7 +68,9 @@ nav:
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md
-  - Development: development.md
+  - Development:
+      - Local Runs: development.md
+      - Custom Resources: development-crds.md
   - OpenAPI Definition: openapi.md
   - Telemetry: telemetry.md
   - Storage: artifacts-storage.md
