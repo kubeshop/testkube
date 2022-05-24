@@ -35,7 +35,7 @@ Kind:         CustomResourceDefinition
 ...
 ```
 
-Below, you will find short descriptions and minimal example definitions of the custom resources defined by Testkube.
+Below, you will find short descriptions and example declarations of the custom resources defined by Testkube.
 
 ## Tests
 
@@ -67,23 +67,35 @@ $ kubectl testkube get executors -o yaml | grep -A1 types
 When creating a Testkube Test, there are multiple supported input types:
 
 * string
-* file path
 * Git directory
 * Git file
-* File URI
+* file URI
 
-Parameters and secrets can also be configured.
+Variables can be configured using the `variables` field as shown below.
 
 ```yml
 apiVersion: tests.testkube.io/v2
 kind: Test
 metadata:
-    type: "soapui/xml"
+  name: example-test
+  namespace: testkube
 spec:
-    content:
-        data: <xml>...</xml>
-        type: string
-    type: "soapui/xml"
+  content:
+    data: "{...}"
+    type: string
+  type: postman/collection
+  variables:
+    var1:
+      name: var1
+      type: basic
+      value: val1
+    sec1:
+      name: sec1
+      type: secret
+      valueFrom:
+        secretKeyRef:
+          key: sec1
+          name: vartest4-testvars
 ```
 
 ## Test Suites
@@ -91,12 +103,27 @@ spec:
 Testkube Test Suites are collections of Testkube Tests of the same or different types.
 
 ```yml
-
+apiVersion: tests.testkube.io/v1
+kind: TestSuite
+metadata:
+  name: example-testsuite
+  namespace: testkube
+spec:
+  description: Example Test Suite
+  steps:
+    - execute:
+        name: example-test1
+        namespace: testkube
+    - delay:
+        duration: 1000
+    - execute:
+        name: example-test2
+        namespace: testkube
 ```
 
 ## Executors
 
-Executors are Testkube-specific test runners.
+Executors are Testkube-specific test runners. There are a list of predefined Executors coming with Testkube. You can also write your own custom Testkube Executor using [this guide](https://kubeshop.github.io/testkube/executor-custom/).
 
 Example:
 
@@ -108,26 +135,32 @@ metadata:
   namespace: testkube
 spec:
   executor_type: job  
-  # 'job' is currently the only type for custom executors
   image: YOUR_USER/testkube-executor-example:1.0.0 
-  # pass your repository and tag
   types:
   - example/test      
-  # your custom type registered (used when creating and running your testkube tests)
   content_types:
-  - string             # test content as string
-  - file-uri           # http based file content
-  - git-file           # file stored in Git
-  - git-dir            # entire dir/project stored in Git
+  - string
+  - file-uri
+  - git-file
+  - git-dir
   features: 
-  - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
-  - junit-report       # executor can have junit xml based results
+  - artifacts
+  - junit-report
 ```
 
 ## Webhooks
 
-Webhooks are ???
+Testkube Webhooks are event-based configurable scripts. They are executed when a test is either started or finished. This can be defined under `events`.
 
 ```yml
-
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: http://localhost:8080/events
+  events:
+  - start-test
+  - end-test
 ```
