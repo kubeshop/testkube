@@ -69,7 +69,6 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
-	// TODO filters looks messy need to introduce some common Filter object for Kubernetes query for List like objects
 	crTests, err := s.TestsClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err

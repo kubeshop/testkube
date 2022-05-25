@@ -1,4 +1,3 @@
-// TODO will be moved to testkube lib when completed
 package output
 
 import (

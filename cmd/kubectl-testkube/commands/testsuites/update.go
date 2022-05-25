@@ -68,7 +68,6 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 			err = validateSchedule(options.Schedule)
 			ui.ExitOnError("validating schedule", err)
 
-			// TODO: figure out how to remove labels from test suite
 			testSuite, err = client.UpdateTestSuite(options)
 			ui.ExitOnError("updating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
 			ui.Success("TestSuite updated", options.Name)

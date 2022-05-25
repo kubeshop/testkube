@@ -39,8 +39,7 @@ func (t TestWithExecution) GetObjectRef() *ObjectRef {
 	}
 
 	return &ObjectRef{
-		Name: name,
-		// TODO add namespace to test model and all dependencies
+		Name:      name,
 		Namespace: "testkube",
 	}
 }

@@ -313,7 +313,8 @@ func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution
 // ListExecutionsHandler returns array of available test executions
 func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// TODO should we split this to separate endpoint? currently this one handles
+		// TODO refactor into some Services (based on some abstraction for CRDs at least / CRUD)
+		// should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /tests/{id}/executions
 		// or should id be a query string as it's some kind of filter?
 
@@ -435,6 +436,7 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 		fileName := c.Params("filename")
 
 		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
+		// remember about CLI client and Dashboard client too!
 		unescaped, err := url.QueryUnescape(fileName)
 		if err == nil {
 			fileName = unescaped
@@ -550,7 +552,6 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-// TODO change vars1 after CR refactor
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
 	variables := map[string]testkube.Variable{}
 	for k, v := range vars1 {

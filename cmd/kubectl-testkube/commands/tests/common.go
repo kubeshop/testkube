@@ -77,7 +77,8 @@ func watchLogs(id string, client apiclientv1.Client) {
 
 	ui.NL()
 
-	// TODO watch for success | error status - in case of connection error on logs watch need fix in 0.8
+	// TODO Websocket research + plug into Event bus (EventEmitter)
+	// watch for success | error status - in case of connection error on logs watch need fix in 0.8
 	for range time.Tick(time.Second) {
 		execution, err := client.GetExecution(id)
 		ui.ExitOnError("get test execution details", err)
@@ -126,8 +127,6 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		return content, fmt.Errorf("empty test content, please pass some test content to create test")
 	}
 
-	// detect content type (git-file need to be everrided manually as we don't)
-	// TODO handle git-file somehow
 	if gitUri != "" && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeGitDir)
 	}
