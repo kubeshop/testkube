@@ -16,10 +16,13 @@ const (
 
 // Options contains client options
 type Options struct {
-	Namespace string
-	APIURI    string
-	Token     *oauth2.Token
-	Config    *oauth2.Config
+	Namespace    string
+	APIURI       string
+	Token        *oauth2.Token
+	Provider     oauth.ProviderType
+	ClientID     string
+	ClientSecret string
+	Scopes       []string
 }
 
 // GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
@@ -28,8 +31,8 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 	case ClientDirect:
 		var token *oauth2.Token
 		if options.Token != nil {
-			provider := oauth.NewProvider(options.Config)
-			if token, err = provider.ValidateToken(options.Token); err != nil {
+			provider := oauth.NewProvider(options.ClientID, options.ClientSecret, options.Scopes)
+			if token, err = provider.ValidateToken(options.Provider, options.Token); err != nil {
 				return client, err
 			}
 		}

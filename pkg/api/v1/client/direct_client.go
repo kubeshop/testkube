@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,13 +41,8 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 func GetHTTTPClient(token *oauth2.Token) (*http.Client, error) {
 	httpClient := phttp.NewClient()
 	if token != nil {
-		data, err := json.Marshal(token)
-		if err != nil {
-			return nil, err
-		}
-
-		httpClient.Transport = &transport{headers: map[string]string{"Authorization": oauth.AuthorizationPrefix + " " +
-			base64.StdEncoding.EncodeToString(data)}}
+		httpClient.Transport = &transport{headers: map[string]string{
+			"Authorization": oauth.AuthorizationPrefix + " " + token.AccessToken}}
 	}
 
 	return httpClient, nil

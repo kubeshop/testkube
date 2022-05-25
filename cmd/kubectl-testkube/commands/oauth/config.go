@@ -4,17 +4,16 @@ import (
 	"fmt"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/oauth"
 	poauth "github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
-	"golang.org/x/oauth2/github"
 )
 
 // NewConfigureOAuthCmd is oauth config config cmd
 func NewConfigureOAuthCmd() *cobra.Command {
 	var (
-		authURI      string
-		tokenURI     string
+		providerType string
 		clientID     string
 		clientSecret string
 		scopes       []string
@@ -29,8 +28,6 @@ func NewConfigureOAuthCmd() *cobra.Command {
 			}
 
 			values := map[string]string{
-				"auth uri":      authURI,
-				"token uri":     tokenURI,
 				"client id":     clientID,
 				"client secret": clientSecret,
 			}
@@ -41,6 +38,11 @@ func NewConfigureOAuthCmd() *cobra.Command {
 				}
 			}
 
+			provider := poauth.NewProvider(clientID, clientSecret, scopes)
+			if _, err := provider.GetValidator(poauth.ProviderType(providerType)); err != nil {
+				return err
+			}
+
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -48,14 +50,13 @@ func NewConfigureOAuthCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			cfg.APIURI = args[0]
-			cfg.OAuth2Data.Config.Endpoint.AuthURL = authURI
-			cfg.OAuth2Data.Config.Endpoint.TokenURL = tokenURI
-			cfg.OAuth2Data.Config.ClientID = clientID
-			cfg.OAuth2Data.Config.ClientSecret = clientSecret
-			cfg.OAuth2Data.Config.Scopes = scopes
+			cfg.OAuth2Data.Provider = poauth.ProviderType(providerType)
+			cfg.OAuth2Data.ClientID = clientID
+			cfg.OAuth2Data.ClientSecret = clientSecret
+			cfg.OAuth2Data.Scopes = scopes
 
-			provider := poauth.NewProvider(&cfg.OAuth2Data.Config)
-			client, err := provider.AuthenticateUser(nil)
+			provider := poauth.NewProvider(clientID, clientSecret, scopes)
+			client, err := provider.AuthenticateUser(poauth.ProviderType(providerType))
 			ui.ExitOnError("authenticating user", err)
 
 			cfg.OAuth2Data.Token = client.Token
@@ -66,8 +67,7 @@ func NewConfigureOAuthCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&authURI, "auth-uri", github.Endpoint.AuthURL, "auth uri for authentication provider (github is a default provider)")
-	cmd.Flags().StringVar(&tokenURI, "token-uri", github.Endpoint.TokenURL, "token uri for authentication provider (github is a default provider)")
+	cmd.Flags().StringVar(&providerType, "provider", string(oauth.GithubProviderType), "authentication provider, currently available: github")
 	cmd.Flags().StringVar(&clientID, "client-id", "", "client id for authentication provider")
 	cmd.Flags().StringVar(&clientSecret, "client-secret", "", "client secret for authentication provider")
 	cmd.Flags().StringArrayVar(&scopes, "scope", nil, "scope for authentication provider")

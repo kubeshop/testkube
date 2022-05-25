@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/kubeshop/testkube/pkg/oauth"
 	"golang.org/x/oauth2"
 )
 
@@ -30,9 +31,12 @@ func (c *Data) SetInitialized() {
 
 // OAuth2Data contains oauth credentials
 type OAuth2Data struct {
-	Enabled bool          `json:"enabled,omitempty"`
-	Token   *oauth2.Token `json:"token,omitempty"`
-	Config  oauth2.Config `json:"config,omitempty"`
+	Enabled      bool               `json:"enabled,omitempty"`
+	Token        *oauth2.Token      `json:"token,omitempty"`
+	ClientID     string             `json:"clientID,omitempty"`
+	ClientSecret string             `json:"clientSecret,omitempty"`
+	Provider     oauth.ProviderType `json:"providerType,omitempty"`
+	Scopes       []string           `json:"scopes"`
 }
 
 // EnableOAuth is oauth enable method

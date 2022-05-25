@@ -1,13 +1,10 @@
 package v1
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/analytics"
@@ -39,36 +36,16 @@ func (s TestkubeAPI) HandleEmitterLogs() {
 func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Get(cliIngressHeader, "") != "" {
-			authorization := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix))
-			data, err := base64.StdEncoding.DecodeString(authorization)
-			if err != nil {
-				s.Log.Errorf("error decoding string", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
+			token := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix))
+			scopes := []string{}
+			if s.oauthParams.Scopes != "" {
+				scopes = strings.Split(s.oauthParams.Scopes, ",")
 			}
 
-			var token oauth2.Token
-			if err = json.Unmarshal(data, &token); err != nil {
-				s.Log.Errorf("error unmarshaling json", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
-			}
-
-			config := &oauth2.Config{
-				ClientID:     s.oauthParams.ClientID,
-				ClientSecret: s.oauthParams.ClientSecret,
-				Endpoint: oauth2.Endpoint{
-					AuthURL:  s.oauthParams.AuthURL,
-					TokenURL: s.oauthParams.TokenURL,
-				},
-				Scopes: strings.Split(s.oauthParams.Scopes, ","),
-			}
-
-			provider := oauth.NewProvider(config)
-			if _, err = provider.ValidateToken(&token); err != nil {
+			provider := oauth.NewProvider(s.oauthParams.ClientID, s.oauthParams.ClientSecret, scopes)
+			if err := provider.ValidateAccessToken(s.oauthParams.Provider, token); err != nil {
 				s.Log.Errorf("error validating token", "error", err)
-				c.Status(http.StatusUnauthorized)
-				return err
+				return s.Error(c, http.StatusUnauthorized, err)
 			}
 		}
 
