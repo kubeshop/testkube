@@ -136,7 +136,6 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 
 	var sum int32
 
-	// TODO: statuses are messy e.g. success==passed error==failed
 	for _, o := range result {
 		sum += o.Count
 		switch testkube.TestSuiteExecutionStatus(o.Status) {

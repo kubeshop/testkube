@@ -7,8 +7,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// TODO: Adjust when it gets too small.
-const PageDefaultLimit int = 1000
+const PageDefaultLimit int = 100
 
 type Filter interface {
 	Name() string

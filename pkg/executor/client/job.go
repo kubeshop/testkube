@@ -36,7 +36,7 @@ type JobExecutor struct {
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
 // Worker should set valid state for success or error after test completion
-// TODO add timeout
+// TODO add timeout - pass context with timeout
 func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
 	events = make(chan ResultEvent)
 

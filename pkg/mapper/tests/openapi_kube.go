@@ -38,7 +38,6 @@ func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
 }
 
 // MapCRDVariables maps variables between API and operator CRDs
-// TODO if we could merge operator into testkube repository we would get rid of those mappings
 func MapCRDVariables(in map[string]testkube.Variable) map[string]testsv2.Variable {
 	out := map[string]testsv2.Variable{}
 	for k, v := range in {

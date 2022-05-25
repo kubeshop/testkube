@@ -19,8 +19,7 @@ func (t Tests) Table() (header []string, output [][]string) {
 
 func (t Test) GetObjectRef() *ObjectRef {
 	return &ObjectRef{
-		Name: t.Name,
-		// TODO add namespace to test model and all dependencies
+		Name:      t.Name,
 		Namespace: "testkube",
 	}
 }
