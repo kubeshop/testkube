@@ -15,7 +15,7 @@ Pay attention to the usage of the scheme (http or https) in uris.
 --set testkube-api.cliIngress.oauth.provider="github"
 --set testkube-api.cliIngress.oauth.clientID="XXXXXXXXXX" \
 --set testkube-api.cliIngress.oauth.clientSecret="XXXXXXXXXX" \
---set testkube-api.cliIngress.oauth.scopes="read,write"
+--set testkube-api.cliIngress.oauth.scopes=""
 ```
 # Create Github OAuth Application
 
