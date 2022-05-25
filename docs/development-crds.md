@@ -66,10 +66,10 @@ $ kubectl testkube get executors -o yaml | grep -A1 types
 
 When creating a Testkube Test, there are multiple supported input types:
 
-* string
+* String
 * Git directory
 * Git file
-* file URI
+* File URI
 
 Variables can be configured using the `variables` field as shown below.
 
@@ -150,7 +150,7 @@ spec:
 
 ## Webhooks
 
-Testkube Webhooks are event-based configurable scripts. They are executed when a test is either started or finished. This can be defined under `events`.
+Testkube Webhooks are HTTP POST calls having the Testkube Execution object and its current state as payload. They are sent when a test is either started or finished. This can be defined under `events`.
 
 ```yml
 apiVersion: executor.testkube.io/v1
