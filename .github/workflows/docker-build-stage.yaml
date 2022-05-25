@@ -17,7 +17,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-        platforms: linux/amd64,linux/arm64
 
       - name: Go Cache
         uses: actions/cache@v2
