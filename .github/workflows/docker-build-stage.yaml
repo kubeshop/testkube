@@ -51,7 +51,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
-          context: build/api-server/Dockerfile
+          context: .
+          file: build/api-server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta_api_server.outputs.tags }}
