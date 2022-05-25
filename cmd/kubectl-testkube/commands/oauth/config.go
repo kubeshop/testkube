@@ -38,8 +38,9 @@ func NewConfigureOAuthCmd() *cobra.Command {
 				}
 			}
 
-			if providerType != "github" {
-				return fmt.Errorf("please use one of supported oauth providers")
+			provider := poauth.NewProvider(clientID, clientSecret, scopes)
+			if _, err := provider.GetValidator(poauth.ProviderType(providerType)); err != nil {
+				return err
 			}
 
 			return nil
