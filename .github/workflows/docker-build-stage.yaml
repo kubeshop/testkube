@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - 1352-build-arm-image
 
 jobs:
   docker:
@@ -72,11 +73,11 @@ jobs:
             build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           push: true
 
-      #Trigger Helm repo workflow to deploy API to Stage cluster
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow
-          client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
+#      #Trigger Helm repo workflow to deploy API to Stage cluster
+#      - name: Repository Dispatch
+#        uses: peter-evans/repository-dispatch@v2
+#        with:
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          repository: kubeshop/helm-charts
+#          event-type: trigger-workflow
+#          client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
