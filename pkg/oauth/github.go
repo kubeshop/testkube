@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -42,7 +43,13 @@ func (v GithubValidator) Validate(accessToken string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(body))
+	parsedURI, err := url.Parse(uri)
+	if err != nil {
+		return err
+	}
+
+	parsedURI.User = url.UserPassword(v.clientID, v.clientSecret)
+	req, err := http.NewRequest(http.MethodPost, parsedURI.String(), bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
