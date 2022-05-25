@@ -37,7 +37,12 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Get(cliIngressHeader, "") != "" {
 			token := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix))
-			provider := oauth.NewProvider(s.oauthParams.ClientID, s.oauthParams.ClientSecret, strings.Split(s.oauthParams.Scopes, ","))
+			scopes := []string{}
+			if s.oauthParams.Scopes != "" {
+				scopes = strings.Split(s.oauthParams.Scopes, ",")
+			}
+
+			provider := oauth.NewProvider(s.oauthParams.ClientID, s.oauthParams.ClientSecret, scopes)
 			if err := provider.ValidateAccessToken(s.oauthParams.Provider, token); err != nil {
 				s.Log.Errorf("error validating token", "error", err)
 				return s.Error(c, http.StatusUnauthorized, err)
