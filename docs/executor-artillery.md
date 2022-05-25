@@ -51,7 +51,7 @@ Our test is ready, but how to run it in Kubernetes cluster? Testkube will help y
 
 Let's create a new Testkube test based on the saved Artillery test definition.
 
-## **Create a New Testkube Test Script**
+## Create a New Testkube Test
 
 ```sh
 kubectl testkube create test --name artillery-api-test --file test.yaml --type artillery/test
@@ -85,7 +85,7 @@ You can also watch your test results in real-time with `-f` flag (like "follow")
 
 Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 
-## **Getting Test Results**
+## Getting Test Results
 
 
 Let's get back our finished test results, test report and output will be stored in Testkube storage so don't worry to loose them.
@@ -164,7 +164,7 @@ Status Test execution completed with success 🥇
 
 ```
 
-## **Summary**
+## Summary
 
 With Artillery executor you can now run your tests in Kubernetes with ease.  
 Testkube simplifies running tests inside a cluster and stores tests and tests results for later use.
