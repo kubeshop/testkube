@@ -1,12 +1,14 @@
 package common
 
 import (
+	"os"
 	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+	"golang.org/x/oauth2"
 )
 
 // GetClient returns api client
@@ -26,8 +28,17 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config file", err)
 
-		options.Config = &cfg.OAuth2Data.Config
+		options.Provider = cfg.OAuth2Data.Provider
+		options.ClientID = cfg.OAuth2Data.ClientID
+		options.ClientSecret = cfg.OAuth2Data.ClientSecret
+		options.Scopes = cfg.OAuth2Data.Scopes
 		options.Token = cfg.OAuth2Data.Token
+		if options.Token == nil && os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN") != "" {
+			options.Token = &oauth2.Token{
+				AccessToken: os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN"),
+			}
+		}
+
 		if options.Token == nil {
 			ui.ExitOnError("oauth token is empty, please configure your oauth settings first")
 		}

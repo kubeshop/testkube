@@ -1,10 +1,5 @@
 package utils
 
-import (
-	"crypto/rand"
-	"encoding/hex"
-)
-
 func ContainsTag(tags []string, tag string) bool {
 	for _, t := range tags {
 		if t == tag {
@@ -25,14 +20,4 @@ func RemoveDuplicates(s []string) []string {
 		}
 	}
 	return result
-}
-
-// NewRandomString generates random string
-func NewRandomString(length int) (string, error) {
-	value := make([]byte, length)
-	if _, err := rand.Read(value); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(value)[:length], nil
 }

@@ -5,15 +5,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/oauth2"
 
+	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // key is context key
@@ -49,25 +48,34 @@ const (
 )
 
 // NewProvider returns new provider
-func NewProvider(oauthConfig *oauth2.Config) Provider {
+func NewProvider(clientID, clientSecret string, scopes []string) Provider {
 	// add transport for self-signed certificate to context
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	oauthConfig.RedirectURL = fmt.Sprintf("http://%s:%d%s", localIP, localPort, callbackPath)
-	return Provider{
-		oauthConfig: oauthConfig,
-		client:      &http.Client{Transport: tr},
-		port:        localPort,
+	client := &http.Client{Transport: tr}
+	provider := Provider{
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		scopes:       scopes,
+		client:       client,
+		port:         localPort,
+		validators:   map[ProviderType]Validator{},
 	}
+
+	provider.AddValidator(GithubProviderType, NewGithubValidator(client, clientID, clientSecret, scopes))
+	return provider
 }
 
 // Provider contains oauth provider config
 type Provider struct {
-	oauthConfig *oauth2.Config
-	client      *http.Client
-	port        int
+	clientID     string
+	clientSecret string
+	scopes       []string
+	client       *http.Client
+	port         int
+	validators   map[ProviderType]Validator
 }
 
 // AuthorizedClient is authorized client and token
@@ -76,42 +84,76 @@ type AuthorizedClient struct {
 	Token  *oauth2.Token
 }
 
+func (p Provider) getOAuthConfig(providerType ProviderType) (*oauth2.Config, error) {
+	validator, err := p.GetValidator(providerType)
+	if err != nil {
+		return nil, err
+	}
+
+	redirectURL := fmt.Sprintf("http://%s:%d%s", localIP, localPort, callbackPath)
+	return &oauth2.Config{
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
+		Endpoint:     validator.GetEndpoint(),
+		RedirectURL:  redirectURL,
+		Scopes:       p.scopes,
+	}, nil
+}
+
+// AddValidator adds validator
+func (p Provider) AddValidator(providerType ProviderType, validator Validator) {
+	p.validators[providerType] = validator
+}
+
+// GetValidator returns validator
+func (p Provider) GetValidator(providerType ProviderType) (Validator, error) {
+	validator, ok := p.validators[providerType]
+	if !ok {
+		return nil, fmt.Errorf("unknown oauth provider %s", providerType)
+	}
+
+	return validator, nil
+}
+
 // ValidateToken validates token
-func (p Provider) ValidateToken(token *oauth2.Token) (*oauth2.Token, error) {
-	tokenSource := p.oauthConfig.TokenSource(context.Background(), token)
+func (p Provider) ValidateToken(providerType ProviderType, token *oauth2.Token) (*oauth2.Token, error) {
+	config, err := p.getOAuthConfig(providerType)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenSource := config.TokenSource(context.Background(), token)
 	return tokenSource.Token()
 }
 
-// AuthenticateUser starts the login process
-func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient, err error) {
-	oauthStateString, err := utils.NewRandomString(randomLength)
+// ValidateAccessToken validates access token
+func (p Provider) ValidateAccessToken(providerType ProviderType, accessToken string) error {
+	validator, err := p.GetValidator(providerType)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	return validator.Validate(accessToken)
+}
+
+// AuthenticateUser starts the login process
+func (p Provider) AuthenticateUser(providerType ProviderType) (client *AuthorizedClient, err error) {
+	oauthStateString := rand.String(randomLength)
 	ctx := context.WithValue(context.WithValue(context.Background(), oauth2.HTTPClient, p.client),
 		oauthStateStringContextKey, oauthStateString)
 
-	authURL := p.oauthConfig.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
-
-	parsedURL, err := url.Parse(authURL)
+	config, err := p.getOAuthConfig(providerType)
 	if err != nil {
 		return nil, err
 	}
 
-	params := parsedURL.Query()
-	for key, value := range values {
-		params[key] = value
-	}
-
-	parsedURL.RawQuery = params.Encode()
-	authURL = parsedURL.String()
+	authURL := config.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
 
 	clientChan := make(chan *AuthorizedClient)
 	shutdownChan := make(chan struct{})
 	cancelChan := make(chan struct{})
 
-	p.startHTTPServer(ctx, clientChan, shutdownChan)
+	p.startHTTPServer(ctx, clientChan, shutdownChan, providerType)
 
 	ui.Info("You will be redirected to your browser for authentication or you can open the url below manually")
 	ui.Info(authURL)
@@ -143,8 +185,8 @@ func (p Provider) AuthenticateUser(values url.Values) (client *AuthorizedClient,
 
 // startHTTPServer starts http server
 func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *AuthorizedClient,
-	shutdownChan chan struct{}) {
-	http.HandleFunc(callbackPath, p.CallbackHandler(ctx, clientChan))
+	shutdownChan chan struct{}, providerType ProviderType) {
+	http.HandleFunc(callbackPath, p.CallbackHandler(ctx, clientChan, providerType))
 	http.HandleFunc(errorPath, p.ErrorHandler())
 	srv := &http.Server{Addr: ":" + strconv.Itoa(p.port)}
 
@@ -173,7 +215,8 @@ func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *Authoriz
 }
 
 // CallbackHandler is oauth callback handler
-func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *AuthorizedClient) func(w http.ResponseWriter, r *http.Request) {
+func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *AuthorizedClient,
+	providerType ProviderType) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestState, ok := ctx.Value(oauthStateStringContextKey).(string)
 		if !ok {
@@ -189,8 +232,15 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 			return
 		}
 
+		config, err := p.getOAuthConfig(providerType)
+		if err != nil {
+			ui.Errf("getting oauth config: %v", err)
+			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
+			return
+		}
+
 		code := r.FormValue("code")
-		token, err := p.oauthConfig.Exchange(ctx, code)
+		token, err := config.Exchange(ctx, code)
 		if err != nil {
 			ui.Errf("exchanging oauth code: %v", err)
 			http.Redirect(w, r, errorPath, http.StatusTemporaryRedirect)
@@ -204,7 +254,7 @@ func (p Provider) CallbackHandler(ctx context.Context, clientChan chan *Authoriz
 		}
 
 		clientChan <- &AuthorizedClient{
-			Client: p.oauthConfig.Client(ctx, token),
+			Client: config.Client(ctx, token),
 			Token:  token,
 		}
 	}

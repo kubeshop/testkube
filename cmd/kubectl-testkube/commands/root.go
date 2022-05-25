@@ -106,11 +106,16 @@ func Execute() {
 		defaultNamespace = cfg.Namespace
 	}
 
+	apiURI := cfg.APIURI
+	if os.Getenv("TESTKUBE_API_URI") != "" {
+		apiURI = os.Getenv("TESTKUBE_API_URI")
+	}
+
 	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
-	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", cfg.APIURI, "api uri, default value read from config if set")
+	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
 
 	if err := RootCmd.Execute(); err != nil {

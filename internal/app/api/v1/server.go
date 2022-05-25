@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
@@ -153,8 +154,7 @@ type storageParams struct {
 type oauthParams struct {
 	ClientID     string
 	ClientSecret string
-	AuthURL      string
-	TokenURL     string
+	Provider     oauth.ProviderType
 	Scopes       string
 }
 
