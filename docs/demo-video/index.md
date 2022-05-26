@@ -1,8 +1,8 @@
-# Testkube installation walkthrough 
+# Testkube Installation Walkthrough 
 
-## Get your cluster first 
+## Get Your Cluster First 
 
-In this demo we're using GKE (Google Kuberntetes Engine) 
+In this demo we're using GKE (Google Kuberntetes Engine) - but you can use whatever you want. 
 
 ## Installing Testkube Kubectl CLI plugin. 
 
@@ -25,10 +25,10 @@ Built by Homebrew
 Build date 
 ```
 
-We can see Client version but server version is not found yet we need to install Testkube cluster components. 
-We can do this using: 
+We can see the `Client version` but the `Server version` is not found yet, as we need to install Testkube cluster components first. 
 
-## Installing cluster components
+## Installing Testkube Cluster Components
+
 ```sh 
 kubectl testkube install
 
@@ -59,10 +59,21 @@ Port forwarding is started for the test results endpoint, hit Ctrl+c (or Cmd+c) 
 Browser should open automatically new and shiny Testkube Dasboard
 
 
-## Configuration of the cluster to expose the UI and go through what components were installed
+## Go through what components were installed
+
+Until now we have several components installed
+- Testkube Kubectl plugin - on your machine 
+- Testkube Orchestrator API - this one is on your cluster
+- Testkube Dashboard - Frontend for our API 
+- Testkube Operator - For CRD management
+- MinIO for artifacts storage - S3 replacement
+- MongoDB - API storage
+- Jetstack Cert Manager 
 
 
-## Configure ingress
+## Configure ingress to expose the the UI 
+
+
 
 All components should be ready now, but none of them are public as we've used default Testkube installation
 Ingresses and auth are optional.
@@ -76,6 +87,7 @@ TODO Github / Google Auth walkthrough
 
 ## Put Example Service into cluster 
 
+We'll create some very simple service which will be tested for valid responses. Service will be written in the  `go` programming language
 
 
 
