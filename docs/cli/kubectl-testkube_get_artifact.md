@@ -13,7 +13,7 @@ kubectl-testkube get artifact <executionID> [flags]
   -h, --help                  help for artifact
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled    enable analytics

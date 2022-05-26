@@ -16,7 +16,7 @@ kubectl-testkube watch execution <executionID> [flags]
   -h, --help   help for execution
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

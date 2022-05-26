@@ -12,7 +12,7 @@ kubectl-testkube update <resourceName> [flags]
   -h, --help   help for update
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

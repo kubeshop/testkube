@@ -18,7 +18,7 @@ kubectl-testkube get webhook <webhookName> [flags]
   -n, --name string     unique webhook name, you can also pass it as argument
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled    enable analytics

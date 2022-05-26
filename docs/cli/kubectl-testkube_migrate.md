@@ -16,7 +16,7 @@ kubectl-testkube migrate [flags]
   -h, --help   help for migrate
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

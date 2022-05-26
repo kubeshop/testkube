@@ -12,7 +12,7 @@ kubectl-testkube config namespace <value> [flags]
   -h, --help   help for namespace
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

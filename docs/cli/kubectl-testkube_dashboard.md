@@ -17,7 +17,7 @@ kubectl-testkube dashboard [flags]
       --use-global-dashboard   use global dashboard for viewing testkube results
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

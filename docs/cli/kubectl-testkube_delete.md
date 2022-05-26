@@ -12,7 +12,7 @@ kubectl-testkube delete <resourceName> [flags]
   -h, --help   help for delete
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

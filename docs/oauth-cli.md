@@ -1,9 +1,9 @@
 # Testkube CLI Authentication
 
 Testkube doesn't provide a separate user/role management system to protect access to its CLI.
-Users can configure OAuth based authenication module using Testkube Helm chart parameters and
+Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and
 CLI config command.
-Testkube can automatically configure Kubernetes Nginx Ingress Controller and create required 
+Testkube can automatically configure the Kubernetes Nginx Ingress Controller and create required 
 ingresses.
 
 # Provide Parameters for API Ingress
@@ -36,7 +36,7 @@ Remember the generated Client ID and Client Secret.
 
 # Provide Parameters for CLI
 
-Run below command to configure oauth parameters (we support github oauth provider):
+Run the command below to configure oauth parameters (we support github oauth provider):
 
 ```sh
 kubectl testkube config oauth httsp://demo.testkube.io/api --client-id XXXXXXXXXX --client-secret XXXXXXXXXX
@@ -50,10 +50,10 @@ https://github.com/login/oauth/authorize?access_type=offline&client_id=XXXXXXXXX
 Authentication will be cancelled in 60 seconds
 ```
 
-You will be requested for authorization for Github application and you need to confirm access 
+Authorization for the Github application will be requested and access will need to be confirmed. 
 ![Confirm App aithorization](img/github_app_authorize_cli.png)
 
-If it was successful, then you will see success page
+If authorization is successful, you will see the success page.
 ![Success Page](img/github_app_success_cli.png)
 
 Output:
@@ -67,7 +67,7 @@ New oauth token gho_XXXXXXXXXX 🥇
 
 # Enable OAuth for CLI
 
-Run command to enable oauth for all direct client requests:
+Run the following command to enable OAuth for all direct client requests:
 
 ```sh
 kubectl testkube enable oauth
@@ -81,7 +81,7 @@ OAuth enabled 🥇
 
 # Run CLI commands with OAuth
 
-From now all your requests with direct client will submit oauth token, for example:
+Now all of your requests with direct client will submit OAuth token, for example:
 
 ```sh
 kubectl testkube get executors -c direct
@@ -100,7 +100,7 @@ Output:
   soapui-executor    |     |      
 ```
 
-# Environment variables
+# Environment Variables
 
 You can use 2 environment variables to override CLI config values:
 

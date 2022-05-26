@@ -30,7 +30,7 @@ kubectl-testkube create test [flags]
   -v, --variable stringToString          variable key value pair: --variable key1=value1 (default [])
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

@@ -33,7 +33,7 @@ kubectl-testkube completion bash
       --no-descriptions   disable completion descriptions
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

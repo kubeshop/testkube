@@ -12,7 +12,7 @@ kubectl-testkube disable oauth [flags]
   -h, --help   help for oauth
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

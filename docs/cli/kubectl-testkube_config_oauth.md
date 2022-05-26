@@ -16,7 +16,7 @@ kubectl-testkube config oauth <value> [flags]
       --scope stringArray      scope for authentication provider
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

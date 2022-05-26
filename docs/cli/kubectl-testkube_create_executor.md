@@ -23,7 +23,7 @@ kubectl-testkube create executor [flags]
   -u, --uri string             if resource need to be loaded from URI
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

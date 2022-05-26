@@ -12,7 +12,7 @@ kubectl-testkube create <resourceName> [flags]
   -h, --help   help for create
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

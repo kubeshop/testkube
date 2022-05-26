@@ -18,7 +18,7 @@ kubectl-testkube get <resourceName> [flags]
   -o, --output string        output type can be one of json|yaml|pretty|go-template (default "pretty")
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

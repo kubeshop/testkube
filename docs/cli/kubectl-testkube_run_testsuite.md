@@ -26,7 +26,7 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
   -f, --watch                            watch for changes after start
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

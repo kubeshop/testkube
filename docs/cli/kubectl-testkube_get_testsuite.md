@@ -18,7 +18,7 @@ kubectl-testkube get testsuite <testSuiteName> [flags]
       --no-execution    don't show latest execution
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled    enable analytics
