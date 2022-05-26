@@ -57,9 +57,6 @@ jobs:
             ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
             ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
 
-      - name: Inspect
-        run: docker manifest inspect !$
-
 
 #      - name: Step
 #        id: github_sha
