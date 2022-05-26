@@ -71,24 +71,20 @@ Until now we have several components installed
 - Jetstack Cert Manager 
 
 
-## Configure ingress to expose the the UI 
-
-
-
-All components should be ready now, but none of them are public as we've used default Testkube installation
-Ingresses and auth are optional.
-
-TODO Ingress walkthrough
-
-## Configure Github authorization
-
-
-TODO Github / Google Auth walkthrough
-
 ## Put Example Service into cluster 
 
 We'll create some very simple service which will be tested for valid responses. Service will be written in the  `go` programming language
 
+First let's build our Docker image and push it into registry (we're using Docker Hub Registry)
+
+```sh
+docker build -t kubeshop/testkube-example-service .
+docker push kubeshop/testkube-example-service
+```
+
+Now when our Docker image can be fetched by Kubernetes let's create the `Deployment` resource.
+Deployment will create our service pods and allow to use it inside Kubernetes cluster - it will be enough 
+for purpose of this demo. 
 
 
 ## Create a few tests from scratch using postman, cypress and k6
@@ -100,5 +96,18 @@ We'll create some very simple service which will be tested for valid responses. 
 ## Run the tests using UI and CLI
 
 ## Navigate GUI and CLI showing executions
+
+## Configure ingress to expose the the UI 
+
+All components should be ready now, but none of them are public as we've used default Testkube installation
+Ingresses and auth are optional.
+
+TODO Ingress walkthrough
+
+## Configure Github authorization
+
+
+TODO Github / Google Auth walkthrough
+
 
 ## Final message with the slide which has the Discord, Twitter and github links.
