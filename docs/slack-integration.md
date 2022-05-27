@@ -2,16 +2,16 @@
 
 In order to receive notifications in slack about the status of the testing process, Testkube provides integration with slack, for this to work bellow are the steps to configure it.
 
-## Create a slack bot for testkube
+## Install Testkube bot to your slack workspace
 
-Go to [https://api.slack.com/apps](https://api.slack.com/apps) and create new app within your namespace, select app to be a Bot type, add within Review Scopes to Add, add chat:write and chat:write.public then Install to Workspace and a bot token will be generated.
+Teskube bot
+<a href="https://slack.com/oauth/v2/authorize?client_id=1943550956369.3416932538629&scope=chat:write,chat:write.public,groups:read,channels:read&user_scope="><img alt="Add Testkube bot to your Slack workspace" height="40" width="139" src="https://platform.slack-edge.com/img/add_to_slack.png" srcSet="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x" /></a>
 
-![img.gif](img/create-slack-bot.gif)
+![img.gif](img/add-testkube-bot-to-workspace.gif)
 
-## Create a slack channel
+## Add Testkube bot to a channel
 
-Create a new slack channel or use a existing one and get the channel id that you can find in the Channel Details window at the bottom.
+![img.gif](img/add-testkube-bot-to-channel.gif)
+## Configure Testkube to use the slack bot token
 
-## Configure Testkube to use the bot token and channel
-
-Populate slackToken and slackChannelId values in the helm values file to use the token and channel, then install testkube using helm install see [Installation](installing.md)
+Populate slackToken in the helm values file, then install testkube using helm install, see [Manual Testkube Helm Charts Installation](installing.md) for more information.
