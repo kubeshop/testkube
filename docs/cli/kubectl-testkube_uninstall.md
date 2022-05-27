@@ -17,7 +17,7 @@ kubectl-testkube uninstall [flags]
       --name string   installation name (default "testkube")
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

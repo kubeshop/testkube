@@ -15,7 +15,7 @@ kubectl-testkube download artifact <executionID> <fileName> <destinationDir> [fl
   -h, --help                  help for artifact
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

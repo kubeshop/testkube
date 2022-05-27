@@ -18,7 +18,7 @@ kubectl-testkube delete executor [executorName] [flags]
   -n, --name string     unique executor name, you can also pass it as first argument
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

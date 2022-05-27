@@ -19,7 +19,7 @@ kubectl-testkube get execution [executionID] [flags]
       --test string     test id
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled    enable analytics

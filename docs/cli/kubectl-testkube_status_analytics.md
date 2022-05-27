@@ -12,7 +12,7 @@ kubectl-testkube status analytics [flags]
   -h, --help   help for analytics
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

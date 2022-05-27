@@ -20,7 +20,7 @@ kubectl-testkube update testsuite [flags]
       --schedule string        test suite schedule in a cronjob form: * * * * *
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

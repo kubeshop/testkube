@@ -12,7 +12,7 @@ kubectl-testkube watch <resourceName> [flags]
   -h, --help   help for watch
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

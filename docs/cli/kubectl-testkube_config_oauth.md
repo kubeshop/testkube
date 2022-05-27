@@ -9,15 +9,14 @@ kubectl-testkube config oauth <value> [flags]
 ### Options
 
 ```
-      --auth-uri string        auth uri for authentication provider (github is a default provider) (default "https://github.com/login/oauth/authorize")
       --client-id string       client id for authentication provider
       --client-secret string   client secret for authentication provider
   -h, --help                   help for oauth
+      --provider string        authentication provider, currently available: github (default "github")
       --scope stringArray      scope for authentication provider
-      --token-uri string       token uri for authentication provider (github is a default provider) (default "https://github.com/login/oauth/access_token")
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

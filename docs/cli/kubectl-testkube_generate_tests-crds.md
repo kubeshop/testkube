@@ -16,7 +16,7 @@ kubectl-testkube generate tests-crds <manifestDirectory> [flags]
   -h, --help   help for tests-crds
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics

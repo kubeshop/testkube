@@ -33,7 +33,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		options.ClientSecret = cfg.OAuth2Data.ClientSecret
 		options.Scopes = cfg.OAuth2Data.Scopes
 		options.Token = cfg.OAuth2Data.Token
-		if options.Token == nil && os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN") != "" {
+		if os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN") != "" {
 			options.Token = &oauth2.Token{
 				AccessToken: os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN"),
 			}

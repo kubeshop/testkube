@@ -19,7 +19,7 @@ kubectl-testkube get testsuiteexecution [executionID] [flags]
       --test-suite string   test suite name
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled    enable analytics

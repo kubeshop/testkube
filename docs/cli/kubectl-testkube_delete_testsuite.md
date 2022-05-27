@@ -18,7 +18,7 @@ kubectl-testkube delete testsuite <testSuiteName> [flags]
   -l, --label strings   label key value pair: --label key1=value1
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics
