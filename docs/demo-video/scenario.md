@@ -70,6 +70,12 @@ Until now we have several components installed
 - MongoDB - API storage
 - Jetstack Cert Manager 
 
+We can look at them checking what pods are in `testkube` namespace. 
+
+```sh 
+kubectl get pods -ntestkube
+```
+
 
 ## Put Example Service into cluster 
 
@@ -86,9 +92,9 @@ docker push kubeshop/testkube-example-service
 
 Now when our Docker image can be fetched by Kubernetes let's create the `Deployment` resource.
 Deployment will create our service pods and allow to use it inside Kubernetes cluster - it will be enough 
-for purpose of this demo. We'll add also service to be able to connectg to our pod
+for purpose of this demo. We'll add also `Service` to be able to connect to the Example Service Pod
 
-Let's create file first: 
+Let's create `manifests.yaml` file: 
 
 ```yaml 
 
@@ -131,15 +137,27 @@ spec:
     - protocol: TCP
       port: 8881
 
-
 ```
 
+And ask Kubernetes to sync this manifest with our cluster: 
+
+```sh
+kubectl apply -f manifests.yaml
+```
+
+After some time everything should be in place, Kubernetes scheduler will create new pod and add service to allow to connect to our service from cluster. 
 
 ## Create a few tests from scratch using postman, cypress and k6
 
-Create new video and export it as file 
+### Postman test
 
-Content should be more or less like this: 
+Create new video and export it as file assuming file name is `Video-Chuck-Test.postman_collection.json` we can create the test with following command: 
+
+```
+kubectl testkube create test --file Video-Chuck-Test.postman_collection.json --name demo-video
+```
+
+Content of our file should be more or less like this: 
 
 ```json 
 {
@@ -212,10 +230,25 @@ Content should be more or less like this:
 ```
 
 
+We can also add additional K6 test to check if our service is performant, let's check also if our service is talking about Chuck
 
+```js 
+import http from 'k6/http';
+import { sleep,check } from 'k6';
+
+export default function () {
+  const baseURI = `${__ENV.API_URI || 'http://testkube-api-server:8881'}`;
+
+  check(http.get(`${baseURI}/joke`), {
+    'joke should be about Chuck': r => r.body.includes("Chuck")
+  });
+}
+```
 
 
 ## Upload tests to Testkube using GUI and CLI
+
+To upload using API you need to 
 
 ## Show Testkube CRDs
 
