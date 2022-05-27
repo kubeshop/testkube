@@ -12,6 +12,6 @@ Teskube bot
 ## Add Testkube bot to a Channel
 
 ![img.gif](img/add-testkube-bot-to-channel.gif)
-## Configure Testkube to use the slack bot token
+## Configure Testkube to Use the Slack bot Token
 
 Populate slackToken in the helm values file, then install testkube using helm install, see [Manual Testkube Helm Charts Installation](installing.md) for more information.
