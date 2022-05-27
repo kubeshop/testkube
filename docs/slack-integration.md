@@ -9,7 +9,7 @@ Teskube bot
 
 ![img.gif](img/add-testkube-bot-to-workspace.gif)
 
-## Add Testkube bot to a channel
+## Add Testkube bot to a Channel
 
 ![img.gif](img/add-testkube-bot-to-channel.gif)
 ## Configure Testkube to use the slack bot token
