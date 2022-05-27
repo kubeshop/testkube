@@ -78,23 +78,143 @@ We'll create some very simple service which will be tested for valid responses. 
 First let's build our Docker image and push it into registry (we're using Docker Hub Registry)
 
 ```sh
-docker build -t kubeshop/testkube-example-service .
+docker build  --platform linux/x86_64 -t kubeshop/testkube-example-service 
 docker push kubeshop/testkube-example-service
 ```
 
+(you can omit platform if you're on linux x86 64 bit)
+
 Now when our Docker image can be fetched by Kubernetes let's create the `Deployment` resource.
 Deployment will create our service pods and allow to use it inside Kubernetes cluster - it will be enough 
-for purpose of this demo. 
+for purpose of this demo. We'll add also service to be able to connectg to our pod
 
 Let's create file first: 
 
 ```yaml 
+
+kind: Deployment
+metadata:
+  name: testkube-example-service
+  labels:
+    app: testkube-example-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: testkube-example-service
+  template:
+    metadata:
+      labels:
+        app: testkube-example-service
+    spec:
+      containers:
+        - name: testkube-example-service
+          image: kubeshop/testkube-example-service:latest
+          ports:
+            - containerPort: 8881
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 64Mi
+              cpu: "0.2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: testkube-example-service
+spec:
+  selector:
+    app: testkube-example-service
+  ports:
+    - protocol: TCP
+      port: 8881
 
 
 ```
 
 
 ## Create a few tests from scratch using postman, cypress and k6
+
+Create new video and export it as file 
+
+Content should be more or less like this: 
+
+```json 
+{
+	"info": {
+		"_postman_id": "046c7729-b816-498a-a07b-88407d4180dc",
+		"name": "Video-Chuck-Test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3706349"
+	},
+	"item": [
+		{
+			"name": "Check if jokes are about Chuck",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"Chuck\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{API_URI}}/joke",
+					"host": [
+						"{{API_URI}}"
+					],
+					"path": [
+						"joke"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "API_URI",
+			"value": "http://testkube-example-service:8881",
+			"type": "string"
+		}
+	]
+}
+
+```
+
+
+
+
 
 ## Upload tests to Testkube using GUI and CLI
 
