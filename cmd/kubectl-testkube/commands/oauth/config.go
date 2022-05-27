@@ -60,6 +60,7 @@ func NewConfigureOAuthCmd() *cobra.Command {
 			ui.ExitOnError("authenticating user", err)
 
 			cfg.OAuth2Data.Token = client.Token
+			cfg.EnableOAuth()
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 			ui.Success("New api uri set to", cfg.APIURI)
