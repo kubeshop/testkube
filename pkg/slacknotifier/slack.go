@@ -15,123 +15,162 @@ import (
 const messageTemplate string = `{
 	"blocks": [
 		{
-			"type": "header",
+			"type": "section",
 			"text": {
 				"type": "plain_text",
-				"text": "Teskube activity",
-				"emoji": true
+				"emoji": true,
+				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} has {{ .Status }}"
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "image",
+					"image_url": "{{ if (eq .FailedSteps 0) }} https://icon-library.com/images/green-tick-icon/green-tick-icon-6.jpg {{ else }} https://icon-library.com/images/error-image-icon/error-image-icon-23.jpg {{ end }}",
+					"alt_text": "notifications warning icon"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Test Name*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Type*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .TestName }}",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .TestType }}",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Namespace*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": " "
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Namespace }}",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Start Time*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*End Time*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .StartTime }}",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .EndTime }}",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Duration*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": " "
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Duration }}",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Test Execution Results*"
 			}
 		},
 		{
 			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Event Type:*\n{{ .EventType }}"
-				}
-				{{ if .Namespace }}
-				,
-				{
-					"type": "mrkdwn",
-					"text": "*Namespace:*\n{{ .Namespace }}"
-				}
-				{{ end }}
-			]
+			"text": {
+				"type": "mrkdwn",
+				"text": "{{ .BackTick }}kubectl testkube get execution {{ .ExecutionID }} {{ .BackTick }}\n"
+			}
 		},
 		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Test Name:*\n{{ .TestName }}"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*Test Type:*\n{{ .TestType }}"
-				}
-			]
-		},
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Status:*\n{{ .Status }}"
-				}
-			]
-		},
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Start Time:*\n{{ .StartTime }}"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*End Time:*\n{{ .EndTime }}"
-				}
-			]
+			"type": "divider"
 		}
-		{{ if .Duration }}
-		,
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Duration:*\n{{ .Duration }}"
-				}
-			]
-		}
-		{{ end }}
-		{{ if .Output }}
-		,
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Output:*\n{{ .Output }}"
-				}
-			]
-		}
-		{{ end }}
 	]
 }`
 
 type messageArgs struct {
-	EventType string
-	Namespace string
-	TestName  string
-	TestType  string
-	Status    string
-	StartTime string
-	EndTime   string
-	Duration  string
-	Output    string
+	ExecutionID string
+	EventType   string
+	Namespace   string
+	TestName    string
+	TestType    string
+	Status      string
+	FailedSteps int
+	TotalSteps  int
+	StartTime   string
+	EndTime     string
+	Duration    string
+	BackTick    string
 }
 
-type client struct {
-	SlackClient *slack.Client
-	ChannelId   string
-}
-
-var c *client
+var slackClient *slack.Client
 
 func init() {
-	if id, ok := os.LookupEnv("SLACK_CHANNEL_ID"); ok {
-		c = &client{ChannelId: id}
-		if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
-			c.SlackClient = slack.New(token, slack.OptionDebug(true))
-		}
+	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
+		slackClient = slack.New(token, slack.OptionDebug(true))
 	}
 }
 
 // SendMessage posts a message to the slack configured channel
-func SendMessage(message string) error {
-	if c != nil && c.SlackClient != nil {
-		_, _, err := c.SlackClient.PostMessage(c.ChannelId, slack.MsgOptionText(message, false))
+func SendMessage(channelID string, message string) error {
+	if slackClient != nil {
+		_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionText(message, false))
 		if err != nil {
 			return err
 		}
@@ -148,15 +187,19 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	}
 
 	args := messageArgs{
-		EventType: string(*eventType),
-		Namespace: execution.TestNamespace,
-		TestName:  execution.TestName,
-		TestType:  execution.TestType,
-		Status:    string(*execution.ExecutionResult.Status),
-		StartTime: execution.StartTime.String(),
-		EndTime:   execution.EndTime.String(),
-		Duration:  execution.Duration,
-		Output:    execution.ExecutionResult.Output}
+		ExecutionID: execution.Id,
+		EventType:   string(*eventType),
+		Namespace:   execution.TestNamespace,
+		TestName:    execution.TestName,
+		TestType:    execution.TestType,
+		Status:      string(*execution.ExecutionResult.Status),
+		StartTime:   execution.StartTime.String(),
+		EndTime:     execution.EndTime.String(),
+		Duration:    execution.Duration,
+		TotalSteps:  len(execution.ExecutionResult.Steps),
+		FailedSteps: getFailedStepsCount(execution.ExecutionResult.Steps),
+		BackTick:    "`",
+	}
 
 	var message bytes.Buffer
 	err = t.Execute(&message, args)
@@ -169,11 +212,32 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	if err != nil {
 		return err
 	}
-	if c != nil && c.SlackClient != nil {
-		_, _, err := c.SlackClient.PostMessage(c.ChannelId, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+
+	if slackClient != nil {
+		channels, _, err := slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
 		if err != nil {
 			return err
 		}
+
+		if len(channels) > 0 {
+			channelID := channels[0].GroupConversation.ID
+
+			_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+			if err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
+}
+
+func getFailedStepsCount(steps []testkube.ExecutionStepResult) int {
+	count := 0
+	for _, v := range steps {
+		if v.Status != string(testkube.PASSED_ExecutionStatus) {
+			count++
+		}
+	}
+	return count
 }
