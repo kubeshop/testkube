@@ -50,8 +50,6 @@ jobs:
         with:
           images: kubeshop/testkube-api-server
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
