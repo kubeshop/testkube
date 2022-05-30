@@ -1,22 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: testkube-example-service
+  name: chuck-jokes
+  namespace: services
   labels:
-    app: testkube-example-service
+    app: chuck-jokes
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: testkube-example-service
+      app: chuck-jokes
   template:
     metadata:
       labels:
-        app: testkube-example-service
+        app: chuck-jokes
     spec:
       containers:
-        - name: testkube-example-service
-          image: kubeshop/testkube-example-service:latest
+        - name: chuck-jokes
+          image: kubeshop/chuck-jokes:latest
           ports:
             - containerPort: 8881
           resources:
@@ -30,10 +31,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: testkube-example-service
+  name: chuck-jokes
+  namespace: services
 spec:
   selector:
-    app: testkube-example-service
+    app: chuck-jokes
   ports:
     - protocol: TCP
       port: 8881
