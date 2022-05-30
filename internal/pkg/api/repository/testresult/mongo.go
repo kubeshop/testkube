@@ -35,14 +35,14 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	return
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.TestSuiteExecution, err error) {
 	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{Key: "starttime", Value: -1}})
+	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
 	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testName}, findOptions).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
 	var results []struct {
 		LatestID string `bson:"latest_id"`
 	}
@@ -57,7 +57,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	}
 
 	pipeline := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
-	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
+	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: sortField, Value: -1}}}})
 	pipeline = append(pipeline, bson.D{
 		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testsuite.name"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
 
