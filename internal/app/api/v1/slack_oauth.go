@@ -1,13 +1,14 @@
-package slacknotifier
+package v1
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	thttp "github.com/kubeshop/testkube/pkg/http"
 )
 
 const slackAccessUrl = "https://slack.com/api/oauth.v2.access"
@@ -36,7 +37,7 @@ type oauthResponse struct {
 }
 
 // OauthHandler creates a handler for slack authentication
-func OauthHandler() fiber.Handler {
+func (s TestkubeAPI) OauthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		errStr := c.Query("error", "")
@@ -47,19 +48,14 @@ func OauthHandler() fiber.Handler {
 		}
 		code := c.Query("code", "")
 		if code == "" {
-			c.Status(http.StatusBadRequest)
-			_, err := c.WriteString("Code was not provided")
-			return err
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("Code was not provided"))
 		}
-		//fmt.Printf("\n---->code is |%s|\n", code)
 
-		var slackClient = &http.Client{Timeout: 10 * time.Second}
+		var slackClient = thttp.NewClient()
 
 		req, err := http.NewRequest(http.MethodGet, slackAccessUrl, nil)
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			_, err = c.WriteString(fmt.Sprintf("\nFailed to create request: %+v\n", err))
-			return err
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to create request: %+v\n", err))
 		}
 
 		req.SetBasicAuth(SlackBotClientID, SlackBotClientSecret)
@@ -70,29 +66,28 @@ func OauthHandler() fiber.Handler {
 
 		resp, err := slackClient.Do(req)
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			_, err = c.WriteString(fmt.Sprintf("\nFailed to get access token: %+v\n", err))
-			return err
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to get access token: %+v\n", err))
 		}
 		defer resp.Body.Close()
 
 		body, err := ioutil.ReadAll(resp.Body)
 
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			_, err = c.WriteString(fmt.Sprintf("\nInvalid format for access token: %+v", err))
-			return err
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nInvalid format for access token: %+v", err))
 		}
+
 		oResp := oauthResponse{}
 		err = json.Unmarshal(body, &oResp)
 
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			_, err = c.WriteString(fmt.Sprintf("\nUnable to unmarshal the response: %+v", err))
-			return err
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nUnable to unmarshal the response: %+v", err))
 		}
 
-		_, err = c.WriteString(fmt.Sprintf("Authentification was succesfull!\nPlease use the following token to configure testkube-bot: %s", oResp.AccessToken))
+		if len(oResp.AccessToken) == 0 {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Unable to get the response from the slack oauth endpoint"))
+		}
+
+		_, err = c.WriteString(fmt.Sprintf("Authentification was succesfull!\nPlease use the following token in the helm values for slackToken : %s", oResp.AccessToken))
 		return err
 	}
 }

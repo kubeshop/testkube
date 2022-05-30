@@ -197,7 +197,7 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 		EndTime:     execution.EndTime.String(),
 		Duration:    execution.Duration,
 		TotalSteps:  len(execution.ExecutionResult.Steps),
-		FailedSteps: getFailedStepsCount(execution.ExecutionResult.Steps),
+		FailedSteps: execution.ExecutionResult.GetFailedStepsCount(),
 		BackTick:    "`",
 	}
 
@@ -230,14 +230,4 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	}
 
 	return nil
-}
-
-func getFailedStepsCount(steps []testkube.ExecutionStepResult) int {
-	count := 0
-	for _, v := range steps {
-		if v.Status != string(testkube.PASSED_ExecutionStatus) {
-			count++
-		}
-	}
-	return count
 }
