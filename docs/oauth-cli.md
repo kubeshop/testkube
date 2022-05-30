@@ -65,20 +65,6 @@ New api uri set to https://demo.testkube.io/api 🥇
 New oauth token gho_XXXXXXXXXX 🥇
 ```
 
-# Enable OAuth for CLI
-
-Run the following command to enable OAuth for all direct client requests:
-
-```sh
-kubectl testkube enable oauth
-```
-
-Output:
-
-```sh
-OAuth enabled 🥇
-```
-
 # Run CLI commands with OAuth
 
 Now all of your requests with direct client will submit OAuth token, for example:
