@@ -2,7 +2,10 @@
 
 ## Get Your Cluster First 
 
-Prerequisite for this demo is to get some Kubernetes cluster. We're using GKE (Google Kuberntetes Engine) - but you can use whatever you want. 
+As Testkube is cloud/Kubernetes native testing tool it need to have Kubernetes cluster ready. 
+
+We'll be using GKE (Google Kuberntetes Engine) for purpose of this introduction 
+but you can use whatever you want. 
 
 ## Installing Testkube Kubectl CLI plugin. 
 
@@ -251,12 +254,41 @@ export default function () {
 kubectl testkube create test --file chuck-jokes.k6.js --name chuck-jokes-k6 --type k6/script
 ```
 
+## Create TestSuite from created tests
+
+For now our tests was run as separate ones. But sometimes we want to connect different tests in single test suite. It's often used to manage multiple test suites done by different development teams, we can compose test suites from tests of different types e.g. run postman API test to deeply check if everything ok, and next run performance test for critical parts of your service. 
+
+
+```json
+{
+	"name": "testkube",
+	"description": "Testkube test suite, api, dashboard and performance",
+	"steps": [
+		{"execute": {"name": "chuck-jokes-postman"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "chuck-jokes-k6"}}
+	]
+}
+```
+
+
 
 ## Upload tests to Testkube using GUI and CLI
 
 To upload using API you need to 
 
 ## Show Testkube CRDs
+
+```sh 
+kubectl get tests -ntestkube
+kubectl get tests -ntestkube -oyaml chuck-jokes-postman 
+kubectl get tests -ntestkube -oyaml chuck-jokes-k6 
+
+kubectl get testsuites -ntestkube 
+
+kubectl get testsuites -ntestkube 
+kubectl get testsuites -ntestkube -oyaml chuck-jokes
+```
 
 ## Run the tests using UI and CLI
 
@@ -271,8 +303,6 @@ TODO Ingress walkthrough
 
 ## Configure Github authorization
 
-
 TODO Github / Google Auth walkthrough
-
 
 ## Final message with the slide which has the Discord, Twitter and github links.
