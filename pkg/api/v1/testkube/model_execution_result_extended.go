@@ -71,3 +71,13 @@ func (e *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
 	}
 	return *e
 }
+
+func (e *ExecutionResult) GetFailedStepsCount() int {
+	count := 0
+	for _, v := range e.Steps {
+		if v.Status != string(PASSED_ExecutionStatus) {
+			count++
+		}
+	}
+	return count
+}
