@@ -60,7 +60,7 @@
 	"variable": [
 		{
 			"key": "API_URI",
-			"value": "http://chuck-jokes:8881",
+			"value": "http://chuck-jokes.services:8881",
 			"type": "string"
 		}
 	]
