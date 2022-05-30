@@ -221,7 +221,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 				jTime = results[j].LatestExecution.StartTime
 			}
 
-			return iTime.Before(jTime)
+			return iTime.After(jTime)
 		})
 
 		testWithExecutions = append(testWithExecutions, results...)
