@@ -37,6 +37,7 @@ func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
 	test.Variables = MergeVariablesAndParams(cr.Spec.Variables, cr.Spec.Params)
+	test.Created = cr.CreationTimestamp.Time
 
 	return
 }

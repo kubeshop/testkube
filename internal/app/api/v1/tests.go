@@ -210,6 +210,10 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			}
 		}
 
+		sort.Slice(testWithExecutions, func(i, j int) bool {
+			return testWithExecutions[i].Test.Created.After(testWithExecutions[i].Test.Created)
+		})
+
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].LatestExecution.EndTime
 			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
