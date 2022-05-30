@@ -15,7 +15,8 @@
 						"exec": [
 							"pm.test(\"Body matches string\", function () {",
 							"    pm.expect(pm.response.text()).to.include(\"Chuck\");",
-							"});"
+							"});",
+							""
 						],
 						"type": "text/javascript"
 					}

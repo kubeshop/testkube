@@ -2,7 +2,7 @@
 
 ## Get Your Cluster First 
 
-In this demo we're using GKE (Google Kuberntetes Engine) - but you can use whatever you want. 
+Prerequisite for this demo is to get some Kubernetes cluster. We're using GKE (Google Kuberntetes Engine) - but you can use whatever you want. 
 
 ## Installing Testkube Kubectl CLI plugin. 
 
@@ -42,22 +42,6 @@ NOTES:
 `Enjoy testing with testkube!`
 ```
 
-## Show UI
-
-Now we're ready to check if Testkube works ok
-
-First let's looks at dashboard 
-
-```sh
-kubectl testkube dashboard
-
-The dashboard is accessible here: http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1 🥇
-The API is accessible here: http://localhost:8088/v1/info 🥇
-Port forwarding is started for the test results endpoint, hit Ctrl+c (or Cmd+c) to stop 🥇
-```
-
-Browser should open automatically new and shiny Testkube Dasboard
-
 
 ## Go through what components were installed
 
@@ -77,6 +61,24 @@ kubectl get pods -ntestkube
 ```
 
 
+## Show UI
+
+Now we're ready to check if Testkube works ok
+
+First let's looks at dashboard 
+
+```sh
+kubectl testkube dashboard
+
+The dashboard is accessible here: http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1 🥇
+The API is accessible here: http://localhost:8088/v1/info 🥇
+Port forwarding is started for the test results endpoint, hit Ctrl+c (or Cmd+c) to stop 🥇
+```
+
+Browser should open automatically new and shiny Testkube Dasboard
+
+
+
 ## Put Example Service into cluster 
 
 We'll create some very simple service which will be tested for valid responses. Service will be written in the  `go` programming language
@@ -84,8 +86,8 @@ We'll create some very simple service which will be tested for valid responses. 
 First let's build our Docker image and push it into registry (we're using Docker Hub Registry)
 
 ```sh
-docker build  --platform linux/x86_64 -t kubeshop/testkube-example-service 
-docker push kubeshop/testkube-example-service
+docker build  --platform linux/x86_64 -t kubeshop/chuck-jokes .
+docker push kubeshop/chuck-jokes
 ```
 
 (you can omit platform if you're on linux x86 64 bit)
@@ -100,22 +102,22 @@ Let's create `manifests.yaml` file:
 
 kind: Deployment
 metadata:
-  name: testkube-example-service
+  name: chuck-jokes
   labels:
-    app: testkube-example-service
+    app: chuck-jokes
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: testkube-example-service
+      app: chuck-jokes
   template:
     metadata:
       labels:
-        app: testkube-example-service
+        app: chuck-jokes
     spec:
       containers:
-        - name: testkube-example-service
-          image: kubeshop/testkube-example-service:latest
+        - name: chuck-jokes
+          image: kubeshop/chuck-jokes:latest
           ports:
             - containerPort: 8881
           resources:
@@ -129,10 +131,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: testkube-example-service
+  name: chuck-jokes
 spec:
   selector:
-    app: testkube-example-service
+    app: chuck-jokes
   ports:
     - protocol: TCP
       port: 8881
@@ -153,8 +155,8 @@ After some time everything should be in place, Kubernetes scheduler will create 
 
 Create new video and export it as file assuming file name is `Video-Chuck-Test.postman_collection.json` we can create the test with following command: 
 
-```
-kubectl testkube create test --file Video-Chuck-Test.postman_collection.json --name demo-video
+```sh
+kubectl testkube create test --file Video-Chuck-Test.postman_collection.json --name chuck-jokes-postman
 ```
 
 Content of our file should be more or less like this: 
@@ -222,7 +224,7 @@ Content of our file should be more or less like this:
 	"variable": [
 		{
 			"key": "API_URI",
-			"value": "http://testkube-example-service:8881",
+			"value": "http://chuck-jokes.services:8881",
 			"type": "string"
 		}
 	]
@@ -230,19 +232,23 @@ Content of our file should be more or less like this:
 ```
 
 
-We can also add additional K6 test to check if our service is performant, let's check also if our service is talking about Chuck
+We can also add additional K6 test to check if our service is performant, let's check also if our service is talking about Chuck. And add it through dashboard.
 
 ```js 
 import http from 'k6/http';
 import { sleep,check } from 'k6';
 
 export default function () {
-  const baseURI = `${__ENV.API_URI || 'http://testkube-example-service:8881'}`;
+  const baseURI = `${__ENV.API_URI || 'http://chuck-jokes.services:8881'}`;
 
   check(http.get(`${baseURI}/joke`), {
     'joke should be about Chuck': r => r.body.includes("Chuck")
   });
 }
+```
+
+```sh
+kubectl testkube create test --file chuck-jokes.k6.js --name chuck-jokes-k6 --type k6/script
 ```
 
 
