@@ -342,7 +342,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		sort.Slice(testSuiteWithExecutions, func(i, j int) bool {
-			return testSuiteWithExecutions[i].TestSuite.Created.After(testSuiteWithExecutions[i].TestSuite.Created)
+			return testSuiteWithExecutions[i].TestSuite.Created.After(testSuiteWithExecutions[j].TestSuite.Created)
 		})
 
 		sort.Slice(results, func(i, j int) bool {
