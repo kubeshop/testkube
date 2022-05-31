@@ -1,6 +1,6 @@
 brew remove testkube
 
-kubectl delete ns testkube; kubectl delete crds executors.executor.testkube.io  scripts.tests.testkube.io tests.tests.testkube.io testsuites.tests.testkube.io webhooks.executor.testkube.io certificaterequests.cert-manager.io certificates.cert-manager.io challenges.acme.cert-manager.io  clusterissuers.cert-manager.io issuers.cert-manager.io managedcertificates.networking.gke.io orders.acme.cert-manager.io
+kubectl delete ns testkube services; kubectl delete crds executors.executor.testkube.io  scripts.tests.testkube.io tests.tests.testkube.io testsuites.tests.testkube.io webhooks.executor.testkube.io certificaterequests.cert-manager.io certificates.cert-manager.io challenges.acme.cert-manager.io  clusterissuers.cert-manager.io issuers.cert-manager.io managedcertificates.networking.gke.io orders.acme.cert-manager.io
 
 brew install testkube
 
