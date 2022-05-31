@@ -3,6 +3,7 @@ package webhooks
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 		events    []string
 		name, uri string
 		labels    map[string]string
+		crdOnly   bool
 	)
 
 	cmd := &cobra.Command{
@@ -43,10 +45,18 @@ func NewCreateWebhookCmd() *cobra.Command {
 				Labels:    labels,
 			}
 
-			_, err = client.CreateWebhook(options)
-			ui.ExitOnError("creating webhook "+name+" in namespace "+namespace, err)
+			if !crdOnly {
+				_, err = client.CreateWebhook(options)
+				ui.ExitOnError("creating webhook "+name+" in namespace "+namespace, err)
 
-			ui.Success("Webhook created", name)
+				ui.Success("Webhook created", name)
+			} else {
+				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
+				ui.ExitOnError("executing crd template", err)
+
+				ui.Info(data)
+				ui.Success("Webhook generated", name)
+			}
 		},
 	}
 
@@ -54,6 +64,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor e.g. start-test|end-test")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only webhook crd")
 
 	return cmd
 }

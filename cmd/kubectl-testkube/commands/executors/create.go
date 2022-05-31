@@ -1,6 +1,7 @@
 package executors
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -62,6 +63,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				ui.Success("Executor created", name)
 			} else {
+				options.JobTemplate = fmt.Sprintf("%q", options.JobTemplate)
 				data, err := crd.ExecuteTemplate(crd.TemplateExecutor, options)
 				ui.ExitOnError("executing crd template", err)
 

@@ -16,6 +16,8 @@ type Template string
 const (
 	// TemplateExecutor is executor crd template
 	TemplateExecutor Template = "executor"
+	// TemplateWebhook is webhook crd template
+	TemplateWebhook Template = "webhook"
 )
 
 // ExecuteTemplate executes crd template
