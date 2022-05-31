@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 		types                                       []string
 		name, executorType, image, uri, jobTemplate string
 		labels                                      map[string]string
+		crdOnly                                     bool
 	)
 
 	cmd := &cobra.Command{
@@ -54,10 +56,18 @@ func NewCreateExecutorCmd() *cobra.Command {
 				Labels:       labels,
 			}
 
-			_, err = client.CreateExecutor(options)
-			ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)
+			if !crdOnly {
+				_, err = client.CreateExecutor(options)
+				ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)
 
-			ui.Success("Executor created", name)
+				ui.Success("Executor created", name)
+			} else {
+				data, err := crd.ExecuteTemplate(crd.TemplateExecutor, options)
+				ui.ExitOnError("executing crd template", err)
+
+				ui.Info(data)
+				ui.Success("Executor generated", name)
+			}
 		},
 	}
 
@@ -69,6 +79,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only executor crd")
 
 	return cmd
 }
