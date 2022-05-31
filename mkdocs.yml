@@ -66,31 +66,19 @@ nav:
       - Upgrade Command: cli/kubectl-testkube_upgrade.md
       - Version Command: cli/kubectl-testkube_version.md
       - Watch Command: cli/kubectl-testkube_watch.md
-<<<<<<< Updated upstream
-  - Integrating with CI/CD: testkube-automation.md
-  - Integrating with Slack: slack-integration.md
-  - Scheduling: scheduling.md
-  - OAuth for UI: oauth-ui.md
-  - OAuth for CLI: oauth-cli.md
-  - Metrics: metrics.md
-  - Architecture: architecture.md
-  - Contributing: contributing.md
-  - Development:
-      - Local Runs: development.md
-      - Custom Resources: development-crds.md
   - OpenAPI Definition: openapi.md
-=======
   - Integrations:
       - Integrating with CI/CD: testkube-automation.md
       - Integrating with Slack: slack-integration.md
   - Authentication:
       - OAuth for UI: oauth.md
-      - OpenAPI Definition: openapi.md
+      - OAuth for CLI: oauth-cli.md
   - Contributing:    
       - Contributing: contributing.md
-      - Development: development.md
+      - Development:
+          - Local Runs: development.md
+          - Custom Resources: development-crds.md
   - Architecture: architecture.md
->>>>>>> Stashed changes
   - Telemetry: telemetry.md
   
  
