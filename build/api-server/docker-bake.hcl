@@ -7,5 +7,6 @@ target "build" {
   dockerfile = "build/api-server/Dockerfile"
   platforms = [
     "linux/amd64",
+    "linux/arm64"
   ]
 }

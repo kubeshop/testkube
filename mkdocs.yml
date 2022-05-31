@@ -37,6 +37,7 @@ nav:
 #     - Maven: maven-executors.md
 #     - Gradle: gradle-executors.md
       - SoapUI Tests: executor-soapui.md
+      - Artillery.io: executor-artillery.md
       - Curl Commands: executor-curl.md
       - Creating Custom Executors: executor-custom.md
   - CLI Reference:
@@ -69,7 +70,9 @@ nav:
   - Metrics: metrics.md
   - Architecture: architecture.md
   - Contributing: contributing.md
-  - Development: development.md
+  - Development:
+      - Local Runs: development.md
+      - Custom Resources: development-crds.md
   - OpenAPI Definition: openapi.md
   - Telemetry: telemetry.md
   - Storage: artifacts-storage.md
