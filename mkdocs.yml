@@ -37,6 +37,7 @@ nav:
 #     - Maven: maven-executors.md
 #     - Gradle: gradle-executors.md
       - SoapUI Tests: executor-soapui.md
+      - Artillery.io: executor-artillery.md
       - Curl Commands: executor-curl.md
       - Creating Custom Executors: executor-custom.md
   - CLI Reference:
