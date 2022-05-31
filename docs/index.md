@@ -37,6 +37,12 @@ run your first tests!
 
 <!---<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> --->
 
+## **Blog Posts**
+
+Check out our blog posts that highlight Testkube functionality:
+
+- [Testkube Blog Post](https://kubeshop.io/blog-projects/testkube) - May 10, 2022
+
 ## **Questions or Comments?**
 
 What do you think of Testkube? We'd LOVE to hear from you! Please share your experiences and, of course, ideas on how we can make it better. Feel free to reach out on our [Discord server](https://discord.gg/uNuhy6GDyn).
