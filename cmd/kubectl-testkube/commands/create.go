@@ -31,7 +31,8 @@ func NewCreateCmd() *cobra.Command {
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
 	cmd.AddCommand(executors.NewCreateExecutorCmd())
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
+
+	cmd.PersistentFlags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
 
 	return cmd
 }

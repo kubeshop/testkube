@@ -13,7 +13,6 @@ kubectl-testkube create test [flags]
 ### Options
 
 ```
-      --crd-only                         generate only test crd
   -f, --file string                      test file - will be read from stdin if not specified
       --git-branch string                if uri is git repository we can set additional branch parameter
       --git-path string                  if repository is big we need to define additional path to directory/file to checkout partially
@@ -31,12 +30,13 @@ kubectl-testkube create test [flags]
   -v, --variable stringToString          variable key value pair: --variable key1=value1 (default [])
 ```
 
-### Options inherited from Parent Commands
+### Options inherited from parent commands
 
 ```
       --analytics-enabled   enable analytics
   -a, --api-uri string      api uri, default value read from config if set
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
+      --crd-only            generate only crd
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
       --verbose             show additional debug messages

@@ -9,10 +9,11 @@ kubectl-testkube create <resourceName> [flags]
 ### Options
 
 ```
-  -h, --help   help for create
+      --crd-only   generate only crd
+  -h, --help       help for create
 ```
 
-### Options inherited from Parent Commands
+### Options inherited from parent commands
 
 ```
       --analytics-enabled   enable analytics
