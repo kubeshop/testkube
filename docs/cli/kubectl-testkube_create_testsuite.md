@@ -13,6 +13,7 @@ kubectl-testkube create testsuite [flags]
 ### Options
 
 ```
+      --crd-only                         generate only test suite crd
   -f, --file string                      JSON test suite file - will be read from stdin if not specified, look at testkube.TestUpsertRequest
   -h, --help                             help for testsuite
   -l, --label stringToString             label key value pair: --label key1=value1 (default [])

@@ -13,6 +13,7 @@ kubectl-testkube create executor [flags]
 ### Options
 
 ```
+      --crd-only               generate only executor crd
       --executor-type string   executor type (defaults to job) (default "job")
   -h, --help                   help for executor
   -i, --image string           if uri is git repository we can set additional branch parameter

@@ -13,6 +13,7 @@ kubectl-testkube create webhook [flags]
 ### Options
 
 ```
+      --crd-only               generate only webhook crd
   -e, --events stringArray     event types handled by executor e.g. start-test|end-test
   -h, --help                   help for webhook
   -l, --label stringToString   label key value pair: --label key1=value1 (default [])
