@@ -265,7 +265,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if c.Accepts("application/json", "text/yaml") == "text/yaml" {
+		if c.Accepts(contentTypeJSON, contentTypeYAML) == contentTypeYAML {
 			data, err := crd.ExecuteTemplate(crd.TemplateTest, request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
