@@ -165,7 +165,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	return content, nil
 }
 
-func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (options apiclientv1.UpsertTestOptions, err error) {
+func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiclientv1.UpsertTestOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 
 	ui.ExitOnError("creating content from passed parameters", err)
@@ -194,10 +194,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, test testkube.Test) (opti
 	}
 
 	// if labels are passed and are different from the existing overwrite
-	if len(labels) > 0 && !reflect.DeepEqual(test.Labels, labels) {
+	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
 		options.Labels = labels
 	} else {
-		options.Labels = test.Labels
+		options.Labels = testLabels
 	}
 
 	// try to detect type if none passed

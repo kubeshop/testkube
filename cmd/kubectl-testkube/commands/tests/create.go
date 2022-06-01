@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -38,38 +39,45 @@ func NewCreateTestsCmd() *cobra.Command {
 		Short:   "Create new Test",
 		Long:    `Create new Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-
-			client, testNamespace := common.GetClient(cmd)
-			test, _ := client.GetTest(testName)
-
 			if testName == "" {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
 
-			if testName == test.Name {
-				ui.Failf("Test with name '%s' already exists in namespace %s", testName, testNamespace)
+			namespace := cmd.Flag("namespace").Value.String()
+			var client client.Client
+			var testLabels map[string]string
+			if !crdOnly {
+				client, namespace = common.GetClient(cmd)
+				test, _ := client.GetTest(testName)
+				testLabels = test.Labels
+
+				if testName == test.Name {
+					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
+				}
 			}
 
 			err := validateCreateOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
+			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
 			ui.ExitOnError("getting test options", err)
 
-			executors, err := client.ListExecutors("")
-			ui.ExitOnError("getting available executors", err)
+			if !crdOnly {
+				executors, err := client.ListExecutors("")
+				ui.ExitOnError("getting available executors", err)
 
-			err = validateExecutorType(options.Type_, executors)
-			ui.ExitOnError("validating executor type", err)
+				err = validateExecutorType(options.Type_, executors)
+				ui.ExitOnError("validating executor type", err)
+			}
 
 			err = validateSchedule(options.Schedule)
 			ui.ExitOnError("validating schedule", err)
 
 			if !crdOnly {
-				test, err = client.CreateTest(options)
-				ui.ExitOnError("creating test "+testName+" in namespace "+testNamespace, err)
+				_, err = client.CreateTest(options)
+				ui.ExitOnError("creating test "+testName+" in namespace "+namespace, err)
 
-				ui.Success("Test created", testNamespace, "/", testName)
+				ui.Success("Test created", namespace, "/", testName)
 			} else {
 				if options.Content != nil && options.Content.Data != "" {
 					options.Content.Data = fmt.Sprintf("%q", options.Content.Data)

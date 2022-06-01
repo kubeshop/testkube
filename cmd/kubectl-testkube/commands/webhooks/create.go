@@ -23,18 +23,19 @@ func NewCreateWebhookCmd() *cobra.Command {
 		Short:   "Create new Webhook",
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-
-			var err error
-
-			client, namespace := common.GetClient(cmd)
-
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			webhook, _ := client.GetWebhook(name)
-			if name == webhook.Name {
-				ui.Failf("Webhook with name '%s' already exists in namespace %s", name, namespace)
+			namespace := cmd.Flag("namespace").Value.String()
+			var client apiv1.Client
+			if !crdOnly {
+				client, namespace = common.GetClient(cmd)
+
+				webhook, _ := client.GetWebhook(name)
+				if name == webhook.Name {
+					ui.Failf("Webhook with name '%s' already exists in namespace %s", name, namespace)
+				}
 			}
 
 			options := apiv1.CreateWebhookOptions{
@@ -46,7 +47,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 			}
 
 			if !crdOnly {
-				_, err = client.CreateWebhook(options)
+				_, err := client.CreateWebhook(options)
 				ui.ExitOnError("creating webhook "+name+" in namespace "+namespace, err)
 
 				ui.Success("Webhook created", name)

@@ -33,7 +33,6 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		Short:   "Create new TestSuite",
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			var content []byte
 			var err error
 
@@ -59,14 +58,17 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				options.Name = name
 			}
 
-			client, namespace := common.GetClient(cmd)
-			options.Namespace = namespace
-
-			test, _ := client.GetTestSuite(options.Name)
-			if options.Name == test.Name {
-				ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, options.Namespace)
+			namespace := cmd.Flag("namespace").Value.String()
+			var client apiClient.Client
+			if !crdOnly {
+				client, namespace = common.GetClient(cmd)
+				test, _ := client.GetTestSuite(options.Name)
+				if options.Name == test.Name {
+					ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, namespace)
+				}
 			}
 
+			options.Namespace = namespace
 			options.Labels = labels
 
 			variables, err := common.CreateVariables(cmd)
@@ -78,7 +80,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			ui.ExitOnError("validating schedule", err)
 
 			if !crdOnly {
-				test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
+				_, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
 				ui.ExitOnError("creating test suite "+options.Name+" in namespace "+options.Namespace, err)
 
 				ui.Success("Test suite created", options.Name)

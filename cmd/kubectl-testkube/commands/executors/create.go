@@ -32,11 +32,15 @@ func NewCreateExecutorCmd() *cobra.Command {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			client, namespace := common.GetClient(cmd)
+			namespace := cmd.Flag("namespace").Value.String()
+			var client apiClient.Client
+			if !crdOnly {
+				client, namespace = common.GetClient(cmd)
 
-			executor, _ := client.GetExecutor(name)
-			if name == executor.Name {
-				ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
+				executor, _ := client.GetExecutor(name)
+				if name == executor.Name {
+					ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
+				}
 			}
 
 			jobTemplateContent := ""

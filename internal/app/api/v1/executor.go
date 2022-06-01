@@ -24,6 +24,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, err)
 			}
 
+			c.Context().SetContentType(mediaTypeYAML)
 			return c.SendString(data)
 		}
 

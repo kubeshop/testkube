@@ -39,7 +39,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, test)
+			options, err := NewUpsertTestOptionsFromFlags(cmd, test.Labels)
 			ui.ExitOnError("getting test options", err)
 
 			err = validateSchedule(options.Schedule)
