@@ -20,7 +20,7 @@ kubectl-testkube create webhook [flags]
   -u, --uri string             URI which should be called when given event occurs
 ```
 
-### Options inherited from parent commands
+### Options inherited from Parent Commands
 
 ```
       --analytics-enabled   enable analytics
