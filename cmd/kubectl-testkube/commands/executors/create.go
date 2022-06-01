@@ -63,7 +63,10 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				ui.Success("Executor created", name)
 			} else {
-				options.JobTemplate = fmt.Sprintf("%q", options.JobTemplate)
+				if options.JobTemplate != "" {
+					options.JobTemplate = fmt.Sprintf("%q", options.JobTemplate)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateExecutor, options)
 				ui.ExitOnError("executing crd template", err)
 

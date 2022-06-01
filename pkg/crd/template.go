@@ -18,6 +18,10 @@ const (
 	TemplateExecutor Template = "executor"
 	// TemplateWebhook is webhook crd template
 	TemplateWebhook Template = "webhook"
+	// TemplateTest is test crd template
+	TemplateTest Template = "test"
+	// TemplateTestSuite is test suite crd template
+	TemplateTestSuite Template = "testsuite"
 )
 
 // ExecuteTemplate executes crd template

@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
@@ -28,6 +29,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		variables       map[string]string
 		secretVariables map[string]string
 		schedule        string
+		crdOnly         bool
 	)
 
 	cmd := &cobra.Command{
@@ -63,10 +65,21 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = validateSchedule(options.Schedule)
 			ui.ExitOnError("validating schedule", err)
 
-			test, err = client.CreateTest(options)
-			ui.ExitOnError("creating test "+testName+" in namespace "+testNamespace, err)
+			if !crdOnly {
+				test, err = client.CreateTest(options)
+				ui.ExitOnError("creating test "+testName+" in namespace "+testNamespace, err)
 
-			ui.Success("Test created", testNamespace, "/", testName)
+				ui.Success("Test created", testNamespace, "/", testName)
+			} else {
+				if options.Content != nil && options.Content.Data != "" {
+					options.Content.Data = fmt.Sprintf("%q", options.Content.Data)
+				}
+
+				data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
+				ui.ExitOnError("executing crd template", err)
+
+				ui.Info(data)
+			}
 		},
 	}
 
@@ -87,6 +100,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only test crd")
 
 	return cmd
 }

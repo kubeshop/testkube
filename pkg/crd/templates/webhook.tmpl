@@ -4,12 +4,12 @@ metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
-  {{- range $key, $value := .Labels }}  
+  {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
   {{- end }}
 spec:
-  events: 
+  events:
   {{- range .Events }}
   - {{ . }}
-  {{- end }}  
+  {{- end }}
   uri: {{ .Uri }}
