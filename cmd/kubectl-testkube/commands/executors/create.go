@@ -68,7 +68,6 @@ func NewCreateExecutorCmd() *cobra.Command {
 				ui.ExitOnError("executing crd template", err)
 
 				ui.Info(data)
-				ui.Success("Executor generated", name)
 			}
 		},
 	}

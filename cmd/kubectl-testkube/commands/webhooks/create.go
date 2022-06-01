@@ -55,7 +55,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 				ui.ExitOnError("executing crd template", err)
 
 				ui.Info(data)
-				ui.Success("Webhook generated", name)
 			}
 		},
 	}
