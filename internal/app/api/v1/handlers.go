@@ -19,10 +19,10 @@ const (
 )
 
 const (
-	// contentTypeJSON is json content type
-	contentTypeJSON = "application/json"
-	// contentTypeYAML is yaml content type
-	contentTypeYAML = "text/yaml"
+	// mediaTypeJSON is json media type
+	mediaTypeJSON = "application/json"
+	// mediaTypeYAML is yaml media type
+	mediaTypeYAML = "text/yaml"
 )
 
 // HandleEmitterLogs is a handler to emit logs

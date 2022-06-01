@@ -17,7 +17,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if c.Accepts(contentTypeJSON, contentTypeYAML) == contentTypeYAML {
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.ExecuteTemplate(crd.TemplateWebhook, request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
