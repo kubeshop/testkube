@@ -1,6 +1,6 @@
 # What is a Testkube Executor?
 
-If tests are written in testing frameworks other than those Testkube supports out-of-the-box, you can write a **custom executor**.
+To use a testing framework that is not on the currently supported framework list for Teskube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contribute it to our repo as well. We are very happy to receive executor contributions from our community.
 
 An Executor is a wrapper around a testing framework in the form of a Docker container and run as a Kubernetes job. Usually, an executor runs a particular test framework binary inside a container. Additionally, it is registered as an Executor Custom Resource in your Kubernetes cluster with a type handler defined (e.g. `postman/collection`).
 

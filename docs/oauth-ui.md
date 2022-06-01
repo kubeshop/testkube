@@ -1,17 +1,17 @@
 # Testkube UI Authentication
 
 Testkube doesn't provide a separate user/role management system to protect access to its UI.
-Users can configure OAuth based authenication module using Testkube Helm chart parameters.
-Testkube can automatically create OAuth2-Proxy service and deployment integrated 
+Users can configure and OAuth based authenication module using Testkube Helm chart parameters.
+Testkube can automatically create an OAuth2-Proxy service and deployment integrated 
 with GitHub, as well as properly configure Kubernetes Nginx Ingress Controller and create required 
 ingresses.
 
-# Provide Parameters for UI and API Ingresses
+## **Provide Parameters for UI and API Ingresses**
 
-## API Ingress
+### **API Ingress**
 
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
-Pay attention to the usage of the scheme (http or https) in uris.
+Pay attention to the usage of the scheme (http or https) in URIs.
 
 ```sh
 --set testkube-api.uiIngress.enabled=true \
@@ -20,10 +20,10 @@ Pay attention to the usage of the scheme (http or https) in uris.
 --set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/access-control-allow-origin" = "*"
 ```
 
-## UI Ingress
+### **UI Ingress**
 
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
-Pay attention to the usage of the scheme (http or https) in uris.
+Pay attention to the usage of the scheme (http or https) in URIs.
 
 ```sh
 --set testkube-dashboard.ingress.enabled=true \
@@ -31,24 +31,24 @@ Pay attention to the usage of the scheme (http or https) in uris.
 --set testkube-dashboard.ingress.annotations.nginx."ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri"
 ```
 
-# Create Cookie Secret
+## **Create Cookie Secret**
 
-Use openssl to generate a shared secret or it can be any 16 or 32 byte value 64base encoded.
+Use OpenSSL to generate a shared secret or it can be any 16 or 32 byte value 64base encoded.
 
 ```sh
 $ openssl rand -hex 16
 48f0a2b815ddc0a437825ccb27548d25
 ```
 
-# Create Github OAuth Application
+## **Create Github OAuth Application**
 
-Register a new Github OAuth application for your personal or organization account.
+Register a new Github OAuth application for your personal or organizational account.
 
 ![Register new App](img/github_app_request_ui.png)
 
-Pay attention to the usage of the scheme (http or https) in uris.
+Pay attention to the usage of the scheme (http or https) in URIs.
 The homepage URL
-should be UI home page http://testdash.testkube.io.
+should be the UI home page http://testdash.testkube.io.
 
 The authorization callback URL
 should be a prebuilt page at the UI website http://testdash.testkube.io/oauth2/callback.
@@ -57,10 +57,10 @@ should be a prebuilt page at the UI website http://testdash.testkube.io/oauth2/c
 
 Remember the generated Client ID and Client Secret.
 
-# OAuth Service, Deployment and Ingresses Parameters
+## **OAuth Service, Deployment and Ingresses Parameters**
 
-Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
-Pay attention to the usage of the scheme (http or https) in uris.
+Pass values to the Testkube Helm chart during installation or upgrade (they are empty by default).
+Pay attention to the usage of the scheme (http or https) in URIs.
 
 ```sh
 --set testkube-dashboard.oauth2.enabled=true \

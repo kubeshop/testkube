@@ -21,25 +21,29 @@ nav:
   - Welcome: index.md
   - Installation: installing.md
   - Getting Started: getting-started.md
-  - UI: UI.md
-  - Managing Test Suites:
-      - Creating: testsuites-creating.md
-      - Running: testsuites-running.md
-      - Getting results: testsuites-getting-results.md
-  - Managing Tests:
-      - Creating: tests-creating.md
-      - Running: tests-running.md
-      - Getting Results: tests-getting-results.md
-  - Executors:
-      - Cypress: cypress-executors.md
-      - Postman: postman-executors.md
+  - Using Testkube:
+      - UI: UI.md
+      - Test Suites:
+          - Creating: testsuites-creating.md
+          - Running: testsuites-running.md
+          - Getting results: testsuites-getting-results.md
+      - Tests:
+          - Creating: tests-creating.md
+          - Running: tests-running.md
+          - Getting Results: tests-getting-results.md
+      - Scheduling: scheduling.md
+      - Artifact Storage: artifacts-storage.md
+      - Metrics: metrics.md
+  - Test Types:
+      - Cypress: executor-cypress.md
+      - Postman: executor-postman.md
       - K6: executor-k6.md
-#     - Maven: maven-executors.md
-#     - Gradle: gradle-executors.md
+#     - Maven: executor-maven.md
+#     - Gradle: executor-gradle.md
       - SoapUI Tests: executor-soapui.md
       - Artillery.io: executor-artillery.md
       - Curl Commands: executor-curl.md
-      - Creating Custom Executors: executor-custom.md
+      - Creating New Test Types: executor-custom.md
   - CLI Reference:
       - Overview: cli/kubectl-testkube.md
       - Abort Command: cli/kubectl-testkube_abort.md
@@ -62,20 +66,22 @@ nav:
       - Upgrade Command: cli/kubectl-testkube_upgrade.md
       - Version Command: cli/kubectl-testkube_version.md
       - Watch Command: cli/kubectl-testkube_watch.md
-  - Integrating with CI/CD: testkube-automation.md
-  - Integrating with Slack: slack-integration.md
-  - Scheduling: scheduling.md
-  - OAuth for UI: oauth-ui.md
-  - OAuth for CLI: oauth-cli.md
-  - Metrics: metrics.md
-  - Architecture: architecture.md
-  - Contributing: contributing.md
-  - Development:
-      - Local Runs: development.md
-      - Custom Resources: development-crds.md
   - OpenAPI Definition: openapi.md
+  - Integrations:
+      - Integrating with CI/CD: testkube-automation.md
+      - Integrating with Slack: slack-integration.md
+  - Authentication:
+      - OAuth for UI: oauth.md
+      - OAuth for CLI: oauth-cli.md
+  - Contributing:    
+      - Contributing: contributing.md
+      - Development:
+          - Local Runs: development.md
+          - Custom Resources: development-crds.md
+  - Architecture: architecture.md
   - Telemetry: telemetry.md
-  - Storage: artifacts-storage.md
+  
+ 
 
 extra:
   analytics:
