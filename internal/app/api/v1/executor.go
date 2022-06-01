@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,6 +16,15 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if c.Accepts("application/json", "text/yaml") == "text/yaml" {
+			data, err := crd.ExecuteTemplate(crd.TemplateExecutor, request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			return c.SendString(data)
 		}
 
 		executor := mapExecutorCreateRequestToExecutorCRD(request)
