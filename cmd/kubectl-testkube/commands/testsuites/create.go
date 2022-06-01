@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -24,7 +25,6 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		variables       map[string]string
 		secretVariables map[string]string
 		schedule        string
-		crdOnly         bool
 	)
 
 	cmd := &cobra.Command{
@@ -34,7 +34,8 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var content []byte
-			var err error
+			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			ui.ExitOnError("parsing flag value", err)
 
 			if file != "" {
 				// read test content
@@ -103,7 +104,6 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "param key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test suite schedule in a cronjob form: * * * * *")
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only test suite crd")
 
 	return cmd
 }

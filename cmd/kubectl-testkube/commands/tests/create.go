@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -30,7 +31,6 @@ func NewCreateTestsCmd() *cobra.Command {
 		variables       map[string]string
 		secretVariables map[string]string
 		schedule        string
-		crdOnly         bool
 	)
 
 	cmd := &cobra.Command{
@@ -39,6 +39,9 @@ func NewCreateTestsCmd() *cobra.Command {
 		Short:   "Create new Test",
 		Long:    `Create new Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
+			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			ui.ExitOnError("parsing flag value", err)
+
 			if testName == "" {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
@@ -56,7 +59,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 			}
 
-			err := validateCreateOptions(cmd)
+			err = validateCreateOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
 			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
@@ -108,7 +111,6 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only test crd")
 
 	return cmd
 }

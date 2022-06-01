@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
@@ -10,6 +11,8 @@ import (
 )
 
 func NewCreateCmd() *cobra.Command {
+	var crdOnly bool
+
 	cmd := &cobra.Command{
 		Use:     "create <resourceName>",
 		Aliases: []string{"c"},
@@ -17,12 +20,18 @@ func NewCreateCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
+		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if !crdOnly {
+				validator.PersistentPreRunVersionCheck(cmd, Version)
+			}
 		}}
 
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
 	cmd.AddCommand(executors.NewCreateExecutorCmd())
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
 
 	return cmd
 }

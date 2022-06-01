@@ -1,6 +1,8 @@
 package webhooks
 
 import (
+	"strconv"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -14,7 +16,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 		events    []string
 		name, uri string
 		labels    map[string]string
-		crdOnly   bool
 	)
 
 	cmd := &cobra.Command{
@@ -23,6 +24,9 @@ func NewCreateWebhookCmd() *cobra.Command {
 		Short:   "Create new Webhook",
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
+			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			ui.ExitOnError("parsing flag value", err)
+
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
@@ -64,7 +68,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor e.g. start-test|end-test")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "generate only webhook crd")
 
 	return cmd
 }
