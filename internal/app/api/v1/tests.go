@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,18 +52,30 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		execution, err := s.ExecutionResults.GetLatestByTest(ctx, name)
-		if err != nil && err != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, err)
+		startExecution, startErr := s.ExecutionResults.GetLatestByTest(ctx, name, "starttime")
+		if startErr != nil && startErr != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, startErr)
+		}
+
+		endExecution, endErr := s.ExecutionResults.GetLatestByTest(ctx, name, "endtime")
+		if endErr != nil && endErr != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
-
 		testWithExecution := testkube.TestWithExecution{
 			Test: &test,
 		}
-		if err == nil {
-			testWithExecution.LatestExecution = &execution
+		if startErr == nil && endErr == nil {
+			if startExecution.StartTime.After(endExecution.EndTime) {
+				testWithExecution.LatestExecution = &startExecution
+			} else {
+				testWithExecution.LatestExecution = &endExecution
+			}
+		} else if startErr == nil {
+			testWithExecution.LatestExecution = &startExecution
+		} else if endErr == nil {
+			testWithExecution.LatestExecution = &endExecution
 		}
 
 		return c.JSON(testWithExecution)
@@ -111,6 +125,56 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
+// getLatestExecutions return latest executions either by starttime or endtine for tests
+func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
+	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames, "starttime")
+	if err != nil && err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+
+	startExecutionMap := make(map[string]testkube.Execution, len(executions))
+	for i := range executions {
+		startExecutionMap[executions[i].TestName] = executions[i]
+	}
+
+	executions, err = s.ExecutionResults.GetLatestByTests(ctx, testNames, "endtime")
+	if err != nil && err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+
+	endExecutionMap := make(map[string]testkube.Execution, len(executions))
+	for i := range executions {
+		endExecutionMap[executions[i].TestName] = executions[i]
+	}
+
+	executionMap := make(map[string]testkube.Execution)
+	for _, testName := range testNames {
+		startExecution, okStart := startExecutionMap[testName]
+		endExecution, okEnd := endExecutionMap[testName]
+		if !okStart && !okEnd {
+			continue
+		}
+
+		if okStart && !okEnd {
+			executionMap[testName] = startExecution
+			continue
+		}
+
+		if !okStart && okEnd {
+			executionMap[testName] = endExecution
+			continue
+		}
+
+		if startExecution.StartTime.After(endExecution.EndTime) {
+			executionMap[testName] = startExecution
+		} else {
+			executionMap[testName] = endExecution
+		}
+	}
+
+	return executionMap, nil
+}
+
 // ListTestWithExecutionsHandler is a method for getting list of all available test with latest executions
 func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -121,29 +185,50 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 		ctx := c.Context()
-		testWithExecutions := make([]testkube.TestWithExecution, len(tests))
+		testWithExecutions := make([]testkube.TestWithExecution, 0, len(tests))
+		results := make([]testkube.TestWithExecution, 0, len(tests))
 		testNames := make([]string, len(tests))
 		for i := range tests {
 			testNames[i] = tests[i].Name
 		}
 
-		executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames)
-		if err != nil && err != mongo.ErrNoDocuments {
+		executionMap, err := s.getLatestExecutions(ctx, testNames)
+		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		executionMap := make(map[string]testkube.Execution, len(executions))
-		for i := range executions {
-			executionMap[executions[i].TestName] = executions[i]
-		}
-
 		for i := range tests {
-			testWithExecutions[i].Test = &tests[i]
 			if execution, ok := executionMap[tests[i].Name]; ok {
-				testWithExecutions[i].LatestExecution = &execution
+				results = append(results, testkube.TestWithExecution{
+					Test:            &tests[i],
+					LatestExecution: &execution,
+				})
+			} else {
+				testWithExecutions = append(testWithExecutions, testkube.TestWithExecution{
+					Test: &tests[i],
+				})
 			}
 		}
 
+		sort.Slice(testWithExecutions, func(i, j int) bool {
+			return testWithExecutions[i].Test.Created.After(testWithExecutions[j].Test.Created)
+		})
+
+		sort.Slice(results, func(i, j int) bool {
+			iTime := results[i].LatestExecution.EndTime
+			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
+				iTime = results[i].LatestExecution.StartTime
+			}
+
+			jTime := results[j].LatestExecution.EndTime
+			if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
+				jTime = results[j].LatestExecution.StartTime
+			}
+
+			return iTime.After(jTime)
+		})
+
+		testWithExecutions = append(testWithExecutions, results...)
 		status := c.Query("status")
 		if status != "" {
 			statusList, err := testkube.ParseExecutionStatusList(status, ",")

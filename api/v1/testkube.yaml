@@ -1623,6 +1623,9 @@ components:
           default: 1
         variables:
           $ref: "#/components/schemas/Variables"
+        created:
+          type: string
+          format: date-time
 
     TestSuiteStepType:
       type: string

@@ -9,6 +9,8 @@
  */
 package testkube
 
+import "time"
+
 type TestSuite struct {
 	Name        string `json:"name"`
 	Namespace   string `json:"namespace,omitempty"`
@@ -25,4 +27,5 @@ type TestSuite struct {
 	Schedule  string              `json:"schedule,omitempty"`
 	Repeats   int32               `json:"repeats,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	Created   time.Time           `json:"created,omitempty"`
 }
