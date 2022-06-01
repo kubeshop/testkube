@@ -42,7 +42,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, err)
 			}
 
-			c.Context().SetContentType(mediaTypeYAML)		
+			c.Context().SetContentType(mediaTypeYAML)
 			return c.SendString(data)
 		}
 
