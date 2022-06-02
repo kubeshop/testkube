@@ -257,6 +257,10 @@ func (s TestkubeAPI) Init() {
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 
+	// mount everything on results
+	// TODO it should be named /api/ + dashboard refactor
+	s.Mux.Mount("/results", s.Mux)
+
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
 }
 
