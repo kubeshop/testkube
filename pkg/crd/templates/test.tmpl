@@ -1,0 +1,39 @@
+apiVersion: tests.testkube.io/v1
+kind: Test
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+spec:
+  type: {{ .Type_ }}
+  {{- if .Content }}
+  content:
+    type: {{ .Content.Type_ }}
+    {{- if .Content.Repository }}
+    repository:
+      type: {{ .Content.Repository.Type_ }}
+      uri: {{ .Content.Repository.Uri }}
+      branch: {{ .Content.Repository.Branch }}
+      path: {{ .Content.Repository.Path }}
+    {{- end }}
+    data: {{ .Content.Data }}
+    uri: {{ .Content.Uri }}
+  {{- end }}
+  schedule: {{ .Schedule }}
+  variables:
+  {{- range $key, $value := .Variables }}
+  - name: {{ $key }}
+    value: {{ $value.Value }}
+    {{- if $value.Type_ }}
+    type: {{ $value.Type_ }}
+    {{- end }}
+    {{- if $value.SecretRef }}
+    secretRef:
+      namespace: {{ $value.SecretRef.Namespace }}
+      name: {{ $value.SecretRef.Name }}
+      key: {{ $value.SecretRef.Key }}
+    {{- end }}
+  {{- end }}

@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -264,6 +265,16 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.ExecuteTemplate(crd.TemplateTest, request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			c.Context().SetContentType(mediaTypeYAML)
+			return c.SendString(data)
+		}
+
 		s.Log.Infow("creating test", "request", request)
 
 		testSpec := testsmapper.MapToSpec(request)
@@ -281,6 +292,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		c.Status(201)
 		return c.JSON(test)
 	}
 }

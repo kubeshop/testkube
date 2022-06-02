@@ -11,6 +11,8 @@ import (
 )
 
 func NewCreateCmd() *cobra.Command {
+	var crdOnly bool
+
 	cmd := &cobra.Command{
 		Use:     "create <resourceName>",
 		Aliases: []string{"c"},
@@ -20,13 +22,17 @@ func NewCreateCmd() *cobra.Command {
 			ui.PrintOnError("Displaying help", err)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			validator.PersistentPreRunVersionCheck(cmd, Version)
+			if !crdOnly {
+				validator.PersistentPreRunVersionCheck(cmd, Version)
+			}
 		}}
 
 	cmd.AddCommand(tests.NewCreateTestsCmd())
 	cmd.AddCommand(testsuites.NewCreateTestSuitesCmd())
 	cmd.AddCommand(webhooks.NewCreateWebhookCmd())
 	cmd.AddCommand(executors.NewCreateExecutorCmd())
+
+	cmd.PersistentFlags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
 
 	return cmd
 }

@@ -1,0 +1,66 @@
+apiVersion: tests.testkube.io/v1
+kind: TestSuite
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+spec:
+  description: {{ .Description }}
+  before:
+  {{- range .Before }}
+  - stopTestOnFailure: {{ .StopTestOnFailure }}
+    {{- if .Execute }}
+    execute:
+      namespace: {{ .Execute.Namespace }}
+      name: {{ .Execute.Name }}
+    {{- end }}
+    {{- if .Delay }}
+    delay:
+      duration: {{ .Delay.Duration }}
+    {{- end }}
+  {{- end }}
+  steps:
+  {{- range .Steps }}
+  - stopTestOnFailure: {{ .StopTestOnFailure }}
+    {{- if .Execute }}
+    execute:
+      namespace: {{ .Execute.Namespace }}
+      name: {{ .Execute.Name }}
+    {{- end }}
+    {{- if .Delay }}
+    delay:
+      duration: {{ .Delay.Duration }}
+    {{- end }}
+  {{- end }}
+  after:
+  {{- range .After }}
+  - stopTestOnFailure: {{ .StopTestOnFailure }}
+    {{- if .Execute }}
+    execute:
+      namespace: {{ .Execute.Namespace }}
+      name: {{ .Execute.Name }}
+    {{- end }}
+    {{- if .Delay }}
+    delay:
+      duration: {{ .Delay.Duration }}
+    {{- end }}
+  {{- end }}
+  schedule: {{ .Schedule }}
+  repeats: {{ .Repeats }}
+  variables:
+  {{- range $key, $value := .Variables }}
+  - name: {{ $key }}
+    value: {{ $value.Value }}
+    {{- if $value.Type_ }}
+    type: {{ $value.Type_ }}
+    {{- end }}
+    {{- if $value.SecretRef }}
+    secretRef:
+      namespace: {{ $value.SecretRef.Namespace }}
+      name: {{ $value.SecretRef.Name }}
+      key: {{ $value.SecretRef.Key }}
+    {{- end }}
+  {{- end }}

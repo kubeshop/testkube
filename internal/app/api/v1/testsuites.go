@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/rand"
@@ -33,6 +34,16 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			c.Context().SetContentType(mediaTypeYAML)
+			return c.SendString(data)
 		}
 
 		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
@@ -14,6 +15,16 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.ExecuteTemplate(crd.TemplateWebhook, request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			c.Context().SetContentType(mediaTypeYAML)
+			return c.SendString(data)
 		}
 
 		webhook := webhooksmapper.MapAPIToCRD(request)

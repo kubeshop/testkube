@@ -18,6 +18,13 @@ const (
 	cliIngressHeader = "X-CLI-Ingress"
 )
 
+const (
+	// mediaTypeJSON is json media type
+	mediaTypeJSON = "application/json"
+	// mediaTypeYAML is yaml media type
+	mediaTypeYAML = "text/yaml"
+)
+
 // HandleEmitterLogs is a handler to emit logs
 func (s TestkubeAPI) HandleEmitterLogs() {
 	go func() {

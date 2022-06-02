@@ -2,12 +2,15 @@ package testsuites
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
@@ -30,9 +33,9 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		Short:   "Create new TestSuite",
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			var content []byte
-			var err error
+			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			ui.ExitOnError("parsing flag value", err)
 
 			if file != "" {
 				// read test content
@@ -56,14 +59,17 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				options.Name = name
 			}
 
-			client, namespace := common.GetClient(cmd)
-			options.Namespace = namespace
-
-			test, _ := client.GetTestSuite(options.Name)
-			if options.Name == test.Name {
-				ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, options.Namespace)
+			namespace := cmd.Flag("namespace").Value.String()
+			var client apiClient.Client
+			if !crdOnly {
+				client, namespace = common.GetClient(cmd)
+				test, _ := client.GetTestSuite(options.Name)
+				if options.Name == test.Name {
+					ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, namespace)
+				}
 			}
 
+			options.Namespace = namespace
 			options.Labels = labels
 
 			variables, err := common.CreateVariables(cmd)
@@ -74,9 +80,21 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			err = validateSchedule(options.Schedule)
 			ui.ExitOnError("validating schedule", err)
 
-			test, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
-			ui.ExitOnError("creating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
-			ui.Success("TestSuite created", options.Name)
+			if !crdOnly {
+				_, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
+				ui.ExitOnError("creating test suite "+options.Name+" in namespace "+options.Namespace, err)
+
+				ui.Success("Test suite created", options.Name)
+			} else {
+				if options.Description != "" {
+					options.Description = fmt.Sprintf("%q", options.Description)
+				}
+
+				data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, options)
+				ui.ExitOnError("executing crd template", err)
+
+				ui.Info(data)
+			}
 		},
 	}
 
