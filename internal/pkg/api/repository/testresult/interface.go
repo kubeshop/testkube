@@ -46,4 +46,8 @@ type Repository interface {
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
 	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
+	// DeleteByTest deletes execution results by test
+	DeleteByTest(ctx context.Context, testName string) error
+	// DeleteAll deletes all execution results
+	DeleteAll(ctx context.Context) error
 }

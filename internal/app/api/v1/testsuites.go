@@ -192,6 +192,16 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			}
 		}
 
+		// delete executions for test
+		if err = s.TestExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// delete all executions for tests
+		if err = s.TestExecutionResults.DeleteAll(c.Context()); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 }

@@ -245,3 +245,15 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	return query, opts
 }
+
+// DeleteByTest deletes execution results by test
+func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuite.name": testName})
+	return
+}
+
+// DeleteAll deletes all execution results
+func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	return
+}
