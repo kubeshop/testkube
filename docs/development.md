@@ -2,7 +2,7 @@
 
 ## **Running with CRDs on Kubernetes Cluster**
 
-The minimial component which must be deployed on your local Kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>)
+The minimial component which must be deployed on your local Kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>).
 
 To install CRDs into your local cluster, checkout the testkube-operator project and run:
 
@@ -20,15 +20,15 @@ Checkout the Testkube project and run a local API server:
 make run-mongo-dev run-api
 ```
 
-Next, checkout and run the Testkube Postman executor (<https://github.com/kubeshop/testkube-executor-postman>). The postman executor is MongoDB based so it will launch MongoDB with the API server step:
+Next, run the Testkube Postman executor (<https://github.com/kubeshop/testkube-executor-postman>). The postman executor is MongoDB based so it will launch MongoDB with the API server step:
 
 ```sh
 make run-executor
 ```
 
-### Making calls to local api server instance
+### **Making Calls to a Local API Server Instance**
 
-If you want to debug api server locally you can run local kube-proxy which make all calls to kube proxy uris directly to api server instances
+If you want to debug an API server locally, you can run a local kube-proxy which makes all calls to kube proxy URIs directly to API server instances.
 
 ```sh
 make api-proxy
@@ -51,7 +51,7 @@ This will register Custom Resources for the following test types:
 - local-cypress/project
 - local-curl/test
 
-Create a `Test` Custom Resource with one of the types above to be executed on given the executor:
+Create a `Test` Custom Resource with one of the types above to be executed on the given executor:
 
 ```sh
 kubectl testkube create test --file my_collection_file.json --name my-test-name --type local-postman/collection

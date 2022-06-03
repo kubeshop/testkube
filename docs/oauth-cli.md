@@ -2,13 +2,13 @@
 
 Testkube doesn't provide a separate user/role management system to protect access to its CLI.
 Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and
-CLI config command.
+the CLI config command.
 Testkube can automatically configure the Kubernetes Nginx Ingress Controller and create required 
 ingresses.
 
-# Provide Parameters for API Ingress
+## **Provide Parameters for API Ingress**
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
-Pay attention to the usage of the scheme (http or https) in uris.
+Pay attention to the usage of the scheme (http or https) in URIs.
 
 ```sh
 --set testkube-api.cliIngress.enabled=true \
@@ -17,15 +17,15 @@ Pay attention to the usage of the scheme (http or https) in uris.
 --set testkube-api.cliIngress.oauth.clientSecret="XXXXXXXXXX" \
 --set testkube-api.cliIngress.oauth.scopes=""
 ```
-# Create Github OAuth Application
+## **Create Github OAuth Application**
 
 Register a new Github OAuth application for your personal or organization account.
 
 ![Register new App](img/github_app_request_cli.png)
 
-Pay attention to the usage of the scheme (http or https) in uris.
+Pay attention to the usage of the scheme (http or https) in URIs.
 The homepage URL
-should be UI home page http://127.0.0.1:13254.
+should be the UI home page http://127.0.0.1:13254.
 
 The authorization callback URL
 should be a prebuilt page at the UI website http://127.0.0.1:13254/oauth/callback.
@@ -34,9 +34,9 @@ should be a prebuilt page at the UI website http://127.0.0.1:13254/oauth/callbac
 
 Remember the generated Client ID and Client Secret.
 
-# Provide Parameters for CLI
+## **Provide Parameters for CLI**
 
-Run the command below to configure oauth parameters (we support github oauth provider):
+Run the command below to configure oauth parameters (we support github OAuth provider):
 
 ```sh
 kubectl testkube config oauth httsp://demo.testkube.io/api --client-id XXXXXXXXXX --client-secret XXXXXXXXXX
@@ -65,9 +65,9 @@ New api uri set to https://demo.testkube.io/api 🥇
 New oauth token gho_XXXXXXXXXX 🥇
 ```
 
-# Run CLI commands with OAuth
+## **Run CLI Commands with OAuth**
 
-Now all of your requests with direct client will submit OAuth token, for example:
+Now all of your requests with direct client will submit an OAuth token, for example:
 
 ```sh
 kubectl testkube get executors -c direct
@@ -86,10 +86,10 @@ Output:
   soapui-executor    |     |      
 ```
 
-# Environment Variables
+## **Environment Variables**
 
 You can use 2 environment variables to override CLI config values:
 
-TESTKUBE_API_URI - for api uri
+TESTKUBE_API_URI - for API uri.
 
-TESTKUBE_OAUTH_ACCESS_TOKEN - for OAuth access token
+TESTKUBE_OAUTH_ACCESS_TOKEN - for OAuth access token.

@@ -1,7 +1,7 @@
 # Artillery.io Performance Tests
 
 
-## Test Environment
+## **Test Environment**
 
 Let's assume that our SUT (Service Under Test) is an internal Kubernetes service which has
 ClusterIP `Service` created and is exposed on port `8088`. The service name is `testkube-api-server`
@@ -19,7 +19,7 @@ Output:
 200 OK
 ```
 
-## Create a Test Manifest
+## **Create a Test Manifest**
 
 The Artillery tests are defined in declarative manner, as YAML files.  
 The test should warm up our service a little bit first, then we can hit a little harder.
@@ -47,11 +47,11 @@ scenarios:
           url: "/health"
 ```
 
-Our test is ready, but how do we run it in Kubernetes cluster? Testkube will help you with that! 
+Our test is ready but how do we run it in a Kubernetes cluster? Testkube will help you with that! 
 
 Let's create a new Testkube test based on the saved Artillery test definition.
 
-## Create a New Testkube Test
+## **Create a New Testkube Test**
 
 ```sh
 kubectl testkube create test --name artillery-api-test --file test.yaml --type artillery/test
@@ -81,11 +81,11 @@ or watch test execution until complete:
 $ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 ```
 
-You can also watch your test results in real-time with `-f` flag (like "follow") 
+You can also watch your test results in real-time with `-f` flag (like "follow"). 
 
 Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 
-## Getting Test Results
+## **Getting Test Results**
 
 
 Let's get back our finished test results. The test report and output will be stored in Testkube storage to revisit when necessary.
@@ -164,6 +164,6 @@ Status Test execution completed with success 🥇
 
 ```
 
-## Summary
+## **Summary**
 
 With the Artillery executor you can now run your tests in Kubernetes with ease. Testkube simplifies running tests inside a cluster and stores tests and tests results for later use.

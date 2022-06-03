@@ -23,12 +23,12 @@ This diagram was made with the C4 diagram technique
 
 ### TestSuites and Tests
 
-Params passing through tests suites and tests priority: 
+Parameters passed through tests suites and tests priority: 
 
-1. Test suite execution variables overrides
-2. Test suite variables overrides
-3. Test execution (variables passed for single test runs) overrides
-4. Test variables
+1. Test Suite execution variables overrides.
+2. Test Suite variables overrides.
+3. Test execution (variables passed for single test runs) overrides.
+4. Test variables.
 
 
-![variables passing](img/params_passing.png)
+![variables passing](img/params-passing.png)

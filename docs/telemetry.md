@@ -33,9 +33,10 @@ The collected data looks like this.
 ## **What We Collect**
 
 Analytics tracked include:
-- The unique id generated from the MAC address.
-- The testkube version.
-- The command being executed.
+
+ - The unique id generated from the MAC address.
+ - The testkube version.
+ - The command being executed.
 
 ## **How to Opt Out**
 

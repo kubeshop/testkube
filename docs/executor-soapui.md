@@ -1,10 +1,10 @@
 # SoapUI Tests
 
-[SoapUI](https://www.soapui.org) is an open-source tool used for end-to-end testing of REST, SOAP, & GraphQL APIs, JMS, JDBC, and other web services. Testkube supports the usage of it with the SoapUI executor implementation.
+[SoapUI](https://www.soapui.org) is an open-source tool used for end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.
 
-## Running a SoapUI test
+## **Running a SoapUI Test**
 
-In order to run a SoapUI test using Testkube, it is necessary to create a Testkube Test.
+In order to run a SoapUI test using Testkube, begin by creating a Testkube Test.
 
 An example of an exported SoapUI test looks the following:
 
@@ -144,9 +144,9 @@ An example of an exported SoapUI test looks the following:
 </con:soapui-project>
 ```
 
-### Using files as input
+### **Using Files as Input**
 
-Testkube and the SoapUI executor accepts a project file as input.
+Testkube and the SoapUI executor accept a project file as input.
 
 ```sh
 $ kubectl testkube create test --file example-project.xml --type soapui/xml --name example-test
@@ -154,7 +154,7 @@ Test created  / example-test 🥇
 
 ```
 
-### Using strings as input
+### **Using Strings as Input**
 
 ```sh
 $ cat example-project.xml | kubectl testkube create test --type soapui/xml --name example-test-string
@@ -162,7 +162,7 @@ Test created  / example-test-string 🥇
 
 ```
 
-### Running the tests
+### **Running the Tests**
 
 To run the created test, use:
 
@@ -187,11 +187,12 @@ $ kubectl testkube get execution 624eedd443ed8485ae9289e2
 
 ```
 
-### Using parameters and arguments in your tests
+### **Using Parameters and Arguments in Your Tests**
 
 SoapUI lets you configure your test runs using different parameters. To see all available command line arguments, check the [official SoapUI docs](https://www.soapui.org/docs/test-automation/running-functional-tests/).
 
-When working with Testkube, the way to use the parameters is by using the `kubectl testkube run` command with the `--args` parameter.
+To use parameters when working with Testkube, use the `kubectl testkube run` command with the `--args` parameter.
+
 An example would be:
 
 ```sh
@@ -224,11 +225,11 @@ SoapUI 5.7.0 TestCase Runner
 
 
 .
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube get execution 625404e5a4cc6d2861193c60
 ```
 
-## Reports, plugins and extensions
+## **Reports, Plugins and Extensions**
 
-In order to be able to use reports, add plugins and extensions the way [SoapUI docs](https://www.soapui.org/docs/test-automation/running-in-docker/) describe it, is currently not supported by Testkube.
-In case you need this feature, please create an [issue](https://github.com/kubeshop/testkube/issues) in the [Testkube repository](https://github.com/kubeshop/testkube).
+In order to use reports, add the plugins and extensions as described in the [SoapUI docs](https://www.soapui.org/docs/test-automation/running-in-docker/). This is currently not supported by Testkube.
+If you are interested in using this feature, please create an [issue](https://github.com/kubeshop/testkube/issues) in the [Testkube repository](https://github.com/kubeshop/testkube).

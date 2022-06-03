@@ -2,17 +2,17 @@
 
 In order to run Tests and Test Suites on a regular basis, we support a scheduling mechanism for these objects.
 CRDs both for test and test suite contain a **schedule** field used to define rules for launching them in time.
-Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details https://en.wikipedia.org/wiki/Cron).
+Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details <https://en.wikipedia.org/wiki/Cron>).
 
-## Scheduling Architecture
+## **Scheduling Architecture**
 
 Testkube uses the scheduling engine from Kubernetes Cron jobs.
 In fact, for each scheduled Test or Test Suite, a special cron job is created from this template:
-https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/cronjob_template.yml.
+<https://github.com/kubeshop/helm-charts/tree/main/charts/testkube-api/cronjob-template.yml>.
 Technically, it is a callback to Testkube API server method launching either Test or Test Suite execution.
-This works similar to scheduled test and test suite executions done by external scheduling platforms. 
+This works similarly to scheduled Test and Test Suite executions done by external scheduling platforms. 
 
-## Create a Test with a Schedule
+## **Create a Test with a Schedule**
 
 Let's create a test with a required schedule using Testkube CLI command:
 
@@ -43,9 +43,9 @@ Output:
 
 The scheduled test was created but it was not yet executed. 
 
-## Run a Scheduled Test
+## **Run a Scheduled Test**
 
-In order to start execution of the test on a defined schedule, run it using the Testkube CLI command:
+In order to start the execution of the test on a defined schedule, use the Testkube CLI command:
 
 ```sh
 kubectl testkube run test scheduled-test
@@ -80,7 +80,7 @@ testkube    scheduled-test-tests   */1 * * * *   False     1        42s         
 ```
 
 The Cron job for this test was successfully created and the test was executed.
-To check Cron job details:
+To the check Cron job details:
 
 ```sh
 kubectl describe cronjob scheduled-test-tests -n testkube
@@ -127,7 +127,7 @@ Events:
 
 As mentioned above, we have a scheduled callback for launching our test.
 
-## Getting Scheduled Test Results
+## **Getting Scheduled Test Results**
 
 Now we can check whether the test is executed every minute for the schedule we provided.
 
@@ -151,7 +151,7 @@ Output:
 
 The test is successfully regulary executed.
 
-## Create a Test Suite with a Schedule
+## **Create a Test Suite with a Schedule**
 
 Let's create a Test Suite with a required schedule using the Testkube CLI command:
 
@@ -181,7 +181,7 @@ Output:
 
 The scheduled test suite was created, but it was not yet executed. 
 
-## Run a Scheduled Test Suite
+## **Run a Scheduled Test Suite**
 
 In order start the execution of the test suite on a defined schedule, we need to run it using Testkube CLI command:
 
@@ -202,12 +202,12 @@ Use the following command to get test execution details:
 $ kubectl testkube get tse 
 ```
 
-Test suite was successfully scheduled for execution and put into the queue.
-We will skip Cron job details, they are fully similar to test one described above.
+The Test Suite was successfully scheduled for execution and put into the queue.
+We will skip the Cron job details, they are fully similar to test one described above.
 
-## Getting Scheduled Test Suite Results
+## **Getting Scheduled Test Suite Results**
 
-The test suite is executed every minute for the schedule we provided.
+The Test Suite is executed every minute for the schedule we provided.
 
 ```sh
 kubectl testkube get tse
@@ -223,4 +223,4 @@ Output:
   6256cdcc418062706814e208 | scheduled-testsuite | scheduled-testsuite.formerly-champion-dodo | passed |     2 |
 ```
 
-The test suite is successfully executed according to the schedule set.
+The Test Suite is successfully executed according to the schedule set.

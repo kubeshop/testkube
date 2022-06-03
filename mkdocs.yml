@@ -71,7 +71,7 @@ nav:
       - Integrating with CI/CD: testkube-automation.md
       - Integrating with Slack: slack-integration.md
   - Authentication:
-      - OAuth for UI: oauth.md
+      - OAuth for UI: oauth-ui.md
       - OAuth for CLI: oauth-cli.md
   - Contributing:    
       - Contributing: contributing.md
