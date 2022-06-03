@@ -205,10 +205,20 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var err error
+		var testSuiteNames []string
 		selector := c.Query("selector")
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
+			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			if !errors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+
+			for _, item := range testSuiteList.Items {
+				testSuiteNames = append(testSuiteNames, item.Name)
+			}
+
 			err = s.TestsSuitesClient.DeleteByLabels(selector)
 		}
 
@@ -228,7 +238,17 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		}
 
 		// delete all executions for test suites
-		if err = s.TestExecutionResults.DeleteAll(c.Context()); err != nil {
+		if selector == "" {
+			err = s.TestExecutionResults.DeleteAll(c.Context())
+		} else {
+			err = s.TestExecutionResults.DeleteByTestSuites(c.Context(), testSuiteNames)
+		}
+
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 

@@ -50,4 +50,6 @@ type Repository interface {
 	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
 	// DeleteAll deletes all execution results
 	DeleteAll(ctx context.Context) error
+	// DeleteByTestSuites deletes execution results by test suites
+	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
 }

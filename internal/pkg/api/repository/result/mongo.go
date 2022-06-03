@@ -311,3 +311,19 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
+
+// DeleteByTests deletes execution results by tests
+func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string) (err error) {
+	if len(testNames) == 0 {
+		return nil
+	}
+
+	conditions := bson.A{}
+	for _, testName := range testNames {
+		conditions = append(conditions, bson.M{"testname": testName})
+	}
+
+	filter := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
+	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}

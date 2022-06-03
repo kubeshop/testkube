@@ -56,4 +56,6 @@ type Repository interface {
 	DeleteByTest(ctx context.Context, testName string) error
 	// DeleteAll deletes all execution results
 	DeleteAll(ctx context.Context) error
+	// DeleteByTests deletes execution results by tests
+	DeleteByTests(ctx context.Context, testNames []string) (err error)
 }

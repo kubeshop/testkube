@@ -210,6 +210,10 @@ func (r MockExecutionResultsRepository) DeleteAll(ctx context.Context) error {
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) DeleteByTests(ctx context.Context, testNames []string) error {
+	panic("not implemented")
+}
+
 type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
