@@ -142,12 +142,12 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		startExecution, startErr := s.TestExecutionResults.GetLatestByTest(ctx, name, "starttime")
+		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusInternalServerError, startErr)
 		}
 
-		endExecution, endErr := s.TestExecutionResults.GetLatestByTest(ctx, name, "endtime")
+		endExecution, endErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "endtime")
 		if endErr != nil && endErr != mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
@@ -193,12 +193,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 		}
 
 		// delete executions for test suite
-		if err = s.TestExecutionResults.DeleteByTest(c.Context(), name); err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// delete all executions for test suites
-		if err = s.TestExecutionResults.DeleteAll(c.Context()); err != nil {
+		if err = s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -230,6 +225,11 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
+		}
+
+		// delete all executions for test suites
+		if err = s.TestExecutionResults.DeleteAll(c.Context()); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)
@@ -270,8 +270,8 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 }
 
 // getLatestTestSuiteExecutions return latest test suite executions either by starttime or endtine for tests
-func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testNames []string) (map[string]testkube.TestSuiteExecution, error) {
-	executions, err := s.TestExecutionResults.GetLatestByTests(ctx, testNames, "starttime")
+func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
+	executions, err := s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames, "starttime")
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, err
 	}
@@ -285,7 +285,7 @@ func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testNames
 		startExecutionMap[executions[i].TestSuite.Name] = executions[i]
 	}
 
-	executions, err = s.TestExecutionResults.GetLatestByTests(ctx, testNames, "endtime")
+	executions, err = s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames, "endtime")
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, err
 	}
@@ -300,27 +300,27 @@ func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testNames
 	}
 
 	executionMap := make(map[string]testkube.TestSuiteExecution)
-	for _, testName := range testNames {
-		startExecution, okStart := startExecutionMap[testName]
-		endExecution, okEnd := endExecutionMap[testName]
+	for _, testSuiteName := range testSuiteNames {
+		startExecution, okStart := startExecutionMap[testSuiteName]
+		endExecution, okEnd := endExecutionMap[testSuiteName]
 		if !okStart && !okEnd {
 			continue
 		}
 
 		if okStart && !okEnd {
-			executionMap[testName] = startExecution
+			executionMap[testSuiteName] = startExecution
 			continue
 		}
 
 		if !okStart && okEnd {
-			executionMap[testName] = endExecution
+			executionMap[testSuiteName] = endExecution
 			continue
 		}
 
 		if startExecution.StartTime.After(endExecution.EndTime) {
-			executionMap[testName] = startExecution
+			executionMap[testSuiteName] = startExecution
 		} else {
-			executionMap[testName] = endExecution
+			executionMap[testSuiteName] = endExecution
 		}
 	}
 
@@ -339,12 +339,12 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
-		testNames := make([]string, len(testSuites))
+		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
-			testNames[i] = testSuites[i].Name
+			testSuiteNames[i] = testSuites[i].Name
 		}
 
-		executionMap, err := s.getLatestTestSuiteExecutions(ctx, testNames)
+		executionMap, err := s.getLatestTestSuiteExecutions(ctx, testSuiteNames)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}

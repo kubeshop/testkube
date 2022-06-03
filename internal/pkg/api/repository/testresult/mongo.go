@@ -30,30 +30,30 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 	return
 }
 
-func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.TestSuiteExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testName}).Decode(&result)
+func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testSuiteName}).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName, sortField string) (result testkube.TestSuiteExecution, err error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testName}, findOptions).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testSuiteName}, findOptions).Decode(&result)
 	return
 }
 
-func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
 	var results []struct {
 		LatestID string `bson:"latest_id"`
 	}
 
-	if len(testNames) == 0 {
+	if len(testSuiteNames) == 0 {
 		return executions, nil
 	}
 
 	conditions := bson.A{}
-	for _, testName := range testNames {
-		conditions = append(conditions, bson.M{"testsuite.name": testName})
+	for _, testSuiteName := range testSuiteNames {
+		conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
 	}
 
 	pipeline := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
@@ -246,9 +246,9 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	return query, opts
 }
 
-// DeleteByTest deletes execution results by test
-func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuite.name": testName})
+// DeleteByTest deletes execution results by test suite
+func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuite.name": testSuiteName})
 	return
 }
 
