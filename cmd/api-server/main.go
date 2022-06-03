@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/analytics"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -61,11 +62,13 @@ func runMigrations() (err error) {
 
 func main() {
 
-	out, err := analytics.SendServerStartAnonymousInfo()
-	if err != nil {
-		ui.Debug("analytics send error", "error", err.Error())
+	if envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED") {
+		out, err := analytics.SendServerStartEvent()
+		if err != nil {
+			ui.Debug("analytics send error", "error", err.Error())
+		}
+		ui.Debug(out)
 	}
-	ui.Debug(out)
 
 	port := os.Getenv("APISERVER_PORT")
 	namespace := "testkube"

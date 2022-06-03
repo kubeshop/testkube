@@ -62,7 +62,7 @@ var RootCmd = &cobra.Command{
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
+			out, err := analytics.SendCmdEvent(cmd, Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
@@ -79,7 +79,7 @@ var RootCmd = &cobra.Command{
 
 				ui.Debug("sending 'init' event")
 
-				out, err := analytics.SendCmdInit(cmd, Version)
+				out, err := analytics.SendCmdInitEvent(cmd, Version)
 				if ui.Verbose && err != nil {
 					ui.Err(err)
 				}

@@ -90,15 +90,15 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 // AnalyticsHandler is analytics recording middleware
 func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		go func(host, path, method string) {
-			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
+		go func(host string) {
+			out, err := analytics.SendHeartbeatEvent(host, api.Version, s.ClusterID)
+			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret))
 			if err != nil {
 				l.Debugw("sending analytics event error", "error", err)
 			} else {
 				l.Debugw("anonymous info to tracker sent", "output", out)
 			}
-		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+		}(c.Hostname()) // log route path in form /v1/tests/:name
 
 		return c.Next()
 	}
