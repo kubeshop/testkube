@@ -264,12 +264,18 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		return nil
 	}
 
-	conditions := bson.A{}
-	for _, testSuiteName := range testSuiteNames {
-		conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
+	var filter bson.M
+	if len(testSuiteNames) > 1 {
+		conditions := bson.A{}
+		for _, testSuiteName := range testSuiteNames {
+			conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
+		}
+
+		filter = bson.M{"$or": conditions}
+	} else {
+		filter = bson.M{"testsuite.name": testSuiteNames[0]}
 	}
 
-	filter := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }

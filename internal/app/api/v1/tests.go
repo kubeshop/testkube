@@ -403,12 +403,14 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			err = s.TestsClient.DeleteAll()
 		} else {
 			testList, err := s.TestsClient.List(selector)
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-
-			for _, item := range testList.Items {
-				testNames = append(testNames, item.Name)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+			} else {
+				for _, item := range testList.Items {
+					testNames = append(testNames, item.Name)
+				}
 			}
 
 			err = s.TestsClient.DeleteByLabels(selector)
@@ -444,10 +446,6 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
-			}
-
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 

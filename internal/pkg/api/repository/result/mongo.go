@@ -318,12 +318,18 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 		return nil
 	}
 
-	conditions := bson.A{}
-	for _, testName := range testNames {
-		conditions = append(conditions, bson.M{"testname": testName})
+	var filter bson.M
+	if len(testNames) > 1 {
+		conditions := bson.A{}
+		for _, testName := range testNames {
+			conditions = append(conditions, bson.M{"testname": testName})
+		}
+
+		filter = bson.M{"$or": conditions}
+	} else {
+		filter = bson.M{"testname": testNames[0]}
 	}
 
-	filter := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
