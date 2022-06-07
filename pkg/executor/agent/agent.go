@@ -24,13 +24,13 @@ func Run(r runner.Runner, args []string) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		test, err = ioutil.ReadAll(os.Stdin)
 		if err != nil {
-			output.PrintError(fmt.Errorf("can't read stind input: %w", err))
+			output.PrintError(os.Stderr, fmt.Errorf("can't read stind input: %w", err))
 			os.Exit(1)
 		}
 	} else if len(args) > 1 {
 		test = []byte(args[1])
 	} else {
-		output.PrintError(fmt.Errorf("missing input JSON argument or stdin input"))
+		output.PrintError(os.Stderr, fmt.Errorf("missing input JSON argument or stdin input"))
 		os.Exit(1)
 	}
 
@@ -38,7 +38,7 @@ func Run(r runner.Runner, args []string) {
 
 	err = json.Unmarshal(test, &e)
 	if err != nil {
-		output.PrintError(err)
+		output.PrintError(os.Stderr, err)
 		os.Exit(1)
 	}
 
@@ -46,7 +46,7 @@ func Run(r runner.Runner, args []string) {
 
 	result, err := r.Run(e)
 	if err != nil {
-		output.PrintError(err)
+		output.PrintError(os.Stderr, err)
 		os.Exit(1)
 	}
 

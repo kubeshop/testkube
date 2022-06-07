@@ -364,7 +364,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {
-				output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+				output.PrintError(os.Stdout, fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 				s.Log.Errorw("getting execution error", "error", err)
 				w.Flush()
 				return
@@ -373,7 +373,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			if execution.ExecutionResult.IsCompleted() {
 				err := s.streamLogsFromResult(execution.ExecutionResult, w)
 				if err != nil {
-					output.PrintError(fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
+					output.PrintError(os.Stdout, fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 					s.Log.Errorw("getting execution error", "error", err)
 					w.Flush()
 				}
@@ -531,7 +531,7 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	logs, err := s.Executor.Logs(executionID)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 	if err != nil {
-		output.PrintError(err)
+		output.PrintError(os.Stdout, err)
 		s.Log.Errorw("getting logs error", "error", err)
 		w.Flush()
 		return

@@ -6,6 +6,7 @@ import (
 )
 
 func (ui *UI) ExitOnError(item string, errors ...error) {
+	ui.Writer = os.Stderr
 	ui.printAndExit(item, true, errors...)
 }
 
