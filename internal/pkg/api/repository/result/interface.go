@@ -52,4 +52,10 @@ type Repository interface {
 	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
 	// GetLabels get all available labels
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
+	// DeleteByTest deletes execution results by test
+	DeleteByTest(ctx context.Context, testName string) error
+	// DeleteAll deletes all execution results
+	DeleteAll(ctx context.Context) error
+	// DeleteByTests deletes execution results by tests
+	DeleteByTests(ctx context.Context, testNames []string) (err error)
 }

@@ -299,3 +299,37 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	return query, opts
 }
+
+// DeleteByTest deletes execution results by test
+func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	return
+}
+
+// DeleteAll deletes all execution results
+func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	return
+}
+
+// DeleteByTests deletes execution results by tests
+func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string) (err error) {
+	if len(testNames) == 0 {
+		return nil
+	}
+
+	var filter bson.M
+	if len(testNames) > 1 {
+		conditions := bson.A{}
+		for _, testName := range testNames {
+			conditions = append(conditions, bson.M{"testname": testName})
+		}
+
+		filter = bson.M{"$or": conditions}
+	} else {
+		filter = bson.M{"testname": testNames[0]}
+	}
+
+	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}

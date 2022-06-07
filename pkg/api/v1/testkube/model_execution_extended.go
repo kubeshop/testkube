@@ -82,13 +82,21 @@ func (e *Execution) WithVariables(variables map[string]Variable) *Execution {
 	return e
 }
 
-func (e Execution) Err(err error) Execution {
+func (e *Execution) Err(err error) Execution {
+	if e.ExecutionResult == nil {
+		e.ExecutionResult = &ExecutionResult{}
+	}
+
 	e.ExecutionResult.Err(err)
-	return e
+	return *e
 }
-func (e Execution) Errw(msg string, err error) Execution {
+func (e *Execution) Errw(msg string, err error) Execution {
+	if e.ExecutionResult == nil {
+		e.ExecutionResult = &ExecutionResult{}
+	}
+
 	e.ExecutionResult.Err(fmt.Errorf(msg, err))
-	return e
+	return *e
 }
 
 func (e *Execution) Start() {
