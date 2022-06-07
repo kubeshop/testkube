@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,9 +17,11 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -27,8 +30,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
+
+const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
@@ -173,11 +179,6 @@ func (s TestkubeAPI) Init() {
 	s.Routes.Use(cors.New())
 	s.Routes.Use(s.AuthHandler())
 
-	if s.AnalyticsEnabled {
-		// global analytics tracking send async
-		s.Routes.Use(s.AnalyticsHandler())
-	}
-
 	s.Routes.Get("/info", s.InfoHandler())
 	s.Routes.Get("/routes", s.RoutesHandler())
 
@@ -256,12 +257,30 @@ func (s TestkubeAPI) Init() {
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
+	if s.AnalyticsEnabled {
+		s.StartHeartbeat()
+	}
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
 
-	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.AnalyticsEnabled)
+}
+
+func (s TestkubeAPI) StartHeartbeat() {
+	go func() {
+		for range time.Tick(HeartbeatInterval) {
+			host, _ := os.Hostname()
+			out, err := analytics.SendHeartbeatEvent(host, api.Version, s.ClusterID)
+			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret))
+			if err != nil {
+				l.Debugw("sending heartbeat telemetry event error", "error", err)
+			} else {
+				l.Debugw("sending heartbeat telemetry event", "output", out)
+			}
+		}
+	}()
 }
 
 // TODO should we use single generic filter for all list based resources ?

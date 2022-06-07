@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/kubeshop/testkube/pkg/log"
 )
 
 const (
@@ -15,7 +13,6 @@ const (
 )
 
 func TestkubeAnalyticsSender(client *http.Client, payload Payload) (out string, err error) {
-	log.DefaultLogger.Debugw("sending testkube analytics payload", "payload", payload)
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {

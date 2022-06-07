@@ -23,8 +23,6 @@ var (
 func GoogleAnalyticsSender(client *http.Client, payload Payload) (out string, err error) {
 	out, err = sendValidationRequest(payload)
 
-	log.DefaultLogger.Debugw("sending ga payload", "payload", payload)
-
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return out, err

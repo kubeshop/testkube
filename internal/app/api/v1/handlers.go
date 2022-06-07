@@ -7,10 +7,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/oauth"
-	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 const (
@@ -84,22 +82,5 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 		}
 
 		return c.JSON(routes)
-	}
-}
-
-// AnalyticsHandler is analytics recording middleware
-func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		go func(host string) {
-			out, err := analytics.SendHeartbeatEvent(host, api.Version, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret))
-			if err != nil {
-				l.Debugw("sending analytics event error", "error", err)
-			} else {
-				l.Debugw("anonymous info to tracker sent", "output", out)
-			}
-		}(c.Hostname()) // log route path in form /v1/tests/:name
-
-		return c.Next()
 	}
 }
