@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -14,8 +15,8 @@ import (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string) (client JobExecutor, err error) {
-	jobClient, err := jobs.NewJobClient(namespace, initImage, jobTemplate)
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics apiv1.Metrics) (client JobExecutor, err error) {
+	jobClient, err := jobs.NewJobClient(namespace, initImage, jobTemplate, metrics)
 	if err != nil {
 		return client, fmt.Errorf("can't get k8s jobs client: %w", err)
 	}

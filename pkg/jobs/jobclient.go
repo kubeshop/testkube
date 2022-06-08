@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -54,6 +55,7 @@ type JobClient struct {
 	Log         *zap.SugaredLogger
 	initImage   string
 	jobTemplate string
+	metrics     apiv1.Metrics
 }
 
 // JobOptions is for configuring JobOptions
@@ -72,7 +74,7 @@ type JobOptions struct {
 }
 
 // NewJobClient returns new JobClient instance
-func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) {
+func NewJobClient(namespace, initImage, jobTemplate string, metrics apiv1.Metrics) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
@@ -84,6 +86,7 @@ func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) 
 		Log:         log.DefaultLogger,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
+		metrics:     metrics,
 	}, nil
 }
 
@@ -271,6 +274,9 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 					}
 					return
 				}
+
+				// metrics increase
+				c.metrics.IncExecution(execution)
 
 				l.Infow("execution completed saving result", "status", result.Status)
 				err = repo.UpdateResult(ctx, execution.Id, result)
