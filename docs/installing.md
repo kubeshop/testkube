@@ -6,6 +6,8 @@ To get Testkube up and running:
 2. Install Testkube in your cluster.
 3. Configure Testkube's Dashboard UI Ingress for your ingress-controller, if needed.
 
+Watch a full installation from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys).
+
 ## **Install the Kubectl Testkube Plugin**
 
 ### **Installing on MacOS**
