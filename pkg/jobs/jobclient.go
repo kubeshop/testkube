@@ -174,6 +174,9 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 				return result, err
 			}
 
+			// metrics increase
+			c.metrics.IncExecution(execution)
+
 			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
 			err = repo.UpdateResult(ctx, execution.Id, result)
 			if err != nil {
