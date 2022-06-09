@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	testkubeAnalyticsUrl = "https://analytics.testkube.io"
+	testkubeTelemetryUrl = "https://analytics.testkube.io"
 )
 
 func TestkubeAnalyticsSender(client *http.Client, payload Payload) (out string, err error) {
@@ -19,7 +19,7 @@ func TestkubeAnalyticsSender(client *http.Client, payload Payload) (out string, 
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", testkubeAnalyticsUrl, bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", testkubeTelemetryUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}
