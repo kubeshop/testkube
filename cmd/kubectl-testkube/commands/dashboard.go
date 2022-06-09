@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
@@ -69,11 +70,9 @@ func NewDashboardCmd() *cobra.Command {
 			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
 
 			// open browser
-			openCmd, err := getOpenCommand()
-			if err == nil {
-				_, err = process.Execute(openCmd, dashboardAddress)
-				ui.PrintOnError("openning dashboard", err)
-			}
+			// open browser
+			err = open.Run(dashboardAddress)
+			ui.PrintOnError("openning dashboard", err)
 
 			// wait for Ctrl/Cmd + c signal to clear everything
 			c := make(chan os.Signal, 1)
