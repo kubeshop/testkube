@@ -6,7 +6,7 @@ import (
 )
 
 type Data struct {
-	AnalyticsEnabled bool       `json:"analyticsEnabled,omitempty"`
+	TelemetryEnabled bool       `json:"telemetryEnabled,omitempty"`
 	Namespace        string     `json:"namespace,omitempty"`
 	Initialized      bool       `json:"initialized,omitempty"`
 	APIURI           string     `json:"apiURI,omitempty"`
@@ -14,11 +14,11 @@ type Data struct {
 }
 
 func (c *Data) EnableAnalytics() {
-	c.AnalyticsEnabled = true
+	c.TelemetryEnabled = true
 }
 
 func (c *Data) DisableAnalytics() {
-	c.AnalyticsEnabled = false
+	c.TelemetryEnabled = false
 }
 
 func (c *Data) SetNamespace(ns string) {

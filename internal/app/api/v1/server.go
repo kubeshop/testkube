@@ -21,7 +21,6 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -30,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
@@ -56,10 +56,10 @@ func NewTestkubeAPI(
 	}
 
 	// you can disable analytics tracking for API server
-	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
-	analyticsEnabled, err := strconv.ParseBool(analyticsEnabledStr)
+	telemetryEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
+	telemetryEnabled, err := strconv.ParseBool(telemetryEnabledStr)
 	if err != nil {
-		analyticsEnabled = true
+		telemetryEnabled = true
 	}
 
 	s := TestkubeAPI{
@@ -74,7 +74,7 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		AnalyticsEnabled:     analyticsEnabled,
+		TelemetryEnabled:     telemetryEnabled,
 		ClusterID:            clusterId,
 	}
 
@@ -117,7 +117,7 @@ type TestkubeAPI struct {
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
-	AnalyticsEnabled     bool
+	TelemetryEnabled     bool
 	ClusterID            string
 	oauthParams          oauthParams
 }
@@ -257,7 +257,7 @@ func (s TestkubeAPI) Init() {
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
-	if s.AnalyticsEnabled {
+	if s.TelemetryEnabled {
 		s.StartHeartbeat()
 	}
 
@@ -265,15 +265,15 @@ func (s TestkubeAPI) Init() {
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
 
-	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.AnalyticsEnabled)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
 func (s TestkubeAPI) StartHeartbeat() {
 	go func() {
 		for range time.Tick(HeartbeatInterval) {
 			host, _ := os.Hostname()
-			out, err := analytics.SendHeartbeatEvent(host, api.Version, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret))
+			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.ClusterID)
+			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
 			if err != nil {
 				l.Debugw("sending heartbeat telemetry event error", "error", err)
 			} else {

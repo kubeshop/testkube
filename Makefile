@@ -12,8 +12,8 @@ ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
 ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
 
@@ -49,8 +49,8 @@ build-testkube-bin:
 			-X main.commit=$(COMMIT) \
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
@@ -63,8 +63,8 @@ build-testkube-bin-intel:
 			-X main.commit=$(COMMIT) \
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \

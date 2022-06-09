@@ -22,10 +22,10 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -63,9 +63,9 @@ func runMigrations() (err error) {
 func main() {
 
 	if envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED") {
-		out, err := analytics.SendServerStartEvent()
+		out, err := telemetry.SendServerStartEvent()
 		if err != nil {
-			ui.Debug("analytics send error", "error", err.Error())
+			ui.Debug("telemetry send error", "error", err.Error())
 		}
 		ui.Debug(out)
 	}

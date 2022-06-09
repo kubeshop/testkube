@@ -1,6 +1,6 @@
 # Telemetry
 
-To improve the end-user experience, Testkube collects anonymous data about usage.
+To improve the end-user experience, Testkube collects anonymous telemetry data about usage.
 
 Participation in this program is optional. You may [opt-out](#how-to-opt-out) if you'd prefer not to share any information.
 
@@ -37,17 +37,19 @@ Analytics tracked include:
 - The testkube version.
 - The command being executed.
 
-## **How to Opt Out**
+## **How to Opt Out?**
 
-To opt out of the Testkube analytics collection:
+To *opt out* of the Testkube telemetry data gathering:
 ```
-kubectl testkube analytics disable
+kubectl testkube disable telemetry
 ```
-To opt in:
+
+To *opt in*:
 ```
-kubectl testkube analytics enable
+kubectl testkube enable telemetry
 ```
-To check the current collection status:
+
+To check the current *status*:
 ``` 
-kubectl testkube anaytics status
+kubectl testkube status
 ```

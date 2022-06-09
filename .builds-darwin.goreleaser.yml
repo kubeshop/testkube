@@ -17,7 +17,7 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
       - -X main.builtBy=goreleaser
-      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
-      - -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
+      - -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{.Env.ANALYTICS_TRACKING_ID}}
+      - -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{.Env.ANALYTICS_API_KEY}}
 archives:
   - format: binary

@@ -1,4 +1,4 @@
-package analytics
+package telemetry
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	TestkubeMeasurementID     = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=G-B6KY2SF30K
+	TestkubeMeasurementID     = "" //this is default but it can be set using ldflag -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=G-B6KY2SF30K
 	TestkubeMeasurementSecret = ""
 )
 

@@ -1,4 +1,4 @@
-package analytics
+package telemetry
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -6,20 +6,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDisableAnalyticsCmd() *cobra.Command {
+func NewStatusTelemetryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "analytics",
-		Short: "disable collecting of anonymous analytics",
+		Use:   "telemetry",
+		Short: "Get telemetry status",
 		Run: func(cmd *cobra.Command, args []string) {
+
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			cfg.DisableAnalytics()
-
-			err = config.Save(cfg)
-			ui.ExitOnError("saving config file", err)
-
-			ui.Success("Analytics", "disabled")
+			if cfg.TelemetryEnabled {
+				ui.Success("Telemetry", "enabled")
+			} else {
+				ui.Success("Telemetry", "disabled")
+			}
 		},
 	}
 

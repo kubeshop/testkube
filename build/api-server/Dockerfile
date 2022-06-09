@@ -17,8 +17,8 @@ RUN cd cmd/api-server; \
     GOOS=$TARGETOS GOARCH=$TARGETARCH  go build \
         -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION \
             -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT \
-            -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$ANALYTICS_TRACKING_ID \
-            -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$ANALYTICS_API_KEY \
+            -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$ANALYTICS_TRACKING_ID \
+            -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$ANALYTICS_API_KEY \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$SLACK_BOT_CLIENT_ID \
 			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$SLACK_BOT_CLIENT_SECRET" \
         -o /app -mod mod -a .
