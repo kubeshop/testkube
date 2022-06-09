@@ -16,7 +16,7 @@ kubectl testkube get --help
 After installing, you will need to add Tests to your cluster, which are created as a Custom Resource in Kubernetes
 (access to Kubernetes cluster is required).
 
-For now, Testkube only supports  *Postman collections*, *basic CURL execution* and *Cypress*. Stay tuned for the support of more testing tools soon.
+This document provides examples for using  *Postman collections* and *Cypress* executors. Please visit the **Test Types** section of the documentation to read about additional types of implementations.
 
 If you don't want to create Custom Resources "by hand", we have a little helper for this: 
 

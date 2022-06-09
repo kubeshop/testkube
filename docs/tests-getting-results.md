@@ -63,11 +63,12 @@ monthly-sure-finch 615d7e1ab046f8fbd3d955d6 success
 
 ## **Getting a List of Test Executions**
 
-Please watch this video on getting tests results in different formats:
+<!--- Please watch this video on getting tests results in different formats:
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/ukHvS5x7TvM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/ukHvS5x7TvM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> --->
 
-### Getting a List of Recent Executions
+
+### **Getting a List of Recent Executions**
 
 We can get a list of current executions with use of the `executions` subcommand:
 
