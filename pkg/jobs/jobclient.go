@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -46,6 +45,10 @@ const (
 	volumeDir    = "/data"
 )
 
+type ExecutionCounter interface {
+	IncExecution(execution testkube.Execution)
+}
+
 // JobClient data struct for managing running jobs
 type JobClient struct {
 	ClientSet   *kubernetes.Clientset
@@ -55,7 +58,7 @@ type JobClient struct {
 	Log         *zap.SugaredLogger
 	initImage   string
 	jobTemplate string
-	metrics     apiv1.Metrics
+	metrics     ExecutionCounter
 }
 
 // JobOptions is for configuring JobOptions
@@ -74,7 +77,7 @@ type JobOptions struct {
 }
 
 // NewJobClient returns new JobClient instance
-func NewJobClient(namespace, initImage, jobTemplate string, metrics apiv1.Metrics) (*JobClient, error) {
+func NewJobClient(namespace, initImage, jobTemplate string, metrics ExecutionCounter) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
