@@ -5,12 +5,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
@@ -69,8 +69,11 @@ func NewDashboardCmd() *cobra.Command {
 			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
 
 			// open browser
-			err = open.Run(dashboardAddress)
-			ui.PrintOnError("openning dashboard", err)
+			openCmd, err := getOpenCommand()
+			if err == nil {
+				_, err = process.Execute(openCmd, dashboardAddress)
+				ui.PrintOnError("openning dashboard", err)
+			}
 
 			// wait for Ctrl/Cmd + c signal to clear everything
 			c := make(chan os.Signal, 1)
@@ -117,6 +120,20 @@ func readinessCheck(apiURI, dashboardURI string) (bool, error) {
 	}
 
 	return false, fmt.Errorf("timed-out waiting for dashboard and api")
+}
+
+func getOpenCommand() (string, error) {
+	os := runtime.GOOS
+	switch os {
+	case "windows":
+		return "start", nil
+	case "darwin":
+		return "open", nil
+	case "linux":
+		return "xdg-open", nil
+	default:
+		return "", fmt.Errorf("unsupported OS")
+	}
 }
 
 func asyncPortForward(namespace, deploymentName string, localPort, clusterPort int) (command *exec.Cmd, err error) {
