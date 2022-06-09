@@ -202,6 +202,18 @@ func (r MockExecutionResultsRepository) GetLabels(ctx context.Context) (labels m
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) DeleteByTest(ctx context.Context, testName string) error {
+	panic("not implemented")
+}
+
+func (r MockExecutionResultsRepository) DeleteAll(ctx context.Context) error {
+	panic("not implemented")
+}
+
+func (r MockExecutionResultsRepository) DeleteByTests(ctx context.Context, testNames []string) error {
+	panic("not implemented")
+}
+
 type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }

@@ -37,7 +37,7 @@ Kind:         CustomResourceDefinition
 
 Below, you will find short descriptions and example declarations of the custom resources defined by Testkube.
 
-## Tests
+## **Tests**
 
 Testkube Tests can be defined as a single executable unit of tests. Depending on the test type, this can mean one or multiple test files.
 
@@ -98,7 +98,7 @@ spec:
           name: vartest4-testvars
 ```
 
-## Test Suites
+## **Test Suites**
 
 Testkube Test Suites are collections of Testkube Tests of the same or different types.
 
@@ -121,7 +121,7 @@ spec:
         namespace: testkube
 ```
 
-## Executors
+## **Executors**
 
 Executors are Testkube-specific test runners. There are a list of predefined Executors coming with Testkube. You can also write your own custom Testkube Executor using [this guide](https://kubeshop.github.io/testkube/executor-custom/).
 
@@ -148,7 +148,7 @@ spec:
   - junit-report
 ```
 
-## Webhooks
+## **Webhooks**
 
 Testkube Webhooks are HTTP POST calls having the Testkube Execution object and its current state as payload. They are sent when a test is either started or finished. This can be defined under `events`.
 

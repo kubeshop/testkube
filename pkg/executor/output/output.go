@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -61,9 +62,9 @@ func (out Output) String() string {
 }
 
 // PrintError - prints error as output json
-func PrintError(err error) {
+func PrintError(w io.Writer, err error) {
 	out, _ := json.Marshal(NewOutputError(err))
-	fmt.Printf("%s\n", out)
+	fmt.Fprintf(w, "%s\n", out)
 }
 
 // PrintLog - prints log line as output json

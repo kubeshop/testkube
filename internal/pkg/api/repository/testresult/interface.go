@@ -28,12 +28,12 @@ type Filter interface {
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
-	// GetByNameAndTest gets execution result by name
-	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.TestSuiteExecution, error)
-	// GetLatestByTest gets latest execution result by test
-	GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.TestSuiteExecution, error)
-	// GetLatestByTests gets latest execution results by test names
-	GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error)
+	// GetByNameAndTestSuite gets execution result by name
+	GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (testkube.TestSuiteExecution, error)
+	// GetLatestByTestSuite gets latest execution result by test suite
+	GetLatestByTestSuite(ctx context.Context, testSuiteName, sortField string) (testkube.TestSuiteExecution, error)
+	// GetLatestByTestSuites gets latest execution results by test suite names
+	GetLatestByTestSuites(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
@@ -46,4 +46,10 @@ type Repository interface {
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
 	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
+	// DeleteByTestSuite deletes execution results by test suite
+	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
+	// DeleteAll deletes all execution results
+	DeleteAll(ctx context.Context) error
+	// DeleteByTestSuites deletes execution results by test suites
+	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
 }

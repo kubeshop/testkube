@@ -1,6 +1,6 @@
 # What is a Testkube Executor?
 
-To use a testing framework that is not on the currently supported framework list for Teskube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contribute it to our repo as well. We are very happy to receive executor contributions from our community.
+To use a testing framework that is not on the currently supported framework list for Teskube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contributed to our repo. We are very happy to receive executor contributions from our community.
 
 An Executor is a wrapper around a testing framework in the form of a Docker container and run as a Kubernetes job. Usually, an executor runs a particular test framework binary inside a container. Additionally, it is registered as an Executor Custom Resource in your Kubernetes cluster with a type handler defined (e.g. `postman/collection`).
 
@@ -23,7 +23,7 @@ Please visit our [Contribution](contributing.md) page to see the guidelines for 
 
 ## **Creating a Custom Executor**
 
-A custom executor can be created on your own or by using our executor template (in `go` language):
+A custom executor can be created on your own or by using our executor template (in `go` language).
 
 ### **Using `testkube-executor-template`**
 
@@ -38,7 +38,7 @@ If you are familiar with the `go` programming language, use our template reposit
 3. Rename the go module from `testkube-executor-template` to the new name and run `go mod tidy`.
 
 [Testkube](https://github.com/kubeshop/testkube) provides the components to help implement the new runner.
-A `Runner` is a wrapper around a testing framework binary responsible for running tests and parsing tests results. You are not limited to use Testkube's components for the `go` language. Use any language - just remember about managing input and output.
+A `Runner` is a wrapper around a testing framework binary responsible for running tests and parsing tests results. You are not limited to using Testkube's components for the `go` language. Use any language - just remember about managing input and output.
 
 Let's try to create a new test runner that tests if a given URI call is successful (`status code == 200`).
 
@@ -192,7 +192,7 @@ Testkube will store its files and directories in a directory defined by the `RUN
 - URI - Testkube will get the content of the file defined by the uri.
 - Git related content - Testkube will checkout the repo content in the current directory.
 
-To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](/testkube/installing/).
+To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](./installing.md).
 
 We have created a simple NodeJS executor.
 

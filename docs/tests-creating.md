@@ -282,7 +282,7 @@ kubectl get tests -n testkube test -oyaml
 
 Some executors can handle files and some can handle only git resources. You'll need to follow the particular executor **readme** file to be aware which test types the executor handles.
 
-Let's assume that a Cypress project is created in a git repository - <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples/tree/main/examples> - where **examples** is a test directory in the `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
+Let's assume that a Cypress project is created in a git repository - <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples> - where **examples** is a test directory in the `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
 
 Now we can create our Cypress-based test as shown below. In git based tests, we need to pass the test type.
 

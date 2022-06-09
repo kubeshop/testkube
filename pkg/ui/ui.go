@@ -6,7 +6,11 @@ import (
 	"os"
 )
 
-var ui = NewStdoutUI(Verbose)
+var (
+	uiOut = NewStdoutUI(Verbose)
+	uiErr = NewStderrUI(Verbose)
+	ui    = uiOut
+)
 
 func NewUI(verbose bool, writer io.Writer) *UI {
 	return &UI{
@@ -19,6 +23,13 @@ func NewStdoutUI(verbose bool) *UI {
 	return &UI{
 		Verbose: verbose,
 		Writer:  os.Stdout,
+	}
+}
+
+func NewStderrUI(verbose bool) *UI {
+	return &UI{
+		Verbose: verbose,
+		Writer:  os.Stderr,
 	}
 }
 
@@ -58,3 +69,6 @@ func ShellCommand(title string, commands ...string)         { ui.ShellCommand(ti
 func Table(tableData TableData, writer io.Writer)           { ui.Table(tableData, writer) }
 func JSONTable(tableData TableData, writer io.Writer) error { return ui.JSONTable(tableData, writer) }
 func NewArrayTable(a [][]string) ArrayTable                 { return ui.NewArrayTable(a) }
+
+func UseStdout() { ui = uiOut }
+func UseStderr() { ui = uiErr }

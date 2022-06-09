@@ -28,12 +28,14 @@ func RenderExecutionResult(result *testkube.ExecutionResult) {
 		ui.Success("Status", "Test execution completed with success")
 
 	case result.IsFailed():
+		ui.UseStderr()
 		ui.Warn("Status", "test execution failed:\n")
 		ui.Errf(result.ErrorMessage)
 		ui.Info(result.Output)
 		os.Exit(1)
 
 	default:
+		ui.UseStderr()
 		ui.Warn("Status", "test execution status unknown:\n")
 		ui.Errf(result.ErrorMessage)
 		ui.Info(result.Output)

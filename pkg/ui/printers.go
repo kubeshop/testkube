@@ -67,12 +67,14 @@ func (ui *UI) Errf(err string, params ...interface{}) {
 }
 
 func (ui *UI) Fail(err error) {
+	ui.Writer = os.Stderr
 	ui.Err(err)
 	fmt.Fprintln(ui.Writer)
 	os.Exit(1)
 }
 
 func (ui *UI) Failf(err string, params ...interface{}) {
+	ui.Writer = os.Stderr
 	ui.Errf(err, params...)
 	fmt.Fprintln(ui.Writer)
 	os.Exit(1)

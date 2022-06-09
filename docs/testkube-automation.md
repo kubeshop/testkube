@@ -1,6 +1,6 @@
 # Integrating with CI/CD
 
-**Check out our latest [blog post](https://kubeshop.io/blog/a-gitops-powered-kubernetes-testing-machine-with-argocd-and-testkube) to follow tutorial steps for our GitOps-friendly Cloud-native test orchestration/execution framework.**
+**Check out our [blog post](https://kubeshop.io/blog/a-gitops-powered-kubernetes-testing-machine-with-argocd-and-testkube) to follow tutorial steps for our GitOps-friendly Cloud-native test orchestration/execution framework.**
 
 In order to automate Testkube runs, access to a  K8S cluster is needed, for example, a configured environment with the set up context and kubeconfig for communication with the K8S cluster.  
 Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources, etc.

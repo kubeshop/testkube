@@ -384,6 +384,11 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			}
 		}
 
+		// delete executions for test
+		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 }
@@ -392,10 +397,22 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var err error
+		var testNames []string
 		selector := c.Query("selector")
 		if selector == "" {
 			err = s.TestsClient.DeleteAll()
 		} else {
+			testList, err := s.TestsClient.List(selector)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+			} else {
+				for _, item := range testList.Items {
+					testNames = append(testNames, item.Name)
+				}
+			}
+
 			err = s.TestsClient.DeleteByLabels(selector)
 		}
 
@@ -419,6 +436,17 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
+		}
+
+		// delete all executions for tests
+		if selector == "" {
+			err = s.ExecutionResults.DeleteAll(c.Context())
+		} else {
+			err = s.ExecutionResults.DeleteByTests(c.Context(), testNames)
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)
