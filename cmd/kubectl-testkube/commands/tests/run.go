@@ -72,6 +72,7 @@ func NewRunTestCmd() *cobra.Command {
 
 				_, err = client.GetTest(testName)
 				if err != nil {
+					ui.UseStderr()
 					ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
 					ui.Debug(err.Error())
 					os.Exit(1)
@@ -164,6 +165,7 @@ func uiPrintStatus(execution testkube.Execution) {
 		ui.Success("Test execution completed with success in " + duration.String())
 
 	case result.IsFailed():
+		ui.UseStderr()
 		ui.Warn("Test test execution failed:\n")
 		ui.Errf(result.ErrorMessage)
 		ui.Info(result.Output)

@@ -60,6 +60,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 	for l := range logs {
 		switch l.Type_ {
 		case output.TypeError:
+			ui.UseStderr()
 			ui.Errf(l.Content)
 			if l.Result != nil {
 				ui.Errf("Error: %s", l.Result.ErrorMessage)
