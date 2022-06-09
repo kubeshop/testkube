@@ -58,7 +58,6 @@ func NewCRDTestsCmd() *cobra.Command {
 				}
 
 				fmt.Print(yaml)
-
 				return nil
 			})
 
