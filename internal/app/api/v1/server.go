@@ -55,7 +55,8 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	// you can disable analytics tracking for API server
+	// TODO one way to rule them out! envs should be processed by single mechanism
+	// you can disable telemetry tracking for API server
 	telemetryEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
 	telemetryEnabled, err := strconv.ParseBool(telemetryEnabledStr)
 	if err != nil {

@@ -53,7 +53,7 @@ func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	return SendData(senders, payload)
 }
 
-// SendData sends data to all analytics in parallel and syncs sending
+// SendData sends data to all telemetry storages  in parallel and syncs sending
 func SendData(senders []Sender, payload Payload) (out string, err error) {
 	var wg sync.WaitGroup
 	wg.Add(len(senders))
@@ -62,10 +62,10 @@ func SendData(senders []Sender, payload Payload) (out string, err error) {
 			defer wg.Done()
 			o, err := sender(client, payload)
 			if err != nil {
-				log.DefaultLogger.Debugw("sending analytics error", "payload", payload, "error", err.Error())
+				log.DefaultLogger.Debugw("sending telemetry data error", "payload", payload, "error", err.Error())
 				return
 			}
-			log.DefaultLogger.Debugw("sending analytics", "payload", payload, "output", o)
+			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o)
 		}(sender)
 	}
 
