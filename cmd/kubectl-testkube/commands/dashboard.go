@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/http"
@@ -119,20 +118,6 @@ func readinessCheck(apiURI, dashboardURI string) (bool, error) {
 	}
 
 	return false, fmt.Errorf("timed-out waiting for dashboard and api")
-}
-
-func getOpenCommand() (string, error) {
-	os := runtime.GOOS
-	switch os {
-	case "windows":
-		return "start", nil
-	case "darwin":
-		return "open", nil
-	case "linux":
-		return "xdg-open", nil
-	default:
-		return "", fmt.Errorf("unsupported OS")
-	}
 }
 
 func asyncPortForward(namespace, deploymentName string, localPort, clusterPort int) (command *exec.Cmd, err error) {
