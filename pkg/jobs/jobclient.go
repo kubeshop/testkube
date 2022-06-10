@@ -178,6 +178,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			}
 
 			// metrics increase
+			execution.ExecutionResult = &result
 			c.metrics.IncExecution(execution)
 
 			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
@@ -282,6 +283,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				}
 
 				// metrics increase
+				execution.ExecutionResult = &result
 				c.metrics.IncExecution(execution)
 
 				l.Infow("execution completed saving result", "status", result.Status)
