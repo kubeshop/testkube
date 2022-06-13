@@ -32,6 +32,8 @@ Create the Testkube test script from this example. The parameters passed are **r
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
+| If your test files are located in root path of the repository, you can omit the `--git-path` flag.
+
 Check that script is created:
 
 ```sh
