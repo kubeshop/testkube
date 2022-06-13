@@ -39,6 +39,12 @@ func (r *MongoRepository) GetUniqueClusterId(ctx context.Context) (clusterId str
 	return config.ClusterId, nil
 }
 
+func (r *MongoRepository) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
+	config := testkube.Config{}
+	err = r.Coll.FindOne(ctx, bson.M{"id": Id}).Decode(&config)
+	return config.EnableTelemetry, err
+}
+
 func (r *MongoRepository) Get(ctx context.Context) (result testkube.Config, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": Id}).Decode(&result)
 	return

@@ -55,14 +55,6 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	// TODO one way to rule them out! envs should be processed by single mechanism
-	// you can disable telemetry tracking for API server
-	telemetryEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
-	telemetryEnabled, err := strconv.ParseBool(telemetryEnabledStr)
-	if err != nil {
-		telemetryEnabled = true
-	}
-
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
@@ -162,6 +154,11 @@ type oauthParams struct {
 	ClientSecret string
 	Provider     oauth.ProviderType
 	Scopes       string
+}
+
+// WithTelemetry enable or disable anonymous telemetry data passing to testkube engineers
+func (s *TestkubeAPI) WithTelemetry(enabled bool) {
+	s.TelemetryEnabled = enabled
 }
 
 // Init initializes api server settings

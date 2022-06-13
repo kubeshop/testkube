@@ -1549,6 +1549,25 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /config/{key}:
+    patch:
+      tags:
+        - api
+      summary: "update config key"
+      description: "Updates config key in cluster storage state"
+      operationId: updateConfigKey
+      responses:
+        200:
+          description: update successful
+        502:
+          description: "problem with updating key in cluster storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     Variables:
@@ -2446,6 +2465,8 @@ components:
           type: string
         clusterId:
           type: string
+        enableTelemetry:
+          type: boolean
 
     #
     # Errors
