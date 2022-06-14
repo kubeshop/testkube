@@ -2076,6 +2076,11 @@ components:
           items:
             $ref: "#/components/schemas/ExecutionStepResult"
           description: execution steps (for collection of requests)
+        reports:
+          type: object
+          properties:
+            junit:
+              type: string
 
     ExecutionStepResult:
       description: execution result data

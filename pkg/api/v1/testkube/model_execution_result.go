@@ -19,5 +19,6 @@ type ExecutionResult struct {
 	// error message when status is error, separate to output as output can be partial in case of error
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	// execution steps (for collection of requests)
-	Steps []ExecutionStepResult `json:"steps,omitempty"`
+	Steps   []ExecutionStepResult   `json:"steps,omitempty"`
+	Reports *ExecutionResultReports `json:"reports,omitempty"`
 }

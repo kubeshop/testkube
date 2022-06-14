@@ -9,7 +9,9 @@
  */
 package testkube
 
-import "time"
+import (
+	"time"
+)
 
 type TestSuite struct {
 	Name        string `json:"name"`
