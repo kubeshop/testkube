@@ -3,7 +3,7 @@ name: Release kubectl-testkube
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-"
+      - "v[0-9]+.[0-9]+.[0-9]+-test"
 #    branches:
 #      - trigger-argocd-image
 
@@ -284,7 +284,8 @@ jobs:
       - name: Set env
         env:
           SOURCE_TAG: ${{ steps.release_tag.outputs.SOURCE_TAG }}
-        run: echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
+        run: |
+          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
 
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
