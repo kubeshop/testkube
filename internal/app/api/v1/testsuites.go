@@ -584,7 +584,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func(testsuiteExecution testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
+	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
@@ -596,7 +596,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			}
 
 			wg.Done()
-		}(&testsuiteExecution)
+		}(testsuiteExecution)
 
 		hasFailedSteps := false
 		cancellSteps := false
@@ -608,14 +608,14 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 
 			// start execution of given step
 			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
-			err = s.TestExecutionResults.Update(ctx, testsuiteExecution)
+			err = s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				s.Log.Infow("Updating test execution", "error", err)
 			}
 
-			s.executeTestStep(ctx, testsuiteExecution, request, &testsuiteExecution.StepResults[i])
+			s.executeTestStep(ctx, *testsuiteExecution, request, &testsuiteExecution.StepResults[i])
 
-			err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
+			err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				hasFailedSteps = true
 				s.Log.Errorw("saving test suite execution results error", "error", err)
@@ -636,12 +636,12 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		}
 
-		err := s.TestExecutionResults.Update(ctx, testsuiteExecution)
+		err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 		if err != nil {
 			s.Log.Errorw("saving final test suite execution result error", "error", err)
 		}
 
-	}(testsuiteExecution, request)
+	}(&testsuiteExecution, request)
 
 	// wait for sync test suite execution
 	if request.Sync {
