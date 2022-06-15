@@ -18,6 +18,8 @@ type TestSuiteExecutionRequest struct {
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// whether to start execution sync or async
+	Sync bool `json:"sync,omitempty"`
 	// http proxy for executor containers
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
