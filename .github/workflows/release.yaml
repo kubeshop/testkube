@@ -3,30 +3,30 @@ name: Release kubectl-testkube
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-test"
-    branches:
-      - trigger-argocd-image
+      - "v[0-9]+.[0-9]+.[0-9]+-"
+#    branches:
+#      - trigger-argocd-image
 
 jobs:
-  # release_creation:
-  #   name: Prepares Release on GitHub
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     id: ${{ steps.main_step.outputs.id }}
-  #   steps:
-  #     - name: Create Release
-  #       id: main_step
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ github.ref }}
-  #         release_name: testkube CLI ${{ github.ref }}
-  #         body: |
-  #           Changes in this Release
-  #           - Releasing new version of the testkube CLI for Kubectl.
-  #         draft: false
-  #         prerelease: false
+#   release_creation:
+#     name: Prepares Release on GitHub
+#     runs-on: ubuntu-latest
+#     outputs:
+#       id: ${{ steps.main_step.outputs.id }}
+#     steps:
+#       - name: Create Release
+#         id: main_step
+#         uses: actions/create-release@latest
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+#         with:
+#           tag_name: ${{ github.ref }}
+#           release_name: testkube CLI ${{ github.ref }}
+#           body: |
+#             Changes in this Release
+#             - Releasing new version of the testkube CLI for Kubectl.
+#           draft: false
+#           prerelease: false
 
 #  pre_build:
 #    name: Pre-build
@@ -275,11 +275,16 @@ jobs:
   trigger-argocd-image-build:
 #    needs: release
     runs-on: ubuntu-latest
-
     steps:
-      - name: Get tag version
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+      - name: Release tag
+        id: release_tag
+        run: |
+          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
+      - name: Set env
+        env:
+          SOURCE_TAG: ${{ steps.release_tag.outputs.SOURCE_TAG }}
+        run: echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
 
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
@@ -287,4 +292,4 @@ jobs:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/testkube-argocd
           event-type: trigger-argocd-image-build
-          client-payload: '{"release_version": "${{ github.event.release.tag_name }}"}'
+          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
