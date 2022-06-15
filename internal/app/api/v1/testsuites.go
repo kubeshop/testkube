@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -581,8 +582,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		s.Log.Infow("Inserting test execution", "error", err)
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func(testsuiteExecution testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
-
 		defer func(testExecution *testkube.TestSuiteExecution) {
 			duration := testExecution.CalculateDuration()
 			testExecution.EndTime = time.Now()
@@ -592,6 +594,8 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			if err != nil {
 				s.Log.Errorw("error setting end time", "error", err.Error())
 			}
+
+			wg.Done()
 		}(&testsuiteExecution)
 
 		hasFailedSteps := false
@@ -638,6 +642,11 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		}
 
 	}(testsuiteExecution, request)
+
+	// wait for sync test suite execution
+	if request.Sync {
+		wg.Wait()
+	}
 
 	return testsuiteExecution, nil
 }
