@@ -287,4 +287,4 @@ jobs:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/testkube-argocd
           event-type: trigger-argocd-image-build
-          client-payload: '{"release_version": "${{ steps.vars.outputs.tag }}"}'
+          client-payload: '{"release_version": "${{ github.event.release.tag_name }}"}'
