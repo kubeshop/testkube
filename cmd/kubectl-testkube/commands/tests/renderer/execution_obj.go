@@ -14,10 +14,14 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		return fmt.Errorf("can't render execution, expecrted obj to be testkube.Execution but got '%T'", obj)
 	}
 
-	ui.Warn("ID:       ", execution.Id)
-	ui.Warn("Name:     ", execution.Name)
-	ui.Warn("Type:     ", execution.TestType)
-	ui.Warn("Duration: ", execution.Duration)
+	ui.Warn("ID:        ", execution.Id)
+	ui.Warn("Number:    ", fmt.Sprintf("%d", execution.Number))
+	ui.Warn("Test name: ", execution.TestName)
+	ui.Warn("Type:      ", execution.TestType)
+	ui.Warn("Status:    ", string(*execution.ExecutionResult.Status))
+	ui.Warn("Start time:", execution.StartTime.String())
+	ui.Warn("End time:  ", execution.EndTime.String())
+	ui.Warn("Duration:  ", execution.Duration)
 
 	if len(execution.Labels) > 0 {
 		ui.Warn("Labels:   ", testkube.MapToString(execution.Labels))

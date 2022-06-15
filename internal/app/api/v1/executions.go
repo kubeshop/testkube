@@ -147,6 +147,8 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		request.Name = rand.Name()
 	}
 
+	request.Number = s.getNextExecutionNumber(test.Name)
+
 	// test name + test execution name should be unique
 	execution, _ = s.ExecutionResults.GetByNameAndTest(ctx, request.Name, test.Name)
 	if execution.Name == request.Name {
@@ -569,6 +571,18 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
+	execution, err := s.ExecutionResults.GetLatestByTest(context.Background(), testName, "number")
+	if err == mongo.ErrNoDocuments {
+		return 0
+	}
+	if err != nil {
+		s.Log.Errorw("retrieving latest execution", "error", err)
+		return 0
+	}
+	return execution.Number + 1
+}
+
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
 	variables := map[string]testkube.Variable{}
 	for k, v := range vars1 {
@@ -588,6 +602,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.TestSuiteName,		
 		options.Request.Name,
 		options.TestSpec.Type_,
+		options.Request.Number,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
@@ -609,6 +624,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 		result[i] = testkube.ExecutionSummary{
 			Id:        execution.Id,
 			Name:      execution.Name,
+			Number:    execution.Number,
 			TestName:  execution.TestName,
 			TestType:  execution.TestType,
 			Status:    execution.ExecutionResult.Status,

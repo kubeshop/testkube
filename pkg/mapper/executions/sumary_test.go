@@ -3,8 +3,9 @@ package executions
 import (
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestMapToSummary(t *testing.T) {
@@ -18,6 +19,7 @@ func TestMapToSummary(t *testing.T) {
 	for i := 0; i < len(executions); i++ {
 		assert.Equal(t, result[i].Id, executions[i].Id)
 		assert.Equal(t, result[i].Name, executions[i].Name)
+		assert.Equal(t, result[i].Number, executions[i].Number)
 		assert.Equal(t, result[i].TestName, executions[i].TestName)
 		assert.Equal(t, result[i].TestType, executions[i].TestType)
 		assert.Equal(t, result[i].Status, executions[i].ExecutionResult.Status)
@@ -35,6 +37,7 @@ func getExecutions() testkube.Executions {
 		"testsuite1",
 		"execution1",
 		"test/test",
+		1,
 		testkube.NewStringTestContent(""),
 		*ex1,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
@@ -52,6 +55,7 @@ func getExecutions() testkube.Executions {
 		"testsuite1",
 		"execution2",
 		"test/test",
+		2,
 		testkube.NewStringTestContent(""),
 		*ex2,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
