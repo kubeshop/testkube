@@ -140,13 +140,13 @@ func (m Metrics) IncCreateTestSuite(err error) {
 }
 
 func (m Metrics) IncAbortTest(testType string, err error) {
-	status := "aborted"
+	result := "aborted"
 	if err != nil {
-		status = "error"
+		result = "error"
 	}
 
 	m.TestAbort.With(map[string]string{
 		"type":   testType,
-		"status": status,
+		"result": result,
 	}).Inc()
 }
