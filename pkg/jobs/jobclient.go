@@ -45,6 +45,10 @@ const (
 	volumeDir    = "/data"
 )
 
+type ExecutionCounter interface {
+	IncExecuteTest(execution testkube.Execution)
+}
+
 // JobClient data struct for managing running jobs
 type JobClient struct {
 	ClientSet   *kubernetes.Clientset
@@ -54,6 +58,7 @@ type JobClient struct {
 	Log         *zap.SugaredLogger
 	initImage   string
 	jobTemplate string
+	metrics     ExecutionCounter
 }
 
 // JobOptions is for configuring JobOptions
@@ -72,7 +77,7 @@ type JobOptions struct {
 }
 
 // NewJobClient returns new JobClient instance
-func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) {
+func NewJobClient(namespace, initImage, jobTemplate string, metrics ExecutionCounter) (*JobClient, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
@@ -84,6 +89,7 @@ func NewJobClient(namespace, initImage, jobTemplate string) (*JobClient, error) 
 		Log:         log.DefaultLogger,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
+		metrics:     metrics,
 	}, nil
 }
 
@@ -170,6 +176,10 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 				}
 				return result, err
 			}
+
+			// metrics increase
+			execution.ExecutionResult = &result
+			c.metrics.IncExecuteTest(execution)
 
 			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
 			err = repo.UpdateResult(ctx, execution.Id, result)
@@ -271,6 +281,10 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 					}
 					return
 				}
+
+				// metrics increase
+				execution.ExecutionResult = &result
+				c.metrics.IncExecuteTest(execution)
 
 				l.Infow("execution completed saving result", "status", result.Status)
 				err = repo.UpdateResult(ctx, execution.Id, result)

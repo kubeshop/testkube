@@ -221,9 +221,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	// set execution result to one created
 	execution.ExecutionResult = &result
 
-	// metrics increase
-	s.Metrics.IncExecuteTest(execution)
-
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
