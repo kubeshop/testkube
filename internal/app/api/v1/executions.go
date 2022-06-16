@@ -220,7 +220,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// set execution result to one created
 	execution.ExecutionResult = &result
-	
+
 	// metrics increase
 	s.Metrics.IncExecuteTest(execution)
 
@@ -426,7 +426,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := c.Context()		
+		ctx := c.Context()
 		id := c.Params("id")
 		execution, err := s.ExecutionResults.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
@@ -440,7 +440,7 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 		err = s.Executor.Abort(id)
 
 		s.Metrics.IncAbortTest(execution.TestType, err)
-		
+
 		return err
 	}
 }
