@@ -218,6 +218,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		result, err = s.Executor.Execute(execution, options)
 	}
 
+	// set execution result to one created
+	execution.ExecutionResult = &result
+
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
@@ -226,12 +229,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		}
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
-
-	// set execution result to one created
-	execution.ExecutionResult = &result
-
-	// metrics increase
-	s.Metrics.IncExecution(execution)
 
 	if err != nil {
 		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
@@ -426,8 +423,22 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		return s.Executor.Abort(id)
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		execution, err := s.ExecutionResults.Get(ctx, executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		err = s.Executor.Abort(executionID)
+
+		s.Metrics.IncAbortTest(execution.TestType, err)
+
+		return err
 	}
 }
 

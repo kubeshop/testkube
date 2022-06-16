@@ -46,7 +46,7 @@ const (
 )
 
 type ExecutionCounter interface {
-	IncExecution(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution)
 }
 
 // JobClient data struct for managing running jobs
@@ -145,6 +145,10 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 				if err != nil {
 					l.Infow("End execution", "error", err)
 				}
+
+				// metrics increase
+				execution.ExecutionResult = &result
+				c.metrics.IncExecuteTest(execution)
 			}()
 
 			// wait for complete
@@ -167,7 +171,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			}
 
 			// parse job ouput log (JSON stream)
-			result, _, err := output.ParseRunnerOutput(logs)
+			result, _, err = output.ParseRunnerOutput(logs)
 			if err != nil {
 				l.Errorw("parse ouput error", "error", err)
 				err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
@@ -176,10 +180,6 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 				}
 				return result, err
 			}
-
-			// metrics increase
-			execution.ExecutionResult = &result
-			c.metrics.IncExecution(execution)
 
 			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
 			err = repo.UpdateResult(ctx, execution.Id, result)
@@ -250,6 +250,10 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 					if err != nil {
 						l.Infow("End execution", "error", err)
 					}
+
+					// metrics increase
+					execution.ExecutionResult = &result
+					c.metrics.IncExecuteTest(execution)
 				}()
 
 				// wait for complete
@@ -272,7 +276,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				}
 
 				// parse job ouput log (JSON stream)
-				result, _, err := output.ParseRunnerOutput(logs)
+				result, _, err = output.ParseRunnerOutput(logs)
 				if err != nil {
 					l.Errorw("parse ouput error", "error", err)
 					err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
@@ -281,10 +285,6 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 					}
 					return
 				}
-
-				// metrics increase
-				execution.ExecutionResult = &result
-				c.metrics.IncExecution(execution)
 
 				l.Infow("execution completed saving result", "status", result.Status)
 				err = repo.UpdateResult(ctx, execution.Id, result)
