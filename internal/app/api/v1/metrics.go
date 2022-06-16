@@ -87,7 +87,7 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
 		status = string(*execution.Status)
 	}
 
-	m.TestExecutions.With(map[string]string{
+	m.TestSuiteExecutions.With(map[string]string{
 		"name":   name,
 		"result": status,
 	}).Inc()
