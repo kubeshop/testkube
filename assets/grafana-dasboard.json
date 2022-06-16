@@ -145,7 +145,7 @@
           "refId": "B"
         }
       ],
-      "title": "SUCCESSFUL tests executions",
+      "title": "SUCCESSFUL test executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -234,7 +234,7 @@
           "refId": "B"
         }
       ],
-      "title": "FAILED tests executions",
+      "title": "FAILED test executions",
       "transparent": true,
       "type": "timeseries"
     },
@@ -289,7 +289,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_tests_creation_count{}",
+          "expr": "testkube_test_creations_count{}",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -303,7 +303,7 @@
           "refId": "B"
         }
       ],
-      "title": "Tests creations",
+      "title": "Test creations",
       "transparent": true,
       "type": "stat"
     }

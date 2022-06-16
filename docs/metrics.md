@@ -2,13 +2,13 @@
 
 The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Prometheus, Grafana, etc. Currently, the following metrics are exposed:
 
-* `testkube_tests_executions_count` - The total number of test executions.
-* `testkube_testsuites_executions_count` - The total number of test suite executions.
-* `testkube_tests_creation_count` - The total number of tests created by type events.
-* `testkube_testsuites_creation_count` - The total number of test suites created events.
-* `testkube_tests_updates_count` - The total number of tests updates by type events.
-* `testkube_testsuites_updates_count` - The total number of test suites updates events.
-* `testkube_tests_abort_count` - The total number of tests aborted by type events.
+* `testkube_test_executions_count` - The total number of test executions.
+* `testkube_testsuite_executions_count` - The total number of test suite executions.
+* `testkube_test_creations_count` - The total number of tests created by type events.
+* `testkube_testsuite_creations_count` - The total number of test suites created events.
+* `testkube_test_updates_count` - The total number of tests updated by type events.
+* `testkube_testsuite_updates_count` - The total number of test suites updated events.
+* `testkube_test_aborts_count` - The total number of tests aborted by type events.
 
 ## **Installation**
 

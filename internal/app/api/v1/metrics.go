@@ -17,28 +17,28 @@ var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 }, []string{"name", "result"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_tests_creation_count",
+	Name: "testkube_test_creations_count",
 	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
 var testSuiteCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_testsuites_creation_count",
+	Name: "testkube_testsuite_creations_count",
 	Help: "The total number of test suites created events",
 }, []string{"result"})
 
 var testUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_tests_updates_count",
+	Name: "testkube_test_updates_count",
 	Help: "The total number of tests updated by type events",
 }, []string{"type", "result"})
 
 var testSuiteUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_testsuites_updates_count",
+	Name: "testkube_testsuite_updates_count",
 	Help: "The total number of test suites updated events",
 }, []string{"result"})
 
 var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_tests_abort_count",
-	Help: "The total number of tests created by type events",
+	Name: "testkube_test_aborts_count",
+	Help: "The total number of tests aborted by type events",
 }, []string{"type", "result"})
 
 func NewMetrics() Metrics {
