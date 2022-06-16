@@ -19,8 +19,8 @@ RUN cd cmd/api-server; \
             -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT \
             -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$ANALYTICS_TRACKING_ID \
             -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$ANALYTICS_API_KEY \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$SLACK_BOT_CLIENT_ID \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$SLACK_BOT_CLIENT_SECRET" \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$SLACK_BOT_CLIENT_ID \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$SLACK_BOT_CLIENT_SECRET" \
         -o /app -mod mod -a .
 
 FROM alpine:3.15  

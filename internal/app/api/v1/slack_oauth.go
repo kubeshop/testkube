@@ -51,6 +51,10 @@ func (s TestkubeAPI) OauthHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("Code was not provided"))
 		}
 
+		if SlackBotClientID == "" && SlackBotClientSecret == "" {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nSlack secrets are not set\n"))
+		}
+
 		var slackClient = thttp.NewClient()
 
 		req, err := http.NewRequest(http.MethodGet, slackAccessUrl, nil)

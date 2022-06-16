@@ -10,8 +10,8 @@ VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
 ANALYTICS_TRACKING_ID ?= $(DEBUG)
 ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
 ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
+LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
+LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) 
@@ -51,8 +51,8 @@ build-testkube-bin:
 			-X main.builtBy=$(USER) \
 			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
 			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
@@ -65,8 +65,8 @@ build-testkube-bin-intel:
 			-X main.builtBy=$(USER) \
 			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
 			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/pkg/slacknotifier.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
