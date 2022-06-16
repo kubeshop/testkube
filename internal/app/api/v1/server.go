@@ -81,7 +81,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics); err != nil {
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job); err != nil {
 		panic(err)
 	}
 

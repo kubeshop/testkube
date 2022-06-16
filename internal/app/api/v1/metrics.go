@@ -6,47 +6,90 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var executionCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_executions_count",
+var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
 }, []string{"type", "name", "result"})
 
-var creationCount = promauto.NewCounterVec(prometheus.CounterOpts{
+var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testsuite_executions_count",
+	Help: "The total number of test suite executions",
+}, []string{"name", "result"})
+
+var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_creation_count",
 	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
-var updatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+var testSuiteCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testsuites_creation_count",
+	Help: "The total number of test suites created events",
+}, []string{"result"})
+
+var testUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_updates_count",
-	Help: "The total number of tests created by type events",
+	Help: "The total number of tests updated by type events",
 }, []string{"type", "result"})
 
-var abortCount = promauto.NewCounterVec(prometheus.CounterOpts{
+var testSuiteUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testsuites_updates_count",
+	Help: "The total number of test suites updated events",
+}, []string{"result"})
+
+var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_tests_abort_count",
 	Help: "The total number of tests created by type events",
 }, []string{"type", "result"})
 
 func NewMetrics() Metrics {
 	return Metrics{
-		Executions: executionCount,
-		Creations:  creationCount,
-		Updates:    updatesCount,
-		Abort:      abortCount,
+		TestExecutions:      testExecutionCount,
+		TestSuiteExecutions: testSuiteExecutionCount,
+		TestCreations:       testCreationCount,
+		TestSuiteCreations:  testSuiteCreationCount,
+		TestUpdates:         testUpdatesCount,
+		TestSuiteUpdates:    testSuiteUpdatesCount,
+		TestAbort:           testAbortCount,
 	}
 }
 
 type Metrics struct {
-	Executions *prometheus.CounterVec
-	Creations  *prometheus.CounterVec
-	Updates    *prometheus.CounterVec
-	Abort      *prometheus.CounterVec
+	TestExecutions      *prometheus.CounterVec
+	TestSuiteExecutions *prometheus.CounterVec
+	TestCreations       *prometheus.CounterVec
+	TestSuiteCreations  *prometheus.CounterVec
+	TestUpdates         *prometheus.CounterVec
+	TestSuiteUpdates    *prometheus.CounterVec
+	TestAbort           *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecution(execution testkube.Execution) {
-	m.Executions.With(map[string]string{
+func (m Metrics) IncExecuteTest(execution testkube.Execution) {
+	status := ""
+	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
+		status = string(*execution.ExecutionResult.Status)
+	}
+
+	m.TestExecutions.With(map[string]string{
 		"type":   execution.TestType,
 		"name":   execution.TestName,
-		"result": string(*execution.ExecutionResult.Status),
+		"result": status,
+	}).Inc()
+}
+
+func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
+	name := ""
+	status := ""
+	if execution.TestSuite != nil {
+		name = execution.TestSuite.Name
+	}
+
+	if execution.Status != nil {
+		status = string(*execution.Status)
+	}
+
+	m.TestExecutions.With(map[string]string{
+		"name":   name,
+		"result": status,
 	}).Inc()
 }
 
@@ -56,8 +99,19 @@ func (m Metrics) IncUpdateTest(testType string, err error) {
 		result = "error"
 	}
 
-	m.Updates.With(map[string]string{
+	m.TestUpdates.With(map[string]string{
 		"type":   testType,
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateTestSuite(err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestSuiteUpdates.With(map[string]string{
 		"result": result,
 	}).Inc()
 }
@@ -68,8 +122,19 @@ func (m Metrics) IncCreateTest(testType string, err error) {
 		result = "error"
 	}
 
-	m.Creations.With(map[string]string{
+	m.TestCreations.With(map[string]string{
 		"type":   testType,
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncCreateTestSuite(err error) {
+	result := "created"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestSuiteCreations.With(map[string]string{
 		"result": result,
 	}).Inc()
 }
@@ -80,7 +145,7 @@ func (m Metrics) IncAbortTest(testType string, err error) {
 		status = "error"
 	}
 
-	m.Creations.With(map[string]string{
+	m.TestAbort.With(map[string]string{
 		"type":   testType,
 		"status": status,
 	}).Inc()

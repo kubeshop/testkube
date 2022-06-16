@@ -53,6 +53,9 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
 
 		created, err := s.TestsSuitesClient.Create(&testSuite)
+
+		s.Metrics.IncCreateTestSuite(err)
+
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -102,6 +105,9 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		testSuite.Spec = testSuiteSpec.Spec
 		testSuite.Labels = request.Labels
 		testSuite, err = s.TestsSuitesClient.Update(testSuite)
+
+		s.Metrics.IncUpdateTestSuite(err)
+
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -635,6 +641,8 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		if hasFailedSteps {
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		}
+
+		s.Metrics.IncExecuteTestSuite(*testsuiteExecution)
 
 		err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 		if err != nil {

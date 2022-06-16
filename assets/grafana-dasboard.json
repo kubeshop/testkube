@@ -133,7 +133,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_executions_count{result=\"success\"}",
+          "expr": "testkube_test_executions_count{result=\"passed\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
@@ -222,7 +222,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_executions_count{result=\"error\"}",
+          "expr": "testkube_test_executions_count{result=\"failed\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
