@@ -171,7 +171,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			}
 
 			// parse job ouput log (JSON stream)
-			result, _, err := output.ParseRunnerOutput(logs)
+			result, _, err = output.ParseRunnerOutput(logs)
 			if err != nil {
 				l.Errorw("parse ouput error", "error", err)
 				err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
@@ -276,7 +276,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				}
 
 				// parse job ouput log (JSON stream)
-				result, _, err := output.ParseRunnerOutput(logs)
+				result, _, err = output.ParseRunnerOutput(logs)
 				if err != nil {
 					l.Errorw("parse ouput error", "error", err)
 					err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
