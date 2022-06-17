@@ -67,7 +67,6 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		TelemetryEnabled:     telemetryEnabled,
 		ClusterID:            clusterId,
 	}
 
