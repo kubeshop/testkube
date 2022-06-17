@@ -31,7 +31,7 @@ func (r *MongoRepository) GetUniqueClusterId(ctx context.Context) (clusterId str
 
 	// generate new cluster Id and save if there is not already
 	if config.ClusterId == "" {
-		config.ClusterId = fmt.Sprintf("cluster%s", telemetry.MachineID())
+		config.ClusterId = fmt.Sprintf("cluster%s", telemetry.GetMachineID())
 		err := r.Upsert(ctx, config)
 		return config.ClusterId, err
 	}

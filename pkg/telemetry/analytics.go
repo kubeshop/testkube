@@ -15,9 +15,9 @@ import (
 
 var (
 	client  = httpclient.NewClient()
-	senders = []Sender{
-		GoogleAnalyticsSender,
-		TestkubeAnalyticsSender,
+	senders = map[string]Sender{
+		"google":   GoogleAnalyticsSender,
+		"testkube": TestkubeAnalyticsSender,
 	}
 )
 
@@ -25,8 +25,8 @@ type Sender func(client *http.Client, payload Payload) (out string, err error)
 
 // SendServerStartEvent will send event to GA
 func SendServerStartEvent() (string, error) {
-	payload := NewCLIPayload(MachineID(), "testkube_api_start", commands.Version, "execution")
-	return SendData(senders, payload)
+	payload := NewCLIPayload(GetMachineID(), "testkube_api_start", commands.Version, "execution")
+	return sendData(senders, payload)
 }
 
 // SendCmdEvent will send CLI event to GA
@@ -37,27 +37,27 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(MachineID(), command, version, "execution")
-	return SendData(senders, payload)
+	payload := NewCLIPayload(GetMachineID(), command, version, "execution")
+	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(MachineID(), "init", version, "execution")
-	return SendData(senders, payload)
+	payload := NewCLIPayload(GetMachineID(), "init", version, "execution")
+	return sendData(senders, payload)
 }
 
 // SendHeartbeatEvent will send CLI event to GA
 func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host)
-	return SendData(senders, payload)
+	return sendData(senders, payload)
 }
 
-// SendData sends data to all telemetry storages  in parallel and syncs sending
-func SendData(senders []Sender, payload Payload) (out string, err error) {
+// sendData sends data to all telemetry storages  in parallel and syncs sending
+func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
 	var wg sync.WaitGroup
 	wg.Add(len(senders))
-	for _, sender := range senders {
+	for name, sender := range senders {
 		go func(sender Sender) {
 			defer wg.Done()
 			o, err := sender(client, payload)
@@ -65,7 +65,7 @@ func SendData(senders []Sender, payload Payload) (out string, err error) {
 				log.DefaultLogger.Debugw("sending telemetry data error", "payload", payload, "error", err.Error())
 				return
 			}
-			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o)
+			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o, "sender", name)
 		}(sender)
 	}
 

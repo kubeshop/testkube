@@ -31,7 +31,7 @@ type Payload struct {
 }
 
 func NewCLIPayload(id, name, version, category string) Payload {
-	machineID := MachineID()
+	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
 		UserID:   id,
@@ -66,7 +66,7 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Host:            AnonymizeHost(host),
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
-					MachineID:       MachineID(),
+					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
 				},
 			}},

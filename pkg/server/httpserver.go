@@ -90,7 +90,7 @@ func (s HTTPServer) Run() error {
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	}
-	s.Log.Debug(out)
+	s.Log.Debugw("sending telemetry server start event", "output", out)
 
 	return s.Mux.Listen(s.Config.Addr())
 }
