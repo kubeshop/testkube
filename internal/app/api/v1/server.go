@@ -268,9 +268,12 @@ func (s TestkubeAPI) Init() {
 func (s TestkubeAPI) startHeartbeat() {
 	go func() {
 		for range time.Tick(HeartbeatInterval) {
-			host, _ := os.Hostname()
-			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.ClusterID)
 			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+			host, err := os.Hostname()
+			if err != nil {
+				l.Debugw("getting hostname error", "hostname", host, "error", err)
+			}
+			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.ClusterID)
 			if err != nil {
 				l.Debugw("sending heartbeat telemetry event error", "error", err)
 			} else {
