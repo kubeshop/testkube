@@ -255,7 +255,7 @@ func (s TestkubeAPI) Init() {
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 	if s.TelemetryEnabled {
-		s.StartHeartbeat()
+		s.startHeartbeat()
 	}
 
 	// mount everything on results
@@ -265,7 +265,7 @@ func (s TestkubeAPI) Init() {
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
-func (s TestkubeAPI) StartHeartbeat() {
+func (s TestkubeAPI) startHeartbeat() {
 	go func() {
 		for range time.Tick(HeartbeatInterval) {
 			host, _ := os.Hostname()
