@@ -58,7 +58,7 @@ func sendData(senders map[string]Sender, payload Payload) (out string, err error
 	var wg sync.WaitGroup
 	wg.Add(len(senders))
 	for name, sender := range senders {
-		go func(sender Sender) {
+		go func(sender Sender, name string) {
 			defer wg.Done()
 			o, err := sender(client, payload)
 			if err != nil {
@@ -66,7 +66,7 @@ func sendData(senders map[string]Sender, payload Payload) (out string, err error
 				return
 			}
 			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o, "sender", name)
-		}(sender)
+		}(sender, name)
 	}
 
 	wg.Wait()
