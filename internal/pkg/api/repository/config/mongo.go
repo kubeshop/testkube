@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
 const CollectionName = "config"
@@ -31,12 +31,18 @@ func (r *MongoRepository) GetUniqueClusterId(ctx context.Context) (clusterId str
 
 	// generate new cluster Id and save if there is not already
 	if config.ClusterId == "" {
-		config.ClusterId = fmt.Sprintf("cluster%s", analytics.MachineID())
+		config.ClusterId = fmt.Sprintf("cluster%s", telemetry.MachineID())
 		err := r.Upsert(ctx, config)
 		return config.ClusterId, err
 	}
 
 	return config.ClusterId, nil
+}
+
+func (r *MongoRepository) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
+	config := testkube.Config{}
+	err = r.Coll.FindOne(ctx, bson.M{"id": Id}).Decode(&config)
+	return config.EnableTelemetry, err
 }
 
 func (r *MongoRepository) Get(ctx context.Context) (result testkube.Config, err error) {

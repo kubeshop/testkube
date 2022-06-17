@@ -10,7 +10,7 @@ import (
 )
 
 var DefaultConfig = Data{
-	AnalyticsEnabled: true,
+	TelemetryEnabled: true,
 	Namespace:        "testkube",
 	OAuth2Data: OAuth2Data{
 		Provider: oauth.GithubProviderType,

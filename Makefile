@@ -7,13 +7,13 @@ NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
-ANALYTICS_TRACKING_ID ?= $(DEBUG)
+DEBUG ?= $(DEBUG)
 ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
 ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
 
@@ -26,7 +26,7 @@ use-env-file:
 	$(call setup_env)
 
 run-api: use-env-file
-	TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
+	TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
 run-api-race-detector: use-env-file
 	TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
@@ -49,10 +49,10 @@ build-testkube-bin:
 			-X main.commit=$(COMMIT) \
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
@@ -63,10 +63,10 @@ build-testkube-bin-intel:
 			-X main.commit=$(COMMIT) \
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 

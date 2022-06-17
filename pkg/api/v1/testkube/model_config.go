@@ -11,6 +11,7 @@ package testkube
 
 // Testkube API config data structure
 type Config struct {
-	Id        string `json:"id"`
-	ClusterId string `json:"clusterId"`
+	Id              string `json:"id"`
+	ClusterId       string `json:"clusterId"`
+	EnableTelemetry bool   `json:"enableTelemetry,omitempty"`
 }

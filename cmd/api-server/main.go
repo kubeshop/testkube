@@ -22,7 +22,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -61,12 +61,6 @@ func runMigrations() (err error) {
 
 func main() {
 
-	out, err := analytics.SendServerStartAnonymousInfo()
-	if err != nil {
-		ui.Debug("analytics send error", "error", err.Error())
-	}
-	ui.Debug(out)
-
 	port := os.Getenv("APISERVER_PORT")
 	namespace := "testkube"
 	if ns, ok := os.LookupEnv("TESTKUBE_NAMESPACE"); ok {
@@ -99,6 +93,13 @@ func main() {
 	testResultsRepository := testresult.NewMongoRespository(db)
 	configRepository := config.NewMongoRespository(db)
 
+	// try to load from mongo based config first
+	telemetryEnabled, err := configRepository.GetTelemetryEnabled(context.Background())
+	if err != nil {
+		// fallback to envs in case of failure (no record yet, or other error)
+		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
+	}
+
 	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
 	ui.WarnOnError("Getting uniqe clusterId", err)
 
@@ -107,7 +108,7 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
-	err = apiv1.NewTestkubeAPI(
+	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
 		testResultsRepository,
@@ -117,7 +118,10 @@ func main() {
 		secretClient,
 		webhooksClient,
 		clusterId,
-	).Run()
+	)
 
+	api.WithTelemetry(telemetryEnabled)
+
+	err = api.Run()
 	ui.ExitOnError("Running API Server", err)
 }
