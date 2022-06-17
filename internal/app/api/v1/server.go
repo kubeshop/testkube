@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -39,7 +40,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
-	clusterId string,
+	clusterID string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -69,7 +70,7 @@ func NewTestkubeAPI(
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 		AnalyticsEnabled:     analyticsEnabled,
-		ClusterID:            clusterId,
+		ClusterID:            clusterID,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -112,8 +113,8 @@ type TestkubeAPI struct {
 	jobTemplates         jobTemplates
 	Namespace            string
 	AnalyticsEnabled     bool
-	ClusterID            string
 	oauthParams          oauthParams
+	ClusterID            string
 }
 
 type jobTemplates struct {
@@ -176,6 +177,18 @@ func (s TestkubeAPI) Init() {
 	if s.AnalyticsEnabled {
 		// global analytics tracking send async
 		s.Routes.Use(s.AnalyticsHandler())
+	}
+
+	if s.AnalyticsEnabled {
+		// global analytics tracking send async
+		s.Routes.Use(func(c *fiber.Ctx) error {
+			go func(path string) {
+				s.Log.Debugw("sending anonymous info to tracker")
+				analytics.SendAnonymousAPIInfo(path)
+			}(c.Route().Path)
+
+			return c.Next()
+		})
 	}
 
 	s.Routes.Get("/info", s.InfoHandler())

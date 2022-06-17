@@ -62,37 +62,16 @@ var RootCmd = &cobra.Command{
 
 		if analyticsEnabled {
 			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
+			err := analytics.SendAnonymousCmdInfo(cmd)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
-			ui.Debug("analytics send event response", out)
-
-			// trigger init event only for first run
-			cfg, err := config.Load()
-			ui.WarnOnError("loading config", err)
-
-			if !cfg.Initialized {
-				cfg.SetInitialized()
-				err := config.Save(cfg)
-				ui.WarnOnError("saving config", err)
-
-				ui.Debug("sending 'init' event")
-
-				out, err := analytics.SendCmdInit(cmd, Version)
-				if ui.Verbose && err != nil {
-					ui.Err(err)
-				}
-				ui.Debug("analytics init event response", out)
-			}
-
 		}
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.Logo()
-		err := cmd.Usage()
-		ui.PrintOnError("Displaying usage", err)
+		cmd.Usage()
 		cmd.DisableAutoGenTag = true
 	},
 }

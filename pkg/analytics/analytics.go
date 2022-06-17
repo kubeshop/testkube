@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tools/commands"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
@@ -83,8 +84,7 @@ func SendServerStartAnonymousInfo() (string, error) {
 }
 
 // SendAnonymousCmdInfo will send CLI event to GA
-func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
-	machineID := MachineID()
+func SendAnonymousCmdInfo(cmd *cobra.Command) error {
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -92,20 +92,44 @@ func SendAnonymousCmdInfo(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
+	args := []string{}
+	if len(os.Args) > 1 {
+		args = os.Args[1:]
+	}
+
 	payload := Payload{
 		ClientID: machineID,
 		UserID:   machineID,
 		Events: []Event{
 			{
-				Name: text.GAEventName(command),
+				Name: command,
 				Params: Params{
-					EventCount:      1,
-					EventCategory:   "execution",
-					AppVersion:      version,
-					AppName:         "kubectl-testkube",
-					MachineID:       machineID,
-					OperatingSystem: runtime.GOOS,
-					Architecture:    runtime.GOARCH,
+					EventCount:       1,
+					EventCategory:    "execution",
+					AppVersion:       commands.Version,
+					AppName:          "testkube",
+					CustomDimensions: strings.Join(args, " "),
+					DataSource:       "kubectl-testkube",
+				},
+			}},
+	}
+
+	return sendDataToGA(payload)
+}
+
+// SendAnonymousCmdInfo will send CLI event to GA
+func SendAnonymousAPIInfo(path string) error {
+	payload := Payload{
+		ClientID: MachineID(),
+		Events: []Event{
+			{
+				Name: path,
+				Params: Params{
+					EventCount:    1,
+					EventCategory: "api-request",
+					AppVersion:    api.Version,
+					AppName:       "testkube",
+					DataSource:    "api-server",
 				},
 			}},
 	}
@@ -211,7 +235,7 @@ func sendDataToGA(payload Payload) (out string, err error) {
 	b, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
-		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
+		return fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
 	}
 	return fmt.Sprintf("status: %d - %s", resp.StatusCode, b), err
 }
