@@ -3,7 +3,7 @@ package webhook
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -92,7 +92,7 @@ func (s *Emitter) Send(event testkube.WebhookEvent) {
 		return
 	}
 
-	d, err := ioutil.ReadAll(resp.Body)
+	d, err := io.ReadAll(resp.Body)
 	if err != nil {
 		l.Errorw("webhook read response error", "error", err)
 		s.Responses <- WebhookResult{Error: err, Event: event}

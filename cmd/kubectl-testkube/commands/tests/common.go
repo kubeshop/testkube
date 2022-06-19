@@ -2,7 +2,7 @@ package tests
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 	"time"
@@ -112,12 +112,12 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 
 	// get file content
 	if file != "" {
-		fileContent, err = ioutil.ReadFile(file)
+		fileContent, err = os.ReadFile(file)
 		if err != nil {
 			return content, fmt.Errorf("reading file "+file+" error: %w", err)
 		}
 	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-		fileContent, err = ioutil.ReadAll(os.Stdin)
+		fileContent, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return content, fmt.Errorf("reading stdin error: %w", err)
 		}

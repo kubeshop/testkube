@@ -2,12 +2,12 @@ package tmp
 
 import (
 	"io"
-	"io/ioutil"
+	"os"
 )
 
 // ReaderToTmpfile converts io.Reader to tmp file returns saved file path
 func ReaderToTmpfile(input io.Reader) (path string, err error) {
-	tmpfile, err := ioutil.TempFile("", "testkube-tmp")
+	tmpfile, err := os.CreateTemp("", "testkube-tmp")
 	path = tmpfile.Name()
 	if _, err := io.Copy(tmpfile, input); err != nil {
 		return path, err
@@ -22,6 +22,6 @@ func ReaderToTmpfile(input io.Reader) (path string, err error) {
 
 // Name generate new temp file and returns file path
 func Name() string {
-	tmpfile, _ := ioutil.TempFile("", "testkube-tmp")
+	tmpfile, _ := os.CreateTemp("", "testkube-tmp")
 	return tmpfile.Name()
 }

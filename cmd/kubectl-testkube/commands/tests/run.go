@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -42,7 +41,7 @@ func NewRunTestCmd() *cobra.Command {
 
 			paramsFileContent := ""
 			if variablesFile != "" {
-				b, err := ioutil.ReadFile(variablesFile)
+				b, err := os.ReadFile(variablesFile)
 				ui.ExitOnError("reading variables file", err)
 				paramsFileContent = string(b)
 			}

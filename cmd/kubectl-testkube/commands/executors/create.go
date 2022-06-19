@@ -2,7 +2,7 @@ package executors
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -45,7 +45,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 			jobTemplateContent := ""
 			if jobTemplate != "" {
-				b, err := ioutil.ReadFile(jobTemplate)
+				b, err := os.ReadFile(jobTemplate)
 				ui.ExitOnError("reading job template", err)
 				jobTemplateContent = string(b)
 			}

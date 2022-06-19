@@ -2,7 +2,7 @@ package testsuites
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 
@@ -32,10 +32,10 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 
 			if file != "" {
 				// read test content
-				content, err = ioutil.ReadFile(file)
+				content, err = os.ReadFile(file)
 				ui.ExitOnError("reading file"+file, err)
 			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-				content, err = ioutil.ReadAll(os.Stdin)
+				content, err = io.ReadAll(os.Stdin)
 				ui.ExitOnError("reading stdin", err)
 			}
 
