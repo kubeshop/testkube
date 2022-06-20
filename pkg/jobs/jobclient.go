@@ -465,9 +465,7 @@ func (c *JobClient) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan [
 			return err
 		}
 
-		go func(ctr *string) {
-			defer close(logs)
-
+		go func() {
 			scanner := bufio.NewScanner(stream)
 
 			// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
@@ -476,14 +474,13 @@ func (c *JobClient) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan [
 
 			for scanner.Scan() {
 				c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", pod.Name)
-
 				logs <- scanner.Bytes()
 			}
 
 			if scanner.Err() != nil {
 				c.Log.Errorw("scanner error", "error", scanner.Err())
 			}
-		}(&container)
+		}()
 	}
 	return
 }
