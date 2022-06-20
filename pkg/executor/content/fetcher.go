@@ -3,7 +3,6 @@ package content
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -110,7 +109,7 @@ func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {
 	var tmpFile *os.File
 	filename := "test-content"
 	if f.path == "" {
-		tmpFile, err = ioutil.TempFile("", filename)
+		tmpFile, err = os.CreateTemp("", filename)
 	} else {
 		tmpFile, err = os.Create(filepath.Join(f.path, filename))
 	}

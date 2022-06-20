@@ -4,7 +4,7 @@
 package git
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/kubeshop/testkube/pkg/process"
 )
@@ -13,7 +13,7 @@ import (
 func Checkout(uri, branch, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
-		tmpDir, err = ioutil.TempDir("", "git-checkout")
+		tmpDir, err = os.MkdirTemp("", "git-checkout")
 		if err != nil {
 			return "", err
 		}
@@ -38,7 +38,7 @@ func Checkout(uri, branch, dir string) (outputDir string, err error) {
 func PartialCheckout(uri, path, branch, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
-		tmpDir, err = ioutil.TempDir("", "git-sparse-checkout")
+		tmpDir, err = os.MkdirTemp("", "git-sparse-checkout")
 		if err != nil {
 			return "", err
 		}

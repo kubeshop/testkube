@@ -1,7 +1,6 @@
 package tmp
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -20,7 +19,7 @@ func TestReaderToTmpfile(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(path) // clean up
 
-	contentBytes, err := ioutil.ReadFile(path)
+	contentBytes, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}

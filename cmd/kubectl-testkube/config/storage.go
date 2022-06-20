@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -29,7 +28,7 @@ func (c *Storage) Load() (data Data, err error) {
 	if err != nil {
 		return data, err
 	}
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return data, err
 	}
@@ -46,7 +45,7 @@ func (c *Storage) Save(data Data) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, d, 0700)
+	return os.WriteFile(path, d, 0700)
 }
 
 func (c *Storage) Init() error {

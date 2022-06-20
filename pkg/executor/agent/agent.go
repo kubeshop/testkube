@@ -3,7 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -22,7 +22,7 @@ func Run(r runner.Runner, args []string) {
 
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		test, err = ioutil.ReadAll(os.Stdin)
+		test, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			output.PrintError(os.Stderr, fmt.Errorf("can't read stind input: %w", err))
 			os.Exit(1)

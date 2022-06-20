@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -44,14 +44,14 @@ func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func proxyPass(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("\n-------------\n")
-	body, _ := ioutil.ReadAll(req.Body)
+	body, _ := io.ReadAll(req.Body)
 	fmt.Printf("%s\n", body)
 
 	prefix := fmt.Sprintf("/api/v1/namespaces/%s/services/testkube-api-server:%d/proxy", *namespace, *apiPort)
 	req.URL.Path = strings.Replace(req.URL.Path, prefix, "", -1)
 
 	newReq := req.Clone(req.Context())
-	newReq.Body = ioutil.NopCloser(bytes.NewReader(body))
+	newReq.Body = io.NopCloser(bytes.NewReader(body))
 
 	url, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", *apiPort))
 	proxy := httputil.NewSingleHostReverseProxy(url)

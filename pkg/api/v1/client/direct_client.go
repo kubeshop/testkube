@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -126,7 +125,7 @@ func (t DirectClient[A]) Delete(uri, selector string, isContentExpected bool) er
 	defer resp.Body.Close()
 
 	if isContentExpected && resp.StatusCode != http.StatusNoContent {
-		respBody, err := ioutil.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
@@ -210,7 +209,7 @@ func (t DirectClient[A]) responseError(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		var pr problem.Problem
 
-		bytes, err := ioutil.ReadAll(resp.Body)
+		bytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("can't get problem from api response: can't read response body %w", err)
 		}
