@@ -15,7 +15,9 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	}
 
 	ui.Warn("ID:        ", execution.Id)
-	ui.Warn("Number:    ", fmt.Sprintf("%d", execution.Number))
+	if execution.Number != 0 {
+		ui.Warn("Number:    ", fmt.Sprintf("%d", execution.Number))
+	}
 	ui.Warn("Test name: ", execution.TestName)
 	ui.Warn("Type:      ", execution.TestType)
 	ui.Warn("Status:    ", string(*execution.ExecutionResult.Status))
