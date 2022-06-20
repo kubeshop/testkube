@@ -87,7 +87,7 @@ func (r *ExampleRunner) Run(execution testkube.Execution) (testkube.ExecutionRes
   }
   defer resp.Body.Close()
 
-  b, err := ioutil.ReadAll(resp.Body)
+  b, err := io.ReadAll(resp.Body)
   if err != nil {
     return result, err
   }
