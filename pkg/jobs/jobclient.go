@@ -405,7 +405,7 @@ func (c *JobClient) GetPodLogs(pod corev1.Pod, logLinesCount ...int64) (logs []b
 
 		stream, err := podLogRequest.Stream(context.TODO())
 		if err != nil {
-			if len(logs) != 0 {
+			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
 				return logs, nil
 			}
 
@@ -417,7 +417,7 @@ func (c *JobClient) GetPodLogs(pod corev1.Pod, logLinesCount ...int64) (logs []b
 		buf := new(bytes.Buffer)
 		_, err = io.Copy(buf, stream)
 		if err != nil {
-			if len(logs) != 0 {
+			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
 				return logs, nil
 			}
 
