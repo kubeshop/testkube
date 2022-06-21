@@ -77,7 +77,6 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	go func() {
 		defer func() {
 			c.Log.Debug("closing JobExecutor.Logs out log")
-			close(logs)
 			close(out)
 		}()
 
