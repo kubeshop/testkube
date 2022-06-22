@@ -1,0 +1,7 @@
+ignore:
+  - "cmd/**"
+
+coverage:
+  status:
+    project: false
+    patch: false
