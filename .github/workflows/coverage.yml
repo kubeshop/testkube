@@ -37,7 +37,7 @@ jobs:
         run: go mod download && go mod tidy
 
       - name: Run tests with coverage
-        run: go test -v -coverpkg=./... -coverprofile=profile.out ./... && go tool cover -func profile.out
+        run: go test -v -coverpkg=./... -coverprofile=profile.out `go list ./... | grep -v ./cmd` && go tool cover -func profile.out
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
