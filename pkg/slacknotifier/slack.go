@@ -19,7 +19,7 @@ const messageTemplate string = `{
 			"text": {
 				"type": "plain_text",
 				"emoji": true,
-				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} has {{ .Status }}"
+				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} reports status {{ .Status }}"
 			}
 		},
 		{
@@ -27,13 +27,16 @@ const messageTemplate string = `{
 			"elements": [
 				{
 					"type": "image",
-					"image_url": "{{ if (eq .FailedSteps 0) }} https://icon-library.com/images/green-tick-icon/green-tick-icon-6.jpg {{ else }} https://icon-library.com/images/error-image-icon/error-image-icon-23.jpg {{ end }}",
+					"image_url": "{{ if eq .Status "failed" }}https://icon-library.com/images/error-image-icon/error-image-icon-23.jpg{{ else }}https://icon-library.com/images/green-tick-icon/green-tick-icon-6.jpg{{ end }}",
 					"alt_text": "notifications warning icon"
-				},
+				}
+				{{ if (gt .TotalSteps 0 )}}
+				,
 				{
 					"type": "mrkdwn",
 					"text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
 				}
+				{{ end }}
 			]
 		},
 		{
@@ -62,6 +65,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ if .Namespace}}
 		{
 			"type": "section",
 			"fields": [
@@ -80,6 +84,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ end }}
 		{
 			"type": "section",
 			"fields": [
@@ -103,6 +108,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ if .Duration }}
 		{
 			"type": "section",
 			"fields": [
@@ -121,6 +127,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ end }}
 		{
 			"type": "divider"
 		},
