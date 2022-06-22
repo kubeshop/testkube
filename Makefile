@@ -7,9 +7,6 @@ NAMESPACE ?= "testkube"
 DATE ?= $(shell date -u --iso-8601=seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
-ANALYTICS_TRACKING_ID ?= $(DEBUG)
-ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
-ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/analytics.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
