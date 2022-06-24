@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests/renderer"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -16,6 +18,7 @@ func NewGetTestsCmd() *cobra.Command {
 	var (
 		selectors   []string
 		noExecution bool
+		crdOnly     bool
 	)
 
 	cmd := &cobra.Command{
@@ -35,6 +38,17 @@ func NewGetTestsCmd() *cobra.Command {
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
 				if test.Test != nil {
+					if crdOnly {
+						if test.Test.Content != nil && test.Test.Content.Data != "" {
+							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
+						}
+
+						data, err := crd.ExecuteTemplate(crd.TemplateTest, test.Test)
+						ui.ExitOnError("executing crd template", err)
+						ui.Info(data)
+						return
+					}
+
 					ui.NL()
 					ui.Info("Test:")
 					err = render.Obj(cmd, *test.Test, os.Stdout, renderer.TestRenderer)
@@ -49,9 +63,19 @@ func NewGetTestsCmd() *cobra.Command {
 				}
 
 			} else {
+				firstEntry := true
 				if noExecution {
 					tests, err := client.ListTests(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all tests in namespace "+namespace, err)
+
+					for _, test := range tests {
+						if !firstEntry {
+							fmt.Printf("\n---\n")
+						} else {
+							firstEntry = false
+						}
+					}
+
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				} else {
@@ -65,6 +89,7 @@ func NewGetTestsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd ")
 
 	return cmd
 }
