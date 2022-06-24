@@ -266,6 +266,10 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if request.Content != nil && request.Content.Data != "" {
+				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
+			}
+
 			data, err := crd.ExecuteTemplate(crd.TemplateTest, request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
