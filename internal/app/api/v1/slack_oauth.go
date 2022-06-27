@@ -47,18 +47,18 @@ func (s TestkubeAPI) OauthHandler() fiber.Handler {
 		}
 		code := c.Query("code", "")
 		if code == "" {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("Code was not provided"))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("code was not provided"))
 		}
 
 		if SlackBotClientID == "" && SlackBotClientSecret == "" {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nSlack secrets are not set\n"))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nslack secrets are not set\n"))
 		}
 
 		var slackClient = thttp.NewClient()
 
 		req, err := http.NewRequest(http.MethodGet, slackAccessUrl, nil)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to create request: %+v\n", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nfailed to create request: %+v\n", err))
 		}
 
 		req.SetBasicAuth(SlackBotClientID, SlackBotClientSecret)
@@ -87,7 +87,7 @@ func (s TestkubeAPI) OauthHandler() fiber.Handler {
 		}
 
 		if len(oResp.AccessToken) == 0 {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Unable to get the response from the slack oauth endpoint"))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("unable to get the response from the slack oauth endpoint"))
 		}
 
 		_, err = c.WriteString(fmt.Sprintf("Authentification was succesfull!\nPlease use the following token in the helm values for slackToken : %s", oResp.AccessToken))

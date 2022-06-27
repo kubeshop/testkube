@@ -221,7 +221,8 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
-			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			var testSuiteList *testsuitesv1.TestSuiteList
+			testSuiteList, err = s.TestsSuitesClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
@@ -515,7 +516,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		s.Log.Debugw("executing test", "name", name, "selector", selector)
 		if name != "" && len(results) != 0 {
 			if results[0].IsFailed() {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("test suite failed %v", name))
 			}
 
 			c.Response().SetStatusCode(fiber.StatusCreated)
