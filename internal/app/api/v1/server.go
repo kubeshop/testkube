@@ -252,6 +252,9 @@ func (s TestkubeAPI) Init() {
 	slack := s.Routes.Group("/slack")
 	slack.Get("/", s.OauthHandler())
 
+	events := s.Routes.Group("/events")
+	events.Post("/flux", s.FluxEventHandler())
+
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 	if s.TelemetryEnabled {
