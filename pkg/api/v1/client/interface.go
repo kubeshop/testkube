@@ -79,6 +79,11 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// WebhookAPI describes webhook api methods
+type ConfigAPI interface {
+	UpdateKey(key string, value any) (webhook testkube.Config, err error)
+}
+
 // ServiceAPI describes service api methods
 type ServiceAPI interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
@@ -122,7 +127,7 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo
+		testkube.Artifact | testkube.ServerInfo | testkube.Config
 }
 
 // Executable is an interface of executable objects

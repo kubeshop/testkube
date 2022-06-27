@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/analytics"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -17,7 +17,7 @@ var (
 	BuiltBy string
 	Date    string
 
-	analyticsEnabled bool
+	telemetryEnabled bool
 	client           string
 	verbose          bool
 	namespace        string
@@ -60,13 +60,13 @@ var RootCmd = &cobra.Command{
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
-		if analyticsEnabled {
-			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
+		if telemetryEnabled {
+			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+			out, err := telemetry.SendCmdEvent(cmd, Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
-			ui.Debug("analytics send event response", out)
+			ui.Debug("telemetry send event response", out)
 
 			// trigger init event only for first run
 			cfg, err := config.Load()
@@ -79,11 +79,11 @@ var RootCmd = &cobra.Command{
 
 				ui.Debug("sending 'init' event")
 
-				out, err := analytics.SendCmdInit(cmd, Version)
+				out, err := telemetry.SendCmdInitEvent(cmd, Version)
 				if ui.Verbose && err != nil {
 					ui.Err(err)
 				}
-				ui.Debug("analytics init event response", out)
+				ui.Debug("telemetry init event response", out)
 			}
 
 		}
@@ -111,7 +111,7 @@ func Execute() {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
 
-	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
+	RootCmd.PersistentFlags().BoolVarP(&telemetryEnabled, "telemetry-enabled", "", cfg.TelemetryEnabled, "enable collection of anonumous telemetry data")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
