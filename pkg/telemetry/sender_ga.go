@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -40,7 +40,7 @@ func GoogleAnalyticsSender(client *http.Client, payload Payload) (out string, er
 		return out, err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
 		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
@@ -70,7 +70,7 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 		return out, err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
 		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)

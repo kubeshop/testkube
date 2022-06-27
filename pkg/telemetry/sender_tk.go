@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -30,7 +30,7 @@ func TestkubeAnalyticsSender(client *http.Client, payload Payload) (out string, 
 		return out, err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
 		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
