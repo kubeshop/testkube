@@ -6,6 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -13,6 +14,7 @@ import (
 func NewGetWebhookCmd() *cobra.Command {
 	var name, namespace string
 	var selectors []string
+	var crdOnly bool
 
 	cmd := &cobra.Command{
 		Use:     "webhook <webhookName>",
@@ -22,15 +24,31 @@ func NewGetWebhookCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 
+			firstEntry := true
 			if len(args) > 0 {
 				name := args[0]
 				webhook, err := client.GetWebhook(name)
 				ui.ExitOnError("getting webhook: "+name, err)
+
+				if crdOnly {
+					common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
+					return
+				}
+
 				err = render.Obj(cmd, webhook, os.Stdout)
 				ui.ExitOnError("rendering obj", err)
 			} else {
 				webhooks, err := client.ListWebhooks(strings.Join(selectors, ","))
 				ui.ExitOnError("getting webhooks", err)
+
+				if crdOnly {
+					for _, webhook := range webhooks {
+						common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
+					}
+
+					return
+				}
+
 				err = render.List(cmd, webhooks, os.Stdout)
 				ui.ExitOnError("rendering list", err)
 			}
@@ -40,6 +58,7 @@ func NewGetWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as argument")
 	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 
 	return cmd
 }

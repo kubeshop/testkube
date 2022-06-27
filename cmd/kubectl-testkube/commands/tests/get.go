@@ -43,7 +43,7 @@ func NewGetTestsCmd() *cobra.Command {
 							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
 						}
 
-						uiPrintCRD(test.Test, &firstEntry)
+						common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
 						return
 					}
 
@@ -67,7 +67,7 @@ func NewGetTestsCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, test := range tests {
-							uiPrintCRD(test, &firstEntry)
+							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 
 						return
@@ -80,7 +80,7 @@ func NewGetTestsCmd() *cobra.Command {
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
 					if crdOnly {
 						for _, test := range tests {
-							uiPrintCRD(test, &firstEntry)
+							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 
 						return
@@ -94,18 +94,7 @@ func NewGetTestsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd ")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 
 	return cmd
-}
-
-func uiPrintCRD(test any, firstEntry *bool) {
-	data, err := crd.ExecuteTemplate(crd.TemplateTest, test)
-	ui.ExitOnError("executing crd template", err)
-	ui.Info(data)
-	if !*firstEntry {
-		ui.Info("\n---")
-	} else {
-		*firstEntry = false
-	}
 }

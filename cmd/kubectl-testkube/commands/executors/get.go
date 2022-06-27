@@ -12,6 +12,7 @@ import (
 
 func NewGetExecutorCmd() *cobra.Command {
 	var selectors []string
+	var crdOnly bool
 
 	cmd := &cobra.Command{
 		Use:     "executor [executorName]",
@@ -39,5 +40,7 @@ func NewGetExecutorCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd ")
+
 	return cmd
 }
