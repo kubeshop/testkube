@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,6 +17,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -27,8 +29,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
+
+const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
@@ -49,13 +55,6 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	// you can disable analytics tracking for API server
-	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
-	analyticsEnabled, err := strconv.ParseBool(analyticsEnabledStr)
-	if err != nil {
-		analyticsEnabled = true
-	}
-
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
@@ -68,7 +67,6 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		AnalyticsEnabled:     analyticsEnabled,
 		ClusterID:            clusterId,
 	}
 
@@ -111,7 +109,7 @@ type TestkubeAPI struct {
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
-	AnalyticsEnabled     bool
+	TelemetryEnabled     bool
 	ClusterID            string
 	oauthParams          oauthParams
 }
@@ -157,6 +155,11 @@ type oauthParams struct {
 	Scopes       string
 }
 
+// WithTelemetry enable or disable anonymous telemetry data passing to testkube engineers
+func (s *TestkubeAPI) WithTelemetry(enabled bool) {
+	s.TelemetryEnabled = enabled
+}
+
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
@@ -172,11 +175,6 @@ func (s TestkubeAPI) Init() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
 	s.Routes.Use(s.AuthHandler())
-
-	if s.AnalyticsEnabled {
-		// global analytics tracking send async
-		s.Routes.Use(s.AnalyticsHandler())
-	}
 
 	s.Routes.Get("/info", s.InfoHandler())
 	s.Routes.Get("/routes", s.RoutesHandler())
@@ -254,14 +252,38 @@ func (s TestkubeAPI) Init() {
 	slack := s.Routes.Group("/slack")
 	slack.Get("/", s.OauthHandler())
 
+	events := s.Routes.Group("/events")
+	events.Post("/flux", s.FluxEventHandler())
+
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
+	if s.TelemetryEnabled {
+		s.startHeartbeat()
+	}
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
 
-	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.TelemetryEnabled)
+}
+
+func (s TestkubeAPI) startHeartbeat() {
+	go func() {
+		for range time.Tick(HeartbeatInterval) {
+			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+			host, err := os.Hostname()
+			if err != nil {
+				l.Debugw("getting hostname error", "hostname", host, "error", err)
+			}
+			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.ClusterID)
+			if err != nil {
+				l.Debugw("sending heartbeat telemetry event error", "error", err)
+			} else {
+				l.Debugw("sending heartbeat telemetry event", "output", out)
+			}
+		}
+	}()
 }
 
 // TODO should we use single generic filter for all list based resources ?
