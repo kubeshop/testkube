@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -75,7 +75,7 @@ var ErrTypeNotDetected = fmt.Errorf("type not detected")
 func GenerateCRD(namespace, path string) (string, error) {
 	var testType string
 
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

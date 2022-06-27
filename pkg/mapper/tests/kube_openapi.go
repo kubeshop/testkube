@@ -48,13 +48,15 @@ func MergeVariablesAndParams(variables map[string]testsv2.Variable, params map[s
 
 // MapTestContentFromSpec maps CRD to OpenAPI spec TestContent
 func MapTestContentFromSpec(specContent *testsv2.TestContent) *testkube.TestContent {
-	content := &testkube.TestContent{
-		Type_: specContent.Type_,
+
+	content := &testkube.TestContent{}
+	if specContent != nil {
+		content.Type_ = specContent.Type_
 		// assuming same data structure - there is task about syncing them automatically
 		// https://github.com/kubeshop/testkube/issues/723
-		Repository: (*testkube.Repository)(specContent.Repository),
-		Data:       specContent.Data,
-		Uri:        specContent.Uri,
+		content.Repository = (*testkube.Repository)(specContent.Repository)
+		content.Data = specContent.Data
+		content.Uri = specContent.Uri
 	}
 
 	return content

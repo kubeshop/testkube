@@ -160,7 +160,7 @@ func (c *JobClient) LaunchK8sJobSync(repo result.Repository, execution testkube.
 			l.Debug("poll immediate end")
 
 			var logs []byte
-			logs, err = c.GetPodLogs(pod.Name)
+			logs, err = c.GetPodLogs(pod)
 			if err != nil {
 				l.Errorw("get pod logs error", "error", err)
 				err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
@@ -265,7 +265,7 @@ func (c *JobClient) LaunchK8sJob(repo result.Repository, execution testkube.Exec
 				l.Debug("poll immediate end")
 
 				var logs []byte
-				logs, err = c.GetPodLogs(pod.Name)
+				logs, err = c.GetPodLogs(pod)
 				if err != nil {
 					l.Errorw("get pod logs error", "error", err)
 					err = repo.UpdateResult(ctx, execution.Id, result.Err(err))
@@ -335,22 +335,22 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return c.TailPodLogs(ctx, pod.Name, logs)
+				return c.TailPodLogs(ctx, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
 				l.Errorw(err.Error())
-				return c.GetLastLogLineError(ctx, pod.Namespace, pod.Name)
+				return c.GetLastLogLineError(ctx, pod)
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
 				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
-					return c.GetLastLogLineError(ctx, pod.Namespace, pod.Name)
+					return c.GetLastLogLineError(ctx, pod)
 				}
 
 				l.Debug("tailing pod logs")
-				return c.TailPodLogs(ctx, pod.Name, logs)
+				return c.TailPodLogs(ctx, pod, logs)
 			}
 		}
 	}
@@ -359,9 +359,9 @@ func (c *JobClient) TailJobLogs(id string, logs chan []byte) (err error) {
 }
 
 // GetLastLogLineError return error if last line is failed
-func (c *JobClient) GetLastLogLineError(ctx context.Context, podNamespace, podName string) error {
-	l := c.Log.With("pod", podName, "namespace", podNamespace)
-	log, err := c.GetPodLogError(ctx, podName)
+func (c *JobClient) GetLastLogLineError(ctx context.Context, pod corev1.Pod) error {
+	l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
+	log, err := c.GetPodLogError(ctx, pod)
 	if err != nil {
 		return fmt.Errorf("getPodLogs error: %w", err)
 	}
@@ -377,77 +377,112 @@ func (c *JobClient) GetLastLogLineError(ctx context.Context, podNamespace, podNa
 }
 
 // GetPodLogs returns pod logs bytes
-func (c *JobClient) GetPodLogs(podName string, logLinesCount ...int64) (logs []byte, err error) {
+func (c *JobClient) GetPodLogs(pod corev1.Pod, logLinesCount ...int64) (logs []byte, err error) {
 	count := int64(100)
 	if len(logLinesCount) > 0 {
 		count = logLinesCount[0]
 	}
 
-	podLogOptions := corev1.PodLogOptions{
-		Follow:    false,
-		TailLines: &count,
+	var containers []string
+	for _, container := range pod.Spec.InitContainers {
+		containers = append(containers, container.Name)
 	}
 
-	podLogRequest := c.ClientSet.CoreV1().
-		Pods(c.Namespace).
-		GetLogs(podName, &podLogOptions)
-
-	stream, err := podLogRequest.Stream(context.TODO())
-	if err != nil {
-		return logs, err
+	for _, container := range pod.Spec.Containers {
+		containers = append(containers, container.Name)
 	}
 
-	defer stream.Close()
+	for _, container := range containers {
+		podLogOptions := corev1.PodLogOptions{
+			Follow:    false,
+			TailLines: &count,
+			Container: container,
+		}
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, stream)
-	if err != nil {
-		return logs, err
+		podLogRequest := c.ClientSet.CoreV1().
+			Pods(c.Namespace).
+			GetLogs(pod.Name, &podLogOptions)
+
+		stream, err := podLogRequest.Stream(context.TODO())
+		if err != nil {
+			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
+				return logs, nil
+			}
+
+			return logs, err
+		}
+
+		defer stream.Close()
+
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, stream)
+		if err != nil {
+			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
+				return logs, nil
+			}
+
+			return logs, err
+		}
+
+		logs = append(logs, buf.Bytes()...)
 	}
 
-	return buf.Bytes(), nil
+	return logs, nil
 }
 
 // GetPodLogError returns last line as error
-func (c *JobClient) GetPodLogError(ctx context.Context, podName string) (logsBytes []byte, err error) {
+func (c *JobClient) GetPodLogError(ctx context.Context, pod corev1.Pod) (logsBytes []byte, err error) {
 	// error line should be last one
-	return c.GetPodLogs(podName, 1)
+	return c.GetPodLogs(pod, 1)
 }
 
 // TailPodLogs returns pod logs as channel of bytes
-func (c *JobClient) TailPodLogs(ctx context.Context, podName string, logs chan []byte) (err error) {
+func (c *JobClient) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan []byte) (err error) {
 	count := int64(1)
 
-	podLogOptions := corev1.PodLogOptions{
-		Follow:    true,
-		TailLines: &count,
+	var containers []string
+	for _, container := range pod.Spec.InitContainers {
+		containers = append(containers, container.Name)
 	}
 
-	podLogRequest := c.ClientSet.CoreV1().
-		Pods(c.Namespace).
-		GetLogs(podName, &podLogOptions)
-
-	stream, err := podLogRequest.Stream(ctx)
-	if err != nil {
-		return err
+	for _, container := range pod.Spec.Containers {
+		containers = append(containers, container.Name)
 	}
 
 	go func() {
 		defer close(logs)
 
-		scanner := bufio.NewScanner(stream)
+		for _, container := range containers {
+			podLogOptions := corev1.PodLogOptions{
+				Follow:    true,
+				TailLines: &count,
+				Container: container,
+			}
 
-		// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
-		buf := make([]byte, 0, 64*1024)
-		scanner.Buffer(buf, 1024*1024)
+			podLogRequest := c.ClientSet.CoreV1().
+				Pods(c.Namespace).
+				GetLogs(pod.Name, &podLogOptions)
 
-		for scanner.Scan() {
-			c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", podName)
-			logs <- scanner.Bytes()
-		}
+			stream, err := podLogRequest.Stream(ctx)
+			if err != nil {
+				c.Log.Errorw("stream error", "error", err)
+				continue
+			}
 
-		if scanner.Err() != nil {
-			c.Log.Errorw("scanner error", "error", scanner.Err())
+			scanner := bufio.NewScanner(stream)
+
+			// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
+			buf := make([]byte, 0, 64*1024)
+			scanner.Buffer(buf, 1024*1024)
+
+			for scanner.Scan() {
+				c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", pod.Name)
+				logs <- scanner.Bytes()
+			}
+
+			if scanner.Err() != nil {
+				c.Log.Errorw("scanner error", "error", scanner.Err())
+			}
 		}
 	}()
 	return

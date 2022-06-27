@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +9,7 @@ import (
 
 func TestSaveTelemetryEnabled(t *testing.T) {
 
-	dir, err := ioutil.TempDir("", "test-config-save")
+	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)
 
 	// create homedir config file

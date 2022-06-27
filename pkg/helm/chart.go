@@ -2,7 +2,6 @@ package helm
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,7 +14,7 @@ type HelmChart yaml.MapSlice
 
 // Read reads helm chart based on path
 func Read(filePath string) (helmChart HelmChart, err error) {
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return helmChart, err
 	}
@@ -31,7 +30,7 @@ func Write(filePath string, helmChart HelmChart) (err error) {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filePath, content, 0644)
+	return os.WriteFile(filePath, content, 0644)
 }
 
 // UpdateDependencyVersion updates version in HelmChart
@@ -164,7 +163,7 @@ func Find(dir string) (chartPath string, err error) {
 
 // UpdateValuesImageTag updates values.yaml image tag field
 func UpdateValuesImageTag(path, tag string) error {
-	input, err := ioutil.ReadFile(path)
+	input, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -172,5 +171,5 @@ func UpdateValuesImageTag(path, tag string) error {
 	r := regexp.MustCompile(`tag: "[^"]+"`)
 	output := r.ReplaceAll(input, []byte(fmt.Sprintf(`tag: "%s"`, tag)))
 
-	return ioutil.WriteFile(path, output, 0644)
+	return os.WriteFile(path, output, 0644)
 }
