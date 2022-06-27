@@ -83,6 +83,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestSuite"
+            text/yaml:
+              schema:
+                type: string
         500:
           description: "problem with getting test suites from storage"
           content:
@@ -778,6 +781,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Test"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -917,6 +923,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Test"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -972,6 +981,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestWithExecution"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1003,6 +1015,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestWithExecution"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
