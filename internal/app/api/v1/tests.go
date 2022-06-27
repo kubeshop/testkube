@@ -20,6 +20,46 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
+func (s TestkubeAPI) getTestCRD(c *fiber.Ctx, crTest *testsv2.Test) error {
+	if crTest.Spec.Content != nil && crTest.Spec.Content.Data != "" {
+		crTest.Spec.Content.Data = fmt.Sprintf("%q", crTest.Spec.Content.Data)
+	}
+
+	data, err := crd.ExecuteTemplate(crd.TemplateTest, crTest.Spec.Content)
+	if err != nil {
+		return s.Error(c, http.StatusBadRequest, err)
+	}
+
+	c.Context().SetContentType(mediaTypeYAML)
+	return c.SendString(data)
+}
+
+func (s TestkubeAPI) getTestCRDs(c *fiber.Ctx, crTests *testsv2.TestList) error {
+	data := ""
+	firstEntry := true
+	for _, crTest := range crTests.Items {
+		if crTest.Spec.Content != nil && crTest.Spec.Content.Data != "" {
+			crTest.Spec.Content.Data = fmt.Sprintf("%q", crTest.Spec.Content.Data)
+		}
+
+		crd, err := crd.ExecuteTemplate(crd.TemplateTest, crTest.Spec.Content)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if !firstEntry {
+			data += "\n---\n"
+		} else {
+			firstEntry = false
+		}
+
+		data += crd
+	}
+
+	c.Context().SetContentType(mediaTypeYAML)
+	return c.SendString(data)
+}
+
 // GetTestHandler is method for getting an existing test
 func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -31,6 +71,10 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestCRD(c, crTest)
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
@@ -50,6 +94,10 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestCRD(c, crTest)
 		}
 
 		ctx := c.Context()
@@ -120,6 +168,10 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestCRDs(c, crTests)
+		}
+
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 
 		return c.JSON(tests)
@@ -182,6 +234,10 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestCRDs(c, crTests)
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)

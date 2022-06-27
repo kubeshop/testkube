@@ -31,7 +31,7 @@ func NewGetTestsCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			var name string
-
+			firstEntry := true
 			if len(args) > 0 {
 				name = args[0]
 				test, err := client.GetTestWithExecution(name)
@@ -43,9 +43,7 @@ func NewGetTestsCmd() *cobra.Command {
 							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
 						}
 
-						data, err := crd.ExecuteTemplate(crd.TemplateTest, test.Test)
-						ui.ExitOnError("executing crd template", err)
-						ui.Info(data)
+						uiPrintCRD(test.Test, &firstEntry)
 						return
 					}
 
@@ -63,17 +61,16 @@ func NewGetTestsCmd() *cobra.Command {
 				}
 
 			} else {
-				firstEntry := true
 				if noExecution {
 					tests, err := client.ListTests(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
-					for _, test := range tests {
-						if !firstEntry {
-							fmt.Printf("\n---\n")
-						} else {
-							firstEntry = false
+					if crdOnly {
+						for _, test := range tests {
+							uiPrintCRD(test, &firstEntry)
 						}
+
+						return
 					}
 
 					err = render.List(cmd, tests, os.Stdout)
@@ -81,6 +78,14 @@ func NewGetTestsCmd() *cobra.Command {
 				} else {
 					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					if crdOnly {
+						for _, test := range tests {
+							uiPrintCRD(test, &firstEntry)
+						}
+
+						return
+					}
+
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				}
@@ -92,4 +97,15 @@ func NewGetTestsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd ")
 
 	return cmd
+}
+
+func uiPrintCRD(test any, firstEntry *bool) {
+	data, err := crd.ExecuteTemplate(crd.TemplateTest, test)
+	ui.ExitOnError("executing crd template", err)
+	ui.Info(data)
+	if !*firstEntry {
+		ui.Info("\n---")
+	} else {
+		*firstEntry = false
+	}
 }
