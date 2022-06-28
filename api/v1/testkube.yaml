@@ -137,6 +137,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuite"
+            text/yaml:
+              schema:
+                type: string
         500:
           description: "problem with getting test suite from storage"
           content:
@@ -238,6 +241,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestSuiteWithExecution"
+            text/yaml:
+              schema:
+                type: string
         500:
           description: "problem with getting test suite with executions from storage"
           content:
@@ -269,6 +275,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuiteWithExecution"
+            text/yaml:
+              schema:
+                type: string
         500:
           description: "problem with getting test suite with execution from storage"
           content:
@@ -1214,6 +1223,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Executor"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1346,6 +1358,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutorDetails"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1415,6 +1430,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Webhook"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1547,6 +1565,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Webhook"
+            text/yaml:
+              schema:
+                type: string
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1566,6 +1587,13 @@ paths:
 
   /config/{key}:
     patch:
+      parameters:
+        - in: path
+          name: key
+          schema:
+            type: string
+          required: true
+          description: Config key
       tags:
         - api
       summary: "update config key"
