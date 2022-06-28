@@ -302,7 +302,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			return s.getTestSuiteCRDs(c, testSuites)
-		}		
+		}
 
 		return c.JSON(testSuites)
 	}
