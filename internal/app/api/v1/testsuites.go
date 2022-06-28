@@ -134,6 +134,9 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestSuiteCRD(c, testSuite)
+		}
 
 		return c.JSON(testSuite)
 	}
@@ -152,6 +155,11 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestSuiteCRD(c, testSuite)
+		}
+
 		ctx := c.Context()
 		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
@@ -163,7 +171,6 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
 
-		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		testSuiteWithExecution := testkube.TestSuiteWithExecution{
 			TestSuite: &testSuite,
 		}
@@ -293,6 +300,9 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 		}
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestSuiteCRDs(c, testSuites)
+		}		
 
 		return c.JSON(testSuites)
 	}
@@ -364,8 +374,12 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		ctx := c.Context()
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getTestSuiteCRDs(c, testSuites)
+		}
+
+		ctx := c.Context()
 		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
@@ -853,4 +867,44 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSu
 	}
 
 	return
+}
+
+func (s TestkubeAPI) getTestSuiteCRD(c *fiber.Ctx, testSuite testkube.TestSuite) error {
+	if testSuite.Description != "" {
+		testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+	}
+
+	data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, testSuite)
+	if err != nil {
+		return s.Error(c, http.StatusBadRequest, err)
+	}
+
+	c.Context().SetContentType(mediaTypeYAML)
+	return c.SendString(data)
+}
+
+func (s TestkubeAPI) getTestSuiteCRDs(c *fiber.Ctx, testSuites []testkube.TestSuite) error {
+	data := ""
+	firstEntry := true
+	for _, testSuite := range testSuites {
+		if testSuite.Description != "" {
+			testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+		}
+
+		crd, err := crd.ExecuteTemplate(crd.TemplateTestSuite, testSuite)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if !firstEntry {
+			data += "\n---\n"
+		} else {
+			firstEntry = false
+		}
+
+		data += crd
+	}
+
+	c.Context().SetContentType(mediaTypeYAML)
+	return c.SendString(data)
 }
