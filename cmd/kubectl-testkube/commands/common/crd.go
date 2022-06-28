@@ -9,10 +9,10 @@ import (
 func UIPrintCRD(tmpl crd.Template, object any, firstEntry *bool) {
 	data, err := crd.ExecuteTemplate(tmpl, object)
 	ui.ExitOnError("executing crd template", err)
-	ui.Info(data)
 	if !*firstEntry {
-		ui.Info("\n---")
+		ui.Info("---")
 	} else {
 		*firstEntry = false
 	}
+	ui.Info(data)
 }
