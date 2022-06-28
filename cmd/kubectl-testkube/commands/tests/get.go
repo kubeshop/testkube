@@ -67,6 +67,10 @@ func NewGetTestsCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, test := range tests {
+							if test.Content != nil && test.Content.Data != "" {
+								test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+							}
+
 							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 
@@ -80,7 +84,13 @@ func NewGetTestsCmd() *cobra.Command {
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
 					if crdOnly {
 						for _, test := range tests {
-							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
+							if test.Test != nil {
+								if test.Test.Content != nil && test.Test.Content.Data != "" {
+									test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
+								}
+
+								common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
+							}
 						}
 
 						return

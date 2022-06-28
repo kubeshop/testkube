@@ -1,6 +1,7 @@
 package testsuites
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -33,12 +34,16 @@ func NewGetTestSuiteCmd() *cobra.Command {
 				testSuite, err := client.GetTestSuiteWithExecution(name)
 				ui.ExitOnError("getting test suite "+name, err)
 
-				if crdOnly {
-					common.UIPrintCRD(crd.TemplateTestSuite, testSuite, &firstEntry)
-					return
-				}
-
 				if testSuite.TestSuite != nil {
+					if crdOnly {
+						if testSuite.TestSuite.Description != "" {
+							testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
+						}
+
+						common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
+						return
+					}
+
 					ui.Info("Test Suite:")
 					err = render.Obj(cmd, *testSuite.TestSuite, os.Stdout, renderer.TestSuiteRenderer)
 					ui.ExitOnError("rendering obj", err)
@@ -57,9 +62,14 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
+							if testSuite.Description != "" {
+								testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+							}
+
 							common.UIPrintCRD(crd.TemplateTestSuite, testSuite, &firstEntry)
-							return
 						}
+
+						return
 					}
 
 					err = render.List(cmd, testSuites, os.Stdout)
@@ -70,9 +80,16 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
-							common.UIPrintCRD(crd.TemplateTestSuite, testSuite, &firstEntry)
-							return
+							if testSuite.TestSuite != nil {
+								if testSuite.TestSuite.Description != "" {
+									testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
+								}
+
+								common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
+							}
 						}
+
+						return
 					}
 
 					err = render.List(cmd, testSuites, os.Stdout)
