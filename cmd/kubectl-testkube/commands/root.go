@@ -21,7 +21,6 @@ var (
 	client           string
 	verbose          bool
 	namespace        string
-	apiURI           string
 	oauthEnabled     bool
 )
 
