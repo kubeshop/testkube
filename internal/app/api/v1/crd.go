@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"	
 )
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.ExecutorCreateRequest | testkube.Webhook 
+	testkube.Test | testkube.TestSuite | testkube.ExecutorCreateRequest | testkube.Webhook
 }
 
 func (s TestkubeAPI) getCRD(c *fiber.Ctx, tmpl crd.Template, item any) error {
@@ -48,7 +48,7 @@ func prepareCRDs[G Gettable](tmpl crd.Template, items []G) (string, error) {
 		}
 
 		data += crd
-	}	
+	}
 
 	return data, nil
 }

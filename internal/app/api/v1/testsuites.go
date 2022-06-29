@@ -137,7 +137,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			if testSuite.Description != "" {
 				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}	
+			}
 
 			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
 		}
@@ -163,8 +163,8 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			if testSuite.Description != "" {
 				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}	
-				
+			}
+
 			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
 		}
 
