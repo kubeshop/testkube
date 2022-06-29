@@ -105,7 +105,11 @@ func Execute() {
 		defaultNamespace = cfg.Namespace
 	}
 
-	apiURI := cfg.APIURI
+	apiURI := "http://localhost:8088"
+	if cfg.APIURI != "" {
+		apiURI = cfg.APIURI
+	}
+
 	if os.Getenv("TESTKUBE_API_URI") != "" {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
