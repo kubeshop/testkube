@@ -34,8 +34,6 @@ func TestMapParams(t *testing.T) {
 	// when
 	track := mapEvent(payload.UserID, payload.Events[0])
 
-	fmt.Printf("%+v\n", track)
-
 	// then
 	assert.Equal(t, "testkube-api", track.Properties["name"])
 	assert.Equal(t, "v1.0.0", track.Properties["version"])
@@ -48,8 +46,7 @@ func TestMapParams(t *testing.T) {
 }
 
 func TestSegmentioSender(t *testing.T) {
-
-	// t.Skip("For debug only")
+	t.Skip("for debug only, to check if real events are getting into Segment.io")
 
 	// given
 	payload := Payload{
