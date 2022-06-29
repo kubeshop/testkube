@@ -131,7 +131,6 @@ jobs:
           SLACK_BOT_CLIENT_SECRET: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          SEGMENTIO_KEY: ${{ secrets.TESTKUBE_SEGMENTIO_KEY }}
       - name: Store Intermediate Artifacts
         uses: actions/upload-artifact@master
         with:

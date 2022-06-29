@@ -48,7 +48,6 @@ jobs:
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          SEGMENTIO_KEY: ${{ secrets.TESTKUBE_SEGMENTIO_KEY }}
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:

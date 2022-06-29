@@ -9,13 +9,13 @@ import (
 
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
 
-var SegmentioKey = ""
+// Brew builds can't be parametrized so we are embedding this one
+var SegmentioKey = "iL0p6r5C9i35F7tRxnB0k3gB2nGh7VTK"
 
 func SegmentioSender(client *http.Client, payload Payload) (out string, err error) {
 
-	// load key from build ldflags for cli or from env for api
-	if SegmentioKey == "" {
-		SegmentioKey = os.Getenv(SegmentioEnvVariableName)
+	if key, ok := os.LookupEnv(SegmentioEnvVariableName); ok {
+		SegmentioKey = key
 	}
 
 	segmentio := analytics.New(SegmentioKey)
