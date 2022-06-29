@@ -34,6 +34,13 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			return s.getCRD(c, crd.TemplateTest, test)
+		}
 
 		return c.JSON(test)
 	}
@@ -52,6 +59,15 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		test := testsmapper.MapTestCRToAPI(*crTest)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			return s.getCRD(c, crd.TemplateTest, test)
+		}
+
 		ctx := c.Context()
 		startExecution, startErr := s.ExecutionResults.GetLatestByTest(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
@@ -63,7 +79,6 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
 
-		test := testsmapper.MapTestCRToAPI(*crTest)
 		testWithExecution := testkube.TestWithExecution{
 			Test: &test,
 		}
@@ -121,6 +136,16 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range tests {
+				if tests[i].Content != nil && tests[i].Content.Data != "" {
+					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
+				}
+			}
+
+			data, err := GenerateCRDs(crd.TemplateTest, tests)
+			return s.getCRDs(c, data, err)
+		}
 
 		return c.JSON(tests)
 	}
@@ -185,6 +210,17 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range tests {
+				if tests[i].Content != nil && tests[i].Content.Data != "" {
+					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
+				}
+			}
+
+			data, err := GenerateCRDs(crd.TemplateTest, tests)
+			return s.getCRDs(c, data, err)
+		}
+
 		ctx := c.Context()
 		testWithExecutions := make([]testkube.TestWithExecution, 0, len(tests))
 		results := make([]testkube.TestWithExecution, 0, len(tests))

@@ -134,6 +134,13 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if testSuite.Description != "" {
+				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+			}
+
+			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
+		}
 
 		return c.JSON(testSuite)
 	}
@@ -152,6 +159,15 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if testSuite.Description != "" {
+				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+			}
+
+			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
+		}
+
 		ctx := c.Context()
 		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
@@ -163,7 +179,6 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
 
-		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		testSuiteWithExecution := testkube.TestSuiteWithExecution{
 			TestSuite: &testSuite,
 		}
@@ -293,6 +308,16 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 		}
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range testSuites {
+				if testSuites[i].Description != "" {
+					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
+				}
+			}
+
+			data, err := GenerateCRDs(crd.TemplateTestSuite, testSuites)
+			return s.getCRDs(c, data, err)
+		}
 
 		return c.JSON(testSuites)
 	}
@@ -364,8 +389,19 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		ctx := c.Context()
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range testSuites {
+				if testSuites[i].Description != "" {
+					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
+				}
+			}
+
+			data, err := GenerateCRDs(crd.TemplateTestSuite, testSuites)
+			return s.getCRDs(c, data, err)
+		}
+
+		ctx := c.Context()
 		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
