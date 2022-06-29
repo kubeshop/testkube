@@ -12,6 +12,8 @@ const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
 // Brew builds can't be parametrized so we are embedding this one
 var SegmentioKey = "iL0p6r5C9i35F7tRxnB0k3gB2nGh7VTK"
 
+// SegmentioSender sends ananymous telemetry data to segment.io
+// TODO refactor Sender func as out is not needed (use debug loggers to log output)
 func SegmentioSender(client *http.Client, payload Payload) (out string, err error) {
 
 	if key, ok := os.LookupEnv(SegmentioEnvVariableName); ok {
