@@ -72,7 +72,7 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 
 		result := webhooksmapper.MapCRDToAPI(*item)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getWebhookCRD(c, result)
+			return s.getCRD(c, crd.TemplateWebhook, result)
 		}
 
 		return c.JSON(result)
@@ -103,16 +103,6 @@ func (s TestkubeAPI) DeleteWebhooksHandler() fiber.Handler {
 		c.Status(http.StatusNoContent)
 		return nil
 	}
-}
-
-func (s TestkubeAPI) getWebhookCRD(c *fiber.Ctx, webhook testkube.Webhook) error {
-	data, err := crd.ExecuteTemplate(crd.TemplateWebhook, webhook)
-	if err != nil {
-		return s.Error(c, http.StatusBadRequest, err)
-	}
-
-	c.Context().SetContentType(mediaTypeYAML)
-	return c.SendString(data)
 }
 
 func (s TestkubeAPI) getWebhookCRDs(c *fiber.Ctx, webhooks []testkube.Webhook) error {

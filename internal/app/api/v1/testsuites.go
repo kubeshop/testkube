@@ -135,7 +135,11 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestSuiteCRD(c, testSuite)
+			if testSuite.Description != "" {
+				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+			}	
+
+			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
 		}
 
 		return c.JSON(testSuite)
@@ -157,7 +161,11 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestSuiteCRD(c, testSuite)
+			if testSuite.Description != "" {
+				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
+			}	
+				
+			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
 		}
 
 		ctx := c.Context()
@@ -867,20 +875,6 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSu
 	}
 
 	return
-}
-
-func (s TestkubeAPI) getTestSuiteCRD(c *fiber.Ctx, testSuite testkube.TestSuite) error {
-	if testSuite.Description != "" {
-		testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-	}
-
-	data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, testSuite)
-	if err != nil {
-		return s.Error(c, http.StatusBadRequest, err)
-	}
-
-	c.Context().SetContentType(mediaTypeYAML)
-	return c.SendString(data)
 }
 
 func (s TestkubeAPI) getTestSuiteCRDs(c *fiber.Ctx, testSuites []testkube.TestSuite) error {

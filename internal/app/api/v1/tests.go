@@ -35,7 +35,11 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestCRD(c, test)
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			return s.getCRD(c, crd.TemplateTest, test)
 		}
 
 		return c.JSON(test)
@@ -57,7 +61,11 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestCRD(c, test)
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			return s.getCRD(c, crd.TemplateTest, test)
 		}
 
 		ctx := c.Context()
@@ -480,20 +488,6 @@ func GetSecretsStringData(content *testkube.TestContent) map[string]string {
 	}
 
 	return stringData
-}
-
-func (s TestkubeAPI) getTestCRD(c *fiber.Ctx, test testkube.Test) error {
-	if test.Content != nil && test.Content.Data != "" {
-		test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
-	}
-
-	data, err := crd.ExecuteTemplate(crd.TemplateTest, test)
-	if err != nil {
-		return s.Error(c, http.StatusBadRequest, err)
-	}
-
-	c.Context().SetContentType(mediaTypeYAML)
-	return c.SendString(data)
 }
 
 func (s TestkubeAPI) getTestCRDs(c *fiber.Ctx, tests []testkube.Test) error {
