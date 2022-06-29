@@ -309,7 +309,14 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestSuiteCRDs(c, testSuites)
+			for i := range testSuites {
+				if testSuites[i].Description != "" {
+					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
+				}
+			}
+
+			data, err := prepareCRDs(crd.TemplateTestSuite, testSuites)
+			return s.getCRDs(c, data, err)
 		}
 
 		return c.JSON(testSuites)
@@ -384,7 +391,14 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			return s.getTestSuiteCRDs(c, testSuites)
+			for i := range testSuites {
+				if testSuites[i].Description != "" {
+					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
+				}
+			}
+
+			data, err := prepareCRDs(crd.TemplateTestSuite, testSuites)
+			return s.getCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
@@ -875,30 +889,4 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSu
 	}
 
 	return
-}
-
-func (s TestkubeAPI) getTestSuiteCRDs(c *fiber.Ctx, testSuites []testkube.TestSuite) error {
-	data := ""
-	firstEntry := true
-	for _, testSuite := range testSuites {
-		if testSuite.Description != "" {
-			testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-		}
-
-		crd, err := crd.ExecuteTemplate(crd.TemplateTestSuite, testSuite)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
-		}
-
-		if !firstEntry {
-			data += "\n---\n"
-		} else {
-			firstEntry = false
-		}
-
-		data += crd
-	}
-
-	c.Context().SetContentType(mediaTypeYAML)
-	return c.SendString(data)
 }
