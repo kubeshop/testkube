@@ -20,7 +20,6 @@ func MapTestSuiteListKubeToAPI(cr testsuitesv1.TestSuiteList) (tests []testkube.
 func MapCRToAPI(cr testsuitesv1.TestSuite) (test testkube.TestSuite) {
 	test.Name = cr.Name
 	test.Namespace = cr.Namespace
-	test.Description = cr.Spec.Description
 
 	for _, s := range cr.Spec.Before {
 		test.Before = append(test.Before, mapCRStepToAPI(s))

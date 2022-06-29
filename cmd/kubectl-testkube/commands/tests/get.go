@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests/renderer"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -16,6 +18,7 @@ func NewGetTestsCmd() *cobra.Command {
 	var (
 		selectors   []string
 		noExecution bool
+		crdOnly     bool
 	)
 
 	cmd := &cobra.Command{
@@ -28,13 +31,22 @@ func NewGetTestsCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 
 			var name string
-
+			firstEntry := true
 			if len(args) > 0 {
 				name = args[0]
 				test, err := client.GetTestWithExecution(name)
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
 				if test.Test != nil {
+					if crdOnly {
+						if test.Test.Content != nil && test.Test.Content.Data != "" {
+							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
+						}
+
+						common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
+						return
+					}
+
 					ui.NL()
 					ui.Info("Test:")
 					err = render.Obj(cmd, *test.Test, os.Stdout, renderer.TestRenderer)
@@ -52,11 +64,38 @@ func NewGetTestsCmd() *cobra.Command {
 				if noExecution {
 					tests, err := client.ListTests(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all tests in namespace "+namespace, err)
+
+					if crdOnly {
+						for _, test := range tests {
+							if test.Content != nil && test.Content.Data != "" {
+								test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+							}
+
+							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
+						}
+
+						return
+					}
+
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				} else {
 					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
 					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					if crdOnly {
+						for _, test := range tests {
+							if test.Test != nil {
+								if test.Test.Content != nil && test.Test.Content.Data != "" {
+									test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
+								}
+
+								common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
+							}
+						}
+
+						return
+					}
+
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				}
@@ -65,6 +104,7 @@ func NewGetTestsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&noExecution, "no-execution", false, "don't show latest execution")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 
 	return cmd
 }

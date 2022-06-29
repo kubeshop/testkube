@@ -19,6 +19,7 @@ func MapTestListKubeToAPI(crTests testsv2.TestList) (tests []testkube.Test) {
 // MapTestCRToAPI maps CRD to OpenAPI spec test
 func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Name = crTest.Name
+	test.Namespace = crTest.Namespace
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
 	test.Type_ = crTest.Spec.Type_

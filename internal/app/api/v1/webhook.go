@@ -52,6 +52,12 @@ func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 			results = append(results, webhooksmapper.MapCRDToAPI(item))
 
 		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := GenerateCRDs(crd.TemplateWebhook, results)
+			return s.getCRDs(c, data, err)
+		}
+
 		return c.JSON(results)
 	}
 }
@@ -64,7 +70,11 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
+
 		result := webhooksmapper.MapCRDToAPI(*item)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			return s.getCRD(c, crd.TemplateWebhook, result)
+		}
 
 		return c.JSON(result)
 	}
