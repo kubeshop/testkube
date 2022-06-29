@@ -220,7 +220,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
 
-    steps:      
+    steps:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
