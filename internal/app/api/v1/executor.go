@@ -62,7 +62,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 				results = append(results, executorsmapper.MapCRDToAPI(item))
 			}
 
-			data, err := prepareCRDs(crd.TemplateExecutor, results)
+			data, err := GenerateCRDs(crd.TemplateExecutor, results)
 			return s.getCRDs(c, data, err)
 		}
 

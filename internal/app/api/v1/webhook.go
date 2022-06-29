@@ -54,7 +54,7 @@ func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := prepareCRDs(crd.TemplateWebhook, results)
+			data, err := GenerateCRDs(crd.TemplateWebhook, results)
 			return s.getCRDs(c, data, err)
 		}
 

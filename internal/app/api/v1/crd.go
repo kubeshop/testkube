@@ -32,7 +32,8 @@ func (s TestkubeAPI) getCRDs(c *fiber.Ctx, data string, err error) error {
 	return c.SendString(data)
 }
 
-func prepareCRDs[G Gettable](tmpl crd.Template, items []G) (string, error) {
+// GenerateCRDs generates CRDs for Testkube models
+func GenerateCRDs[G Gettable](tmpl crd.Template, items []G) (string, error) {
 	data := ""
 	firstEntry := true
 	for _, item := range items {

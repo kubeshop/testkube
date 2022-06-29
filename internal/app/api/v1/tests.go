@@ -143,7 +143,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 				}
 			}
 
-			data, err := prepareCRDs(crd.TemplateTest, tests)
+			data, err := GenerateCRDs(crd.TemplateTest, tests)
 			return s.getCRDs(c, data, err)
 		}
 
@@ -217,7 +217,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 				}
 			}
 
-			data, err := prepareCRDs(crd.TemplateTest, tests)
+			data, err := GenerateCRDs(crd.TemplateTest, tests)
 			return s.getCRDs(c, data, err)
 		}
 
