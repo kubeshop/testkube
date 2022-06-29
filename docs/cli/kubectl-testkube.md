@@ -21,7 +21,7 @@ kubectl-testkube [flags]
 ### SEE ALSO
 
 * [kubectl-testkube abort](kubectl-testkube_abort.md)	 - Abort tests or test suites
-* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - generate the autocompletion script for the specified shell
+* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 * [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
 * [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
 * [kubectl-testkube dashboard](kubectl-testkube_dashboard.md)	 - Open testkube dashboard

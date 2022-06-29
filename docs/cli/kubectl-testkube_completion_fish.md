@@ -1,17 +1,18 @@
 ## kubectl-testkube completion fish
 
-generate the autocompletion script for fish
+Generate the autocompletion script for fish
 
 ### Synopsis
-
 
 Generate the autocompletion script for the fish shell.
 
 To load completions in your current shell session:
-$ kubectl-testkube completion fish | source
+
+	kubectl-testkube completion fish | source
 
 To load completions for every new session, execute once:
-$ kubectl-testkube completion fish > ~/.config/fish/completions/kubectl-testkube.fish
+
+	kubectl-testkube completion fish > ~/.config/fish/completions/kubectl-testkube.fish
 
 You will need to start a new shell for this setup to take effect.
 
@@ -40,5 +41,5 @@ kubectl-testkube completion fish [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - generate the autocompletion script for the specified shell
+* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 

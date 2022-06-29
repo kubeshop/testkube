@@ -13,6 +13,7 @@ kubectl-testkube get testsuite <testSuiteName> [flags]
 ### Options
 
 ```
+      --crd-only        show only test crd
   -h, --help            help for testsuite
   -l, --label strings   label key value pair: --label key1=value1
       --no-execution    don't show latest execution
