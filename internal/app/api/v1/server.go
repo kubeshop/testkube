@@ -110,7 +110,6 @@ type TestkubeAPI struct {
 	jobTemplates         jobTemplates
 	Namespace            string
 	TelemetryEnabled     bool
-	ClusterID            string
 	oauthParams          oauthParams
 }
 

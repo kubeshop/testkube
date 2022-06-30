@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/problem"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -26,10 +27,11 @@ func NewServer(config Config) HTTPServer {
 
 // HTTPServer represents basic REST HTTP server abstarction
 type HTTPServer struct {
-	Mux    *fiber.App
-	Log    *zap.SugaredLogger
-	Routes fiber.Router
-	Config Config
+	Mux       *fiber.App
+	Log       *zap.SugaredLogger
+	Routes    fiber.Router
+	Config    Config
+	ClusterID string
 }
 
 // Init initializes router and setting up basic routes for health and metrics
@@ -86,7 +88,7 @@ func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string
 
 // Run starts listening for incoming connetions
 func (s HTTPServer) Run() error {
-	out, err := telemetry.SendServerStartEvent()
+	out, err := telemetry.SendServerStartEvent(s.ClusterID, api.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	}
