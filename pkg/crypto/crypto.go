@@ -88,7 +88,7 @@ func (p Provider) EncryptData(source []byte) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// DecryptKey decrypts data
+// DecryptData decrypts data
 func (p Provider) DecryptData(source string) ([]byte, error) {
 	bytes, err := hex.DecodeString(source)
 	if err != nil {
