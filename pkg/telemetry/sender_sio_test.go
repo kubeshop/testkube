@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -69,17 +68,14 @@ func TestSegmentioSender(t *testing.T) {
 		},
 	}
 
-	for i := 0; i < 100; i++ {
-		// when
-		payload.Events[0].Params.MachineID = fmt.Sprintf("mid%d", i)
-		out, err := SegmentioSender(http.DefaultClient, payload)
+	// when
+	out, err := SegmentioSender(http.DefaultClient, payload)
 
-		time.Sleep(100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, "", out)
-
-	}
+	// then
+	assert.NoError(t, err)
+	assert.Equal(t, "", out)
+	t.Fail()
 
 }
