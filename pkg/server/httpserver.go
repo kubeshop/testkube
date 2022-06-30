@@ -5,10 +5,8 @@ import (
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
@@ -87,11 +85,5 @@ func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string
 
 // Run starts listening for incoming connetions
 func (s HTTPServer) Run() error {
-	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
-	if err != nil {
-		s.Log.Debug("telemetry send error", "error", err.Error())
-	}
-	s.Log.Debugw("sending telemetry server start event", "output", out)
-
 	return s.Mux.Listen(s.Config.Addr())
 }

@@ -160,6 +160,20 @@ func (s *TestkubeAPI) WithTelemetry(enabled bool) {
 	s.TelemetryEnabled = enabled
 }
 
+// SendTelemetryStartEvent sends anonymous start event to telemetry trackers
+func (s TestkubeAPI) SendTelemetryStartEvent() {
+	if !s.TelemetryEnabled {
+		return
+	}
+
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
+	if err != nil {
+		s.Log.Debug("telemetry send error", "error", err.Error())
+	} else {
+		s.Log.Debugw("sending telemetry server start event", "output", out)
+	}
+}
+
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {

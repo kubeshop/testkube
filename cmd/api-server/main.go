@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -70,7 +71,7 @@ func main() {
 	ln, err := net.Listen("tcp", ":"+port)
 	ui.ExitOnError("Checking if port "+port+"is free", err)
 	ln.Close()
-	ui.Debug("TCP Port is available", port)
+	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
@@ -101,8 +102,9 @@ func main() {
 	}
 
 	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
-	ui.WarnOnError("Getting uniqe clusterId", err)
+	log.DefaultLogger.Warnw("Getting uniqe clusterId", "error", err)
 
+	// TODO check if this version exists somewhere in stats (probably could be removed)
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV2, testsuitesClient))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
@@ -121,6 +123,13 @@ func main() {
 	)
 
 	api.WithTelemetry(telemetryEnabled)
+	api.SendTelemetryStartEvent()
+
+	log.DefaultLogger.Infow(
+		"starting Testkube API server",
+		"telemetryEnabled", telemetryEnabled,
+		"clusterId", clusterId, "namespace", namespace,
+	)
 
 	err = api.Run()
 	ui.ExitOnError("Running API Server", err)
