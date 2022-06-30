@@ -42,13 +42,8 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 				request.Description = fmt.Sprintf("%q", request.Description)
 			}
 
-			data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
-			}
-
-			c.Context().SetContentType(mediaTypeYAML)
-			return c.SendString(data)
+			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
+			return s.getCRDs(c, data, err)
 		}
 
 		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
@@ -139,7 +134,8 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
 			}
 
-			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
+			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
+			return s.getCRDs(c, data, err)
 		}
 
 		return c.JSON(testSuite)
@@ -165,7 +161,8 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
 			}
 
-			return s.getCRD(c, crd.TemplateTestSuite, testSuite)
+			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
+			return s.getCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
@@ -315,7 +312,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 				}
 			}
 
-			data, err := GenerateCRDs(crd.TemplateTestSuite, testSuites)
+			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
 			return s.getCRDs(c, data, err)
 		}
 
@@ -397,7 +394,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 				}
 			}
 
-			data, err := GenerateCRDs(crd.TemplateTestSuite, testSuites)
+			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
 			return s.getCRDs(c, data, err)
 		}
 

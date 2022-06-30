@@ -20,13 +20,8 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.ExecuteTemplate(crd.TemplateExecutor, request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
-			}
-
-			c.Context().SetContentType(mediaTypeYAML)
-			return c.SendString(data)
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{request})
+			return s.getCRDs(c, data, err)
 		}
 
 		executor := executorsmapper.MapAPIToCRD(request)
@@ -62,7 +57,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 				results = append(results, executorsmapper.MapCRDToAPI(item))
 			}
 
-			data, err := GenerateCRDs(crd.TemplateExecutor, results)
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, results)
 			return s.getCRDs(c, data, err)
 		}
 
@@ -88,7 +83,8 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 				item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
 			}
 
-			return s.getCRD(c, crd.TemplateExecutor, executorsmapper.MapCRDToAPI(*item))
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{executorsmapper.MapCRDToAPI(*item)})
+			return s.getCRDs(c, data, err)
 		}
 
 		result := mapExecutorCRDToExecutorDetails(*item)

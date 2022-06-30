@@ -13,6 +13,7 @@ kubectl-testkube get executor [executorName] [flags]
 ### Options
 
 ```
+      --crd-only        show only test crd 
   -h, --help            help for executor
   -l, --label strings   label key value pair: --label key1=value1
 ```

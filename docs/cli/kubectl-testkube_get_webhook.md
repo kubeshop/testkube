@@ -13,6 +13,7 @@ kubectl-testkube get webhook <webhookName> [flags]
 ### Options
 
 ```
+      --crd-only        show only test crd
   -h, --help            help for webhook
   -l, --label strings   label key value pair: --label key1=value1
   -n, --name string     unique webhook name, you can also pass it as argument
