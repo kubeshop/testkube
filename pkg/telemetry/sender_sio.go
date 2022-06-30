@@ -16,6 +16,7 @@ var SegmentioKey = "iL0p6r5C9i35F7tRxnB0k3gB2nGh7VTK"
 // TODO refactor Sender func as out is not needed (use debug loggers to log output)
 func SegmentioSender(client *http.Client, payload Payload) (out string, err error) {
 
+	// TODO consider removing this as CLI has fixed key and API overrides it in build time
 	if key, ok := os.LookupEnv(SegmentioEnvVariableName); ok {
 		SegmentioKey = key
 	}
