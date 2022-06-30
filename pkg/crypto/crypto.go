@@ -12,7 +12,7 @@ import (
 
 const (
 	// KeyLength is key length
-	KeyLength = 1024
+	KeyLength = 2048
 	// KeyType is key type
 	KeyType = "RSA PRIVATE KEY"
 )
