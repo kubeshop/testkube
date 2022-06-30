@@ -169,8 +169,9 @@ func (s TestkubeAPI) SendTelemetryStartEvent() {
 	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
+	} else {
+		s.Log.Debugw("sending telemetry server start event", "output", out)
 	}
-	s.Log.Debugw("sending telemetry server start event", "output", out)
 }
 
 // Init initializes api server settings
