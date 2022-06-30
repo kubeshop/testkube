@@ -60,7 +60,7 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 				Name: text.GAEventName(name),
 				Params: Params{
 					EventCount:      1,
-					EventCategory:   "api-request",
+					EventCategory:   "api",
 					AppVersion:      version,
 					AppName:         "testkube-api-server",
 					Host:            AnonymizeHost(host),

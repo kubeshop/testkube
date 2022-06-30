@@ -55,6 +55,8 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
+	httpConfig.ClusterID = clusterId
+
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testExecutionsResults,
@@ -67,7 +69,6 @@ func NewTestkubeAPI(
 		EventsEmitter:        webhook.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		ClusterID:            clusterId,
 	}
 
 	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
@@ -110,7 +111,6 @@ type TestkubeAPI struct {
 	jobTemplates         jobTemplates
 	Namespace            string
 	TelemetryEnabled     bool
-	ClusterID            string
 	oauthParams          oauthParams
 }
 
@@ -265,7 +265,7 @@ func (s TestkubeAPI) Init() {
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
 
-	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID, "telemetry", s.TelemetryEnabled)
+	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.Config.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
 func (s TestkubeAPI) startHeartbeat() {
@@ -277,7 +277,7 @@ func (s TestkubeAPI) startHeartbeat() {
 			if err != nil {
 				l.Debugw("getting hostname error", "hostname", host, "error", err)
 			}
-			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.ClusterID)
+			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
 			if err != nil {
 				l.Debugw("sending heartbeat telemetry event error", "error", err)
 			} else {

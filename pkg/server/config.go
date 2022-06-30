@@ -4,8 +4,9 @@ import "fmt"
 
 // Config for HTTP server
 type Config struct {
-	Port     int
-	Fullname string
+	Port      int
+	Fullname  string
+	ClusterID string
 }
 
 // Addr returns port based address

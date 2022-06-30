@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/tools/commands"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -25,8 +24,8 @@ var (
 type Sender func(client *http.Client, payload Payload) (out string, err error)
 
 // SendServerStartEvent will send event to GA
-func SendServerStartEvent() (string, error) {
-	payload := NewCLIPayload(GetMachineID(), "testkube_api_start", commands.Version, "execution")
+func SendServerStartEvent(clusterId, version string) (string, error) {
+	payload := NewAPIPayload(clusterId, "testkube_api_start", version, "localhost")
 	return sendData(senders, payload)
 }
 
@@ -38,13 +37,13 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(GetMachineID(), command, version, "execution")
+	payload := NewCLIPayload(GetMachineID(), command, version, "cli_command_execution")
 	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(GetMachineID(), "init", version, "execution")
+	payload := NewCLIPayload(GetMachineID(), "init", version, "cli_command_execution")
 	return sendData(senders, payload)
 }
 
