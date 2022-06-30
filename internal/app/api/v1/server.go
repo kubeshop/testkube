@@ -270,7 +270,8 @@ func (s TestkubeAPI) Init() {
 
 func (s TestkubeAPI) startHeartbeat() {
 	go func() {
-		for range time.Tick(HeartbeatInterval) {
+		ticker := time.NewTicker(HeartbeatInterval)
+		for {
 			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
 			host, err := os.Hostname()
 			if err != nil {
@@ -282,6 +283,8 @@ func (s TestkubeAPI) startHeartbeat() {
 			} else {
 				l.Debugw("sending heartbeat telemetry event", "output", out)
 			}
+
+			<-ticker.C
 		}
 	}()
 }
