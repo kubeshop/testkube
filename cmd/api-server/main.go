@@ -125,7 +125,7 @@ func main() {
 	// telemetry based functions
 	api.WithTelemetry(telemetryEnabled)
 	api.SendTelemetryStartEvent()
-	api.StartHeartbeat()
+	api.StartTelemetryHeartbeats()
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",

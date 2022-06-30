@@ -279,7 +279,7 @@ func (s TestkubeAPI) Init() {
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.Config.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
-func (s TestkubeAPI) StartHeartbeat() {
+func (s TestkubeAPI) StartTelemetryHeartbeats() {
 	if !s.TelemetryEnabled {
 		return
 	}
