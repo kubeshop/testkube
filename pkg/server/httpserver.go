@@ -27,11 +27,10 @@ func NewServer(config Config) HTTPServer {
 
 // HTTPServer represents basic REST HTTP server abstarction
 type HTTPServer struct {
-	Mux       *fiber.App
-	Log       *zap.SugaredLogger
-	Routes    fiber.Router
-	Config    Config
-	ClusterID string
+	Mux    *fiber.App
+	Log    *zap.SugaredLogger
+	Routes fiber.Router
+	Config Config
 }
 
 // Init initializes router and setting up basic routes for health and metrics
@@ -88,7 +87,7 @@ func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string
 
 // Run starts listening for incoming connetions
 func (s HTTPServer) Run() error {
-	out, err := telemetry.SendServerStartEvent(s.ClusterID, api.Version)
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	}
