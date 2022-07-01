@@ -154,6 +154,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Err(fmt.Errorf("test execution with name %s already exists", request.Name)), nil
 	}
 
+	secretUUID, err := s.TestsClient.GetCurrentSnaphsotUUID(test.Name)
+	if err != nil {
+		return execution.Errw("can't get current snapshot uuid: %w", err), nil
+	}	
+
+	request.SecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
@@ -585,6 +591,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
+		options.Request.SecretUUID,
 		options.Labels,
 	)
 
