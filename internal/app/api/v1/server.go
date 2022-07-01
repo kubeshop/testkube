@@ -271,9 +271,6 @@ func (s TestkubeAPI) Init() {
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
-	if s.TelemetryEnabled {
-		s.startHeartbeat()
-	}
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
@@ -282,7 +279,11 @@ func (s TestkubeAPI) Init() {
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.Config.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
-func (s TestkubeAPI) startHeartbeat() {
+func (s TestkubeAPI) StartTelemetryHeartbeats() {
+	if !s.TelemetryEnabled {
+		return
+	}
+
 	go func() {
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
