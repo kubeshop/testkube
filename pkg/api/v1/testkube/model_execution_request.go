@@ -18,6 +18,8 @@ type ExecutionRequest struct {
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
 	VariablesFile string              `json:"variablesFile,omitempty"`
 	Variables     map[string]Variable `json:"variables,omitempty"`
+	// secret snaphost uuid
+	SecretUUID string `json:"secretUUID"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// environment variables passed to executor

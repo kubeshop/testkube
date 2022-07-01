@@ -1779,6 +1779,9 @@ components:
             prefix: "some-"
         variables:
           $ref: "#/components/schemas/Variables"
+        secretUUID:
+          type: string
+          description: secret snaphost uuid
         startTime:
           type: string
           description: "test start time"
@@ -2002,6 +2005,9 @@ components:
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
+        secretUUID:
+          type: string
+          description: secret snaphost uuid
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2264,6 +2270,9 @@ components:
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
         variables:
           $ref: "#/components/schemas/Variables"
+        secretUUID:
+          type: string
+          description: secret snaphost uuid
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2315,6 +2324,9 @@ components:
           example: testkube
         variables:
           $ref: "#/components/schemas/Variables"
+        secretUUID:
+          type: string
+          description: secret snaphost uuid
         labels:
           type: object
           description: "execution labels"

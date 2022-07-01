@@ -16,6 +16,8 @@ type TestSuiteExecutionRequest struct {
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string              `json:"namespace,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	// secret snaphost uuid
+	SecretUUID string `json:"secretUUID"`
 	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// whether to start execution sync or async

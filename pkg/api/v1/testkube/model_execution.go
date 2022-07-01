@@ -31,8 +31,10 @@ type Execution struct {
 	Args      []string            `json:"args,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
-	VariablesFile string       `json:"variablesFile,omitempty"`
-	Content       *TestContent `json:"content,omitempty"`
+	VariablesFile string `json:"variablesFile,omitempty"`
+	// secret snaphost uuid
+	SecretUUID string       `json:"secretUUID"`
+	Content    *TestContent `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
