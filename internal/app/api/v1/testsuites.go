@@ -618,10 +618,10 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
 	testsuiteExecution testkube.TestSuiteExecution, err error) {
 	s.Log.Debugw("Got test to execute", "test", testSuite)
-	secretUUID, err := s.TestsSuitesClient.GetCurrentSnaphsotUUID(testSuite.Name)
+	secretUUID, err := s.TestsSuitesClient.GetCurrentSecretUUID(testSuite.Name)
 	if err != nil {
 		return testsuiteExecution, err
-	}	
+	}
 
 	request.SecretUUID = secretUUID
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)

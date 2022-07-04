@@ -37,6 +37,7 @@ func getExecutions() testkube.Executions {
 		testkube.NewStringTestContent(""),
 		*ex1,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
+		"uuid",
 		nil,
 	)
 	execution1.Start()
@@ -51,6 +52,7 @@ func getExecutions() testkube.Executions {
 		testkube.NewStringTestContent(""),
 		*ex2,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
+		"uuid",
 		nil,
 	)
 	execution2.Start()

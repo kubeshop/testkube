@@ -154,10 +154,10 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Err(fmt.Errorf("test execution with name %s already exists", request.Name)), nil
 	}
 
-	secretUUID, err := s.TestsClient.GetCurrentSnaphsotUUID(test.Name)
+	secretUUID, err := s.TestsClient.GetCurrentSecretUUID(test.Name)
 	if err != nil {
-		return execution.Errw("can't get current snapshot uuid: %w", err), nil
-	}	
+		return execution.Errw("can't get current secret uuid: %w", err), nil
+	}
 
 	request.SecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
