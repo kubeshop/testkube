@@ -421,6 +421,33 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 		execution.Duration = types.FormatDuration(execution.Duration)
 
+		testSecretMap := make(map[string]string)
+		if execution.TestSecretUUID != "" {
+			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		testSuiteSecretMap := make(map[string]string)
+		if execution.TestSuiteSecretUUID != "" {
+			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range testSuiteSecretMap {
+			testSecretMap[key] = value
+		}
+
+		for key, value := range testSecretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				execution.Variables[key] = variable
+			}
+		}
+
 		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
