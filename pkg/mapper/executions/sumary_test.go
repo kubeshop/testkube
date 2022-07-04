@@ -32,12 +32,14 @@ func getExecutions() testkube.Executions {
 	execution1 := testkube.NewExecution(
 		"testkube",
 		"script1",
+		"testsuite1",
 		"execution1",
 		"test/test",
 		testkube.NewStringTestContent(""),
 		*ex1,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
-		"uuid",
+		"test-uuid",
+		"testsuite-uuid",
 		nil,
 	)
 	execution1.Start()
@@ -47,12 +49,14 @@ func getExecutions() testkube.Executions {
 	execution2 := testkube.NewExecution(
 		"testkube",
 		"script1",
+		"testsuite1",
 		"execution2",
 		"test/test",
 		testkube.NewStringTestContent(""),
 		*ex2,
 		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
 		"uuid",
+		"testsuite-uuid",
 		nil,
 	)
 	execution2.Start()

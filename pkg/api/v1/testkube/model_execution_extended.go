@@ -16,19 +16,21 @@ func NewExecutionWithID(id, testType, testName string) Execution {
 	}
 }
 
-func NewExecution(testNamespace, testName, executionName, testType string, content *TestContent, result ExecutionResult,
-	variables map[string]Variable, secretUUID string, labels map[string]string) Execution {
+func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string, content *TestContent, result ExecutionResult,
+	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string, labels map[string]string) Execution {
 	return Execution{
-		Id:              primitive.NewObjectID().Hex(),
-		TestName:        testName,
-		TestNamespace:   testNamespace,
-		Name:            executionName,
-		TestType:        testType,
-		ExecutionResult: &result,
-		Variables:       variables,
-		SecretUUID:      secretUUID,
-		Content:         content,
-		Labels:          labels,
+		Id:                  primitive.NewObjectID().Hex(),
+		TestName:            testName,
+		TestSuiteName:       testSuiteName,
+		TestNamespace:       testNamespace,
+		Name:                executionName,
+		TestType:            testType,
+		ExecutionResult:     &result,
+		Variables:           variables,
+		TestSecretUUID:      testSecretUUID,
+		TestSuiteSecretUUID: testSuiteSecretUUID,
+		Content:             content,
+		Labels:              labels,
 	}
 }
 

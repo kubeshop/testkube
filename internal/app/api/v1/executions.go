@@ -159,7 +159,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Errw("can't get current secret uuid: %w", err), nil
 	}
 
-	request.SecretUUID = secretUUID
+	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
@@ -587,11 +587,13 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Namespace,
 		options.TestName,
 		options.Request.Name,
+		options.Request.TestSuiteName,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
-		options.Request.SecretUUID,
+		options.Request.TestSecretUUID,
+		options.Request.TestSuiteSecretUUID,
 		options.Labels,
 	)
 

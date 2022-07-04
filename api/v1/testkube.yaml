@@ -1781,7 +1781,7 @@ components:
           $ref: "#/components/schemas/Variables"
         secretUUID:
           type: string
-          description: secret snaphost uuid
+          description: secret uuid
         startTime:
           type: string
           description: "test start time"
@@ -1977,6 +1977,9 @@ components:
         testName:
           type: string
           description: unique test name (CRD Test name)
+        testSuiteName:
+          type: string
+          description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
         testNamespace:
           type: string
           description: test namespace
@@ -2005,9 +2008,12 @@ components:
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
-        secretUUID:
+        testSecretUUID:
           type: string
-          description: secret snaphost uuid
+          description: test secret uuid
+        testSuiteSecretUUID:
+            type: string
+            description: test suite secret uuid, if it's run as a part of test suite
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2261,6 +2267,9 @@ components:
           type: string
           description: test execution custom name
           example: testing with 1000 users
+        testSuiteName:
+          type: string
+          description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
@@ -2270,9 +2279,12 @@ components:
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
         variables:
           $ref: "#/components/schemas/Variables"
-        secretUUID:
+        testSecretUUID:
           type: string
-          description: secret snaphost uuid
+          description: test secret uuid
+        testSuiteSecretUUID:
+            type: string
+            description: test suite secret uuid, if it's run as a part of test suite
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2326,7 +2338,7 @@ components:
           $ref: "#/components/schemas/Variables"
         secretUUID:
           type: string
-          description: secret snaphost uuid
+          description: secret uuid
         labels:
           type: object
           description: "execution labels"

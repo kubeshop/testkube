@@ -24,7 +24,7 @@ type TestSuiteExecution struct {
 	// environment variables passed to executor
 	Envs      map[string]string   `json:"envs,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
-	// secret snaphost uuid
+	// secret uuid
 	SecretUUID string `json:"secretUUID"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`

@@ -13,13 +13,17 @@ package testkube
 type ExecutionRequest struct {
 	// test execution custom name
 	Name string `json:"name,omitempty"`
+	// unique test suite name (CRD Test suite name), if it's run as a part of test suite
+	TestSuiteName string `json:"testSuiteName,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
 	VariablesFile string              `json:"variablesFile,omitempty"`
 	Variables     map[string]Variable `json:"variables,omitempty"`
-	// secret snaphost uuid
-	SecretUUID string `json:"secretUUID"`
+	// test secret uuid
+	TestSecretUUID string `json:"testSecretUUID"`
+	// test suite secret uuid, if it's run as a part of test suite
+	TestSuiteSecretUUID string `json:"testSuiteSecretUUID"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// environment variables passed to executor

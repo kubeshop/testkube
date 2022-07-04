@@ -718,12 +718,14 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:       fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
-			Namespace:  executeTestStep.Namespace,
-			Variables:  testsuiteExecution.Variables,
-			Sync:       true,
-			HttpProxy:  request.HttpProxy,
-			HttpsProxy: request.HttpsProxy,
+			Name:                fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
+			TestSuiteName:       testSuiteName,
+			Namespace:           executeTestStep.Namespace,
+			Variables:           testsuiteExecution.Variables,
+			TestSuiteSecretUUID: request.SecretUUID,
+			Sync:                true,
+			HttpProxy:           request.HttpProxy,
+			HttpsProxy:          request.HttpsProxy,
 		}
 
 		l.Debug("executing test", "variables", testsuiteExecution.Variables)
