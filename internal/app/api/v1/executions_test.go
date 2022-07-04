@@ -206,11 +206,23 @@ func (r MockExecutionResultsRepository) DeleteByTest(ctx context.Context, testNa
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) error {
+	panic("not implemented")
+}
+
 func (r MockExecutionResultsRepository) DeleteAll(ctx context.Context) error {
 	panic("not implemented")
 }
 
 func (r MockExecutionResultsRepository) DeleteByTests(ctx context.Context, testNames []string) error {
+	panic("not implemented")
+}
+
+func (r MockExecutionResultsRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) error {
+	panic("not implemented")
+}
+
+func (r MockExecutionResultsRepository) DeleteForAllTestSuites(ctx context.Context) error {
 	panic("not implemented")
 }
 
