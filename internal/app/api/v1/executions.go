@@ -281,6 +281,7 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 	return vars, nil
 }
 
+// TODO move it to EventEmitter
 func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
 	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
 	if err != nil {
@@ -301,6 +302,7 @@ func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, executio
 	return nil
 }
 
+// TODO move it to EventEmitter as kind of webhook
 func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
 	err := slacknotifier.SendEvent(eventType, execution)
 	if err != nil {
