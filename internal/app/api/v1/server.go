@@ -66,7 +66,7 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		EventsEmitter:        webhook.NewEmitter(),
+		EventsEmitter:        webhook.NewEmitter(webhookClient),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 	}

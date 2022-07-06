@@ -57,14 +57,14 @@ func TestParamsNilAssign(t *testing.T) {
 func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
 	resultRepo := MockExecutionResultsRepository{}
-	executor := MockExecutor{}
+	executor := &MockExecutor{}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
 		ExecutionResults: &resultRepo,
-		Executor:         &executor,
+		Executor:         executor,
 	}
 	app.Get("/executions/:executionID/logs", s.ExecutionLogsHandler())
 
@@ -234,7 +234,7 @@ func (e MockExecutor) ExecuteSync(execution testkube.Execution, options client.E
 	panic("not implemented")
 }
 
-func (e MockExecutor) Abort(id string) error {
+func (e MockExecutor) Abort(id string) *testkube.ExecutionResult {
 	panic("not implemented")
 }
 
