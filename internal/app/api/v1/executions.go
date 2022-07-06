@@ -434,9 +434,8 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		err = s.Executor.Abort(executionID)
-
-		s.Metrics.IncAbortTest(execution.TestType, err)
+		result := s.Executor.Abort(executionID)
+		s.Metrics.IncAbortTest(execution.TestType, result.IsFailed())
 
 		return err
 	}
