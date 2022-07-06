@@ -119,7 +119,7 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 	}
 
 	for _, wh := range webhookList.Items {
-		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
+		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
 		s.Notify(testkube.WebhookEvent{
 			Uri:       wh.Spec.Uri,
 			Type_:     eventType,
@@ -131,7 +131,7 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 
 }
 
-// TODO move it to EventEmitter as kind of webhook
+// TODO move it to EventEmitter as kind of SlackEvent
 func (s Emitter) sendSlackEvent(eventType *testkube.WebhookEventType, execution testkube.Execution) {
 	err := slacknotifier.SendEvent(eventType, execution)
 	if err != nil {
