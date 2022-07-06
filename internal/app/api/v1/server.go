@@ -71,7 +71,15 @@ func NewTestkubeAPI(
 		Namespace:            namespace,
 	}
 
-	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			s.Log.Warnf("parse bool env %w", err)
+		}
+	}
+
+	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"), readOnlyExecutors)
 	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
 	}
@@ -364,7 +372,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage string, err error) {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecutors bool) (initImage string, err error) {
 	var executors []testkube.ExecutorDetails
 
 	if data == "" {
@@ -387,6 +395,10 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 
 		if executor.Name == "executor-init" {
 			initImage = executor.Executor.Image
+			continue
+		}
+
+		if readOnlyExecutors {
 			continue
 		}
 
