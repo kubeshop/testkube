@@ -279,6 +279,7 @@ func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution
 		return err
 	}
 
+	c.Log.Debug("creating job with options", "options", jobOptions)
 	jobSpec, err := NewJobSpec(c.Log, jobOptions)
 	if err != nil {
 		return err
@@ -320,7 +321,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 		l.Errorw("parse ouput error", "error", err)
 		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
 		if err != nil {
-			l.Infow("End execution", "error", err)
+			l.Errorw("Update execution result error", "error", err)
 		}
 		return result, err
 	}
@@ -328,7 +329,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
 	err = c.Repository.UpdateResult(ctx, execution.Id, result)
 	if err != nil {
-		l.Infow("End execution", "error", err)
+		l.Errorw("Update execution result error", "error", err)
 	}
 	return result, nil
 
@@ -339,7 +340,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	execution.Stop()
 	err := c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 	if err != nil {
-		l.Infow("End execution", "error", err)
+		l.Errorw("Update execution result erorr", "error", err)
 	}
 
 	// metrics increase

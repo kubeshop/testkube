@@ -79,9 +79,9 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
-// WebhookAPI describes webhook api methods
+// ConfigAPI describes webhook api methods
 type ConfigAPI interface {
-	UpdateKey(key string, value any) (webhook testkube.Config, err error)
+	UpdateKey(key string, value any) (config testkube.Config, err error)
 }
 
 // ServiceAPI describes service api methods
