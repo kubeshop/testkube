@@ -45,7 +45,7 @@ The telemetry data we use in our metrics is limited to:
 
 To opt out of the Testkube telemetry collection:
 ```
-kubectl testkube telemetry disable
+kubectl testkube disable telemetry
 ```
 
 To *opt in*:
