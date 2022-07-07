@@ -215,6 +215,11 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			}
 		}
 
+		// delete executions for test
+		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		// delete executions for test suite
 		if err = s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -260,6 +265,17 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			if !errors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
+		}
+
+		// delete all executions for tests
+		if selector == "" {
+			err = s.ExecutionResults.DeleteForAllTestSuites(c.Context())
+		} else {
+			err = s.ExecutionResults.DeleteByTestSuites(c.Context(), testSuiteNames)
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// delete all executions for test suites
@@ -611,6 +627,22 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 
 		execution.Duration = types.FormatDuration(execution.Duration)
 
+		secretMap := make(map[string]string)
+		if execution.SecretUUID != "" && execution.TestSuite != nil {
+			secretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuite.Name, execution.SecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range secretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				variable.SecretRef = nil
+				execution.Variables[key] = variable
+			}
+		}
+
 		return c.JSON(execution)
 	}
 }
@@ -618,7 +650,12 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
 	testsuiteExecution testkube.TestSuiteExecution, err error) {
 	s.Log.Debugw("Got test to execute", "test", testSuite)
+	secretUUID, err := s.TestsSuitesClient.GetCurrentSecretUUID(testSuite.Name)
+	if err != nil {
+		return testsuiteExecution, err
+	}
 
+	request.SecretUUID = secretUUID
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
@@ -713,12 +750,14 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:       fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
-			Namespace:  executeTestStep.Namespace,
-			Variables:  testsuiteExecution.Variables,
-			Sync:       true,
-			HttpProxy:  request.HttpProxy,
-			HttpsProxy: request.HttpsProxy,
+			Name:                fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
+			TestSuiteName:       testSuiteName,
+			Namespace:           executeTestStep.Namespace,
+			Variables:           testsuiteExecution.Variables,
+			TestSuiteSecretUUID: request.SecretUUID,
+			Sync:                true,
+			HttpProxy:           request.HttpProxy,
+			HttpsProxy:          request.HttpsProxy,
 		}
 
 		l.Debug("executing test", "variables", testsuiteExecution.Variables)

@@ -19,6 +19,8 @@ type Execution struct {
 	Id string `json:"id,omitempty"`
 	// unique test name (CRD Test name)
 	TestName string `json:"testName,omitempty"`
+	// unique test suite name (CRD Test suite name), if it's run as a part of test suite
+	TestSuiteName string `json:"testSuiteName,omitempty"`
 	// test namespace
 	TestNamespace string `json:"testNamespace,omitempty"`
 	// test type e.g. postman/collection
@@ -31,8 +33,12 @@ type Execution struct {
 	Args      []string            `json:"args,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
-	VariablesFile string       `json:"variablesFile,omitempty"`
-	Content       *TestContent `json:"content,omitempty"`
+	VariablesFile string `json:"variablesFile,omitempty"`
+	// test secret uuid
+	TestSecretUUID string `json:"testSecretUUID,omitempty"`
+	// test suite secret uuid, if it's run as a part of test suite
+	TestSuiteSecretUUID string       `json:"testSuiteSecretUUID,omitempty"`
+	Content             *TestContent `json:"content,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time

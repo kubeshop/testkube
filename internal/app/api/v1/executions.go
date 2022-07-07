@@ -153,6 +153,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Err(fmt.Errorf("test execution with name %s already exists", request.Name)), nil
 	}
 
+	secretUUID, err := s.TestsClient.GetCurrentSecretUUID(test.Name)
+	if err != nil {
+		return execution.Errw("can't get current secret uuid: %w", err), nil
+	}
+
+	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
@@ -387,6 +393,34 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 		execution.Duration = types.FormatDuration(execution.Duration)
 
+		testSecretMap := make(map[string]string)
+		if execution.TestSecretUUID != "" {
+			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		testSuiteSecretMap := make(map[string]string)
+		if execution.TestSuiteSecretUUID != "" {
+			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range testSuiteSecretMap {
+			testSecretMap[key] = value
+		}
+
+		for key, value := range testSecretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				variable.SecretRef = nil
+				execution.Variables[key] = variable
+			}
+		}
+
 		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
 		return c.JSON(execution)
@@ -551,11 +585,14 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
+		options.Request.TestSuiteName,		
 		options.Request.Name,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
+		options.Request.TestSecretUUID,
+		options.Request.TestSuiteSecretUUID,
 		options.Labels,
 	)
 

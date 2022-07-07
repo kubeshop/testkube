@@ -20,13 +20,14 @@ func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
 
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 	testExecution := TestSuiteExecution{
-		Id:        primitive.NewObjectID().Hex(),
-		StartTime: time.Now(),
-		Name:      fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
-		Status:    TestSuiteExecutionStatusRunning,
-		Variables: testSuite.Variables,
-		TestSuite: testSuite.GetObjectRef(),
-		Labels:    testSuite.Labels,
+		Id:         primitive.NewObjectID().Hex(),
+		StartTime:  time.Now(),
+		Name:       fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
+		Status:     TestSuiteExecutionStatusRunning,
+		Variables:  testSuite.Variables,
+		SecretUUID: request.SecretUUID,
+		TestSuite:  testSuite.GetObjectRef(),
+		Labels:     testSuite.Labels,
 	}
 
 	// override variables from request

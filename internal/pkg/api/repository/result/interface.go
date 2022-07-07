@@ -54,8 +54,14 @@ type Repository interface {
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 	// DeleteByTest deletes execution results by test
 	DeleteByTest(ctx context.Context, testName string) error
+	// DeleteByTestSuite deletes execution results by test suite
+	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
 	// DeleteAll deletes all execution results
 	DeleteAll(ctx context.Context) error
 	// DeleteByTests deletes execution results by tests
 	DeleteByTests(ctx context.Context, testNames []string) (err error)
+	// DeleteByTestSuites deletes execution results by test suites
+	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
+	// DeleteForAllTestSuites deletes execution results for all test suites
+	DeleteForAllTestSuites(ctx context.Context) (err error)
 }
