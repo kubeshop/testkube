@@ -52,12 +52,17 @@ func NewRunTestCmd() *cobra.Command {
 			variables, err := common.CreateVariables(cmd)
 			ui.WarnOnError("getting variables", err)
 
+			executorArgs := make([]string, 0)
+			for _, arg := range binaryArgs {
+				executorArgs = append(executorArgs, strings.Split(arg, " ")...)
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
-				Args:                          binaryArgs,
+				Args:                          executorArgs,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
