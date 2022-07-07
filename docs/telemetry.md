@@ -32,25 +32,28 @@ The collected data looks like this.
 
 ## **What We Collect**
 
-Analytics tracked include:
+The telemetry data we use in our metrics is limited to:
 
- - The unique id generated from the MAC address.
- - The testkube version.
- - The command being executed.
+ - The number of CLI installations.
+ - The number of unique CLI usages in a day.
+ - The number of installations to a cluster.
+ - The number of unique active cluster installations.
+ - The number of people who disable telemetry.
+ - The number of unique sessions in the UI.
 
 ## **How to Opt Out?**
 
-To *opt out* of the Testkube telemetry data gathering:
+To opt out of the Testkube telemetry collection:
 ```
-kubectl testkube disable telemetry
+kubectl testkube telemetry disable
 ```
 
 To *opt in*:
 ```
-kubectl testkube enable telemetry
+kubectl testkube telemetry enable
 ```
 
 To check the current *status*:
 ``` 
-kubectl testkube status
+kubectl testkube telemetry status
 ```

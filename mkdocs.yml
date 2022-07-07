@@ -29,6 +29,7 @@ nav:
           - Getting results: testsuites-getting-results.md
       - Tests:
           - Creating: tests-creating.md
+          - Adding Test Variables: tests-variables.md
           - Running: tests-running.md
           - Getting Results: tests-getting-results.md
       - Scheduling: scheduling.md
