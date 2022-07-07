@@ -50,7 +50,7 @@ kubectl testkube disable telemetry
 
 To *opt in*:
 ```
-kubectl testkube telemetry enable
+kubectl testkube enable telemetry
 ```
 
 To check the current *status*:
