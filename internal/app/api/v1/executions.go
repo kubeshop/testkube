@@ -23,7 +23,6 @@ import (
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -181,17 +180,17 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 
-	err = s.notifyEvents(testkube.WebhookTypeStartTest, execution)
+	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeStartTest, execution)
 	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+		s.Log.Errorw("Notify events error", "error", err)
 	}
 
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
@@ -199,9 +198,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+			err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 			if err != nil {
-				s.Log.Infow("Notify events", "error", err)
+				s.Log.Errorw("Notify events error", "error", err)
 			}
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
@@ -223,15 +222,15 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		errNotify := s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		errNotify := s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if errNotify != nil {
 			s.Log.Infow("Notify events", "error", errNotify)
 		}
@@ -239,9 +238,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+		s.Log.Errorw("Notify events error", "error", err)
 	}
 
 	return execution, nil
@@ -279,35 +278,6 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 	}
 
 	return vars, nil
-}
-
-// TODO move it to EventEmitter
-func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
-	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
-	if err != nil {
-		return err
-	}
-
-	for _, wh := range webhookList.Items {
-		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.EventsEmitter.Notify(testkube.WebhookEvent{
-			Uri:       wh.Spec.Uri,
-			Type_:     eventType,
-			Execution: &execution,
-		})
-	}
-
-	s.notifySlack(eventType, execution)
-
-	return nil
-}
-
-// TODO move it to EventEmitter as kind of webhook
-func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
-	err := slacknotifier.SendEvent(eventType, execution)
-	if err != nil {
-		s.Log.Warnw("notify slack failed", "error", err)
-	}
 }
 
 // ListExecutionsHandler returns array of available test executions

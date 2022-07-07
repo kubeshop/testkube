@@ -18,8 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/webhook"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
@@ -87,7 +87,7 @@ var (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics ExecutionCounter) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics ExecutionCounter, emiter *webhook.Emitter) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -101,6 +101,7 @@ func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate st
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
 		metrics:     metrics,
+		Emitter:     emiter,
 	}, nil
 }
 
@@ -118,6 +119,7 @@ type JobExecutor struct {
 	initImage   string
 	jobTemplate string
 	metrics     ExecutionCounter
+	Emitter     *webhook.Emitter
 }
 
 type JobOptions struct {
@@ -202,102 +204,37 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 // Execution is started asynchronously client can check later for results
 func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 
-	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	ctx := context.Background()
-
-	// init result
 	result = testkube.NewRunningExecutionResult()
 
-	jsn, err := json.Marshal(execution)
+	ctx := context.Background()
+	err = c.CreateJob(ctx, execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
 
-	jobOptions := getJobOptions(options)
-	jobOptions.Name = execution.Id
-	jobOptions.Namespace = execution.TestNamespace
-	jobOptions.Jsn = string(jsn)
-	jobOptions.InitImage = c.initImage
-	jobOptions.TestName = execution.TestName
-	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = c.jobTemplate
-	}
-
-	jobSpec, err := NewJobSpec(c.Log, jobOptions)
-
-	if err != nil {
-		return result.Err(err), fmt.Errorf("new job spec error: %w", err)
-	}
-
-	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
-	if err != nil {
-		return result.Err(err), fmt.Errorf("job create error: %w", err)
-	}
-
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 10)
 	if err != nil {
-		return result.Err(err), fmt.Errorf("get job pods error: %w", err)
+		return result.Err(err), err
 	}
 
-	// get job pod and
+	l := c.Log.With("executionID", execution.Id, "type", "async")
+
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
-			go func() {
-				l := c.Log.With("executionID", execution.Id, "func", "LaunchK8sJob")
-				// save stop time
-				defer func() {
-					l.Debug("stopping execution")
-					execution.Stop()
-					err = c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
-					if err != nil {
-						l.Infow("End execution", "error", err)
-					}
-
-					// metrics increase
-					execution.ExecutionResult = &result
-					c.metrics.IncExecuteTest(execution)
-				}()
-
-				// wait for complete
-				l.Debug("poll immediate waiting for pod to succeed")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-					// continue on poll err and try to get logs later
-					l.Errorw("poll immediate error", "error", err)
-				}
-				l.Debug("poll immediate end")
-
-				var logs []byte
-				logs, err = c.GetPodLogs(pod)
+			go func(pod corev1.Pod) {
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution, result)
 				if err != nil {
-					l.Errorw("get pod logs error", "error", err)
-					err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-					if err != nil {
-						l.Infow("End execution", "error", err)
-					}
-					return
+					l.Errorw("update results from jobs pod error", "error", err)
 				}
+			}(pod)
 
-				// parse job ouput log (JSON stream)
-				result, _, err = output.ParseRunnerOutput(logs)
-				if err != nil {
-					l.Errorw("parse ouput error", "error", err)
-					err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-					if err != nil {
-						l.Infow("End execution", "error", err)
-					}
-					return
-				}
-
-				l.Infow("execution completed saving result", "status", result.Status)
-				err = c.Repository.UpdateResult(ctx, execution.Id, result)
-				if err != nil {
-					l.Infow("End execution", "error", err)
-				}
-			}()
+			return result, nil
 		}
 	}
+
+	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
 
 	return testkube.NewRunningExecutionResult(), nil
 }
@@ -307,104 +244,118 @@ func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOption
 func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
 
-	jobOptions := getJobOptions(options)
-
-	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	ctx := context.Background()
-
-	jsn, err := json.Marshal(execution)
+	err = c.CreateJob(ctx, execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
 
-	jobOptions.Name = execution.Id
-	jobOptions.Namespace = execution.TestNamespace
-	jobOptions.Jsn = string(jsn)
-	jobOptions.InitImage = c.initImage
-	jobOptions.TestName = execution.TestName
-	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = c.jobTemplate
-	}
-
-	jobSpec, err := NewJobSpec(c.Log, jobOptions)
-	if err != nil {
-		return result.Err(err), err
-	}
-
-	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
-	if err != nil {
-		return result.Err(err), err
-	}
-
+	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	pods, err := c.GetJobPods(podsClient, execution.Id, 1, 10)
 	if err != nil {
 		return result.Err(err), err
 	}
 
+	l := c.Log.With("executionID", execution.Id, "type", "sync")
+
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace, "func", "LaunchK8sJobSync")
-
-			// save stop time
-			defer func() {
-				execution.Stop()
-				err = c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
-				if err != nil {
-					l.Infow("End execution", "error", err)
-				}
-
-				// metrics increase
-				execution.ExecutionResult = &result
-				c.metrics.IncExecuteTest(execution)
-			}()
-
-			// wait for complete
-			l.Debug("poll immediate waiting for pod to succeed")
-			if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
-				// continue on poll err and try to get logs later
-				l.Errorw("waiting for pod complete error", "error", err)
-			}
-			l.Debug("poll immediate end")
-
-			var logs []byte
-			logs, err = c.GetPodLogs(pod)
-			if err != nil {
-				l.Errorw("get pod logs error", "error", err)
-				err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-				if err != nil {
-					l.Infow("Update result", "error", err)
-				}
-				return result, err
-			}
-
-			// parse job ouput log (JSON stream)
-			result, _, err = output.ParseRunnerOutput(logs)
-			if err != nil {
-				l.Errorw("parse ouput error", "error", err)
-				err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-				if err != nil {
-					l.Infow("End execution", "error", err)
-				}
-				return result, err
-			}
-
-			l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
-			err = c.Repository.UpdateResult(ctx, execution.Id, result)
-			if err != nil {
-				l.Infow("End execution", "error", err)
-			}
-			return result, nil
+			return c.updateResultsFromPod(ctx, pod, l, execution, result)
 		}
 	}
+
+	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
 
 	return
 
 }
 
-// getJobOptions compose JobOptions based on ExecuteOptions
-func getJobOptions(options ExecuteOptions) JobOptions {
+// CreateJob creates new Kubernetes job based on execution and execute options
+func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
+	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, execution, options)
+	if err != nil {
+		return err
+	}
+
+	c.Log.Debug("creating job with options", "options", jobOptions)
+	jobSpec, err := NewJobSpec(c.Log, jobOptions)
+	if err != nil {
+		return err
+	}
+
+	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
+	return err
+}
+
+// updateResultsFromPod watches logs and stores results if execution is finished
+func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+	var err error
+
+	// save stop time and final state
+	defer c.stopExecution(ctx, l, execution, &result)
+
+	// wait for complete
+	l.Debug("poll immediate waiting for pod to succeed")
+	if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+		// continue on poll err and try to get logs later
+		l.Errorw("waiting for pod complete error", "error", err)
+	}
+	l.Debug("poll immediate end")
+
+	var logs []byte
+	logs, err = c.GetPodLogs(pod)
+	if err != nil {
+		l.Errorw("get pod logs error", "error", err)
+		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
+		if err != nil {
+			l.Infow("Update result", "error", err)
+		}
+		return result, err
+	}
+
+	// parse job ouput log (JSON stream)
+	result, _, err = output.ParseRunnerOutput(logs)
+	if err != nil {
+		l.Errorw("parse ouput error", "error", err)
+		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
+		if err != nil {
+			l.Errorw("Update execution result error", "error", err)
+		}
+		return result, err
+	}
+
+	l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+	err = c.Repository.UpdateResult(ctx, execution.Id, result)
+	if err != nil {
+		l.Errorw("Update execution result error", "error", err)
+	}
+	return result, nil
+
+}
+
+func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution testkube.Execution, result *testkube.ExecutionResult) {
+	l.Debug("stopping execution")
+	execution.Stop()
+	err := c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+	if err != nil {
+		l.Errorw("Update execution result erorr", "error", err)
+	}
+
+	// metrics increase
+	execution.ExecutionResult = result
+	c.metrics.IncExecuteTest(execution)
+
+	err = c.Emitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+	if err != nil {
+		c.Log.Errorw("Notify events error", "error", err)
+	}
+
+}
+
+// NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
+func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:       options.ExecutorSpec.Image,
 		HasSecrets:  options.HasSecrets,
@@ -626,63 +577,6 @@ func (c *JobExecutor) Abort(jobName string) *testkube.ExecutionResult {
 	}
 }
 
-// CreatePersistentVolume creates persistent volume
-func (c *JobExecutor) CreatePersistentVolume(name string) error {
-	quantity, err := resource.ParseQuantity("10Gi")
-	if err != nil {
-		return err
-	}
-	pv := &corev1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"type": "local"},
-		},
-		Spec: corev1.PersistentVolumeSpec{
-			Capacity:    corev1.ResourceList{"storage": quantity},
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			PersistentVolumeSource: corev1.PersistentVolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: fmt.Sprintf("/mnt/data/%s", name),
-				},
-			},
-			StorageClassName: "manual",
-		},
-	}
-
-	if _, err = c.ClientSet.CoreV1().PersistentVolumes().Create(context.TODO(), pv, metav1.CreateOptions{}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CreatePersistentVolumeClaim creates PVC with given name
-func (c *JobExecutor) CreatePersistentVolumeClaim(name string) error {
-	storageClassName := "manual"
-	quantity, err := resource.ParseQuantity("10Gi")
-	if err != nil {
-		return err
-	}
-
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageClassName,
-			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{"storage": quantity},
-			},
-		},
-	}
-
-	if _, err := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace).Create(context.TODO(), pvc, metav1.CreateOptions{}); err != nil {
-		return err
-	}
-	return nil
-}
-
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
 	var secretEnvVars []corev1.EnvVar
@@ -786,4 +680,23 @@ func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.Conditi
 		}
 		return false, nil
 	}
+}
+
+func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+	jsn, err := json.Marshal(execution)
+	if err != nil {
+		return jobOptions, err
+	}
+
+	jobOptions = NewJobOptionsFromExecutionOptions(options)
+	jobOptions.Name = execution.Id
+	jobOptions.Namespace = execution.TestNamespace
+	jobOptions.Jsn = string(jsn)
+	jobOptions.InitImage = initImage
+	jobOptions.TestName = execution.TestName
+	if jobOptions.JobTemplate == "" {
+		jobOptions.JobTemplate = jobTemplate
+	}
+
+	return
 }
