@@ -55,5 +55,5 @@ kubectl testkube enable telemetry
 
 To check the current *status*:
 ``` 
-kubectl testkube telemetry status
+kubectl testkube status telemetry
 ```
