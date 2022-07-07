@@ -638,6 +638,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		for key, value := range secretMap {
 			if variable, ok := execution.Variables[key]; ok {
 				variable.Value = string(value)
+				variable.SecretRef = nil
 				execution.Variables[key] = variable
 			}
 		}

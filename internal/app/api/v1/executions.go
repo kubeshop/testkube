@@ -444,6 +444,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		for key, value := range testSecretMap {
 			if variable, ok := execution.Variables[key]; ok {
 				variable.Value = string(value)
+				variable.SecretRef = nil
 				execution.Variables[key] = variable
 			}
 		}
@@ -613,8 +614,8 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
+		options.Request.TestSuiteName,		
 		options.Request.Name,
-		options.Request.TestSuiteName,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),

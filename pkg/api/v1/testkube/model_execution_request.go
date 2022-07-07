@@ -21,9 +21,9 @@ type ExecutionRequest struct {
 	VariablesFile string              `json:"variablesFile,omitempty"`
 	Variables     map[string]Variable `json:"variables,omitempty"`
 	// test secret uuid
-	TestSecretUUID string `json:"testSecretUUID"`
+	TestSecretUUID string `json:"testSecretUUID,omitempty"`
 	// test suite secret uuid, if it's run as a part of test suite
-	TestSuiteSecretUUID string `json:"testSuiteSecretUUID"`
+	TestSuiteSecretUUID string `json:"testSuiteSecretUUID,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// environment variables passed to executor

@@ -17,7 +17,7 @@ type TestSuiteExecutionRequest struct {
 	Namespace string              `json:"namespace,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// secret uuid
-	SecretUUID string `json:"secretUUID"`
+	SecretUUID string `json:"secretUUID,omitempty"`
 	// execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// whether to start execution sync or async

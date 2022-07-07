@@ -25,7 +25,7 @@ type TestSuiteExecution struct {
 	Envs      map[string]string   `json:"envs,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// secret uuid
-	SecretUUID string `json:"secretUUID"`
+	SecretUUID string `json:"secretUUID,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
