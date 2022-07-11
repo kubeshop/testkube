@@ -83,7 +83,7 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	output.PrintEvent("Running", directory, gradleCommand, args)
 	output, err := executor.Run(directory, gradleCommand, args...)
 
-	fmt.Printf("%+v\n", output)
+	fmt.Printf("%+v\n", string(output))
 
 	if err == nil {
 		result.Status = testkube.ExecutionStatusPassed

@@ -8,6 +8,6 @@ ENV GOOS=linux
 
 RUN cd cmd/agent;go build -o /runner -mod mod -a .
 
-FROM gradle:7.4.1-jdk11
+FROM gradle:7.4.2-jdk17
 COPY --from=builder /runner /bin/runner
 ENTRYPOINT ["/bin/runner"]
