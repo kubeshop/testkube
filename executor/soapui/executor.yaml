@@ -1,0 +1,15 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: soapui-executor
+  namespace: testkube
+spec:
+  executor_type: job  
+  image: kubeshop/testkube-executor-soapui:latest
+  types:
+  - soapui/xml
+  content_types:
+  - string
+  - file-uri
+  features: 
+  - artifacts

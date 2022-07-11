@@ -1,0 +1,157 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: testkube-k6-influxdb
+  namespace: testkube
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8086
+      protocol: TCP
+  selector:
+    app: influxdb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testkube-k6-influxdb
+  namespace: testkube
+  labels:
+    app: influxdb
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+      - name: influxdb
+        image: influxdb:1.8-alpine
+        env:
+          - name: INFLUXDB_DB
+            value: k6
+        ports:
+          - name: api
+            containerPort: 8086
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 100m
+          limits:
+            memory: 256Mi
+            cpu: 500m
+        livenessProbe:
+          httpGet:
+            port: api
+            path: /ping
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            port: api
+            path: /ping
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: testkube-k6-grafana
+  namespace: testkube
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      protocol: TCP
+  selector:
+    app: grafana
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: testkube-k6-grafana-config
+    namespace: testkube
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: k6influxdb
+        type: influxdb
+        access: proxy
+        database: k6
+        url: http://influxdb-service:8086
+        isDefault: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testkube-k6-grafana
+  namespace: testkube
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:      
+      containers:
+      - name: grafana
+        image: grafana/grafana:7.5.15
+        env:
+          - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+            value: Admin
+          - name: GF_AUTH_ANONYMOUS_ENABLED
+            value: "true"
+          - name: GF_AUTH_BASIC_ENABLED
+            value: "false"
+        ports:
+          - name: web
+            containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: web
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: web
+          initialDelaySeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        volumeMounts:
+            - name: datasource-yaml
+              mountPath: /etc/grafana/provisioning/datasources/
+              readOnly: true
+      volumes:
+        - name: datasource-yaml
+          configMap:
+            name: testkube-k6-grafana-config
+            items:
+              - key: "datasource.yaml"
+                path: "datasource.yaml"

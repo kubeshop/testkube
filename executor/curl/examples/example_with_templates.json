@@ -1,0 +1,8 @@
+{
+	"id": "blablablablabla",
+	"name": "some-testing-exec",
+	"content": {
+		"type": "string",
+		"data": "{ \"command\": [ \"curl\", \"{{.url}}\", \"-H\", \"'{{.header}}'\" ], \"expected_status\": {{.status}}, \"expected_body\": \"{{.body}}\" }"
+	}
+}

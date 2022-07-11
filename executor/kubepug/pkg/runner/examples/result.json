@@ -1,0 +1,89 @@
+{
+	"DeprecatedAPIs": [
+	  {
+		"Description": "ComponentStatus (and ComponentStatusList) holds the cluster validation info. Deprecated: This API is deprecated in v1.19+",
+		"Group": "",
+		"Kind": "ComponentStatus",
+		"Version": "v1",
+		"Name": "",
+		"Deprecated": true,
+		"Items": [
+		  {
+			"Scope": "GLOBAL",
+			"ObjectName": "scheduler",
+			"Namespace": ""
+		  },
+		  {
+			"Scope": "GLOBAL",
+			"ObjectName": "etcd-0",
+			"Namespace": ""
+		  },
+		  {
+			"Scope": "GLOBAL",
+			"ObjectName": "etcd-1",
+			"Namespace": ""
+		  },
+		  {
+			"Scope": "GLOBAL",
+			"ObjectName": "controller-manager",
+			"Namespace": ""
+		  }
+		]
+	  }
+	],
+	"DeletedAPIs": [
+	  {
+		"Group": "extensions",
+		"Kind": "Ingress",
+		"Version": "v1beta1",
+		"Name": "ingresses",
+		"Deleted": true,
+		"Items": [
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "cli-testkube-api-server-testkube",
+			"Namespace": "testkube"
+		  },
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "oauth2-proxy",
+			"Namespace": "testkube"
+		  },
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "testapi",
+			"Namespace": "testkube"
+		  },
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "testdash",
+			"Namespace": "testkube"
+		  },
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "testkube-dashboard-testkube",
+			"Namespace": "testkube"
+		  },
+		  {
+			"Scope": "OBJECT",
+			"ObjectName": "ui-testkube-api-server-testkube",
+			"Namespace": "testkube"
+		  }
+		]
+	  },
+	  {
+		"Group": "policy",
+		"Kind": "PodSecurityPolicy",
+		"Version": "v1beta1",
+		"Name": "podsecuritypolicies",
+		"Deleted": true,
+		"Items": [
+		  {
+			"Scope": "GLOBAL",
+			"ObjectName": "gce.gke-metrics-agent",
+			"Namespace": ""
+		  }
+		]
+	  }
+	]
+  }

@@ -1,0 +1,14 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: artillery-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-executor-artilleryr:latest
+  types:
+    - artillery/test
+  content_types:
+    - git-file
+    - git-dir
+    - string
+    - uri-file

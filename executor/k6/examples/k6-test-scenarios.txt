@@ -1,0 +1,104 @@
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: examples/k6-test-scenarios.js
+     output: -
+
+  scenarios: (100.00%) 2 scenarios, 10 max VUs, 1m35s max duration (incl. graceful stop):
+           * testkube: 5 looping VUs for 10s (exec: testkube, gracefulStop: 30s)
+           * monokle: 10 iterations for each of 5 VUs (maxDuration: 1m0s, exec: monokle, startTime: 5s, gracefulStop: 30s)
+
+
+running (0m01.0s), 05/10 VUs, 0 complete and 0 interrupted iterations
+testkube   [  10% ] 5 VUs    01.0s/10s
+monokle  • [   0% ] waiting  4.0s
+
+running (0m02.0s), 05/10 VUs, 5 complete and 0 interrupted iterations
+testkube   [  20% ] 5 VUs    02.0s/10s
+monokle  • [   0% ] waiting  3.0s
+
+running (0m03.0s), 05/10 VUs, 10 complete and 0 interrupted iterations
+testkube   [  30% ] 5 VUs    03.0s/10s
+monokle  • [   0% ] waiting  2.0s
+
+running (0m04.0s), 05/10 VUs, 15 complete and 0 interrupted iterations
+testkube   [  40% ] 5 VUs    04.0s/10s
+monokle  • [   0% ] waiting  1.0s
+
+running (0m05.0s), 05/10 VUs, 20 complete and 0 interrupted iterations
+testkube   [  50% ] 5 VUs    05.0s/10s
+monokle  • [   0% ] waiting  0.0s
+
+running (0m06.0s), 10/10 VUs, 25 complete and 0 interrupted iterations
+testkube   [  60% ] 5 VUs  06.0s/10s    
+monokle    [   0% ] 5 VUs  0m01.0s/1m0s  00/50 iters, 10 per VU
+
+running (0m07.0s), 10/10 VUs, 35 complete and 0 interrupted iterations
+testkube   [  70% ] 5 VUs  07.0s/10s    
+monokle    [  10% ] 5 VUs  0m02.0s/1m0s  05/50 iters, 10 per VU
+
+running (0m08.0s), 10/10 VUs, 45 complete and 0 interrupted iterations
+testkube   [  80% ] 5 VUs  08.0s/10s    
+monokle    [  20% ] 5 VUs  0m03.0s/1m0s  10/50 iters, 10 per VU
+
+running (0m09.0s), 10/10 VUs, 55 complete and 0 interrupted iterations
+testkube   [  90% ] 5 VUs  09.0s/10s    
+monokle    [  30% ] 5 VUs  0m04.0s/1m0s  15/50 iters, 10 per VU
+
+running (0m10.0s), 10/10 VUs, 65 complete and 0 interrupted iterations
+testkube   [ 100% ] 5 VUs  10.0s/10s    
+monokle    [  40% ] 5 VUs  0m05.0s/1m0s  20/50 iters, 10 per VU
+
+running (0m11.0s), 05/10 VUs, 75 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [  50% ] 5 VUs  0m06.0s/1m0s  25/50 iters, 10 per VU
+
+running (0m12.0s), 05/10 VUs, 80 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [  60% ] 5 VUs  0m07.0s/1m0s  30/50 iters, 10 per VU
+
+running (0m13.0s), 05/10 VUs, 85 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [  70% ] 5 VUs  0m08.0s/1m0s  35/50 iters, 10 per VU
+
+running (0m14.0s), 05/10 VUs, 90 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [  80% ] 5 VUs  0m09.0s/1m0s  40/50 iters, 10 per VU
+
+running (0m15.0s), 05/10 VUs, 95 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [  90% ] 5 VUs  0m10.0s/1m0s  45/50 iters, 10 per VU
+
+running (0m15.2s), 00/10 VUs, 100 complete and 0 interrupted iterations
+testkube ✓ [ 100% ] 5 VUs  10s          
+monokle    [ 100% ] 5 VUs  0m10.2s/1m0s  50/50 iters, 10 per VU
+
+     ✓ Testkube is OK
+     ✓ Monokle is OK
+
+     checks.........................: 100.00% ✓ 100      ✗ 0   
+     ✓ { type:monokle }.............: 100.00% ✓ 50       ✗ 0   
+     ✓ { type:testkube }............: 100.00% ✓ 50       ✗ 0   
+     data_received..................: 2.4 MB  158 kB/s
+     data_sent......................: 16 kB   1.0 kB/s
+     http_req_blocked...............: avg=2.2ms    min=0s     med=0s      max=24.63ms  p(90)=1.89ms  p(95)=20.45ms 
+     http_req_connecting............: avg=883.89µs min=0s     med=0s      max=9.05ms   p(90)=871.4µs p(95)=8.82ms  
+     http_req_duration..............: avg=15.43ms  min=9.88ms med=11.52ms max=233.91ms p(90)=15.44ms p(95)=26.27ms 
+       { expected_response:true }...: avg=15.43ms  min=9.88ms med=11.52ms max=233.91ms p(90)=15.44ms p(95)=26.27ms 
+     ✓ { kind:html }................: avg=15.43ms  min=9.88ms med=11.52ms max=233.91ms p(90)=15.44ms p(95)=26.27ms 
+     http_req_failed................: 0.00%   ✓ 0        ✗ 100 
+     http_req_receiving.............: avg=3.62ms   min=80µs   med=781.5µs max=223.25ms p(90)=3.09ms  p(95)=3.75ms  
+     http_req_sending...............: avg=99.88µs  min=44µs   med=77.5µs  max=640µs    p(90)=124.2µs p(95)=347.34µs
+     http_req_tls_handshaking.......: avg=1.19ms   min=0s     med=0s      max=13.31ms  p(90)=1ms     p(95)=11.48ms 
+     http_req_waiting...............: avg=11.7ms   min=8.86ms med=10ms    max=68.84ms  p(90)=13.08ms p(95)=20.39ms 
+     http_reqs......................: 100     6.576781/s
+     iteration_duration.............: avg=1.01s    min=1.01s  med=1.01s   max=1.23s    p(90)=1.03s   p(95)=1.04s   
+     iterations.....................: 100     6.576781/s
+     vus............................: 5       min=5      max=10
+     vus_max........................: 10      min=10     max=10
+

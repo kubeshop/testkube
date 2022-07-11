@@ -1,0 +1,20 @@
+config:
+  target: "https://api.zippopotam.us"
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: Warm up
+    - duration: 20
+      arrivalRate: 5
+      rampTo: 50
+      name: Ramp up load
+  payload:
+    path: "postcodes.csv"
+    fields:
+      - "postcode"
+
+scenarios:
+  - name: "Get Zip Code Info"
+    flow:
+      - get:
+          url: "/us/{{ postcode }}"

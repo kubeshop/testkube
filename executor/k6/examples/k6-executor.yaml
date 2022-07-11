@@ -1,0 +1,14 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: k6-executor
+  namespace: testkube
+spec:
+  executor_type: job
+  # not best practice but for now we use latest
+  image: kubeshop/testkube-k6-executor:latest
+  # image: lreimer/testkube-k6-executor:latest
+  types:
+  - k6/script
+  - k6/run
+  - k6/cloud
