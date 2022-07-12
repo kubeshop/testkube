@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -54,7 +56,19 @@ func NewRunTestCmd() *cobra.Command {
 
 			executorArgs := make([]string, 0)
 			for _, arg := range binaryArgs {
-				executorArgs = append(executorArgs, strings.Split(arg, " ")...)
+				r := csv.NewReader(strings.NewReader(arg))
+				r.Comma = ' '
+				r.LazyQuotes = true
+				r.TrimLeadingSpace = true
+
+				records, err := r.ReadAll()
+				ui.ExitOnError("parsing args", err)
+
+				if len(records) != 1 {
+					ui.ExitOnError("wrong args data", errors.New("single string expected"))
+				}
+
+				executorArgs = append(executorArgs, records[0]...)
 			}
 
 			var executions []testkube.Execution
