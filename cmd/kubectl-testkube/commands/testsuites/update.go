@@ -39,6 +39,9 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
+			if name == "" {
+				ui.Failf("pass valid test suite name (in '--name' flag)")
+			}
 			var options testkubeapiv1.UpsertTestSuiteOptions
 
 			err = json.Unmarshal(content, &options)

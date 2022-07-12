@@ -33,6 +33,10 @@ func NewUpdateTestsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
 
+			if testName == "" {
+				ui.Failf("pass valid test name (in '--name' flag)")
+			}
+
 			client, _ := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)
 			if testName != test.Name {
