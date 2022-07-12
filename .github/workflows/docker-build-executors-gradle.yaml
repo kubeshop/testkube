@@ -32,7 +32,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           # TODO remove -dev after tests
-          images: testkube/testkube-gradle-executor-dev
+          images: kubeshop/testkube-gradle-executor-dev
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -51,6 +51,18 @@ jobs:
           targets: jdk11
           push: true
 
+      - name: Docker meta for Gradle executor JDK11
+        id: meta_gradle_executor
+        uses: docker/metadata-action@v3
+        with:
+          # TODO remove -dev after tests
+          images: kubeshop/testkube-gradle-executor-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}-jdk17
+            type=semver,pattern={{major}}.{{minor}}-jdk17
+            type=sha
       - name: Build JDK17 Gradle executor
         uses: docker/bake-action@v1
         with:
@@ -60,6 +72,18 @@ jobs:
           targets: jdk11
           push: true
 
+      - name: Docker meta for Gradle executor JDK18
+        id: meta_gradle_executor
+        uses: docker/metadata-action@v3
+        with:
+          # TODO remove -dev after tests
+          images: kubeshop/testkube-gradle-executor-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}-jdk18
+            type=semver,pattern={{major}}.{{minor}}-jdk18
+            type=sha
       - name: Build JDK18 Gradle executor
         uses: docker/bake-action@v1
         with:
