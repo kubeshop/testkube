@@ -1,4 +1,4 @@
-# Checking manifests using the KubePug Testkube executor
+# Checking Manifests Using the KubePug Testkube Executor
 
 [KubePug](https://github.com/rikatz/kubepug) is a kubectl plugin checking for deprecated Kubernetes clusters or deprecated versions of Kubernetes manifests. It can connect to both your cluster directly, and it can run on input files.
 Due to security reasons, Testkube only supports scanning input files via the KubePug executor.
