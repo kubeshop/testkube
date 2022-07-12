@@ -1,11 +1,11 @@
 # Checking Manifests Using the KubePug Testkube Executor
 
 [KubePug](https://github.com/rikatz/kubepug) is a kubectl plugin checking for deprecated Kubernetes clusters or deprecated versions of Kubernetes manifests. It can connect to both your cluster directly and it can run on input files.
-Due to security reasons, Testkube only supports scanning input files via the KubePug executor.
+For security, Testkube only supports scanning input files via the KubePug executor.
 
-Running the KubePug Testkube executor does not require any special installation, Testkube comes directly with the ability to run it after installation.
+Running the KubePug Testkube executor does not require any special installation; Testkube comes with the ability to run Kubepug immediately after installation.
 
-## Testing manifests
+## Testing Manifests
 
 By default, `kubepug` downloads the latest `swagger.json` from the `Kubernetes` GitHub repository. When running it using Testkube, the same behavior is applied, unless a version is specified in the arguments.
 
@@ -62,9 +62,9 @@ Status test execution failed:
 
 These tests also support input strings, file URIs, Git files and Git directories.
 
-## Testing the output of `kubectl get`
+## Testing the Output of `kubectl get`
 
-Another way to test Kubernetes objects is to create the Testkube Test with the output of `kubectl get`. The output has to be in the correct format in order for KubePug to be able to scan it, so use the `-o yaml` argument.
+Another way to test Kubernetes objects is to create the Testkube Test with the output of `kubectl get`. The output has to be in the correct format in order for KubePug to be able to scan it using `-o yaml` argument.
 
 ```sh
 $ kubectl get PodSecurityPolicy gce.gke-metrics-agent -o yaml | kubectl testkube create test --type kubepug/yaml --name kubepug-example-test2
@@ -87,9 +87,9 @@ Use following command to get test execution details:
 $ kubectl testkube get execution 62c8110338a672dc415ce98e
 ```
 
-## Testing against previous Kubernetes version
+## Testing Against a Previous Kubernetes Version
 
-It is possible to run the same Testkube KubePug test using different Kubernetes versions to compare to. The way to do this is to use the `--k8s-version=${VERSION}` argument as shown below:
+It is possible to run the same Testkube KubePug test using different Kubernetes versions to compare to using the `--k8s-version=${VERSION}` argument as shown below:
 
 ```sh
 $ kubectl testkube run test kubepug-example-test-1 --args '--k8s-version=v1.18.0'
