@@ -30,7 +30,8 @@ jobs:
         id: meta_gradle_executor
         uses: docker/metadata-action@v3
         with:
-          images: testkube/testkube-gradle-executor
+          # TODO remove -dev after tests
+          images: testkube/testkube-gradle-executor-dev
           tags: |
             type=ref,event=branch
             type=ref,event=pr
