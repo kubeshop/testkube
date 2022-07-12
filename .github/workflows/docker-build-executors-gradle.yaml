@@ -28,7 +28,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker meta for Gradle executor JDK11
-        id: meta_gradle_executor
+        id: meta_gradle_executor_jdk11
         uses: docker/metadata-action@v3
         with:
           # TODO remove -dev after tests
@@ -47,12 +47,12 @@ jobs:
         with:
           files: |
             executor/gradle/build/agent/docker-bake.hcl
-            ${{ steps.meta_gradle_executor.outputs.bake-file }}
+            ${{ steps.meta_gradle_executor_jdk11.outputs.bake-file }}
           targets: jdk11
           push: true
 
-      - name: Docker meta for Gradle executor JDK11
-        id: meta_gradle_executor
+      - name: Docker meta for Gradle executor JDK17
+        id: meta_gradle_executor_jdk17
         uses: docker/metadata-action@v3
         with:
           # TODO remove -dev after tests
@@ -68,12 +68,12 @@ jobs:
         with:
           files: |
             executor/gradle/build/agent/docker-bake.hcl
-            ${{ steps.meta_gradle_executor.outputs.bake-file }}
+            ${{ steps.meta_gradle_executor_jdk17.outputs.bake-file }}
           targets: jdk11
           push: true
 
       - name: Docker meta for Gradle executor JDK18
-        id: meta_gradle_executor
+        id: meta_gradle_executor_jdk18
         uses: docker/metadata-action@v3
         with:
           # TODO remove -dev after tests
@@ -89,6 +89,6 @@ jobs:
         with:
           files: |
             executor/gradle/build/agent/docker-bake.hcl
-            ${{ steps.meta_gradle_executor.outputs.bake-file }}
+            ${{ steps.meta_gradle_executor_jdk18.outputs.bake-file }}
           targets: jdk11
           push: true
