@@ -1,23 +1,23 @@
-// docker-bake.hcl
+// docker-bake.hcl is run from root directory so part
 target "docker-metadata-action" {}
 
 group "default" {
-    targets = ["build gradle:7.4.2-jdk11"]
+    targets = ["jdk11","jdk17","jdk18"]
 }
 
 
-target "build gradle:7.4.2-jdk11" {
+target "jdk11" {
   inherits = ["docker-metadata-action"]
-  context = "./"
+  context = "./executor/gradle/"
   dockerfile = "build/agent/Dockerfile.jdk11"
   platforms = [
     "linux/amd64",
   ]
 }
 
-target "build gradle:7.4.2-jdk17" {
+target "jdk17" {
   inherits = ["docker-metadata-action"]
-  context = "./"
+  context = "./executor/gradle/"
   dockerfile = "build/agent/Dockerfile.jdk17"
   platforms = [
     "linux/amd64",
@@ -25,9 +25,9 @@ target "build gradle:7.4.2-jdk17" {
 }
 
 
-target "build gradle:7.4.2-jdk18" {
+target "jdk18" {
   inherits = ["docker-metadata-action"]
-  context = "./"
+  context = "./executor/gradle/"
   dockerfile = "build/agent/Dockerfile.jdk17"
   platforms = [
     "linux/amd64",
