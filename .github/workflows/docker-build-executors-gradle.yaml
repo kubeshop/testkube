@@ -4,8 +4,8 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+-gradle-executor"
       - "[0-9]+.[0-9]+.[0-9]+-gradle-executor-*"
-    paths:
-      - "executor/gradle/*"
+    # paths:
+    #   - "executor/gradle/*"
 
 jobs:
   docker:
@@ -26,7 +26,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Docker meta for Gradle executor
+      - name: Docker meta for Gradle executor JDK11
         id: meta_gradle_executor
         uses: docker/metadata-action@v3
         with:
@@ -35,8 +35,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}}-jdk11
+            type=semver,pattern={{major}}.{{minor}}-jdk11
             type=sha
 
       # TODO need to make it parallel
