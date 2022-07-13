@@ -19,6 +19,8 @@ type ExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
+	// execution number
+	Number int `json:"number,omitempty"`
 	// name of the test
 	TestName string `json:"testName"`
 	// name of the test
