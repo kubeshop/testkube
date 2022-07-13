@@ -119,9 +119,11 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf(results[0].ExecutionResult.ErrorMessage))
 			}
 
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)		
 		return c.JSON(results)
 	}
 }

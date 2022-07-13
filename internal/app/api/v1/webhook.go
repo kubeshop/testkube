@@ -30,7 +30,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(created)
 	}
 }
@@ -85,7 +85,7 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(204)
+		c.Status(http.StatusNoContent)
 		return nil
 	}
 }
