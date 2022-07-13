@@ -42,6 +42,7 @@ nav:
 #     - Maven: executor-maven.md
 #     - Gradle: executor-gradle.md
       - SoapUI Tests: executor-soapui.md
+      - KubePug Tests: executor-kubepug.md
       - Artillery.io: executor-artillery.md
       - Curl Commands: executor-curl.md
       - Creating New Test Types: executor-custom.md
