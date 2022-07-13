@@ -123,7 +123,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			return c.JSON(results[0])
 		}
 
-		c.Status(http.StatusCreated)		
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -587,7 +587,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
-		options.Request.TestSuiteName,		
+		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
