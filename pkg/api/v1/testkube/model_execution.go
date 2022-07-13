@@ -48,6 +48,8 @@ type Execution struct {
 	// test duration
 	Duration        string           `json:"duration,omitempty"`
 	ExecutionResult *ExecutionResult `json:"executionResult,omitempty"`
-	// execution labels
+	// test labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// execution labels
+	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 }

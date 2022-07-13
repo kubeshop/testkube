@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 const WatchInterval = 2 * time.Second
@@ -32,6 +33,7 @@ func NewRunTestCmd() *cobra.Command {
 		selectors                []string
 		concurrencyLevel         int
 		httpProxy, httpsProxy    string
+		executionLabels          map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -76,6 +78,7 @@ func NewRunTestCmd() *cobra.Command {
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
+				ExecutionLabels:               executionLabels,
 				Args:                          executorArgs,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
@@ -157,6 +160,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 
 	return cmd
 }

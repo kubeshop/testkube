@@ -109,6 +109,7 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
+	ExecutionLabels               map[string]string
 	Args                          []string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string

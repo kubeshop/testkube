@@ -599,7 +599,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
-		options.Request.TestSuiteName,		
+		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
 		options.Request.Number,
@@ -609,6 +609,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.TestSecretUUID,
 		options.Request.TestSuiteSecretUUID,
 		options.Labels,
+		options.Request.ExecutionLabels,
 	)
 
 	execution.Args = options.Request.Args
