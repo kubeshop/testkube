@@ -196,7 +196,7 @@
 					"script": {
 						"exec": [
 							"pm.test(\"Status code is 201 CREATED\", function () {",
-							"    pm.response.to.have.status(200);",
+							"    pm.response.to.have.status(201);",
 							"});",
 							"",
 							"pm.test(\"Check execution is created\", function () {",
