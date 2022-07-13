@@ -328,7 +328,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(test)
 	}
 }
@@ -425,7 +425,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -485,7 +485,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 

@@ -59,7 +59,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(created)
 	}
 }
@@ -225,7 +225,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -289,7 +289,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -567,10 +567,11 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
 			}
 
-			c.Response().SetStatusCode(fiber.StatusCreated)
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }

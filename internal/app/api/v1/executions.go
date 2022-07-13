@@ -119,9 +119,11 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf(results[0].ExecutionResult.ErrorMessage))
 			}
 
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -599,7 +601,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
-		options.Request.TestSuiteName,		
+		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
 		options.Request.Number,
