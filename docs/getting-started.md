@@ -210,4 +210,4 @@ There plans to support other output formats like junit etc. If there is somethin
 
 ## **Deleting a Test**
 
-The command to delete a test is `kubectl testkube tests delete TEST_NAME`. The `--all` flag can be used to delete all.
+The command to delete a test is `kubectl testkube delete tests TEST_NAME`. The `--all` flag can be used to delete all.
