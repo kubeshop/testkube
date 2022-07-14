@@ -16,17 +16,21 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	ui.Warn("ID:        ", execution.Id)
 	if execution.Number != 0 {
-		ui.Warn("Number:    ", fmt.Sprintf("%d", execution.Number))
+		ui.Warn("Number:           ", fmt.Sprintf("%d", execution.Number))
 	}
-	ui.Warn("Test name: ", execution.TestName)
-	ui.Warn("Type:      ", execution.TestType)
-	ui.Warn("Status:    ", string(*execution.ExecutionResult.Status))
-	ui.Warn("Start time:", execution.StartTime.String())
-	ui.Warn("End time:  ", execution.EndTime.String())
-	ui.Warn("Duration:  ", execution.Duration)
+	ui.Warn("Test name:        ", execution.TestName)
+	ui.Warn("Type:             ", execution.TestType)
+	ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+	ui.Warn("Start time:       ", execution.StartTime.String())
+	ui.Warn("End time:         ", execution.EndTime.String())
+	ui.Warn("Duration:         ", execution.Duration)
 
 	if len(execution.Labels) > 0 {
-		ui.Warn("Labels:   ", testkube.MapToString(execution.Labels))
+		ui.Warn("Labels:           ", testkube.MapToString(execution.Labels))
+	}
+
+	if len(execution.ExecutionLabels) > 0 {
+		ui.Warn("Execution Labels   ", testkube.MapToString(execution.ExecutionLabels))
 	}
 
 	renderer.RenderVariables(execution.Variables)

@@ -30,6 +30,9 @@ func printExecutionDetails(execution testkube.Execution) {
 		ui.Warn("Start time:       ", execution.StartTime.String())
 		ui.Warn("End time:         ", execution.EndTime.String())
 		ui.Warn("Duration:         ", execution.Duration)
+		if len(execution.ExecutionLabels) > 0 {
+			ui.Warn("Execution Labels   ", testkube.MapToString(execution.ExecutionLabels))
+		}
 	}
 
 	renderer.RenderVariables(execution.Variables)
