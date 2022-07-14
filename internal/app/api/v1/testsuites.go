@@ -835,15 +835,16 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 		}
 
 		result[i] = testkube.TestSuiteExecutionSummary{
-			Id:            execution.Id,
-			Name:          execution.Name,
-			TestSuiteName: execution.TestSuite.Name,
-			Status:        execution.Status,
-			StartTime:     execution.StartTime,
-			EndTime:       execution.EndTime,
-			Duration:      types.FormatDuration(execution.Duration),
-			Execution:     executionsSummary,
-			Labels:        execution.Labels,
+			Id:              execution.Id,
+			Name:            execution.Name,
+			TestSuiteName:   execution.TestSuite.Name,
+			Status:          execution.Status,
+			StartTime:       execution.StartTime,
+			EndTime:         execution.EndTime,
+			Duration:        types.FormatDuration(execution.Duration),
+			Execution:       executionsSummary,
+			Labels:          execution.Labels,
+			ExecutionLabels: execution.ExecutionLabels,
 		}
 	}
 

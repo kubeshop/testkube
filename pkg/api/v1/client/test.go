@@ -177,15 +177,16 @@ func (c TestClient) AbortExecution(testID, id string) error {
 }
 
 // ListExecutions list all executions for given test name
-func (c TestClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
+func (c TestClient) ListExecutions(id string, limit int, selector, executionSelector string) (executions testkube.ExecutionsResult, err error) {
 	uri := c.executionsResultTransport.GetURI("/executions/")
 	if id != "" {
 		uri = c.executionsResultTransport.GetURI(fmt.Sprintf("/tests/%s/executions", id))
 	}
 
 	params := map[string]string{
-		"selector": selector,
-		"pageSize": fmt.Sprintf("%d", limit),
+		"selector":          selector,
+		"executionSelector": executionSelector,
+		"pageSize":          fmt.Sprintf("%d", limit),
 	}
 
 	return c.executionsResultTransport.Execute(http.MethodGet, uri, nil, params)
