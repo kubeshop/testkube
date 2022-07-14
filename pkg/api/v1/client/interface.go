@@ -122,6 +122,7 @@ type ExecuteTestSuiteOptions struct {
 	ExecutionVariables map[string]testkube.Variable
 	HTTPProxy          string
 	HTTPSProxy         string
+	ExecutionLabels    map[string]string
 }
 
 // Gettable is an interface of gettable objects

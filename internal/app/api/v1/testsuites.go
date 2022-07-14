@@ -758,9 +758,10 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 			Sync:                true,
 			HttpProxy:           request.HttpProxy,
 			HttpsProxy:          request.HttpsProxy,
+			ExecutionLabels:     request.ExecutionLabels,
 		}
 
-		l.Debug("executing test", "variables", testsuiteExecution.Variables)
+		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)

@@ -18,8 +18,10 @@ type TestSuiteExecutionRequest struct {
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// secret uuid
 	SecretUUID string `json:"secretUUID,omitempty"`
-	// execution labels
+	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// execution labels
+	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`
 	// http proxy for executor containers
