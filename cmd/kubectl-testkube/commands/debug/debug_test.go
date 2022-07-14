@@ -20,7 +20,11 @@ func TestBuildInfo(t *testing.T) {
 			name: "Debug info populated",
 			debugInfo: DebugInfo{
 				ClientVersion:  "v0.test",
-				ClusterVersion: "v1.test",
+				ServerVersion:  "v1.test",
+				Commit:         "commitID",
+				BuildBy:        "test",
+				BuildDate:      "now",
+				ClusterVersion: "v2.test",
 				APILogs:        []string{"api logline1", "api logline2"},
 				OperatorLogs:   []string{"operator logline1", "operator logline2", "operator logline3"},
 				LastExecutionLogs: map[string][]string{
@@ -29,10 +33,14 @@ func TestBuildInfo(t *testing.T) {
 				},
 			},
 			want: `
-|Property|Version|
+|Property|Value|
 |----|----|
-|Client|v0.test|
-|Kubernetes cluster|v1.test|
+|Client version|v0.test|
+|Server version|v1.test|
+|Commit|commitID|
+|Build by|test|
+|Build date|now|
+|Cluster version|v2.test|
 
 ### API logs
 

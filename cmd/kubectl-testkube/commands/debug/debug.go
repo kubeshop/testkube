@@ -5,18 +5,24 @@ import (
 	"errors"
 	"fmt"
 	"text/template"
+
+	"github.com/kubeshop/testkube/cmd/tools/commands"
 )
 
 type DebugInfo struct {
 	ClientVersion     string
+	ServerVersion     string
+	Commit            string
+	BuildBy           string
+	BuildDate         string
 	ClusterVersion    string
 	APILogs           []string
 	OperatorLogs      []string
 	LastExecutionLogs map[string][]string
 }
 
-func GetClientVersion() error {
-	return nil
+func GetClientVersion() string {
+	return commands.Version
 }
 
 func GetClusterVersion() error {
@@ -55,10 +61,14 @@ func BuildInfo(d DebugInfo) (string, error) {
 
 func GetTemplate() string {
 	return `
-|Property|Version|
+|Property|Value|
 |----|----|
-|Client|{{ .ClientVersion }}|
-|Kubernetes cluster|{{ .ClusterVersion }}|
+|Client version|{{ .ClientVersion }}|
+|Server version|{{ .ServerVersion }}|
+|Commit|{{ .Commit }}|
+|Build by|{{ .BuildBy }}|
+|Build date|{{ .BuildDate }}|
+|Cluster version|{{ .ClusterVersion }}|
 
 ### API logs
 {{ range $log := .APILogs }}
