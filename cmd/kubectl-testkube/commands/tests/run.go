@@ -94,7 +94,7 @@ func NewRunTestCmd() *cobra.Command {
 				_, err = client.GetTest(testName)
 				if err != nil {
 					ui.UseStderr()
-					ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
+					ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
 					ui.Debug(err.Error())
 					os.Exit(1)
 				}
