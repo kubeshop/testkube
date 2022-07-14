@@ -7,15 +7,16 @@ import (
 )
 
 type filter struct {
-	testName   string
-	startDate  *time.Time
-	endDate    *time.Time
-	statuses   testkube.ExecutionStatuses
-	page       int
-	pageSize   int
-	textSearch string
-	selector   string
-	objectType string
+	testName          string
+	startDate         *time.Time
+	endDate           *time.Time
+	statuses          testkube.ExecutionStatuses
+	page              int
+	pageSize          int
+	textSearch        string
+	selector          string
+	executionSelector string
+	objectType        string
 }
 
 func NewExecutionsFilter() *filter {
@@ -64,6 +65,11 @@ func (f *filter) WithTextSearch(textSearch string) *filter {
 
 func (f *filter) WithSelector(selector string) *filter {
 	f.selector = selector
+	return f
+}
+
+func (f *filter) WithExecutionSelector(selector string) *filter {
+	f.executionSelector = selector
 	return f
 }
 
@@ -129,4 +135,8 @@ func (f filter) Type() string {
 
 func (f filter) Selector() string {
 	return f.selector
+}
+
+func (f filter) ExecutionSelector() string {
+	return f.executionSelector
 }
