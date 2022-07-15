@@ -1,0 +1,148 @@
+# Gradle based tests
+
+Testkube allow us to run Gradle based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
+
+
+## **Test Environment**
+
+We'll try to put simple JUnit test to our cluster and run it, Testkube Gradle Executor handles `gradle` and `gradlew` binaries.
+Because gradle projects are quite complicated in terms of directory structure we'll need to load them from Git directory
+
+You can find example projects in executors repo here: https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
+
+Let's create some simple test which will check if some env variable is set to true: 
+```java
+package hello.gradle;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class LibraryTest {
+    @Test void someLibraryMethodReturnsTrue() {
+        String env = System.getenv("TESTKUBE_GRADLE");
+        assertTrue(Boolean.parseBoolean(env), "TESTKUBE_GRADLE env should be true");
+    }
+}
+```
+
+
+Default Gradle executor look like below: 
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1.4-jdk18
+  types:
+  - gradle/project
+  - gradle/test
+  - gradle/integrationTest 
+```
+
+As we can notice there are several types, Gradle excutor handle second part after `/` like task name, so `gradle/test` will run `gradle test` and so on. 
+
+Instead of `project` which is generic one and force you to pass additional argument during test execution 
+e.g. 
+
+```sh
+kubectl testkube run gradle-example-project --args='runMyCustomTask' 
+```
+
+
+## **Create a New Gradle based Test**
+
+```sh
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-gradle.git --git-path examples/hello-gradle --type gradle/test --name gradle-example-test --git-branch main
+```
+
+
+
+## **Running a Test**
+
+Let's pass the env variable to our test run:
+
+```sh
+ run test gradle-example-test -f -v TESTKUBE_GRADLE=true
+
+# ...... after some time
+
+Test execution completed with success in 16.555s 🥇
+
+Watch test execution until complete:
+$ kubectl testkube watch execution 62d148db0260f256c1a1e993
+
+
+Use following command to get test execution details:
+$ kubectl testkube get execution 62d148db0260f256c1a1e993
+```
+
+## **Getting Test Results**
+
+Now we can watch/get test execution details:
+
+```sh
+kubectl testkube get execution 62d148db0260f256c1a1e993
+```
+
+Output:
+
+```sh
+# ....... a lot of Gradle logs
+
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+> Task :test
+
+BUILD SUCCESSFUL in 10s
+2 actionable tasks: 2 executed
+
+Status Test execution completed with success 🥇
+```
+
+## Using different JDKs 
+
+In Java world usually you want to have control over Runtime environment, Testkube can easily handle that for you! 
+We're building several Java iamges to handle constraints which Gradle can put in it's build file.
+
+To use different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own docker image based on gradle executor.
+
+Let's assume we need JDK18 for our test runs, to handle that issue just create new Gradle executor 
+
+content of `gradle-jdk18-executor.yaml`
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1.4-jdk18
+  types:
+  - gradle:jdk18/project
+  - gradle:jdk18/test
+  - gradle:jdk18/integrationTest 
+```
+
+And add it to your cluster: 
+```sh
+kubectl apply -f gradle-jdk18-executor.yaml 
+```
+
+Now just create new test with type which our new executor can handle e.g.: `gradle:jdk18/test`
+
+```sh 
+ # create test
+ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-gradle.git --git-path examples/hello-gradle-jdk18 --type gradle:jdk18/test --name gradle-jdk18-example-test --git-branch main
+
+# and run it
+kubectl testkube run test gradle-jdk18-example-test -f -v TESTKUBE_GRADLE=true
+```
+
+
+## **Summary**
+
+Testkube simplifies running Java/Kotlin based tests (yes: `build.gradle.kts` is also handled) and allows to easily merge Java based tests into your global testing ecosystem.

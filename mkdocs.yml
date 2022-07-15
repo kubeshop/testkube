@@ -38,13 +38,19 @@ nav:
   - Test Types:
       - Cypress: executor-cypress.md
       - Postman: executor-postman.md
+      - SoapUI: executor-soapui.md
       - K6: executor-k6.md
+<<<<<<< Updated upstream
 #     - Maven: executor-maven.md
 #     - Gradle: executor-gradle.md
       - SoapUI Tests: executor-soapui.md
       - KubePug Tests: executor-kubepug.md
+=======
+>>>>>>> Stashed changes
       - Artillery.io: executor-artillery.md
-      - Curl Commands: executor-curl.md
+      - Maven: executor-maven.md
+      - Gradle: executor-gradle.md
+      - Curl: executor-curl.md
       - Creating New Test Types: executor-custom.md
   - CLI Reference:
       - Overview: cli/kubectl-testkube.md
@@ -75,15 +81,13 @@ nav:
   - Authentication:
       - OAuth for UI: oauth-ui.md
       - OAuth for CLI: oauth-cli.md
-  - Contributing:    
+  - Contributing:
       - Contributing: contributing.md
       - Development:
           - Local Runs: development.md
           - Custom Resources: development-crds.md
   - Architecture: architecture.md
   - Telemetry: telemetry.md
-  
- 
 
 extra:
   analytics:
