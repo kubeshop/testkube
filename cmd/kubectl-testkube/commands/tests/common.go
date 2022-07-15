@@ -116,6 +116,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
@@ -160,6 +161,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 			Type_:    "git",
 			Uri:      gitUri,
 			Branch:   gitBranch,
+			Commit:   gitCommit,
 			Path:     gitPath,
 			Username: gitUsername,
 			Token:    gitToken,

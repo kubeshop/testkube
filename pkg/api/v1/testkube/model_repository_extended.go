@@ -1,17 +1,19 @@
 package testkube
 
-func NewGitRepository(uri, branch string) *Repository {
+func NewGitRepository(uri, branch, commit string) *Repository {
 	return &Repository{
 		Type_:  "git",
-		Branch: "main",
+		Branch: branch,
+		Commit: commit,
 		Uri:    uri,
 	}
 }
 
-func NewAuthGitRepository(uri, branch, user, token string) *Repository {
+func NewAuthGitRepository(uri, branch, commit, user, token string) *Repository {
 	return &Repository{
 		Type_:    "git",
 		Branch:   branch,
+		Commit:   commit,
 		Uri:      uri,
 		Username: user,
 		Token:    token,
