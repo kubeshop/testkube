@@ -22,12 +22,16 @@ func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]st
 			}
 		}
 
+		executionLabels := make(map[string]string)
+		if e.LatestExecution != nil {
+			executionLabels = e.LatestExecution.ExecutionLabels
+		}
 		output = append(output, []string{
 			e.TestSuite.Name,
 			e.TestSuite.Description,
 			fmt.Sprintf("%d", len(e.TestSuite.Steps)),
 			MapToString(e.TestSuite.Labels),
-			MapToString(e.LatestExecution.ExecutionLabels),
+			MapToString(executionLabels),
 			e.TestSuite.Schedule,
 			status,
 			executionID,

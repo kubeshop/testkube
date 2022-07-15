@@ -18,12 +18,16 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 			}
 		}
 
+		executionLabels := make(map[string]string)
+		if e.LatestExecution != nil {
+			executionLabels = e.LatestExecution.ExecutionLabels
+		}
 		output = append(output, []string{
 			e.Test.Name,
 			e.Test.Type_,
 			e.Test.Created.String(),
 			MapToString(e.Test.Labels),
-			MapToString(e.LatestExecution.ExecutionLabels),
+			MapToString(executionLabels),
 			e.Test.Schedule,
 			status,
 			executionID,
