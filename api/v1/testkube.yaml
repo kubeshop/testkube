@@ -2264,7 +2264,7 @@ components:
           description: branch/tag name for checkout
         commit:
           type: string
-          description: commid id (sha) for checkout
+          description: commit id (sha) for checkout
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
