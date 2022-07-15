@@ -611,6 +611,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.TestSecretUUID,
 		options.Request.TestSuiteSecretUUID,
 		options.Labels,
+		options.Request.ExecutionLabels,
 	)
 
 	execution.Args = options.Request.Args
@@ -624,16 +625,17 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:        execution.Id,
-			Name:      execution.Name,
-			Number:    execution.Number,
-			TestName:  execution.TestName,
-			TestType:  execution.TestType,
-			Status:    execution.ExecutionResult.Status,
-			StartTime: execution.StartTime,
-			EndTime:   execution.EndTime,
-			Duration:  types.FormatDuration(execution.Duration),
-			Labels:    execution.Labels,
+			Id:              execution.Id,
+			Name:            execution.Name,
+			Number:          execution.Number,
+			TestName:        execution.TestName,
+			TestType:        execution.TestType,
+			Status:          execution.ExecutionResult.Status,
+			StartTime:       execution.StartTime,
+			EndTime:         execution.EndTime,
+			Duration:        types.FormatDuration(execution.Duration),
+			Labels:          execution.Labels,
+			ExecutionLabels: execution.ExecutionLabels,
 		}
 	}
 

@@ -29,6 +29,8 @@ type TestSuiteExecutionSummary struct {
 	// test suite execution duration
 	Duration  string                          `json:"duration,omitempty"`
 	Execution []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
-	// test suite execution labels
+	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// execution labels
+	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 }

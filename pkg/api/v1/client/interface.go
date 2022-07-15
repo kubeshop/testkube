@@ -34,7 +34,7 @@ type TestAPI interface {
 // ExecutionAPI describes execution api methods
 type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
+	ListExecutions(id string, limit int, selector, executionSelector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
@@ -57,7 +57,7 @@ type TestSuiteAPI interface {
 // TestSuiteExecutionAPI describes test suite execution api methods
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
+	ListTestSuiteExecutions(test string, limit int, selector, executionSelector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 }
 
@@ -109,6 +109,7 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
+	ExecutionLabels               map[string]string
 	Args                          []string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string
@@ -121,6 +122,7 @@ type ExecuteTestSuiteOptions struct {
 	ExecutionVariables map[string]testkube.Variable
 	HTTPProxy          string
 	HTTPSProxy         string
+	ExecutionLabels    map[string]string
 }
 
 // Gettable is an interface of gettable objects

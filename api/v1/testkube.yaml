@@ -230,6 +230,7 @@ paths:
       operationId: listTestSuiteWithExecutions
       parameters:
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/TestExecutionsStatusFilter"
       responses:
@@ -553,6 +554,7 @@ paths:
           description: kubernetes namespace
           required: false
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
         - api
@@ -979,6 +981,7 @@ paths:
       operationId: listTestWithExecutions
       parameters:
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
       responses:
@@ -1886,12 +1889,17 @@ components:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
         labels:
           type: object
-          description: "test suite execution labels"
+          description: "test suite labels"
           additionalProperties:
             type: string
           example:
             env: "prod"
             app: "backend"
+        executionLabels:
+          type: object
+          description: "test suite execution labels"
+          additionalProperties:
+            type: string
 
     TestSuiteStepExecutionSummary:
       description: test suite execution summary
@@ -2033,12 +2041,17 @@ components:
           $ref: "#/components/schemas/ExecutionResult"
         labels:
           type: object
-          description: "execution labels"
+          description: "test/testsuite labels"
           additionalProperties:
             type: string
           example:
             env: "prod"
             app: "backend"
+        executionLabels:
+          type: object
+          description: "execution labels"
+          additionalProperties:
+            type: string
 
     Artifact:
       type: object
@@ -2653,6 +2666,12 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    ExecutionSelector:
+      in: query
+      name: executionSelector
+      schema:
+        type: string
+        description: Execution Labels to filter by
     ConcurrencyLevel:
       in: query
       name: concurrency

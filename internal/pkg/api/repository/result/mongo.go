@@ -274,15 +274,11 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.Selector() != "" {
-		items := strings.Split(filter.Selector(), ",")
-		for _, item := range items {
-			elements := strings.Split(item, "=")
-			if len(elements) == 2 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: elements[1]})
-			} else if len(elements) == 1 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: bson.M{"$exists": true}})
-			}
-		}
+		conditions = addSelectorConditions(filter.Selector(), "labels", conditions)
+	}
+
+	if filter.ExecutionSelector() != "" {
+		conditions = addSelectorConditions(filter.ExecutionSelector(), "labels", conditions)
 	}
 
 	if filter.TypeDefined() {
@@ -298,6 +294,19 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	return query, opts
+}
+
+func addSelectorConditions(selector string, tag string, conditions primitive.A) primitive.A {
+	items := strings.Split(selector, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: elements[1]})
+		} else if len(elements) == 1 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: bson.M{"$exists": true}})
+		}
+	}
+	return conditions
 }
 
 // DeleteByTest deletes execution results by test

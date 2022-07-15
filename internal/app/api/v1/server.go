@@ -368,6 +368,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithSelector(selector)
 	}
 
+	executionSelector := c.Query("executionSelector")
+	if selector != "" {
+		filter = filter.WithExecutionSelector(executionSelector)
+	}
+
 	return filter
 }
 

@@ -7,14 +7,15 @@ func MapToSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
 	result := make([]testkube.ExecutionSummary, len(executions))
 	for i, s := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:        s.Id,
-			Name:      s.Name,
-			Number:    s.Number,
-			TestName:  s.TestName,
-			TestType:  s.TestType,
-			Status:    s.ExecutionResult.Status,
-			StartTime: s.StartTime,
-			EndTime:   s.EndTime,
+			Id:              s.Id,
+			Name:            s.Name,
+			Number:          s.Number,
+			ExecutionLabels: s.ExecutionLabels,
+			TestName:        s.TestName,
+			TestType:        s.TestType,
+			Status:          s.ExecutionResult.Status,
+			StartTime:       s.StartTime,
+			EndTime:         s.EndTime,
 		}
 	}
 

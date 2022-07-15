@@ -119,10 +119,11 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Name:       executionName,
-		Variables:  options.ExecutionVariables,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Name:            executionName,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -138,9 +139,10 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Variables:  options.ExecutionVariables,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -187,12 +189,13 @@ func (c TestSuiteClient) WatchTestSuiteExecution(executionID string) (executionC
 }
 
 // ListTestSuiteExecutions list all executions for given test suite
-func (c TestSuiteClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c TestSuiteClient) ListTestSuiteExecutions(testID string, limit int, selector, executionSelector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.testSuiteExecutionsResultTransport.GetURI("/test-suite-executions")
 	params := map[string]string{
-		"selector": selector,
-		"pageSize": fmt.Sprintf("%d", limit),
-		"id":       testID,
+		"selector":          selector,
+		"executionSelector": executionSelector,
+		"pageSize":          fmt.Sprintf("%d", limit),
+		"id":                testID,
 	}
 
 	return c.testSuiteExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)

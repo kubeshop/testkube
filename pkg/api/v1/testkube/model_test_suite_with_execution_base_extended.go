@@ -7,7 +7,7 @@ import (
 type TestSuiteWithExecutions []TestSuiteWithExecution
 
 func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "Status", "Execution id"}
+	header = []string{"Name", "Description", "Steps", "Labels", "Execution Labels", "Schedule", "Status", "Execution id"}
 	for _, e := range testSutes {
 		if e.TestSuite == nil {
 			continue
@@ -27,6 +27,7 @@ func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]st
 			e.TestSuite.Description,
 			fmt.Sprintf("%d", len(e.TestSuite.Steps)),
 			MapToString(e.TestSuite.Labels),
+			MapToString(e.LatestExecution.ExecutionLabels),
 			e.TestSuite.Schedule,
 			status,
 			executionID,

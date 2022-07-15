@@ -3,7 +3,7 @@ package testkube
 type TestWithExecutions []TestWithExecution
 
 func (t TestWithExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Type", "Created", "Labels", "Schedule", "Status", "Execution id"}
+	header = []string{"Name", "Type", "Created", "Labels", "Execution labels", "Schedule", "Status", "Execution id"}
 	for _, e := range t {
 		if e.Test == nil {
 			continue
@@ -23,6 +23,7 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 			e.Test.Type_,
 			e.Test.Created.String(),
 			MapToString(e.Test.Labels),
+			MapToString(e.LatestExecution.ExecutionLabels),
 			e.Test.Schedule,
 			status,
 			executionID,

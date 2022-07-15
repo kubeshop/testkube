@@ -13,9 +13,10 @@ import (
 
 func NewTestSuiteExecutionCmd() *cobra.Command {
 	var (
-		limit         int
-		selectors     []string
-		testSuiteName string
+		limit             int
+		selectors         []string
+		executionSelector []string
+		testSuiteName     string
 	)
 
 	cmd := &cobra.Command{
@@ -36,7 +37,8 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 			} else {
 				client, _ := common.GetClient(cmd)
 
-				executions, err := client.ListTestSuiteExecutions(testSuiteName, limit, strings.Join(selectors, ","))
+				executions, err := client.ListTestSuiteExecutions(testSuiteName, limit,
+					strings.Join(selectors, ","), strings.Join(executionSelector, ","))
 				ui.ExitOnError("getting test suites executions list", err)
 				err = render.List(cmd, executions, os.Stdout)
 				ui.ExitOnError("rendering list", err)
@@ -48,6 +50,7 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 	cmd.Flags().StringVar(&testSuiteName, "test-suite", "", "test suite name")
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringSliceVarP(&executionSelector, "execution-label", "", nil, "label key value pair: --execution-label key1=value1")
 
 	return cmd
 }

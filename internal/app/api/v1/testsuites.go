@@ -759,9 +759,10 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 			Sync:                true,
 			HttpProxy:           request.HttpProxy,
 			HttpsProxy:          request.HttpsProxy,
+			ExecutionLabels:     request.ExecutionLabels,
 		}
 
-		l.Debug("executing test", "variables", testsuiteExecution.Variables)
+		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)
@@ -835,15 +836,16 @@ func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 		}
 
 		result[i] = testkube.TestSuiteExecutionSummary{
-			Id:            execution.Id,
-			Name:          execution.Name,
-			TestSuiteName: execution.TestSuite.Name,
-			Status:        execution.Status,
-			StartTime:     execution.StartTime,
-			EndTime:       execution.EndTime,
-			Duration:      types.FormatDuration(execution.Duration),
-			Execution:     executionsSummary,
-			Labels:        execution.Labels,
+			Id:              execution.Id,
+			Name:            execution.Name,
+			TestSuiteName:   execution.TestSuite.Name,
+			Status:          execution.Status,
+			StartTime:       execution.StartTime,
+			EndTime:         execution.EndTime,
+			Duration:        types.FormatDuration(execution.Duration),
+			Execution:       executionsSummary,
+			Labels:          execution.Labels,
+			ExecutionLabels: execution.ExecutionLabels,
 		}
 	}
 
