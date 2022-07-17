@@ -15,6 +15,7 @@ kubectl-testkube update test [flags]
 ```
   -f, --file string                      test file - will try to read content from stdin if not specified
       --git-branch string                if uri is git repository we can set additional branch parameter
+      --git-commit string                if uri is git repository we can use commit id (sha) parameter
       --git-path string                  if repository is big we need to define additional path to directory/file to checkout partially
       --git-token string                 if git repository is private we can use token as an auth parameter
       --git-uri string                   Git repository uri
