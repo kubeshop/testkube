@@ -16,7 +16,7 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
       --concurrency int                  concurrency level for multiple test suite execution (default 10)
   -d, --download-artifacts               download artifacts automatically
       --download-dir string              download dir (default "artifacts")
-      --execution-label stringToString   execution-label key value pair: --execution-label key1=value1 (default [])
+      --execution-label stringToString   execution-label adds a label to execution in form of key value pair: --execution-label key1=value1 (default [])
   -h, --help                             help for testsuite
       --http-proxy string                http proxy for executor containers
       --https-proxy string               https proxy for executor containers
