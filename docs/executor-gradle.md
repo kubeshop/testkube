@@ -138,7 +138,7 @@ Now, create the new test with the type that our new executor can handle e.g.: `g
  # create test
  kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-gradle.git --git-path examples/hello-gradle-jdk18 --type gradle:jdk18/test --name gradle-jdk18-example-test --git-branch main
 
-# and run it
+# and run it:
 kubectl testkube run test gradle-jdk18-example-test -f -v TESTKUBE_GRADLE=true
 ```
 
