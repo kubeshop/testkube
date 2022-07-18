@@ -145,7 +145,7 @@ And add it to your cluster:
 kubectl apply -f maven-jdk18-executor.yaml 
 ```
 
-Now just create new test with type which our new executor can handle e.g.: `maven:jdk18/test`
+Now, create a new test with a type which our new executor can handle e.g.: `maven:jdk18/test`
 
 ```sh 
  # create test
