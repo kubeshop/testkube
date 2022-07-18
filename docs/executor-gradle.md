@@ -103,7 +103,7 @@ BUILD SUCCESSFUL in 10s
 Status Test execution completed with success 🥇
 ```
 
-## Using different JDKs 
+## Using Different JDKs 
 
 In the Java world, you would like to have control over the Runtime environment. Testkube can easily handle that for you! 
 We're building several Java iamges to handle constraints which Gradle can put in it's build file.
