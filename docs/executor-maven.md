@@ -158,4 +158,4 @@ kubectl testkube run test maven-jdk18-example-test -f -v TESTKUBE_MAVEN=true
 
 ## **Summary**
 
-Testkube simplifies running Java tests based on maven and allows to easily merge Java based tests into your global testing ecosystem.
+Testkube simplifies running Java tests based on Maven and simplifies the merging of Java based tests into your global testing ecosystem.
