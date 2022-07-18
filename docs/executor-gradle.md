@@ -132,7 +132,7 @@ And add it to your cluster:
 kubectl apply -f gradle-jdk18-executor.yaml 
 ```
 
-Now just create new test with type which our new executor can handle e.g.: `gradle:jdk18/test`
+Now, create the new test with the type that our new executor can handle e.g.: `gradle:jdk18/test`.
 
 ```sh 
  # create test
