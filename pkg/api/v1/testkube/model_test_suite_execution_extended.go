@@ -6,6 +6,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
@@ -21,15 +22,14 @@ func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
 
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 	testExecution := TestSuiteExecution{
-		Id:              primitive.NewObjectID().Hex(),
-		StartTime:       time.Now(),
-		Name:            fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
-		Status:          TestSuiteExecutionStatusRunning,
-		Variables:       testSuite.Variables,
-		SecretUUID:      request.SecretUUID,
-		TestSuite:       testSuite.GetObjectRef(),
-		Labels:          testSuite.Labels,
-		ExecutionLabels: request.ExecutionLabels,
+		Id:         primitive.NewObjectID().Hex(),
+		StartTime:  time.Now(),
+		Name:       fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
+		Status:     TestSuiteExecutionStatusRunning,
+		Variables:  testSuite.Variables,
+		SecretUUID: request.SecretUUID,
+		TestSuite:  testSuite.GetObjectRef(),
+		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
 	}
 
 	// override variables from request

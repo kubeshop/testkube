@@ -20,8 +20,7 @@ func NewExecutionWithID(id, testType, testName string) Execution {
 func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
 	executionNumber int, content *TestContent, result ExecutionResult,
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
-	labels map[string]string,
-	executionLabels map[string]string) Execution {
+	labels map[string]string) Execution {
 	return Execution{
 		Id:                  primitive.NewObjectID().Hex(),
 		TestName:            testName,
@@ -36,7 +35,6 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteSecretUUID: testSuiteSecretUUID,
 		Content:             content,
 		Labels:              labels,
-		ExecutionLabels:     executionLabels,
 	}
 }
 
@@ -62,7 +60,7 @@ func NewQueuedExecution() *Execution {
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Type", "Number", "Status", "Labels", "Execution Labels"}
+	header = []string{"Id", "Name", "Type", "Number", "Status", "Labels"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -77,7 +75,6 @@ func (executions Executions) Table() (header []string, output [][]string) {
 			strconv.Itoa(e.Number),
 			status,
 			MapToString(e.Labels),
-			MapToString(e.ExecutionLabels),
 		})
 	}
 

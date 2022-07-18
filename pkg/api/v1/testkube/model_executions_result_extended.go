@@ -3,7 +3,7 @@ package testkube
 import "strconv"
 
 func (result ExecutionsResult) Table() (header []string, output [][]string) {
-	header = []string{"ID", "Name", "Type", "Number", "Status", "Labels", "Execution Labels"}
+	header = []string{"ID", "Name", "Type", "Number", "Status", "Labels"}
 
 	for _, e := range result.Results {
 		var status string
@@ -17,7 +17,6 @@ func (result ExecutionsResult) Table() (header []string, output [][]string) {
 			strconv.Itoa(e.Number),
 			status,
 			MapToString(e.Labels),
-			MapToString(e.ExecutionLabels),
 		})
 	}
 

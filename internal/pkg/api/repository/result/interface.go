@@ -23,7 +23,6 @@ type Filter interface {
 	TextSearchDefined() bool
 	TextSearch() string
 	Selector() string
-	ExecutionSelector() string
 	TypeDefined() bool
 	Type() string
 }

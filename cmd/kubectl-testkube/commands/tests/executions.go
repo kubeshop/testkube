@@ -13,10 +13,9 @@ import (
 
 func NewGetExecutionCmd() *cobra.Command {
 	var (
-		selectors          []string
-		executionSelectors []string
-		testID             string
-		limit              int
+		selectors []string
+		testID    string
+		limit     int
 	)
 
 	cmd := &cobra.Command{
@@ -35,7 +34,7 @@ func NewGetExecutionCmd() *cobra.Command {
 				err = render.Obj(cmd, execution, os.Stdout, renderer.ExecutionRenderer)
 				ui.ExitOnError("rendering execution", err)
 			} else {
-				executions, err := client.ListExecutions(testID, limit, strings.Join(selectors, ","), strings.Join(executionSelectors, ","))
+				executions, err := client.ListExecutions(testID, limit, strings.Join(selectors, ","))
 				ui.ExitOnError("Getting executions for test: "+testID, err)
 				err = render.List(cmd, executions, os.Stdout)
 				ui.ExitOnError("rendering", err)
@@ -44,7 +43,6 @@ func NewGetExecutionCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringSliceVarP(&executionSelectors, "execution-label", "", nil, "label key value pair: --execution-label key1=value1")
 	cmd.Flags().StringVarP(&testID, "test", "", "", "test id")
 	cmd.Flags().IntVarP(&limit, "limit", "", 10, "records limit")
 

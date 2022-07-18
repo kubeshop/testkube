@@ -29,10 +29,6 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Labels:           ", testkube.MapToString(execution.Labels))
 	}
 
-	if len(execution.ExecutionLabels) > 0 {
-		ui.Warn("Execution Labels   ", testkube.MapToString(execution.ExecutionLabels))
-	}
-
 	renderer.RenderVariables(execution.Variables)
 
 	if len(execution.Args) > 0 {

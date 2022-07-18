@@ -277,10 +277,6 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		conditions = addSelectorConditions(filter.Selector(), "labels", conditions)
 	}
 
-	if filter.ExecutionSelector() != "" {
-		conditions = addSelectorConditions(filter.ExecutionSelector(), "labels", conditions)
-	}
-
 	if filter.TypeDefined() {
 		conditions = append(conditions, bson.M{"testtype": filter.Type()})
 	}
