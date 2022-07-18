@@ -2249,7 +2249,6 @@ components:
       required:
         - type
         - uri
-        - branch
       properties:
         type:
           type: string

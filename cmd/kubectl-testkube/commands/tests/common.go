@@ -152,7 +152,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	var repository *testkube.Repository
-	if gitUri != "" && gitBranch != "" {
+	if gitUri != "" {
 		if testContentType == "" {
 			testContentType = "git-dir"
 		}

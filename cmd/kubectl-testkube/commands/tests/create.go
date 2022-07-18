@@ -146,8 +146,8 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		if gitUri == "" {
 			return fmt.Errorf("please pass valid `--git-uri` flag")
 		}
-		if gitBranch == "" {
-			return fmt.Errorf("please pass valid `--git-branch` flag")
+		if gitBranch != "" && gitCommit != "" {
+			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
 		}
 	}
 

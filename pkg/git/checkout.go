@@ -19,13 +19,16 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 		}
 	}
 
+	args := []string{"clone"}
+	if branch != "" {
+		args = append(args, "-b", branch)
+	}
+
+	args = append(args, "--depth", "1", uri, "repo")
 	_, err = process.ExecuteInDir(
 		tmpDir,
 		"git",
-		"clone",
-		"-b", branch,
-		"--depth", "1",
-		uri, "repo",
+		args...,
 	)
 	if err != nil {
 		return "", err
@@ -57,15 +60,16 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 		}
 	}
 
+	args := []string{"clone"}
+	if branch != "" {
+		args = append(args, "-b", branch)
+	}
+
+	args = append(args, "--depth", "1", "--filter", "blob:none", "--sparse", uri, "repo")
 	_, err = process.ExecuteInDir(
 		tmpDir,
 		"git",
-		"clone",
-		"-b", branch,
-		"--depth", "1",
-		"--filter", "blob:none",
-		"--sparse",
-		uri, "repo",
+		args...,
 	)
 	if err != nil {
 		return "", err
