@@ -106,7 +106,7 @@ Status Test execution completed with success 🥇
 ## Using Different JDKs 
 
 In the Java world, you would like to have control over the Runtime environment. Testkube can easily handle that for you! 
-We're building several Java iamges to handle constraints which Gradle can put in it's build file.
+We're building several Java images to handle constraints which Gradle can put in its build file.
 
 To use a different executor, you can use one of our pre-built ones (for Java 8,11,17,18) or build your own Docker image based on the Gradle executor.
 
