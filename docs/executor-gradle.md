@@ -71,7 +71,7 @@ Let's pass the env variable to our test run:
 
 The test execution completed successfully in 16.555s 🥇.
 
-Watch test execution until complete:
+Watch the test execution until complete:
 $ kubectl testkube watch execution 62d148db0260f256c1a1e993
 
 
