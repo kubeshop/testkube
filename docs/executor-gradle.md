@@ -8,7 +8,7 @@ Testkube allow us to run Gradle based tasks which could be also tests. For examp
 We'll try to put simple JUnit test to our cluster and run it, Testkube Gradle Executor handles `gradle` and `gradlew` binaries.
 Because gradle projects are quite complicated in terms of directory structure we'll need to load them from Git directory
 
-You can find example projects in executors repo here: https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
+You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
 
 Let's create some simple test which will check if some env variable is set to true: 
 ```java

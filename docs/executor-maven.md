@@ -1,0 +1,147 @@
+# Maven based tests
+
+Testkube allow us to run Maven based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
+
+
+## **Test Environment**
+
+We'll try to put simple JUnit test to our cluster and run it, Testkube Maven Executor handles `mvn` and `mvnw` binaries.
+Because maven projects are quite complicated in terms of directory structure we'll need to load them from Git directory
+
+You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-maven/tree/main/examples
+
+Let's create some simple test which will check if some env variable is set to true: 
+```java
+package hello.maven;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class LibraryTest {
+    @Test void someLibraryMethodReturnsTrue() {
+        String env = System.getenv("TESTKUBE_MAVEN");
+        assertTrue(Boolean.parseBoolean(env), "TESTKUBE_MAVEN env should be true");
+    }
+}
+```
+
+
+Default Maven executor look like below: 
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1.4
+  types:
+  - maven/project
+  - maven/test
+  - maven/integration-test 
+```
+
+As we can notice there are several types, Maven excutor handle second part after `/` like task name, so `maven/test` will run `mvn test` and so on. 
+
+One exception from this rule is `project` which is generic one and force you to pass additional argument during test execution e.g.:
+
+```sh
+kubectl testkube run maven-example-project --args='runMyCustomTask' 
+```
+
+
+## **Create a New Maven based Test**
+
+```sh
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --name maven-example-test --git-branch main
+```
+
+
+
+## **Running a Test**
+
+Let's pass the env variable to our test run:
+
+```sh
+ run test maven-example-test -f -v TESTKUBE_MAVEN=true
+
+# ...... after some time
+
+Test execution completed with success in 16.555s 🥇
+
+Watch test execution until complete:
+$ kubectl testkube watch execution 62d148db0260f256c1a1e993
+
+
+Use following command to get test execution details:
+$ kubectl testkube get execution 62d148db0260f256c1a1e993
+```
+
+## **Getting Test Results**
+
+Now we can watch/get test execution details:
+
+```sh
+kubectl testkube get execution 62d148db0260f256c1a1e993
+```
+
+Output:
+
+```sh
+# ....... a lot of Maven logs
+
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+> Task :test
+
+BUILD SUCCESSFUL in 10s
+2 actionable tasks: 2 executed
+
+Status Test execution completed with success 🥇
+```
+
+## Using different JDKs 
+
+In Java world usually you want to have control over Runtime environment, Testkube can easily handle that for you! 
+We're building several Java iamges to handle constraints which Maven can put in it's build file.
+
+To use different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own docker image based on maven executor.
+
+Let's assume we need JDK18 for our test runs, to handle that issue just create new Maven executor 
+
+content of `maven-jdk18-executor.yaml`
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1.4-jdk18   # <-- we're building jdk
+  types:
+  - maven:jdk18/project
+  - maven:jdk18/test
+  - maven:jdk18/integrationTest 
+```
+
+And add it to your cluster: 
+```sh
+kubectl apply -f maven-jdk18-executor.yaml 
+```
+
+Now just create new test with type which our new executor can handle e.g.: `maven:jdk18/test`
+
+```sh 
+ # create test
+ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-jdk18 --type maven:jdk18/test --name maven-jdk18-example-test --git-branch main
+
+# and run it
+kubectl testkube run test maven-jdk18-example-test -f -v TESTKUBE_MAVEN=true
+```
+
+
+## **Summary**
+
+Testkube simplifies running Java tests based on maven and allows to easily merge Java based tests into your global testing ecosystem.
