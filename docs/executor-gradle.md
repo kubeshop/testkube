@@ -10,7 +10,7 @@ Since Gradle projects are quite complicated in terms of directory structure, we'
 
 You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
 
-Let's create some simple test which will check if some env variable is set to true: 
+Let's create a simple test which will check if an env variable is set to true: 
 ```java
 package hello.gradle;
 
