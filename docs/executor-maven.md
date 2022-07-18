@@ -120,7 +120,7 @@ We're building several Java images to handle constraints which Maven can put in 
 
 To use different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own docker image based on maven executor.
 
-Let's assume we need JDK18 for our test runs, to handle that issue just create new Maven executor 
+Let's assume we need JDK18 for our test runs. To handle that issue, create a new Maven executor:
 
 content of `maven-jdk18-executor.yaml`
 ```yaml
