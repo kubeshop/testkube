@@ -1,4 +1,4 @@
-# Gradle based tests
+# Gradle Based Tests
 
 Testkube allow us to run Gradle based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
 
