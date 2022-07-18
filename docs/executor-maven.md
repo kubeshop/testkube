@@ -64,7 +64,7 @@ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-exec
 Let's pass the env variable to our test run:
 
 ```sh
- run test maven-example-test -f -v TESTKUBE_MAVEN=true
+kubectl testkube run test maven-example-test -f -v TESTKUBE_MAVEN=true
 
 # ...... after some time
 
@@ -91,13 +91,24 @@ Output:
 ```sh
 # ....... a lot of Maven logs
 
-> Task :compileTestJava
-> Task :processTestResources NO-SOURCE
-> Task :testClasses
-> Task :test
-
-BUILD SUCCESSFUL in 10s
-2 actionable tasks: 2 executed
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-launcher/1.7.2/junit-platform-launcher-1.7.2.pom (3.0 kB at 121 kB/s)
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running hello.maven.LibraryTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.052 s - in hello.maven.LibraryTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  9.851 s
+[INFO] Finished at: 2022-07-18T09:06:15Z
+[INFO] ------------------------------------------------------------------------
 
 Status Test execution completed with success 🥇
 ```
@@ -119,12 +130,15 @@ metadata:
   name: maven-jdk18-executor
   namespace: testkube
 spec:
-  image: kubeshop/testkube-maven-executor:0.1.4-jdk18   # <-- we're building jdk
+  image: kubeshop/testkube-maven-executor:0.1.0-jdk18   # <-- we're building jdk
   types:
-  - maven:jdk18/project
+  - maven:jdk18/project # <-- just create different test type with naming convention "framework:version/type"
   - maven:jdk18/test
-  - maven:jdk18/integrationTest 
+  - maven:jdk18/integration-test 
 ```
+
+> tip: look for recent executor versions here https://hub.docker.com/repository/registry-1.docker.io/kubeshop/testkube-maven-executor/tags?page=1&ordering=last_updated
+
 
 And add it to your cluster: 
 ```sh
