@@ -110,7 +110,7 @@ We're building several Java images to handle constraints which Gradle can put in
 
 To use a different executor, you can use one of our pre-built ones (for Java 8,11,17,18) or build your own Docker image based on the Gradle executor.
 
-Let's assume we need JDK18 for our test runs. In Testkube, create a new Gradle executor.
+Let's assume we need JDK18 for our test runs. In Testkube, create a new Gradle executor:
 
 content of `gradle-jdk18-executor.yaml`
 ```yaml
