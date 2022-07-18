@@ -26,7 +26,7 @@ class LibraryTest {
 ```
 
 
-Default Gradle executor look like below: 
+The default Gradle executor looks like: 
 
 ```yaml
 apiVersion: executor.testkube.io/v1
