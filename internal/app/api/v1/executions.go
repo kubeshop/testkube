@@ -22,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -147,10 +146,11 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	// generate random execution name in case there is no one set
 	// like for docker images
 	if request.Name == "" {
-		request.Name = rand.Name()
+		request.Name = test.Name
 	}
 
 	request.Number = s.getNextExecutionNumber(test.Name)
+	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
 	execution, _ = s.ExecutionResults.GetByNameAndTest(ctx, request.Name, test.Name)

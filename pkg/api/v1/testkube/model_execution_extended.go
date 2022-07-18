@@ -2,7 +2,6 @@ package testkube
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -60,7 +59,7 @@ func NewQueuedExecution() *Execution {
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Type", "Number", "Status", "Labels"}
+	header = []string{"Id", "Name", "Test Name", "Type", "Status", "Labels"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -70,9 +69,9 @@ func (executions Executions) Table() (header []string, output [][]string) {
 
 		output = append(output, []string{
 			e.Id,
+			e.Name,
 			e.TestName,
 			e.TestType,
-			strconv.Itoa(e.Number),
 			status,
 			MapToString(e.Labels),
 		})
