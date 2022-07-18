@@ -13,11 +13,10 @@ kubectl-testkube get execution [executionID] [flags]
 ### Options
 
 ```
-      --execution-label strings   label key value pair: --execution-label key1=value1
-  -h, --help                      help for execution
-  -l, --label strings             label key value pair: --label key1=value1
-      --limit int                 records limit (default 10)
-      --test string               test id
+  -h, --help            help for execution
+  -l, --label strings   label key value pair: --label key1=value1
+      --limit int       records limit (default 10)
+      --test string     test id
 ```
 
 ### Options inherited from parent commands

@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -610,8 +611,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.Variables,
 		options.Request.TestSecretUUID,
 		options.Request.TestSuiteSecretUUID,
-		options.Labels,
-		options.Request.ExecutionLabels,
+		common.MergeMaps(options.Labels, options.Request.ExecutionLabels),
 	)
 
 	execution.Args = options.Request.Args
@@ -625,17 +625,16 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:              execution.Id,
-			Name:            execution.Name,
-			Number:          execution.Number,
-			TestName:        execution.TestName,
-			TestType:        execution.TestType,
-			Status:          execution.ExecutionResult.Status,
-			StartTime:       execution.StartTime,
-			EndTime:         execution.EndTime,
-			Duration:        types.FormatDuration(execution.Duration),
-			Labels:          execution.Labels,
-			ExecutionLabels: execution.ExecutionLabels,
+			Id:        execution.Id,
+			Name:      execution.Name,
+			Number:    execution.Number,
+			TestName:  execution.TestName,
+			TestType:  execution.TestType,
+			Status:    execution.ExecutionResult.Status,
+			StartTime: execution.StartTime,
+			EndTime:   execution.EndTime,
+			Duration:  types.FormatDuration(execution.Duration),
+			Labels:    execution.Labels,
 		}
 	}
 

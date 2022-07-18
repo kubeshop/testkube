@@ -44,7 +44,6 @@ func getExecutions() testkube.Executions {
 		"test-uuid",
 		"testsuite-uuid",
 		nil,
-		map[string]string{"labelkey": "labelvalue"},
 	)
 	execution1.Start()
 	execution1.Stop()
@@ -63,7 +62,6 @@ func getExecutions() testkube.Executions {
 		"uuid",
 		"testsuite-uuid",
 		nil,
-		map[string]string{"labelkey": "labelvalue"},
 	)
 	execution2.Start()
 	execution2.Stop()

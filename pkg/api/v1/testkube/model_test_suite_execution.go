@@ -36,6 +36,4 @@ type TestSuiteExecution struct {
 	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
-	// test suite execution labels
-	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 }

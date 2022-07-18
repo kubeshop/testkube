@@ -189,13 +189,12 @@ func (c TestSuiteClient) WatchTestSuiteExecution(executionID string) (executionC
 }
 
 // ListTestSuiteExecutions list all executions for given test suite
-func (c TestSuiteClient) ListTestSuiteExecutions(testID string, limit int, selector, executionSelector string) (executions testkube.TestSuiteExecutionsResult, err error) {
+func (c TestSuiteClient) ListTestSuiteExecutions(testID string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error) {
 	uri := c.testSuiteExecutionsResultTransport.GetURI("/test-suite-executions")
 	params := map[string]string{
-		"selector":          selector,
-		"executionSelector": executionSelector,
-		"pageSize":          fmt.Sprintf("%d", limit),
-		"id":                testID,
+		"selector": selector,
+		"pageSize": fmt.Sprintf("%d", limit),
+		"id":       testID,
 	}
 
 	return c.testSuiteExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
