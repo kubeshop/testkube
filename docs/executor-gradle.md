@@ -145,4 +145,4 @@ kubectl testkube run test gradle-jdk18-example-test -f -v TESTKUBE_GRADLE=true
 
 ## **Summary**
 
-Testkube simplifies running Java/Kotlin based tests (yes: `build.gradle.kts` is also handled) and allows to easily merge Java based tests into your global testing ecosystem.
+Testkube simplifies running Java/Kotlin based tests (`build.gradle.kts` is also handled) and allows merging Java based tests into your global testing ecosystem easily.
