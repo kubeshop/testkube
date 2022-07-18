@@ -2237,7 +2237,6 @@ components:
       required:
         - type
         - uri
-        - branch
       properties:
         type:
           type: string
@@ -2250,6 +2249,9 @@ components:
         branch:
           type: string
           description: branch/tag name for checkout
+        commit:
+          type: string
+          description: commit id (sha) for checkout
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories

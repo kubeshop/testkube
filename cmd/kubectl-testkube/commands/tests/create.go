@@ -25,6 +25,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		uri             string
 		gitUri          string
 		gitBranch       string
+		gitCommit       string
 		gitPath         string
 		gitUsername     string
 		gitToken        string
@@ -105,6 +106,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
@@ -119,6 +121,7 @@ func NewCreateTestsCmd() *cobra.Command {
 func validateCreateOptions(cmd *cobra.Command) error {
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
@@ -126,7 +129,7 @@ func validateCreateOptions(cmd *cobra.Command) error {
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 
-	hasGitParams := gitBranch != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != ""
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != ""
 
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
@@ -143,8 +146,8 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		if gitUri == "" {
 			return fmt.Errorf("please pass valid `--git-uri` flag")
 		}
-		if gitBranch == "" {
-			return fmt.Errorf("please pass valid `--git-branch` flag")
+		if gitBranch != "" && gitCommit != "" {
+			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
 		}
 	}
 

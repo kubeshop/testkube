@@ -40,6 +40,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("Repository: ")
 			ui.Warn("  Uri:      ", test.Content.Repository.Uri)
 			ui.Warn("  Branch:   ", test.Content.Repository.Branch)
+			ui.Warn("  Commit:   ", test.Content.Repository.Commit)
 			ui.Warn("  Path:     ", test.Content.Repository.Path)
 			ui.Warn("  Username: ", test.Content.Repository.Username)
 			ui.Warn("  Token:    ", test.Content.Repository.Token)
