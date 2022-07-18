@@ -44,7 +44,7 @@ spec:
 
 As we can see, there are several types. The Gradle executor handles the second part after `/` as a task name, so `gradle/test` will run `gradle test` and so on. 
 
-Instead of `project` which is generic one and force you to pass additional argument during test execution 
+As opposed to `project` which is generic and forces you to pass additional arguments during test execution. 
 e.g. 
 
 ```sh
