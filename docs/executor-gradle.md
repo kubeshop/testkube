@@ -42,7 +42,7 @@ spec:
   - gradle/integrationTest 
 ```
 
-As we can notice there are several types, Gradle excutor handle second part after `/` like task name, so `gradle/test` will run `gradle test` and so on. 
+As we can see, there are several types. The Gradle executor handles the second part after `/` as a task name, so `gradle/test` will run `gradle test` and so on. 
 
 Instead of `project` which is generic one and force you to pass additional argument during test execution 
 e.g. 
