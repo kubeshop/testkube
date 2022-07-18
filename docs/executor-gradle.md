@@ -45,7 +45,7 @@ spec:
 As we can see, there are several types. The Gradle executor handles the second part after `/` as a task name, so `gradle/test` will run `gradle test` and so on. 
 
 As opposed to `project` which is generic and forces you to pass additional arguments during test execution. 
-e.g. 
+For example:
 
 ```sh
 kubectl testkube run gradle-example-project --args='runMyCustomTask' 
