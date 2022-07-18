@@ -137,7 +137,7 @@ spec:
   - maven:jdk18/integration-test 
 ```
 
-> tip: look for recent executor versions here https://hub.docker.com/repository/registry-1.docker.io/kubeshop/testkube-maven-executor/tags?page=1&ordering=last_updated
+> Tip: Look for recent executor versions here https://hub.docker.com/repository/registry-1.docker.io/kubeshop/testkube-maven-executor/tags?page=1&ordering=last_updated.
 
 
 And add it to your cluster: 
