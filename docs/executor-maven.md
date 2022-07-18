@@ -5,7 +5,7 @@ Testkube allow us to run Maven based tasks which could be also tests. For exampl
 
 ## **Test Environment**
 
-We'll try to put simple JUnit test to our cluster and run it, Testkube Maven Executor handles `mvn` and `mvnw` binaries.
+We'll try to put simple JUnit test to our cluster and run it. Testkube Maven Executor handles `mvn` and `mvnw` binaries.
 Because maven projects are quite complicated in terms of directory structure we'll need to load them from Git directory
 
 You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-maven/tree/main/examples
