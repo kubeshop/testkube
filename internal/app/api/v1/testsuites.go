@@ -23,7 +23,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
-	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -751,7 +750,7 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:                fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
+			Name:                fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
 			TestSuiteName:       testSuiteName,
 			Namespace:           executeTestStep.Namespace,
 			Variables:           testsuiteExecution.Variables,

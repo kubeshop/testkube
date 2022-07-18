@@ -23,6 +23,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.Warn("Name:             ", execution.TestName)
 	if execution.Id != "" {
 		ui.Warn("Execution ID:     ", execution.Id)
+		ui.Warn("Execution name:   ", execution.Name)
 		if execution.Number != 0 {
 			ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
 		}
