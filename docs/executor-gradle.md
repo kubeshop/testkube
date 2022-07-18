@@ -52,7 +52,7 @@ kubectl testkube run gradle-example-project --args='runMyCustomTask'
 ```
 
 
-## **Create a New Gradle based Test**
+## **Create a New Gradle-based Test**
 
 ```sh
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-gradle.git --git-path examples/hello-gradle --type gradle/test --name gradle-example-test --git-branch main
