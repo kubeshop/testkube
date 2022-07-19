@@ -30,7 +30,9 @@ type Filter interface {
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
-	// GetByNameAndTest gets execution result by name
+	// GetByName gets execution result by name
+	GetByName(ctx context.Context, id string) (testkube.Execution, error)
+	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetLatestByTest gets latest execution result by test
 	GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error)
