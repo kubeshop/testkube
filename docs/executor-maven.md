@@ -51,7 +51,7 @@ kubectl testkube run maven-example-project --args='runMyCustomTask'
 ```
 
 
-## **Create a New Maven based Test**
+## **Create a New Maven-based Test**
 
 ```sh
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --name maven-example-test --git-branch main
