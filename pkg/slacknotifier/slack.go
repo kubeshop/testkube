@@ -171,7 +171,7 @@ var slackClient *slack.Client
 
 func init() {
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
-		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token[len(token)-5:])
+		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackClient = slack.New(token, slack.OptionDebug(true))
 	} else {
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
