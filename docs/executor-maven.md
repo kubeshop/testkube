@@ -26,7 +26,7 @@ class LibraryTest {
 ```
 
 
-Default Maven executor look like below: 
+The default Maven executor: 
 
 ```yaml
 apiVersion: executor.testkube.io/v1
