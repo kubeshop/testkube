@@ -202,7 +202,7 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	}
 
 	args := messageArgs{
-		ExecutionID: execution.Id,
+		ExecutionID: execution.Name,
 		EventType:   string(*eventType),
 		Namespace:   execution.TestNamespace,
 		TestName:    execution.TestName,
