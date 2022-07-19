@@ -118,7 +118,7 @@ Status Test execution completed with success 🥇
 In Java world usually you want to have control over Runtime environment, Testkube can easily handle that for you! 
 We're building several Java images to handle constraints which Maven can put in it's build file.
 
-To use different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own docker image based on maven executor.
+To use a different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own Docker image based on a Maven executor.
 
 Let's assume we need JDK18 for our test runs. To handle that issue, create a new Maven executor:
 
