@@ -42,7 +42,7 @@ spec:
   - maven/integration-test 
 ```
 
-As we can notice there are several types, Maven excutor handle second part after `/` like task name, so `maven/test` will run `mvn test` and so on. 
+As we can see, there are several types. The Maven executor handles the second part after `/` as a task name, so `maven/test` will run `mvn test` and so on. 
 
 One exception from this rule is `project` which is generic one and force you to pass additional argument during test execution e.g.:
 
