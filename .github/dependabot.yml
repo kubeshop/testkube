@@ -11,7 +11,7 @@ updates:
     allow:
       - dependency-type: "all"
     commit-message:
-      prefix: "dep: "
+      prefix: "build: "
     reviewers:
       - "exu"
     
