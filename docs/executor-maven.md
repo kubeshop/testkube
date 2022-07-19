@@ -44,7 +44,7 @@ spec:
 
 As we can see, there are several types. The Maven executor handles the second part after `/` as a task name, so `maven/test` will run `mvn test` and so on. 
 
-One exception from this rule is `project` which is generic one and force you to pass additional argument during test execution e.g.:
+One exception from this rule is `project` which is a generic one and forces you to pass additional arguments during test execution. For example:
 
 ```sh
 kubectl testkube run maven-example-project --args='runMyCustomTask' 
