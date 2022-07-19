@@ -8,7 +8,7 @@ require (
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fluxcd/pkg/runtime v0.16.2
 	github.com/gofiber/adaptor/v2 v2.1.22
-	github.com/gofiber/fiber/v2 v2.31.0
+	github.com/gofiber/fiber/v2 v2.35.0
 	github.com/gookit/color v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.3.14
@@ -21,7 +21,7 @@ require (
 	github.com/slack-go/slack v0.10.2
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
-	github.com/valyala/fasthttp v1.34.0
+	github.com/valyala/fasthttp v1.38.0
 	go.mongodb.org/mongo-driver v1.7.4
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v2 v2.4.0
