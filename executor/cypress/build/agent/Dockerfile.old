@@ -1,0 +1,19 @@
+FROM golang:1.18
+RUN apt update && apt install -y curl
+RUN apt-get install -y libgtk2.0-0 \
+    libgtk-3-0 \
+    libgbm-dev \
+    libnotify-dev \
+    libgconf-2-4 \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libxtst6 \
+    xauth \
+    xvfb \
+    nodejs \
+    npm
+RUN npm install cypress -g
+WORKDIR /
+ADD . /
+RUN go build -o /usr/local/bin/agent cmd/agent/main.go 

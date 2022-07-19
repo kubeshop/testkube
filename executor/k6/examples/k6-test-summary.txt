@@ -1,0 +1,40 @@
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: examples/k6-test-summary.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+           * default: 1 iterations for each of 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+
+running (00m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m01.0s/10m0s  0/1 iters, 1 per VU
+
+running (00m01.0s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  00m01.0s/10m0s  1/1 iters, 1 per VU
+     ✓ status is 200
+
+     checks.........................: 100.00% ✓ 1        ✗ 0  
+     data_received..................: 27 kB   26 kB/s
+     data_sent......................: 653 B   630 B/s
+     http_req_blocked...............: avg=21.59ms min=21.59ms med=21.59ms max=21.59ms p(90)=21.59ms p(95)=21.59ms
+     http_req_connecting............: avg=8.6ms   min=8.6ms   med=8.6ms   max=8.6ms   p(90)=8.6ms   p(95)=8.6ms  
+     http_req_duration..............: avg=12.14ms min=12.14ms med=12.14ms max=12.14ms p(90)=12.14ms p(95)=12.14ms
+       { expected_response:true }...: avg=12.14ms min=12.14ms med=12.14ms max=12.14ms p(90)=12.14ms p(95)=12.14ms
+     ✓ { kind:html }................: avg=12.14ms min=12.14ms med=12.14ms max=12.14ms p(90)=12.14ms p(95)=12.14ms
+     http_req_failed................: 0.00%   ✓ 0        ✗ 1  
+     http_req_receiving.............: avg=1.2ms   min=1.2ms   med=1.2ms   max=1.2ms   p(90)=1.2ms   p(95)=1.2ms  
+     http_req_sending...............: avg=1.33ms  min=1.33ms  med=1.33ms  max=1.33ms  p(90)=1.33ms  p(95)=1.33ms 
+     http_req_tls_handshaking.......: avg=10.06ms min=10.06ms med=10.06ms max=10.06ms p(90)=10.06ms p(95)=10.06ms
+     http_req_waiting...............: avg=9.61ms  min=9.61ms  med=9.61ms  max=9.61ms  p(90)=9.61ms  p(95)=9.61ms 
+     http_reqs......................: 1       0.964342/s
+     iteration_duration.............: avg=1.03s   min=1.03s   med=1.03s   max=1.03s   p(90)=1.03s   p(95)=1.03s  
+     iterations.....................: 1       0.964342/s
+     vus............................: 1       min=1      max=1
+     vus_max........................: 1       min=1      max=1

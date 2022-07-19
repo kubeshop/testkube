@@ -1,0 +1,94 @@
+name: Docker Images for Gradle executor
+on:
+  push:
+    tags:
+      - "test-gradle-executor-[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-gradle-executor"
+      - "[0-9]+.[0-9]+.[0-9]+-gradle-executor-*"
+    # paths:
+    #   - "executor/gradle/*"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker meta for Gradle executor JDK11
+        id: meta_gradle_executor_jdk11
+        uses: docker/metadata-action@v3
+        with:
+          # TODO remove -dev after tests
+          images: kubeshop/testkube-gradle-executor-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}-jdk11
+            type=semver,pattern={{major}}.{{minor}}-jdk11
+            type=sha
+
+      # TODO need to make it parallel
+      # TODO NTH define list of `docker buildx bake` targets only e.g. jdk11,jdk17,jdk18
+      - name: Build JDK11 Gradle executor
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            executor/gradle/build/agent/docker-bake.hcl
+            ${{ steps.meta_gradle_executor_jdk11.outputs.bake-file }}
+          targets: jdk11
+          push: true
+
+      - name: Docker meta for Gradle executor JDK17
+        id: meta_gradle_executor_jdk17
+        uses: docker/metadata-action@v3
+        with:
+          # TODO remove -dev after tests
+          images: kubeshop/testkube-gradle-executor-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}-jdk17
+            type=semver,pattern={{major}}.{{minor}}-jdk17
+            type=sha
+      - name: Build JDK17 Gradle executor
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            executor/gradle/build/agent/docker-bake.hcl
+            ${{ steps.meta_gradle_executor_jdk17.outputs.bake-file }}
+          targets: jdk11
+          push: true
+
+      - name: Docker meta for Gradle executor JDK18
+        id: meta_gradle_executor_jdk18
+        uses: docker/metadata-action@v3
+        with:
+          # TODO remove -dev after tests
+          images: kubeshop/testkube-gradle-executor-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}-jdk18
+            type=semver,pattern={{major}}.{{minor}}-jdk18
+            type=sha
+      - name: Build JDK18 Gradle executor
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            executor/gradle/build/agent/docker-bake.hcl
+            ${{ steps.meta_gradle_executor_jdk18.outputs.bake-file }}
+          targets: jdk11
+          push: true

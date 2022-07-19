@@ -1,8 +1,9 @@
 {
 	"info": {
-		"_postman_id": "6f491079-bd25-48b9-8986-977d08c29249",
+		"_postman_id": "1dfe5241-e7f1-4219-a232-51927edee1c4",
 		"name": "Testkube-API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3706349"
 	},
 	"item": [
 		{
@@ -272,7 +273,7 @@
 							"        return;",
 							"    } ",
 							"",
-							"    pm.expect(jsonData.executionResult.status).to.eql(\"passed\");",
+							"    pm.expect(jsonData.executionResult.status).to.eql(\"cpassed\");",
 							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
 							"    pm.expect(jsonData.executionResult[\"output\"]).contains(\"Health\");",
 							"    pm.expect(jsonData.executionResult[\"output\"]).contains(\"200 OK\");",
