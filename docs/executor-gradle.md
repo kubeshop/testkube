@@ -65,7 +65,7 @@ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-exec
 Let's pass the env variable to our test run:
 
 ```sh
- run test gradle-example-test -f -v TESTKUBE_GRADLE=true
+ kubectl testkube run test gradle-example-test -f -v TESTKUBE_GRADLE=true
 
 # ...... after some time
 
