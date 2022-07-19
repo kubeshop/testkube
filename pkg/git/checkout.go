@@ -9,60 +9,62 @@ import (
 	"github.com/kubeshop/testkube/pkg/process"
 )
 
-func CheckoutCommit(uri, path, commit, dir string) error {
-	_, err := process.ExecuteInDir(
-		dir,
-		"git",
-		"init",
-	)
-	if err != nil {
+// CheckoutCommit checks out specific commit
+func CheckoutCommit(uri, path, commit, dir string) (err error) {
+	repoDir := dir + "/repo"
+	if err = os.Mkdir(repoDir, 0750); err != nil {
 		return err
 	}
 
-	_, err = process.ExecuteInDir(
-		dir,
+	if _, err = process.ExecuteInDir(
+		repoDir,
+		"git",
+		"init",
+	); err != nil {
+		return err
+	}
+
+	if _, err = process.ExecuteInDir(
+		repoDir,
 		"git",
 		"remote",
 		"add",
 		"origin",
 		uri,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
-	_, err = process.ExecuteInDir(
-		dir,
+	if _, err = process.ExecuteInDir(
+		repoDir,
 		"git",
+		"fetch",
 		"--depth",
 		"1",
 		"origin",
 		commit,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
 	if path != "" {
-		_, err = process.ExecuteInDir(
-			dir,
+		if _, err = process.ExecuteInDir(
+			repoDir,
 			"git",
 			"sparse-checkout",
 			"set",
 			path,
-		)
-		if err != nil {
+		); err != nil {
 			return err
 		}
 	}
 
-	_, err = process.ExecuteInDir(
-		dir,
+	if _, err = process.ExecuteInDir(
+		repoDir,
 		"git",
 		"checkout",
 		"FETCH_HEAD",
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -95,7 +97,9 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 			return "", err
 		}
 	} else {
-
+		if err = CheckoutCommit(uri, "", commit, tmpDir); err != nil {
+			return "", err
+		}
 	}
 
 	return tmpDir + "/repo/", nil
@@ -138,7 +142,9 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 			return "", err
 		}
 	} else {
-
+		if err = CheckoutCommit(uri, path, commit, tmpDir); err != nil {
+			return "", err
+		}
 	}
 
 	return tmpDir + "/repo/" + path, nil
