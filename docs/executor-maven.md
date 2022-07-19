@@ -1,6 +1,6 @@
 # Maven based tests
 
-Testkube allow us to run Maven based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
+Testkube allows us to run Maven-based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
 
 
 ## **Test Environment**
