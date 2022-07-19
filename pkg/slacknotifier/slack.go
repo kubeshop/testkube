@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // can be generated here https://app.slack.com/block-kit-builder
@@ -170,7 +171,10 @@ var slackClient *slack.Client
 
 func init() {
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
+		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackClient = slack.New(token, slack.OptionDebug(true))
+	} else {
+		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
 }
 
@@ -179,8 +183,11 @@ func SendMessage(channelID string, message string) error {
 	if slackClient != nil {
 		_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionText(message, false))
 		if err != nil {
+			log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
 			return err
 		}
+	} else {
+		log.DefaultLogger.Warnw("slack client is not initialised")
 	}
 	return nil
 }
@@ -190,11 +197,12 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 
 	t, err := template.New("message").Parse(messageTemplate)
 	if err != nil {
+		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
 		return err
 	}
 
 	args := messageArgs{
-		ExecutionID: execution.Id,
+		ExecutionID: execution.Name,
 		EventType:   string(*eventType),
 		Namespace:   execution.TestNamespace,
 		TestName:    execution.TestName,
@@ -211,18 +219,21 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	var message bytes.Buffer
 	err = t.Execute(&message, args)
 	if err != nil {
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error())
 		return err
 	}
 
 	view := slack.Message{}
 	err = json.Unmarshal(message.Bytes(), &view)
 	if err != nil {
+		log.DefaultLogger.Warnw("error while creating slack specific message", "error", err.Error())
 		return err
 	}
 
 	if slackClient != nil {
 		channels, _, err := slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
 		if err != nil {
+			log.DefaultLogger.Warnw("error while getting bot channels", "error", err.Error())
 			return err
 		}
 
@@ -231,9 +242,14 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 
 			_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
 			if err != nil {
+				log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
 				return err
 			}
+		} else {
+			log.DefaultLogger.Warnw("Testkube bot is not added to any channel")
 		}
+	} else {
+		log.DefaultLogger.Warnw("slack client is not initialised")
 	}
 
 	return nil

@@ -7,7 +7,7 @@ Lists or gets test executions
 Getting list of execution for given test name or recent executions if there is no test name passed
 
 ```
-kubectl-testkube get execution [executionID] [flags]
+kubectl-testkube get execution [executionID][executionName] [flags]
 ```
 
 ### Options
