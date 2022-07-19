@@ -70,7 +70,7 @@ kubectl testkube run test maven-example-test -f -v TESTKUBE_MAVEN=true
 
 Test execution completed with success in 16.555s 🥇
 
-Watch test execution until complete:
+Watch the test execution until complete:
 $ kubectl testkube watch execution 62d148db0260f256c1a1e993
 
 
