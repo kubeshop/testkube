@@ -135,7 +135,7 @@ kubectl apply -f gradle-jdk18-executor.yaml
 Now, create the new test with the type that our new executor can handle e.g.: `gradle:jdk18/test`:
 
 ```sh 
- # create test
+ # create test:
  kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-gradle.git --git-path examples/hello-gradle-jdk18 --type gradle:jdk18/test --name gradle-jdk18-example-test --git-branch main
 
 # and run it:
