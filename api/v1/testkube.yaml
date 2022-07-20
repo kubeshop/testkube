@@ -1802,7 +1802,7 @@ components:
             description: test execution results
         labels:
           type: object
-          description: "test suite execution labels"
+          description: "test suite labels"
           additionalProperties:
             type: string
           example:
@@ -1887,7 +1887,7 @@ components:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
         labels:
           type: object
-          description: "test suite labels"
+          description: "test suite and execution labels"
           additionalProperties:
             type: string
           example:
@@ -1990,6 +1990,9 @@ components:
         name:
           type: string
           description: "execution name"
+        number:
+          type: int
+          description: "execution number"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -2034,7 +2037,7 @@ components:
           $ref: "#/components/schemas/ExecutionResult"
         labels:
           type: object
-          description: "test/testsuite labels"
+          description: "test and execution labels"
           additionalProperties:
             type: string
           example:
@@ -2085,6 +2088,9 @@ components:
         name:
           type: string
           description: execution name
+        number:
+          type: int
+          description: execution number
         testName:
           type: string
           description: name of the test
@@ -2109,7 +2115,7 @@ components:
           description: calculated test duration
         labels:
           type: object
-          description: "execution labels"
+          description: "test and execution labels"
           additionalProperties:
             type: string
           example:
@@ -2237,6 +2243,8 @@ components:
       required:
         - type
         - uri
+        - branch
+        - commit
       properties:
         type:
           type: string
@@ -2251,7 +2259,7 @@ components:
           description: branch/tag name for checkout
         commit:
           type: string
-          description: commit id (sha) for checkout
+          description: Commit id (sha) for checkout
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
@@ -2273,6 +2281,17 @@ components:
         testSuiteName:
           type: string
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
+        number:
+          type: int
+          description: test execution number
+        executionLabels:
+          type: object
+          description: "test execution labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
@@ -2343,6 +2362,14 @@ components:
           type: string
           description: secret uuid
         labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+        executionLabels:
           type: object
           description: "execution labels"
           additionalProperties:

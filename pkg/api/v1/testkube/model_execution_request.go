@@ -18,7 +18,7 @@ type ExecutionRequest struct {
 	// test execution number
 	Number int `json:"number,omitempty"`
 	// test execution labels
-	ExecutionLabels map[string]string
+	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string `json:"namespace,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
