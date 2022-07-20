@@ -224,6 +224,7 @@ jobs:
       - name: Commit and push changes
         working-directory: ./choco
         run: |
+          Get-ChildItem .\tools
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
