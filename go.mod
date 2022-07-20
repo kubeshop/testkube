@@ -20,7 +20,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/slack-go/slack v0.10.2
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	github.com/valyala/fasthttp v1.38.0
 	go.mongodb.org/mongo-driver v1.7.4
 	go.uber.org/zap v1.21.0
