@@ -221,6 +221,7 @@ jobs:
         run: ./update.ps1 ${{steps.tag.outputs.tag}}
 
       - name: Commit and push changes
+        working-directory: ./choco
         run: |
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
