@@ -6,26 +6,6 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  # release_creation:
-  #   name: Prepares Release on GitHub
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     id: ${{ steps.main_step.outputs.id }}
-  #   steps:
-  #     - name: Create Release
-  #       id: main_step
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ github.ref }}
-  #         release_name: testkube CLI ${{ github.ref }}
-  #         body: |
-  #           Changes in this Release
-  #           - Releasing new version of the testkube CLI for Kubectl.
-  #         draft: false
-  #         prerelease: false
-
   pre_build:
     name: Pre-build
     runs-on: ubuntu-latest
@@ -193,6 +173,12 @@ jobs:
           $hash=Get-FileHash testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+          echo "::set-output name=CHECKSUM::${hash.Hash}"
+
+          Copy-Item -Path "$env:MSI_NAME.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+
+          Get-ChildItem
+          Get-Location
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
 
@@ -215,6 +201,28 @@ jobs:
           asset_path: msi_checksum.txt
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}_checksum.txt
           asset_content_type: text/plain
+
+      - name: Update checksum in chocolateyInstall.ps1 file
+        working-directory: ./choco
+        run: |
+          $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
+          $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
+
+          Write-Output $update_version
+
+      - name: Bump versions and push package to chocolatey repo
+        working-directory: ./choco
+        run: ./update.ps1 ${{steps.tag.outputs.tag}}
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
+          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
+          git push
+
 
   build-and-publish-linux-installer:
     needs: release
