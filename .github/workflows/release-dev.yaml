@@ -175,7 +175,7 @@ jobs:
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
           echo "::set-output name=CHECKSUM::${hash.Hash}"
 
-          Copy-Item -Path "$env:MSI_NAME.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+          Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
 
           Get-ChildItem
           Get-Location
