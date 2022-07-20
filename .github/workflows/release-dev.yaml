@@ -210,6 +210,7 @@ jobs:
       - name: Update checksum in chocolateyInstall.ps1 file
         working-directory: ./choco
         run: |
+          Get-ChildItem .\tools
           $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
           $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
           Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
@@ -228,7 +229,6 @@ jobs:
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
           git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
           git push origin HEAD:add_choco-package
-
 
   build-and-publish-linux-installer:
     needs: release
