@@ -249,9 +249,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-	if err != nil {
-		s.Log.Errorw("Notify events error", "error", err)
+
+	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Errorw("Notify events error", "error", err)
+		}
 	}
 
 	return execution, nil

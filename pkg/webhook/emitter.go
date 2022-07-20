@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
-	"go.uber.org/zap"
 )
 
 const eventsBuffer = 10000
