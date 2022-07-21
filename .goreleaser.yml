@@ -43,8 +43,8 @@ brews:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
-    post_install: |
-      bin.install_symlink "tk"
+#    post_install: |
+#      bin.install_symlink "tk"
 
 nfpms:
   - maintainer: Testkube team
@@ -52,7 +52,7 @@ nfpms:
     formats:
       - deb
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
-    contents:
-      - src: kubectl-testkube
-        dst: tk
-        type: "symlink"
+#    contents:
+#      - src: kubectl-testkube
+#        dst: tk
+#        type: "symlink"
