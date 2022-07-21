@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
-	"go.uber.org/zap"
 )
 
 const eventsBuffer = 10000
@@ -49,13 +50,13 @@ type WebhookHttpResponse struct {
 
 // Notify notifies emitter with webhook
 func (s *Emitter) Notify(event testkube.WebhookEvent) {
-	s.Log.Debugw("notifying webhook", "event", event)
+	s.Log.Infow("notifying webhook", "event", event)
 	s.Events <- event
 }
 
 // RunWorkers runs emitter workers responsible for sending HTTP requests
 func (s *Emitter) RunWorkers() {
-	s.Log.Debugw("Starting workers", "count", workersCount)
+	s.Log.Infow("Starting workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
 		go s.Listen(s.Events)
 	}
@@ -64,9 +65,8 @@ func (s *Emitter) RunWorkers() {
 // Listen listens for webhook events
 func (s *Emitter) Listen(events chan testkube.WebhookEvent) {
 	for event := range events {
+		s.Log.Infow("processing event", "event", event)
 		s.sendHttpEvent(event)
-		// TODO webhooks should be designed as events with type webhook/slack
-		s.sendSlackEvent(event.Type_, *event.Execution)
 	}
 }
 
@@ -126,6 +126,10 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 			Execution: &execution,
 		})
 	}
+
+	// TODO webhooks should be designed as events with type webhook/slack
+	// TODO move it to Listen when the type webhook/slack is ready
+	s.sendSlackEvent(eventType, execution)
 
 	return nil
 

@@ -249,9 +249,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-	if err != nil {
-		s.Log.Errorw("Notify events error", "error", err)
+
+	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Errorw("Notify events error", "error", err)
+		}
 	}
 
 	return execution, nil
@@ -368,7 +371,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-// GetExecutionHandler returns test execution object for given test and execution id
+// GetExecutionHandler returns test execution object for given test and execution id/name
 func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -381,7 +384,10 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
+				if err == mongo.ErrNoDocuments {
+					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+				}
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)

@@ -73,7 +73,13 @@ Main Testkube components are:
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
   - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests
+  - [SoapUI](https://kubeshop.github.io/testkube/executor-soapui/) - runs SoapUI tests
+  - [Kubepug](https://kubeshop.github.io/testkube/executor-kubepug/) - runs Kubepug tests
+  - [Artillery.io](https://kubeshop.github.io/testkube/executor-artillery/) - runs Artillery tests
   - [Curl Executor](https://github.com/kubeshop/testkube-executor-curl) - runs simple Curl commands
+  - [Maven](https://kubeshop.github.io/testkube/executor-maven/) - Runs tests written in Java using Maven
+  - [Gradle](https://kubeshop.github.io/testkube/executor-gradle/) - Runs tests written in Java using Gradle
+  
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
 - [Testkube Dashboard](https://github.com/kubeshop/testkube-dashboard) - standalone web application for viewing real-time Testkube test results

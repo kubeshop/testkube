@@ -11,7 +11,7 @@ builds:
     goamd64:
       - v1
     prebuilt:
-      path: '{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}'
+      path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
 archives:
   - replacements:
@@ -43,9 +43,16 @@ brews:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
+    post_install: |
+      bin.install_symlink "tk"
+
 nfpms:
   - maintainer: Testkube team
     license: "MIT"
     formats:
       - deb
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+    contents:
+      - src: kubectl-testkube
+        dst: tk
+        type: "symlink"
