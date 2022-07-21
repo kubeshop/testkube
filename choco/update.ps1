@@ -27,4 +27,4 @@ Set-Content -Path $file -Value $update_version
 choco pack
 
 #push package
-# choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
+choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
