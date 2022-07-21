@@ -512,6 +512,8 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	// Test variables lowest priority, then test suite, then test suite execution / test execution
 	request.Variables = mergeVariables(test.Variables, request.Variables)
+	// Combine test executor args with execution args
+	request.Args = append(request.Args, test.ExecutorArgs...)
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
