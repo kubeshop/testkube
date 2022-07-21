@@ -261,5 +261,6 @@ func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
 
 		executorArgs = append(executorArgs, records[0]...)
 	}
+
 	return executorArgs, nil
 }
