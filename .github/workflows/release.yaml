@@ -162,7 +162,6 @@ jobs:
         run: |
           Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
-          Copy-Item 'build\installer\windows\tk.bat' '.\tk.bat'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
           & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
