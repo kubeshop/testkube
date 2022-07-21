@@ -197,8 +197,6 @@ jobs:
 
           #copy MSI to choco directory to build a nuget package
           Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
-
-          Get-ChildItem .\choco\tools
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
 
@@ -229,8 +227,6 @@ jobs:
           $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
           $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
           Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
-
-          Write-Output $update_version
 
       - name: Bump versions and push package to chocolatey repo
         working-directory: ./choco
