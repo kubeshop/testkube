@@ -223,7 +223,6 @@ jobs:
       - name: Update checksum in chocolateyInstall.ps1 file
         working-directory: ./choco
         run: |
-          Get-ChildItem .\tools
           $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
           $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
           Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
@@ -235,7 +234,6 @@ jobs:
       - name: Commit and push changes
         working-directory: ./choco
         run: |
-          Get-ChildItem .\tools
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
