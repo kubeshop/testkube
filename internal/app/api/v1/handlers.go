@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/oauth"
 )
 
@@ -88,11 +90,29 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 // DebugHandler is a handler to get debug information
 func (s TestkubeAPI) DebugHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		clusterVersion, err := getClusterVersion()
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
 		return c.JSON(testkube.DebugInfo{
-			ClusterVersion: "",
+			ClusterVersion: clusterVersion,
 			ApiLogs:        []string{},
 			OperatorLogs:   []string{},
 			ExecutionLogs:  []string{},
 		})
 	}
+}
+
+// getClusterVersion gets the version of the Kubernetes cluster
+func getClusterVersion() (string, error) {
+	clientSet, err := k8sclient.ConnectToK8s()
+	if err != nil {
+		return "", fmt.Errorf("could not connect to cluster: %w", err)
+	}
+	clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
+	if err != nil {
+		return "", fmt.Errorf("could not get cluster version: %w", err)
+	}
+	return clusterVersion, nil
 }
