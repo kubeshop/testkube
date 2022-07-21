@@ -182,3 +182,13 @@ func WaitForPodsReady(k8sClient *kubernetes.Clientset, namespace string, instanc
 	}
 	return nil
 }
+
+// GetClusterVersion returns the current version of the Kubernetes cluster
+func GetClusterVersion(k8sClient *kubernetes.Clientset) (string, error) {
+	version, err := k8sClient.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return "", err
+	}
+
+	return version.String(), nil
+}
