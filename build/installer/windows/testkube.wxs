@@ -25,7 +25,7 @@
 			<Component Id="ProductComponent" Guid="932900c1-a727-40c0-a5b6-95c8024b2d3d">
 				<!-- TODO: Insert files, registry keys, and other resources here. -->
 				<File Id='TeskubeEXE' Name='kubectl-testkube.exe' DiskId='1' Source='kubectl-testkube.exe' KeyPath='yes' Vital='yes'/>
-				<File Id='TeskubeALIAS' Name='tk.bat' DiskId='1' Source='tk.bat' KeyPath='yes' Vital='yes'/>
+				<File Id='TeskubeALIAS' Name='tk.bat' DiskId='1' Source='tk.bat' Vital='yes'/>
 			</Component>
 		</ComponentGroup>
 	</Fragment>
