@@ -53,6 +53,6 @@ nfpms:
       - deb
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     contents:
-      - src: kubectl-testkube
-        dst: tk
+      - src: /usr/bin/kubectl-testkube
+        dst: /usr/bin/tk
         type: "symlink"
