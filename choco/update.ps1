@@ -7,9 +7,7 @@ $files_to_update = "$folder\VERIFICATION.txt", "$folder\chocolateyInstall.ps1"
 
 foreach ($file in $files_to_update) {
     $script_path = "$PSScriptRoot\$file"
-    $content    = Get-Content $script_path -Raw  
-
-    write-host $version 
+    $content    = Get-Content $script_path -Raw
 
     Write-Host "Updating $file file with version: $version"
     $update_version = $content -replace "\d+\.\d+\.\d+", "$version"
@@ -29,4 +27,4 @@ choco pack
 
 #push package
 choco apikey --key $api_key --source https://push.chocolatey.org/
-#choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
+choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
