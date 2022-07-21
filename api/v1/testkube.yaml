@@ -2252,8 +2252,6 @@ components:
       required:
         - type
         - uri
-        - branch
-        - commit
       properties:
         type:
           type: string
