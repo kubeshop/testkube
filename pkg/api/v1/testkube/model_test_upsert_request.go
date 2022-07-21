@@ -28,4 +28,6 @@ type TestUpsertRequest struct {
 	// schedule to run test
 	Schedule  string              `json:"schedule,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	// additional executor binary arguments
+	ExecutorArgs []string `json:"executorArgs,omitempty"`
 }

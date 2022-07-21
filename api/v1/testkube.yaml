@@ -1946,6 +1946,15 @@ components:
           description: schedule to run test
         variables:
           $ref: "#/components/schemas/Variables"
+        executorArgs:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+            - "--repeats"
+            - "5"
+            - "--insecure"
 
     TestContent:
       type: object
@@ -2259,7 +2268,7 @@ components:
           description: branch/tag name for checkout
         commit:
           type: string
-          description: Commit id (sha) for checkout
+          description: commit id (sha) for checkout
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
