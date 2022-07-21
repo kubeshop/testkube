@@ -189,6 +189,15 @@ jobs:
           $hash=Get-FileHash testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+
+          #export MSI hash to environment
+          $hashsum = $hash.Hash
+          echo "::set-output name=CHECKSUM::${hashsum}"
+
+          #copy MSI to choco directory to build a nuget package
+          Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+
+          Get-ChildItem .\choco\tools
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
 
@@ -211,6 +220,30 @@ jobs:
           asset_path: msi_checksum.txt
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}_checksum.txt
           asset_content_type: text/plain
+
+      - name: Update checksum in chocolateyInstall.ps1 file
+        working-directory: ./choco
+        run: |
+          Get-ChildItem .\tools
+          $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
+          $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
+
+          Write-Output $update_version
+
+      - name: Bump versions and push package to chocolatey repo
+        working-directory: ./choco
+        run: ./update.ps1 ${{steps.tag.outputs.tag}}
+
+      - name: Commit and push changes
+        working-directory: ./choco
+        run: |
+          Get-ChildItem .\tools
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
+          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
+          git push origin HEAD:add_choco-package
 
   build-and-publish-linux-installer:
     needs: release

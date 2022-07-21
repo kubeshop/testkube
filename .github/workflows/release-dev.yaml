@@ -172,20 +172,18 @@ jobs:
           $installer_name = $env:MSI_NAME
           $hash=Get-FileHash testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
-          $hashsum = $hash.Hash
-
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+
+          #export MSI hash to an env variable
+          $hashsum = $hash.Hash
           echo "::set-output name=CHECKSUM::${hashsum}"
 
+          #copy MSI to choco directory to build a nuget package
           Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
 
           Get-ChildItem .\choco\tools
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
-
-      - name: Echo
-        run: |
-          echo ${{ steps.checksum.outputs.CHECKSUM }}
 
       - name: Upload release binary
         uses: actions/upload-release-asset@v1.0.2
