@@ -38,3 +38,7 @@ spec:
       key: {{ $value.SecretRef.Key }}
     {{- end }}
   {{- end }}
+  executorArgs:
+  {{- range .ExecutorArgs }}
+    - {{ . }}
+  {{- end }}

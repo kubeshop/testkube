@@ -26,6 +26,7 @@ func MapTestCRToAPI(crTest testsv2.Test) (test testkube.Test) {
 	test.Labels = crTest.Labels
 	test.Variables = MergeVariablesAndParams(crTest.Spec.Variables, crTest.Spec.Params)
 	test.Schedule = crTest.Spec.Schedule
+	test.ExecutorArgs = crTest.Spec.ExecutorArgs
 	return
 }
 

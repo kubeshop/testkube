@@ -51,6 +51,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 	}
 
+	if len(test.ExecutorArgs) > 0 {
+		ui.Warn("Executor Args:", test.ExecutorArgs...)
+	}
+
 	return nil
 
 }

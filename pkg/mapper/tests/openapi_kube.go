@@ -16,10 +16,11 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv2.Test {
 			Labels:    request.Labels,
 		},
 		Spec: testsv2.TestSpec{
-			Type_:     request.Type_,
-			Content:   MapContentToSpecContent(request.Content),
-			Schedule:  request.Schedule,
-			Variables: MapCRDVariables(request.Variables),
+			Type_:        request.Type_,
+			Content:      MapContentToSpecContent(request.Content),
+			Schedule:     request.Schedule,
+			Variables:    MapCRDVariables(request.Variables),
+			ExecutorArgs: request.ExecutorArgs,
 		},
 	}
 

@@ -33,6 +33,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		variables       map[string]string
 		secretVariables map[string]string
 		schedule        string
+		executorArgs    []string
 	)
 
 	cmd := &cobra.Command{
@@ -114,6 +115,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
 	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 
 	return cmd
 }

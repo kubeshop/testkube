@@ -1,10 +1,13 @@
 package tests
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -195,13 +198,24 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	schedule := cmd.Flag("schedule").Value.String()
+	binrayArgs, err := cmd.Flags().GetStringArray("executor-args")
+	if err != nil {
+		return options, err
+	}
+
+	executorArgs, err := prepareExecutorArgs(binrayArgs)
+	if err != nil {
+		return options, err
+	}
+
 	options = apiclientv1.UpsertTestOptions{
-		Name:      name,
-		Type_:     executorType,
-		Content:   content,
-		Namespace: namespace,
-		Schedule:  schedule,
-		Variables: variables,
+		Name:         name,
+		Type_:        executorType,
+		Content:      content,
+		Namespace:    namespace,
+		Schedule:     schedule,
+		Variables:    variables,
+		ExecutorArgs: executorArgs,
 	}
 
 	// if labels are passed and are different from the existing overwrite
@@ -226,4 +240,27 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	return options, nil
 
+}
+
+func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
+	executorArgs := make([]string, 0)
+	for _, arg := range binaryArgs {
+		r := csv.NewReader(strings.NewReader(arg))
+		r.Comma = ' '
+		r.LazyQuotes = true
+		r.TrimLeadingSpace = true
+
+		records, err := r.ReadAll()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(records) != 1 {
+			return nil, errors.New("single string expected")
+		}
+
+		executorArgs = append(executorArgs, records[0]...)
+	}
+
+	return executorArgs, nil
 }

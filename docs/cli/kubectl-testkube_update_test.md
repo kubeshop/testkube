@@ -13,6 +13,7 @@ kubectl-testkube update test [flags]
 ### Options
 
 ```
+      --executor-args stringArray        executor binary additional arguments
   -f, --file string                      test file - will try to read content from stdin if not specified
       --git-branch string                if uri is git repository we can set additional branch parameter
       --git-commit string                if uri is git repository we can use commit id (sha) parameter

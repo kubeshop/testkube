@@ -11,6 +11,10 @@ to enable it.  You can execute the following once:
 
 	echo "autoload -U compinit; compinit" >> ~/.zshrc
 
+To load completions in your current shell session:
+
+	source <(kubectl-testkube completion zsh); compdef _kubectl-testkube kubectl-testkube
+
 To load completions for every new session, execute once:
 
 #### Linux:
@@ -19,7 +23,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	kubectl-testkube completion zsh > /usr/local/share/zsh/site-functions/_kubectl-testkube
+	kubectl-testkube completion zsh > $(brew --prefix)/share/zsh/site-functions/_kubectl-testkube
 
 You will need to start a new shell for this setup to take effect.
 
