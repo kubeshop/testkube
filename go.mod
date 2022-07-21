@@ -7,27 +7,27 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fluxcd/pkg/runtime v0.16.2
-	github.com/gofiber/adaptor/v2 v2.1.22
-	github.com/gofiber/fiber/v2 v2.31.0
-	github.com/gookit/color v1.5.0
+	github.com/gofiber/adaptor/v2 v2.1.24
+	github.com/gofiber/fiber/v2 v2.35.0
+	github.com/gookit/color v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.2.0
-	github.com/minio/minio-go/v7 v7.0.14
+	github.com/kubeshop/testkube-operator v1.3.16
+	github.com/minio/minio-go/v7 v7.0.31
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
 	github.com/prometheus/client_golang v1.12.2
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
-	github.com/slack-go/slack v0.10.2
-	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
-	github.com/valyala/fasthttp v1.34.0
+	github.com/slack-go/slack v0.11.0
+	github.com/spf13/cobra v1.5.0
+	github.com/stretchr/testify v1.8.0
+	github.com/valyala/fasthttp v1.38.0
 	go.mongodb.org/mongo-driver v1.7.4
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.24.1
-	k8s.io/apimachinery v0.24.1
-	k8s.io/client-go v0.24.1
+	k8s.io/api v0.24.3
+	k8s.io/apimachinery v0.24.3
+	k8s.io/client-go v0.24.3
 )
 
 require (
@@ -60,7 +60,7 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
@@ -84,7 +84,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/minio/md5-simd v1.1.0 // indirect
 	github.com/minio/sha256-simd v0.1.1 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

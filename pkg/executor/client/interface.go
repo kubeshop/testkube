@@ -31,7 +31,7 @@ type Executor interface {
 	ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 
 	// Abort aborts pending execution, do nothing when there is no pending execution
-	Abort(id string) (err error)
+	Abort(id string) (execution *testkube.ExecutionResult)
 
 	Logs(id string) (logs chan output.Output, err error)
 }

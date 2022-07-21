@@ -1,16 +1,19 @@
 package tests
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 const WatchInterval = 2 * time.Second
@@ -30,6 +33,7 @@ func NewRunTestCmd() *cobra.Command {
 		selectors                []string
 		concurrencyLevel         int
 		httpProxy, httpsProxy    string
+		executionLabels          map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -52,12 +56,30 @@ func NewRunTestCmd() *cobra.Command {
 			variables, err := common.CreateVariables(cmd)
 			ui.WarnOnError("getting variables", err)
 
+			executorArgs := make([]string, 0)
+			for _, arg := range binaryArgs {
+				r := csv.NewReader(strings.NewReader(arg))
+				r.Comma = ' '
+				r.LazyQuotes = true
+				r.TrimLeadingSpace = true
+
+				records, err := r.ReadAll()
+				ui.ExitOnError("parsing args", err)
+
+				if len(records) != 1 {
+					ui.ExitOnError("wrong args data", errors.New("single string expected"))
+				}
+
+				executorArgs = append(executorArgs, records[0]...)
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
-				Args:                          binaryArgs,
+				ExecutionLabels:               executionLabels,
+				Args:                          executorArgs,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
@@ -72,7 +94,7 @@ func NewRunTestCmd() *cobra.Command {
 				_, err = client.GetTest(testName)
 				if err != nil {
 					ui.UseStderr()
-					ui.Errf("Can't get test with name '%s'. Test does not exists in namespace '%s'", testName, namespace)
+					ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
 					ui.Debug(err.Error())
 					os.Exit(1)
 				}
@@ -138,6 +160,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 
 	return cmd
 }

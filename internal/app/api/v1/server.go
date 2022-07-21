@@ -66,12 +66,20 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		EventsEmitter:        webhook.NewEmitter(),
+		EventsEmitter:        webhook.NewEmitter(webhookClient),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 	}
 
-	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			s.Log.Warnf("parse bool env %w", err)
+		}
+	}
+
+	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"), readOnlyExecutors)
 	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
 	}
@@ -80,7 +88,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics); err != nil {
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.EventsEmitter); err != nil {
 		panic(err)
 	}
 
@@ -271,9 +279,6 @@ func (s TestkubeAPI) Init() {
 
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
-	if s.TelemetryEnabled {
-		s.startHeartbeat()
-	}
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
@@ -282,7 +287,11 @@ func (s TestkubeAPI) Init() {
 	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.Config.ClusterID, "telemetry", s.TelemetryEnabled)
 }
 
-func (s TestkubeAPI) startHeartbeat() {
+func (s TestkubeAPI) StartTelemetryHeartbeats() {
+	if !s.TelemetryEnabled {
+		return
+	}
+
 	go func() {
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
@@ -363,7 +372,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage string, err error) {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecutors bool) (initImage string, err error) {
 	var executors []testkube.ExecutorDetails
 
 	if data == "" {
@@ -386,6 +395,10 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 
 		if executor.Name == "executor-init" {
 			initImage = executor.Executor.Image
+			continue
+		}
+
+		if readOnlyExecutors {
 			continue
 		}
 

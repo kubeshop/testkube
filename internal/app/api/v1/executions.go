@@ -16,14 +16,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -120,9 +119,11 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf(results[0].ExecutionResult.ErrorMessage))
 			}
 
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -145,8 +146,11 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	// generate random execution name in case there is no one set
 	// like for docker images
 	if request.Name == "" {
-		request.Name = rand.Name()
+		request.Name = test.Name
 	}
+
+	request.Number = s.getNextExecutionNumber(test.Name)
+	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
 	execution, _ = s.ExecutionResults.GetByNameAndTest(ctx, request.Name, test.Name)
@@ -154,6 +158,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Err(fmt.Errorf("test execution with name %s already exists", request.Name)), nil
 	}
 
+	secretUUID, err := s.TestsClient.GetCurrentSecretUUID(test.Name)
+	if err != nil {
+		return execution.Errw("can't get current secret uuid: %w", err), nil
+	}
+
+	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
@@ -181,17 +191,17 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 
-	err = s.notifyEvents(testkube.WebhookTypeStartTest, execution)
+	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeStartTest, execution)
 	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+		s.Log.Errorw("Notify events error", "error", err)
 	}
 
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
@@ -199,9 +209,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+			err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 			if err != nil {
-				s.Log.Infow("Notify events", "error", err)
+				s.Log.Errorw("Notify events error", "error", err)
 			}
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
@@ -223,15 +233,15 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		errNotify := s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		errNotify := s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if errNotify != nil {
 			s.Log.Infow("Notify events", "error", errNotify)
 		}
@@ -239,9 +249,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
-	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+
+	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Errorw("Notify events error", "error", err)
+		}
 	}
 
 	return execution, nil
@@ -279,33 +292,6 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 	}
 
 	return vars, nil
-}
-
-func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
-	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
-	if err != nil {
-		return err
-	}
-
-	for _, wh := range webhookList.Items {
-		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.EventsEmitter.Notify(testkube.WebhookEvent{
-			Uri:       wh.Spec.Uri,
-			Type_:     eventType,
-			Execution: &execution,
-		})
-	}
-
-	s.notifySlack(eventType, execution)
-
-	return nil
-}
-
-func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
-	err := slacknotifier.SendEvent(eventType, execution)
-	if err != nil {
-		s.Log.Warnw("notify slack failed", "error", err)
-	}
 }
 
 // ListExecutionsHandler returns array of available test executions
@@ -385,7 +371,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-// GetExecutionHandler returns test execution object for given test and execution id
+// GetExecutionHandler returns test execution object for given test and execution id/name
 func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -398,7 +384,10 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
+				if err == mongo.ErrNoDocuments {
+					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+				}
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -414,6 +403,34 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		}
 
 		execution.Duration = types.FormatDuration(execution.Duration)
+
+		testSecretMap := make(map[string]string)
+		if execution.TestSecretUUID != "" {
+			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		testSuiteSecretMap := make(map[string]string)
+		if execution.TestSuiteSecretUUID != "" {
+			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range testSuiteSecretMap {
+			testSecretMap[key] = value
+		}
+
+		for key, value := range testSecretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				variable.SecretRef = nil
+				execution.Variables[key] = variable
+			}
+		}
 
 		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
@@ -434,9 +451,8 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		err = s.Executor.Abort(executionID)
-
-		s.Metrics.IncAbortTest(execution.TestType, err)
+		result := s.Executor.Abort(executionID)
+		s.Metrics.IncAbortTest(execution.TestType, result.IsFailed())
 
 		return err
 	}
@@ -564,6 +580,18 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
+	execution, err := s.ExecutionResults.GetLatestByTest(context.Background(), testName, "number")
+	if err == mongo.ErrNoDocuments {
+		return 1
+	}
+	if err != nil {
+		s.Log.Errorw("retrieving latest execution", "error", err)
+		return 1
+	}
+	return execution.Number + 1
+}
+
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
 	variables := map[string]testkube.Variable{}
 	for k, v := range vars1 {
@@ -580,12 +608,16 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
+		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
+		options.Request.Number,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
-		options.Labels,
+		options.Request.TestSecretUUID,
+		options.Request.TestSuiteSecretUUID,
+		common.MergeMaps(options.Labels, options.Request.ExecutionLabels),
 	)
 
 	execution.Args = options.Request.Args
@@ -601,6 +633,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 		result[i] = testkube.ExecutionSummary{
 			Id:        execution.Id,
 			Name:      execution.Name,
+			Number:    execution.Number,
 			TestName:  execution.TestName,
 			TestType:  execution.TestType,
 			Status:    execution.ExecutionResult.Status,

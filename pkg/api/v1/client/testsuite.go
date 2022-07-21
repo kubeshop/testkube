@@ -119,10 +119,11 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Name:       executionName,
-		Variables:  options.ExecutionVariables,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Name:            executionName,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -138,9 +139,10 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Variables:  options.ExecutionVariables,
-		HttpProxy:  options.HTTPProxy,
-		HttpsProxy: options.HTTPSProxy,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
 	}
 
 	body, err := json.Marshal(executionRequest)

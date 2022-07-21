@@ -16,8 +16,12 @@ type TestSuiteExecutionRequest struct {
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string              `json:"namespace,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
-	// execution labels
+	// secret uuid
+	SecretUUID string `json:"secretUUID,omitempty"`
+	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// execution labels
+	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`
 	// http proxy for executor containers

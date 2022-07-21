@@ -553,6 +553,7 @@ paths:
           description: kubernetes namespace
           required: false
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
         - api
@@ -1779,6 +1780,9 @@ components:
             prefix: "some-"
         variables:
           $ref: "#/components/schemas/Variables"
+        secretUUID:
+          type: string
+          description: secret uuid
         startTime:
           type: string
           description: "test start time"
@@ -1798,7 +1802,7 @@ components:
             description: test execution results
         labels:
           type: object
-          description: "test suite execution labels"
+          description: "test suite labels"
           additionalProperties:
             type: string
           example:
@@ -1883,7 +1887,7 @@ components:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
         labels:
           type: object
-          description: "test suite execution labels"
+          description: "test suite and execution labels"
           additionalProperties:
             type: string
           example:
@@ -1974,6 +1978,9 @@ components:
         testName:
           type: string
           description: unique test name (CRD Test name)
+        testSuiteName:
+          type: string
+          description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
         testNamespace:
           type: string
           description: test namespace
@@ -1983,6 +1990,9 @@ components:
         name:
           type: string
           description: "execution name"
+        number:
+          type: int
+          description: "execution number"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -2002,6 +2012,12 @@ components:
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
+        testSecretUUID:
+          type: string
+          description: test secret uuid
+        testSuiteSecretUUID:
+            type: string
+            description: test suite secret uuid, if it's run as a part of test suite
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2021,7 +2037,7 @@ components:
           $ref: "#/components/schemas/ExecutionResult"
         labels:
           type: object
-          description: "execution labels"
+          description: "test and execution labels"
           additionalProperties:
             type: string
           example:
@@ -2072,6 +2088,9 @@ components:
         name:
           type: string
           description: execution name
+        number:
+          type: int
+          description: execution number
         testName:
           type: string
           description: name of the test
@@ -2096,7 +2115,7 @@ components:
           description: calculated test duration
         labels:
           type: object
-          description: "execution labels"
+          description: "test and execution labels"
           additionalProperties:
             type: string
           example:
@@ -2225,6 +2244,7 @@ components:
         - type
         - uri
         - branch
+        - commit
       properties:
         type:
           type: string
@@ -2237,6 +2257,9 @@ components:
         branch:
           type: string
           description: branch/tag name for checkout
+        commit:
+          type: string
+          description: Commit id (sha) for checkout
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
@@ -2255,6 +2278,20 @@ components:
           type: string
           description: test execution custom name
           example: testing with 1000 users
+        testSuiteName:
+          type: string
+          description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
+        number:
+          type: int
+          description: test execution number
+        executionLabels:
+          type: object
+          description: "test execution labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
@@ -2264,6 +2301,12 @@ components:
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
         variables:
           $ref: "#/components/schemas/Variables"
+        testSecretUUID:
+          type: string
+          description: test secret uuid
+        testSuiteSecretUUID:
+            type: string
+            description: test suite secret uuid, if it's run as a part of test suite
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2315,7 +2358,18 @@ components:
           example: testkube
         variables:
           $ref: "#/components/schemas/Variables"
+        secretUUID:
+          type: string
+          description: secret uuid
         labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+        executionLabels:
           type: object
           description: "execution labels"
           additionalProperties:
@@ -2629,6 +2683,12 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    ExecutionSelector:
+      in: query
+      name: executionSelector
+      schema:
+        type: string
+        description: Execution Labels to add to executions
     ConcurrencyLevel:
       in: query
       name: concurrency

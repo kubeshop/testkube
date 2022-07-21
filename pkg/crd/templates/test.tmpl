@@ -17,6 +17,7 @@ spec:
       type: {{ .Content.Repository.Type_ }}
       uri: {{ .Content.Repository.Uri }}
       branch: {{ .Content.Repository.Branch }}
+      commit: {{ .Content.Repository.Commit }}      
       path: {{ .Content.Repository.Path }}
     {{- end }}
     data: {{ .Content.Data }}

@@ -133,10 +133,14 @@ kubectl testkube run test my-test-name
 
 #  ... some test run output ...
 
+```
 Use the following command to get test execution details:
+```sh
 kubectl testkube get execution 611b6da38cd74034e7c9d408
 
+```
 Or watch for completion with
+```sh
 kubectl testkube watch execution 611b6da38cd74034e7c9d408
 
 ```
@@ -149,8 +153,8 @@ tests execution command:
 ```sh
 kubectl testkube get execution 6103a45b7e18c4ea04883866
 
-....
-some execution details
+#....some execution details....
+
 ```
 
 ## **Getting Available Scripts**
@@ -160,6 +164,9 @@ To run a test execution, you'll need to know the test name:
 ```shell
 kubectl testkube get tests
 
+```
+Output:
+```
 +----------------------+--------------------+
 |         NAME         |        TYPE        |
 +----------------------+--------------------+
@@ -176,7 +183,9 @@ kubectl testkube get tests
 
 ```shell
 kubectl testkube get executions TEST_NAME
-
+```
+Output:
+```
 +------------+--------------------+--------------------------+---------------------------+----------+
 |   TEST     |        TYPE        |       EXECUTION ID       |      EXECUTION NAME       | STATUS   |
 +------------+--------------------+--------------------------+---------------------------+----------+
@@ -201,4 +210,4 @@ There plans to support other output formats like junit etc. If there is somethin
 
 ## **Deleting a Test**
 
-The command to delete a test is `kubectl testkube tests delete TEST_NAME`. The `--all` flag can be used to delete all.
+The command to delete a test is `kubectl testkube delete tests TEST_NAME`. The `--all` flag can be used to delete all.

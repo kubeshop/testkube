@@ -30,6 +30,10 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
 	return
 }
+func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.Execution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+	return
+}
 
 func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
@@ -274,15 +278,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.Selector() != "" {
-		items := strings.Split(filter.Selector(), ",")
-		for _, item := range items {
-			elements := strings.Split(item, "=")
-			if len(elements) == 2 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: elements[1]})
-			} else if len(elements) == 1 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: bson.M{"$exists": true}})
-			}
-		}
+		conditions = addSelectorConditions(filter.Selector(), "labels", conditions)
 	}
 
 	if filter.TypeDefined() {
@@ -300,9 +296,28 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	return query, opts
 }
 
+func addSelectorConditions(selector string, tag string, conditions primitive.A) primitive.A {
+	items := strings.Split(selector, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: elements[1]})
+		} else if len(elements) == 1 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: bson.M{"$exists": true}})
+		}
+	}
+	return conditions
+}
+
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	return
+}
+
+// DeleteByTestSuite deletes execution results by test suite
+func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
 
@@ -331,5 +346,33 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}
+
+// DeleteByTestSuites deletes execution results by test suites
+func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
+	if len(testSuiteNames) == 0 {
+		return nil
+	}
+
+	var filter bson.M
+	if len(testSuiteNames) > 1 {
+		conditions := bson.A{}
+		for _, testSuiteName := range testSuiteNames {
+			conditions = append(conditions, bson.M{"testsuitename": testSuiteName})
+		}
+
+		filter = bson.M{"$or": conditions}
+	} else {
+		filter = bson.M{"testSuitename": testSuiteNames[0]}
+	}
+
+	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}
+
+// DeleteForAllTestSuites deletes execution results for all test suites
+func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }

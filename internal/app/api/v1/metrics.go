@@ -139,9 +139,9 @@ func (m Metrics) IncCreateTestSuite(err error) {
 	}).Inc()
 }
 
-func (m Metrics) IncAbortTest(testType string, err error) {
+func (m Metrics) IncAbortTest(testType string, failed bool) {
 	result := "aborted"
-	if err != nil {
+	if failed {
 		result = "error"
 	}
 

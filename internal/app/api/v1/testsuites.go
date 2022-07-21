@@ -23,7 +23,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
-	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -59,7 +58,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(created)
 	}
 }
@@ -215,12 +214,17 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			}
 		}
 
+		// delete executions for test
+		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		// delete executions for test suite
 		if err = s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -262,6 +266,17 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			}
 		}
 
+		// delete all executions for tests
+		if selector == "" {
+			err = s.ExecutionResults.DeleteForAllTestSuites(c.Context())
+		} else {
+			err = s.ExecutionResults.DeleteByTestSuites(c.Context(), testSuiteNames)
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
 		// delete all executions for test suites
 		if selector == "" {
 			err = s.TestExecutionResults.DeleteAll(c.Context())
@@ -273,7 +288,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -551,10 +566,11 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
 			}
 
-			c.Response().SetStatusCode(fiber.StatusCreated)
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }
@@ -611,6 +627,22 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 
 		execution.Duration = types.FormatDuration(execution.Duration)
 
+		secretMap := make(map[string]string)
+		if execution.SecretUUID != "" && execution.TestSuite != nil {
+			secretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuite.Name, execution.SecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range secretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				variable.SecretRef = nil
+				execution.Variables[key] = variable
+			}
+		}
+
 		return c.JSON(execution)
 	}
 }
@@ -618,7 +650,12 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
 	testsuiteExecution testkube.TestSuiteExecution, err error) {
 	s.Log.Debugw("Got test to execute", "test", testSuite)
+	secretUUID, err := s.TestsSuitesClient.GetCurrentSecretUUID(testSuite.Name)
+	if err != nil {
+		return testsuiteExecution, err
+	}
 
+	request.SecretUUID = secretUUID
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
@@ -713,15 +750,18 @@ func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution tes
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:       fmt.Sprintf("%s-%s-%s", testSuiteName, executeTestStep.Name, rand.String(5)),
-			Namespace:  executeTestStep.Namespace,
-			Variables:  testsuiteExecution.Variables,
-			Sync:       true,
-			HttpProxy:  request.HttpProxy,
-			HttpsProxy: request.HttpsProxy,
+			Name:                fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
+			TestSuiteName:       testSuiteName,
+			Namespace:           executeTestStep.Namespace,
+			Variables:           testsuiteExecution.Variables,
+			TestSuiteSecretUUID: request.SecretUUID,
+			Sync:                true,
+			HttpProxy:           request.HttpProxy,
+			HttpsProxy:          request.HttpsProxy,
+			ExecutionLabels:     request.ExecutionLabels,
 		}
 
-		l.Debug("executing test", "variables", testsuiteExecution.Variables)
+		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)

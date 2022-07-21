@@ -9,8 +9,70 @@ import (
 	"github.com/kubeshop/testkube/pkg/process"
 )
 
+// CheckoutCommit checks out specific commit
+func CheckoutCommit(uri, path, commit, dir string) (err error) {
+	repoDir := dir + "/repo"
+	if err = os.Mkdir(repoDir, 0750); err != nil {
+		return err
+	}
+
+	if _, err = process.ExecuteInDir(
+		repoDir,
+		"git",
+		"init",
+	); err != nil {
+		return err
+	}
+
+	if _, err = process.ExecuteInDir(
+		repoDir,
+		"git",
+		"remote",
+		"add",
+		"origin",
+		uri,
+	); err != nil {
+		return err
+	}
+
+	if _, err = process.ExecuteInDir(
+		repoDir,
+		"git",
+		"fetch",
+		"--depth",
+		"1",
+		"origin",
+		commit,
+	); err != nil {
+		return err
+	}
+
+	if path != "" {
+		if _, err = process.ExecuteInDir(
+			repoDir,
+			"git",
+			"sparse-checkout",
+			"set",
+			path,
+		); err != nil {
+			return err
+		}
+	}
+
+	if _, err = process.ExecuteInDir(
+		repoDir,
+		"git",
+		"checkout",
+		"FETCH_HEAD",
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Checkout will checkout directory from Git repository
-func Checkout(uri, branch, dir string) (outputDir string, err error) {
+func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-checkout")
@@ -19,23 +81,32 @@ func Checkout(uri, branch, dir string) (outputDir string, err error) {
 		}
 	}
 
-	_, err = process.ExecuteInDir(
-		tmpDir,
-		"git",
-		"clone",
-		"-b", branch,
-		"--depth", "1",
-		uri, "repo",
-	)
-	if err != nil {
-		return "", err
+	if commit == "" {
+		args := []string{"clone"}
+		if branch != "" {
+			args = append(args, "-b", branch)
+		}
+
+		args = append(args, "--depth", "1", uri, "repo")
+		_, err = process.ExecuteInDir(
+			tmpDir,
+			"git",
+			args...,
+		)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		if err = CheckoutCommit(uri, "", commit, tmpDir); err != nil {
+			return "", err
+		}
 	}
 
 	return tmpDir + "/repo/", nil
 }
 
 // PartialCheckout will checkout only given directory from Git repository
-func PartialCheckout(uri, path, branch, dir string) (outputDir string, err error) {
+func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-sparse-checkout")
@@ -44,29 +115,36 @@ func PartialCheckout(uri, path, branch, dir string) (outputDir string, err error
 		}
 	}
 
-	_, err = process.ExecuteInDir(
-		tmpDir,
-		"git",
-		"clone",
-		"-b", branch,
-		"--depth", "1",
-		"--filter", "blob:none",
-		"--sparse",
-		uri, "repo",
-	)
-	if err != nil {
-		return "", err
-	}
+	if commit == "" {
+		args := []string{"clone"}
+		if branch != "" {
+			args = append(args, "-b", branch)
+		}
 
-	_, err = process.ExecuteInDir(
-		tmpDir+"/repo",
-		"git",
-		"sparse-checkout",
-		"set",
-		path,
-	)
-	if err != nil {
-		return "", err
+		args = append(args, "--depth", "1", "--filter", "blob:none", "--sparse", uri, "repo")
+		_, err = process.ExecuteInDir(
+			tmpDir,
+			"git",
+			args...,
+		)
+		if err != nil {
+			return "", err
+		}
+
+		_, err = process.ExecuteInDir(
+			tmpDir+"/repo",
+			"git",
+			"sparse-checkout",
+			"set",
+			path,
+		)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		if err = CheckoutCommit(uri, path, commit, tmpDir); err != nil {
+			return "", err
+		}
 	}
 
 	return tmpDir + "/repo/" + path, nil

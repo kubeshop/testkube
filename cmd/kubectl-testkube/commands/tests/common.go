@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -14,15 +16,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func printExecutionDetails(execution testkube.Execution) {
-	ui.Warn("Type          :", execution.TestType)
-	ui.Warn("Name          :", execution.TestName)
+	ui.Warn("Type:             ", execution.TestType)
+	ui.Warn("Name:             ", execution.TestName)
 	if execution.Id != "" {
-		ui.Warn("Execution ID  :", execution.Id)
-		ui.Warn("Execution name:", execution.Name)
+		ui.Warn("Execution ID:     ", execution.Id)
+		ui.Warn("Execution name:   ", execution.Name)
+		if execution.Number != 0 {
+			ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
+		}
+		ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+		ui.Warn("Start time:       ", execution.StartTime.String())
+		ui.Warn("End time:         ", execution.EndTime.String())
+		ui.Warn("Duration:         ", execution.Duration)
 	}
 
 	renderer.RenderVariables(execution.Variables)
@@ -106,6 +114,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
@@ -141,7 +150,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	var repository *testkube.Repository
-	if gitUri != "" && gitBranch != "" {
+	if gitUri != "" {
 		if testContentType == "" {
 			testContentType = "git-dir"
 		}
@@ -150,6 +159,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 			Type_:    "git",
 			Uri:      gitUri,
 			Branch:   gitBranch,
+			Commit:   gitCommit,
 			Path:     gitPath,
 			Username: gitUsername,
 			Token:    gitToken,

@@ -17,6 +17,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		uri             string
 		gitUri          string
 		gitBranch       string
+		gitCommit       string
 		gitPath         string
 		gitUsername     string
 		gitToken        string
@@ -32,6 +33,10 @@ func NewUpdateTestsCmd() *cobra.Command {
 		Long:  `Update Test Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
+
+			if testName == "" {
+				ui.Failf("pass valid test name (in '--name' flag)")
+			}
 
 			client, _ := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)
@@ -61,6 +66,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")

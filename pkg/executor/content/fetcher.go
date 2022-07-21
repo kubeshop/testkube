@@ -68,10 +68,10 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 
 	// if path not set make full repo checkout
 	if repo.Path == "" {
-		return git.Checkout(uri, repo.Branch, f.path)
+		return git.Checkout(uri, repo.Branch, repo.Commit, f.path)
 	}
 
-	return git.PartialCheckout(uri, repo.Path, repo.Branch, f.path)
+	return git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, f.path)
 }
 
 // FetchGitFile returns path to git based file saved in local temp directory
@@ -81,7 +81,7 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 		return path, err
 	}
 
-	repoPath, err := git.Checkout(uri, repo.Branch, f.path)
+	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
 	if err != nil {
 		return path, err
 	}

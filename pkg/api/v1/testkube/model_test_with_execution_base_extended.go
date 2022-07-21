@@ -17,7 +17,6 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 				status = string(*e.LatestExecution.ExecutionResult.Status)
 			}
 		}
-
 		output = append(output, []string{
 			e.Test.Name,
 			e.Test.Type_,

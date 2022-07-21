@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "-"
+    allow:
+      - dependency-type: "all"
+    commit-message:
+      prefix: "build: "
+    reviewers:
+      - "exu"
+    

@@ -24,6 +24,8 @@ type TestSuiteExecution struct {
 	// environment variables passed to executor
 	Envs      map[string]string   `json:"envs,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	// secret uuid
+	SecretUUID string `json:"secretUUID,omitempty"`
 	// test start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test end time
@@ -32,6 +34,6 @@ type TestSuiteExecution struct {
 	Duration string `json:"duration,omitempty"`
 	// steps execution restults
 	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
-	// test suite execution labels
+	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

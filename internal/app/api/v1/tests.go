@@ -12,11 +12,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -328,7 +328,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(test)
 	}
 }
@@ -425,7 +425,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -485,16 +485,16 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
 func GetSecretsStringData(content *testkube.TestContent) map[string]string {
 	// create secrets for test
-	stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
+	stringData := map[string]string{client.GitUsernameSecretName: "", client.GitTokenSecretName: ""}
 	if content != nil && content.Repository != nil {
-		stringData[jobs.GitUsernameSecretName] = content.Repository.Username
-		stringData[jobs.GitTokenSecretName] = content.Repository.Token
+		stringData[client.GitUsernameSecretName] = content.Repository.Username
+		stringData[client.GitTokenSecretName] = content.Repository.Token
 	}
 
 	return stringData
