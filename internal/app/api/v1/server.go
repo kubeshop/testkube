@@ -200,6 +200,7 @@ func (s TestkubeAPI) Init() {
 
 	s.Routes.Get("/info", s.InfoHandler())
 	s.Routes.Get("/routes", s.RoutesHandler())
+	s.Routes.Get("/debug", s.DebugHandler())
 
 	executors := s.Routes.Group("/executors")
 

@@ -84,3 +84,15 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 		return c.JSON(routes)
 	}
 }
+
+// DebugHandler is a handler to get debug information
+func (s TestkubeAPI) DebugHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(testkube.DebugInfo{
+			ClusterVersion: "",
+			ApiLogs:        []string{},
+			OperatorLogs:   []string{},
+			ExecutionLogs:  []string{},
+		})
+	}
+}
