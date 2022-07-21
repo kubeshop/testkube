@@ -233,7 +233,7 @@ jobs:
 
       - name: Bump versions and push package to chocolatey repo
         working-directory: ./choco
-        run: ./update.ps1 ${{steps.tag.outputs.tag}}
+        run: ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
 
       - name: Commit and push changes
         working-directory: ./choco
