@@ -39,6 +39,6 @@ spec:
     {{- end }}
   {{- end }}
   executorArgs:
-  {{- range _, $value := .ExecutorArgs }}
-    - {{ $value }}
+  {{- range .ExecutorArgs }}
+    - {{ . }}
   {{- end }}

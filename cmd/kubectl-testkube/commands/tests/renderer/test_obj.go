@@ -14,16 +14,16 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		return fmt.Errorf("can't use '%T' as testkube.Test in RenderObj for test", obj)
 	}
 
-	ui.Warn("Name:         ", test.Name)
-	ui.Warn("Namespace:    ", test.Namespace)
-	ui.Warn("Created:      ", test.Created.String())
+	ui.Warn("Name:     ", test.Name)
+	ui.Warn("Namespace:", test.Namespace)
+	ui.Warn("Created:  ", test.Created.String())
 	if len(test.Labels) > 0 {
 		ui.NL()
-		ui.Warn("Labels:       ", testkube.MapToString(test.Labels))
+		ui.Warn("Labels:   ", testkube.MapToString(test.Labels))
 	}
 	if test.Schedule != "" {
 		ui.NL()
-		ui.Warn("Schedule:     ", test.Schedule)
+		ui.Warn("Schedule: ", test.Schedule)
 	}
 
 	renderer.RenderVariables(test.Variables)
