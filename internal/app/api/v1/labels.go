@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/pkg/data/set"
 )
 
 func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
@@ -38,6 +39,11 @@ func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 					}
 				}
 			}
+		}
+
+		// make labels unique
+		for key, list := range labels {
+			labels[key] = set.Of(list...).ToArray()
 		}
 
 		return c.JSON(labels)
