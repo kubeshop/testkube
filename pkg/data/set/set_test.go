@@ -21,8 +21,8 @@ func TestSet_ToArray(t *testing.T) {
 	arr := out.ToArray()
 
 	// then
-	assert.Equal(t, "aaa", arr[0])
-	assert.Equal(t, "bbb", arr[1])
+	assert.Contains(t, arr, "aaa")
+	assert.Contains(t, arr, "bbb")
 }
 
 func TestSet_Remove(t *testing.T) {
@@ -33,7 +33,5 @@ func TestSet_Remove(t *testing.T) {
 	out.Remove("bbb")
 
 	// then
-	arr := out.ToArray()
-	assert.Equal(t, "aaa", arr[0])
-	assert.Equal(t, "ccc", arr[1])
+	assert.False(t, out.Has("bbb"))
 }
