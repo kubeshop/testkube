@@ -18,5 +18,3 @@ $packageArgs = @{
 }
 
 Install-ChocolateyInstallPackage @packageArgs
-
-

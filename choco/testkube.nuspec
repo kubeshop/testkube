@@ -79,7 +79,3 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
     <file src="tools\**" target="tools" />
   </files>
 </package>
-
-
-
-
