@@ -238,7 +238,7 @@ jobs:
           git config user.email "kubeshop-bot@kubeshop.io"
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
           git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
-          git push origin HEAD:add_choco-package
+          git push origin HEAD:main
 
   build-and-publish-linux-installer:
     needs: release
