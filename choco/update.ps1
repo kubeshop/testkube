@@ -11,7 +11,7 @@ foreach ($file in $files_to_update) {
 
     Write-Host "Updating $file file with version: $version"
     $update_version = $content -replace "\d+\.\d+\.\d+", "$version"
-    Set-Content -Path $script_path -Value $update_version
+    Set-Content -Path $script_path -Value $update_version -NoNewline
 }
 
 #update testkube.nuspec
@@ -20,11 +20,11 @@ $file_content  = Get-Content $file -Raw
 
 Write-Host "Updating $file file with version: $version"
 $update_version = $file_content -replace ">\d+\.\d+\.\d+<", ">$version<"
-Set-Content -Path $file -Value $update_version
+Set-Content -Path $file -Value $update_version -NoNewline
 
 #package with chocolatey
 choco pack
 
 #push package
 choco apikey --key $api_key --source https://push.chocolatey.org/
-choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
+#choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org

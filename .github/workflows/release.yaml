@@ -5,6 +5,9 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
+env:
+  REVIEWERS: ypoplavs,vsukhin,nicufk
+
 jobs:
   pre_build:
     name: Pre-build
@@ -142,7 +145,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          ref: 'main'
 
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
@@ -225,7 +228,7 @@ jobs:
         run: |
           $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
           $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
-          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version -NoNewline
 
       - name: Bump versions and push package to chocolatey repo
         working-directory: ./choco
@@ -238,7 +241,28 @@ jobs:
           git config user.email "kubeshop-bot@kubeshop.io"
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
           git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
-          git push origin HEAD:main
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          delete-branch: true
+          branch: patch-${{steps.tag.outputs.tag}}
+          add-paths: |
+            .\testkube.nuspec
+            .\tools\chocolateyInstall.ps1
+            .\tools\VERIFICATION.txt
+          title: "Update Testkube version for choco to ${{steps.tag.outputs.tag}}"
+          labels: |
+            automated pr
+          reviewers: ${{ env.REVIEWERS }}
+
+      - name: Check outputs
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
 
   build-and-publish-linux-installer:
     needs: release
