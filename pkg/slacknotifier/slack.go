@@ -28,7 +28,7 @@ const messageTemplate string = `{
 			"elements": [
 				{
 					"type": "image",
-					"image_url": "{{ .StatusIcon }}",
+					"image_url": "{{ if eq .Status "failed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png{{ else if eq .Status "passed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png{{ else }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png{{ end }}",
 					"alt_text": "notifications warning icon"
 				}
 				{{ if (gt .TotalSteps 0 )}}
@@ -171,18 +171,11 @@ type messageArgs struct {
 	EndTime     string
 	Duration    string
 	BackTick    string
-	StatusIcon  string
 }
 
 var (
 	slackClient *slack.Client
 	timestamps  map[string]string
-)
-
-const (
-	iconPending = "https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png"
-	iconPassed  = "https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png"
-	iconFailed  = "https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png"
 )
 
 func init() {
@@ -283,15 +276,6 @@ func composeMessage(execution testkube.Execution, eventType *testkube.WebhookEve
 		TotalSteps:  len(execution.ExecutionResult.Steps),
 		FailedSteps: execution.ExecutionResult.GetFailedStepsCount(),
 		BackTick:    "`",
-	}
-
-	switch *execution.ExecutionResult.Status {
-	case *testkube.ExecutionStatusPassed:
-		args.StatusIcon = iconPassed
-	case *testkube.ExecutionStatusFailed:
-		args.StatusIcon = iconFailed
-	default:
-		args.StatusIcon = iconPending
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)
