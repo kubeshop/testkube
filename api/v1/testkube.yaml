@@ -2025,8 +2025,8 @@ components:
           type: string
           description: test secret uuid
         testSuiteSecretUUID:
-            type: string
-            description: test suite secret uuid, if it's run as a part of test suite
+          type: string
+          description: test suite secret uuid, if it's run as a part of test suite
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2312,8 +2312,8 @@ components:
           type: string
           description: test secret uuid
         testSuiteSecretUUID:
-            type: string
-            description: test suite secret uuid, if it's run as a part of test suite
+          type: string
+          description: test suite secret uuid, if it's run as a part of test suite
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2464,6 +2464,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        features:
+          description: Available executor featues
+          type: array
+          items:
+            type: string
+            enum:
+              - artifacts
+              - junit-report
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions

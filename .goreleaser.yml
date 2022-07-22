@@ -45,6 +45,7 @@ brews:
     license: "MIT"
     post_install: |
       bin.install_symlink "tk"
+      bin.install_symlink "testkube"
 
 nfpms:
   - maintainer: Testkube team
@@ -55,4 +56,7 @@ nfpms:
     contents:
       - src: /usr/bin/kubectl-testkube
         dst: /usr/bin/tk
+        type: "symlink"
+      - src: /usr/bin/kubectl-testkube
+        dst: /usr/bin/testkube
         type: "symlink"

@@ -26,6 +26,7 @@
 				<!-- TODO: Insert files, registry keys, and other resources here. -->
 				<File Id='TeskubeEXE' Name='kubectl-testkube.exe' DiskId='1' Source='kubectl-testkube.exe' KeyPath='yes' Vital='yes'/>
 				<File Id='TeskubeALIAS' Name='tk.bat' DiskId='1' Source='tk.bat' Vital='yes'/>
+				<File Id='TeskubeALIASFULL' Name='testkube.bat' DiskId='1' Source='testkube.bat' Vital='yes'/>
 			</Component>
 		</ComponentGroup>
 	</Fragment>

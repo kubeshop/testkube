@@ -402,6 +402,11 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecut
 			continue
 		}
 
+		features := []executorv1.Feature{}
+		for _, f := range executor.Executor.Features {
+			features = append(features, executorv1.Feature(f))
+		}
+
 		obj := &executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      executor.Name,
@@ -411,6 +416,7 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecut
 				Types:        executor.Executor.Types,
 				ExecutorType: executor.Executor.ExecutorType,
 				Image:        executor.Executor.Image,
+				Features:     features,
 			},
 		}
 

@@ -128,6 +128,16 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Uri:          item.Spec.URI,
 			JobTemplate:  item.Spec.JobTemplate,
 			Labels:       item.Labels,
+			Features:     mapFeatures(item.Spec.Features),
 		},
 	}
+}
+
+func mapFeatures(features []executorv1.Feature) (out []string) {
+
+	for _, feature := range features {
+		out = append(out, string(feature))
+	}
+
+	return
 }
