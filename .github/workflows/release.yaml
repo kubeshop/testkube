@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          ref: 'main'
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -142,7 +142,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: 'main'
+          fetch-depth: 0
 
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
@@ -246,6 +246,7 @@ jobs:
           token: ${{ secrets.CI_BOT_TOKEN }}
           delete-branch: true
           branch: patch-${{steps.tag.outputs.tag}}
+          base: main
           add-paths: |
             .\testkube.nuspec
             .\tools\chocolateyInstall.ps1
