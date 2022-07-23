@@ -1,9 +1,9 @@
 # Postman Collections
 
-Watch this simple Testkube intro video for Postman collections with Testkube:
+ <!--Watch this simple Testkube intro video for Postman collections with Testkube:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
-</iframe>
+</iframe> -->
 
 Testkube is able to run Postman collections inside your Kubernetes cluster so it can be used to test internal or external services.
 
