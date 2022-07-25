@@ -1,8 +1,10 @@
 package k8sclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"time"
@@ -192,3 +194,36 @@ func GetClusterVersion(k8sClient *kubernetes.Clientset) (string, error) {
 
 	return version.String(), nil
 }
+
+// GetAPIServerLogs returns the latest logs from the API server deployment
+func GetAPIServerLogs(ctx context.Context, k8sClient *kubernetes.Clientset, namespace string) ([]string, error) {
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=api-server",
+	})
+	if err != nil {
+		return []string{}, fmt.Errorf("could not get api server pods: %w", err)
+	}
+
+	logs := []string{}
+
+	for _, pod := range pods.Items {
+		podLogs, err := k8sClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{}).Stream(ctx)
+		if err != nil {
+			return []string{}, fmt.Errorf("error in getting api server deployment: %w", err)
+		}
+		defer podLogs.Close()
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, podLogs)
+		if err != nil {
+			return []string{}, fmt.Errorf("error in copy information from podLogs to buf")
+		}
+		logs = append(logs, fmt.Sprintf("Pod: %s \n Logs: \n %s", pod.Name, buf.String()))
+	}
+	return logs, nil
+}
+
+// GetOperatorLogs returns the logs from the operator
+// func GetOperatorLogs() ([]string, error) {
+
+// 	return []string{}, nil
+// }

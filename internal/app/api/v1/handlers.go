@@ -16,6 +16,8 @@ import (
 const (
 	// cliIngressHeader is cli ingress header
 	cliIngressHeader = "X-CLI-Ingress"
+	// namespace is the Kubernetes namespaces Testkube is running in
+	namespace = "testkube"
 )
 
 const (
@@ -90,29 +92,26 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 // DebugHandler is a handler to get debug information
 func (s TestkubeAPI) DebugHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		clusterVersion, err := getClusterVersion()
+		clientSet, err := k8sclient.ConnectToK8s()
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not connect to cluster: %w", err))
+		}
+
+		clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get cluster version: %w", err))
+		}
+
+		apiLogs, err := k8sclient.GetAPIServerLogs(c.Context(), clientSet, namespace)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get api server logs: %w", err))
 		}
 
 		return c.JSON(testkube.DebugInfo{
 			ClusterVersion: clusterVersion,
-			ApiLogs:        []string{},
+			ApiLogs:        apiLogs,
 			OperatorLogs:   []string{},
 			ExecutionLogs:  []string{},
 		})
 	}
-}
-
-// getClusterVersion gets the version of the Kubernetes cluster
-func getClusterVersion() (string, error) {
-	clientSet, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		return "", fmt.Errorf("could not connect to cluster: %w", err)
-	}
-	clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
-	if err != nil {
-		return "", fmt.Errorf("could not get cluster version: %w", err)
-	}
-	return clusterVersion, nil
 }
