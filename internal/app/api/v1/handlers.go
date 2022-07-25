@@ -107,10 +107,15 @@ func (s TestkubeAPI) DebugHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get api server logs: %w", err))
 		}
 
+		operatorLogs, err := k8sclient.GetOperatorLogs(c.Context(), clientSet, namespace)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get operator logs: %w", err))
+		}
+
 		return c.JSON(testkube.DebugInfo{
 			ClusterVersion: clusterVersion,
 			ApiLogs:        apiLogs,
-			OperatorLogs:   []string{},
+			OperatorLogs:   operatorLogs,
 			ExecutionLogs:  []string{},
 		})
 	}
