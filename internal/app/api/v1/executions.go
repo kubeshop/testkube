@@ -128,8 +128,10 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestRequests(work []testsv2.Test, request testkube.ExecutionRequest) []workerpool.Request[
-	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
+func (s TestkubeAPI) prepareTestRequests(
+	work []testsv2.Test,
+	request testkube.ExecutionRequest) []workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
+
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
 	for i := range work {
 		requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
@@ -138,11 +140,15 @@ func (s TestkubeAPI) prepareTestRequests(work []testsv2.Test, request testkube.E
 			ExecFn:  s.executeTest,
 		}
 	}
+
 	return requests
 }
 
-func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, request testkube.ExecutionRequest) (
-	execution testkube.Execution, err error) {
+func (s TestkubeAPI) executeTest(
+	ctx context.Context,
+	test testkube.Test,
+	request testkube.ExecutionRequest) (execution testkube.Execution, err error) {
+
 	// generate random execution name in case there is no one set
 	// like for docker images
 	if request.Name == "" {
@@ -487,7 +493,7 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	}
 }
 
-// GetArtifacts returns list of files in the given bucket
+// ListArtifactsHandler returns list of files in the given bucket
 func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -501,7 +507,9 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s TestkubeAPI) GetExecuteOptions(
+	namespace, id string,
+	request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
 	testCR, err := s.TestsClient.Get(id)
 	if err != nil {
@@ -536,20 +544,23 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 // streamLogsFromResult writes logs from the output of executionResult to the writer
 func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
 	enc := json.NewEncoder(w)
-	fmt.Fprintf(w, "data: ")
+	_, _ = fmt.Fprintf(w, "data: ")
 	s.Log.Debug("using logs from result")
-	output := testkube.ExecutorOutput{
+	execOut := testkube.ExecutorOutput{
 		Type_:   output.TypeResult,
 		Content: executionResult.Output,
 		Result:  executionResult,
 	}
-	err := enc.Encode(output)
+
+	err := enc.Encode(execOut)
 	if err != nil {
 		s.Log.Infow("Encode", "error", err)
 		return err
 	}
-	fmt.Fprintf(w, "\n")
-	w.Flush()
+
+	_, _ = fmt.Fprintf(w, "\n")
+	_ = w.Flush()
+
 	return nil
 }
 
@@ -563,7 +574,8 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	if err != nil {
 		output.PrintError(os.Stdout, err)
 		s.Log.Errorw("getting logs error", "error", err)
-		w.Flush()
+		_ = w.Flush()
+
 		return
 	}
 
@@ -571,14 +583,15 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	// and pass single log output as sse data chunk
 	for out := range logs {
 		s.Log.Debugw("got log", "out", out)
-		fmt.Fprintf(w, "data: ")
+		_, _ = fmt.Fprintf(w, "data: ")
 		err = enc.Encode(out)
 		if err != nil {
 			s.Log.Infow("Encode", "error", err)
 		}
+
 		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
-		fmt.Fprintf(w, "\n")
-		w.Flush()
+		_, _ = fmt.Fprintf(w, "\n")
+		_ = w.Flush()
 	}
 }
 
@@ -591,6 +604,7 @@ func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
 		s.Log.Errorw("retrieving latest execution", "error", err)
 		return 1
 	}
+
 	return execution.Number + 1
 }
 
@@ -599,6 +613,7 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	for k, v := range vars1 {
 		variables[k] = v
 	}
+
 	for k, v := range vars2 {
 		variables[k] = v
 	}

@@ -85,7 +85,6 @@ func TestWebhook(t *testing.T) {
 		r := <-s.Responses
 		assert.Error(t, r.Error)
 	})
-
 }
 
 func exampleExecution() *testkube.Execution {
@@ -96,5 +95,4 @@ func exampleExecution() *testkube.Execution {
 
 func NewSimpleEmitter() *Emitter {
 	return NewEmitter(&executorsclientv1.WebhooksClient{})
-
 }
