@@ -253,7 +253,7 @@ jobs:
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
           delete-branch: true
-          branch: patch-${{steps.tag.outputs.tag}}
+          branch: update-${{steps.tag.outputs.tag}}
           base: main
           title: "docs: testkube version update for choco to ${{steps.tag.outputs.tag}}"
           labels: |

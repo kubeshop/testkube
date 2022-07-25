@@ -27,4 +27,4 @@ choco pack
 
 #push package
 choco apikey --key $api_key --source https://push.chocolatey.org/
-#choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
+choco push .\Testkube.$version.nupkg --source https://push.chocolatey.org
