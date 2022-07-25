@@ -234,7 +234,7 @@ jobs:
 
       - name: Remove files so that they won't be commited to our repository
         run: |
-          $filestoremove = "testkube.*", "choco/testkube.*.nupkg", "tk.bat", "temp/*", "msi_checksum.txt" choco/tools/testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
+          $filestoremove = "testkube.*", "choco/testkube.*.nupkg", "tk.bat", "temp/*", "msi_checksum.txt", "choco/tools/testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi"
           foreach ($file in $filestoremove) {
             if (Test-Path $file) {
 
@@ -255,7 +255,7 @@ jobs:
           delete-branch: true
           branch: patch-${{steps.tag.outputs.tag}}
           base: main
-          title: "Update Testkube version for choco to ${{steps.tag.outputs.tag}}"
+          title: "docs: testkube version update for choco to ${{steps.tag.outputs.tag}}"
           labels: |
             automated pr
 
