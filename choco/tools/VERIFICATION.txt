@@ -8,7 +8,3 @@ or directly here: https://github.com/kubeshop/testkube/releases/download/<vTestk
 
 For example for version v1.3.27 it is https://github.com/kubeshop/testkube/releases/tag/v1.3.27
 and https://github.com/kubeshop/testkube/releases/download/v1.3.27/testkube_1.3.27_Windows_i386_checksum.txt
-
-
-
-
