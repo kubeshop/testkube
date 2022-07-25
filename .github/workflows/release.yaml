@@ -232,10 +232,19 @@ jobs:
         run: |
           ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
 
-          #removing nupkg so it won't be commited to our repository
-          $FileName = "testkube.${{steps.tag.outputs.tag}}.nupkg"
-          if (Test-Path $FileName) {
-            Remove-Item $FileName
+      - name: Remove files so that they won't be commited to our repository
+        run: |
+          $filestoremove = "testkube.*", "choco/testkube.*.nupkg", "tk.bat", "temp/*", "msi_checksum.txt" choco/tools/testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi
+          foreach ($file in $filestoremove) {
+            if (Test-Path $file) {
+
+          Write-Output $file
+          Remove-Item $file
+          }
+            else
+          {
+            Write-Output "File $file doesn't exist "
+            }
           }
 
       - name: Create Pull Request
