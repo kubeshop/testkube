@@ -223,7 +223,32 @@ func GetAPIServerLogs(ctx context.Context, k8sClient *kubernetes.Clientset, name
 }
 
 // GetOperatorLogs returns the logs from the operator
-// func GetOperatorLogs() ([]string, error) {
+func GetOperatorLogs(ctx context.Context, k8sClient *kubernetes.Clientset, namespace string) ([]string, error) {
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "control-plane=controller-manager",
+	})
+	if err != nil {
+		return []string{}, fmt.Errorf("could not get operator pods: %w", err)
+	}
 
-// 	return []string{}, nil
-// }
+	logs := []string{}
+
+	for _, pod := range pods.Items {
+		for _, container := range pod.Spec.Containers {
+			podLogs, err := k8sClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+				Container: container.Name,
+			}).Stream(ctx)
+			if err != nil {
+				return []string{}, fmt.Errorf("error in getting operator deployment: %w", err)
+			}
+			defer podLogs.Close()
+			buf := new(bytes.Buffer)
+			_, err = io.Copy(buf, podLogs)
+			if err != nil {
+				return []string{}, fmt.Errorf("error in copy information from podLogs to buf")
+			}
+			logs = append(logs, fmt.Sprintf("Pod: %s \n Logs: \n %s", pod.Name, buf.String()))
+		}
+	}
+	return logs, nil
+}

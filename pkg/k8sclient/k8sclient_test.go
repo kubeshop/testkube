@@ -24,3 +24,12 @@ func TestGetAPIServerLogs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, logs)
 }
+
+func TestGetOperatorLogs(t *testing.T) {
+	client, err := ConnectToK8s()
+	assert.NoError(t, err)
+
+	logs, err := GetOperatorLogs(context.Background(), client, "testkube")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, logs)
+}
