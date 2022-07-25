@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: 'main'
+          fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -229,15 +229,14 @@ jobs:
 
       - name: Bump versions and push package to chocolatey repo
         working-directory: ./choco
-        run: ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
-
-      - name: Commit and push changes
-        working-directory: ./choco
         run: |
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
-          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
-          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
+          ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
+
+          #removing nupkg so it won't be commited to our repository
+          $FileName = "testkube.${{steps.tag.outputs.tag}}.nupkg"
+          if (Test-Path $FileName) {
+            Remove-Item $FileName
+          }
 
       - name: Create Pull Request
         id: cpr
@@ -247,10 +246,6 @@ jobs:
           delete-branch: true
           branch: patch-${{steps.tag.outputs.tag}}
           base: main
-          add-paths: |
-            .\testkube.nuspec
-            .\tools\chocolateyInstall.ps1
-            .\tools\VERIFICATION.txt
           title: "Update Testkube version for choco to ${{steps.tag.outputs.tag}}"
           labels: |
             automated pr
