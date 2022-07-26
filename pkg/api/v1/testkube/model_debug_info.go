@@ -11,8 +11,8 @@ package testkube
 
 // Testkube debug info
 type DebugInfo struct {
-	ClusterVersion string   `json:"clusterVersion,omitempty"`
-	ApiLogs        []string `json:"apiLogs,omitempty"`
-	OperatorLogs   []string `json:"operatorLogs,omitempty"`
-	ExecutionLogs  []string `json:"executionLogs,omitempty"`
+	ClusterVersion string              `json:"clusterVersion,omitempty"`
+	ApiLogs        []string            `json:"apiLogs,omitempty"`
+	OperatorLogs   []string            `json:"operatorLogs,omitempty"`
+	ExecutionLogs  map[string][]string `json:"executionLogs,omitempty"`
 }

@@ -116,7 +116,7 @@ func (s TestkubeAPI) DebugHandler() fiber.Handler {
 			ClusterVersion: clusterVersion,
 			ApiLogs:        apiLogs,
 			OperatorLogs:   operatorLogs,
-			ExecutionLogs:  []string{},
+			ExecutionLogs:  map[string][]string{},
 		})
 	}
 }

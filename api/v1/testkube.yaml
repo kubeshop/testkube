@@ -2613,10 +2613,12 @@ components:
             type: string
           example: ["logline1", "logline2", "logline3"]
         executionLogs:
-          type: array
-          items:
-            type: string
-          example: ["logline1", "logline2", "logline3"]
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            example: ["logline1", "logline2", "logline3"]
 
     #
     # Errors
