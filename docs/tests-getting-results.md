@@ -4,7 +4,7 @@ We saw how simple it is to create and run Testkube tests execution. Obtaining te
 
 ## **Getting Test Executions After Test is Executed**
 
-After each run, Testkube informs you that you can get results a of given test execution.
+After each run, Testkube informs you that you can get results of a given test execution.
 
 ```sh
 kubectl testkube run test api-incluster-test
