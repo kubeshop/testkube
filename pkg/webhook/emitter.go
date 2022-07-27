@@ -58,16 +58,92 @@ func (s *Emitter) Notify(event testkube.WebhookEvent) {
 func (s *Emitter) RunWorkers() {
 	s.Log.Infow("Starting workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
-		go s.Listen(s.Events)
+		go s.Listen()
 	}
 }
 
-// Listen listens for webhook events
-func (s *Emitter) Listen(events chan testkube.WebhookEvent) {
-	for event := range events {
+// Listen listens webhook events
+func (s *Emitter) Listen() {
+	for event := range s.Events {
 		s.Log.Infow("processing event", "event", event)
 		s.sendHttpEvent(event)
 	}
+}
+
+// NotifyAll broadcasting webhook events with label filtering in case if settings exist
+func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
+	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
+	if err != nil {
+		return err
+	}
+
+	for _, wh := range webhookList.Items {
+
+		// notify any if no labels specified
+		if len(wh.Labels) == 0 {
+
+			s.Log.Debugw(
+				"NotifyAll: Sending event",
+				"uri", wh.Spec.Uri,
+				"type", eventType,
+				"execution", execution)
+
+			s.Notify(testkube.WebhookEvent{
+				Uri:       wh.Spec.Uri,
+				Type_:     eventType,
+				Execution: &execution,
+			})
+
+			continue
+		}
+
+		// apply label filtering for notifications
+		for whLabelKey, whLabelValue := range wh.Labels {
+
+			execLabelValue, ok := execution.Labels[whLabelKey]
+
+			if ok && whLabelValue == "" {
+
+				s.Log.Debugw(
+					"NotifyByLabelMatchEmptyVal: Sending event",
+					"uri", wh.Spec.Uri,
+					"type", eventType,
+					"execution", execution)
+
+				s.Notify(testkube.WebhookEvent{
+					Uri:       wh.Spec.Uri,
+					Type_:     eventType,
+					Execution: &execution,
+				})
+
+				break
+			}
+
+			if ok && whLabelValue == execLabelValue {
+
+				s.Log.Debugw(
+					"NotifyByLabelFullMatch: Sending event",
+					"uri", wh.Spec.Uri,
+					"type", eventType,
+					"execution", execution)
+
+				s.Notify(testkube.WebhookEvent{
+					Uri:       wh.Spec.Uri,
+					Type_:     eventType,
+					Execution: &execution,
+				})
+
+				break
+			}
+		}
+	}
+
+	// TODO webhooks should be designed as events with type webhook/slack
+	// TODO move it to Listen when the type webhook/slack is ready
+	s.sendSlackEvent(eventType, execution)
+
+	return nil
+
 }
 
 // sendHttpEvent sends new webhook event - should be used when some event occurs
@@ -110,29 +186,6 @@ func (s *Emitter) sendHttpEvent(event testkube.WebhookEvent) {
 	webhookResponse := WebhookHttpResponse{Body: respBody, StatusCode: status}
 	l.Debugw("got webhook send result", "response", webhookResponse)
 	s.Responses <- WebhookResult{Response: webhookResponse, Event: event}
-}
-
-func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
-	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
-	if err != nil {
-		return err
-	}
-
-	for _, wh := range webhookList.Items {
-		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.Notify(testkube.WebhookEvent{
-			Uri:       wh.Spec.Uri,
-			Type_:     eventType,
-			Execution: &execution,
-		})
-	}
-
-	// TODO webhooks should be designed as events with type webhook/slack
-	// TODO move it to Listen when the type webhook/slack is ready
-	s.sendSlackEvent(eventType, execution)
-
-	return nil
-
 }
 
 // TODO move it to EventEmitter as kind of SlackEvent
