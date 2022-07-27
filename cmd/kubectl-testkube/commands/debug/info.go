@@ -4,36 +4,41 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
+// NewShowDebugInfoCmd creates a new cobra command to print the debug info to the CLI
 func NewShowDebugInfoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "info",
 		Short: "Show debug info",
 		Long:  "Getting all the necessary information to debug an issue",
 		Run: func(cmd *cobra.Command, args []string) {
-			// client, _ := common.GetClient(cmd)
-			// debug := client.GetDebugInfo()
-			debug := testkube.DebugInfo{
-				ClientVersion:  "v0.0.test",
-				ServerVersion:  "v0.0.test",
-				ClusterVersion: "v0.0.test",
-				ApiLogs:        []string{"log1", "log2", "log3"},
-				OperatorLogs:   []string{"log1", "log2", "log3"},
-				ExecutionLogs: map[string][]string{
-					"e1": {"log1", "log2", "log3"},
-					"e2": {"log1", "log2", "log3"},
-					"e3": {"log1", "log2", "log3"},
-				},
-			}
+			client, _ := common.GetClient(cmd)
+			debug, err := client.GetDebugInfo()
+			ui.ExitOnError("get debug info", err)
+
+			// debug := testkube.DebugInfo{
+			// 	ClientVersion:  "v0.0.test",
+			// 	ServerVersion:  "v0.0.test",
+			// 	ClusterVersion: "v0.0.test",
+			// 	ApiLogs:        []string{"log1", "log2", "log3"},
+			// 	OperatorLogs:   []string{"log1", "log2", "log3"},
+			// 	ExecutionLogs: map[string][]string{
+			// 		"e1": {"log1", "log2", "log3"},
+			// 		"e2": {"log1", "log2", "log3"},
+			// 		"e3": {"log1", "log2", "log3"},
+			// 	},
+			// }
 			printDebugInfo(debug)
 		},
 	}
 }
 
+// printDebugInfo prints the debugging data to the CLI
 func printDebugInfo(info testkube.DebugInfo) {
 	ui.Table(info, os.Stdout)
 	ui.NL()
