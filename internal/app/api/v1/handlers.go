@@ -112,11 +112,16 @@ func (s TestkubeAPI) DebugHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get operator logs: %w", err))
 		}
 
+		executionLogs, err := s.GetLatestExecutionLogs(c.Context())
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get execution logs: %w", err))
+		}
+
 		return c.JSON(testkube.DebugInfo{
 			ClusterVersion: clusterVersion,
 			ApiLogs:        apiLogs,
 			OperatorLogs:   operatorLogs,
-			ExecutionLogs:  map[string][]string{},
+			ExecutionLogs:  executionLogs,
 		})
 	}
 }

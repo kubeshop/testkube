@@ -17,6 +17,7 @@ import (
 
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -650,29 +651,50 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 	return result
 }
 
-// GetLatestExecutionLogs returns the 5 latest executions' logs
-// func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string]string, error) {
-// 	executions, err := s.getExecutions(c)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("could not list executions: %w", err)
-// 	}
+// GetLatestExecutionLogs returns the latest executions' logs
+func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]string, error) {
+	latestExecutions, err := s.getNewestExecutions(c)
+	if err != nil {
+		return nil, fmt.Errorf("could not list executions: %w", err)
+	}
 
-// 	latestExecutions := getLatestExecutions(executions)
+	executionLogs := map[string][]string{}
+	for _, e := range latestExecutions {
+		logs, err := s.getExecutionLogs(e)
+		if err != nil {
+			return nil, fmt.Errorf("could not get logs: %w", err)
+		}
+		executionLogs[e.Id] = logs
+	}
 
-// 	executionLogs := map[string]string{}
-// 	for _, e := range latestExecutions {
-// 		logs := getExecutionLogs()
-// 		executionLogs[e.Name] = logs
-// 	}
-
-// 	return result, nil
-// }
+	return executionLogs, nil
+}
 
 // // getExecutions returns Testkube executions
-// func (s *TestkubeAPI) getExecutions(c context.Context) ([]testkube.Execution, error) {
-// 	executions, err := s.ExecutionResults.GetExecutions(c, filter)
-// 	if err != nil {
-// 		return s.Error(c, http.StatusInternalServerError, err)
-// 	}
-// 	return []testkube.Execution{}, nil
-// }
+func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Execution, error) {
+	f := result.NewExecutionsFilter().WithSelector("").WithPage(1).WithPageSize(5)
+	executions, err := s.ExecutionResults.GetExecutions(c, f)
+	if err != nil {
+		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
+	}
+	return executions, nil
+}
+
+// getExecutionLogs returns logs from an execution
+func (s *TestkubeAPI) getExecutionLogs(execution testkube.Execution) ([]string, error) {
+	result := []string{}
+	if execution.ExecutionResult.IsCompleted() {
+		return append(result, execution.ExecutionResult.Output), nil
+	}
+
+	logs, err := s.Executor.Logs(execution.Id)
+	if err != nil {
+		return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
+	}
+
+	for out := range logs {
+		result = append(result, out.Result.Output)
+	}
+
+	return result, nil
+}

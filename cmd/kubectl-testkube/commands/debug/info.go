@@ -20,19 +20,6 @@ func NewShowDebugInfoCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 			debug, err := client.GetDebugInfo()
 			ui.ExitOnError("get debug info", err)
-
-			// debug := testkube.DebugInfo{
-			// 	ClientVersion:  "v0.0.test",
-			// 	ServerVersion:  "v0.0.test",
-			// 	ClusterVersion: "v0.0.test",
-			// 	ApiLogs:        []string{"log1", "log2", "log3"},
-			// 	OperatorLogs:   []string{"log1", "log2", "log3"},
-			// 	ExecutionLogs: map[string][]string{
-			// 		"e1": {"log1", "log2", "log3"},
-			// 		"e2": {"log1", "log2", "log3"},
-			// 		"e3": {"log1", "log2", "log3"},
-			// 	},
-			// }
 			printDebugInfo(debug)
 		},
 	}
@@ -60,7 +47,7 @@ func printDebugInfo(info testkube.DebugInfo) {
 	ui.Info("EXECUTION LOGS")
 	ui.NL()
 	for id, logs := range info.ExecutionLogs {
-		ui.Info(fmt.Sprintf("ID: %s", id))
+		ui.Info(fmt.Sprintf("EXECUTION ID: %s", id))
 		ui.NL()
 		for _, l := range logs {
 			ui.Info(l)
