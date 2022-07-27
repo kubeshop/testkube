@@ -2615,6 +2615,10 @@ components:
       type: object
       required:
       properties:
+        clientVersion:
+          type: string
+        serverVersion:
+          type: string
         clusterVersion:
           type: string
         apiLogs:

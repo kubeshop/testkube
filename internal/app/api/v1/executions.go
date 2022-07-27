@@ -651,28 +651,28 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 }
 
 // GetLatestExecutionLogs returns the 5 latest executions' logs
-func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string]string, error) {
-	executions, err := s.getExecutions(c)
-	if err != nil {
-		return nil, fmt.Errorf("could not list executions: %w", err)
-	}
+// func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string]string, error) {
+// 	executions, err := s.getExecutions(c)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("could not list executions: %w", err)
+// 	}
 
-	latestExecutions := getLatestExecutions(executions)
+// 	latestExecutions := getLatestExecutions(executions)
 
-	executionLogs := map[string]string{}
-	for _, e := range latestExecutions {
-		logs := getExecutionLogs()
-		executionLogs[e.Name] = logs
-	}
+// 	executionLogs := map[string]string{}
+// 	for _, e := range latestExecutions {
+// 		logs := getExecutionLogs()
+// 		executionLogs[e.Name] = logs
+// 	}
 
-	return result, nil
-}
+// 	return result, nil
+// }
 
-// getExecutions returns Testkube executions
-func (s *TestkubeAPI) getExecutions(c context.Context) ([]testkube.Execution, error) {
-	executions, err := s.ExecutionResults.GetExecutions(c, filter)
-	if err != nil {
-		return s.Error(c, http.StatusInternalServerError, err)
-	}
-	return []testkube.Execution{}, nil
-}
+// // getExecutions returns Testkube executions
+// func (s *TestkubeAPI) getExecutions(c context.Context) ([]testkube.Execution, error) {
+// 	executions, err := s.ExecutionResults.GetExecutions(c, filter)
+// 	if err != nil {
+// 		return s.Error(c, http.StatusInternalServerError, err)
+// 	}
+// 	return []testkube.Execution{}, nil
+// }

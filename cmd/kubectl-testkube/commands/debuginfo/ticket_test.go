@@ -1,33 +1,32 @@
-package debug
+package debuginfo
 
 import (
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestBuildInfo(t *testing.T) {
 	tests := []struct {
 		name      string
-		debugInfo DebugInfo
+		debugInfo testkube.DebugInfo
 		want      string
 		wantErr   bool
 	}{
 		{
 			name:      "Empty DebugInfo",
-			debugInfo: DebugInfo{},
+			debugInfo: testkube.DebugInfo{},
 			wantErr:   true,
 		},
 		{
 			name: "Debug info populated",
-			debugInfo: DebugInfo{
+			debugInfo: testkube.DebugInfo{
 				ClientVersion:  "v0.test",
 				ServerVersion:  "v1.test",
-				Commit:         "commitID",
-				BuildBy:        "test",
-				BuildDate:      "now",
 				ClusterVersion: "v2.test",
-				APILogs:        []string{"api logline1", "api logline2"},
+				ApiLogs:        []string{"api logline1", "api logline2"},
 				OperatorLogs:   []string{"operator logline1", "operator logline2", "operator logline3"},
-				LastExecutionLogs: map[string][]string{
+				ExecutionLogs: map[string][]string{
 					"execution1": {"execution logline1"},
 					"execution2": {"execution logline1", "execution logline2"},
 				},
@@ -37,9 +36,6 @@ func TestBuildInfo(t *testing.T) {
 |----|----|
 |Client version|v0.test|
 |Server version|v1.test|
-|Commit|commitID|
-|Build by|test|
-|Build date|now|
 |Cluster version|v2.test|
 
 ### API logs

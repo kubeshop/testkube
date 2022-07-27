@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/debuginfo"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -19,8 +20,8 @@ func NewDebugCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, Version)
 		}}
 
-	// cmd.AddCommand(tests.NewWatchExecutionCmd())
-	// cmd.AddCommand(testsuites.NewWatchTestSuiteExecutionCmd())
+	cmd.AddCommand(debuginfo.NewShowDebugInfoCmd())
+	// cmd.AddCommand(debuginfo.NewOpenTicketCmd())
 
 	return cmd
 }

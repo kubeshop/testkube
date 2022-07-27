@@ -1,4 +1,4 @@
-package debug
+package debuginfo
 
 import (
 	"bytes"
@@ -6,42 +6,10 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/kubeshop/testkube/cmd/tools/commands"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-type DebugInfo struct {
-	ClientVersion     string
-	ServerVersion     string
-	Commit            string
-	BuildBy           string
-	BuildDate         string
-	ClusterVersion    string
-	APILogs           []string
-	OperatorLogs      []string
-	LastExecutionLogs map[string][]string
-}
-
-func GetClientVersion() string {
-	return commands.Version
-}
-
-func GetClusterVersion() error {
-	return nil
-}
-
-func GetAPILogs() error {
-	return nil
-}
-
-func GetOperatorLogs() error {
-	return nil
-}
-
-func GetLastExecutionLogs() error {
-	return nil
-}
-
-func BuildInfo(d DebugInfo) (string, error) {
+func BuildInfo(d testkube.DebugInfo) (string, error) {
 	if d.ClientVersion == "" || d.ClusterVersion == "" {
 		return "", errors.New("client version and cluster version must be populated to create debug message")
 	}
@@ -65,13 +33,10 @@ func GetTemplate() string {
 |----|----|
 |Client version|{{ .ClientVersion }}|
 |Server version|{{ .ServerVersion }}|
-|Commit|{{ .Commit }}|
-|Build by|{{ .BuildBy }}|
-|Build date|{{ .BuildDate }}|
 |Cluster version|{{ .ClusterVersion }}|
 
 ### API logs
-{{ range $log := .APILogs }}
+{{ range $log := .ApiLogs }}
 {{ $log }}{{ end }}
 
 ### Operator logs
@@ -79,7 +44,7 @@ func GetTemplate() string {
 {{ $log }}{{ end }}
 
 ### Execution logs
-{{ range $id, $executionLogs := .LastExecutionLogs }}
+{{ range $id, $executionLogs := .ExecutionLogs }}
 Execution ID: {{ $id }}
 {{ range $log := $executionLogs}}
 {{ $log }}{{ end }}
