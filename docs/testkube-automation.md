@@ -5,7 +5,7 @@
 In order to automate Testkube runs, access to a  K8S cluster is needed, for example, a configured environment with the set up context and kubeconfig for communication with the K8S cluster.  
 Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources, etc.
 
-In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
+In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHub Actions and GKE K8S.
 
 ## **Configuring your GH Actions for the Access to GKE**
 
