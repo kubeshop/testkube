@@ -622,6 +622,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		common.MergeMaps(options.Labels, options.Request.ExecutionLabels),
 	)
 
+	execution.Envs = options.Request.Envs
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
 

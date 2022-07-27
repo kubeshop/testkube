@@ -151,6 +151,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 	request := testkube.ExecutionRequest{
 		VariablesFile: options.ExecutionVariablesFileContent,
 		Variables:     options.ExecutionVariables,
+		Envs:          options.Envs,
 		Args:          options.Args,
 		SecretEnvs:    options.SecretEnvs,
 		HttpProxy:     options.HTTPProxy,
