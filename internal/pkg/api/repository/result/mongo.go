@@ -14,16 +14,26 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const CollectionName = "results"
+const (
+	CollectionName    = "results"
+	CollectionNumbers = "numbers"
+)
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
-		Coll: db.Collection(CollectionName),
+		Coll:    db.Collection(CollectionName),
+		Numbers: db.Collection(CollectionNumbers),
 	}
 }
 
 type MongoRepository struct {
-	Coll *mongo.Collection
+	Coll    *mongo.Collection
+	Numbers *mongo.Collection
+}
+
+type executionNumber struct {
+	TestName string `json:"testName"`
+	Number   int    `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
@@ -205,6 +215,18 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 		}
 	}
 	return labels, nil
+}
+
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error) {
+	opts := options.FindOneAndUpdate()
+	opts.SetUpsert(true)
+	opts.SetReturnDocument(options.After)
+	execNmbr := executionNumber{}
+	err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+	if err != nil {
+		return 1, err
+	}
+	return execNmbr.Number, nil
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
