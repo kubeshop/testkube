@@ -183,7 +183,7 @@ The scheduled test suite was created, but it was not yet executed.
 
 ## **Run a Scheduled Test Suite**
 
-In order start the execution of the test suite on a defined schedule, we need to run it using Testkube CLI command:
+In order to start the execution of the test suite on a defined schedule, we need to run it using Testkube CLI command:
 
 ```sh
 kubectl testkube run testsuite scheduled-testsuite
