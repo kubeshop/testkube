@@ -70,7 +70,7 @@ bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 If you don't like automatic scripts you can always do a manual install:
 
 1. Download binary with the version of your choice (the most recent one is recommended).
-2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz).
+2. Unpack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz).
 3. Move it to a location in the PATH. For example, `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`.
 
 For Windows, download the binary [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`.
@@ -199,7 +199,7 @@ The following Helm defaults are used in the `testkube` chart:
 | ------------------------------------ | ----------- | ------------------------------------ |
 | mongodb.auth.enabled                 | yes         | false                                |
 | mongodb.service.port                 | yes         | "27017"                              |
-| mongodb.service.portNmae             | yes         | "mongodb"                            |
+| mongodb.service.portName             | yes         | "mongodb"                            |
 | mongodb.service.nodePort             | yes         | true                                 |
 | mongodb.service.clusterIP            | yes         | ""                                   |
 | mongodb.nameOverride                 | yes         | "mongodb"                            |
