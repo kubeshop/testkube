@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/cronjob"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -644,6 +645,33 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		}
 
 		return c.JSON(execution)
+	}
+}
+
+// ListTestSuiteTestsHandler for getting list of all available Tests for TestSuites
+func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		crTestSuite, err := s.TestsSuitesClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
+		crTests, err := s.TestsClient.ListByNames(testSuite.GetTestNames())
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Warn(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(testsmapper.MapTestArrayKubeToAPI(crTests))
 	}
 }
 
