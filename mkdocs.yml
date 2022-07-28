@@ -54,6 +54,7 @@ nav:
       - Config Command: cli/kubectl-testkube_config.md
       - Create Command: cli/kubectl-testkube_create.md
       - Dashboard Command: cli/kubectl-testkube_dashboard.md
+      - Debug Command: cli/kubectl-testkube_debug.md
       - Delete Command: cli/kubectl-testkube_delete.md
       - Disable Command: cli/kubectl-testkube_disable.md
       - Download Command: cli/kubectl-testkube_download.md
