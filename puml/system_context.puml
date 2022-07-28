@@ -1,0 +1,55 @@
+@startuml system_context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include FONTAWESOME/chart_line.puml
+!include FONTAWESOME/envelope_open.puml
+
+
+
+LAYOUT_WITH_LEGEND()
+
+
+Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+
+System_Ext(webhookevent1, "Webhook receivers", "system1", "envelope_open")
+
+
+
+Boundary(kubernetes, "kubnernetes cluster") {
+	System(testkube, "testkube", "TestSuites stuff inside kuberbetes cluster", "kubernetes")
+
+	Boundary(crds, "Custom Resources") {
+		System_Ext(testCrds, "TestSuites CRDs", "tests definitions Custom Resources", "kubernetes")
+		System_Ext(executorCrds, "Executors CRDs", "executors CR (internal and custom) Custom Resources", "kubernetes")
+	}
+
+	System(operator, "operator", "Manages CRD versioning", "kubernetes")
+
+	System_Ext(sut, "SUT", "System Under Test", "html5")
+
+	Rel_U(testCrds, operator, "Listens for CRDs changes, versioning")
+	Rel_U(testCrds, testkube, "Getting details about tests contents")
+	Rel_D(kubectl, crds, "Creates new Custom Resources")
+
+	Rel_U(executorCrds, testkube, "Read connection details from executors CRDs")
+}
+
+
+Rel(kubectl, testkube, "Runs tests, getting results")
+Rel(cicd, testkube, "Runs tests getting results")
+Rel(web, testkube, "Runs tests, getting restuls")
+Rel(testkube, webhookevent1, "Receives Testkube events")
+
+Rel(metrics, testkube, "Reads business metrics")
+Rel_L(testkube, sut, "Runs test on SUT")
+
+
+@enduml

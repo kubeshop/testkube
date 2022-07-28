@@ -1,0 +1,9 @@
+{
+	"name": "testkube",
+	"description": "Testkube test suite, api, dashboard and performance",
+	"steps": [
+		{"execute": {"name": "chuck-jokes-postman"}},
+		{"delay": {"duration": 1000}},
+		{"execute": {"name": "chuck-jokes-k6"}}
+	]
+}

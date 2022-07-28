@@ -1,0 +1,46 @@
+@startuml "variables-passing"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/html5.puml
+!include FONTAWESOME/check_double.puml
+!include FONTAWESOME/check.puml
+!include FONTAWESOME/clipboard_list.puml
+!include FONTAWESOME/file_code.puml
+
+LAYOUT_AS_SKETCH()
+
+Container_Boundary(tests, "Params passing: Tests") {
+
+	Component(test, "Test",  "test default variables: par1=val1")
+
+	Component(testExecution, "Test Execution", "val1 overriden by variables: par1=exec1 in execution")
+	Rel(test, testExecution, "EXECUTE: set variables e.g. par1=exec1")
+}
+
+
+Container_Boundary(testsuites, "Params passing: Test suites") {
+
+	Component(testSuite, "TestSuite", "test suite default variables: par1=val2")
+	Component(testInTestsuite, "Test", "test default variables: par1=val3")
+
+
+	Rel_L(testInTestsuite, testSuite,  "part of")
+
+
+	Component(testsuiteExecution, "TestSuite Execution",  "val1 overriden by par1=exec2 in execution variables")
+
+	Component(testExecutionInTestSuite1, "TestSuite Execution",  "tests variables: par1=val3 overriden to val3 by execution variables")
+	Component(testExecutionInTestSuite2, "TestSuite Execution",  "tests variables: par1=val3 overriden by val2 in TestSuite")
+
+	Rel(testSuite, testsuiteExecution, "EXECUTE: set variables e.g. par1=exec2")
+
+	Rel(testsuiteExecution, testExecutionInTestSuite1, "EXECUTE: set variables e.g. par1=val3")
+	Rel(testsuiteExecution, testExecutionInTestSuite2, "EXECUTE: no variables, variables will be passed from TestSuite to Test: par1=val2")
+}
+
+
+
+@enduml

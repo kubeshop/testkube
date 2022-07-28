@@ -1,0 +1,75 @@
+@startuml containers 
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include DEVICONS/go.puml
+!include DEVICONS/mongodb.puml
+!include FONTAWESOME/envelope_open.puml
+!include FONTAWESOME/chart_line.puml
+
+
+LAYOUT_WITH_LEGEND()
+
+Boundary(ext, "external systems") {
+	Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+	System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+	System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+
+}
+
+Boundary(webhooks, "Webhook receivers") {
+	System_Ext(webhookevent1, "Webhook event 1", "system1", "envelope_open")
+	System_Ext(webhookevent2, "Webhook event 2", "system2", "envelope_open")
+}
+
+Boundary(kubernetes, "kubnernetes cluster") {
+	System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+
+	Boundary(crds, "CRDs") {
+		System_Ext(testCrds, "TestSuites CRDs", "kubernetes CRD defined by engineers", "kubernetes")
+		System_Ext(executorCrds, "Executor CRDs", "kubernetes CRD defined by executor owner", "kubernetes")
+	}
+
+
+
+	Boundary(executors, "Jobs of any kind, implements testkube runner ") {
+		System_Ext(executorn, "Executor job n", "postman/collection", "kubernetes")
+		System_Ext(executor2, "Executor job 2", "postman/collection", "kubernetes")
+		System_Ext(executor1, "Executor job 1", "curl/test", "kubernetes")
+	}
+
+	Container(api, "testkube API", "golang", "Orchestrate incoming test runs", "go")
+	Container(operator, "Operator", "golang", "Mananges CRD changes", "go")
+	ContainerDb(db, "MongoDB", "Storage", "Stores execution results", "mongodb")
+
+	System_Ext(sut, "SUT", "System Under Test", "html5")
+
+	Rel(executor1, sut, "Runs tests")
+	Rel(executor2, sut, "Runs tests")
+	Rel(executorn, sut, "Runs tests")
+
+	Rel(webhookevent1, api, "calls external systems on Testkube event (e.g. test completed)")
+	Rel(webhookevent2, api, "calls external systems")
+
+	Rel(api, db, "stores results")
+	Rel(api, executor1, "schedules executions as Kuberntetes jobs")
+
+	Rel(api, metrics, "Stores test runs metrics")
+}
+
+
+Rel(operator, testCrds, "watch for new crd/changes")
+Rel(testCrds, api, "get tests content")
+
+Rel(executorCrds, api, "get executor uri and other details")
+
+BiRel(kubectl, api, "Runs tests, getting results")
+BiRel(cicd, api, "Runs tests getting results")
+BiRel(web, api, "Runs tests, getting restuls")
+
+
+@enduml

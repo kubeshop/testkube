@@ -1,0 +1,58 @@
+@startuml "objects-dependencies"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/html5.puml
+!include FONTAWESOME/check_double.puml
+!include FONTAWESOME/check.puml
+!include FONTAWESOME/clipboard_list.puml
+!include FONTAWESOME/file_code.puml
+
+LAYOUT_AS_SKETCH()
+
+Boundary(ext, "TestSuite execution") {
+
+	System(testsuite1, "TestSuite 1", "TestSuite defined with testsuites attached", "clipboard_list")
+
+	System(test1, "Test 1", "testsuite content", "file_code")
+	System(test2, "Test 2", "testsuite content", "file_code")
+
+	System(testsuite1Execution1, "TestSuite 1 Execution 1", "TestSuite RUN - knows about what testsuites was executed and stores executions references", "check_double")
+	System(testsuite1Execution2, "TestSuite 1 Execution 2", "TestSuite RUN - knows about what testsuites was executed and stores executions references", "check_double")
+
+	System(testsuite1test1Execution1, "TestSuite 1 Test 1 Execution 1", "Test RUN - results", "check")
+	System(testsuite1test2Execution1, "TestSuite 1 Test 2 Execution 1", "Test RUN - results", "check")
+	System(testsuite1test1Execution2, "TestSuite 1 Test 1 Execution 2", "Test RUN - results", "check")
+	System(testsuite1test2Execution2, "TestSuite 1 Test 2 Execution 2", "Test RUN - results", "check")
+
+	Rel(test1, testsuite1, "Test is one of testsuite steps")
+	Rel(test2, testsuite1, "Test is one of testsuite steps")
+
+	Rel(testsuite1, testsuite1Execution1, "Execute testsuite")
+	Rel(testsuite1, testsuite1Execution2, "Execute testsuite")
+
+	Rel_U(testsuite1test1Execution1, testsuite1Execution1, "is part of")
+	Rel_U(testsuite1test2Execution1, testsuite1Execution1, "is part of")
+
+	Rel_U(testsuite1test1Execution2, testsuite1Execution2, "is part of")
+	Rel_U(testsuite1test2Execution2, testsuite1Execution2, "is part of")
+
+}
+
+Boundary(grids, "Views on dashboard and relations") {
+
+	System(testsuitegrid, "TestSuites List", "TestSuite 1\nTestSuite 2", "clipboard_list")
+	System(testsgrid, "TestSuites List", "Test 1\nTest 2\nTest 3", "clipboard_list")
+	System(executionsgrid, "Executions List", "Execution 1\nExecution 2\n\nlists testsuite or testsuite testsuites executions", "check_double")
+	System(testsuitesexecutionsgrid, "TestSuites Executions List", "TestSuite 1 Execution 1\nTestSuite 1 Execution 2\n\nlists testsuite or testsuite testsuites executions", "check")
+
+
+	Rel(testsuitegrid, testsgrid, "Click on 'show testsuites' in 'TestSuite 1' row will filter testsuites which are part of 'TestSuite 1'")
+	Rel(testsgrid, executionsgrid, "Click on 'show executions' in 'Test 1' will show executions of that testsuite")
+	Rel(testsuitegrid, testsuitesexecutionsgrid, "Click on 'show executions' in 'TestSuite 1' row will show given testsuite testsuites executions")
+	Rel(testsuitesexecutionsgrid, executionsgrid, "Click on 'show executions' will show testsuites executions of given testsuite executions (list of executions of testsuite testsuites in given testsuite run)")
+}
+
+@enduml
