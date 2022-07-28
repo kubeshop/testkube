@@ -63,3 +63,13 @@ func MapTestContentFromSpec(specContent *testsv2.TestContent) *testkube.TestCont
 
 	return content
 }
+
+// MapTestArrayKubeToAPI maps CRD array data to OpenAPI spec tests list
+func MapTestArrayKubeToAPI(crTests []testsv2.Test) (tests []testkube.Test) {
+	tests = []testkube.Test{}
+	for _, crTest := range crTests {
+		tests = append(tests, MapTestCRToAPI(crTest))
+	}
+
+	return
+}
