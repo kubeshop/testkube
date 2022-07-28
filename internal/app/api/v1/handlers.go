@@ -16,8 +16,6 @@ import (
 const (
 	// cliIngressHeader is cli ingress header
 	cliIngressHeader = "X-CLI-Ingress"
-	// namespace is the Kubernetes namespaces Testkube is running in
-	namespace = "testkube"
 )
 
 const (
@@ -102,12 +100,12 @@ func (s TestkubeAPI) DebugHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get cluster version: %w", err))
 		}
 
-		apiLogs, err := k8sclient.GetAPIServerLogs(c.Context(), clientSet, namespace)
+		apiLogs, err := k8sclient.GetAPIServerLogs(c.Context(), clientSet, s.Namespace)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get api server logs: %w", err))
 		}
 
-		operatorLogs, err := k8sclient.GetOperatorLogs(c.Context(), clientSet, namespace)
+		operatorLogs, err := k8sclient.GetOperatorLogs(c.Context(), clientSet, s.Namespace)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get operator logs: %w", err))
 		}

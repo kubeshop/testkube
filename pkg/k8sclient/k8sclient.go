@@ -18,6 +18,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	apiServerDeploymentSelector = "app.kubernetes.io/name=api-server"
+	operatorDeploymentSelector  = "control-plane=controller-manager"
+)
+
 // ConnectToK8s establishes a connection to the k8s and returns a *kubernetes.Clientset
 func ConnectToK8s() (*kubernetes.Clientset, error) {
 	var err error
@@ -197,35 +202,18 @@ func GetClusterVersion(k8sClient kubernetes.Interface) (string, error) {
 
 // GetAPIServerLogs returns the latest logs from the API server deployment
 func GetAPIServerLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace string) ([]string, error) {
-	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=api-server",
-	})
-	if err != nil {
-		return []string{}, fmt.Errorf("could not get api server pods: %w", err)
-	}
-
-	logs := []string{}
-
-	for _, pod := range pods.Items {
-		podLogs, err := k8sClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{}).Stream(ctx)
-		if err != nil {
-			return []string{}, fmt.Errorf("error in getting api server deployment: %w", err)
-		}
-		defer podLogs.Close()
-		buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, podLogs)
-		if err != nil {
-			return []string{}, fmt.Errorf("error in copy information from podLogs to buf")
-		}
-		logs = append(logs, fmt.Sprintf("Pod: %s \n Logs: \n %s", pod.Name, buf.String()))
-	}
-	return logs, nil
+	return GetPodLogs(ctx, k8sClient, namespace, apiServerDeploymentSelector)
 }
 
 // GetOperatorLogs returns the logs from the operator
 func GetOperatorLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace string) ([]string, error) {
+	return GetPodLogs(ctx, k8sClient, namespace, operatorDeploymentSelector)
+}
+
+// GetPodLogs returns logs for pods specified by the label selector
+func GetPodLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace string, selector string) ([]string, error) {
 	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "control-plane=controller-manager",
+		LabelSelector: selector,
 	})
 	if err != nil {
 		return []string{}, fmt.Errorf("could not get operator pods: %w", err)

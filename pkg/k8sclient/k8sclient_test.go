@@ -31,3 +31,11 @@ func TestGetOperatorLogs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string([]string{}), logs)
 }
+
+func TestGetPodLogs(t *testing.T) {
+	client := fake.NewSimpleClientset()
+
+	logs, err := GetPodLogs(context.Background(), client, "testkube", "selector")
+	assert.NoError(t, err)
+	assert.Equal(t, []string([]string{}), logs)
+}

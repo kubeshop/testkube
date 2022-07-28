@@ -35,6 +35,8 @@ const (
 	testSuiteResourceURI = "test-suites"
 	// defaultConcurrencyLevel is a default concurrency level for worker pool
 	defaultConcurrencyLevel = "10"
+	// latestExecutionNo defines the number of relevant latest executions
+	latestExecutions = 5
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
@@ -672,7 +674,7 @@ func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]st
 
 // getNewestExecutions returns the latest Testkube executions
 func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Execution, error) {
-	f := result.NewExecutionsFilter().WithSelector("").WithPage(1).WithPageSize(5)
+	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
 	executions, err := s.ExecutionResults.GetExecutions(c, f)
 	if err != nil {
 		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
