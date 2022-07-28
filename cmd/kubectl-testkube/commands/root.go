@@ -106,7 +106,7 @@ func Execute() {
 		defaultNamespace = cfg.Namespace
 	}
 
-	apiURI := "http://127.0.0.1:50729"
+	apiURI := "http://localhost:8088"
 	if cfg.APIURI != "" {
 		apiURI = cfg.APIURI
 	}

@@ -42,8 +42,6 @@ type Repository interface {
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
 	// GetExecutionTotals gets the statistics on number of executions using a filter, but without paging
 	GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (result testkube.ExecutionsTotals, err error)
-	// // GetExecutionsOrderedByTime gets the executions in a descending order by time
-	// GetExecutionsOrderedByTime(ctx context.Context, paging bool, filter Filter) ([]testkube.Execution, error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.Execution) error
 	// Update updates execution result

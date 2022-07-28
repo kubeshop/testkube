@@ -670,7 +670,7 @@ func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]st
 	return executionLogs, nil
 }
 
-// // getExecutions returns Testkube executions
+// getNewestExecutions returns the latest Testkube executions
 func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Execution, error) {
 	f := result.NewExecutionsFilter().WithSelector("").WithPage(1).WithPageSize(5)
 	executions, err := s.ExecutionResults.GetExecutions(c, f)

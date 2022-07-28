@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+// NewDebugCmd creates the 'testkube debug' command
 func NewDebugCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "debug",
@@ -21,7 +22,6 @@ func NewDebugCmd() *cobra.Command {
 		}}
 
 	cmd.AddCommand(debuginfo.NewShowDebugInfoCmd())
-	// cmd.AddCommand(debuginfo.NewOpenTicketCmd())
 
 	return cmd
 }
