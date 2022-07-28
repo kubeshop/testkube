@@ -20,6 +20,13 @@ func NewShowDebugInfoCmd() *cobra.Command {
 			client, _ := common.GetClient(cmd)
 			debug, err := client.GetDebugInfo()
 			ui.ExitOnError("get debug info", err)
+
+			info, err := client.GetServerInfo()
+			ui.ExitOnError("get server info", err)
+
+			debug.ClientVersion = common.Version
+			debug.ServerVersion = info.Version
+
 			printDebugInfo(debug)
 		},
 	}

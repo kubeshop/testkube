@@ -21,15 +21,15 @@ func NewVersionCmd() *cobra.Command {
 			}
 
 			ui.Logo()
-			ui.Info("Client Version", Version)
+			ui.Info("Client Version", common.Version)
 			ui.Info("Server Version", info.Version)
-			ui.Info("Commit", Commit)
-			ui.Info("Built by", BuiltBy)
-			ui.Info("Build date", Date)
+			ui.Info("Commit", common.Commit)
+			ui.Info("Built by", common.BuiltBy)
+			ui.Info("Build date", common.Date)
 
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			validator.PersistentPreRunVersionCheck(cmd, Version)
+			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		},
 	}
 }
