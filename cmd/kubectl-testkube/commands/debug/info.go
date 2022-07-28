@@ -15,7 +15,7 @@ func NewShowDebugInfoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "info",
 		Short: "Show debug info",
-		Long:  "Getting all the necessary information to debug an issue",
+		Long:  "Getting all the necessary information to debug an issue in Testkube",
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 			debug, err := client.GetDebugInfo()

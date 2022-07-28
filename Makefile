@@ -4,12 +4,12 @@ CHART_NAME=api-server
 BIN_DIR ?= $(HOME)/bin
 USER ?= $(USER)
 NAMESPACE ?= "testkube"
-DATE ?= $(shell date -u --iso-8601=seconds)
+DATE ?= $(shell date -u -I seconds)
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
 DEBUG ?= $(DEBUG)
-ANALYTICS_TRACKING_ID ?= $(ANALYTICS_TRACKING_ID)
-ANALYTICS_API_KEY ?= $(ANALYTICS_API_KEY)"
+ANALYTICS_TRACKING_ID = ${ANALYTICS_TRACKING_ID:-""}
+ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
@@ -50,9 +50,9 @@ build-testkube-bin:
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
 			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
@@ -64,9 +64,9 @@ build-testkube-bin-intel:
 			-X main.date=$(DATE) \
 			-X main.builtBy=$(USER) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)" \
+			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
 			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
