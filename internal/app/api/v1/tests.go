@@ -153,7 +153,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
-// getLatestExecutions return latest executions either by starttime or endtine for tests
+// getLatestExecutions return latest executions either by starttime or endtime for tests
 func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
 	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames, "starttime")
 	if err != nil && err != mongo.ErrNoDocuments {

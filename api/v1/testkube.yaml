@@ -1611,6 +1611,28 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /debug:
+    get:
+      tags:
+        - api
+      summary: "get debug information"
+      description: "Gets information that is needed for debugging and opening Testkube bug reports"
+      operationId: getDebugInfo
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugInfo"
+        500:
+          description: "problem with getting debug information"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 
 components:
   schemas:
@@ -2587,6 +2609,35 @@ components:
           type: string
         enableTelemetry:
           type: boolean
+
+    DebugInfo:
+      description: Testkube debug info
+      type: object
+      required:
+      properties:
+        clientVersion:
+          type: string
+        serverVersion:
+          type: string
+        clusterVersion:
+          type: string
+        apiLogs:
+          type: array
+          items:
+            type: string
+          example: ["logline1", "logline2", "logline3"]
+        operatorLogs:
+          type: array
+          items:
+            type: string
+          example: ["logline1", "logline2", "logline3"]
+        executionLogs:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            example: ["logline1", "logline2", "logline3"]
 
     #
     # Errors

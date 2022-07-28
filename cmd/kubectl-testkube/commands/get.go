@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/artifacts"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
@@ -22,7 +23,7 @@ func NewGetCmd() *cobra.Command {
 			ui.PrintOnError("Displaying help", err)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			validator.PersistentPreRunVersionCheck(cmd, Version)
+			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
 	cmd.AddCommand(tests.NewGetTestsCmd())

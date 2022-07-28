@@ -87,6 +87,7 @@ type ConfigAPI interface {
 // ServiceAPI describes service api methods
 type ServiceAPI interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
+	GetDebugInfo() (info testkube.DebugInfo, err error)
 }
 
 // TODO consider replacing below types by testkube.*
@@ -129,7 +130,7 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo | testkube.Config
+		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo
 }
 
 // Executable is an interface of executable objects

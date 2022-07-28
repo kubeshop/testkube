@@ -6,17 +6,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
-	Commit  string
-	Version string
-	BuiltBy string
-	Date    string
-
 	telemetryEnabled bool
 	client           string
 	verbose          bool
@@ -50,6 +46,7 @@ func init() {
 	RootCmd.AddCommand(NewVersionCmd())
 
 	RootCmd.AddCommand(NewConfigCmd())
+	RootCmd.AddCommand(NewDebugCmd())
 }
 
 var RootCmd = &cobra.Command{
@@ -61,7 +58,7 @@ var RootCmd = &cobra.Command{
 
 		if telemetryEnabled {
 			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-			out, err := telemetry.SendCmdEvent(cmd, Version)
+			out, err := telemetry.SendCmdEvent(cmd, common.Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
@@ -78,7 +75,7 @@ var RootCmd = &cobra.Command{
 
 				ui.Debug("sending 'init' event")
 
-				out, err := telemetry.SendCmdInitEvent(cmd, Version)
+				out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
 				if ui.Verbose && err != nil {
 					ui.Err(err)
 				}

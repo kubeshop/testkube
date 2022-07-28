@@ -1,19 +1,19 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	debuginfo "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/debug"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
-func NewUpdateCmd() *cobra.Command {
+// NewDebugCmd creates the 'testkube debug' command
+func NewDebugCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update <resourceName>",
-		Aliases: []string{"u"},
-		Short:   "Update resource",
+		Use:   "debug",
+		Short: "Print environment information for debugging",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
@@ -22,8 +22,7 @@ func NewUpdateCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
-	cmd.AddCommand(tests.NewUpdateTestsCmd())
-	cmd.AddCommand(testsuites.NewUpdateTestSuitesCmd())
+	cmd.AddCommand(debuginfo.NewShowDebugInfoCmd())
 
 	return cmd
 }

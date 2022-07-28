@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 )
 
 var (
@@ -13,10 +14,10 @@ var (
 
 func init() {
 	// pass data from goreleaser to commands package
-	commands.Version = version
-	commands.BuiltBy = builtBy
-	commands.Commit = commit
-	commands.Date = date
+	common.Version = version
+	common.BuiltBy = builtBy
+	common.Commit = commit
+	common.Date = date
 }
 
 func main() {
