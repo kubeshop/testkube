@@ -53,7 +53,7 @@ func ConnectToK8s() (*kubernetes.Clientset, error) {
 }
 
 // GetIngressAddress gets the hostname or ip address of the ingress with name.
-func GetIngressAddress(clientSet *kubernetes.Clientset, ingressName string, namespace string) (string, error) {
+func GetIngressAddress(clientSet kubernetes.Interface, ingressName string, namespace string) (string, error) {
 	period := 30 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), period)
 	defer cancel()
@@ -93,7 +93,7 @@ func GetIngressAddress(clientSet *kubernetes.Clientset, ingressName string, name
 }
 
 // IsPersistentVolumeClaimBound TODO: add description.
-func IsPersistentVolumeClaimBound(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+func IsPersistentVolumeClaimBound(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pv, err := c.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
@@ -111,7 +111,7 @@ func IsPersistentVolumeClaimBound(c *kubernetes.Clientset, podName, namespace st
 }
 
 // IsPodRunning check if the pod in question is running state
-func IsPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+func IsPodRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
@@ -129,7 +129,7 @@ func IsPodRunning(c *kubernetes.Clientset, podName, namespace string) wait.Condi
 }
 
 // HasPodSucceeded custom method for checing if Pod is succeded (handles PodFailed state too)
-func HasPodSucceeded(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+func HasPodSucceeded(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
@@ -147,7 +147,7 @@ func HasPodSucceeded(c *kubernetes.Clientset, podName, namespace string) wait.Co
 }
 
 // IsPodReady check if the pod in question is running state
-func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
@@ -167,7 +167,7 @@ func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.Conditi
 }
 
 // WaitForPodsReady wait for pods to be running with a timeout, return error
-func WaitForPodsReady(k8sClient *kubernetes.Clientset, namespace string, instance string, timeout time.Duration) error {
+func WaitForPodsReady(k8sClient kubernetes.Interface, namespace string, instance string, timeout time.Duration) error {
 
 	pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + instance})
 	if err != nil {
@@ -186,8 +186,8 @@ func WaitForPodsReady(k8sClient *kubernetes.Clientset, namespace string, instanc
 }
 
 // GetClusterVersion returns the current version of the Kubernetes cluster
-func GetClusterVersion(k8sClient *kubernetes.Clientset) (string, error) {
-	version, err := k8sClient.DiscoveryClient.ServerVersion()
+func GetClusterVersion(k8sClient kubernetes.Interface) (string, error) {
+	version, err := k8sClient.Discovery().ServerVersion()
 	if err != nil {
 		return "", err
 	}
@@ -196,7 +196,7 @@ func GetClusterVersion(k8sClient *kubernetes.Clientset) (string, error) {
 }
 
 // GetAPIServerLogs returns the latest logs from the API server deployment
-func GetAPIServerLogs(ctx context.Context, k8sClient *kubernetes.Clientset, namespace string) ([]string, error) {
+func GetAPIServerLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace string) ([]string, error) {
 	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/name=api-server",
 	})
@@ -223,7 +223,7 @@ func GetAPIServerLogs(ctx context.Context, k8sClient *kubernetes.Clientset, name
 }
 
 // GetOperatorLogs returns the logs from the operator
-func GetOperatorLogs(ctx context.Context, k8sClient *kubernetes.Clientset, namespace string) ([]string, error) {
+func GetOperatorLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace string) ([]string, error) {
 	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "control-plane=controller-manager",
 	})
