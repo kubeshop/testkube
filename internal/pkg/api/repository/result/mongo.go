@@ -218,14 +218,38 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 }
 
 func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error) {
+
+	execNmbr := executionNumber{}
+	retry := false
+	retryAttempts := 0
+	maxRetries := 10
+
 	opts := options.FindOneAndUpdate()
 	opts.SetUpsert(true)
 	opts.SetReturnDocument(options.After)
-	execNmbr := executionNumber{}
-	err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
-	if err != nil {
-		return 1, err
+
+	err = r.Numbers.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
+	if err == mongo.ErrNoDocuments {
+		execution, err := r.GetLatestByTest(context.Background(), testName, "number")
+		if err == mongo.ErrNoDocuments || execution.Number == 0 || err != nil {
+			execNmbr.TestName = testName
+			execNmbr.Number = 1
+			_, err = r.Numbers.InsertOne(ctx, execNmbr)
+			retry = (err != nil)
+		}
+	} else {
+		err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		retry = (err != nil)
 	}
+
+	for retry {
+		retryAttempts++
+		err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		if err == nil || retryAttempts >= maxRetries {
+			retry = false
+		}
+	}
+
 	return execNmbr.Number, nil
 }
 
