@@ -11,7 +11,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.35.0
 	github.com/gookit/color v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.3.18
+	github.com/kubeshop/testkube-operator v1.3.19
 	github.com/minio/minio-go/v7 v7.0.32
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5
