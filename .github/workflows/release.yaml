@@ -126,13 +126,21 @@ jobs:
         run: git config --global user.email "brewbot@kubeshop.io"
       - name: Setup git name
         run: git config --global user.name "Brew Bot"
+#      - name: Bump formulae
+#        uses: Homebrew/actions/bump-formulae@master
+#        with:
+#          # Custom GitHub access token with only the 'public_repo' scope enabled
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          # Bump only these formulae if outdated
+#          formulae: testkube
       - name: Bump formulae
-        uses: Homebrew/actions/bump-formulae@master
+        uses: dawidd6/action-homebrew-bump-formula@v3
         with:
           # Custom GitHub access token with only the 'public_repo' scope enabled
           token: ${{ secrets.CI_BOT_TOKEN }}
           # Bump only these formulae if outdated
           formulae: testkube
+          livecheck: true
 
   build-and-publish-windows-installer:
     needs: release
