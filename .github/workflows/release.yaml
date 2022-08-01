@@ -118,26 +118,13 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-#      - name: Setup Homebrew
-#        uses: Homebrew/actions/setup-homebrew@master
-#      - name: Update brew
-#        run: brew update
       - name: Setup git email
         run: git config --global user.email "brewbot@kubeshop.io"
       - name: Setup git name
         run: git config --global user.name "Brew Bot"
-#      - name: Bump formulae
-#        uses: Homebrew/actions/bump-formulae@master
-#        with:
-#          # Custom GitHub access token with only the 'public_repo' scope enabled
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          # Bump only these formulae if outdated
-#          formulae: testkube
       - name: Bump formulae
         uses: mislav/bump-homebrew-formula-action@v2
         with:
-          # Custom GitHub access token with only the 'public_repo' scope enabled
-          # Bump only these formulae if outdated
           formula-name: testkube
         env:
           COMMITTER_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
