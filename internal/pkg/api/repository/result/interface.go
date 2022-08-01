@@ -28,6 +28,7 @@ type Filter interface {
 }
 
 type Repository interface {
+	Sequences
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByName gets execution result by name
@@ -42,8 +43,6 @@ type Repository interface {
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
 	// GetExecutionTotals gets the statistics on number of executions using a filter, but without paging
 	GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (result testkube.ExecutionsTotals, err error)
-	// GetNextExecutionNumber gets next execution number by test name
-	GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.Execution) error
 	// Update updates execution result
@@ -68,4 +67,9 @@ type Repository interface {
 	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
 	// DeleteForAllTestSuites deletes execution results for all test suites
 	DeleteForAllTestSuites(ctx context.Context) (err error)
+}
+
+type Sequences interface {
+	// GetNextExecutionNumber gets next execution number by test name
+	GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error)
 }
