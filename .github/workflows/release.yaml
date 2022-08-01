@@ -137,9 +137,10 @@ jobs:
         uses: mislav/bump-homebrew-formula-action@v2
         with:
           # Custom GitHub access token with only the 'public_repo' scope enabled
-          token: ${{ secrets.CI_BOT_TOKEN }}
           # Bump only these formulae if outdated
-          formula: testkube
+          formula-name: testkube
+        env:
+          COMMITTER_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
   build-and-publish-windows-installer:
     needs: release
