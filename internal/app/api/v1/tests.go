@@ -101,6 +101,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
+
 	crTests, err := s.TestsClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
