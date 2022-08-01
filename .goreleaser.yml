@@ -43,7 +43,8 @@ brews:
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
     homepage: https://testkube.io
     license: "MIT"
-    post_install: |
+    install: |
+      bin.install "kubectl-testkube"
       ln_s bin/"kubectl-testkube", bin/"tk"
       ln_s bin/"kubectl-testkube", bin/"testkube"
 
