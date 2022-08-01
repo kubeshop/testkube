@@ -23,6 +23,7 @@ func NewDebugCmd() *cobra.Command {
 		}}
 
 	cmd.AddCommand(debuginfo.NewShowDebugInfoCmd())
+	cmd.AddCommand(debuginfo.NewCreateTicketCmd())
 
 	return cmd
 }
