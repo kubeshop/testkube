@@ -45,6 +45,7 @@ brews:
     license: "MIT"
     post_install: |
       ln_s bin/"kubectl-testkube", bin/"tk"
+      ln_s bin/"kubectl-testkube", bin/"testkube"
 
 nfpms:
   - maintainer: Testkube team
