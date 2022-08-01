@@ -44,8 +44,7 @@ brews:
     homepage: https://testkube.io
     license: "MIT"
     post_install: |
-      bin.install_symlink "tk"
-      bin.install_symlink "testkube"
+      ln_s bin/"kubectl-testkube", bin/"tk"
 
 nfpms:
   - maintainer: Testkube team
