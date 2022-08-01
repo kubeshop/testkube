@@ -15,20 +15,20 @@ import (
 )
 
 const (
-	CollectionName    = "results"
-	CollectionNumbers = "numbers"
+	CollectionName      = "results"
+	CollectionSequences = "sequences"
 )
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
-		Coll:    db.Collection(CollectionName),
-		Numbers: db.Collection(CollectionNumbers),
+		Coll:      db.Collection(CollectionName),
+		Sequences: db.Collection(CollectionSequences),
 	}
 }
 
 type MongoRepository struct {
-	Coll    *mongo.Collection
-	Numbers *mongo.Collection
+	Coll      *mongo.Collection
+	Sequences *mongo.Collection
 }
 
 type executionNumber struct {
@@ -228,7 +228,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName s
 	opts.SetUpsert(true)
 	opts.SetReturnDocument(options.After)
 
-	err = r.Numbers.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
+	err = r.Sequences.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
 	if err != nil {
 		var execution testkube.Execution
 		execution, err = r.GetLatestByTest(context.Background(), testName, "number")
@@ -237,16 +237,16 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName s
 		} else {
 			execNmbr.Number = execution.Number + 1
 		}
-		_, err = r.Numbers.InsertOne(ctx, execNmbr)
+		_, err = r.Sequences.InsertOne(ctx, execNmbr)
 	} else {
-		err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
 	}
 
 	retry = (err != nil)
 
 	for retry {
 		retryAttempts++
-		err = r.Numbers.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
 		if err == nil || retryAttempts >= maxRetries {
 			retry = false
 		}
