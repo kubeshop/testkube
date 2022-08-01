@@ -139,7 +139,7 @@ jobs:
           # Custom GitHub access token with only the 'public_repo' scope enabled
           token: ${{ secrets.CI_BOT_TOKEN }}
           # Bump only these formulae if outdated
-          formulae: testkube
+          formula: testkube
           livecheck: true
 
   build-and-publish-windows-installer:
