@@ -134,13 +134,12 @@ jobs:
 #          # Bump only these formulae if outdated
 #          formulae: testkube
       - name: Bump formulae
-        uses: dawidd6/action-homebrew-bump-formula@v3
+        uses: mislav/bump-homebrew-formula-action@v2
         with:
           # Custom GitHub access token with only the 'public_repo' scope enabled
           token: ${{ secrets.CI_BOT_TOKEN }}
           # Bump only these formulae if outdated
           formula: testkube
-          livecheck: true
 
   build-and-publish-windows-installer:
     needs: release
