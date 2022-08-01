@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
@@ -101,10 +102,15 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
+
+	n := time.Now()
+
 	crTests, err := s.TestsClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("LIST: %+v\n", time.Since(n))
 
 	search := c.Query("textSearch")
 	if search != "" {
