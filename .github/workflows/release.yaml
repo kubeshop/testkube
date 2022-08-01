@@ -118,10 +118,10 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      - name: Setup Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      - name: Update brew
-        run: brew update
+#      - name: Setup Homebrew
+#        uses: Homebrew/actions/setup-homebrew@master
+#      - name: Update brew
+#        run: brew update
       - name: Setup git email
         run: git config --global user.email "brewbot@kubeshop.io"
       - name: Setup git name
