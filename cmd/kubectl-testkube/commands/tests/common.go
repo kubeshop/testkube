@@ -209,13 +209,18 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	options = apiclientv1.UpsertTestOptions{
-		Name:         name,
-		Type_:        executorType,
-		Content:      content,
-		Namespace:    namespace,
-		Schedule:     schedule,
-		Variables:    variables,
-		ExecutorArgs: executorArgs,
+		Name:      name,
+		Type_:     executorType,
+		Content:   content,
+		Namespace: namespace,
+		Schedule:  schedule,
+	}
+
+	if len(variables) != 0 || len(executorArgs) != 0 {
+		options.ExecutionRequest = &testkube.ExecutionRequest{
+			Variables: variables,
+			Args:      executorArgs,
+		}
 	}
 
 	// if labels are passed and are different from the existing overwrite

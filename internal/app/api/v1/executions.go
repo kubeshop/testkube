@@ -15,7 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -53,7 +53,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		id := c.Params("id")
 		namespace := request.Namespace
 
-		var tests []testsv2.Test
+		var tests []testsv3.Test
 		if id != "" {
 			test, err := s.TestsClient.Get(id)
 			if err != nil {
@@ -71,7 +71,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		var results []testkube.Execution
-		var work []testsv2.Test
+		var work []testsv3.Test
 		for _, test := range tests {
 			if test.Spec.Schedule == "" || c.Query("callback") != "" {
 				work = append(work, test)
@@ -131,7 +131,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestRequests(work []testsv2.Test, request testkube.ExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) prepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
 	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
 	for i := range work {
@@ -152,7 +152,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		request.Name = test.Name
 	}
 
-	request.Number = s.getNextExecutionNumber(test.Name)
+	request.Number = int32(s.getNextExecutionNumber(test.Name))
 	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
@@ -514,9 +514,13 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
 	// Test variables lowest priority, then test suite, then test suite execution / test execution
-	request.Variables = mergeVariables(test.Variables, request.Variables)
+	if test.ExecutionRequest != nil {
+		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
+	}
 	// Combine test executor args with execution args
-	request.Args = append(request.Args, test.ExecutorArgs...)
+	if test.ExecutionRequest != nil {
+		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+	}
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -585,7 +589,7 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
 	execution, err := s.ExecutionResults.GetLatestByTest(context.Background(), testName, "number")
 	if err == mongo.ErrNoDocuments {
 		return 1
@@ -594,7 +598,7 @@ func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
 		s.Log.Errorw("retrieving latest execution", "error", err)
 		return 1
 	}
-	return execution.Number + 1
+	return int32(execution.Number) + 1
 }
 
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {

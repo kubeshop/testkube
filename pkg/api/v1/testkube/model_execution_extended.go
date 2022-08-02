@@ -17,7 +17,7 @@ func NewExecutionWithID(id, testType, testName string) Execution {
 }
 
 func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
-	executionNumber int, content *TestContent, result ExecutionResult,
+	executionNumber int32, content *TestContent, result ExecutionResult,
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
 	return Execution{
@@ -26,7 +26,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
 		Name:                executionName,
-		Number:              executionNumber,
+		Number:              int32(executionNumber),
 		TestType:            testType,
 		ExecutionResult:     &result,
 		Variables:           variables,

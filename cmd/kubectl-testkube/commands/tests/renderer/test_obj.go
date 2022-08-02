@@ -26,7 +26,9 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	renderer.RenderVariables(test.Variables)
+	if test.ExecutionRequest != nil && len(test.ExecutionRequest.Variables) > 0 {
+		renderer.RenderVariables(test.ExecutionRequest.Variables)
+	}
 
 	if test.Content != nil {
 		ui.NL()
@@ -51,8 +53,8 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 	}
 
-	if len(test.ExecutorArgs) > 0 {
-		ui.Warn("Executor Args:", test.ExecutorArgs...)
+	if test.ExecutionRequest != nil && len(test.ExecutionRequest.Args) > 0 {
+		ui.Warn("Executor Args:", test.ExecutionRequest.Args...)
 	}
 
 	return nil

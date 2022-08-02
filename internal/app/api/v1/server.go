@@ -15,7 +15,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
@@ -40,7 +40,7 @@ func NewTestkubeAPI(
 	namespace string,
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	testsClient *testsclientv2.TestsClient,
+	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv1.TestSuitesClient,
 	secretClient *secret.Client,
@@ -107,7 +107,7 @@ type TestkubeAPI struct {
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
 	TestsSuitesClient    *testsuitesclientv1.TestSuitesClient
-	TestsClient          *testsclientv2.TestsClient
+	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
