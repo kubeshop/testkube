@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -21,7 +20,6 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
@@ -77,26 +75,6 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		testSuite, err := s.TestsSuitesClient.Get(request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// delete cron job, if schedule is cleaned
-		if testSuite.Spec.Schedule != "" {
-			cronJob, err := s.CronJobClient.Get(cronjob.GetMetadataName(request.Name, testSuiteResourceURI))
-			if err != nil && !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-
-			if cronJob != nil {
-				if request.Schedule == "" {
-					if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI)); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				} else {
-					if err = s.CronJobClient.UpdateLabels(cronJob, testSuite.Labels, request.Labels); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				}
-			}
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
@@ -208,13 +186,6 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete cron job for test suite
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI)); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -258,13 +229,6 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// delete all cron jobs for test suites
-		if err = s.CronJobClient.DeleteAll(testSuiteResourceURI, selector); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
 		}
 
 		// delete all executions for tests
@@ -494,7 +458,6 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		}
 
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
 
@@ -520,32 +483,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		}
 
 		var results []testkube.TestSuiteExecution
-		var work []testsuitesv1.TestSuite
-		for _, testSuite := range testSuites {
-			if testSuite.Spec.Schedule == "" || c.Query("callback") != "" {
-				work = append(work, testSuite)
-				continue
-			}
-
-			data, err := json.Marshal(request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test suite request: %w", err))
-			}
-
-			options := cronjob.CronJobOptions{
-				Schedule: testSuite.Spec.Schedule,
-				Resource: testSuiteResourceURI,
-				Data:     string(data),
-				Labels:   testSuite.Labels,
-			}
-			if err = s.CronJobClient.Apply(testSuite.Name, cronjob.GetMetadataName(testSuite.Name, testSuiteResourceURI), options); err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
-			}
-
-			results = append(results, testkube.NewQueuedTestSuiteExecution(name, namespace))
-		}
-
-		if len(work) != 0 {
+		if len(testSuites) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
@@ -553,7 +491,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
+			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(testSuites, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {

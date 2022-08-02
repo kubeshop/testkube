@@ -22,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -92,11 +91,6 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob, s.Namespace)
-	if err != nil {
-		panic(err)
-	}
-
 	s.Init()
 	return s
 }
@@ -112,7 +106,6 @@ type TestkubeAPI struct {
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	EventsEmitter        *webhook.Emitter
-	CronJobClient        *cronjob.Client
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
@@ -123,8 +116,7 @@ type TestkubeAPI struct {
 }
 
 type jobTemplates struct {
-	Job     string
-	Cronjob string
+	Job string
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
@@ -132,7 +124,7 @@ func (j *jobTemplates) decodeFromEnv() error {
 	if err != nil {
 		return err
 	}
-	templates := []*string{&j.Job, &j.Cronjob}
+	templates := []*string{&j.Job}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])

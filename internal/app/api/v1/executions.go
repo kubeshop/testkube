@@ -19,7 +19,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -51,7 +50,6 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		id := c.Params("id")
-		namespace := request.Namespace
 
 		var tests []testsv3.Test
 		if id != "" {
@@ -71,37 +69,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		var results []testkube.Execution
-		var work []testsv3.Test
-		for _, test := range tests {
-			if test.Spec.Schedule == "" || c.Query("callback") != "" {
-				work = append(work, test)
-				continue
-			}
-
-			data, err := json.Marshal(request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test request: %w", err))
-			}
-
-			options := cronjob.CronJobOptions{
-				Schedule: test.Spec.Schedule,
-				Resource: testResourceURI,
-				Data:     string(data),
-				Labels:   test.Labels,
-			}
-			if err = s.CronJobClient.Apply(test.Name, cronjob.GetMetadataName(test.Name, testResourceURI), options); err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
-			}
-
-			results = append(results, testkube.Execution{
-				TestName:        test.Name,
-				TestType:        test.Spec.Type_,
-				TestNamespace:   namespace,
-				ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued},
-			})
-		}
-
-		if len(work) != 0 {
+		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
@@ -109,7 +77,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestRequests(work, request))
+			go workerpoolService.SendRequests(s.prepareTestRequests(tests, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
