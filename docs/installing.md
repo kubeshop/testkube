@@ -33,6 +33,28 @@ brew update
 brew upgrade testkube
 ```
 
+### **Installing on Windows**
+
+You can install Testkube from Chocolatey (the installed version might be not a latest one, because it's manually approved
+by the chocolatey maintainers)
+
+```sh
+choco install testkube
+```
+
+You can easily install latest Testkube version from our own chocolatey repository .
+
+```sh
+choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey
+choco install testkube
+```
+
+If you want to upgrade testkube, please run following command
+
+```sh
+choco upgrade testkube
+```
+
 ### **Installing on Linux with apt**
 
 You can use apt to install Testkube.
