@@ -585,7 +585,7 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
 	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
 	if err == nil {
 		s.Log.Errorw("retrieving latest execution", "error", err)

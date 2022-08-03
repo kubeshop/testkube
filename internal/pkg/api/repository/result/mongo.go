@@ -33,7 +33,7 @@ type MongoRepository struct {
 
 type executionNumber struct {
 	TestName string `json:"testName"`
-	Number   int    `json:"number"`
+	Number   int32  `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
@@ -217,7 +217,7 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
-func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error) {
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
 
 	execNmbr := executionNumber{TestName: testName}
 	retry := false
