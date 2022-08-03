@@ -14,6 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var _ Repository = &MongoRepository{}
+
 const CollectionName = "results"
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
@@ -374,5 +376,32 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	return
+}
+
+// GetTestMetrics returns test executions metrics
+func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string) (metrics testkube.TestMetrics, err error) {
+	query := bson.M{"testname": name}
+
+	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+
+	pipeline = append(pipeline, bson.D{
+		{
+			Key: "$project", Value: bson.D{
+				{Key: "status", Value: "$executionresult.status"},
+				{Key: "duration", Value: 1},
+			},
+		},
+	})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return metrics, err
+	}
+	err = cursor.All(ctx, &metrics)
+	if err != nil {
+		return metrics, err
+	}
+
 	return
 }

@@ -1006,6 +1006,40 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /tests/{id}/metrics:
+    get:
+      tags:
+        - tests
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the test
+      summary: "Get test metrics"
+      description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
+      operationId: getTestMetrics
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestMetrics"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: "problem with read information from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-with-executions:
     get:
       tags:
@@ -1672,6 +1706,36 @@ paths:
 
 components:
   schemas:
+    TestMetrics:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestMetricsExecutions"
+        pass_fail_ratio:
+          type: int
+        execution_duration_p50:
+          type: string
+        execution_duration_p90:
+          type: string
+        execution_duration_p99:
+          type: string
+        total_executions:
+          type: int
+        failed_executions:
+          type: int
+
+    TestMetricsExecutions:
+      type: object
+      properties:
+        executionId:
+          type: string
+        duration:
+          type: string
+        status:
+          type: string
+
     Variables:
       type: object
       description: "execution variables passed to executor converted to vars for usage in tests"

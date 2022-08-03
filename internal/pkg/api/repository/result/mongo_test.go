@@ -1,4 +1,4 @@
-//go:build integration
+///go:build integration
 
 package result
 
@@ -268,6 +268,31 @@ func TestLabels(t *testing.T) {
 
 	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
 		labels, err := repository.GetLabels(context.Background())
+		assert.NoError(err)
+		assert.Len(labels, 0)
+	})
+}
+
+func TestTestExecutionsMetrics(t *testing.T) {
+	assert := require.New(t)
+
+	repository, err := getRepository()
+	assert.NoError(err)
+
+	err = repository.Coll.Drop(context.TODO())
+	assert.NoError(err)
+
+	testName := "example-test"
+
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+
+	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
+		labels, err := repository.GetTestMetrics(context.Background(), testName)
 		assert.NoError(err)
 		assert.Len(labels, 0)
 	})
