@@ -1,6 +1,6 @@
 ## kubectl-testkube debug create-ticket
 
-Create Bug ticket in the Testkube repository
+Create bug ticket
 
 ### Synopsis
 
