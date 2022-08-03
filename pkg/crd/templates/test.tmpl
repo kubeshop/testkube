@@ -24,21 +24,36 @@ spec:
     uri: {{ .Content.Uri }}
   {{- end }}
   schedule: {{ .Schedule }}
-  variables:
-  {{- range $key, $value := .Variables }}
-  - name: {{ $key }}
-    value: {{ $value.Value }}
-    {{- if $value.Type_ }}
-    type: {{ $value.Type_ }}
+  if {{ .ExecutionRequest }}
+  executionRequest:
+    name: {{ .ExecutionRequest.Name }}
+    variablesFile: {{ .ExecutionRequest.VariablesFile }}
+    variables:
+    {{- range $key, $value := .ExecutionRequest.Variables }}
+    - name: {{ $key }}
+      value: {{ $value.Value }}
+      {{- if $value.Type_ }}
+      type: {{ $value.Type_ }}
+      {{- end }}
+      {{- if $value.SecretRef }}
+      secretRef:
+        namespace: {{ $value.SecretRef.Namespace }}
+        name: {{ $value.SecretRef.Name }}
+        key: {{ $value.SecretRef.Key }}
+      {{- end }}
     {{- end }}
-    {{- if $value.SecretRef }}
-    secretRef:
-      namespace: {{ $value.SecretRef.Namespace }}
-      name: {{ $value.SecretRef.Name }}
-      key: {{ $value.SecretRef.Key }}
+    args:
+    {{- range .ExecutionRequest.Args }}
+      - {{ . }}
     {{- end }}
-  {{- end }}
-  executorArgs:
-  {{- range .ExecutorArgs }}
-    - {{ . }}
+    envs:
+    {{- range $key, $value := .ExecutionRequest.Envs }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+    secretEnvs:
+    {{- range $key, $value := .ExecutionRequest.SecretEnvs }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+    httpProxy: {{ .ExecutionRequest.HttpProxy }}
+    httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
   {{- end }}

@@ -74,7 +74,7 @@ When creating a Testkube Test, there are multiple supported input types:
 Variables can be configured using the `variables` field as shown below.
 
 ```yml
-apiVersion: tests.testkube.io/v2
+apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: example-test
@@ -84,18 +84,19 @@ spec:
     data: "{...}"
     type: string
   type: postman/collection
-  variables:
-    var1:
-      name: var1
-      type: basic
-      value: val1
-    sec1:
-      name: sec1
-      type: secret
-      valueFrom:
-        secretKeyRef:
-          key: sec1
-          name: vartest4-testvars
+  executionRequest:
+    variables:
+      var1:
+        name: var1
+        type: basic
+        value: val1
+      sec1:
+        name: sec1
+        type: secret
+        valueFrom:
+          secretKeyRef:
+            key: sec1
+            name: vartest4-testvars
 ```
 
 ## **Test Suites**
