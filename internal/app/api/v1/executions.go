@@ -586,15 +586,12 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 }
 
 func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
-	execution, err := s.ExecutionResults.GetLatestByTest(context.Background(), testName, "number")
-	if err == mongo.ErrNoDocuments {
-		return 1
-	}
-	if err != nil {
+	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
+	if err == nil {
 		s.Log.Errorw("retrieving latest execution", "error", err)
-		return 1
+		return number
 	}
-	return execution.Number + 1
+	return number
 }
 
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
