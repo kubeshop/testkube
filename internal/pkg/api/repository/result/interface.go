@@ -28,6 +28,7 @@ type Filter interface {
 }
 
 type Repository interface {
+	Sequences
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByName gets execution result by name
@@ -66,4 +67,9 @@ type Repository interface {
 	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
 	// DeleteForAllTestSuites deletes execution results for all test suites
 	DeleteForAllTestSuites(ctx context.Context) (err error)
+}
+
+type Sequences interface {
+	// GetNextExecutionNumber gets next execution number by test name
+	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
 }

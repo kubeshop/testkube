@@ -14,16 +14,26 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const CollectionName = "results"
+const (
+	CollectionName      = "results"
+	CollectionSequences = "sequences"
+)
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
-		Coll: db.Collection(CollectionName),
+		Coll:      db.Collection(CollectionName),
+		Sequences: db.Collection(CollectionSequences),
 	}
 }
 
 type MongoRepository struct {
-	Coll *mongo.Collection
+	Coll      *mongo.Collection
+	Sequences *mongo.Collection
+}
+
+type executionNumber struct {
+	TestName string `json:"testName"`
+	Number   int32  `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
@@ -205,6 +215,44 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 		}
 	}
 	return labels, nil
+}
+
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
+
+	execNmbr := executionNumber{TestName: testName}
+	retry := false
+	retryAttempts := 0
+	maxRetries := 10
+
+	opts := options.FindOneAndUpdate()
+	opts.SetUpsert(true)
+	opts.SetReturnDocument(options.After)
+
+	err = r.Sequences.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
+	if err != nil {
+		var execution testkube.Execution
+		execution, err = r.GetLatestByTest(context.Background(), testName, "number")
+		if err != nil {
+			execNmbr.Number = 1
+		} else {
+			execNmbr.Number = execution.Number + 1
+		}
+		_, err = r.Sequences.InsertOne(ctx, execNmbr)
+	} else {
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+	}
+
+	retry = (err != nil)
+
+	for retry {
+		retryAttempts++
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		if err == nil || retryAttempts >= maxRetries {
+			retry = false
+		}
+	}
+
+	return execNmbr.Number, nil
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {

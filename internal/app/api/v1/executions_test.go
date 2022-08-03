@@ -185,6 +185,10 @@ func (r MockExecutionResultsRepository) GetExecutionTotals(ctx context.Context, 
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
+	panic("not implemented")
+}
+
 func (r MockExecutionResultsRepository) Insert(ctx context.Context, result testkube.Execution) error {
 	panic("not implemented")
 }
