@@ -27,7 +27,7 @@ func NewShowDebugInfoCmd() *cobra.Command {
 	}
 }
 
-//
+// getDebugInfo returns information on the current Testkube environment
 func getDebugInfo(apiClient client.Client) (testkube.DebugInfo, error) {
 	debug, err := apiClient.GetDebugInfo()
 	if err != nil {
