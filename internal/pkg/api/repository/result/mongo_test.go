@@ -284,17 +284,65 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	testName := "example-test"
 
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(2*-time.Hour), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Hour), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(10*-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(10*-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
 	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
+	assert.NoError(err)
 
-	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
-		labels, err := repository.GetTestMetrics(context.Background(), testName)
+	metrics, err := repository.GetTestMetrics(context.Background(), testName)
+	assert.NoError(err)
+
+	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
-		assert.Len(labels, 0)
+		assert.Equal(20, metrics.TotalExecutions)
+		assert.Equal(5, metrics.FailedExecutions)
+		assert.Len(metrics.Executions, 20)
+	})
+
+	t.Run("getting pass/fail ratio", func(t *testing.T) {
+		assert.Equal(float64(75), metrics.PassFailRatio)
+	})
+
+	t.Run("getting percentiles of execution duration", func(t *testing.T) {
+		assert.Contains(metrics.ExecutionDurationP50, "1m0.00")
+		assert.Contains(metrics.ExecutionDurationP90, "10m0.00")
+		assert.Contains(metrics.ExecutionDurationP99, "1h0m0.00")
 	})
 }
 
@@ -313,6 +361,7 @@ func (repository *MongoRepository) insertExecutionResult(testName string, execSt
 			TestType:        "test/curl",
 			StartTime:       startTime,
 			EndTime:         time.Now(),
+			Duration:        time.Since(startTime).String(),
 			ExecutionResult: &testkube.ExecutionResult{Status: &execStatus},
 			Labels:          labels,
 		})

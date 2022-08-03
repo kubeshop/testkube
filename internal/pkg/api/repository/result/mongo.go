@@ -12,6 +12,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+
+	"github.com/bmizerany/perks/quantile"
 )
 
 var _ Repository = &MongoRepository{}
@@ -446,10 +448,33 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string) (metr
 	if err != nil {
 		return metrics, err
 	}
-	err = cursor.All(ctx, &metrics)
+	err = cursor.All(ctx, &metrics.Executions)
 	if err != nil {
 		return metrics, err
 	}
+
+	q := quantile.NewTargeted(0.50, 0.90, 0.99)
+
+	for _, execution := range metrics.Executions {
+		if execution.Status == string(testkube.FAILED_ExecutionStatus) {
+			metrics.FailedExecutions++
+		}
+		metrics.TotalExecutions++
+
+		// ignore empty and ivalid durations
+		duration, err := time.ParseDuration(execution.Duration)
+		if err != nil {
+			continue
+		}
+
+		q.Insert(float64(duration))
+	}
+
+	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
+
+	metrics.ExecutionDurationP50 = time.Duration(q.Query(0.50)).String()
+	metrics.ExecutionDurationP90 = time.Duration(q.Query(0.90)).String()
+	metrics.ExecutionDurationP99 = time.Duration(q.Query(0.99)).String()
 
 	return
 }

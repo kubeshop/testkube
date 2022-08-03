@@ -2,6 +2,7 @@ package testresult
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -10,8 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/bmizerany/perks/quantile"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+var _ Repository = &MongoRepository{}
 
 const CollectionName = "testresults"
 
@@ -277,5 +282,57 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}
+
+// GetTestMetrics returns test executions metrics
+func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string) (metrics testkube.TestSuiteMetrics, err error) {
+	query := bson.M{"testsuite.name": name}
+
+	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+
+	pipeline = append(pipeline, bson.D{
+		{
+			Key: "$project", Value: bson.D{
+				{Key: "status", Value: 1},
+				{Key: "duration", Value: 1},
+			},
+		},
+	})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return metrics, err
+	}
+	err = cursor.All(ctx, &metrics.Executions)
+	if err != nil {
+		return metrics, err
+	}
+
+	fmt.Printf("%+v\n", metrics)
+
+	q := quantile.NewTargeted(0.50, 0.90, 0.99)
+
+	for _, execution := range metrics.Executions {
+		if execution.Status == string(testkube.FAILED_ExecutionStatus) {
+			metrics.FailedExecutions++
+		}
+		metrics.TotalExecutions++
+
+		// ignore empty and invalid durations
+		duration, err := time.ParseDuration(execution.Duration)
+		if err != nil {
+			continue
+		}
+
+		q.Insert(float64(duration))
+	}
+
+	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
+
+	metrics.ExecutionDurationP50 = time.Duration(q.Query(0.50)).String()
+	metrics.ExecutionDurationP90 = time.Duration(q.Query(0.90)).String()
+	metrics.ExecutionDurationP99 = time.Duration(q.Query(0.99)).String()
+
 	return
 }

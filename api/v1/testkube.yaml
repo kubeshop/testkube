@@ -1714,17 +1714,23 @@ components:
           items:
             $ref: "#/components/schemas/TestMetricsExecutions"
         pass_fail_ratio:
-          type: int
+          type: number
+          description: Percentage pass to fail ratio
         execution_duration_p50:
           type: string
+          description: 50th percentile of all durations
         execution_duration_p90:
           type: string
+          description: 90th percentile of all durations
         execution_duration_p99:
           type: string
+          description: 99th percentile of all durations
         total_executions:
           type: int
+          description: total executions number
         failed_executions:
           type: int
+          description: failed executions number
 
     TestMetricsExecutions:
       type: object
@@ -2036,6 +2042,42 @@ components:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
           $ref: "#/components/schemas/TestSuiteStepType"
+
+    TestSuiteMetrics:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteMetricsExecutions"
+        pass_fail_ratio:
+          type: number
+          description: Percentage pass to fail ratio
+        execution_duration_p50:
+          type: string
+          description: 50th percentile of all durations
+        execution_duration_p90:
+          type: string
+          description: 90th percentile of all durations
+        execution_duration_p99:
+          type: string
+          description: 99th percentile of all durations
+        total_executions:
+          type: int
+          description: total executions number
+        failed_executions:
+          type: int
+          description: failed executions number
+
+    TestSuiteMetricsExecutions:
+      type: object
+      properties:
+        executionId:
+          type: string
+        duration:
+          type: string
+        status:
+          type: string
 
     Test:
       type: object
