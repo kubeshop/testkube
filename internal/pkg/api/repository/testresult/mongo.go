@@ -2,7 +2,6 @@ package testresult
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -308,8 +307,6 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string) 
 	if err != nil {
 		return metrics, err
 	}
-
-	fmt.Printf("%+v\n", metrics)
 
 	q := quantile.NewTargeted(0.50, 0.90, 0.99)
 
