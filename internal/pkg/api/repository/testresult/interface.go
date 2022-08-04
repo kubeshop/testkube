@@ -52,4 +52,6 @@ type Repository interface {
 	DeleteAll(ctx context.Context) error
 	// DeleteByTestSuites deletes execution results by test suites
 	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
+
+	GetTestSuiteMetrics(ctx context.Context, name string) (metrics testkube.TestSuiteMetrics, err error)
 }

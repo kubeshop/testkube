@@ -237,6 +237,10 @@ func (r MockExecutionResultsRepository) DeleteForAllTestSuites(ctx context.Conte
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) GetTestMetrics(ctx context.Context, name string) (testkube.TestMetrics, error) {
+	panic("not implemented")
+}
+
 type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }

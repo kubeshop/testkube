@@ -336,6 +336,19 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	}
 }
 
+// TestSuiteMetricsHandler returns basic metrics for given testsuite
+func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testSuiteName := c.Params("id")
+		metrics, err := s.TestExecutionResults.GetTestSuiteMetrics(context.Background(), testSuiteName)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(metrics)
+	}
+}
+
 // getLatestTestSuiteExecutions return latest test suite executions either by starttime or endtine for tests
 func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
 	executions, err := s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames, "starttime")
