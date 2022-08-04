@@ -7,7 +7,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fluxcd/pkg/runtime v0.16.2
-	github.com/gofiber/adaptor/v2 v2.1.24
+	github.com/gofiber/adaptor/v2 v2.1.25
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gookit/color v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -68,7 +68,6 @@ require (
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
-	github.com/gofiber/utils v0.1.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
