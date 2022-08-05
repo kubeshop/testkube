@@ -99,7 +99,8 @@ Is available at [https://kubeshop.github.io/testkube](https://kubeshop.github.io
 
 Shout-out to our contributors 🎉 - you're great!
 
-- ⭐️ [@lreimer](https://github.com/lreimer) - [k6 executor](https://github.com/kubeshop/testkube-executor-k6)
+- ⭐️ [@lreimer](https://github.com/lreimer) - [K6 executor](https://github.com/kubeshop/testkube-executor-k6) [Gradle executor](https://github.com/kubeshop/testkube-executor-gradle) [Maven executor](https://github.com/kubeshop/testkube-executor-maven)
+- ⭐️ [@jdborneman-terminus](https://github.com/jdborneman-terminus) - [Ginkgo executor](https://github.com/kubeshop/testkube-executor-ginkgo) 
 - ️⭐️ [@abhishek9686](https://github.com/abhishek9686)
 
 
