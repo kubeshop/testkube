@@ -1,10 +1,11 @@
-package debuginfo
+package debug
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -18,18 +19,30 @@ func NewShowDebugInfoCmd() *cobra.Command {
 		Long:  "Get all the necessary information to debug an issue in Testkube",
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
-			debug, err := client.GetDebugInfo()
+			debug, err := GetDebugInfo(client)
 			ui.ExitOnError("get debug info", err)
-
-			info, err := client.GetServerInfo()
-			ui.ExitOnError("get server info", err)
-
-			debug.ClientVersion = common.Version
-			debug.ServerVersion = info.Version
 
 			printDebugInfo(debug)
 		},
 	}
+}
+
+// GetDebugInfo returns information on the current Testkube environment
+func GetDebugInfo(apiClient client.Client) (testkube.DebugInfo, error) {
+	debug, err := apiClient.GetDebugInfo()
+	if err != nil {
+		return testkube.DebugInfo{}, err
+	}
+
+	info, err := apiClient.GetServerInfo()
+	if err != nil {
+		return testkube.DebugInfo{}, err
+	}
+
+	debug.ClientVersion = common.Version
+	debug.ServerVersion = info.Version
+
+	return debug, nil
 }
 
 // printDebugInfo prints the debugging data to the CLI
