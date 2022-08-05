@@ -39,6 +39,8 @@ If applicable, add CLI commands/output to help explain your problem.
 
 **Additional context**
 Add any other context about the problem here.
+
+Attach the output of the **testkube debug info** command to provide more details.
 `
 )
 
