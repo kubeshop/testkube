@@ -1,4 +1,4 @@
-package debuginfo
+package debug
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ func NewShowDebugInfoCmd() *cobra.Command {
 		Long:  "Get all the necessary information to debug an issue in Testkube",
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
-			debug, err := getDebugInfo(client)
+			debug, err := GetDebugInfo(client)
 			ui.ExitOnError("get debug info", err)
 
 			printDebugInfo(debug)
@@ -27,8 +27,8 @@ func NewShowDebugInfoCmd() *cobra.Command {
 	}
 }
 
-// getDebugInfo returns information on the current Testkube environment
-func getDebugInfo(apiClient client.Client) (testkube.DebugInfo, error) {
+// GetDebugInfo returns information on the current Testkube environment
+func GetDebugInfo(apiClient client.Client) (testkube.DebugInfo, error) {
 	debug, err := apiClient.GetDebugInfo()
 	if err != nil {
 		return testkube.DebugInfo{}, err

@@ -32,4 +32,3 @@ Debug Testkube
 
 * [kubectl-testkube](kubectl-testkube.md)  - Testkube entrypoint for kubectl plugin
 * [kubectl-testkube debug info](kubectl-testkube_debug_info.md) - Show debug info
-* [kubectl-testkube debug create-ticket](kubectl-testkube_debug_create_ticket.md) - Create bug ticket
