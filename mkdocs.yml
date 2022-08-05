@@ -45,6 +45,7 @@ nav:
       - Artillery.io: executor-artillery.md
       - Maven: executor-maven.md
       - Gradle: executor-gradle.md
+      - Ginkgo: executor-ginkgo.md
       - Curl: executor-curl.md
       - Creating New Test Types: executor-custom.md
   - CLI Reference:

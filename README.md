@@ -72,14 +72,14 @@ Main Testkube components are:
 - Executors - runs tests defined for specific runner
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
-  - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests
+  - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests ((@lreimer)[https://github.com/lreimer])
   - [SoapUI](https://kubeshop.github.io/testkube/executor-soapui/) - runs SoapUI tests
   - [Kubepug](https://kubeshop.github.io/testkube/executor-kubepug/) - runs Kubepug tests
   - [Artillery.io](https://kubeshop.github.io/testkube/executor-artillery/) - runs Artillery tests
   - [Curl Executor](https://github.com/kubeshop/testkube-executor-curl) - runs simple Curl commands
-  - [Maven](https://kubeshop.github.io/testkube/executor-maven/) - Runs tests written in Java using Maven
-  - [Gradle](https://kubeshop.github.io/testkube/executor-gradle/) - Runs tests written in Java using Gradle
-  
+  - [Maven](https://kubeshop.github.io/testkube/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
+  - [Gradle](https://kubeshop.github.io/testkube/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
+  - [Ginkgo](https://kubeshop.github.io/testkube/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
 - [Testkube Dashboard](https://github.com/kubeshop/testkube-dashboard) - standalone web application for viewing real-time Testkube test results
