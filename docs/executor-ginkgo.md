@@ -38,7 +38,7 @@ spec:
 
 ## **Create a New Ginkgo-based Test**
 
-### Write some Ginkgo test 
+### Write a Ginkgo test 
 
 We'll try to check if there are any executors registered on the Testkube demo cluster. To do that we need to check the `/v1/executors`
 endpoint. Results should have at least one Executor registered.
