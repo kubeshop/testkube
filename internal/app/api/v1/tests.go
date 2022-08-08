@@ -153,6 +153,19 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	}
 }
 
+// ListTestsHandler is a method for getting list of all available tests
+func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testName := c.Params("id")
+		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(metrics)
+	}
+}
+
 // getLatestExecutions return latest executions either by starttime or endtime for tests
 func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
 	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames, "starttime")

@@ -5,7 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	debuginfo "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/debug"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/debug"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -22,7 +22,7 @@ func NewDebugCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
-	cmd.AddCommand(debuginfo.NewShowDebugInfoCmd())
+	cmd.AddCommand(debug.NewShowDebugInfoCmd())
 
 	return cmd
 }

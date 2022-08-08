@@ -47,6 +47,7 @@ func init() {
 
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
+	RootCmd.AddCommand(NewCreateTicketCmd())
 }
 
 var RootCmd = &cobra.Command{

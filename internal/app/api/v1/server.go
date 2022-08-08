@@ -229,6 +229,8 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
 
+	tests.Get("/:id/metrics", s.TestMetricsHandler())
+
 	tests.Post("/:id/executions", s.ExecuteTestsHandler())
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
@@ -253,6 +255,8 @@ func (s TestkubeAPI) Init() {
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
 	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
+
+	testsuites.Get("/:id/metrics", s.TestSuiteMetricsHandler())
 
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())

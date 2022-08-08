@@ -2,19 +2,14 @@
 
 Print environment information for debugging
 
-### Synopsis
-
-Print environment information for debugging
-
 ```
-  kubectl-testkube debug [flags]
-  kubectl-testkube debug [command]
+kubectl-testkube debug [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help                   help for debug
+  -h, --help   help for debug
 ```
 
 ### Options inherited from parent commands
@@ -30,5 +25,6 @@ Print environment information for debugging
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)  - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube debug info](kubectl-testkube_debug_info.md) - Show debug info
+* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [kubectl-testkube debug info](kubectl-testkube_debug_info.md)	 - Show debug info
+
