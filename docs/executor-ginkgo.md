@@ -95,7 +95,7 @@ You can also look at code (in our examples)[https://github.com/kubeshop/testkube
 
 ### Add it to Testkube 
 
-To add a Ginkgo test to Testkube you need to call `create test` command, We'll assume here that our test is in git repository.
+To add a Ginkgo test to Testkube you need to call the `create test` command. We'll assume that our test is in a Git repository.
 
 ```sh
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-ginkgo.git --git-path examples/testkube-api --type ginkgo/test --name ginkgo-example-test --git-branch main
