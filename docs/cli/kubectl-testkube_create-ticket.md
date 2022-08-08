@@ -1,19 +1,19 @@
-## kubectl-testkube debug info
+## kubectl-testkube create-ticket
 
-Show debug info
+Create bug ticket
 
 ### Synopsis
 
-Get all the necessary information to debug an issue in Testkube
+Create an issue of type bug in the Testkube repository
 
 ```
-kubectl-testkube debug info [flags]
+kubectl-testkube create-ticket [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for info
+  -h, --help   help for create-ticket
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +29,5 @@ kubectl-testkube debug info [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube debug](kubectl-testkube_debug.md)	 - Print environment information for debugging
+* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
 
