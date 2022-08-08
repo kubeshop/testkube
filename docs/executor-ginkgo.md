@@ -89,7 +89,7 @@ go mod init testkube-ginkgo-example
 ginkgo bootstrap
 ```
 
-Everything was pushed to git repository
+Everything was pushed to the Git repository.
 
 You can also look at code (in our examples)[https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api]
 
