@@ -93,7 +93,7 @@ Everything was pushed to git repository
 
 You can also look at code (in our examples)[https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api]
 
-### Add it to Testkube 
+### Add Test to Testkube 
 
 To add a Ginkgo test to Testkube you need to call the `create test` command. We'll assume that our test is in a Git repository.
 
