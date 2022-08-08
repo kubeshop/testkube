@@ -91,7 +91,7 @@ ginkgo bootstrap
 
 Everything was pushed to the Git repository.
 
-You can also look at code (in our examples)[https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api]
+You can also look at the code in our examples: [https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api]
 
 ### Add Test to Testkube 
 
