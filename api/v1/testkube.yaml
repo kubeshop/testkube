@@ -1766,11 +1766,11 @@ components:
         repeats:
           type: integer
           default: 1
-        variables:
-          $ref: "#/components/schemas/Variables"
         created:
           type: string
           format: date-time
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
 
     TestSuiteStepType:
       type: string

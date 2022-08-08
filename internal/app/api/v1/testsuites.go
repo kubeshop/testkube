@@ -13,9 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
+	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -44,7 +43,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
+		testSuite := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Namespace = s.Namespace
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
@@ -78,7 +77,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := mapTestSuiteUpsertRequestToTestCRD(request)
+		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Spec = testSuiteSpec.Spec
 		testSuite.Labels = request.Labels
 		testSuite, err = s.TestsSuitesClient.Update(testSuite)
@@ -257,7 +256,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv1.TestSuiteList, error) {
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv2.TestSuiteList, error) {
 	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -461,7 +460,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
 
-		var testSuites []testsuitesv1.TestSuite
+		var testSuites []testsuitesv2.TestSuite
 		if name != "" {
 			testSuite, err := s.TestsSuitesClient.Get(name)
 			if err != nil {
@@ -514,7 +513,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv1.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution] {
 	requests := make([]workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution], len(work))
 	for i := range work {
@@ -549,7 +548,7 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 		return c.JSON(testkube.TestSuiteExecutionsResult{
 			Totals:   &allExecutionsTotals,
 			Filtered: &executionsTotals,
-			Results:  mapToTestExecutionSummary(executions),
+			Results:  testsuitesmapper.MapToTestExecutionSummary(executions),
 		})
 	}
 }
@@ -788,108 +787,4 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	}
 
 	return filter
-}
-
-// TODO move to testuites mapper
-func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testkube.TestSuiteExecutionSummary {
-	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
-
-	for i, execution := range executions {
-		executionsSummary := make([]testkube.TestSuiteStepExecutionSummary, len(execution.StepResults))
-		for j, stepResult := range execution.StepResults {
-			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
-		}
-
-		result[i] = testkube.TestSuiteExecutionSummary{
-			Id:            execution.Id,
-			Name:          execution.Name,
-			TestSuiteName: execution.TestSuite.Name,
-			Status:        execution.Status,
-			StartTime:     execution.StartTime,
-			EndTime:       execution.EndTime,
-			Duration:      types.FormatDuration(execution.Duration),
-			Execution:     executionsSummary,
-			Labels:        execution.Labels,
-		}
-	}
-
-	return result
-}
-
-func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
-	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
-	var stepType *testkube.TestSuiteStepType
-
-	if r.Test != nil {
-		testName = r.Test.Name
-	}
-
-	if r.Execution != nil {
-		id = r.Execution.Id
-		if r.Execution.ExecutionResult != nil {
-			status = r.Execution.ExecutionResult.Status
-		}
-	}
-
-	if r.Step != nil {
-		stepType = r.Step.Type()
-		name = r.Step.FullName()
-	}
-
-	return testkube.TestSuiteStepExecutionSummary{
-		Id:       id,
-		Name:     name,
-		TestName: testName,
-		Status:   status,
-		Type_:    stepType,
-	}
-}
-
-func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsuitesv1.TestSuite {
-	return testsuitesv1.TestSuite{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-			Labels:    request.Labels,
-		},
-		Spec: testsuitesv1.TestSuiteSpec{
-			Repeats:     int(request.Repeats),
-			Description: request.Description,
-			Before:      mapTestStepsToCRD(request.Before),
-			Steps:       mapTestStepsToCRD(request.Steps),
-			After:       mapTestStepsToCRD(request.After),
-			Schedule:    request.Schedule,
-			Variables:   testsuitesmapper.MapCRDVariables(request.Variables),
-		},
-	}
-}
-
-func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsuitesv1.TestSuiteStepSpec) {
-	for _, step := range steps {
-		out = append(out, mapTestStepToCRD(step))
-	}
-
-	return
-}
-
-func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSuiteStepSpec) {
-	switch step.Type() {
-
-	case testkube.TestSuiteStepTypeDelay:
-		stepSpec.Delay = &testsuitesv1.TestSuiteStepDelay{
-			Duration: step.Delay.Duration,
-		}
-
-	case testkube.TestSuiteStepTypeExecuteTest:
-		s := step.Execute
-		stepSpec.Execute = &testsuitesv1.TestSuiteStepExecute{
-			Namespace: s.Namespace,
-			Name:      s.Name,
-			// TODO move StopOnFailure level up in operator model to mimic this one
-			StopOnFailure: step.StopTestOnFailure,
-		}
-	}
-
-	return
 }

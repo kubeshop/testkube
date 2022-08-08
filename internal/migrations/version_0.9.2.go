@@ -8,11 +8,11 @@ import (
 
 	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuite "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
+	testsuite "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/migrator"
 )
@@ -21,7 +21,7 @@ func NewVersion_0_9_2(
 	scriptsClient *scriptsclientv2.ScriptsClient,
 	testsClientV1 *testsclientv1.TestsClient,
 	testsClientV3 *testsclientv3.TestsClient,
-	testsuitesClient *testsuitesclientv1.TestSuitesClient,
+	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 ) *Version_0_9_2 {
 	return &Version_0_9_2{
 		scriptsClient:    scriptsClient,
@@ -35,7 +35,7 @@ type Version_0_9_2 struct {
 	scriptsClient    *scriptsclientv2.ScriptsClient
 	testsClientV1    *testsclientv1.TestsClient
 	testsClientV3    *testsclientv3.TestsClient
-	testsuitesClient *testsuitesclientv1.TestSuitesClient
+	testsuitesClient *testsuitesclientv2.TestSuitesClient
 }
 
 func (m *Version_0_9_2) Version() string {

@@ -14,7 +14,7 @@ import (
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
@@ -88,7 +88,7 @@ func main() {
 	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
-	testsuitesClient := testsuitesclientv1.NewClient(kubeClient, namespace)
+	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)

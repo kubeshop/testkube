@@ -104,7 +104,7 @@ spec:
 Testkube Test Suites are collections of Testkube Tests of the same or different types.
 
 ```yml
-apiVersion: tests.testkube.io/v1
+apiVersion: tests.testkube.io/v2
 kind: TestSuite
 metadata:
   name: example-testsuite

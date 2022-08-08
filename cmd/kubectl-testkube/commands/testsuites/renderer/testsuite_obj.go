@@ -25,7 +25,9 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", ts.Schedule)
 	}
 
-	renderer.RenderVariables(ts.Variables)
+	if ts.ExecutionRequest != nil && len(ts.ExecutionRequest.Variables) > 0 {
+		renderer.RenderVariables(ts.ExecutionRequest.Variables)
+	}
 
 	steps := append(ts.Before, ts.Steps...)
 	steps = append(steps, ts.After...)

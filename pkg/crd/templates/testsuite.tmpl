@@ -1,4 +1,4 @@
-apiVersion: tests.testkube.io/v1
+apiVersion: tests.testkube.io/v2
 kind: TestSuite
 metadata:
   name: {{ .Name }}
@@ -50,17 +50,23 @@ spec:
   {{- end }}
   schedule: {{ .Schedule }}
   repeats: {{ .Repeats }}
-  variables:
-  {{- range $key, $value := .Variables }}
-  - name: {{ $key }}
-    value: {{ $value.Value }}
-    {{- if $value.Type_ }}
-    type: {{ $value.Type_ }}
+  if {{ .ExecutionRequest }}
+  executionRequest:
+    name: {{ .ExecutionRequest.Name }}
+    variables:
+    {{- range $key, $value := .ExecutionRequest.Variables }}
+    - name: {{ $key }}
+      value: {{ $value.Value }}
+      {{- if $value.Type_ }}
+      type: {{ $value.Type_ }}
+      {{- end }}
+      {{- if $value.SecretRef }}
+      secretRef:
+        namespace: {{ $value.SecretRef.Namespace }}
+        name: {{ $value.SecretRef.Name }}
+        key: {{ $value.SecretRef.Key }}
+      {{- end }}
     {{- end }}
-    {{- if $value.SecretRef }}
-    secretRef:
-      namespace: {{ $value.SecretRef.Namespace }}
-      name: {{ $value.SecretRef.Name }}
-      key: {{ $value.SecretRef.Key }}
-    {{- end }}
+    httpProxy: {{ .ExecutionRequest.HttpProxy }}
+    httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
   {{- end }}

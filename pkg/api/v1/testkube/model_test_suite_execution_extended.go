@@ -26,10 +26,13 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		StartTime:  time.Now(),
 		Name:       fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
 		Status:     TestSuiteExecutionStatusRunning,
-		Variables:  testSuite.Variables,
 		SecretUUID: request.SecretUUID,
 		TestSuite:  testSuite.GetObjectRef(),
 		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
+	}
+
+	if testSuite.ExecutionRequest != nil {
+		testExecution.Variables = testSuite.ExecutionRequest.Variables
 	}
 
 	// override variables from request
