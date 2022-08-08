@@ -7,7 +7,7 @@ Testkube allows us to run Ginkgo-based tests. (https://onsi.github.io/ginkgo/)
 
 ## **Test Environment**
 
-We'll try to put simple Ginkgo. Testkube Ginkgo Executor is using `ginkgo` binary and allows to configure it's behaviour using args.
+Let's try some simple Ginkgo. Testkube's Ginkgo Executor is using the `ginkgo` binary and allows configuring it's behavior using arguments.
 Because Ginkgo projects are quite complicated in terms of directory structure. We'll need to load them from a Git directory.
 
 You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples.
