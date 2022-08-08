@@ -55,7 +55,7 @@ func NewDashboardCmd() *cobra.Command {
 				}
 			}()
 
-			// if not global dashboard - we'll try to port-forward current cluster API
+			// if not global dasboard - we'll try to port-forward current cluster API
 			if !useGlobalDashboard {
 				command, err := asyncPortForward(namespace, DashboardName, dashboardLocalPort, DashboardPort)
 				ui.PrintOnError("port forwarding dashboard endpoint", err)
@@ -66,7 +66,7 @@ func NewDashboardCmd() *cobra.Command {
 			ui.PrintOnError("port forwarding api endpoint", err)
 			commandsToKill = append(commandsToKill, command)
 
-			// check for api and dashboard to be ready
+			// check for api and dasboard to be ready
 			ready, err := readinessCheck(apiAddress, dashboardAddress)
 			ui.PrintOnError("checking readiness of services", err)
 			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))

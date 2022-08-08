@@ -66,7 +66,7 @@ func NewDashboardCmd() *cobra.Command {
 			ui.PrintOnError("port forwarding api endpoint", err)
 			commandsToKill = append(commandsToKill, command)
 
-			// check for api and dashboard to be ready
+			// check for api and dasboard to be ready
 			ready, err := readinessCheck(apiAddress, dashboardAddress)
 			ui.PrintOnError("checking readiness of services", err)
 			ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
