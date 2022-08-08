@@ -83,7 +83,7 @@ func GetTestkubeExecutors(body io.ReadCloser) ([]testkube.ExecutorDetails, error
 
 ```
 
-Test is run in the standard Ginkgo bootstrapped project. 
+The test is run in the standard Ginkgo bootstrapped project. 
 ```
 go mod init testkube-ginkgo-example
 ginkgo bootstrap
