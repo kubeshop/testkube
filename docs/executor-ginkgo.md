@@ -135,7 +135,7 @@ Watch test execution until complete:
 $ kubectl testkube watch execution 62eceb8df4732077cee099cf
 
 
-Use following command to get test execution details:
+Use the following command to get test execution details:
 $ kubectl testkube get execution 62eceb8df4732077cee099cf
 
 ```
