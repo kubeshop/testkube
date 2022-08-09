@@ -11,7 +11,7 @@ info:
   version: 1.0.0
 
 externalDocs:
-  description: "Find out more about testkube"
+  description: "Find out more about Testkube"
   url: http://testkube.io
 
 tags:
@@ -1760,10 +1760,10 @@ components:
           type: string
           description: 99th percentile of all durations
         total_executions:
-          type: int
+          type: integer
           description: total executions number
         failed_executions:
-          type: int
+          type: integer
           description: failed executions number
 
     TestMetricsExecutions:
@@ -1781,6 +1781,15 @@ components:
       description: "execution variables passed to executor converted to vars for usage in tests"
       additionalProperties:
         $ref: "#/components/schemas/Variable"
+      example:
+        var1:
+          name: "var1"
+          type: "basic"
+          value: "value1"
+        secret1:
+          name: "secret1"
+          type: "secret"
+          value: "secretvalue1"
 
     Variable:
       type: object
@@ -1813,10 +1822,12 @@ components:
           description: object name
 
     SecretRef:
+      readOnly: true
       required:
         - name
         - key
       type: object
+      description: Testkube internal reference for secret storage in Kubernetes secrets
       properties:
         namespace:
           type: string
@@ -1837,25 +1848,43 @@ components:
       properties:
         name:
           type: string
+          example: "test-suite1"
         namespace:
           type: string
+          example: "testkube"
         description:
           type: string
+          example: "collection of tests"
         before:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         steps:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Steps to run
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         after:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step after whole suite
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         labels:
           type: object
           description: "test suite labels"
@@ -1867,9 +1896,11 @@ components:
         schedule:
           type: string
           description: schedule to run test suite
+          example: "* * * * *"
         repeats:
           type: integer
           default: 1
+          example: 1
         variables:
           $ref: "#/components/schemas/Variables"
         created:
@@ -2097,10 +2128,10 @@ components:
           type: string
           description: 99th percentile of all durations
         total_executions:
-          type: int
+          type: integer
           description: total executions number
         failed_executions:
-          type: int
+          type: integer
           description: failed executions number
 
     TestSuiteMetricsExecutions:
@@ -2119,12 +2150,15 @@ components:
         name:
           type: string
           description: test name
+          example: "test1"
         namespace:
           type: string
           description: test namespace
+          example: "testkube"
         type:
           type: string
           description: test type
+          example: "postman/collection"
         content:
           $ref: "#/components/schemas/TestContent"
           description: test content
@@ -2440,9 +2474,11 @@ components:
         version:
           type: string
           description: build version
+          example: "v1.4.4"
         commit:
           type: string
           description: build commit
+          example: "aaff223ae68aab1af56e8ed8c84c2b80ed63d9b8"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -2628,7 +2664,7 @@ components:
         - $ref: "#/components/schemas/Webhook"
 
     # Copied from CRD spec
-    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
+    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
     # TODO we need to sync those in some nice way
     Executor:
       description: CRD based executor data
@@ -2700,7 +2736,6 @@ components:
         content:
           type: string
           description: Message/event data passed from executor (like log lines etc)
-          example:
         result:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
@@ -2789,9 +2824,6 @@ components:
     DebugInfo:
       description: Testkube debug info
       type: object
-      required:
-        - clientVersion
-        - serverVersion
       properties:
         clientVersion:
           type: string
