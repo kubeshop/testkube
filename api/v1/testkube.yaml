@@ -234,7 +234,7 @@ paths:
           description: name of the test suite
       summary: "Get test suite metrics"
       description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
-      operationId: getTestMetrics
+      operationId: getTestSuiteMetrics
       responses:
         200:
           description: "successful operation"
@@ -2803,6 +2803,8 @@ components:
       description: Testkube debug info
       type: object
       required:
+        - clientVersion
+        - serverVersion
       properties:
         clientVersion:
           type: string
