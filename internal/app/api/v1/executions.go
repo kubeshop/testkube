@@ -485,8 +485,8 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
-	if test.ExecutionRequest != nil {		
-		// Test variables lowest priority, then test suite, then test suite execution / test execution		
+	if test.ExecutionRequest != nil {
+		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
 		// Combine test executor args with execution args
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
