@@ -116,6 +116,10 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution testkube.Execution, err error) {
 	// generate random execution name in case there is no one set
 	// like for docker images
+	if request.Name == "" && test.ExecutionRequest != nil && test.ExecutionRequest.Name != "" {
+		request.Name = test.ExecutionRequest.Name
+	}
+
 	if request.Name == "" {
 		request.Name = test.Name
 	}
@@ -481,13 +485,20 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
-	// Test variables lowest priority, then test suite, then test suite execution / test execution
-	if test.ExecutionRequest != nil {
+	if test.ExecutionRequest != nil {		
+		// Test variables lowest priority, then test suite, then test suite execution / test execution		
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
-	}
-	// Combine test executor args with execution args
-	if test.ExecutionRequest != nil {
+		// Combine test executor args with execution args
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
+		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
+			request.HttpProxy = test.ExecutionRequest.HttpProxy
+		}
+
+		if request.HttpsProxy == "" && test.ExecutionRequest.HttpsProxy != "" {
+			request.HttpsProxy = test.ExecutionRequest.HttpsProxy
+		}
 	}
 
 	// get executor from kubernetes CRs
@@ -576,6 +587,18 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	}
 
 	return variables
+}
+
+func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]string {
+	envs := map[string]string{}
+	for k, v := range envs1 {
+		envs[k] = v
+	}
+	for k, v := range envs2 {
+		envs[k] = v
+	}
+
+	return envs
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {

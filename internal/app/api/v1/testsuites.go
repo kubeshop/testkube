@@ -634,6 +634,18 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 	}
 
 	request.SecretUUID = secretUUID
+	if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
+		request.Name = testSuite.ExecutionRequest.Name
+	}
+
+	if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
+		request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
+	}
+
+	if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
+		request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
+	}
+
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 	if err != nil {

@@ -21,10 +21,15 @@ func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
 }
 
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
+	name := request.Name
+	if name == "" {
+		name = fmt.Sprintf("%s.%s", testSuite.Name, rand.Name())
+	}
+
 	testExecution := TestSuiteExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		StartTime:  time.Now(),
-		Name:       fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
+		Name:       name,
 		Status:     TestSuiteExecutionStatusRunning,
 		SecretUUID: request.SecretUUID,
 		TestSuite:  testSuite.GetObjectRef(),
