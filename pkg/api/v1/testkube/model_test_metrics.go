@@ -15,10 +15,16 @@ type TestMetrics struct {
 	PassFailRatio float64 `json:"pass_fail_ratio,omitempty"`
 	// 50th percentile of all durations
 	ExecutionDurationP50 string `json:"execution_duration_p50,omitempty"`
+	// 50th percentile of all durations in milliseconds
+	ExecutionDurationP50Ms int `json:"execution_duration_p50_ms,omitempty"`
 	// 90th percentile of all durations
 	ExecutionDurationP90 string `json:"execution_duration_p90,omitempty"`
+	// 90th percentile of all durations in milliseconds
+	ExecutionDurationP90Ms int `json:"execution_duration_p90_ms,omitempty"`
 	// 99th percentile of all durations
 	ExecutionDurationP99 string `json:"execution_duration_p99,omitempty"`
+	// 99th percentile of all durations in milliseconds
+	ExecutionDurationP99Ms int `json:"execution_duration_p99_ms,omitempty"`
 	// total executions number
 	TotalExecutions int `json:"total_executions,omitempty"`
 	// failed executions number

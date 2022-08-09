@@ -1753,12 +1753,21 @@ components:
         execution_duration_p50:
           type: string
           description: 50th percentile of all durations
+        execution_duration_p50_ms:
+          type: int
+          description: 50th percentile of all durations in milliseconds
         execution_duration_p90:
           type: string
           description: 90th percentile of all durations
+        execution_duration_p90_ms:
+          type: int
+          description: 90th percentile of all durations in milliseconds
         execution_duration_p99:
           type: string
           description: 99th percentile of all durations
+        execution_duration_p99_ms:
+          type: int
+          description: 99th percentile of all durations in milliseconds
         total_executions:
           type: int
           description: total executions number
@@ -1773,6 +1782,8 @@ components:
           type: string
         duration:
           type: string
+        duration_ms:
+          type: int
         status:
           type: string
 
@@ -2090,12 +2101,21 @@ components:
         execution_duration_p50:
           type: string
           description: 50th percentile of all durations
+        execution_duration_p50_ms:
+          type: int
+          description: 50th percentile of all durations in milliseconds
         execution_duration_p90:
           type: string
           description: 90th percentile of all durations
+        execution_duration_p90_ms:
+          type: int
+          description: 90th percentile of all durations in milliseconds
         execution_duration_p99:
           type: string
           description: 99th percentile of all durations
+        execution_duration_p99_ms:
+          type: int
+          description: 99th percentile of all durations in milliseconds
         total_executions:
           type: int
           description: total executions number
@@ -2110,6 +2130,8 @@ components:
           type: string
         duration:
           type: string
+        duration_ms:
+          type: int
         status:
           type: string
 
