@@ -340,9 +340,9 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	})
 
 	t.Run("getting percentiles of execution duration", func(t *testing.T) {
-		assert.Contains(metrics.ExecutionDurationP50, "1m0.00")
-		assert.Contains(metrics.ExecutionDurationP90, "10m0.00")
-		assert.Contains(metrics.ExecutionDurationP99, "1h0m0.00")
+		assert.Contains(metrics.ExecutionDurationP50, "1m0")
+		assert.Contains(metrics.ExecutionDurationP90, "10m0")
+		assert.Contains(metrics.ExecutionDurationP99, "1h0m0")
 	})
 }
 
