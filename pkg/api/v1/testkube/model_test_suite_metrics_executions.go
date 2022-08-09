@@ -12,5 +12,6 @@ package testkube
 type TestSuiteMetricsExecutions struct {
 	ExecutionId string `json:"executionId,omitempty"`
 	Duration    string `json:"duration,omitempty"`
+	DurationMs  int    `json:"duration_ms,omitempty"`
 	Status      string `json:"status,omitempty"`
 }

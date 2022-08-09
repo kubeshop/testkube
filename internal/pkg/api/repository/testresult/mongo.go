@@ -326,13 +326,22 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string) 
 		q.Insert(float64(duration))
 
 		metrics.Executions[j].Duration = utils.RoundDuration(duration).String()
+		metrics.Executions[j].DurationMs = int(duration / time.Millisecond)
 	}
 
 	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
 
-	metrics.ExecutionDurationP50 = utils.RoundDuration(time.Duration(q.Query(0.50))).String()
-	metrics.ExecutionDurationP90 = utils.RoundDuration(time.Duration(q.Query(0.90))).String()
-	metrics.ExecutionDurationP99 = utils.RoundDuration(time.Duration(q.Query(0.99))).String()
+	durationP50 := time.Duration(q.Query(0.50))
+	durationP90 := time.Duration(q.Query(0.90))
+	durationP99 := time.Duration(q.Query(0.99))
+
+	metrics.ExecutionDurationP50 = utils.RoundDuration(durationP50).String()
+	metrics.ExecutionDurationP90 = utils.RoundDuration(durationP90).String()
+	metrics.ExecutionDurationP99 = utils.RoundDuration(durationP99).String()
+
+	metrics.ExecutionDurationP50Ms = int(durationP50 / time.Millisecond)
+	metrics.ExecutionDurationP90Ms = int(durationP90 / time.Millisecond)
+	metrics.ExecutionDurationP99Ms = int(durationP99 / time.Millisecond)
 
 	return
 }
