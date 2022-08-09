@@ -29,5 +29,8 @@ FROM alpine:3.16
 RUN apk --no-cache add ca-certificates libssl1.1
 WORKDIR /root/
 COPY  --from=build /app /bin/app
+
+USER 1001
+
 EXPOSE 8088
 CMD ["/bin/app"]
