@@ -26,7 +26,7 @@ type TestMetrics struct {
 	// 99th percentile of all durations in milliseconds
 	ExecutionDurationP99Ms int `json:"execution_duration_p99_ms,omitempty"`
 	// total executions number
-	TotalExecutions int `json:"total_executions,omitempty"`
+	TotalExecutions int32 `json:"total_executions,omitempty"`
 	// failed executions number
-	FailedExecutions int `json:"failed_executions,omitempty"`
+	FailedExecutions int32 `json:"failed_executions,omitempty"`
 }
