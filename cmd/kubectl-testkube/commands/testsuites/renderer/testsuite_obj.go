@@ -25,8 +25,23 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", ts.Schedule)
 	}
 
-	if ts.ExecutionRequest != nil && len(ts.ExecutionRequest.Variables) > 0 {
-		renderer.RenderVariables(ts.ExecutionRequest.Variables)
+	if ts.ExecutionRequest != nil {
+		ui.Warn("Execution request: ")
+		if ts.ExecutionRequest.Name != "" {
+			ui.Warn("  Name:        ", ts.ExecutionRequest.Name)
+		}
+
+		if len(ts.ExecutionRequest.Variables) > 0 {
+			renderer.RenderVariables(ts.ExecutionRequest.Variables)
+		}
+
+		if ts.ExecutionRequest.HttpProxy != "" {
+			ui.Warn("  Http proxy:  ", ts.ExecutionRequest.HttpProxy)
+		}
+
+		if ts.ExecutionRequest.HttpsProxy != "" {
+			ui.Warn("  Https proxy: ", ts.ExecutionRequest.HttpsProxy)
+		}
 	}
 
 	steps := append(ts.Before, ts.Steps...)
