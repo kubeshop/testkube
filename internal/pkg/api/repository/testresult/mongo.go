@@ -13,6 +13,7 @@ import (
 	"github.com/bmizerany/perks/quantile"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var _ Repository = &MongoRepository{}
@@ -310,7 +311,7 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string) 
 
 	q := quantile.NewTargeted(0.50, 0.90, 0.99)
 
-	for _, execution := range metrics.Executions {
+	for j, execution := range metrics.Executions {
 		if execution.Status == string(testkube.FAILED_ExecutionStatus) {
 			metrics.FailedExecutions++
 		}
@@ -323,13 +324,15 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string) 
 		}
 
 		q.Insert(float64(duration))
+
+		metrics.Executions[j].Duration = utils.RoundDuration(duration).String()
 	}
 
 	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
 
-	metrics.ExecutionDurationP50 = time.Duration(q.Query(0.50)).String()
-	metrics.ExecutionDurationP90 = time.Duration(q.Query(0.90)).String()
-	metrics.ExecutionDurationP99 = time.Duration(q.Query(0.99)).String()
+	metrics.ExecutionDurationP50 = utils.RoundDuration(time.Duration(q.Query(0.50))).String()
+	metrics.ExecutionDurationP90 = utils.RoundDuration(time.Duration(q.Query(0.90))).String()
+	metrics.ExecutionDurationP99 = utils.RoundDuration(time.Duration(q.Query(0.99))).String()
 
 	return
 }
