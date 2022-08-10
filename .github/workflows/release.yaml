@@ -228,38 +228,47 @@ jobs:
         run: |
           ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
 
-      - name: Remove files so that they won't be commited to our repository
+      - name: Commit and push changes
+        working-directory: ./choco
         run: |
-          $filestoremove = "testkube.*", "choco/testkube.*.nupkg", "tk.bat", "temp/*", "msi_checksum.txt", "choco/tools/testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi"
-          foreach ($file in $filestoremove) {
-            if (Test-Path $file) {
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
+          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
+          git push origin HEAD:main
 
-          Write-Output $file
-          Remove-Item $file
-          }
-            else
-          {
-            Write-Output "File $file doesn't exist "
-            }
-          }
-
-      - name: Create Pull Request
-        id: cpr
-        uses: peter-evans/create-pull-request@v4
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          delete-branch: true
-          branch: update-${{steps.tag.outputs.tag}}
-          base: main
-          title: "docs: testkube version update for choco to ${{steps.tag.outputs.tag}}"
-          labels: |
-            automated pr
-
-      - name: Check outputs
-        if: ${{ steps.cpr.outputs.pull-request-number }}
-        run: |
-          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
-          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
+#      - name: Remove files so that they won't be commited to our repository
+#        run: |
+#          $filestoremove = "testkube.*", "choco/testkube.*.nupkg", "tk.bat", "temp/*", "msi_checksum.txt", "choco/tools/testkube_${{steps.tag.outputs.tag}}_Windows_i386.msi"
+#          foreach ($file in $filestoremove) {
+#            if (Test-Path $file) {
+#
+#          Write-Output $file
+#          Remove-Item $file
+#          }
+#            else
+#          {
+#            Write-Output "File $file doesn't exist "
+#            }
+#          }
+#
+#      - name: Create Pull Request
+#        id: cpr
+#        uses: peter-evans/create-pull-request@v4
+#        with:
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          delete-branch: true
+#          branch: update-${{steps.tag.outputs.tag}}
+#          base: main
+#          title: "docs: testkube version update for choco to ${{steps.tag.outputs.tag}}"
+#          labels: |
+#            automated pr
+#
+#      - name: Check outputs
+#        if: ${{ steps.cpr.outputs.pull-request-number }}
+#        run: |
+#          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+#          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
 
   build-and-publish-linux-installer:
     needs: release
