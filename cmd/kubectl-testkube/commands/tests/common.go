@@ -209,13 +209,46 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	options = apiclientv1.UpsertTestOptions{
-		Name:         name,
-		Type_:        executorType,
-		Content:      content,
-		Namespace:    namespace,
-		Schedule:     schedule,
-		Variables:    variables,
-		ExecutorArgs: executorArgs,
+		Name:      name,
+		Type_:     executorType,
+		Content:   content,
+		Namespace: namespace,
+		Schedule:  schedule,
+	}
+
+	executionName := cmd.Flag("execution-name").Value.String()
+	envs, err := cmd.Flags().GetStringToString("env")
+	if err != nil {
+		return options, err
+	}
+
+	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
+	if err != nil {
+		return options, err
+	}
+
+	paramsFileContent := ""
+	variablesFile := cmd.Flag("variables-file").Value.String()
+	if variablesFile != "" {
+		b, err := os.ReadFile(variablesFile)
+		if err != nil {
+			return options, err
+		}
+
+		paramsFileContent = string(b)
+	}
+
+	httpProxy := cmd.Flag("http-proxy").Value.String()
+	httpsProxy := cmd.Flag("https-proxy").Value.String()
+	options.ExecutionRequest = &testkube.ExecutionRequest{
+		Name:          executionName,
+		VariablesFile: paramsFileContent,
+		Variables:     variables,
+		Args:          executorArgs,
+		Envs:          envs,
+		SecretEnvs:    secretEnvs,
+		HttpProxy:     httpProxy,
+		HttpsProxy:    httpsProxy,
 	}
 
 	// if labels are passed and are different from the existing overwrite

@@ -15,11 +15,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -51,9 +50,8 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		id := c.Params("id")
-		namespace := request.Namespace
 
-		var tests []testsv2.Test
+		var tests []testsv3.Test
 		if id != "" {
 			test, err := s.TestsClient.Get(id)
 			if err != nil {
@@ -71,37 +69,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		var results []testkube.Execution
-		var work []testsv2.Test
-		for _, test := range tests {
-			if test.Spec.Schedule == "" || c.Query("callback") != "" {
-				work = append(work, test)
-				continue
-			}
-
-			data, err := json.Marshal(request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test request: %w", err))
-			}
-
-			options := cronjob.CronJobOptions{
-				Schedule: test.Spec.Schedule,
-				Resource: testResourceURI,
-				Data:     string(data),
-				Labels:   test.Labels,
-			}
-			if err = s.CronJobClient.Apply(test.Name, cronjob.GetMetadataName(test.Name, testResourceURI), options); err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
-			}
-
-			results = append(results, testkube.Execution{
-				TestName:        test.Name,
-				TestType:        test.Spec.Type_,
-				TestNamespace:   namespace,
-				ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued},
-			})
-		}
-
-		if len(work) != 0 {
+		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
@@ -109,7 +77,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestRequests(work, request))
+			go workerpoolService.SendRequests(s.prepareTestRequests(tests, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -131,7 +99,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestRequests(work []testsv2.Test, request testkube.ExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) prepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
 	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
 	for i := range work {
@@ -148,11 +116,15 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution testkube.Execution, err error) {
 	// generate random execution name in case there is no one set
 	// like for docker images
+	if request.Name == "" && test.ExecutionRequest != nil && test.ExecutionRequest.Name != "" {
+		request.Name = test.ExecutionRequest.Name
+	}
+
 	if request.Name == "" {
 		request.Name = test.Name
 	}
 
-	request.Number = s.getNextExecutionNumber(test.Name)
+	request.Number = int32(s.getNextExecutionNumber(test.Name))
 	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
@@ -513,10 +485,21 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
-	// Test variables lowest priority, then test suite, then test suite execution / test execution
-	request.Variables = mergeVariables(test.Variables, request.Variables)
-	// Combine test executor args with execution args
-	request.Args = append(request.Args, test.ExecutorArgs...)
+	if test.ExecutionRequest != nil {
+		// Test variables lowest priority, then test suite, then test suite execution / test execution
+		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
+		// Combine test executor args with execution args
+		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
+		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
+			request.HttpProxy = test.ExecutionRequest.HttpProxy
+		}
+
+		if request.HttpsProxy == "" && test.ExecutionRequest.HttpsProxy != "" {
+			request.HttpsProxy = test.ExecutionRequest.HttpsProxy
+		}
+	}
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -604,6 +587,18 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	}
 
 	return variables
+}
+
+func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]string {
+	envs := map[string]string{}
+	for k, v := range envs1 {
+		envs[k] = v
+	}
+	for k, v := range envs2 {
+		envs[k] = v
+	}
+
+	return envs
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {

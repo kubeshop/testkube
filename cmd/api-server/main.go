@@ -13,8 +13,8 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
@@ -85,10 +85,10 @@ func main() {
 
 	scriptsClient := scriptsclient.NewClient(kubeClient, namespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, namespace)
-	testsClientV2 := testsclientv2.NewClient(kubeClient, namespace)
+	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
-	testsuitesClient := testsuitesclientv1.NewClient(kubeClient, namespace)
+	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
@@ -105,7 +105,7 @@ func main() {
 	log.DefaultLogger.Warnw("Getting uniqe clusterId", "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
-	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV2, testsuitesClient))
+	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClient))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
 	}
@@ -114,7 +114,7 @@ func main() {
 		namespace,
 		resultsRepository,
 		testResultsRepository,
-		testsClientV2,
+		testsClientV3,
 		executorsClient,
 		testsuitesClient,
 		secretClient,

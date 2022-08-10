@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -14,14 +13,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
+	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
@@ -46,7 +43,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		testSuite := mapTestSuiteUpsertRequestToTestCRD(request)
+		testSuite := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Namespace = s.Namespace
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
@@ -79,28 +76,8 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete cron job, if schedule is cleaned
-		if testSuite.Spec.Schedule != "" {
-			cronJob, err := s.CronJobClient.Get(cronjob.GetMetadataName(request.Name, testSuiteResourceURI))
-			if err != nil && !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-
-			if cronJob != nil {
-				if request.Schedule == "" {
-					if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testSuiteResourceURI)); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				} else {
-					if err = s.CronJobClient.UpdateLabels(cronJob, testSuite.Labels, request.Labels); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				}
-			}
-		}
-
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := mapTestSuiteUpsertRequestToTestCRD(request)
+		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Spec = testSuiteSpec.Spec
 		testSuite.Labels = request.Labels
 		testSuite, err = s.TestsSuitesClient.Update(testSuite)
@@ -208,13 +185,6 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete cron job for test suite
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testSuiteResourceURI)); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -260,13 +230,6 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete all cron jobs for test suites
-		if err = s.CronJobClient.DeleteAll(testSuiteResourceURI, selector); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete all executions for tests
 		if selector == "" {
 			err = s.ExecutionResults.DeleteForAllTestSuites(c.Context())
@@ -293,7 +256,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv1.TestSuiteList, error) {
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv2.TestSuiteList, error) {
 	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -507,11 +470,10 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		}
 
 		name := c.Params("id")
-		namespace := c.Query("namespace", "testkube")
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
 
-		var testSuites []testsuitesv1.TestSuite
+		var testSuites []testsuitesv2.TestSuite
 		if name != "" {
 			testSuite, err := s.TestsSuitesClient.Get(name)
 			if err != nil {
@@ -533,32 +495,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		}
 
 		var results []testkube.TestSuiteExecution
-		var work []testsuitesv1.TestSuite
-		for _, testSuite := range testSuites {
-			if testSuite.Spec.Schedule == "" || c.Query("callback") != "" {
-				work = append(work, testSuite)
-				continue
-			}
-
-			data, err := json.Marshal(request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test suite request: %w", err))
-			}
-
-			options := cronjob.CronJobOptions{
-				Schedule: testSuite.Spec.Schedule,
-				Resource: testSuiteResourceURI,
-				Data:     string(data),
-				Labels:   testSuite.Labels,
-			}
-			if err = s.CronJobClient.Apply(testSuite.Name, cronjob.GetMetadataName(testSuite.Name, testSuiteResourceURI), options); err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test suite: %w", err))
-			}
-
-			results = append(results, testkube.NewQueuedTestSuiteExecution(name, namespace))
-		}
-
-		if len(work) != 0 {
+		if len(testSuites) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
@@ -566,7 +503,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(work, request))
+			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(testSuites, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -589,7 +526,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv1.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution] {
 	requests := make([]workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution], len(work))
 	for i := range work {
@@ -624,7 +561,7 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 		return c.JSON(testkube.TestSuiteExecutionsResult{
 			Totals:   &allExecutionsTotals,
 			Filtered: &executionsTotals,
-			Results:  mapToTestExecutionSummary(executions),
+			Results:  testsuitesmapper.MapToTestExecutionSummary(executions),
 		})
 	}
 }
@@ -697,6 +634,18 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 	}
 
 	request.SecretUUID = secretUUID
+	if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
+		request.Name = testSuite.ExecutionRequest.Name
+	}
+
+	if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
+		request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
+	}
+
+	if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
+		request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
+	}
+
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
@@ -863,108 +812,4 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	}
 
 	return filter
-}
-
-// TODO move to testuites mapper
-func mapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testkube.TestSuiteExecutionSummary {
-	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
-
-	for i, execution := range executions {
-		executionsSummary := make([]testkube.TestSuiteStepExecutionSummary, len(execution.StepResults))
-		for j, stepResult := range execution.StepResults {
-			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
-		}
-
-		result[i] = testkube.TestSuiteExecutionSummary{
-			Id:            execution.Id,
-			Name:          execution.Name,
-			TestSuiteName: execution.TestSuite.Name,
-			Status:        execution.Status,
-			StartTime:     execution.StartTime,
-			EndTime:       execution.EndTime,
-			Duration:      types.FormatDuration(execution.Duration),
-			Execution:     executionsSummary,
-			Labels:        execution.Labels,
-		}
-	}
-
-	return result
-}
-
-func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
-	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
-	var stepType *testkube.TestSuiteStepType
-
-	if r.Test != nil {
-		testName = r.Test.Name
-	}
-
-	if r.Execution != nil {
-		id = r.Execution.Id
-		if r.Execution.ExecutionResult != nil {
-			status = r.Execution.ExecutionResult.Status
-		}
-	}
-
-	if r.Step != nil {
-		stepType = r.Step.Type()
-		name = r.Step.FullName()
-	}
-
-	return testkube.TestSuiteStepExecutionSummary{
-		Id:       id,
-		Name:     name,
-		TestName: testName,
-		Status:   status,
-		Type_:    stepType,
-	}
-}
-
-func mapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsuitesv1.TestSuite {
-	return testsuitesv1.TestSuite{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-			Labels:    request.Labels,
-		},
-		Spec: testsuitesv1.TestSuiteSpec{
-			Repeats:     int(request.Repeats),
-			Description: request.Description,
-			Before:      mapTestStepsToCRD(request.Before),
-			Steps:       mapTestStepsToCRD(request.Steps),
-			After:       mapTestStepsToCRD(request.After),
-			Schedule:    request.Schedule,
-			Variables:   testsuitesmapper.MapCRDVariables(request.Variables),
-		},
-	}
-}
-
-func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsuitesv1.TestSuiteStepSpec) {
-	for _, step := range steps {
-		out = append(out, mapTestStepToCRD(step))
-	}
-
-	return
-}
-
-func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv1.TestSuiteStepSpec) {
-	switch step.Type() {
-
-	case testkube.TestSuiteStepTypeDelay:
-		stepSpec.Delay = &testsuitesv1.TestSuiteStepDelay{
-			Duration: step.Delay.Duration,
-		}
-
-	case testkube.TestSuiteStepTypeExecuteTest:
-		s := step.Execute
-		stepSpec.Execute = &testsuitesv1.TestSuiteStepExecute{
-			Namespace: s.Namespace,
-			Name:      s.Name,
-			// TODO move StopOnFailure level up in operator model to mimic this one
-			StopOnFailure: step.StopTestOnFailure,
-		}
-	}
-
-	return
 }
