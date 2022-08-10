@@ -235,7 +235,7 @@ jobs:
           git config user.email "kubeshop-bot@kubeshop.io"
           git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
           git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
-          git push --force origin HEAD:main
+          git push origin HEAD:main
 
 #      - name: Remove files so that they won't be commited to our repository
 #        run: |
