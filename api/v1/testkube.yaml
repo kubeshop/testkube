@@ -25,6 +25,14 @@
       description: "Test suites orchestration operations"
     - name: labels
       description: "Listing all available labels"
+    - name: artifacts
+      description: "Artifact operations"
+    - name: logs
+      description: "Log operations"
+    - name: executor
+      description: "Executor operations"
+    - name: webhook
+      description: "Webhook operations"
   
   paths:
     /test-suites:
@@ -98,8 +106,8 @@
         tags:
           - test-suites
           - api
-        summary: "delete test suites"
-        description: "deletes all or labeled test suites"
+        summary: "Delete test suites"
+        description: "Deletes all or labeled test suites"
         operationId: deleteTestSuites
         parameters:
           - $ref: "#/components/parameters/Selector"
@@ -160,8 +168,8 @@
         tags:
           - test-suites
           - api
-        summary: "update test suite"
-        description: "update test based on test suite content or git based data"
+        summary: "Update test suite"
+        description: "Update test based on test suite content or git based data"
         operationId: updateTestSuite
         requestBody:
           description: test suite details body
@@ -205,8 +213,8 @@
               type: string
             required: true
             description: ID of the test suite
-        summary: "delete test suite"
-        description: "deletes a test suite"
+        summary: "Delete test suite"
+        description: "Deletes a test suite"
         operationId: deleteTestSuite
         responses:
           204:
@@ -823,10 +831,12 @@
           - artifacts
           - executions
           - api
+        summary: "Download artifact"
+        description: "Download the artifact file from the given execution"
         operationId: downloadFile
         responses:
           200:
-            description: successful operation
+            description: "successful operation"
             content:
               application/octet-stream:
                 schema:
@@ -876,8 +886,8 @@
         tags:
           - tests
           - api
-        summary: "create new test"
-        description: "create new test based on file content, uri or git based data"
+        summary: "Create new test"
+        description: "Create new test based on file content, uri or git based data"
         operationId: createTest
         requestBody:
           description: test details body
@@ -919,8 +929,8 @@
         tags:
           - tests
           - api
-        summary: "delete tests"
-        description: "deletes all or labeled tests"
+        summary: "Delete tests"
+        description: "Deletes all or labeled tests"
         operationId: deleteTests
         parameters:
           - $ref: "#/components/parameters/Selector"
@@ -948,8 +958,8 @@
         tags:
           - tests
           - api
-        summary: "update test"
-        description: "update test based on test content or git based data"
+        summary: "Update test"
+        description: "Update test based on test content or git based data"
         operationId: updateTest
         requestBody:
           description: test details body
@@ -1025,8 +1035,8 @@
               type: string
             required: true
             description: ID of the test
-        summary: "delete test"
-        description: "deletes a test"
+        summary: "Delete test"
+        description: "Deletes a test"
         operationId: deleteTest
         responses:
           204:
@@ -1343,8 +1353,8 @@
         tags:
           - executor
           - api
-        summary: "create new executor"
-        description: "create new executor based on variables passed in request"
+        summary: "Create new executor"
+        description: "Create new executor based on variables passed in request"
         operationId: createExecutor
         requestBody:
           description: executor request body data
@@ -1386,8 +1396,8 @@
         tags:
           - executor
           - api
-        summary: "delete executors"
-        description: "deletes labeled executors"
+        summary: "Delete executors"
+        description: "Deletes labeled executors"
         operationId: deleteExecutors
         parameters:
           - $ref: "#/components/parameters/Selector"
@@ -1557,8 +1567,8 @@
         tags:
           - webhook
           - api
-        summary: "create new webhook"
-        description: "create new webhook based on variables passed in request"
+        summary: "Create new webhook"
+        description: "Create new webhook based on variables passed in request"
         operationId: createWebhook
         requestBody:
           description: executor request body data
@@ -1600,8 +1610,8 @@
         tags:
           - webhook
           - api
-        summary: "delete webhooks"
-        description: "deletes labeled webhooks"
+        summary: "Delete webhooks"
+        description: "Deletes labeled webhooks"
         operationId: deleteWebhooks
         parameters:
           - $ref: "#/components/parameters/Selector"
@@ -1708,7 +1718,7 @@
             description: Config key
         tags:
           - api
-        summary: "update config key"
+        summary: "Update config key"
         description: "Updates config key in cluster storage state"
         operationId: updateConfigKey
         responses:
@@ -1726,7 +1736,7 @@
       get:
         tags:
           - api
-        summary: "get debug information"
+        summary: "Get debug information"
         description: "Gets information that is needed for debugging and opening Testkube bug reports"
         operationId: getDebugInfo
         responses:
@@ -2063,7 +2073,7 @@
               $ref: "#/components/schemas/TestSuiteExecutionSummary"
   
       TestSuiteExecutionSummary:
-        description: test execution summary
+        description: "Test execution summary"
         type: object
         required:
           - id
@@ -2112,7 +2122,7 @@
               app: "backend"
   
       TestSuiteStepExecutionSummary:
-        description: test suite execution summary
+        description: "Test suite execution summary"
         type: object
         required:
           - id
@@ -2356,7 +2366,7 @@
               $ref: "#/components/schemas/ExecutionSummary"
   
       ExecutionSummary:
-        description: execution summary
+        description: "Execution summary"
         type: object
         required:
           - id
@@ -2656,7 +2666,7 @@
           name:
             type: string
             description: test execution custom name
-            example: testing with 1000 users
+            example: "testing with 1000 users"
           namespace:
             type: string
             description: test kubernetes namespace ("testkube" when not set)
@@ -2896,10 +2906,13 @@
         properties:
           clientVersion:
             type: string
+            example: "1.4.9"
           serverVersion:
             type: string
+            example: "v1.4.9"
           clusterVersion:
             type: string
+            example: "v1.23.4"
           apiLogs:
             type: array
             items:
