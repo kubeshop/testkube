@@ -26,7 +26,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
 		Name:                executionName,
-		Number:              executionNumber,
+		Number:              int32(executionNumber),
 		TestType:            testType,
 		ExecutionResult:     &result,
 		Variables:           variables,

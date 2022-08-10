@@ -13,7 +13,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gookit/color v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.4.2
+	github.com/kubeshop/testkube-operator v1.4.3
 	github.com/minio/minio-go/v7 v7.0.34
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -160,4 +160,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// replace github.com/kubeshop/testkube-operator v1.3.19 => ../testkube-operator
+// replace github.com/kubeshop/testkube-operator v1.0.20 => ../testkube-operator

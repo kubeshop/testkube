@@ -15,14 +15,13 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -40,9 +39,9 @@ func NewTestkubeAPI(
 	namespace string,
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	testsClient *testsclientv2.TestsClient,
+	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
-	testsuitesClient *testsuitesclientv1.TestSuitesClient,
+	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clusterId string,
@@ -92,11 +91,6 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob, s.Namespace)
-	if err != nil {
-		panic(err)
-	}
-
 	s.Init()
 	return s
 }
@@ -106,13 +100,12 @@ type TestkubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsSuitesClient    *testsuitesclientv1.TestSuitesClient
-	TestsClient          *testsclientv2.TestsClient
+	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
+	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	EventsEmitter        *webhook.Emitter
-	CronJobClient        *cronjob.Client
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
@@ -123,8 +116,7 @@ type TestkubeAPI struct {
 }
 
 type jobTemplates struct {
-	Job     string
-	Cronjob string
+	Job string
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
@@ -132,7 +124,7 @@ func (j *jobTemplates) decodeFromEnv() error {
 	if err != nil {
 		return err
 	}
-	templates := []*string{&j.Job, &j.Cronjob}
+	templates := []*string{&j.Job}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])

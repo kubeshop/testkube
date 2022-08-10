@@ -26,8 +26,6 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	renderer.RenderVariables(test.Variables)
-
 	if test.Content != nil {
 		ui.NL()
 		ui.Info("Content")
@@ -51,8 +49,37 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 	}
 
-	if len(test.ExecutorArgs) > 0 {
-		ui.Warn("Executor Args:", test.ExecutorArgs...)
+	if test.ExecutionRequest != nil {
+		ui.Warn("Execution request: ")
+		if test.ExecutionRequest.Name != "" {
+			ui.Warn("  Name:        ", test.ExecutionRequest.Name)
+		}
+
+		if len(test.ExecutionRequest.Variables) > 0 {
+			renderer.RenderVariables(test.ExecutionRequest.Variables)
+		}
+
+		if len(test.ExecutionRequest.Args) > 0 {
+			ui.Warn("  Args:        ", test.ExecutionRequest.Args...)
+		}
+
+		if len(test.ExecutionRequest.Envs) > 0 {
+			ui.NL()
+			ui.Warn("  Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
+		}
+
+		if len(test.ExecutionRequest.SecretEnvs) > 0 {
+			ui.NL()
+			ui.Warn("  Secret Envs: ", testkube.MapToString(test.ExecutionRequest.SecretEnvs))
+		}
+
+		if test.ExecutionRequest.HttpProxy != "" {
+			ui.Warn("  Http proxy:  ", test.ExecutionRequest.HttpProxy)
+		}
+
+		if test.ExecutionRequest.HttpsProxy != "" {
+			ui.Warn("  Https proxy: ", test.ExecutionRequest.HttpsProxy)
+		}
 	}
 
 	return nil
