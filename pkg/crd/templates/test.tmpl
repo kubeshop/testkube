@@ -1,4 +1,4 @@
-apiVersion: tests.testkube.io/v2
+apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: {{ .Name }}
@@ -24,7 +24,7 @@ spec:
     uri: {{ .Content.Uri }}
   {{- end }}
   schedule: {{ .Schedule }}
-  if {{ .ExecutionRequest }}
+  {{- if .ExecutionRequest }}
   executionRequest:
     name: {{ .ExecutionRequest.Name }}
     variablesFile: {{ .ExecutionRequest.VariablesFile }}

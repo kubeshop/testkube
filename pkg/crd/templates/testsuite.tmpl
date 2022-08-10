@@ -50,7 +50,7 @@ spec:
   {{- end }}
   schedule: {{ .Schedule }}
   repeats: {{ .Repeats }}
-  if {{ .ExecutionRequest }}
+  {{- if .ExecutionRequest }}
   executionRequest:
     name: {{ .ExecutionRequest.Name }}
     variables:
