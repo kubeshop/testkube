@@ -9,4 +9,3 @@ or directly here: https://github.com/kubeshop/testkube/releases/download/<vTestk
 
 For example for version v1.4.9 it is https://github.com/kubeshop/testkube/releases/tag/v1.4.9
 and https://github.com/kubeshop/testkube/releases/download/v1.4.9/testkube_1.4.9_Windows_i386_checksum.txt
-
