@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// execution summary
+// Execution summary
 type ExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`

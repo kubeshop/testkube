@@ -9,7 +9,7 @@
  */
 package testkube
 
-// test suite execution summary
+// Test suite execution summary
 type TestSuiteStepExecutionSummary struct {
 	Id string `json:"id"`
 	// execution name

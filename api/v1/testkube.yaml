@@ -1772,20 +1772,32 @@
             type: string
             description: 50th percentile of all durations
             example: "7m2.71s"
+          execution_duration_p50_ms:
+            type: int
+            description: 50th percentile of all durations in milliseconds
+            example: 422
           execution_duration_p90:
             type: string
             description: 90th percentile of all durations
             example: "7m2.71s"
+          execution_duration_p90_ms:
+            type: int
+            description: 90th percentile of all durations in milliseconds
+            example: 422
           execution_duration_p99:
             type: string
             description: 99th percentile of all durations
             example: "7m2.71s"
+          execution_duration_p99_ms:
+            type: int
+            description: 99th percentile of all durations in milliseconds
+            example: 422
           total_executions:
-            type: integer
+            type: int
             description: total executions number
             example: 2
           failed_executions:
-            type: integer
+            type: int
             description: failed executions number
             example: 1
   
@@ -1796,6 +1808,8 @@
             type: string
           duration:
             type: string
+          duration_ms:
+            type: int
           status:
             type: string
   
@@ -2164,20 +2178,32 @@
             type: string
             description: 50th percentile of all durations
             example: "9.88s"
+          execution_duration_p50_ms:
+            type: int
+            description: 50th percentile of all durations in milliseconds
+            example: 9
           execution_duration_p90:
             type: string
             description: 90th percentile of all durations
             example: "9.88s"
+          execution_duration_p90_ms:
+            type: int
+            description: 90th percentile of all durations in milliseconds
+            example: 9
           execution_duration_p99:
             type: string
             description: 99th percentile of all durations
             example: "9.88s"
+          execution_duration_p99_ms:
+            type: int
+            description: 99th percentile of all durations in milliseconds
+            example: 9
           total_executions:
-            type: integer
+            type: int
             description: total executions number
             example: 1
           failed_executions:
-            type: integer
+            type: int
             description: failed executions number
             example: 0
   
@@ -2188,6 +2214,8 @@
             type: string
           duration:
             type: string
+          duration_ms:
+            type: int
           status:
             type: string
   
