@@ -228,14 +228,14 @@ jobs:
         run: |
           ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
 
-      - name: Commit and push changes
-        working-directory: ./choco
-        run: |
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
-          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
-          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
-          git push origin HEAD:main
+#      - name: Commit and push changes
+#        working-directory: ./choco
+#        run: |
+#          git config user.name "kubeshop-bot"
+#          git config user.email "kubeshop-bot@kubeshop.io"
+#          git add .\testkube.nuspec .\tools\chocolateyInstall.ps1 .\tools\VERIFICATION.txt
+#          git commit -m "New testkube version is: ${{steps.tag.outputs.tag}}"
+#          git push origin HEAD:main
 
 #      - name: Remove files so that they won't be commited to our repository
 #        run: |
