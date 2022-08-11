@@ -34,6 +34,7 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		SecretUUID: request.SecretUUID,
 		TestSuite:  testSuite.GetObjectRef(),
 		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
+		Variables:  map[string]Variable{},
 	}
 
 	if testSuite.ExecutionRequest != nil {
