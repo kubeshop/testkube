@@ -26,4 +26,4 @@ Set-Content -Path $file -Value $update_version -NoNewline
 choco pack
 
 #push package
-choco push .\Testkube.$version.nupkg --source http://chocolatey.testkube.io/ --key $api_key --force
+choco push .\Testkube.$version.nupkg --source https://chocolatey.testkube.io/ --key $api_key
