@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -157,7 +158,14 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testName := c.Params("id")
-		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName)
+
+		const DefaultLimit = 0
+		limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(DefaultLimit)))
+		if err != nil {
+			limit = DefaultLimit
+		}
+
+		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
