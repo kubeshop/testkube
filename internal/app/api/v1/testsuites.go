@@ -340,7 +340,14 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testSuiteName := c.Params("id")
-		metrics, err := s.TestExecutionResults.GetTestSuiteMetrics(context.Background(), testSuiteName)
+
+		const DefaultLimit = 0
+		limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(DefaultLimit)))
+		if err != nil {
+			limit = DefaultLimit
+		}
+
+		metrics, err := s.TestExecutionResults.GetTestSuiteMetrics(context.Background(), testSuiteName, limit)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}

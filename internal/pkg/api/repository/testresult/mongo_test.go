@@ -71,7 +71,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	err = repository.insertExecutionResult(testName, testkube.PASSED_TestSuiteExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
 
-	metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName)
+	metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 100)
 	assert.NoError(err)
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
