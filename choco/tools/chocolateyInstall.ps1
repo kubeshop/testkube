@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop';
 $toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$fileLocation = Join-Path $toolsDir 'testkube_1.4.20_Windows_i386.msi'
+$fileLocation = Join-Path $toolsDir 'testkube_1.4.21_Windows_i386.msi'
 
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName
@@ -10,7 +10,7 @@ $packageArgs = @{
 
   softwareName  = 'testkube'
 
-  checksum      = '921D389BFCE4A4484EE3CCB45CFB9CB60842261A34B547122BD1FE1153BB12DE'
+  checksum      = '45702242A945EA471339346D93985900CC798DE02D7EFFD62EA97D9AC2928476'
   checksumType  = 'sha256'
 
   silentArgs    = "/qn /norestart /l*v `"$($env:TEMP)\$($packageName).$($env:chocolateyPackageVersion).MsiInstall.log`""
