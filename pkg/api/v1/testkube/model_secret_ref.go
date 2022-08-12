@@ -9,6 +9,7 @@
  */
 package testkube
 
+// Testkube internal reference for secret storage in Kubernetes secrets
 type SecretRef struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace,omitempty"`

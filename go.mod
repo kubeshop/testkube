@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b
-	github.com/cli/cli/v2 v2.14.3
+	github.com/cli/cli/v2 v2.14.4
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fluxcd/pkg/runtime v0.16.2
@@ -13,7 +13,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gookit/color v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.4.2
+	github.com/kubeshop/testkube-operator v1.4.3
 	github.com/minio/minio-go/v7 v7.0.34
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -40,7 +40,7 @@ require (
 	github.com/briandowns/spinner v1.18.1 // indirect
 	github.com/charmbracelet/glamour v0.4.0 // indirect
 	github.com/cli/browser v1.1.0 // indirect
-	github.com/cli/go-gh v0.0.4-0.20220725193052-79f89db738dc // indirect
+	github.com/cli/go-gh v0.1.0 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
@@ -160,4 +160,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// replace github.com/kubeshop/testkube-operator v1.3.19 => ../testkube-operator
+// replace github.com/kubeshop/testkube-operator v1.0.20 => ../testkube-operator

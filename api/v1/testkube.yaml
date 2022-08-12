@@ -11,7 +11,7 @@ info:
   version: 1.0.0
 
 externalDocs:
-  description: "Find out more about testkube"
+  description: "Find out more about Testkube"
   url: http://testkube.io
 
 tags:
@@ -25,6 +25,14 @@ tags:
     description: "Test suites orchestration operations"
   - name: labels
     description: "Listing all available labels"
+  - name: artifacts
+    description: "Artifact operations"
+  - name: logs
+    description: "Log operations"
+  - name: executor
+    description: "Executor operations"
+  - name: webhook
+    description: "Webhook operations"
 
 paths:
   /test-suites:
@@ -98,8 +106,8 @@ paths:
       tags:
         - test-suites
         - api
-      summary: "delete test suites"
-      description: "deletes all or labeled test suites"
+      summary: "Delete test suites"
+      description: "Deletes all or labeled test suites"
       operationId: deleteTestSuites
       parameters:
         - $ref: "#/components/parameters/Selector"
@@ -160,8 +168,8 @@ paths:
       tags:
         - test-suites
         - api
-      summary: "update test suite"
-      description: "update test based on test suite content or git based data"
+      summary: "Update test suite"
+      description: "Update test based on test suite content or git based data"
       operationId: updateTestSuite
       requestBody:
         description: test suite details body
@@ -205,8 +213,8 @@ paths:
             type: string
           required: true
           description: ID of the test suite
-      summary: "delete test suite"
-      description: "deletes a test suite"
+      summary: "Delete test suite"
+      description: "Deletes a test suite"
       operationId: deleteTestSuite
       responses:
         204:
@@ -232,15 +240,9 @@ paths:
             type: string
           required: true
           description: name of the test suite
-        - in: query
-          name: limit
-          schema:
-            type: string
-          description: limit executions
-          required: false
       summary: "Get test suite metrics"
       description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
-      operationId: getTestMetrics
+      operationId: getTestSuiteMetrics
       responses:
         200:
           description: "successful operation"
@@ -829,10 +831,12 @@ paths:
         - artifacts
         - executions
         - api
+      summary: "Download artifact"
+      description: "Download the artifact file from the given execution"
       operationId: downloadFile
       responses:
         200:
-          description: successful operation
+          description: "successful operation"
           content:
             application/octet-stream:
               schema:
@@ -882,8 +886,8 @@ paths:
       tags:
         - tests
         - api
-      summary: "create new test"
-      description: "create new test based on file content, uri or git based data"
+      summary: "Create new test"
+      description: "Create new test based on file content, uri or git based data"
       operationId: createTest
       requestBody:
         description: test details body
@@ -925,8 +929,8 @@ paths:
       tags:
         - tests
         - api
-      summary: "delete tests"
-      description: "deletes all or labeled tests"
+      summary: "Delete tests"
+      description: "Deletes all or labeled tests"
       operationId: deleteTests
       parameters:
         - $ref: "#/components/parameters/Selector"
@@ -954,8 +958,8 @@ paths:
       tags:
         - tests
         - api
-      summary: "update test"
-      description: "update test based on test content or git based data"
+      summary: "Update test"
+      description: "Update test based on test content or git based data"
       operationId: updateTest
       requestBody:
         description: test details body
@@ -1031,8 +1035,8 @@ paths:
             type: string
           required: true
           description: ID of the test
-      summary: "delete test"
-      description: "deletes a test"
+      summary: "Delete test"
+      description: "Deletes a test"
       operationId: deleteTest
       responses:
         204:
@@ -1058,12 +1062,6 @@ paths:
             type: string
           required: true
           description: ID of the test
-        - in: query
-          name: limit
-          schema:
-            type: string
-          description: limit executions
-          required: false
       summary: "Get test metrics"
       description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestMetrics
@@ -1355,8 +1353,8 @@ paths:
       tags:
         - executor
         - api
-      summary: "create new executor"
-      description: "create new executor based on variables passed in request"
+      summary: "Create new executor"
+      description: "Create new executor based on variables passed in request"
       operationId: createExecutor
       requestBody:
         description: executor request body data
@@ -1398,8 +1396,8 @@ paths:
       tags:
         - executor
         - api
-      summary: "delete executors"
-      description: "deletes labeled executors"
+      summary: "Delete executors"
+      description: "Deletes labeled executors"
       operationId: deleteExecutors
       parameters:
         - $ref: "#/components/parameters/Selector"
@@ -1513,6 +1511,13 @@ paths:
                   type: array
                   items:
                     type: string
+                example:
+                  app:
+                    - backend
+                  env:
+                    - prod
+                  toDelete:
+                    - "yes"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1562,8 +1567,8 @@ paths:
       tags:
         - webhook
         - api
-      summary: "create new webhook"
-      description: "create new webhook based on variables passed in request"
+      summary: "Create new webhook"
+      description: "Create new webhook based on variables passed in request"
       operationId: createWebhook
       requestBody:
         description: executor request body data
@@ -1605,8 +1610,8 @@ paths:
       tags:
         - webhook
         - api
-      summary: "delete webhooks"
-      description: "deletes labeled webhooks"
+      summary: "Delete webhooks"
+      description: "Deletes labeled webhooks"
       operationId: deleteWebhooks
       parameters:
         - $ref: "#/components/parameters/Selector"
@@ -1713,7 +1718,7 @@ paths:
           description: Config key
       tags:
         - api
-      summary: "update config key"
+      summary: "Update config key"
       description: "Updates config key in cluster storage state"
       operationId: updateConfigKey
       responses:
@@ -1731,7 +1736,7 @@ paths:
     get:
       tags:
         - api
-      summary: "get debug information"
+      summary: "Get debug information"
       description: "Gets information that is needed for debugging and opening Testkube bug reports"
       operationId: getDebugInfo
       responses:
@@ -1762,30 +1767,39 @@ components:
         pass_fail_ratio:
           type: number
           description: Percentage pass to fail ratio
+          example: 50
         execution_duration_p50:
           type: string
           description: 50th percentile of all durations
+          example: "7m2.71s"
         execution_duration_p50_ms:
           type: int
           description: 50th percentile of all durations in milliseconds
+          example: 422
         execution_duration_p90:
           type: string
           description: 90th percentile of all durations
+          example: "7m2.71s"
         execution_duration_p90_ms:
           type: int
           description: 90th percentile of all durations in milliseconds
+          example: 422
         execution_duration_p99:
           type: string
           description: 99th percentile of all durations
+          example: "7m2.71s"
         execution_duration_p99_ms:
           type: int
           description: 99th percentile of all durations in milliseconds
+          example: 422
         total_executions:
           type: int
           description: total executions number
+          example: 2
         failed_executions:
           type: int
           description: failed executions number
+          example: 1
 
     TestMetricsExecutions:
       type: object
@@ -1804,6 +1818,15 @@ components:
       description: "execution variables passed to executor converted to vars for usage in tests"
       additionalProperties:
         $ref: "#/components/schemas/Variable"
+      example:
+        var1:
+          name: "var1"
+          type: "basic"
+          value: "value1"
+        secret1:
+          name: "secret1"
+          type: "secret"
+          value: "secretvalue1"
 
     Variable:
       type: object
@@ -1831,15 +1854,19 @@ components:
         namespace:
           type: string
           description: object kubernetes namespace
+          example: "testkube"
         name:
           type: string
           description: object name
+          example: "name"
 
     SecretRef:
+      readOnly: true
       required:
         - name
         - key
       type: object
+      description: Testkube internal reference for secret storage in Kubernetes secrets
       properties:
         namespace:
           type: string
@@ -1860,25 +1887,43 @@ components:
       properties:
         name:
           type: string
+          example: "test-suite1"
         namespace:
           type: string
+          example: "testkube"
         description:
           type: string
+          example: "collection of tests"
         before:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         steps:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Steps to run
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         after:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step after whole suite
+          example:
+            - stopTestOn: true,
+              execute:
+                namespace: "testkube"
+                name: "example-test"
         labels:
           type: object
           description: "test suite labels"
@@ -1890,14 +1935,16 @@ components:
         schedule:
           type: string
           description: schedule to run test suite
+          example: "* * * * *"
         repeats:
           type: integer
           default: 1
-        variables:
-          $ref: "#/components/schemas/Variables"
+          example: 1
         created:
           type: string
           format: date-time
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
 
     TestSuiteStepType:
       type: string
@@ -1947,9 +1994,11 @@ components:
           type: string
           description: execution id
           format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: "execution name"
+          example: "test-suite1.needlessly-sweet-imp"
         testSuite:
           $ref: "#/components/schemas/ObjectRef"
           description: object name and namespace
@@ -1968,6 +2017,8 @@ components:
         secretUUID:
           type: string
           description: secret uuid
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         startTime:
           type: string
           description: "test start time"
@@ -1979,6 +2030,7 @@ components:
         duration:
           type: string
           description: "test duration"
+          example: "2m"
         stepResults:
           type: array
           description: "steps execution restults"
@@ -2035,7 +2087,7 @@ components:
             $ref: "#/components/schemas/TestSuiteExecutionSummary"
 
     TestSuiteExecutionSummary:
-      description: test execution summary
+      description: "Test execution summary"
       type: object
       required:
         - id
@@ -2047,12 +2099,15 @@ components:
           type: string
           description: execution id
           format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: execution name
+          example: "test-suite1.needlessly-sweet-imp"
         testSuiteName:
           type: string
           description: name of the test suite
+          example: "test-suite1"
         status:
           $ref: "#/components/schemas/TestSuiteExecutionStatus"
         startTime:
@@ -2066,6 +2121,7 @@ components:
         duration:
           type: string
           description: "test suite execution duration"
+          example: "00:00:09"
         execution:
           type: array
           items:
@@ -2080,7 +2136,7 @@ components:
             app: "backend"
 
     TestSuiteStepExecutionSummary:
-      description: test suite execution summary
+      description: "Test suite execution summary"
       type: object
       required:
         - id
@@ -2089,12 +2145,15 @@ components:
       properties:
         id:
           type: string
+          example: "62f395e004109209b50edfc4"
         name:
           type: string
           description: execution name
+          example: "run:testkube/test1"
         testName:
           type: string
           description: test name
+          example: "test1"
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
@@ -2107,33 +2166,46 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteMetricsExecutions"
+          example:
+            - duration: 9.88s
+              duration_ms: 9878
+              status: passed
         pass_fail_ratio:
           type: number
           description: Percentage pass to fail ratio
+          example: 100
         execution_duration_p50:
           type: string
           description: 50th percentile of all durations
+          example: "9.88s"
         execution_duration_p50_ms:
           type: int
           description: 50th percentile of all durations in milliseconds
+          example: 9
         execution_duration_p90:
           type: string
           description: 90th percentile of all durations
+          example: "9.88s"
         execution_duration_p90_ms:
           type: int
           description: 90th percentile of all durations in milliseconds
+          example: 9
         execution_duration_p99:
           type: string
           description: 99th percentile of all durations
+          example: "9.88s"
         execution_duration_p99_ms:
           type: int
           description: 99th percentile of all durations in milliseconds
+          example: 9
         total_executions:
           type: int
           description: total executions number
+          example: 1
         failed_executions:
           type: int
           description: failed executions number
+          example: 0
 
     TestSuiteMetricsExecutions:
       type: object
@@ -2153,18 +2225,22 @@ components:
         name:
           type: string
           description: test name
+          example: "test1"
         namespace:
           type: string
           description: test namespace
+          example: "testkube"
         type:
           type: string
           description: test type
+          example: "postman/collection"
         content:
           $ref: "#/components/schemas/TestContent"
           description: test content
         created:
           type: string
           format: date-time
+          example: "2022-07-30T06:54:15Z"
         labels:
           type: object
           description: "test labels"
@@ -2176,17 +2252,9 @@ components:
         schedule:
           type: string
           description: schedule to run test
-        variables:
-          $ref: "#/components/schemas/Variables"
-        executorArgs:
-          type: array
-          description: "additional executor binary arguments"
-          items:
-            type: string
-          example:
-            - "--repeats"
-            - "5"
-            - "--insecure"
+          example: "* * * * *"
+        executionRequest:
+          $ref: "#/components/schemas/ExecutionRequest"
 
     TestContent:
       type: object
@@ -2207,6 +2275,7 @@ components:
         uri:
           type: string
           description: test content
+          example: "https://github.com/kubeshop/testkube"
 
     Execution:
       type: object
@@ -2216,24 +2285,31 @@ components:
           type: string
           description: execution id
           format: bson objectId
+          example: "62f395e004109209b50edfc4"
         testName:
           type: string
           description: unique test name (CRD Test name)
+          example: "example-test"
         testSuiteName:
           type: string
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
+          example: "test-suite1"
         testNamespace:
           type: string
           description: test namespace
+          example: "testkube"
         testType:
           type: string
           description: test type e.g. postman/collection
+          example: "postman/collection"
         name:
           type: string
           description: "execution name"
+          example: "test-suite1-example-test-1"
         number:
           type: integer
           description: "execution number"
+          example: 1
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -2256,9 +2332,13 @@ components:
         testSecretUUID:
           type: string
           description: test secret uuid
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         testSuiteSecretUUID:
           type: string
           description: test suite secret uuid, if it's run as a part of test suite
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         content:
           $ref: "#/components/schemas/TestContent"
         startTime:
@@ -2272,6 +2352,7 @@ components:
         duration:
           type: string
           description: "test duration"
+          example: "88s"
         executionResult:
           required: true
           description: result get from executor
@@ -2313,7 +2394,7 @@ components:
             $ref: "#/components/schemas/ExecutionSummary"
 
     ExecutionSummary:
-      description: execution summary
+      description: "Execution summary"
       type: object
       required:
         - id
@@ -2326,21 +2407,27 @@ components:
           type: string
           description: execution id
           format: bson objectId
+          example: "62f395e004109209b50edfc4"
         name:
           type: string
           description: execution name
+          example: "test-suite1-test1"
         number:
           type: integer
           description: execution number
+          example: 1
         testName:
           type: string
           description: name of the test
+          example: "test1"
         testNamespace:
           type: string
           description: name of the test
+          example: "testkube"
         testType:
           type: string
           description: the type of test for this execution
+          example: "postman/collection"
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         startTime:
@@ -2354,6 +2441,7 @@ components:
         duration:
           type: string
           description: calculated test duration
+          example: "00:00:13"
         labels:
           type: object
           description: "test and execution labels"
@@ -2414,13 +2502,15 @@ components:
         name:
           type: string
           description: step name
+          example: "step1"
         duration:
           type: string
           format: duration
+          example: "10m0s"
         status:
           type: string
           description: execution step status
-          enum: [success, error]
+          enum: [passed, failed]
         assertionResults:
           type: array
           items:
@@ -2432,9 +2522,10 @@ components:
       properties:
         name:
           type: string
+          example: "assertion1"
         status:
           type: string
-          enum: [success, error]
+          enum: [passed, failed]
         errorMessage:
           type: string
           nullable: true
@@ -2474,9 +2565,11 @@ components:
         version:
           type: string
           description: build version
+          example: "v1.4.4"
         commit:
           type: string
           description: build commit
+          example: "aaff223ae68aab1af56e8ed8c84c2b80ed63d9b8"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -2493,21 +2586,27 @@ components:
         uri:
           type: string
           description: uri of content file or git directory
+          example: "https://github.com/kubeshop/testkube"
         branch:
           type: string
           description: branch/tag name for checkout
+          example: "main"
         commit:
           type: string
           description: commit id (sha) for checkout
+          example: "b928cbb7186944ab9275937ec1ac3d3738ca2e1d"
         path:
           type: string
           description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
+          example: "test/perf"
         username:
           type: string
           description: git auth username for private repositories
+          example: "git_user"
         token:
           type: string
           description: git auth token for private repositories
+          example: "ghp_IqIMNOZH..."
 
     ExecutionRequest:
       description: test execution request body
@@ -2516,10 +2615,11 @@ components:
         name:
           type: string
           description: test execution custom name
-          example: testing with 1000 users
+          example: "testing with 1000 users"
         testSuiteName:
           type: string
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
+          example: "test-suite1"
         number:
           type: integer
           description: test execution number
@@ -2543,9 +2643,13 @@ components:
         testSecretUUID:
           type: string
           description: test secret uuid
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         testSuiteSecretUUID:
           type: string
           description: test suite secret uuid, if it's run as a part of test suite
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2590,7 +2694,7 @@ components:
         name:
           type: string
           description: test execution custom name
-          example: testing with 1000 users
+          example: "testing with 1000 users"
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
@@ -2600,6 +2704,8 @@ components:
         secretUUID:
           type: string
           description: secret uuid
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
         labels:
           type: object
           description: "test suite labels"
@@ -2662,7 +2768,7 @@ components:
         - $ref: "#/components/schemas/Webhook"
 
     # Copied from CRD spec
-    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.kubtest.io_executors.yaml
+    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
     # TODO we need to sync those in some nice way
     Executor:
       description: CRD based executor data
@@ -2734,7 +2840,6 @@ components:
         content:
           type: string
           description: Message/event data passed from executor (like log lines etc)
-          example:
         result:
           description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
@@ -2748,10 +2853,13 @@ components:
       properties:
         name:
           type: string
+          example: "webhook1"
         namespace:
           type: string
+          example: "testkube"
         uri:
           type: string
+          example: "https://hooks.app.com/services/1"
         events:
           type: array
           items:
@@ -2823,14 +2931,16 @@ components:
     DebugInfo:
       description: Testkube debug info
       type: object
-      required:
       properties:
         clientVersion:
           type: string
+          example: "1.4.9"
         serverVersion:
           type: string
+          example: "v1.4.9"
         clusterVersion:
           type: string
+          example: "v1.23.4"
         apiLogs:
           type: array
           items:

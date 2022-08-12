@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// test execution summary
+// Test execution summary
 type TestSuiteExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`
