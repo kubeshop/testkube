@@ -90,6 +90,13 @@ func TestTestExecutionsMetrics(t *testing.T) {
 		assert.Contains(metrics.ExecutionDurationP90, "10m0")
 		assert.Contains(metrics.ExecutionDurationP99, "1h0m0")
 	})
+
+	t.Run("limit should limit executions", func(t *testing.T) {
+		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 1)
+		assert.NoError(err)
+		assert.Equal(1, metrics.TotalExecutions)
+	})
+
 }
 
 func getRepository() (*MongoRepository, error) {
