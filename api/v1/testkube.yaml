@@ -232,6 +232,12 @@ paths:
             type: string
           required: true
           description: name of the test suite
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: limit executions
+          required: false
       summary: "Get test suite metrics"
       description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestMetrics
@@ -1052,6 +1058,12 @@ paths:
             type: string
           required: true
           description: ID of the test
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: limit executions
+          required: false
       summary: "Get test metrics"
       description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestMetrics
