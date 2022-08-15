@@ -19,6 +19,16 @@ spec:
       branch: {{ .Content.Repository.Branch }}
       commit: {{ .Content.Repository.Commit }}      
       path: {{ .Content.Repository.Path }}
+      {{- if .Content.Repository.UsernameSecret }}
+      usernameSecret:
+        name: {{ .Content.Repository.UsernameSecret.Name }}
+        key: {{ .Content.Repository.UsernameSecret.Key }}
+      {{- end }}
+      {{- if .Content.Repository.TokenSecret }}
+      tokenSecret:
+        name: {{ .Content.Repository.TokenSecret.Name }}
+        key: {{ .Content.Repository.TokenSecret.Key }}
+      {{- end }}
     {{- end }}
     data: {{ .Content.Data }}
     uri: {{ .Content.Uri }}
