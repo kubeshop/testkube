@@ -510,20 +510,20 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 	var usernameSecret, tokenSecret *testkube.SecretRef
 	if test.Content != nil && test.Content.Repository != nil {
 		usernameSecret = test.Content.Repository.UsernameSecret
-		tokenSecret = test.Content.Repository.TokenSecret		
+		tokenSecret = test.Content.Repository.TokenSecret
 	}
 
 	return client.ExecuteOptions{
-		TestName:     id,
-		Namespace:    namespace,
-		TestSpec:     testCR.Spec,
-		ExecutorName: executorCR.ObjectMeta.Name,
-		ExecutorSpec: executorCR.Spec,
-		Request:      request,
-		Sync:         request.Sync,
-		Labels:       testCR.Labels,
+		TestName:       id,
+		Namespace:      namespace,
+		TestSpec:       testCR.Spec,
+		ExecutorName:   executorCR.ObjectMeta.Name,
+		ExecutorSpec:   executorCR.Spec,
+		Request:        request,
+		Sync:           request.Sync,
+		Labels:         testCR.Labels,
 		UsernameSecret: usernameSecret,
-		TokenSecret: tokenSecret,
+		TokenSecret:    tokenSecret,
 	}, nil
 }
 
