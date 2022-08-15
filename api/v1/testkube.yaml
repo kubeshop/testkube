@@ -2602,11 +2602,13 @@ components:
         username:
           type: string
           description: git auth username for private repositories
-          example: "git_user"
         token:
           type: string
           description: git auth token for private repositories
-          example: "ghp_IqIMNOZH..."
+        usernameSecret:
+          $ref: "#/components/schemas/SecretRef"
+        tokenSecret:
+          $ref: "#/components/schemas/SecretRef"
 
     ExecutionRequest:
       description: test execution request body

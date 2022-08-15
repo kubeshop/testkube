@@ -56,9 +56,33 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 		return
 	}
 
+	var repository *testsv3.Repository
+	if content.Repository != nil {
+		repository = &testsv3.Repository{
+			Type_:  specContent.Repository.Type_,
+			Uri:    specContent.Repository.Uri,
+			Branch: specContent.Repository.Branch,
+			Commit: specContent.Repository.Commit,
+			Path:   specContent.Repository.Path,
+		}
+
+		if content.Repository.UsernameSecret != nil {
+			repository.UsernameSecret = &testsv3.SecretRef{
+				Name: content.Repository.UsernameSecret.Name,
+				Key:  content.Repository.UsernameSecret.Key,
+			}
+		}
+
+		if content.Repository.TokenSecret != nil {
+			repository.TokenSecret = &testsv3.SecretRef{
+				Name: content.Repository.TokenSecret.Name,
+				Key:  content.Repository.TokenSecret.Key,
+			}
+		}
+	}
+
 	return &testsv3.TestContent{
-		// assuming same data structure
-		Repository: (*testsv3.Repository)(content.Repository),
+		Repository: repository,
 		Data:       content.Data,
 		Uri:        content.Uri,
 		Type_:      content.Type_,

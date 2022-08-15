@@ -507,6 +507,12 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get executor spec: %w", err)
 	}
 
+	var usernameSecret, tokenSecret *testkube.SecretRef
+	if test.Content != nil && test.Content.Repository != nil {
+		usernameSecret = test.Content.Repository.UsernameSecret
+		tokenSecret = test.Content.Repository.TokenSecret		
+	}
+
 	return client.ExecuteOptions{
 		TestName:     id,
 		Namespace:    namespace,
@@ -516,6 +522,8 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		Request:      request,
 		Sync:         request.Sync,
 		Labels:       testCR.Labels,
+		UsernameSecret: usernameSecret,
+		TokenSecret: tokenSecret,
 	}, nil
 }
 

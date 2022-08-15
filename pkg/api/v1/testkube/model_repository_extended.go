@@ -8,13 +8,11 @@ func NewGitRepository(uri, branch string) *Repository {
 	}
 }
 
-func NewAuthGitRepository(uri, branch, user, token string) *Repository {
+func NewAuthGitRepository(uri, branch string) *Repository {
 	return &Repository{
-		Type_:    "git",
-		Branch:   branch,
-		Uri:      uri,
-		Username: user,
-		Token:    token,
+		Type_:  "git",
+		Branch: branch,
+		Uri:    uri,
 	}
 }
 
