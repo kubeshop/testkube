@@ -59,11 +59,11 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 	var repository *testsv3.Repository
 	if content.Repository != nil {
 		repository = &testsv3.Repository{
-			Type_:  specContent.Repository.Type_,
-			Uri:    specContent.Repository.Uri,
-			Branch: specContent.Repository.Branch,
-			Commit: specContent.Repository.Commit,
-			Path:   specContent.Repository.Path,
+			Type_:  content.Repository.Type_,
+			Uri:    content.Repository.Uri,
+			Branch: content.Repository.Branch,
+			Commit: content.Repository.Commit,
+			Path:   content.Repository.Path,
 		}
 
 		if content.Repository.UsernameSecret != nil {
