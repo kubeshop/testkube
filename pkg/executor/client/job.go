@@ -602,6 +602,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		i++
 	}
 
+	var setSecrets bool
 	var data = []struct {
 		envVar    string
 		secretRef *testkube.SecretRef
@@ -618,6 +619,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	for _, value := range data {
 		if value.secretRef != nil {
+			setSecrets = true
 			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
 				Name: value.envVar,
 				ValueFrom: &corev1.EnvVarSource{
@@ -632,7 +634,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		}
 	}
 
-	if options.HasSecrets {
+	if options.HasSecrets && !setSecrets {
 		var data = []struct {
 			envVar    string
 			secretKey string
