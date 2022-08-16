@@ -23,4 +23,5 @@ type ExecuteOptions struct {
 	Sync         bool
 	HasSecrets   bool
 	Labels       map[string]string
+	Image        string
 }

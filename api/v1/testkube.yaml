@@ -2659,6 +2659,10 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
+        image:
+          type: string
+          description: container image, executor will run inside this image
+          example: kubeshop/testkube-executor-custom:1.10.11-dev-0a9c91
         envs:
           type: object
           description: "environment variables passed to executor"

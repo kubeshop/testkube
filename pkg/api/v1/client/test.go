@@ -137,6 +137,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		HttpProxy:       options.HTTPProxy,
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
+		Image:           options.Image,
 	}
 
 	body, err := json.Marshal(request)

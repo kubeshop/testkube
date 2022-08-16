@@ -659,7 +659,13 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		// override container image if provided
+		if options.Image != "" {
+			job.Spec.Template.Spec.Containers[i].Image = options.Image
+		}
 	}
+
+	fmt.Printf("\n\n\n\n\n\n\n%s\n\n\n\n\n\n\n\n", jobSpec)
 
 	return &job, nil
 }
@@ -693,6 +699,7 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = initImage
+	jobOptions.Image = options.Image
 	jobOptions.TestName = execution.TestName
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate

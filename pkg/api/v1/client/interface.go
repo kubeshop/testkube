@@ -116,6 +116,7 @@ type ExecuteTestOptions struct {
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string
 	HTTPSProxy                    string
+	Image                         string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
