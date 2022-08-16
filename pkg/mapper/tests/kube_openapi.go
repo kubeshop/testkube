@@ -53,11 +53,31 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 	content := &testkube.TestContent{}
 	if specContent != nil {
 		content.Type_ = specContent.Type_
-		// assuming same data structure - there is task about syncing them automatically
-		// https://github.com/kubeshop/testkube/issues/723
-		content.Repository = (*testkube.Repository)(specContent.Repository)
 		content.Data = specContent.Data
 		content.Uri = specContent.Uri
+		if specContent.Repository != nil {
+			content.Repository = &testkube.Repository{
+				Type_:  specContent.Repository.Type_,
+				Uri:    specContent.Repository.Uri,
+				Branch: specContent.Repository.Branch,
+				Commit: specContent.Repository.Commit,
+				Path:   specContent.Repository.Path,
+			}
+
+			if specContent.Repository.UsernameSecret != nil {
+				content.Repository.UsernameSecret = &testkube.SecretRef{
+					Name: specContent.Repository.UsernameSecret.Name,
+					Key:  specContent.Repository.UsernameSecret.Key,
+				}
+			}
+
+			if specContent.Repository.TokenSecret != nil {
+				content.Repository.TokenSecret = &testkube.SecretRef{
+					Name: specContent.Repository.TokenSecret.Name,
+					Key:  specContent.Repository.TokenSecret.Key,
+				}
+			}
+		}
 	}
 
 	return content

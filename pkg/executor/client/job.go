@@ -123,17 +123,19 @@ type JobExecutor struct {
 }
 
 type JobOptions struct {
-	Name        string
-	Namespace   string
-	Image       string
-	Jsn         string
-	TestName    string
-	InitImage   string
-	JobTemplate string
-	HasSecrets  bool
-	SecretEnvs  map[string]string
-	HTTPProxy   string
-	HTTPSProxy  string
+	Name           string
+	Namespace      string
+	Image          string
+	Jsn            string
+	TestName       string
+	InitImage      string
+	JobTemplate    string
+	HasSecrets     bool
+	SecretEnvs     map[string]string
+	HTTPProxy      string
+	HTTPSProxy     string
+	UsernameSecret *testkube.SecretRef
+	TokenSecret    *testkube.SecretRef
 }
 
 // Watch will get valid execution after async Execute, execution will be returned when success or error occurs
@@ -357,14 +359,16 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
 func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
-		Image:       options.ExecutorSpec.Image,
-		HasSecrets:  options.HasSecrets,
-		JobTemplate: options.ExecutorSpec.JobTemplate,
-		TestName:    options.TestName,
-		Namespace:   options.Namespace,
-		SecretEnvs:  options.Request.SecretEnvs,
-		HTTPProxy:   options.Request.HttpProxy,
-		HTTPSProxy:  options.Request.HttpsProxy,
+		Image:          options.ExecutorSpec.Image,
+		HasSecrets:     options.HasSecrets,
+		JobTemplate:    options.ExecutorSpec.JobTemplate,
+		TestName:       options.TestName,
+		Namespace:      options.Namespace,
+		SecretEnvs:     options.Request.SecretEnvs,
+		HTTPProxy:      options.Request.HttpProxy,
+		HTTPSProxy:     options.Request.HttpsProxy,
+		UsernameSecret: options.UsernameSecret,
+		TokenSecret:    options.TokenSecret,
 	}
 }
 
@@ -598,31 +602,66 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		i++
 	}
 
-	if options.HasSecrets {
-		secretEnvVars = append(secretEnvVars, []corev1.EnvVar{
+	var setSecrets bool
+	var data = []struct {
+		envVar    string
+		secretRef *testkube.SecretRef
+	}{
+		{
+			GitUsernameEnvVarName,
+			options.UsernameSecret,
+		},
+		{
+			GitTokenEnvVarName,
+			options.TokenSecret,
+		},
+	}
+
+	for _, value := range data {
+		if value.secretRef != nil {
+			setSecrets = true
+			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+				Name: value.envVar,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: value.secretRef.Name,
+						},
+						Key: value.secretRef.Key,
+					},
+				},
+			})
+		}
+	}
+
+	if options.HasSecrets && !setSecrets {
+		var data = []struct {
+			envVar    string
+			secretKey string
+		}{
 			{
-				Name: GitUsernameEnvVarName,
+				GitUsernameEnvVarName,
+				GitUsernameSecretName,
+			},
+			{
+				GitTokenEnvVarName,
+				GitTokenSecretName,
+			},
+		}
+
+		for _, value := range data {
+			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+				Name: value.envVar,
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: secret.GetMetadataName(options.TestName),
 						},
-						Key: GitUsernameSecretName,
+						Key: value.secretKey,
 					},
 				},
-			},
-			{
-				Name: GitTokenEnvVarName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(options.TestName),
-						},
-						Key: GitTokenSecretName,
-					},
-				},
-			},
-		}...)
+			})
+		}
 	}
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)

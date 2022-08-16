@@ -121,6 +121,15 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+	if err != nil {
+		return content, err
+	}
+
+	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return content, err
+	}
 
 	// get file content
 	if file != "" {
@@ -166,6 +175,20 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 			Path:     gitPath,
 			Username: gitUsername,
 			Token:    gitToken,
+		}
+
+		for key, val := range gitUsernameSecret {
+			repository.UsernameSecret = &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
+		}
+
+		for key, val := range gitTokenSecret {
+			repository.TokenSecret = &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
 		}
 	}
 

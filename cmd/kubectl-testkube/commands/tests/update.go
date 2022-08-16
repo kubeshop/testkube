@@ -31,6 +31,8 @@ func NewUpdateTestsCmd() *cobra.Command {
 		envs                  map[string]string
 		secretEnvs            map[string]string
 		httpProxy, httpsProxy string
+		gitUsernameSecret     map[string]string
+		gitTokenSecret        map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -87,6 +89,8 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 
 	return cmd
 }
