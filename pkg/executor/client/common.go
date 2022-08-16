@@ -13,14 +13,16 @@ const (
 )
 
 type ExecuteOptions struct {
-	ID           string
-	TestName     string
-	Namespace    string
-	TestSpec     testsv3.TestSpec
-	ExecutorName string
-	ExecutorSpec executorv1.ExecutorSpec
-	Request      testkube.ExecutionRequest
-	Sync         bool
-	HasSecrets   bool
-	Labels       map[string]string
+	ID             string
+	TestName       string
+	Namespace      string
+	TestSpec       testsv3.TestSpec
+	ExecutorName   string
+	ExecutorSpec   executorv1.ExecutorSpec
+	Request        testkube.ExecutionRequest
+	Sync           bool
+	HasSecrets     bool
+	Labels         map[string]string
+	UsernameSecret *testkube.SecretRef
+	TokenSecret    *testkube.SecretRef
 }

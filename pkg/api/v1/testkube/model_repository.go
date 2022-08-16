@@ -24,5 +24,7 @@ type Repository struct {
 	// git auth username for private repositories
 	Username string `json:"username,omitempty"`
 	// git auth token for private repositories
-	Token string `json:"token,omitempty"`
+	Token          string     `json:"token,omitempty"`
+	UsernameSecret *SecretRef `json:"usernameSecret,omitempty"`
+	TokenSecret    *SecretRef `json:"tokenSecret,omitempty"`
 }

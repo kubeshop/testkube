@@ -40,8 +40,15 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Branch:   ", test.Content.Repository.Branch)
 			ui.Warn("  Commit:   ", test.Content.Repository.Commit)
 			ui.Warn("  Path:     ", test.Content.Repository.Path)
-			ui.Warn("  Username: ", test.Content.Repository.Username)
-			ui.Warn("  Token:    ", test.Content.Repository.Token)
+			if test.Content.Repository.UsernameSecret != nil {
+				ui.Warn("  Username: ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.UsernameSecret.Name,
+					test.Content.Repository.UsernameSecret.Key))
+			}
+
+			if test.Content.Repository.TokenSecret != nil {
+				ui.Warn("  Token:    ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.TokenSecret.Name,
+					test.Content.Repository.TokenSecret.Key))
+			}
 		}
 
 		if test.Content.Data != "" {

@@ -39,6 +39,8 @@ func NewCreateTestsCmd() *cobra.Command {
 		envs                  map[string]string
 		secretEnvs            map[string]string
 		httpProxy, httpsProxy string
+		gitUsernameSecret     map[string]string
+		gitTokenSecret        map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -127,6 +129,8 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 
 	return cmd
 }
@@ -138,11 +142,21 @@ func validateCreateOptions(cmd *cobra.Command) error {
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+	if err != nil {
+		return err
+	}
+
+	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return err
+	}
 
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != ""
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
 
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
@@ -162,6 +176,18 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		if gitBranch != "" && gitCommit != "" {
 			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
 		}
+	}
+
+	if len(gitUsernameSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git username")
+	}
+
+	if len(gitTokenSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git token")
+	}
+
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
+		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
 	}
 
 	return nil
