@@ -4,7 +4,7 @@ CHART_NAME=api-server
 BIN_DIR ?= $(HOME)/bin
 USER ?= $(USER)
 NAMESPACE ?= "testkube"
-DATE ?= $(shell date -u -I seconds)
+DATE ?= $(shell date '+%s')
 COMMIT ?= $(shell git log -1 --pretty=format:"%h")
 VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
 DEBUG ?= $(DEBUG)

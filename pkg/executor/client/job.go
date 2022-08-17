@@ -126,6 +126,7 @@ type JobOptions struct {
 	Name           string
 	Namespace      string
 	Image          string
+	ImageOverride  string
 	Jsn            string
 	TestName       string
 	InitImage      string
@@ -276,6 +277,7 @@ func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOp
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+
 	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, execution, options)
 	if err != nil {
 		return err
@@ -360,6 +362,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:          options.ExecutorSpec.Image,
+		ImageOverride:  options.ImageOverride,
 		HasSecrets:     options.HasSecrets,
 		JobTemplate:    options.ExecutorSpec.JobTemplate,
 		TestName:       options.TestName,
@@ -699,12 +702,10 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
 		// override container image if provided
-		if options.Image != "" {
-			job.Spec.Template.Spec.Containers[i].Image = options.Image
+		if options.ImageOverride != "" {
+			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
 		}
 	}
-
-	fmt.Printf("\n\n\n\n\n\n\n%s\n\n\n\n\n\n\n\n", jobSpec)
 
 	return &job, nil
 }
@@ -738,7 +739,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = initImage
-	jobOptions.Image = options.Image
 	jobOptions.TestName = execution.TestName
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate

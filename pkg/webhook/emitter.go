@@ -50,13 +50,13 @@ type WebhookHttpResponse struct {
 
 // Notify notifies emitter with webhook
 func (s *Emitter) Notify(event testkube.WebhookEvent) {
-	s.Log.Infow("notifying webhook", "event", event)
+	s.Log.Infow("notifying webhook", "eventURI", event.Uri, "eventType", event.Type_)
 	s.Events <- event
 }
 
 // RunWorkers runs emitter workers responsible for sending HTTP requests
 func (s *Emitter) RunWorkers() {
-	s.Log.Infow("Starting workers", "count", workersCount)
+	s.Log.Debugw("Starting event emitter workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
 		go s.Listen(s.Events)
 	}
@@ -65,7 +65,7 @@ func (s *Emitter) RunWorkers() {
 // Listen listens for webhook events
 func (s *Emitter) Listen(events chan testkube.WebhookEvent) {
 	for event := range events {
-		s.Log.Infow("processing event", "event", event)
+		s.Log.Infow("processing event", event.Log()...)
 		s.sendHttpEvent(event)
 	}
 }
@@ -75,7 +75,7 @@ func (s *Emitter) sendHttpEvent(event testkube.WebhookEvent) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
 
-	l := s.Log.With("event", event)
+	l := s.Log.With(event.Log()...)
 
 	if err != nil {
 		l.Errorw("webhook send json encode error", "error", err)
@@ -119,7 +119,7 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 	}
 
 	for _, wh := range webhookList.Items {
-		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
+		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
 		s.Notify(testkube.WebhookEvent{
 			Uri:       wh.Spec.Uri,
 			Type_:     eventType,

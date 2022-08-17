@@ -14,7 +14,7 @@ import (
 // NewServer returns new HTTP server instance, initializes logger and metrics
 func NewServer(config Config) HTTPServer {
 	s := HTTPServer{
-		Mux:    fiber.New(),
+		Mux:    fiber.New(fiber.Config{DisableStartupMessage: true}),
 		Log:    log.DefaultLogger,
 		Config: config,
 	}
