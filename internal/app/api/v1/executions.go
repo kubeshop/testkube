@@ -524,6 +524,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		Labels:         testCR.Labels,
 		UsernameSecret: usernameSecret,
 		TokenSecret:    tokenSecret,
+		ImageOverride:  request.Image,
 	}, nil
 }
 

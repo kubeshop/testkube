@@ -46,16 +46,17 @@ func init() {
 }
 
 func runMigrations() (err error) {
-	ui.Info("Available migrations for", api.Version)
 	results := migrations.Migrator.GetValidMigrations(api.Version, migrator.MigrationTypeServer)
 	if len(results) == 0 {
-		ui.Warn("No migrations available for", api.Version)
+		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", api.Version)
 		return nil
 	}
 
+	migrationInfo := []string{}
 	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
+		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
 	}
+	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", api.Version, "migrations", migrationInfo)
 
 	return migrations.Migrator.Run(api.Version, migrator.MigrationTypeServer)
 }
@@ -102,7 +103,7 @@ func main() {
 	}
 
 	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
-	log.DefaultLogger.Warnw("Getting uniqe clusterId", "error", err)
+	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClient))

@@ -30,6 +30,8 @@ type ExecutionRequest struct {
 	TestSuiteSecretUUID string `json:"testSuiteSecretUUID,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
+	// container image, executor will run inside this image
+	Image string `json:"image,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution variables passed to executor from secrets
