@@ -47,5 +47,14 @@ curl -sSLf $(_download_url) > testkube.tar.gz
 tar -xzf testkube.tar.gz kubectl-testkube 
 rm testkube.tar.gz
 mv kubectl-testkube /usr/local/bin/kubectl-testkube
-echo "kubectl-testkube installed in /usr/local/bin/kubectl-testkube"
+ln -s /usr/local/bin/kubectl-testkube /usr/local/bin/testkube
+ln -s /usr/local/bin/kubectl-testkube /usr/local/bin/tk
 
+echo "kubectl-testkube installed in:"
+echo "- /usr/local/bin/kubectl-testkube"
+echo "- /usr/local/bin/testkube"
+echo "- /usr/local/bin/tk"
+echo "" 
+echo "You'll also need `helm` and Kubernetes `kubectl` installed."
+echo "- Install Helm: https://helm.sh/docs/intro/install/"
+echo "- Install kubectl: https://kubernetes.io/docs/tasks/tools/#kubectl"
