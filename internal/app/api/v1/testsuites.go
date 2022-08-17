@@ -25,6 +25,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
+type TestSuitesClient interface {
+	Create(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error)
+	Get(name string) (*testsuitesv2.TestSuite, error)
+	GetSecretTestSuiteVars(testSuiteName, secretUUID string) (map[string]string, error)
+	GetCurrentSecretUUID(testSuiteName string) (string, error)
+	List(selector string) (*testsuitesv2.TestSuiteList, error)
+	ListLabels() (map[string][]string, error)
+	Update(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error)
+	Delete(name string) error
+	DeleteAll() error
+	DeleteByLabels(selector string) error
+}
+
 // GetTestSuiteHandler for getting test object
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

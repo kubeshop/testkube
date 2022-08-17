@@ -100,7 +100,7 @@ type TestkubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
+	TestsSuitesClient    TestSuitesClient //*testsuitesclientv2.TestSuitesClient
 	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
