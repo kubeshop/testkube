@@ -228,7 +228,7 @@ jobs:
           curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
-          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
 
           ### Create snapshot
           curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots
