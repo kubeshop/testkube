@@ -1,9 +1,9 @@
 package config
 
 import (
-	"os"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -53,7 +53,7 @@ func (c *ConfigMap) Get(ctx context.Context) (result testkube.Config, err error)
 	if err != nil {
 		return result, fmt.Errorf("reading enable telemetry error: %w", err)
 	}
-	if len(data) != 0  {
+	if len(data) != 0 {
 		result.EnableTelemetry, err = strconv.ParseBool(string(data))
 		if err != nil {
 			return result, fmt.Errorf("parsing enable telemetry error: %w", err)
@@ -70,7 +70,7 @@ func (c *ConfigMap) Upsert(ctx context.Context, result testkube.Config) (err err
 
 	if err = os.WriteFile(filepath.Join(c.path, "enableTelemetry"), []byte(fmt.Sprint(result.EnableTelemetry)), 0666); err != nil {
 		return fmt.Errorf("writing enable telemetry error: %w", err)
-	}	
+	}
 
 	return
 }
