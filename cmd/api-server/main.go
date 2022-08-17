@@ -18,7 +18,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/config"
+	"github.com/kubeshop/testkube/internal/pkg/api/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -93,16 +93,16 @@ func main() {
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
-	configRepository := config.NewMongoRespository(db)
+	configMap := config.NewConfigMap(os.Getenv("APISERVER_CONFIG"))
 
 	// try to load from mongo based config first
-	telemetryEnabled, err := configRepository.GetTelemetryEnabled(context.Background())
+	telemetryEnabled, err := configMap.GetTelemetryEnabled(context.Background())
 	if err != nil {
 		// fallback to envs in case of failure (no record yet, or other error)
 		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
 	}
 
-	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
+	clusterId, err := configMap.GetUniqueClusterId(context.Background())
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
