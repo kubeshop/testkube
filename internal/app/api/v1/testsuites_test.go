@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http/httptest"
@@ -9,13 +10,15 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/kubeshop/testkube/internal/pkg/api/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestTestkubeAPI_GetTestSuiteWithExecutionHandler(t *testing.T) {
@@ -189,5 +192,85 @@ func getExampleTestSuiteWithExecutionList() []testkube.TestSuiteWithExecution {
 				},
 			},
 		},
+	}
+}
+
+func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
+	app := fiber.New()
+	resultRepo := mock.TestExecutionRepository{}
+	testSuitesClient := &mock.TestSuitesClient{}
+	s := &TestkubeAPI{
+		HTTPServer: server.HTTPServer{
+			Mux: app,
+			Log: log.DefaultLogger,
+		},
+		TestExecutionResults: &resultRepo,
+		TestsSuitesClient:    testSuitesClient,
+	}
+	app.Post("/:id/executions", s.ExecuteTestSuitesHandler())
+
+	tests := []struct {
+		name           string
+		route          string
+		expectedCode   int
+		testSuitesList *testsuitesv2.TestSuiteList
+		execRequest    *testkube.TestSuiteExecutionRequest
+		isSavedToRepo  bool
+		isRanInCluster bool
+	}{
+		{
+			name:           "Run test suite that was not created",
+			route:          "/fake-test-suite/executions",
+			expectedCode:   404,
+			testSuitesList: &testsuitesv2.TestSuiteList{},
+			execRequest:    &testkube.TestSuiteExecutionRequest{},
+			isSavedToRepo:  false,
+			isRanInCluster: false,
+		},
+		// {
+		// 	name:           "Run test suite for the first time",
+		// 	route:          "/test-suite-example/executions",
+		// 	expectedCode:   200,
+		// 	testSuitesList: getExampleTestSuiteList(),
+		// 	execRequest:    getExampleTestSuiteExecRequest(),
+		// 	isSavedToRepo:  true,
+		// 	isRanInCluster: true,
+		// },
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testSuitesClient.GetFn = func(name string) (*testsuitesv2.TestSuite, error) {
+				for _, n := range tt.testSuitesList.Items {
+					if n.Name == name {
+						return &n, nil
+					}
+				}
+				err := errors.NewNotFound(schema.GroupResource{}, "example-test-suite")
+				return nil, err
+			}
+
+			payload, err := json.Marshal(tt.execRequest)
+			assert.NoError(t, err)
+			req := httptest.NewRequest("POST", tt.route, bytes.NewReader(payload))
+			req.Header.Add("Accept", "application/json")
+			req.Header.Add("Content-Type", "application/json")
+			resp, err := app.Test(req, -1)
+			assert.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.expectedCode, resp.StatusCode, tt.name)
+
+			var res output.Output
+			err = json.NewDecoder(resp.Body).Decode(&res)
+			assert.NoError(t, err)
+			// assert.Equal(t, tt.wantLogs, res.Content)
+		})
+	}
+}
+
+func getExampleTestSuiteExecRequest() *testkube.TestSuiteExecutionRequest {
+	return &testkube.TestSuiteExecutionRequest{
+		Name:      "test-suite-execution",
+		Namespace: "testkube",
 	}
 }
