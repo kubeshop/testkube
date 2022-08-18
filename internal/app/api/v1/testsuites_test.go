@@ -206,6 +206,7 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 		},
 		TestExecutionResults: &resultRepo,
 		TestsSuitesClient:    testSuitesClient,
+		Metrics:              NewMetrics(),
 	}
 	app.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 
@@ -216,6 +217,7 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 		testSuitesList *testsuitesv2.TestSuiteList
 		execRequest    *testkube.TestSuiteExecutionRequest
 		isSavedToRepo  bool
+		isEndedToRepo  bool
 		isRanInCluster bool
 	}{
 		{
@@ -225,20 +227,23 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 			testSuitesList: &testsuitesv2.TestSuiteList{},
 			execRequest:    &testkube.TestSuiteExecutionRequest{},
 			isSavedToRepo:  false,
+			isEndedToRepo:  false,
 			isRanInCluster: false,
 		},
-		// {
-		// 	name:           "Run test suite for the first time",
-		// 	route:          "/test-suite-example/executions",
-		// 	expectedCode:   200,
-		// 	testSuitesList: getExampleTestSuiteList(),
-		// 	execRequest:    getExampleTestSuiteExecRequest(),
-		// 	isSavedToRepo:  true,
-		// 	isRanInCluster: true,
-		// },
+		{
+			name:           "Run test suite for the first time",
+			route:          "/test-suite-example/executions",
+			expectedCode:   201,
+			testSuitesList: getExampleTestSuiteList(),
+			execRequest:    getExampleTestSuiteExecRequest(),
+			isSavedToRepo:  true,
+			isEndedToRepo:  true,
+			isRanInCluster: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			gotSavedToRepo, gotEndedToRepo := false, false
 			testSuitesClient.GetFn = func(name string) (*testsuitesv2.TestSuite, error) {
 				for _, n := range tt.testSuitesList.Items {
 					if n.Name == name {
@@ -247,6 +252,21 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 				}
 				err := errors.NewNotFound(schema.GroupResource{}, "example-test-suite")
 				return nil, err
+			}
+			testSuitesClient.GetCurrentSecretUUIDFn = func(testSuiteName string) (string, error) {
+				return "", nil
+			}
+			resultRepo.InsertFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
+				gotSavedToRepo = true
+				return nil
+			}
+			resultRepo.EndExecutionFn = func(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
+				gotEndedToRepo = true
+				return nil
+			}
+			resultRepo.UpdateFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
+				assert.Empty(t, result)
+				return nil
 			}
 
 			payload, err := json.Marshal(tt.execRequest)
@@ -259,11 +279,12 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 			defer resp.Body.Close()
 
 			assert.Equal(t, tt.expectedCode, resp.StatusCode, tt.name)
+			assert.Equal(t, tt.isSavedToRepo, gotSavedToRepo)
+			assert.Equal(t, tt.isEndedToRepo, gotEndedToRepo)
 
 			var res output.Output
 			err = json.NewDecoder(resp.Body).Decode(&res)
 			assert.NoError(t, err)
-			// assert.Equal(t, tt.wantLogs, res.Content)
 		})
 	}
 }
