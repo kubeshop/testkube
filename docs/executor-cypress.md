@@ -1,5 +1,7 @@
 # Cypress Tests
 
+**Check out our [blog post](https://kubeshop.io/blog/end-to-end-tests-of-your-kubernetes-applications-with-cypress) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Cypress.**
+
 Testkube makes running Cypress tests simple. As Cypress is organised in projects, Testkube allows tests to be defined in a Github repository.
 
 To create a new Cypress test, you will need a Git repository with an example Cypress project. Please follow the Cypress documentation for details - <https://docs.cypress.io/guides/dashboard/projects>.
