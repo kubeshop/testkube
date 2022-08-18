@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
+	"github.com/kubeshop/testkube/internal/pkg/api/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -56,8 +54,8 @@ func TestParamsNilAssign(t *testing.T) {
 
 func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
-	resultRepo := MockExecutionResultsRepository{}
-	executor := &MockExecutor{}
+	resultRepo := mock.ExecutionResultsRepository{}
+	executor := &mock.Executor{}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
@@ -145,129 +143,4 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 			assert.Equal(t, tt.wantLogs, res.Content)
 		})
 	}
-}
-
-type MockExecutionResultsRepository struct {
-	GetFn func(ctx context.Context, id string) (testkube.Execution, error)
-}
-
-func (r MockExecutionResultsRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
-	if r.GetFn == nil {
-		panic("not implemented")
-	}
-	return r.GetFn(ctx, id)
-}
-
-func (r MockExecutionResultsRepository) GetByName(ctx context.Context, name string) (testkube.Execution, error) {
-	if r.GetFn == nil {
-		panic("not implemented")
-	}
-	return r.GetFn(ctx, name)
-}
-
-func (r MockExecutionResultsRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (result testkube.ExecutionsTotals, err error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) Insert(ctx context.Context, result testkube.Execution) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) Update(ctx context.Context, result testkube.Execution) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteByTest(ctx context.Context, testName string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteAll(ctx context.Context) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteByTests(ctx context.Context, testNames []string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteForAllTestSuites(ctx context.Context) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetTestMetrics(ctx context.Context, name string, limit int) (testkube.ExecutionsMetrics, error) {
-	panic("not implemented")
-}
-
-type MockExecutor struct {
-	LogsFn func(id string) (chan output.Output, error)
-}
-
-func (e MockExecutor) Watch(id string) chan client.ResultEvent {
-	panic("not implemented")
-}
-
-func (e MockExecutor) Get(id string) (testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
-func (e MockExecutor) Execute(execution testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
-func (e MockExecutor) ExecuteSync(execution testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
-func (e MockExecutor) Abort(id string) *testkube.ExecutionResult {
-	panic("not implemented")
-}
-
-func (e MockExecutor) Logs(id string) (chan output.Output, error) {
-	if e.LogsFn == nil {
-		panic("not implemented")
-	}
-	return e.LogsFn(id)
 }
