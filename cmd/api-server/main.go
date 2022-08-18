@@ -98,25 +98,29 @@ func main() {
 	configMapConfig, err := configmap.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
 	ui.ExitOnError("Getting config map config", err)
 
+	ctx := context.Background()
 	// try to load from mongo based config first
-	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(context.Background())
+	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
 	if err != nil {
 		// fallback to envs in case of failure (no record yet, or other error)
 		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
 	}
 
 	var clusterId string
-	config, err := configMapConfig.Get(context.Background())
+	config, err := configMapConfig.Get(ctx)
 	if config.ClusterId != "" {
 		clusterId = config.ClusterId
-	} else {
-		config, err = configRepository.Get(context.Background())
-		if config.ClusterId != "" {
-			clusterId = config.ClusterId
-			err = configMapConfig.Upsert(context.Background(), config)
-		} else {
-			clusterId, err = configMapConfig.GetUniqueClusterId(context.Background())
+	}
+
+	if clusterId == "" {
+		config, err = configRepository.Get(ctx)
+		config.EnableTelemetry = telemetryEnabled
+		if config.ClusterId == "" {
+			config.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
 		}
+
+		clusterId = config.ClusterId
+		err = configMapConfig.Upsert(ctx, config)
 	}
 
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)

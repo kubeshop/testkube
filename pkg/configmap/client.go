@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -30,6 +31,19 @@ func NewClient(namespace string) (*Client, error) {
 		Log:       log.DefaultLogger,
 		Namespace: namespace,
 	}, nil
+}
+
+// Create is a method to create new configmap
+func (c *Client) Create(id string, stringData map[string]string) error {
+	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
+	ctx := context.Background()
+
+	configMapSpec := NewSpec(id, c.Namespace, stringData)
+	if _, err := configMapsClient.Create(ctx, configMapSpec, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Get is a method to retrieve an existing configmap
@@ -63,6 +77,20 @@ func (c *Client) Update(id string, stringData map[string]string) error {
 	return nil
 }
 
+// Apply is a method to create or update a configmap
+func (c *Client) Apply(id string, stringData map[string]string) error {
+	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
+	ctx := context.Background()
+
+	configMapSpec := NewApplySpec(id, c.Namespace, stringData)
+	if _, err := configMapsClient.Apply(ctx, configMapSpec, metav1.ApplyOptions{
+		FieldManager: "application/apply-patch"}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewSpec is a method to return configmap spec
 func NewSpec(id, namespace string, stringData map[string]string) *v1.ConfigMap {
 	configuration := &v1.ConfigMap{
@@ -72,6 +100,14 @@ func NewSpec(id, namespace string, stringData map[string]string) *v1.ConfigMap {
 		},
 		Data: stringData,
 	}
+
+	return configuration
+}
+
+// NewApplySpec is a method to return configmap apply spec
+func NewApplySpec(id, namespace string, stringData map[string]string) *corev1.ConfigMapApplyConfiguration {
+	configuration := corev1.ConfigMap(id, namespace).
+		WithData(stringData)
 
 	return configuration
 }

@@ -29,15 +29,9 @@ type ConfigMapConfig struct {
 
 func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId string, err error) {
 	config, err := c.Get(ctx)
-	if err != nil {
-		return clusterId, err
-	}
-
 	// generate new cluster Id and save if there is not already
 	if config.ClusterId == "" {
-		config.ClusterId = fmt.Sprintf("cluster%s", telemetry.GetMachineID())
-		err := c.Upsert(ctx, config)
-		return config.ClusterId, err
+		return fmt.Sprintf("cluster%s", telemetry.GetMachineID()), err
 	}
 
 	return config.ClusterId, nil
@@ -45,7 +39,11 @@ func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId str
 
 func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
 	config, err := c.Get(ctx)
-	return config.EnableTelemetry, err
+	if err != nil {
+		return false, err
+	}
+
+	return config.EnableTelemetry, nil
 }
 
 func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err error) {
@@ -70,7 +68,7 @@ func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (e
 		"clusterId":       result.ClusterId,
 		"enableTelemetry": fmt.Sprint(result.EnableTelemetry),
 	}
-	if err = c.client.Update(c.name, data); err != nil {
+	if err = c.client.Apply(c.name, data); err != nil {
 		return fmt.Errorf("writing config map error: %w", err)
 	}
 
