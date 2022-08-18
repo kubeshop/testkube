@@ -64,7 +64,7 @@ func (c *Client) Get(id string) (map[string]string, error) {
 	return stringData, nil
 }
 
-// Update is a method to update an existing sconfigmap
+// Update is a method to update an existing configmap
 func (c *Client) Update(id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
 	ctx := context.Background()
