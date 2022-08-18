@@ -40,7 +40,7 @@ func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId str
 func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
 	config, err := c.Get(ctx)
 	if err != nil {
-		return false, err
+		return true, err
 	}
 
 	return config.EnableTelemetry, nil
