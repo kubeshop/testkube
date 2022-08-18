@@ -18,7 +18,8 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/config"
+	configmap "github.com/kubeshop/testkube/internal/pkg/api/config"
+	configmongo "github.com/kubeshop/testkube/internal/pkg/api/repository/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -93,7 +94,8 @@ func main() {
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
-	configMapConfig, err := config.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
+	configRepository := configmongo.NewMongoRespository(db)
+	configMapConfig, err := configmap.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
@@ -103,7 +105,20 @@ func main() {
 		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
 	}
 
-	clusterId, err := configMapConfig.GetUniqueClusterId(context.Background())
+	var clusterId string
+	config, err := configMapConfig.Get(context.Background())
+	if config.ClusterId != "" {
+		clusterId = config.ClusterId
+	} else {
+		config, err = configRepository.Get(context.Background())
+		if config.ClusterId != "" {
+			clusterId = config.ClusterId
+			err = configMapConfig.Upsert(context.Background(), config)
+		} else {
+			clusterId, err = configMapConfig.GetUniqueClusterId(context.Background())
+		}
+	}
+
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
