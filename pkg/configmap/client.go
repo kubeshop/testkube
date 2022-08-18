@@ -58,7 +58,7 @@ func (c *Client) Get(id string) (map[string]string, error) {
 
 	stringData := map[string]string{}
 	for key, value := range configMapSpec.Data {
-		stringData[key] = string(value)
+		stringData[key] = value
 	}
 
 	return stringData, nil
