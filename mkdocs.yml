@@ -40,7 +40,6 @@ nav:
       - Postman: executor-postman.md
       - SoapUI: executor-soapui.md
       - K6: executor-k6.md
-      - SoapUI: executor-soapui.md
       - KubePug: executor-kubepug.md
       - Artillery.io: executor-artillery.md
       - Maven: executor-maven.md
