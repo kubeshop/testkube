@@ -4,7 +4,7 @@ import (
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 )
 
-type TestSuitesClient struct {
+type TestSuiteClient struct {
 	CreateFn                 func(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error)
 	GetFn                    func(name string) (*testsuitesv2.TestSuite, error)
 	GetSecretTestSuiteVarsFn func(testSuiteName, secretUUID string) (map[string]string, error)
@@ -17,69 +17,69 @@ type TestSuitesClient struct {
 	DeleteByLabelsFn         func(selector string) error
 }
 
-func (c TestSuitesClient) Create(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error) {
+func (c TestSuiteClient) Create(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error) {
 	if c.CreateFn == nil {
 		panic("not implemented")
 	}
 	return c.CreateFn(testsuite)
 }
 
-func (c TestSuitesClient) Get(name string) (*testsuitesv2.TestSuite, error) {
+func (c TestSuiteClient) Get(name string) (*testsuitesv2.TestSuite, error) {
 	if c.GetFn == nil {
 		panic("not implemented")
 	}
 	return c.GetFn(name)
 }
-func (c TestSuitesClient) GetSecretTestSuiteVars(testSuiteName, secretUUID string) (map[string]string, error) {
+func (c TestSuiteClient) GetSecretTestSuiteVars(testSuiteName, secretUUID string) (map[string]string, error) {
 	if c.GetSecretTestSuiteVarsFn == nil {
 		panic("not implemented")
 	}
 	return c.GetSecretTestSuiteVarsFn(testSuiteName, secretUUID)
 }
 
-func (c TestSuitesClient) GetCurrentSecretUUID(testSuiteName string) (string, error) {
+func (c TestSuiteClient) GetCurrentSecretUUID(testSuiteName string) (string, error) {
 	if c.GetCurrentSecretUUIDFn == nil {
 		panic("not implemented")
 	}
 	return c.GetCurrentSecretUUIDFn(testSuiteName)
 }
 
-func (c TestSuitesClient) List(selector string) (*testsuitesv2.TestSuiteList, error) {
+func (c TestSuiteClient) List(selector string) (*testsuitesv2.TestSuiteList, error) {
 	if c.ListFn == nil {
 		panic("not implemented")
 	}
 	return c.ListFn(selector)
 }
 
-func (c TestSuitesClient) ListLabels() (map[string][]string, error) {
+func (c TestSuiteClient) ListLabels() (map[string][]string, error) {
 	if c.ListLabelsFn == nil {
 		panic("not implemented")
 	}
 	return c.ListLabelsFn()
 }
 
-func (c TestSuitesClient) Update(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error) {
+func (c TestSuiteClient) Update(testsuite *testsuitesv2.TestSuite) (*testsuitesv2.TestSuite, error) {
 	if c.UpdateFn == nil {
 		panic("not implemented")
 	}
 	return c.UpdateFn(testsuite)
 }
 
-func (c TestSuitesClient) Delete(name string) error {
+func (c TestSuiteClient) Delete(name string) error {
 	if c.DeleteFn == nil {
 		panic("not implemented")
 	}
 	return c.DeleteFn(name)
 }
 
-func (c TestSuitesClient) DeleteAll() error {
+func (c TestSuiteClient) DeleteAll() error {
 	if c.DeleteAllFn == nil {
 		panic("not implemented")
 	}
 	return c.DeleteAllFn()
 }
 
-func (c TestSuitesClient) DeleteByLabels(selector string) error {
+func (c TestSuiteClient) DeleteByLabels(selector string) error {
 	if c.DeleteByLabelsFn == nil {
 		panic("not implemented")
 	}

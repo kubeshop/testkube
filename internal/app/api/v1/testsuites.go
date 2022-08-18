@@ -514,7 +514,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 			testSuites = append(testSuites, testSuiteList.Items...)
 		}
 
-		var results []testkube.TestSuiteExecution
+		var executions []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
@@ -527,22 +527,23 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
-				results = append(results, r.Result)
+				executions = append(executions, r.Result)
 			}
 		}
 
-		s.Log.Debugw("executing test", "name", name, "selector", selector)
-		if name != "" && len(results) != 0 {
-			if results[0].IsFailed() {
+		s.Log.Debugw("executing test suite", "name", name, "selector", selector)
+		if name != "" && len(executions) != 0 {
+			if executions[0].IsFailed() {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
 			}
 
 			c.Status(http.StatusCreated)
-			return c.JSON(results[0])
+			return c.JSON(executions[0])
 		}
 
 		c.Status(http.StatusCreated)
-		return c.JSON(results)
+		// can we be sure at this point that the execution was finished? - probably not
+		return c.JSON(executions)
 	}
 }
 
@@ -705,7 +706,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 				s.Log.Infow("Updating test execution", "error", err)
 			}
 
-			s.executeTestStep(ctx, *testsuiteExecution, request, &testsuiteExecution.StepResults[i])
+			test := &testsuiteExecution.StepResults[i]
+			s.executeTestStep(ctx, *testsuiteExecution, request, test)
+			s.ExecutionResults.EndExecution(ctx, test.Execution.TestName, testsuiteExecution.EndTime, testsuiteExecution.CalculateDuration())
 
 			err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
@@ -747,7 +750,6 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 
 func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
 	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteStepExecutionResult) {
-
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
 		testSuiteName = testsuiteExecution.TestSuite.Name

@@ -24,14 +24,14 @@ import (
 func TestTestkubeAPI_GetTestSuiteWithExecutionHandler(t *testing.T) {
 	app := fiber.New()
 	route := "/test-suite-with-executions"
-	resultRepo := mock.TestExecutionRepository{}
-	testSuitesClient := &mock.TestSuitesClient{}
+	testSuitesRepo := mock.TestSuiteRepository{}
+	testSuitesClient := &mock.TestSuiteClient{}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		TestExecutionResults: &resultRepo,
+		TestExecutionResults: &testSuitesRepo,
 		TestsSuitesClient:    testSuitesClient,
 	}
 	app.Get(route, s.ListTestSuiteWithExecutionsHandler())
@@ -64,7 +64,7 @@ func TestTestkubeAPI_GetTestSuiteWithExecutionHandler(t *testing.T) {
 			testSuitesClient.ListFn = func(selector string) (*testsuitesv2.TestSuiteList, error) {
 				return tt.testSuitesList, nil
 			}
-			resultRepo.GetLatestByTestSuitesFn = func(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
+			testSuitesRepo.GetLatestByTestSuitesFn = func(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
 				return tt.executionsList, nil
 			}
 
@@ -197,15 +197,17 @@ func getExampleTestSuiteWithExecutionList() []testkube.TestSuiteWithExecution {
 
 func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 	app := fiber.New()
-	resultRepo := mock.TestExecutionRepository{}
-	testSuitesClient := &mock.TestSuitesClient{}
+	executionRepo := mock.ExecutionRepository{}
+	testSuiteRepo := mock.TestSuiteRepository{}
+	testSuiteClient := &mock.TestSuiteClient{}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		TestExecutionResults: &resultRepo,
-		TestsSuitesClient:    testSuitesClient,
+		ExecutionResults:     executionRepo,
+		TestExecutionResults: &testSuiteRepo,
+		TestsSuitesClient:    testSuiteClient,
 		Metrics:              NewMetrics(),
 	}
 	app.Post("/:id/executions", s.ExecuteTestSuitesHandler())
@@ -244,7 +246,7 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotSavedToRepo, gotEndedToRepo := false, false
-			testSuitesClient.GetFn = func(name string) (*testsuitesv2.TestSuite, error) {
+			testSuiteClient.GetFn = func(name string) (*testsuitesv2.TestSuite, error) {
 				for _, n := range tt.testSuitesList.Items {
 					if n.Name == name {
 						return &n, nil
@@ -253,18 +255,18 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 				err := errors.NewNotFound(schema.GroupResource{}, "example-test-suite")
 				return nil, err
 			}
-			testSuitesClient.GetCurrentSecretUUIDFn = func(testSuiteName string) (string, error) {
+			testSuiteClient.GetCurrentSecretUUIDFn = func(testSuiteName string) (string, error) {
 				return "", nil
 			}
-			resultRepo.InsertFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
+			testSuiteRepo.InsertFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
 				gotSavedToRepo = true
 				return nil
 			}
-			resultRepo.EndExecutionFn = func(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
+			testSuiteRepo.EndExecutionFn = func(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
 				gotEndedToRepo = true
 				return nil
 			}
-			resultRepo.UpdateFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
+			testSuiteRepo.UpdateFn = func(ctx context.Context, result testkube.TestSuiteExecution) error {
 				assert.Empty(t, result)
 				return nil
 			}
@@ -281,6 +283,7 @@ func TestTestkubeAPI_ExecuteTestSuitesHandler(t *testing.T) {
 			assert.Equal(t, tt.expectedCode, resp.StatusCode, tt.name)
 			assert.Equal(t, tt.isSavedToRepo, gotSavedToRepo)
 			assert.Equal(t, tt.isEndedToRepo, gotEndedToRepo)
+			assert.Eventually(t, func() bool { return tt.isEndedToRepo == gotEndedToRepo }, 10*time.Second, time.Second)
 
 			var res output.Output
 			err = json.NewDecoder(resp.Body).Decode(&res)

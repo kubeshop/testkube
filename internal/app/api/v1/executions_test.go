@@ -54,14 +54,14 @@ func TestParamsNilAssign(t *testing.T) {
 
 func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
-	resultRepo := mock.ExecutionResultsRepository{}
+	executionRepo := mock.ExecutionRepository{}
 	executor := &mock.Executor{}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		ExecutionResults: &resultRepo,
+		ExecutionResults: &executionRepo,
 		Executor:         executor,
 	}
 	app.Get("/executions/:executionID/logs", s.ExecutionLogsHandler())
@@ -107,7 +107,7 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	responsePrefix := "data: "
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultRepo.GetFn = func(ctx context.Context, id string) (testkube.Execution, error) {
+			executionRepo.GetFn = func(ctx context.Context, id string) (testkube.Execution, error) {
 				assert.Equal(t, tt.execution.Id, id)
 
 				return tt.execution, nil
