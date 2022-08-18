@@ -298,6 +298,8 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 			Key: "$project", Value: bson.D{
 				{Key: "status", Value: 1},
 				{Key: "duration", Value: 1},
+				{Key: "starttime", Value: 1},
+				{Key: "name", Value: 1},
 			},
 		},
 	})

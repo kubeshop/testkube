@@ -443,6 +443,8 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 			Key: "$project", Value: bson.D{
 				{Key: "status", Value: "$executionresult.status"},
 				{Key: "duration", Value: 1},
+				{Key: "starttime", Value: 1},
+				{Key: "name", Value: 1},
 			},
 		},
 	})

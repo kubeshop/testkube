@@ -9,9 +9,15 @@
  */
 package testkube
 
+import (
+	"time"
+)
+
 type TestMetricsExecutions struct {
-	ExecutionId string `json:"executionId,omitempty"`
-	Duration    string `json:"duration,omitempty"`
-	DurationMs  int    `json:"duration_ms,omitempty"`
-	Status      string `json:"status,omitempty"`
+	ExecutionId string    `json:"executionId,omitempty"`
+	Duration    string    `json:"duration,omitempty"`
+	DurationMs  int       `json:"duration_ms,omitempty"`
+	Status      string    `json:"status,omitempty"`
+	Name        string    `json:"name,omitempty"`
+	StartTime   time.Time `json:"startTime,omitempty"`
 }
