@@ -11,10 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/utils"
-
-	"github.com/bmizerany/perks/quantile"
 )
 
 var _ Repository = &MongoRepository{}
@@ -431,7 +429,7 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 }
 
 // GetTestMetrics returns test executions metrics
-func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit int) (metrics testkube.TestMetrics, err error) {
+func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"testname": name}
 
 	pipeline := []bson.D{{{Key: "$match", Value: query}}}
@@ -453,44 +451,12 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 	if err != nil {
 		return metrics, err
 	}
-	err = cursor.All(ctx, &metrics.Executions)
+
+	var executions []testkube.ExecutionsMetricsExecutions
+	err = cursor.All(ctx, &executions)
 	if err != nil {
 		return metrics, err
 	}
 
-	q := quantile.NewTargeted(0.50, 0.90, 0.99)
-
-	for j, execution := range metrics.Executions {
-		if execution.Status == string(testkube.FAILED_ExecutionStatus) {
-			metrics.FailedExecutions++
-		}
-		metrics.TotalExecutions++
-
-		// ignore empty and ivalid durations
-		duration, err := time.ParseDuration(execution.Duration)
-		if err != nil {
-			continue
-		}
-
-		q.Insert(float64(duration))
-
-		metrics.Executions[j].Duration = utils.RoundDuration(duration).String()
-		metrics.Executions[j].DurationMs = int(duration / time.Millisecond)
-	}
-
-	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
-
-	durationP50 := time.Duration(q.Query(0.50))
-	durationP90 := time.Duration(q.Query(0.90))
-	durationP99 := time.Duration(q.Query(0.99))
-
-	metrics.ExecutionDurationP50 = utils.RoundDuration(durationP50).String()
-	metrics.ExecutionDurationP90 = utils.RoundDuration(durationP90).String()
-	metrics.ExecutionDurationP99 = utils.RoundDuration(durationP99).String()
-
-	metrics.ExecutionDurationP50Ms = int(durationP50 / time.Millisecond)
-	metrics.ExecutionDurationP90Ms = int(durationP90 / time.Millisecond)
-	metrics.ExecutionDurationP99Ms = int(durationP99 / time.Millisecond)
-
-	return
+	return common.CalculateMetrics(executions), nil
 }

@@ -68,7 +68,7 @@ type Repository interface {
 	// DeleteForAllTestSuites deletes execution results for all test suites
 	DeleteForAllTestSuites(ctx context.Context) (err error)
 
-	GetTestMetrics(ctx context.Context, name string, limit int) (metrics testkube.TestMetrics, err error)
+	GetTestMetrics(ctx context.Context, name string, limit int) (metrics testkube.ExecutionsMetrics, err error)
 }
 
 type Sequences interface {
