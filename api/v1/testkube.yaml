@@ -1757,13 +1757,13 @@ paths:
 
 components:
   schemas:
-    TestMetrics:
+    ExecutionsMetrics:
       type: object
       properties:
         executions:
           type: array
           items:
-            $ref: "#/components/schemas/TestMetricsExecutions"
+            $ref: "#/components/schemas/ExecutionsMetricsExecutions"
         pass_fail_ratio:
           type: number
           description: Percentage pass to fail ratio
@@ -1784,6 +1784,14 @@ components:
           type: int
           description: 90th percentile of all durations in milliseconds
           example: 422
+        execution_duration_p95:
+          type: string
+          description: 95th percentile of all durations
+          example: "7m2.71s"
+        execution_duration_p95_ms:
+          type: int
+          description: 95th percentile of all durations in milliseconds
+          example: 422
         execution_duration_p99:
           type: string
           description: 99th percentile of all durations
@@ -1801,7 +1809,7 @@ components:
           description: failed executions number
           example: 1
 
-    TestMetricsExecutions:
+    ExecutionsMetricsExecutions:
       type: object
       properties:
         executionId:
@@ -2163,71 +2171,6 @@ components:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
           $ref: "#/components/schemas/TestSuiteStepType"
-
-    TestSuiteMetrics:
-      type: object
-      properties:
-        executions:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestSuiteMetricsExecutions"
-          example:
-            - duration: 9.88s
-              duration_ms: 9878
-              status: passed
-        pass_fail_ratio:
-          type: number
-          description: Percentage pass to fail ratio
-          example: 100
-        execution_duration_p50:
-          type: string
-          description: 50th percentile of all durations
-          example: "9.88s"
-        execution_duration_p50_ms:
-          type: int
-          description: 50th percentile of all durations in milliseconds
-          example: 9
-        execution_duration_p90:
-          type: string
-          description: 90th percentile of all durations
-          example: "9.88s"
-        execution_duration_p90_ms:
-          type: int
-          description: 90th percentile of all durations in milliseconds
-          example: 9
-        execution_duration_p99:
-          type: string
-          description: 99th percentile of all durations
-          example: "9.88s"
-        execution_duration_p99_ms:
-          type: int
-          description: 99th percentile of all durations in milliseconds
-          example: 9
-        total_executions:
-          type: int
-          description: total executions number
-          example: 1
-        failed_executions:
-          type: int
-          description: failed executions number
-          example: 0
-
-    TestSuiteMetricsExecutions:
-      type: object
-      properties:
-        executionId:
-          type: string
-        duration:
-          type: string
-        duration_ms:
-          type: int
-        status:
-          type: string
-        name:
-          type: string
-        startTime:
-          type: string
-          format: date-time
 
     Test:
       type: object

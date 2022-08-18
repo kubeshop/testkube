@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type TestSuiteMetricsExecutions struct {
+type ExecutionsMetricsExecutions struct {
 	ExecutionId string    `json:"executionId,omitempty"`
 	Duration    string    `json:"duration,omitempty"`
 	DurationMs  int       `json:"duration_ms,omitempty"`
