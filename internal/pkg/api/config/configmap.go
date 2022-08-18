@@ -18,13 +18,13 @@ func NewConfigMapConfig(name, namespace string) (*ConfigMapConfig, error) {
 
 	return &ConfigMapConfig{
 		name:   name,
-		client: *client,
+		client: client,
 	}, nil
 }
 
 type ConfigMapConfig struct {
 	name   string
-	client configmap.Client
+	client *configmap.Client
 }
 
 func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId string, err error) {
