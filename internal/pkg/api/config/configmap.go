@@ -3,25 +3,31 @@ package config
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
-func NewConfigMap(path string) *ConfigMap {
-	return &ConfigMap{
-		path: path,
+func NewConfigMapConfig(name, namespace string) (*ConfigMapConfig, error) {
+	client, err := configmap.NewClient(namespace)
+	if err != nil {
+		return nil, err
 	}
+
+	return &ConfigMapConfig{
+		name:   name,
+		client: *client,
+	}, nil
 }
 
-type ConfigMap struct {
-	path string
+type ConfigMapConfig struct {
+	name   string
+	client configmap.Client
 }
 
-func (c *ConfigMap) GetUniqueClusterId(ctx context.Context) (clusterId string, err error) {
+func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId string, err error) {
 	config, err := c.Get(ctx)
 	if err != nil {
 		return clusterId, err
@@ -37,24 +43,20 @@ func (c *ConfigMap) GetUniqueClusterId(ctx context.Context) (clusterId string, e
 	return config.ClusterId, nil
 }
 
-func (c *ConfigMap) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
+func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
 	config, err := c.Get(ctx)
 	return config.EnableTelemetry, err
 }
 
-func (c *ConfigMap) Get(ctx context.Context) (result testkube.Config, err error) {
-	data, err := os.ReadFile(filepath.Join(c.path, "clusterId"))
+func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err error) {
+	data, err := c.client.Get(c.name)
 	if err != nil {
-		return result, fmt.Errorf("reading cluster id error: %w", err)
+		return result, fmt.Errorf("reading config map error: %w", err)
 	}
-	result.ClusterId = string(data)
 
-	data, err = os.ReadFile(filepath.Join(c.path, "enableTelemetry"))
-	if err != nil {
-		return result, fmt.Errorf("reading enable telemetry error: %w", err)
-	}
-	if len(data) != 0 {
-		result.EnableTelemetry, err = strconv.ParseBool(string(data))
+	result.ClusterId = data["clusterId"]
+	if enableTelemetry, ok := data["enableTelemetry"]; ok {
+		result.EnableTelemetry, err = strconv.ParseBool(enableTelemetry)
 		if err != nil {
 			return result, fmt.Errorf("parsing enable telemetry error: %w", err)
 		}
@@ -63,13 +65,13 @@ func (c *ConfigMap) Get(ctx context.Context) (result testkube.Config, err error)
 	return
 }
 
-func (c *ConfigMap) Upsert(ctx context.Context, result testkube.Config) (err error) {
-	if err = os.WriteFile(filepath.Join(c.path, "clusterId"), []byte(result.ClusterId), 0666); err != nil {
-		return fmt.Errorf("writing cluster id error: %w", err)
+func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (err error) {
+	data := map[string]string{
+		"clusterId":       result.ClusterId,
+		"enableTelemetry": fmt.Sprint(result.EnableTelemetry),
 	}
-
-	if err = os.WriteFile(filepath.Join(c.path, "enableTelemetry"), []byte(fmt.Sprint(result.EnableTelemetry)), 0666); err != nil {
-		return fmt.Errorf("writing enable telemetry error: %w", err)
+	if err = c.client.Update(c.name, data); err != nil {
+		return fmt.Errorf("writing config map error: %w", err)
 	}
 
 	return

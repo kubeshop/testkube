@@ -93,16 +93,17 @@ func main() {
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
-	configMap := config.NewConfigMap(os.Getenv("APISERVER_CONFIG"))
+	configMapConfig, err := config.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
+	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
-	telemetryEnabled, err := configMap.GetTelemetryEnabled(context.Background())
+	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(context.Background())
 	if err != nil {
 		// fallback to envs in case of failure (no record yet, or other error)
 		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
 	}
 
-	clusterId, err := configMap.GetUniqueClusterId(context.Background())
+	clusterId, err := configMapConfig.GetUniqueClusterId(context.Background())
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
