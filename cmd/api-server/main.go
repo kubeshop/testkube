@@ -18,7 +18,8 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/config"
+	configmap "github.com/kubeshop/testkube/internal/pkg/api/config"
+	configmongo "github.com/kubeshop/testkube/internal/pkg/api/repository/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -93,16 +94,35 @@ func main() {
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
-	configRepository := config.NewMongoRespository(db)
+	configRepository := configmongo.NewMongoRespository(db)
+	configMapConfig, err := configmap.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
+	ui.ExitOnError("Getting config map config", err)
 
+	ctx := context.Background()
 	// try to load from mongo based config first
-	telemetryEnabled, err := configRepository.GetTelemetryEnabled(context.Background())
+	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
 	if err != nil {
 		// fallback to envs in case of failure (no record yet, or other error)
 		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
 	}
 
-	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
+	var clusterId string
+	config, err := configMapConfig.Get(ctx)
+	if config.ClusterId != "" {
+		clusterId = config.ClusterId
+	}
+
+	if clusterId == "" {
+		config, err = configRepository.Get(ctx)
+		config.EnableTelemetry = telemetryEnabled
+		if config.ClusterId == "" {
+			config.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
+		}
+
+		clusterId = config.ClusterId
+		err = configMapConfig.Upsert(ctx, config)
+	}
+
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
