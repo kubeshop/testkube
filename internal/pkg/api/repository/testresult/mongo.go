@@ -288,6 +288,7 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 	query := bson.M{"testsuite.name": name}
 
 	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 	if limit > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
 	}
