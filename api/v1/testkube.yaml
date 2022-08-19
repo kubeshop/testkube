@@ -2825,7 +2825,7 @@ components:
             $ref: "#/components/schemas/WebhookEventType"
         selector:
           type: string
-          description: Labels to filter by
+          description: Labels to filter for tests and test suites
         labels:
           type: object
           description: "webhook labels"
