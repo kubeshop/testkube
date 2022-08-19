@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -119,12 +120,24 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 	}
 
 	for _, wh := range webhookList.Items {
-		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
-		s.Notify(testkube.WebhookEvent{
-			Uri:       wh.Spec.Uri,
-			Type_:     eventType,
-			Execution: &execution,
-		})
+		sendEvent := wh.Spec.Selector == ""
+		if !sendEvent {
+			selector, err := labels.Parse(wh.Spec.Selector)
+			if err != nil {
+				return err
+			}
+
+			sendEvent = selector.Matches(labels.Set(execution.Labels))
+		}
+
+		if sendEvent {
+			s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
+			s.Notify(testkube.WebhookEvent{
+				Uri:       wh.Spec.Uri,
+				Type_:     eventType,
+				Execution: &execution,
+			})
+		}
 	}
 
 	// TODO webhooks should be designed as events with type webhook/slack
