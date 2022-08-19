@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
+// NewConfigMapConfig is a constructor for configmap config
 func NewConfigMapConfig(name, namespace string) (*ConfigMapConfig, error) {
 	client, err := configmap.NewClient(namespace)
 	if err != nil {
@@ -22,14 +23,16 @@ func NewConfigMapConfig(name, namespace string) (*ConfigMapConfig, error) {
 	}, nil
 }
 
+// ConfigMapConfig contains configmap config properties
 type ConfigMapConfig struct {
 	name   string
 	client *configmap.Client
 }
 
+// GetUniqueClusterId gets unique cluster based ID
 func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId string, err error) {
 	config, err := c.Get(ctx)
-	// generate new cluster Id and save if there is not already
+	// generate new cluster Id
 	if config.ClusterId == "" {
 		return fmt.Sprintf("cluster%s", telemetry.GetMachineID()), err
 	}
@@ -37,6 +40,7 @@ func (c *ConfigMapConfig) GetUniqueClusterId(ctx context.Context) (clusterId str
 	return config.ClusterId, nil
 }
 
+// GetTelemetryEnabled get telemetry enabled
 func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
 	config, err := c.Get(ctx)
 	if err != nil {
@@ -46,6 +50,7 @@ func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err
 	return config.EnableTelemetry, nil
 }
 
+// Get gets execution result by id
 func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err error) {
 	data, err := c.client.Get(c.name)
 	if err != nil {
@@ -63,6 +68,7 @@ func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err 
 	return
 }
 
+// Upserts inserts record if not exists, updates otherwise
 func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (err error) {
 	data := map[string]string{
 		"clusterId":       result.ClusterId,
