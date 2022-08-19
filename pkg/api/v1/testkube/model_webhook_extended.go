@@ -14,13 +14,14 @@ import "fmt"
 type Webhooks []Webhook
 
 func (list Webhooks) Table() (header []string, output [][]string) {
-	header = []string{"Name", "URI", "Events", "Labels"}
+	header = []string{"Name", "URI", "Events", "Selector", "Labels"}
 
 	for _, e := range list {
 		output = append(output, []string{
 			e.Name,
 			e.Uri,
 			fmt.Sprintf("%v", e.Events),
+			e.Selector,
 			MapToString(e.Labels),
 		})
 	}
