@@ -130,14 +130,16 @@ func (s Emitter) NotifyAll(eventType *testkube.WebhookEventType, execution testk
 			sendEvent = selector.Matches(labels.Set(execution.Labels))
 		}
 
-		if sendEvent {
-			s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
-			s.Notify(testkube.WebhookEvent{
-				Uri:       wh.Spec.Uri,
-				Type_:     eventType,
-				Execution: &execution,
-			})
+		if !sendEvent {
+			continue
 		}
+
+		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
+		s.Notify(testkube.WebhookEvent{
+			Uri:       wh.Spec.Uri,
+			Type_:     eventType,
+			Execution: &execution,
+		})
 	}
 
 	// TODO webhooks should be designed as events with type webhook/slack
