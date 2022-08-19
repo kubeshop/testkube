@@ -15,6 +15,8 @@ type WebhookCreateRequest struct {
 	Namespace string             `json:"namespace,omitempty"`
 	Uri       string             `json:"uri"`
 	Events    []WebhookEventType `json:"events,omitempty"`
+	// Labels to filter by
+	Selector string `json:"selector,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`
 }
