@@ -30,7 +30,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	testName := "example-test"
 
-	err = repository.insertExecutionResult(testName, testkube.FAILED_TestSuiteExecutionStatus, time.Now().Add(2*-time.Hour), map[string]string{"key1": "value1", "key2": "value2"})
+	err = repository.insertExecutionResult(testName, testkube.FAILED_TestSuiteExecutionStatus, time.Now().Add(48*-time.Hour), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
 	err = repository.insertExecutionResult(testName, testkube.PASSED_TestSuiteExecutionStatus, time.Now().Add(-time.Hour), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(err)
@@ -71,7 +71,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	err = repository.insertExecutionResult(testName, testkube.PASSED_TestSuiteExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
 
-	metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 100)
+	metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 100, 100)
 	assert.NoError(err)
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
@@ -92,11 +92,16 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	})
 
 	t.Run("limit should limit executions", func(t *testing.T) {
-		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 1)
+		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 1, 100)
 		assert.NoError(err)
 		assert.Equal(1, metrics.TotalExecutions)
 	})
 
+	t.Run("filter last n days should limit executions", func(t *testing.T) {
+		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 100, 1)
+		assert.NoError(err)
+		assert.Equal(19, metrics.TotalExecutions)
+	})
 }
 
 func getRepository() (*MongoRepository, error) {

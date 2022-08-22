@@ -302,15 +302,18 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 // TestSuiteMetricsHandler returns basic metrics for given testsuite
 func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		const (
+			DefaultLastDays = 0
+			DefaultLimit    = 0
+		)
+
 		testSuiteName := c.Params("id")
 
-		const DefaultLimit = 0
 		limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(DefaultLimit)))
 		if err != nil {
 			limit = DefaultLimit
 		}
 
-		const DefaultLastDays = 7
 		last, err := strconv.Atoi(c.Query("last", strconv.Itoa(DefaultLastDays)))
 		if err != nil {
 			last = DefaultLastDays
