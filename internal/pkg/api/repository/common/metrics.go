@@ -32,7 +32,9 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 		metrics.Executions[j].DurationMs = int(duration / time.Millisecond)
 	}
 
-	metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
+	if metrics.TotalExecutions > 0 {
+		metrics.PassFailRatio = 100 * float64(metrics.TotalExecutions-metrics.FailedExecutions) / float64(metrics.TotalExecutions)
+	}
 
 	durationP50 := time.Duration(q.Query(0.50))
 	durationP90 := time.Duration(q.Query(0.90))

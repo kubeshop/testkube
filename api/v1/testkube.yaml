@@ -240,6 +240,16 @@ paths:
             type: string
           required: true
           description: name of the test suite
+        - in: query
+          name: last
+          schema:
+            type: int
+          description: last N days time metrics should be returned
+        - in: query
+          name: limit
+          schema:
+            type: int
+          description: limit executions
       summary: "Get test suite metrics"
       description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestSuiteMetrics
@@ -249,7 +259,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestSuiteMetrics"
+                $ref: "#/components/schemas/ExecutionsMetrics"
             text/yaml:
               schema:
                 type: string
@@ -1062,6 +1072,16 @@ paths:
             type: string
           required: true
           description: ID of the test
+        - in: query
+          name: last
+          schema:
+            type: int
+          description: last N days time metrics should be returned
+        - in: query
+          name: limit
+          schema:
+            type: int
+          description: limit executions
       summary: "Get test metrics"
       description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestMetrics
@@ -1071,7 +1091,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestMetrics"
+                $ref: "#/components/schemas/ExecutionsMetrics"
             text/yaml:
               schema:
                 type: string
@@ -1760,10 +1780,6 @@ components:
     ExecutionsMetrics:
       type: object
       properties:
-        executions:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExecutionsMetricsExecutions"
         pass_fail_ratio:
           type: number
           description: Percentage pass to fail ratio
@@ -1808,6 +1824,11 @@ components:
           type: int
           description: failed executions number
           example: 1
+        executions:
+          type: array
+          description: List of test/testsuite executions
+          items:
+            $ref: "#/components/schemas/ExecutionsMetricsExecutions"
 
     ExecutionsMetricsExecutions:
       type: object
