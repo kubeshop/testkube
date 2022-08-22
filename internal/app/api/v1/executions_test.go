@@ -245,15 +245,11 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Get(id string) (testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Execute(execution testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
-func (e MockExecutor) ExecuteSync(execution testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) ExecuteSync(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
