@@ -198,9 +198,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// sync/async test execution
 	if options.Sync {
-		result, err = s.Executor.ExecuteSync(execution, options)
+		result, err = s.Executor.ExecuteSync(&execution, options)
 	} else {
-		result, err = s.Executor.Execute(execution, options)
+		result, err = s.Executor.Execute(&execution, options)
 	}
 
 	// set execution result to one created
