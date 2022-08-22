@@ -245,10 +245,6 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Watch(id string) chan client.ResultEvent {
-	panic("not implemented")
-}
-
 func (e MockExecutor) Get(id string) (testkube.ExecutionResult, error) {
 	panic("not implemented")
 }

@@ -16,12 +16,6 @@ type ResultEvent struct {
 
 // Executor abstraction to implement new executors
 type Executor interface {
-	// Watch returns ExecuteEvents stream
-	Watch(id string) (events chan ResultEvent)
-
-	// Get synnchronous request to executor to get testkubeExecution
-	Get(id string) (execution testkube.ExecutionResult, err error)
-
 	// Execute starts new external test execution, reads data and returns ID
 	// execution is started asynchronously client can check later for results
 	Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
