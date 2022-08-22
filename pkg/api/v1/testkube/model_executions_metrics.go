@@ -10,7 +10,6 @@
 package testkube
 
 type ExecutionsMetrics struct {
-	Executions []ExecutionsMetricsExecutions `json:"executions,omitempty"`
 	// Percentage pass to fail ratio
 	PassFailRatio float64 `json:"pass_fail_ratio,omitempty"`
 	// 50th percentile of all durations
@@ -33,4 +32,6 @@ type ExecutionsMetrics struct {
 	TotalExecutions int `json:"total_executions,omitempty"`
 	// failed executions number
 	FailedExecutions int `json:"failed_executions,omitempty"`
+	// List of test/testsuite executions
+	Executions []ExecutionsMetricsExecutions `json:"executions,omitempty"`
 }

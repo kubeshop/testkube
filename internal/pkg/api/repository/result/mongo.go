@@ -428,11 +428,16 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 	return
 }
 
-// GetTestMetrics returns test executions metrics
-func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit int) (metrics testkube.ExecutionsMetrics, err error) {
+// GetTestMetrics returns test executions metrics limited to number of executions or last N days
+func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"testname": name}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{}
+	if last > 0 {
+		query["starttime"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
+	}
+
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: query}})
 	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 	if limit > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
