@@ -351,7 +351,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	execution.ExecutionResult = result
 	c.metrics.IncExecuteTest(execution)
 
-	err = c.Emitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+	err = c.Emitter.NotifyAll(testkube.TestkubeEventEndTest, execution)
 	if err != nil {
 		c.Log.Errorw("Notify events error", "error", err)
 	}

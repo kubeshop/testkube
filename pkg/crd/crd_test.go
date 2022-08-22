@@ -18,7 +18,7 @@ func TestGenerateYAML(t *testing.T) {
 				Name:      "name1",
 				Namespace: "namespace1",
 				Uri:       "http://localhost",
-				Events:    []testkube.WebhookEventType{*testkube.WebhookTypeStartTest},
+				Events:    []testkube.TestkubeEventType{*testkube.TestkubeEventStartTest},
 				Labels:    map[string]string{"key1": "value1"},
 			},
 		}
@@ -39,14 +39,14 @@ func TestGenerateYAML(t *testing.T) {
 				Name:      "name1",
 				Namespace: "namespace1",
 				Uri:       "http://localhost",
-				Events:    []testkube.WebhookEventType{*testkube.WebhookTypeStartTest},
+				Events:    []testkube.TestkubeEventType{*testkube.TestkubeEventStartTest},
 				Labels:    map[string]string{"key1": "value1"},
 			},
 			{
 				Name:      "name2",
 				Namespace: "namespace2",
 				Uri:       "http://localhost",
-				Events:    []testkube.WebhookEventType{*testkube.WebhookTypeEndTest},
+				Events:    []testkube.TestkubeEventType{*testkube.TestkubeEventEndTest},
 				Labels:    map[string]string{"key2": "value2"},
 			},
 		}

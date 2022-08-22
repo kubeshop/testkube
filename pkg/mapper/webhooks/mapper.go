@@ -17,10 +17,10 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	}
 }
 
-// MapStringArrayToCRDEvents maps string array of event types to OpenAPI spec list of WebhookEventType
-func MapStringArrayToCRDEvents(items []string) (events []testkube.WebhookEventType) {
+// MapStringArrayToCRDEvents maps string array of event types to OpenAPI spec list of TestkubeEventType
+func MapStringArrayToCRDEvents(items []string) (events []testkube.TestkubeEventType) {
 	for _, e := range items {
-		events = append(events, testkube.WebhookEventType(e))
+		events = append(events, testkube.TestkubeEventType(e))
 	}
 	return
 }
@@ -40,8 +40,8 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 	}
 }
 
-// MapEventTypesToStringArray maps OpenAPI spec list of WebhookEventType to string array
-func MapEventTypesToStringArray(eventTypes []testkube.WebhookEventType) (arr []string) {
+// MapEventTypesToStringArray maps OpenAPI spec list of TestkubeEventType to string array
+func MapEventTypesToStringArray(eventTypes []testkube.TestkubeEventType) (arr []string) {
 	for _, et := range eventTypes {
 		arr = append(arr, string(et))
 	}

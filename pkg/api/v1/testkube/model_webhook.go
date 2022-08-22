@@ -11,10 +11,10 @@ package testkube
 
 // CRD based webhook data
 type Webhook struct {
-	Name      string             `json:"name,omitempty"`
-	Namespace string             `json:"namespace,omitempty"`
-	Uri       string             `json:"uri"`
-	Events    []WebhookEventType `json:"events,omitempty"`
+	Name      string              `json:"name,omitempty"`
+	Namespace string              `json:"namespace,omitempty"`
+	Uri       string              `json:"uri"`
+	Events    []TestkubeEventType `json:"events,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

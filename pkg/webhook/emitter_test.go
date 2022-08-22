@@ -18,7 +18,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("send event success response", func(t *testing.T) {
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var event testkube.WebhookEvent
+			var event testkube.TestkubeEvent
 			err := json.NewDecoder(r.Body).Decode(&event)
 			// then
 			assert.NoError(t, err)
@@ -32,8 +32,8 @@ func TestWebhook(t *testing.T) {
 		s.RunWorkers()
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
+		s.sendHttpEvent(testkube.TestkubeEvent{
+			Type_:     testkube.TestkubeEventStartTest,
 			Uri:       svr.URL,
 			Execution: exampleExecution(),
 		})
@@ -57,8 +57,8 @@ func TestWebhook(t *testing.T) {
 		s.RunWorkers()
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
+		s.sendHttpEvent(testkube.TestkubeEvent{
+			Type_:     testkube.TestkubeEventStartTest,
 			Uri:       svr.URL,
 			Execution: exampleExecution(),
 		})
@@ -75,8 +75,8 @@ func TestWebhook(t *testing.T) {
 		s.RunWorkers()
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
+		s.sendHttpEvent(testkube.TestkubeEvent{
+			Type_:     testkube.TestkubeEventStartTest,
 			Uri:       "http://baduri.badbadbad",
 			Execution: exampleExecution(),
 		})

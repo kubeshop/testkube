@@ -1,6 +1,6 @@
 package testkube
 
-func (e WebhookEvent) Log() []any {
+func (e TestkubeEvent) Log() []any {
 
 	var executionId, executionName string
 	if e.Execution != nil {

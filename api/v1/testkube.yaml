@@ -2822,7 +2822,7 @@ components:
         events:
           type: array
           items:
-            $ref: "#/components/schemas/WebhookEventType"
+            $ref: "#/components/schemas/TestkubeEventType"
         labels:
           type: object
           description: "webhook labels"
@@ -2832,7 +2832,7 @@ components:
             env: "prod"
             app: "backend"
 
-    WebhookEvent:
+    TestkubeEvent:
       description: CRD based executor data
       type: object
       required:
@@ -2841,15 +2841,19 @@ components:
         uri:
           type: string
         type:
-          $ref: "#/components/schemas/WebhookEventType"
+          $ref: "#/components/schemas/TestkubeEventType"
         execution:
           $ref: "#/components/schemas/Execution"
 
-    WebhookEventType:
+    TestkubeEventType:
       type: string
       enum:
         - start-test
+        - start-testsuite
         - end-test
+        - end-testsuite
+        - test-failed
+        - testsuite-failed
 
     TestWithExecution:
       description: Test with latest Execution result
