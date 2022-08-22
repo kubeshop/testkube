@@ -165,7 +165,13 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 			limit = DefaultLimit
 		}
 
-		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit)
+		const DefaultLastDays = 7
+		last, err := strconv.Atoi(c.Query("last", strconv.Itoa(DefaultLastDays)))
+		if err != nil {
+			last = DefaultLastDays
+		}
+
+		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit, last)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}

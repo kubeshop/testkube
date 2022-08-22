@@ -283,15 +283,22 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	return
 }
 
-// GetTestMetrics returns test executions metrics
-func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, limit int) (metrics testkube.ExecutionsMetrics, err error) {
+// GetTestSuiteMetrics returns test executions metrics
+func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"testsuite.name": name}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{}
+	if last > 0 {
+		query["starttime"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
+	}
+
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: query}})
 	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
+
 	if limit > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
 	}
+
 	pipeline = append(pipeline, bson.D{
 		{
 			Key: "$project", Value: bson.D{
@@ -310,6 +317,7 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 
 	var executions []testkube.ExecutionsMetricsExecutions
 	err = cursor.All(ctx, &executions)
+
 	if err != nil {
 		return metrics, err
 	}

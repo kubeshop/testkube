@@ -325,7 +325,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	err = repository.insertExecutionResult(testName, testkube.PASSED_ExecutionStatus, time.Now().Add(-time.Minute), map[string]string{"key3": "value3", "key4": "value4"})
 	assert.NoError(err)
 
-	metrics, err := repository.GetTestMetrics(context.Background(), testName, 100)
+	metrics, err := repository.GetTestMetrics(context.Background(), testName, 100, 2)
 	assert.NoError(err)
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
@@ -346,7 +346,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	})
 
 	t.Run("limit should limit executions", func(t *testing.T) {
-		metrics, err := repository.GetTestMetrics(context.Background(), testName, 1)
+		metrics, err := repository.GetTestMetrics(context.Background(), testName, 1, 2)
 		assert.NoError(err)
 		assert.Equal(1, metrics.TotalExecutions)
 	})
