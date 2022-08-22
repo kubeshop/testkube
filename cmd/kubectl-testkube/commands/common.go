@@ -47,44 +47,6 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 		return err
 	}
 
-	if !options.NoJetstack {
-		_, err = process.Execute("kubectl", "get", "crds", "certificates.cert-manager.io")
-		if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
-			return err
-		}
-
-		if err != nil {
-			ui.Info("Helm installing jetstack cert manager")
-			_, err = process.Execute(helmPath, "repo", "add", "jetstack", "https://charts.jetstack.io")
-			if err != nil && !strings.Contains(err.Error(), "Error: repository name (jetstack) already exists") {
-				return err
-			}
-
-			_, err = process.Execute(helmPath, "repo", "update")
-			if err != nil {
-				return err
-			}
-
-			command := []string{"upgrade", "--install",
-				"jetstack", "jetstack/cert-manager",
-				"--namespace", options.Namespace,
-				"--create-namespace",
-				"--version", "v1.7.1",
-				"--set", "installCRDs=true",
-			}
-
-			out, err := process.Execute(helmPath, command...)
-			if err != nil {
-				return err
-			}
-
-			ui.Info("Helm install jetstack output", string(out))
-		} else {
-			ui.Info("Found existing crd certificates.cert-manager.io. Assume that jetstack cert manager is already installed. " +
-				"Skip its installation")
-		}
-	}
-
 	ui.Info("Helm installing testkube framework")
 	_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
