@@ -8,7 +8,6 @@ import (
 
 	"go.uber.org/zap"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/slacknotifier"
@@ -18,21 +17,20 @@ const eventsBuffer = 10000
 const workersCount = 20
 
 // NewEmitter returns new emitter instance
-func NewEmitter(webhooksClient *executorsclientv1.WebhooksClient) *Emitter {
+func NewEmitter() *Emitter {
 	return &Emitter{
-		Events:         make(chan testkube.TestkubeEvent, eventsBuffer),
-		Responses:      make(chan WebhookResult, eventsBuffer),
-		Log:            log.DefaultLogger,
-		WebhooksClient: webhooksClient,
+		Events:    make(chan testkube.TestkubeEvent, eventsBuffer),
+		Responses: make(chan WebhookResult, eventsBuffer),
+		Log:       log.DefaultLogger,
 	}
 }
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	WebhooksClient *executorsclientv1.WebhooksClient
-	Events         chan testkube.TestkubeEvent
-	Responses      chan WebhookResult
-	Log            *zap.SugaredLogger
+	Events    chan testkube.TestkubeEvent
+	Listeners []Listener
+	Responses chan WebhookResult
+	Log       *zap.SugaredLogger
 }
 
 // WebhookResult is a wrapper for results from HTTP client for given webhook
@@ -50,7 +48,10 @@ type WebhookHttpResponse struct {
 
 // Notify notifies emitter with webhook
 func (s *Emitter) Notify(event testkube.TestkubeEvent) {
-	s.Log.Infow("notifying webhook", "eventURI", event.Uri, "eventType", event.Type_)
+	for _, listener := range s.Listeners {
+		listener.Notify(event)
+		s.Log.Infow("notifying listener", "event", event.Type_, "executionID", event.Execution.Id, "executionName", event.Execution.Name)
+	}
 	s.Events <- event
 }
 
