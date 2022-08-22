@@ -12,7 +12,15 @@ spec:
   {{- range .Types }}
   - {{ . }}
   {{- end }}  
+  {{- if .ExecutorType }}
   executor_type: {{ .ExecutorType }}
+  {{- end }}
+  {{- if .Uri }}
   uri: {{ .Uri }}
+  {{- end }}
+  {{- if .Image }}
   image: {{ .Image }}
+  {{- end }}
+  {{- if .JobTemplate }}
   job_template: {{ .JobTemplate }}
+  {{- end }}
