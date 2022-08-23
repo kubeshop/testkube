@@ -27,6 +27,7 @@
 				<File Id='TeskubeEXE' Name='kubectl-testkube.exe' DiskId='1' Source='kubectl-testkube.exe' KeyPath='yes' Vital='yes'/>
 				<File Id='TeskubeALIAS' Name='tk.bat' DiskId='1' Source='tk.bat' Vital='yes'/>
 				<File Id='TeskubeALIASFULL' Name='testkube.bat' DiskId='1' Source='testkube.bat' Vital='yes'/>
+				<Environment Id='UpdatePath' Name='PATH' Action='set' Permanent='yes' System='yes' Part='last' Value='[INSTALLFOLDER]' />
 			</Component>
 		</ComponentGroup>
 	</Fragment>
