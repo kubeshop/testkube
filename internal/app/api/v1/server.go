@@ -351,6 +351,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithType(objectType)
 	}
 
+	last, err := strconv.Atoi(c.Query("last", "0"))
+	if err == nil && last != 0 {
+		filter = filter.WithLastNDays(last)
+	}
+
 	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
 		filter = filter.WithStartDate(dFilter.Start)

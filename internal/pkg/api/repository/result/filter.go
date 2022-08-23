@@ -10,6 +10,7 @@ type filter struct {
 	testName   string
 	startDate  *time.Time
 	endDate    *time.Time
+	lastNDays  int
 	statuses   testkube.ExecutionStatuses
 	page       int
 	pageSize   int
@@ -30,6 +31,11 @@ func (f *filter) WithTestName(testName string) *filter {
 
 func (f *filter) WithStartDate(date time.Time) *filter {
 	f.startDate = &date
+	return f
+}
+
+func (f *filter) WithLastNDays(days int) *filter {
+	f.lastNDays = days
 	return f
 }
 
@@ -79,8 +85,16 @@ func (f filter) TestNameDefined() bool {
 	return f.testName != ""
 }
 
+func (f filter) LastNDaysDefined() bool {
+	return f.lastNDays > 0
+}
+
 func (f filter) StartDateDefined() bool {
 	return f.startDate != nil
+}
+
+func (f filter) LastNDays() int {
+	return f.lastNDays
 }
 
 func (f filter) StartDate() time.Time {
