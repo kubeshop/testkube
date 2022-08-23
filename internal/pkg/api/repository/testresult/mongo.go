@@ -10,8 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+var _ Repository = &MongoRepository{}
 
 const CollectionName = "testresults"
 
@@ -201,6 +204,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
 
+	if filter.LastNDaysDefined() {
+		startTimeQuery["$gte"] = time.Now().Add(-time.Duration(filter.LastNDays()) * 24 * time.Hour)
+	}
+
 	if filter.StartDateDefined() {
 		startTimeQuery["$gte"] = filter.StartDate()
 	}
@@ -278,4 +285,46 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
+}
+
+// GetTestSuiteMetrics returns test executions metrics
+func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
+	query := bson.M{"testsuite.name": name}
+
+	pipeline := []bson.D{}
+	if last > 0 {
+		query["starttime"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
+	}
+
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: query}})
+	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
+
+	if limit > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
+	}
+
+	pipeline = append(pipeline, bson.D{
+		{
+			Key: "$project", Value: bson.D{
+				{Key: "status", Value: 1},
+				{Key: "duration", Value: 1},
+				{Key: "starttime", Value: 1},
+				{Key: "name", Value: 1},
+			},
+		},
+	})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return metrics, err
+	}
+
+	var executions []testkube.ExecutionsMetricsExecutions
+	err = cursor.All(ctx, &executions)
+
+	if err != nil {
+		return metrics, err
+	}
+
+	return common.CalculateMetrics(executions), nil
 }

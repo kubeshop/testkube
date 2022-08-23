@@ -1,5 +1,7 @@
 package utils
 
+import "time"
+
 func ContainsTag(tags []string, tag string) bool {
 	for _, t := range tags {
 		if t == tag {
@@ -20,4 +22,13 @@ func RemoveDuplicates(s []string) []string {
 		}
 	}
 	return result
+}
+
+// RoundDuration rounds duration to default value if no round passed
+func RoundDuration(duration time.Duration, to ...time.Duration) time.Duration {
+	roundTo := 10 * time.Millisecond
+	if len(to) > 0 {
+		roundTo = to[0]
+	}
+	return duration.Round(roundTo)
 }

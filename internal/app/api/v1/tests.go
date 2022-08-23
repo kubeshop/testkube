@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/cronjob"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/kubeshop/testkube/pkg/jobs"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -34,6 +34,14 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
+			return s.getCRDs(c, data, err)
+		}
 
 		return c.JSON(test)
 	}
@@ -52,6 +60,16 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		test := testsmapper.MapTestCRToAPI(*crTest)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if test.Content != nil && test.Content.Data != "" {
+				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
+			return s.getCRDs(c, data, err)
+		}
+
 		ctx := c.Context()
 		startExecution, startErr := s.ExecutionResults.GetLatestByTest(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
@@ -63,7 +81,6 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, endErr)
 		}
 
-		test := testsmapper.MapTestCRToAPI(*crTest)
 		testWithExecution := testkube.TestWithExecution{
 			Test: &test,
 		}
@@ -83,7 +100,8 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv2.TestList, error) {
+func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error) {
+
 	crTests, err := s.TestsClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -121,12 +139,48 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range tests {
+				if tests[i].Content != nil && tests[i].Content.Data != "" {
+					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
+				}
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
+			return s.getCRDs(c, data, err)
+		}
 
 		return c.JSON(tests)
 	}
 }
 
-// getLatestExecutions return latest executions either by starttime or endtine for tests
+// ListTestsHandler is a method for getting list of all available tests
+func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testName := c.Params("id")
+
+		const DefaultLimit = 0
+		limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(DefaultLimit)))
+		if err != nil {
+			limit = DefaultLimit
+		}
+
+		const DefaultLastDays = 7
+		last, err := strconv.Atoi(c.Query("last", strconv.Itoa(DefaultLastDays)))
+		if err != nil {
+			last = DefaultLastDays
+		}
+
+		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit, last)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(metrics)
+	}
+}
+
+// getLatestExecutions return latest executions either by starttime or endtime for tests
 func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
 	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames, "starttime")
 	if err != nil && err != mongo.ErrNoDocuments {
@@ -185,6 +239,17 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range tests {
+				if tests[i].Content != nil && tests[i].Content.Data != "" {
+					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
+				}
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
+			return s.getCRDs(c, data, err)
+		}
+
 		ctx := c.Context()
 		testWithExecutions := make([]testkube.TestWithExecution, 0, len(tests))
 		results := make([]testkube.TestWithExecution, 0, len(tests))
@@ -266,13 +331,11 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.ExecuteTemplate(crd.TemplateTest, request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
+			if request.Content != nil && request.Content.Data != "" {
+				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
 			}
-
-			c.Context().SetContentType(mediaTypeYAML)
-			return c.SendString(data)
+			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
+			return s.getCRDs(c, data, err)
 		}
 
 		s.Log.Infow("creating test", "request", request)
@@ -292,7 +355,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(test)
 	}
 }
@@ -313,26 +376,6 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		test, err := s.TestsClient.Get(request.Name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// delete cron job, if schedule is cleaned
-		if test.Spec.Schedule != "" {
-			cronJob, err := s.CronJobClient.Get(cronjob.GetMetadataName(request.Name, testResourceURI))
-			if err != nil && !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-
-			if cronJob != nil {
-				if request.Schedule == "" {
-					if err = s.CronJobClient.Delete(cronjob.GetMetadataName(request.Name, testResourceURI)); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				} else {
-					if err = s.CronJobClient.UpdateLabels(cronJob, test.Labels, request.Labels); err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
-					}
-				}
-			}
 		}
 
 		// map test but load spec only to not override metadata.ResourceVersion
@@ -377,19 +420,12 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			}
 		}
 
-		// delete cron job for test
-		if err = s.CronJobClient.Delete(cronjob.GetMetadataName(name, testResourceURI)); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
@@ -431,13 +467,6 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			}
 		}
 
-		// delete all cron jobs for tests
-		if err = s.CronJobClient.DeleteAll(testResourceURI, selector); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete all executions for tests
 		if selector == "" {
 			err = s.ExecutionResults.DeleteAll(c.Context())
@@ -449,16 +478,16 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.SendStatus(fiber.StatusNoContent)
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
 func GetSecretsStringData(content *testkube.TestContent) map[string]string {
 	// create secrets for test
-	stringData := map[string]string{jobs.GitUsernameSecretName: "", jobs.GitTokenSecretName: ""}
+	stringData := map[string]string{client.GitUsernameSecretName: "", client.GitTokenSecretName: ""}
 	if content != nil && content.Repository != nil {
-		stringData[jobs.GitUsernameSecretName] = content.Repository.Username
-		stringData[jobs.GitTokenSecretName] = content.Repository.Token
+		stringData[client.GitUsernameSecretName] = content.Repository.Username
+		stringData[client.GitTokenSecretName] = content.Repository.Token
 	}
 
 	return stringData

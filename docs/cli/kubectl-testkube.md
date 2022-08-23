@@ -9,22 +9,24 @@ kubectl-testkube [flags]
 ### Options
 
 ```
-      --analytics-enabled   enable analytics
-  -a, --api-uri string      api uri, default value read from config if set
+  -a, --api-uri string      api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help                help for kubectl-testkube
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             show additional debug messages
 ```
 
 ### SEE ALSO
 
 * [kubectl-testkube abort](kubectl-testkube_abort.md)	 - Abort tests or test suites
-* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - generate the autocompletion script for the specified shell
+* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 * [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
 * [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
+* [kubectl-testkube create-ticket](kubectl-testkube_create-ticket.md)	 - Create bug ticket
 * [kubectl-testkube dashboard](kubectl-testkube_dashboard.md)	 - Open testkube dashboard
+* [kubectl-testkube debug](kubectl-testkube_debug.md)	 - Print environment information for debugging
 * [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
 * [kubectl-testkube disable](kubectl-testkube_disable.md)	 - Disable feature
 * [kubectl-testkube download](kubectl-testkube_download.md)	 - Artifacts management commands

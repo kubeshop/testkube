@@ -6,22 +6,17 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/analytics"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
-	Commit  string
-	Version string
-	BuiltBy string
-	Date    string
-
-	analyticsEnabled bool
+	telemetryEnabled bool
 	client           string
 	verbose          bool
 	namespace        string
-	apiURI           string
 	oauthEnabled     bool
 )
 
@@ -51,6 +46,8 @@ func init() {
 	RootCmd.AddCommand(NewVersionCmd())
 
 	RootCmd.AddCommand(NewConfigCmd())
+	RootCmd.AddCommand(NewDebugCmd())
+	RootCmd.AddCommand(NewCreateTicketCmd())
 }
 
 var RootCmd = &cobra.Command{
@@ -60,13 +57,13 @@ var RootCmd = &cobra.Command{
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
-		if analyticsEnabled {
-			ui.Debug("collecting anonymous analytics data, you can disable it by calling `kubectl testkube disable analytics`")
-			out, err := analytics.SendAnonymousCmdInfo(cmd, Version)
+		if telemetryEnabled {
+			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+			out, err := telemetry.SendCmdEvent(cmd, common.Version)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
-			ui.Debug("analytics send event response", out)
+			ui.Debug("telemetry send event response", out)
 
 			// trigger init event only for first run
 			cfg, err := config.Load()
@@ -79,11 +76,11 @@ var RootCmd = &cobra.Command{
 
 				ui.Debug("sending 'init' event")
 
-				out, err := analytics.SendCmdInit(cmd, Version)
+				out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
 				if ui.Verbose && err != nil {
 					ui.Err(err)
 				}
-				ui.Debug("analytics init event response", out)
+				ui.Debug("telemetry init event response", out)
 			}
 
 		}
@@ -106,12 +103,16 @@ func Execute() {
 		defaultNamespace = cfg.Namespace
 	}
 
-	apiURI := cfg.APIURI
+	apiURI := "http://localhost:8088"
+	if cfg.APIURI != "" {
+		apiURI = cfg.APIURI
+	}
+
 	if os.Getenv("TESTKUBE_API_URI") != "" {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
 
-	RootCmd.PersistentFlags().BoolVarP(&analyticsEnabled, "analytics-enabled", "", cfg.AnalyticsEnabled, "enable analytics")
+	RootCmd.PersistentFlags().BoolVarP(&telemetryEnabled, "telemetry-enabled", "", cfg.TelemetryEnabled, "enable collection of anonumous telemetry data")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")

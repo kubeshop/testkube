@@ -12,6 +12,8 @@ const PageDefaultLimit int = 100
 type Filter interface {
 	Name() string
 	NameDefined() bool
+	LastNDays() int
+	LastNDaysDefined() bool
 	StartDate() time.Time
 	StartDateDefined() bool
 	EndDate() time.Time
@@ -52,4 +54,6 @@ type Repository interface {
 	DeleteAll(ctx context.Context) error
 	// DeleteByTestSuites deletes execution results by test suites
 	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
+
+	GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
 }

@@ -1,5 +1,7 @@
 # K6 Performance Tests
 
+**Check out our [blog post](https://kubeshop.io/blog/load-testing-in-kubernetes-with-k6-and-testkube) to follow tutorial steps to harness the power of k6 load testing in Kubernetes with Testkube's CLI and API.**
+
 [K6](https://k6.io/docs/) Grafana k6 is an open-source load testing tool that makes performance testing easy and productive for engineering teams. K6 is free, developer-centric and extensible.
 
 Using k6, you can test the reliability and performance of your systems and catch performance regressions and problems earlier. K6 will help you to build resilient and performant applications that scale.

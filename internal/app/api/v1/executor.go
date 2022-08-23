@@ -1,13 +1,14 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
 
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
@@ -19,16 +20,11 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.ExecuteTemplate(crd.TemplateExecutor, request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
-			}
-
-			c.Context().SetContentType(mediaTypeYAML)
-			return c.SendString(data)
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{request})
+			return s.getCRDs(c, data, err)
 		}
 
-		executor := mapExecutorCreateRequestToExecutorCRD(request)
+		executor := executorsmapper.MapAPIToCRD(request)
 		if executor.Spec.JobTemplate == "" {
 			executor.Spec.JobTemplate = s.jobTemplates.Job
 		}
@@ -39,7 +35,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(201)
+		c.Status(http.StatusCreated)
 		return c.JSON(created)
 	}
 }
@@ -49,6 +45,20 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 		list, err := s.ExecutorsClient.List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			results := []testkube.ExecutorCreateRequest{}
+			for _, item := range list.Items {
+				if item.Spec.JobTemplate != "" {
+					item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
+				}
+
+				results = append(results, executorsmapper.MapCRDToAPI(item))
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, results)
+			return s.getCRDs(c, data, err)
 		}
 
 		results := []testkube.ExecutorDetails{}
@@ -67,8 +77,17 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
-		result := mapExecutorCRDToExecutorDetails(*item)
 
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if item.Spec.JobTemplate != "" {
+				item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
+			}
+
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{executorsmapper.MapCRDToAPI(*item)})
+			return s.getCRDs(c, data, err)
+		}
+
+		result := mapExecutorCRDToExecutorDetails(*item)
 		return c.JSON(result)
 	}
 }
@@ -82,7 +101,7 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(204)
+		c.Status(http.StatusNoContent)
 		return nil
 	}
 }
@@ -94,7 +113,7 @@ func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		c.Status(204)
+		c.Status(http.StatusNoContent)
 		return nil
 	}
 }
@@ -109,23 +128,16 @@ func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Uri:          item.Spec.URI,
 			JobTemplate:  item.Spec.JobTemplate,
 			Labels:       item.Labels,
+			Features:     mapFeatures(item.Spec.Features),
 		},
 	}
 }
 
-func mapExecutorCreateRequestToExecutorCRD(request testkube.ExecutorCreateRequest) executorv1.Executor {
-	return executorv1.Executor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-			Labels:    request.Labels,
-		},
-		Spec: executorv1.ExecutorSpec{
-			ExecutorType: request.ExecutorType,
-			Types:        request.Types,
-			URI:          request.Uri,
-			Image:        request.Image,
-			JobTemplate:  request.JobTemplate,
-		},
+func mapFeatures(features []executorv1.Feature) (out []string) {
+
+	for _, feature := range features {
+		out = append(out, string(feature))
 	}
+
+	return
 }

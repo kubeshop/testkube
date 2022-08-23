@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,11 +28,11 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewEmitter()
+		s := NewSimpleEmitter()
 		s.RunWorkers()
 
 		// when
-		s.Send(testkube.WebhookEvent{
+		s.sendHttpEvent(testkube.WebhookEvent{
 			Type_:     testkube.WebhookTypeStartTest,
 			Uri:       svr.URL,
 			Execution: exampleExecution(),
@@ -52,11 +53,11 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewEmitter()
+		s := NewSimpleEmitter()
 		s.RunWorkers()
 
 		// when
-		s.Send(testkube.WebhookEvent{
+		s.sendHttpEvent(testkube.WebhookEvent{
 			Type_:     testkube.WebhookTypeStartTest,
 			Uri:       svr.URL,
 			Execution: exampleExecution(),
@@ -70,11 +71,11 @@ func TestWebhook(t *testing.T) {
 
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
-		s := NewEmitter()
+		s := NewSimpleEmitter()
 		s.RunWorkers()
 
 		// when
-		s.Send(testkube.WebhookEvent{
+		s.sendHttpEvent(testkube.WebhookEvent{
 			Type_:     testkube.WebhookTypeStartTest,
 			Uri:       "http://baduri.badbadbad",
 			Execution: exampleExecution(),
@@ -91,4 +92,9 @@ func exampleExecution() *testkube.Execution {
 	execution := testkube.NewQueuedExecution()
 	execution.Id = executionID
 	return execution
+}
+
+func NewSimpleEmitter() *Emitter {
+	return NewEmitter(&executorsclientv1.WebhooksClient{})
+
 }

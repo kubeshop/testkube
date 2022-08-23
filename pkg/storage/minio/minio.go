@@ -188,7 +188,7 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	for _, directory := range directories {
 
 		if _, err := os.Stat(directory); os.IsNotExist(err) {
-			c.Log.Debugw("directory %s does not exists, skipping", directory)
+			c.Log.Debugw("directory %s does not exist, skipping", directory)
 			continue
 		}
 

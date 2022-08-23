@@ -15,15 +15,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/slacknotifier"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -35,6 +34,8 @@ const (
 	testSuiteResourceURI = "test-suites"
 	// defaultConcurrencyLevel is a default concurrency level for worker pool
 	defaultConcurrencyLevel = "10"
+	// latestExecutionNo defines the number of relevant latest executions
+	latestExecutions = 5
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
@@ -49,9 +50,8 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		id := c.Params("id")
-		namespace := request.Namespace
 
-		var tests []testsv2.Test
+		var tests []testsv3.Test
 		if id != "" {
 			test, err := s.TestsClient.Get(id)
 			if err != nil {
@@ -69,37 +69,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		var results []testkube.Execution
-		var work []testsv2.Test
-		for _, test := range tests {
-			if test.Spec.Schedule == "" || c.Query("callback") != "" {
-				work = append(work, test)
-				continue
-			}
-
-			data, err := json.Marshal(request)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't prepare test request: %w", err))
-			}
-
-			options := cronjob.CronJobOptions{
-				Schedule: test.Spec.Schedule,
-				Resource: testResourceURI,
-				Data:     string(data),
-				Labels:   test.Labels,
-			}
-			if err = s.CronJobClient.Apply(test.Name, cronjob.GetMetadataName(test.Name, testResourceURI), options); err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't create scheduled test: %w", err))
-			}
-
-			results = append(results, testkube.Execution{
-				TestName:        test.Name,
-				TestType:        test.Spec.Type_,
-				TestNamespace:   namespace,
-				ExecutionResult: &testkube.ExecutionResult{Status: testkube.ExecutionStatusQueued},
-			})
-		}
-
-		if len(work) != 0 {
+		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
@@ -107,7 +77,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestRequests(work, request))
+			go workerpoolService.SendRequests(s.prepareTestRequests(tests, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -120,14 +90,16 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf(results[0].ExecutionResult.ErrorMessage))
 			}
 
+			c.Status(http.StatusCreated)
 			return c.JSON(results[0])
 		}
 
+		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
 }
 
-func (s TestkubeAPI) prepareTestRequests(work []testsv2.Test, request testkube.ExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) prepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
 	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
 	for i := range work {
@@ -144,9 +116,16 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution testkube.Execution, err error) {
 	// generate random execution name in case there is no one set
 	// like for docker images
-	if request.Name == "" {
-		request.Name = rand.Name()
+	if request.Name == "" && test.ExecutionRequest != nil && test.ExecutionRequest.Name != "" {
+		request.Name = test.ExecutionRequest.Name
 	}
+
+	if request.Name == "" {
+		request.Name = test.Name
+	}
+
+	request.Number = int32(s.getNextExecutionNumber(test.Name))
+	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
 	execution, _ = s.ExecutionResults.GetByNameAndTest(ctx, request.Name, test.Name)
@@ -154,6 +133,12 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Err(fmt.Errorf("test execution with name %s already exists", request.Name)), nil
 	}
 
+	secretUUID, err := s.TestsClient.GetCurrentSecretUUID(test.Name)
+	if err != nil {
+		return execution.Errw("can't get current secret uuid: %w", err), nil
+	}
+
+	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.GetExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
@@ -181,17 +166,17 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 
-	err = s.notifyEvents(testkube.WebhookTypeStartTest, execution)
+	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeStartTest, execution)
 	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+		s.Log.Errorw("Notify events error", "error", err)
 	}
 
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
@@ -199,9 +184,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+			err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 			if err != nil {
-				s.Log.Infow("Notify events", "error", err)
+				s.Log.Errorw("Notify events error", "error", err)
 			}
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
@@ -213,9 +198,9 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// sync/async test execution
 	if options.Sync {
-		result, err = s.Executor.ExecuteSync(execution, options)
+		result, err = s.Executor.ExecuteSync(&execution, options)
 	} else {
-		result, err = s.Executor.Execute(execution, options)
+		result, err = s.Executor.Execute(&execution, options)
 	}
 
 	// set execution result to one created
@@ -223,25 +208,28 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
 		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+			s.Log.Errorw("Notify events error", "error", err)
 		}
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
-		if err != nil {
-			s.Log.Infow("Notify events", "error", err)
+		errNotify := s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+		if errNotify != nil {
+			s.Log.Infow("Notify events", "error", errNotify)
 		}
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = s.notifyEvents(testkube.WebhookTypeEndTest, execution)
-	if err != nil {
-		s.Log.Infow("Notify events", "error", err)
+
+	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
+		if err != nil {
+			s.Log.Errorw("Notify events error", "error", err)
+		}
 	}
 
 	return execution, nil
@@ -279,33 +267,6 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 	}
 
 	return vars, nil
-}
-
-func (s TestkubeAPI) notifyEvents(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
-	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
-	if err != nil {
-		return err
-	}
-
-	for _, wh := range webhookList.Items {
-		s.Log.Debugw("Sending event", "uri", wh.Spec.Uri, "type", eventType, "execution", execution)
-		s.EventsEmitter.Notify(testkube.WebhookEvent{
-			Uri:       wh.Spec.Uri,
-			Type_:     eventType,
-			Execution: &execution,
-		})
-	}
-
-	s.notifySlack(eventType, execution)
-
-	return nil
-}
-
-func (s TestkubeAPI) notifySlack(eventType *testkube.WebhookEventType, execution testkube.Execution) {
-	err := slacknotifier.SendEvent(eventType, execution)
-	if err != nil {
-		s.Log.Warnw("notify slack failed", "error", err)
-	}
 }
 
 // ListExecutionsHandler returns array of available test executions
@@ -385,7 +346,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-// GetExecutionHandler returns test execution object for given test and execution id
+// GetExecutionHandler returns test execution object for given test and execution id/name
 func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -398,7 +359,10 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
+				if err == mongo.ErrNoDocuments {
+					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+				}
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -414,6 +378,34 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		}
 
 		execution.Duration = types.FormatDuration(execution.Duration)
+
+		testSecretMap := make(map[string]string)
+		if execution.TestSecretUUID != "" {
+			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		testSuiteSecretMap := make(map[string]string)
+		if execution.TestSuiteSecretUUID != "" {
+			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, err)
+			}
+		}
+
+		for key, value := range testSuiteSecretMap {
+			testSecretMap[key] = value
+		}
+
+		for key, value := range testSecretMap {
+			if variable, ok := execution.Variables[key]; ok {
+				variable.Value = string(value)
+				variable.SecretRef = nil
+				execution.Variables[key] = variable
+			}
+		}
 
 		s.Log.Debugw("get test execution request - debug", "execution", execution)
 
@@ -434,9 +426,8 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		err = s.Executor.Abort(executionID)
-
-		s.Metrics.IncAbortTest(execution.TestType, err)
+		result := s.Executor.Abort(executionID)
+		s.Metrics.IncAbortTest(execution.TestType, result.IsFailed())
 
 		return err
 	}
@@ -494,8 +485,21 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
-	// Test variables lowest priority, then test suite, then test suite execution / test execution
-	request.Variables = mergeVariables(test.Variables, request.Variables)
+	if test.ExecutionRequest != nil {
+		// Test variables lowest priority, then test suite, then test suite execution / test execution
+		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
+		// Combine test executor args with execution args
+		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
+		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
+			request.HttpProxy = test.ExecutionRequest.HttpProxy
+		}
+
+		if request.HttpsProxy == "" && test.ExecutionRequest.HttpsProxy != "" {
+			request.HttpsProxy = test.ExecutionRequest.HttpsProxy
+		}
+	}
 
 	// get executor from kubernetes CRs
 	executorCR, err := s.ExecutorsClient.GetByType(testCR.Spec.Type_)
@@ -503,15 +507,24 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get executor spec: %w", err)
 	}
 
+	var usernameSecret, tokenSecret *testkube.SecretRef
+	if test.Content != nil && test.Content.Repository != nil {
+		usernameSecret = test.Content.Repository.UsernameSecret
+		tokenSecret = test.Content.Repository.TokenSecret
+	}
+
 	return client.ExecuteOptions{
-		TestName:     id,
-		Namespace:    namespace,
-		TestSpec:     testCR.Spec,
-		ExecutorName: executorCR.ObjectMeta.Name,
-		ExecutorSpec: executorCR.Spec,
-		Request:      request,
-		Sync:         request.Sync,
-		Labels:       testCR.Labels,
+		TestName:       id,
+		Namespace:      namespace,
+		TestSpec:       testCR.Spec,
+		ExecutorName:   executorCR.ObjectMeta.Name,
+		ExecutorSpec:   executorCR.Spec,
+		Request:        request,
+		Sync:           request.Sync,
+		Labels:         testCR.Labels,
+		UsernameSecret: usernameSecret,
+		TokenSecret:    tokenSecret,
+		ImageOverride:  request.Image,
 	}, nil
 }
 
@@ -564,6 +577,15 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
+	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
+	if err == nil {
+		s.Log.Errorw("retrieving latest execution", "error", err)
+		return number
+	}
+	return number
+}
+
 func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
 	variables := map[string]testkube.Variable{}
 	for k, v := range vars1 {
@@ -576,18 +598,35 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	return variables
 }
 
+func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]string {
+	envs := map[string]string{}
+	for k, v := range envs1 {
+		envs[k] = v
+	}
+	for k, v := range envs2 {
+		envs[k] = v
+	}
+
+	return envs
+}
+
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
 		options.Namespace,
 		options.TestName,
+		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
+		options.Request.Number,
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
-		options.Labels,
+		options.Request.TestSecretUUID,
+		options.Request.TestSuiteSecretUUID,
+		common.MergeMaps(options.Labels, options.Request.ExecutionLabels),
 	)
 
+	execution.Envs = options.Request.Envs
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
 
@@ -601,6 +640,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 		result[i] = testkube.ExecutionSummary{
 			Id:        execution.Id,
 			Name:      execution.Name,
+			Number:    execution.Number,
 			TestName:  execution.TestName,
 			TestType:  execution.TestType,
 			Status:    execution.ExecutionResult.Status,
@@ -612,4 +652,52 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 	}
 
 	return result
+}
+
+// GetLatestExecutionLogs returns the latest executions' logs
+func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]string, error) {
+	latestExecutions, err := s.getNewestExecutions(c)
+	if err != nil {
+		return nil, fmt.Errorf("could not list executions: %w", err)
+	}
+
+	executionLogs := map[string][]string{}
+	for _, e := range latestExecutions {
+		logs, err := s.getExecutionLogs(e)
+		if err != nil {
+			return nil, fmt.Errorf("could not get logs: %w", err)
+		}
+		executionLogs[e.Id] = logs
+	}
+
+	return executionLogs, nil
+}
+
+// getNewestExecutions returns the latest Testkube executions
+func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Execution, error) {
+	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
+	executions, err := s.ExecutionResults.GetExecutions(c, f)
+	if err != nil {
+		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
+	}
+	return executions, nil
+}
+
+// getExecutionLogs returns logs from an execution
+func (s *TestkubeAPI) getExecutionLogs(execution testkube.Execution) ([]string, error) {
+	result := []string{}
+	if execution.ExecutionResult.IsCompleted() {
+		return append(result, execution.ExecutionResult.Output), nil
+	}
+
+	logs, err := s.Executor.Logs(execution.Id)
+	if err != nil {
+		return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
+	}
+
+	for out := range logs {
+		result = append(result, out.Result.Output)
+	}
+
+	return result, nil
 }

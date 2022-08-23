@@ -21,6 +21,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.ExecutionsResult](client, config),
 			NewProxyClient[testkube.Artifact](client, config),
 			NewProxyClient[testkube.ServerInfo](client, config),
+			NewProxyClient[testkube.DebugInfo](client, config),
 		),
 		TestSuiteClient: NewTestSuiteClient(
 			NewProxyClient[testkube.TestSuite](client, config),
@@ -43,6 +44,7 @@ func NewDirectAPIClient(httpClient *http.Client, apiURI string) APIClient {
 			NewDirectClient[testkube.ExecutionsResult](httpClient, apiURI),
 			NewDirectClient[testkube.Artifact](httpClient, apiURI),
 			NewDirectClient[testkube.ServerInfo](httpClient, apiURI),
+			NewDirectClient[testkube.DebugInfo](httpClient, apiURI),
 		),
 		TestSuiteClient: NewTestSuiteClient(
 			NewDirectClient[testkube.TestSuite](httpClient, apiURI),

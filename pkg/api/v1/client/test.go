@@ -19,6 +19,7 @@ func NewTestClient(
 	executionsResultTransport Transport[testkube.ExecutionsResult],
 	artifactTransport Transport[testkube.Artifact],
 	serverInfoTransport Transport[testkube.ServerInfo],
+	debugInfoTransport Transport[testkube.DebugInfo],
 ) TestClient {
 	return TestClient{
 		testTransport:              testTransport,
@@ -27,6 +28,7 @@ func NewTestClient(
 		executionsResultTransport:  executionsResultTransport,
 		artifactTransport:          artifactTransport,
 		serverInfoTransport:        serverInfoTransport,
+		debugInfoTransport:         debugInfoTransport,
 	}
 }
 
@@ -38,6 +40,7 @@ type TestClient struct {
 	executionsResultTransport  Transport[testkube.ExecutionsResult]
 	artifactTransport          Transport[testkube.Artifact]
 	serverInfoTransport        Transport[testkube.ServerInfo]
+	debugInfoTransport         Transport[testkube.DebugInfo]
 }
 
 // GetTest returns single test by id
@@ -125,14 +128,16 @@ func (c TestClient) GetExecution(executionID string) (execution testkube.Executi
 func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOptions) (execution testkube.Execution, err error) {
 	uri := c.executionTransport.GetURI("/tests/%s/executions", id)
 	request := testkube.ExecutionRequest{
-		Name:          executionName,
-		VariablesFile: options.ExecutionVariablesFileContent,
-		Variables:     options.ExecutionVariables,
-		Envs:          options.Envs,
-		Args:          options.Args,
-		SecretEnvs:    options.SecretEnvs,
-		HttpProxy:     options.HTTPProxy,
-		HttpsProxy:    options.HTTPSProxy,
+		Name:            executionName,
+		VariablesFile:   options.ExecutionVariablesFileContent,
+		Variables:       options.ExecutionVariables,
+		Envs:            options.Envs,
+		Args:            options.Args,
+		SecretEnvs:      options.SecretEnvs,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
+		Image:           options.Image,
 	}
 
 	body, err := json.Marshal(request)
@@ -150,6 +155,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 	request := testkube.ExecutionRequest{
 		VariablesFile: options.ExecutionVariablesFileContent,
 		Variables:     options.ExecutionVariables,
+		Envs:          options.Envs,
 		Args:          options.Args,
 		SecretEnvs:    options.SecretEnvs,
 		HttpProxy:     options.HTTPProxy,
@@ -214,4 +220,9 @@ func (c TestClient) DownloadFile(executionID, fileName, destination string) (art
 func (c TestClient) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.serverInfoTransport.GetURI("/info")
 	return c.serverInfoTransport.Execute(http.MethodGet, uri, nil, nil)
+}
+
+func (c TestClient) GetDebugInfo() (debugInfo testkube.DebugInfo, err error) {
+	uri := c.debugInfoTransport.GetURI("/debug")
+	return c.debugInfoTransport.Execute(http.MethodGet, uri, nil, nil)
 }

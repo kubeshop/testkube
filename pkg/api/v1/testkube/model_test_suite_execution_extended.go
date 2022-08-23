@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/rand"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/rand"
 )
 
 func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
@@ -19,14 +21,24 @@ func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
 }
 
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
+	name := request.Name
+	if name == "" {
+		name = fmt.Sprintf("%s.%s", testSuite.Name, rand.Name())
+	}
+
 	testExecution := TestSuiteExecution{
-		Id:        primitive.NewObjectID().Hex(),
-		StartTime: time.Now(),
-		Name:      fmt.Sprintf("%s.%s", testSuite.Name, rand.Name()),
-		Status:    TestSuiteExecutionStatusRunning,
-		Variables: testSuite.Variables,
-		TestSuite: testSuite.GetObjectRef(),
-		Labels:    testSuite.Labels,
+		Id:         primitive.NewObjectID().Hex(),
+		StartTime:  time.Now(),
+		Name:       name,
+		Status:     TestSuiteExecutionStatusRunning,
+		SecretUUID: request.SecretUUID,
+		TestSuite:  testSuite.GetObjectRef(),
+		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
+		Variables:  map[string]Variable{},
+	}
+
+	if testSuite.ExecutionRequest != nil {
+		testExecution.Variables = testSuite.ExecutionRequest.Variables
 	}
 
 	// override variables from request

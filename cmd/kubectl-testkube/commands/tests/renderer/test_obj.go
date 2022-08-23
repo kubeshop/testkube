@@ -26,8 +26,6 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Schedule: ", test.Schedule)
 	}
 
-	renderer.RenderVariables(test.Variables)
-
 	if test.Content != nil {
 		ui.NL()
 		ui.Info("Content")
@@ -40,13 +38,54 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("Repository: ")
 			ui.Warn("  Uri:      ", test.Content.Repository.Uri)
 			ui.Warn("  Branch:   ", test.Content.Repository.Branch)
+			ui.Warn("  Commit:   ", test.Content.Repository.Commit)
 			ui.Warn("  Path:     ", test.Content.Repository.Path)
-			ui.Warn("  Username: ", test.Content.Repository.Username)
-			ui.Warn("  Token:    ", test.Content.Repository.Token)
+			if test.Content.Repository.UsernameSecret != nil {
+				ui.Warn("  Username: ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.UsernameSecret.Name,
+					test.Content.Repository.UsernameSecret.Key))
+			}
+
+			if test.Content.Repository.TokenSecret != nil {
+				ui.Warn("  Token:    ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.TokenSecret.Name,
+					test.Content.Repository.TokenSecret.Key))
+			}
 		}
 
 		if test.Content.Data != "" {
 			ui.Warn("Data: ", "\n", test.Content.Data)
+		}
+	}
+
+	if test.ExecutionRequest != nil {
+		ui.Warn("Execution request: ")
+		if test.ExecutionRequest.Name != "" {
+			ui.Warn("  Name:        ", test.ExecutionRequest.Name)
+		}
+
+		if len(test.ExecutionRequest.Variables) > 0 {
+			renderer.RenderVariables(test.ExecutionRequest.Variables)
+		}
+
+		if len(test.ExecutionRequest.Args) > 0 {
+			ui.Warn("  Args:        ", test.ExecutionRequest.Args...)
+		}
+
+		if len(test.ExecutionRequest.Envs) > 0 {
+			ui.NL()
+			ui.Warn("  Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
+		}
+
+		if len(test.ExecutionRequest.SecretEnvs) > 0 {
+			ui.NL()
+			ui.Warn("  Secret Envs: ", testkube.MapToString(test.ExecutionRequest.SecretEnvs))
+		}
+
+		if test.ExecutionRequest.HttpProxy != "" {
+			ui.Warn("  Http proxy:  ", test.ExecutionRequest.HttpProxy)
+		}
+
+		if test.ExecutionRequest.HttpsProxy != "" {
+			ui.Warn("  Https proxy: ", test.ExecutionRequest.HttpsProxy)
 		}
 	}
 

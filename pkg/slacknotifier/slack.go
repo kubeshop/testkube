@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // can be generated here https://app.slack.com/block-kit-builder
@@ -19,7 +20,7 @@ const messageTemplate string = `{
 			"text": {
 				"type": "plain_text",
 				"emoji": true,
-				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} has {{ .Status }}"
+				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} status {{ .Status }}"
 			}
 		},
 		{
@@ -27,13 +28,16 @@ const messageTemplate string = `{
 			"elements": [
 				{
 					"type": "image",
-					"image_url": "{{ if (eq .FailedSteps 0) }} https://icon-library.com/images/green-tick-icon/green-tick-icon-6.jpg {{ else }} https://icon-library.com/images/error-image-icon/error-image-icon-23.jpg {{ end }}",
+					"image_url": "{{ if eq .Status "failed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png{{ else if eq .Status "passed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png{{ else }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png{{ end }}",
 					"alt_text": "notifications warning icon"
-				},
+				}
+				{{ if (gt .TotalSteps 0 )}}
+				,
 				{
 					"type": "mrkdwn",
 					"text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
 				}
+				{{ end }}
 			]
 		},
 		{
@@ -62,6 +66,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ if .Namespace}}
 		{
 			"type": "section",
 			"fields": [
@@ -71,15 +76,21 @@ const messageTemplate string = `{
 				},
 				{
 					"type": "mrkdwn",
-					"text": " "
+					"text": "*Labels*"
 				},
 				{
 					"type": "plain_text",
-					"text": "{{ .Namespace }}",
+					"text": "{{ .Namespace }} ",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Labels }} ",
 					"emoji": true
 				}
 			]
 		},
+		{{ end }}
 		{
 			"type": "section",
 			"fields": [
@@ -103,6 +114,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ if .Duration }}
 		{
 			"type": "section",
 			"fields": [
@@ -121,6 +133,7 @@ const messageTemplate string = `{
 				}
 			]
 		},
+		{{ end }}
 		{
 			"type": "divider"
 		},
@@ -148,6 +161,7 @@ type messageArgs struct {
 	ExecutionID string
 	EventType   string
 	Namespace   string
+	Labels      string
 	TestName    string
 	TestType    string
 	Status      string
@@ -159,11 +173,18 @@ type messageArgs struct {
 	BackTick    string
 }
 
-var slackClient *slack.Client
+var (
+	slackClient *slack.Client
+	timestamps  map[string]string
+)
 
 func init() {
+	timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
+		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackClient = slack.New(token, slack.OptionDebug(true))
+	} else {
+		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
 }
 
@@ -172,8 +193,11 @@ func SendMessage(channelID string, message string) error {
 	if slackClient != nil {
 		_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionText(message, false))
 		if err != nil {
+			log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
 			return err
 		}
+	} else {
+		log.DefaultLogger.Warnw("slack client is not initialised")
 	}
 	return nil
 }
@@ -181,15 +205,68 @@ func SendMessage(channelID string, message string) error {
 // SendEvent composes an event message and sends it to slack
 func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
 
-	t, err := template.New("message").Parse(messageTemplate)
+	message, err := composeMessage(execution, eventType)
 	if err != nil {
 		return err
 	}
 
+	view := slack.Message{}
+	err = json.Unmarshal(message, &view)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while creating slack specific message", "error", err.Error())
+		return err
+	}
+
+	if slackClient != nil {
+		channels, _, err := slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
+		if err != nil {
+			log.DefaultLogger.Warnw("error while getting bot channels", "error", err.Error())
+			return err
+		}
+
+		if len(channels) > 0 {
+			channelID := channels[0].GroupConversation.ID
+			prevTimestamp, ok := timestamps[execution.Name]
+			var timestamp string
+
+			if ok {
+				_, timestamp, _, err = slackClient.UpdateMessage(channelID, prevTimestamp, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+			} else {
+				_, timestamp, err = slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+			}
+
+			if err != nil {
+				log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
+				return err
+			}
+
+			if *eventType == testkube.END_TEST_WebhookEventType {
+				delete(timestamps, execution.Name)
+			} else {
+				timestamps[execution.Name] = timestamp
+			}
+		} else {
+			log.DefaultLogger.Warnw("Testkube bot is not added to any channel")
+		}
+	} else {
+		log.DefaultLogger.Warnw("slack client is not initialised")
+	}
+
+	return nil
+}
+
+func composeMessage(execution testkube.Execution, eventType *testkube.WebhookEventType) ([]byte, error) {
+	t, err := template.New("message").Parse(messageTemplate)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
+		return nil, err
+	}
+
 	args := messageArgs{
-		ExecutionID: execution.Id,
+		ExecutionID: execution.Name,
 		EventType:   string(*eventType),
 		Namespace:   execution.TestNamespace,
+		Labels:      testkube.MapToString(execution.Labels),
 		TestName:    execution.TestName,
 		TestType:    execution.TestType,
 		Status:      string(*execution.ExecutionResult.Status),
@@ -201,33 +278,13 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 		BackTick:    "`",
 	}
 
+	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)
+
 	var message bytes.Buffer
 	err = t.Execute(&message, args)
 	if err != nil {
-		return err
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error())
+		return nil, err
 	}
-
-	view := slack.Message{}
-	err = json.Unmarshal(message.Bytes(), &view)
-	if err != nil {
-		return err
-	}
-
-	if slackClient != nil {
-		channels, _, err := slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
-		if err != nil {
-			return err
-		}
-
-		if len(channels) > 0 {
-			channelID := channels[0].GroupConversation.ID
-
-			_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return message.Bytes(), nil
 }

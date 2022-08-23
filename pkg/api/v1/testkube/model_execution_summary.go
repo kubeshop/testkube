@@ -13,12 +13,14 @@ import (
 	"time"
 )
 
-// execution summary
+// Execution summary
 type ExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
+	// execution number
+	Number int32 `json:"number,omitempty"`
 	// name of the test
 	TestName string `json:"testName"`
 	// name of the test
@@ -32,6 +34,6 @@ type ExecutionSummary struct {
 	EndTime time.Time `json:"endTime,omitempty"`
 	// calculated test duration
 	Duration string `json:"duration,omitempty"`
-	// execution labels
+	// test and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -11,23 +11,40 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const CollectionName = "results"
+var _ Repository = &MongoRepository{}
+
+const (
+	CollectionName      = "results"
+	CollectionSequences = "sequences"
+)
 
 func NewMongoRespository(db *mongo.Database) *MongoRepository {
 	return &MongoRepository{
-		Coll: db.Collection(CollectionName),
+		Coll:      db.Collection(CollectionName),
+		Sequences: db.Collection(CollectionSequences),
 	}
 }
 
 type MongoRepository struct {
-	Coll *mongo.Collection
+	Coll      *mongo.Collection
+	Sequences *mongo.Collection
+}
+
+type executionNumber struct {
+	TestName string `json:"testName"`
+	Number   int32  `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
+	return
+}
+func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.Execution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
 	return
 }
 
@@ -203,6 +220,44 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
+
+	execNmbr := executionNumber{TestName: testName}
+	retry := false
+	retryAttempts := 0
+	maxRetries := 10
+
+	opts := options.FindOneAndUpdate()
+	opts.SetUpsert(true)
+	opts.SetReturnDocument(options.After)
+
+	err = r.Sequences.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
+	if err != nil {
+		var execution testkube.Execution
+		execution, err = r.GetLatestByTest(context.Background(), testName, "number")
+		if err != nil {
+			execNmbr.Number = 1
+		} else {
+			execNmbr.Number = execution.Number + 1
+		}
+		_, err = r.Sequences.InsertOne(ctx, execNmbr)
+	} else {
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+	}
+
+	retry = (err != nil)
+
+	for retry {
+		retryAttempts++
+		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		if err == nil || retryAttempts >= maxRetries {
+			retry = false
+		}
+	}
+
+	return execNmbr.Number, nil
+}
+
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
@@ -247,6 +302,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		conditions = append(conditions, bson.M{"testname": filter.TestName()})
 	}
 
+	if filter.LastNDaysDefined() {
+		startTimeQuery["$gte"] = time.Now().Add(-time.Duration(filter.LastNDays()) * 24 * time.Hour)
+	}
+
 	if filter.StartDateDefined() {
 		startTimeQuery["$gte"] = filter.StartDate()
 	}
@@ -274,15 +333,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.Selector() != "" {
-		items := strings.Split(filter.Selector(), ",")
-		for _, item := range items {
-			elements := strings.Split(item, "=")
-			if len(elements) == 2 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: elements[1]})
-			} else if len(elements) == 1 {
-				conditions = append(conditions, bson.M{"labels." + elements[0]: bson.M{"$exists": true}})
-			}
-		}
+		conditions = addSelectorConditions(filter.Selector(), "labels", conditions)
 	}
 
 	if filter.TypeDefined() {
@@ -300,9 +351,28 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	return query, opts
 }
 
+func addSelectorConditions(selector string, tag string, conditions primitive.A) primitive.A {
+	items := strings.Split(selector, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: elements[1]})
+		} else if len(elements) == 1 {
+			conditions = append(conditions, bson.M{tag + "." + elements[0]: bson.M{"$exists": true}})
+		}
+	}
+	return conditions
+}
+
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	return
+}
+
+// DeleteByTestSuite deletes execution results by test suite
+func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
 
@@ -332,4 +402,71 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
+}
+
+// DeleteByTestSuites deletes execution results by test suites
+func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
+	if len(testSuiteNames) == 0 {
+		return nil
+	}
+
+	var filter bson.M
+	if len(testSuiteNames) > 1 {
+		conditions := bson.A{}
+		for _, testSuiteName := range testSuiteNames {
+			conditions = append(conditions, bson.M{"testsuitename": testSuiteName})
+		}
+
+		filter = bson.M{"$or": conditions}
+	} else {
+		filter = bson.M{"testSuitename": testSuiteNames[0]}
+	}
+
+	_, err = r.Coll.DeleteMany(ctx, filter)
+	return
+}
+
+// DeleteForAllTestSuites deletes execution results for all test suites
+func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	return
+}
+
+// GetTestMetrics returns test executions metrics limited to number of executions or last N days
+func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
+	query := bson.M{"testname": name}
+
+	pipeline := []bson.D{}
+	if last > 0 {
+		query["starttime"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
+	}
+
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: query}})
+	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
+	if limit > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
+	}
+	pipeline = append(pipeline, bson.D{
+		{
+			Key: "$project", Value: bson.D{
+				{Key: "status", Value: "$executionresult.status"},
+				{Key: "duration", Value: 1},
+				{Key: "starttime", Value: 1},
+				{Key: "name", Value: 1},
+			},
+		},
+	})
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return metrics, err
+	}
+
+	var executions []testkube.ExecutionsMetricsExecutions
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return metrics, err
+	}
+
+	return common.CalculateMetrics(executions), nil
 }

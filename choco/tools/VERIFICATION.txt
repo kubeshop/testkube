@@ -1,0 +1,11 @@
+VERIFICATION
+
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+Checksums can be found here https://github.com/kubeshop/testkube/releases/tag/<vTestkube_version>
+or directly here: https://github.com/kubeshop/testkube/releases/download/<vTestkube_version>/testkube_<Teskube_version>_Windows_i386_checksum.txt
+
+
+For example for version v1.4.21 it is https://github.com/kubeshop/testkube/releases/tag/v1.4.21
+and https://github.com/kubeshop/testkube/releases/download/v1.4.21/testkube_1.4.21_Windows_i386_checksum.txt

@@ -16,6 +16,7 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
       --concurrency int                  concurrency level for multiple test suite execution (default 10)
   -d, --download-artifacts               download artifacts automatically
       --download-dir string              download dir (default "artifacts")
+      --execution-label stringToString   execution-label adds a label to execution in form of key value pair: --execution-label key1=value1 (default [])
   -h, --help                             help for testsuite
       --http-proxy string                http proxy for executor containers
       --https-proxy string               https proxy for executor containers
@@ -26,14 +27,14 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
   -f, --watch                            watch for changes after start
 ```
 
-### Options inherited from Parent Commands
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics
-  -a, --api-uri string      api uri, default value read from config if set
+  -a, --api-uri string      api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             show additional debug messages
 ```
 

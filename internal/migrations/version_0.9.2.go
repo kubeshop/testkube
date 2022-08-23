@@ -7,25 +7,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv1 "github.com/kubeshop/testkube-operator/apis/tests/v1"
-	testsv2 "github.com/kubeshop/testkube-operator/apis/tests/v2"
-	testsuite "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsuite "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	scriptsclientv2 "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/migrator"
 )
 
 func NewVersion_0_9_2(
 	scriptsClient *scriptsclientv2.ScriptsClient,
 	testsClientV1 *testsclientv1.TestsClient,
-	testsClientV2 *testsclientv2.TestsClient,
-	testsuitesClient *testsuitesclientv1.TestSuitesClient,
+	testsClientV3 *testsclientv3.TestsClient,
+	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 ) *Version_0_9_2 {
 	return &Version_0_9_2{
 		scriptsClient:    scriptsClient,
 		testsClientV1:    testsClientV1,
-		testsClientV2:    testsClientV2,
+		testsClientV3:    testsClientV3,
 		testsuitesClient: testsuitesClient,
 	}
 }
@@ -33,8 +34,8 @@ func NewVersion_0_9_2(
 type Version_0_9_2 struct {
 	scriptsClient    *scriptsclientv2.ScriptsClient
 	testsClientV1    *testsclientv1.TestsClient
-	testsClientV2    *testsclientv2.TestsClient
-	testsuitesClient *testsuitesclientv1.TestSuitesClient
+	testsClientV3    *testsclientv3.TestsClient
+	testsuitesClient *testsuitesclientv2.TestSuitesClient
 }
 
 func (m *Version_0_9_2) Version() string {
@@ -47,7 +48,7 @@ func (m *Version_0_9_2) Migrate() error {
 	}
 
 	for _, script := range scripts.Items {
-		if _, err = m.testsClientV2.Get(script.Name); err != nil && !errors.IsNotFound(err) {
+		if _, err = m.testsClientV3.Get(script.Name); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 
@@ -55,27 +56,40 @@ func (m *Version_0_9_2) Migrate() error {
 			continue
 		}
 
-		test := &testsv2.Test{
+		test := &testsv3.Test{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      script.Name,
 				Namespace: script.Namespace,
 			},
-			Spec: testsv2.TestSpec{
-				Type_:  script.Spec.Type_,
-				Name:   script.Spec.Name,
-				Params: script.Spec.Params,
+			Spec: testsv3.TestSpec{
+				Type_: script.Spec.Type_,
+				Name:  script.Spec.Name,
 			},
 		}
 
+		if len(script.Spec.Params) != 0 {
+			test.Spec.ExecutionRequest = &testsv3.ExecutionRequest{
+				Variables: make(map[string]testsv3.Variable, len(script.Spec.Params)),
+			}
+
+			for key, value := range script.Spec.Params {
+				test.Spec.ExecutionRequest.Variables[key] = testsv3.Variable{
+					Name:  key,
+					Value: value,
+					Type_: string(*testkube.VariableTypeBasic),
+				}
+			}
+		}
+
 		if script.Spec.Content != nil {
-			test.Spec.Content = &testsv2.TestContent{
+			test.Spec.Content = &testsv3.TestContent{
 				Type_: script.Spec.Content.Type_,
 				Data:  script.Spec.Content.Data,
 				Uri:   script.Spec.Content.Uri,
 			}
 
 			if script.Spec.Content.Repository != nil {
-				test.Spec.Content.Repository = &testsv2.Repository{
+				test.Spec.Content.Repository = &testsv3.Repository{
 					Type_:  script.Spec.Content.Repository.Type_,
 					Uri:    script.Spec.Content.Repository.Uri,
 					Branch: script.Spec.Content.Repository.Branch,
@@ -84,7 +98,7 @@ func (m *Version_0_9_2) Migrate() error {
 			}
 		}
 
-		if _, err = m.testsClientV2.Create(test); err != nil {
+		if _, err = m.testsClientV3.Create(test); err != nil {
 			return err
 		}
 

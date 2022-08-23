@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -14,29 +15,33 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 	"github.com/kubeshop/testkube/pkg/webhook"
 )
+
+const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
 	executionsResults result.Repository,
 	testExecutionsResults testresult.Repository,
-	testsClient *testsclientv2.TestsClient,
+	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
-	testsuitesClient *testsuitesclientv1.TestSuitesClient,
+	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clusterId string,
@@ -49,12 +54,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	// you can disable analytics tracking for API server
-	analyticsEnabledStr := os.Getenv("TESTKUBE_ANALYTICS_ENABLED")
-	analyticsEnabled, err := strconv.ParseBool(analyticsEnabledStr)
-	if err != nil {
-		analyticsEnabled = true
-	}
+	httpConfig.ClusterID = clusterId
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
@@ -65,14 +65,20 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		EventsEmitter:        webhook.NewEmitter(),
+		EventsEmitter:        webhook.NewEmitter(webhookClient),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
-		AnalyticsEnabled:     analyticsEnabled,
-		ClusterID:            clusterId,
 	}
 
-	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"))
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			s.Log.Warnf("parse bool env %w", err)
+		}
+	}
+
+	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"), readOnlyExecutors)
 	if err != nil {
 		s.Log.Warnf("load default executors %w", err)
 	}
@@ -81,12 +87,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics); err != nil {
-		panic(err)
-	}
-
-	s.CronJobClient, err = cronjob.NewClient(httpConfig.Fullname, httpConfig.Port, s.jobTemplates.Cronjob, s.Namespace)
-	if err != nil {
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.EventsEmitter); err != nil {
 		panic(err)
 	}
 
@@ -99,26 +100,23 @@ type TestkubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
-	TestsSuitesClient    *testsuitesclientv1.TestSuitesClient
-	TestsClient          *testsclientv2.TestsClient
+	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
+	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	EventsEmitter        *webhook.Emitter
-	CronJobClient        *cronjob.Client
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
-	AnalyticsEnabled     bool
-	ClusterID            string
+	TelemetryEnabled     bool
 	oauthParams          oauthParams
 }
 
 type jobTemplates struct {
-	Job     string
-	Cronjob string
+	Job string
 }
 
 func (j *jobTemplates) decodeFromEnv() error {
@@ -126,7 +124,7 @@ func (j *jobTemplates) decodeFromEnv() error {
 	if err != nil {
 		return err
 	}
-	templates := []*string{&j.Job, &j.Cronjob}
+	templates := []*string{&j.Job}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
@@ -157,6 +155,25 @@ type oauthParams struct {
 	Scopes       string
 }
 
+// WithTelemetry enable or disable anonymous telemetry data passing to testkube engineers
+func (s *TestkubeAPI) WithTelemetry(enabled bool) {
+	s.TelemetryEnabled = enabled
+}
+
+// SendTelemetryStartEvent sends anonymous start event to telemetry trackers
+func (s TestkubeAPI) SendTelemetryStartEvent() {
+	if !s.TelemetryEnabled {
+		return
+	}
+
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
+	if err != nil {
+		s.Log.Debug("telemetry send error", "error", err.Error())
+	} else {
+		s.Log.Debugw("sending telemetry server start event", "output", out)
+	}
+}
+
 // Init initializes api server settings
 func (s TestkubeAPI) Init() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
@@ -173,13 +190,9 @@ func (s TestkubeAPI) Init() {
 	s.Routes.Use(cors.New())
 	s.Routes.Use(s.AuthHandler())
 
-	if s.AnalyticsEnabled {
-		// global analytics tracking send async
-		s.Routes.Use(s.AnalyticsHandler())
-	}
-
 	s.Routes.Get("/info", s.InfoHandler())
 	s.Routes.Get("/routes", s.RoutesHandler())
+	s.Routes.Get("/debug", s.DebugHandler())
 
 	executors := s.Routes.Group("/executors")
 
@@ -216,6 +229,8 @@ func (s TestkubeAPI) Init() {
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
 
+	tests.Get("/:id/metrics", s.TestMetricsHandler())
+
 	tests.Post("/:id/executions", s.ExecuteTestsHandler())
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
@@ -239,6 +254,10 @@ func (s TestkubeAPI) Init() {
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
 
+	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
+
+	testsuites.Get("/:id/metrics", s.TestSuiteMetricsHandler())
+
 	testExecutions := s.Routes.Group("/test-suite-executions")
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
 	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
@@ -254,14 +273,40 @@ func (s TestkubeAPI) Init() {
 	slack := s.Routes.Group("/slack")
 	slack.Get("/", s.OauthHandler())
 
+	events := s.Routes.Group("/events")
+	events.Post("/flux", s.FluxEventHandler())
+
 	s.EventsEmitter.RunWorkers()
 	s.HandleEmitterLogs()
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
+}
 
-	s.Log.Infow("Testkube API configured", "namespace", s.Namespace, "clusterId", s.ClusterID)
+func (s TestkubeAPI) StartTelemetryHeartbeats() {
+	if !s.TelemetryEnabled {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(HeartbeatInterval)
+		for {
+			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+			host, err := os.Hostname()
+			if err != nil {
+				l.Debugw("getting hostname error", "hostname", host, "error", err)
+			}
+			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
+			if err != nil {
+				l.Debugw("sending heartbeat telemetry event error", "error", err)
+			} else {
+				l.Debugw("sending heartbeat telemetry event", "output", out)
+			}
+
+			<-ticker.C
+		}
+	}()
 }
 
 // TODO should we use single generic filter for all list based resources ?
@@ -306,6 +351,11 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 		filter = filter.WithType(objectType)
 	}
 
+	last, err := strconv.Atoi(c.Query("last", "0"))
+	if err == nil && last != 0 {
+		filter = filter.WithLastNDays(last)
+	}
+
 	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
 	if dFilter.IsStartValid {
 		filter = filter.WithStartDate(dFilter.Start)
@@ -324,7 +374,7 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 // loadDefaultExecutors loads default executors
-func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage string, err error) {
+func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecutors bool) (initImage string, err error) {
 	var executors []testkube.ExecutorDetails
 
 	if data == "" {
@@ -350,6 +400,15 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 			continue
 		}
 
+		if readOnlyExecutors {
+			continue
+		}
+
+		features := []executorv1.Feature{}
+		for _, f := range executor.Executor.Features {
+			features = append(features, executorv1.Feature(f))
+		}
+
 		obj := &executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      executor.Name,
@@ -359,6 +418,7 @@ func (s TestkubeAPI) loadDefaultExecutors(namespace, data string) (initImage str
 				Types:        executor.Executor.Types,
 				ExecutorType: executor.Executor.ExecutorType,
 				Image:        executor.Executor.Image,
+				Features:     features,
 			},
 		}
 

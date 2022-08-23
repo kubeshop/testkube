@@ -79,9 +79,15 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// ConfigAPI describes webhook api methods
+type ConfigAPI interface {
+	UpdateKey(key string, value any) (config testkube.Config, err error)
+}
+
 // ServiceAPI describes service api methods
 type ServiceAPI interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
+	GetDebugInfo() (info testkube.DebugInfo, err error)
 }
 
 // TODO consider replacing below types by testkube.*
@@ -104,11 +110,13 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
+	ExecutionLabels               map[string]string
 	Args                          []string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string
 	HTTPSProxy                    string
+	Image                         string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -116,13 +124,14 @@ type ExecuteTestSuiteOptions struct {
 	ExecutionVariables map[string]testkube.Variable
 	HTTPProxy          string
 	HTTPSProxy         string
+	ExecutionLabels    map[string]string
 }
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo
+		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo
 }
 
 // Executable is an interface of executable objects

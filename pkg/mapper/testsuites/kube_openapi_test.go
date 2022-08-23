@@ -3,35 +3,35 @@ package testsuites
 import (
 	"testing"
 
-	testsuitesv1 "github.com/kubeshop/testkube-operator/apis/testsuite/v1"
+	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 
 	openAPITest := MapCRToAPI(
-		testsuitesv1.TestSuite{
-			Spec: testsuitesv1.TestSuiteSpec{
-				Before: []testsuitesv1.TestSuiteStepSpec{
+		testsuitesv2.TestSuite{
+			Spec: testsuitesv2.TestSuiteSpec{
+				Before: []testsuitesv2.TestSuiteStepSpec{
 					{
-						Delay: &testsuitesv1.TestSuiteStepDelay{
+						Delay: &testsuitesv2.TestSuiteStepDelay{
 							Duration: 1000,
 						},
 					},
 				},
 
-				Steps: []testsuitesv1.TestSuiteStepSpec{
+				Steps: []testsuitesv2.TestSuiteStepSpec{
 					{
-						Execute: &testsuitesv1.TestSuiteStepExecute{
+						Execute: &testsuitesv2.TestSuiteStepExecute{
 							Namespace: "testkube",
 							Name:      "some-test-name",
 						},
 					},
 				},
 
-				After: []testsuitesv1.TestSuiteStepSpec{
+				After: []testsuitesv2.TestSuiteStepSpec{
 					{
-						Delay: &testsuitesv1.TestSuiteStepDelay{
+						Delay: &testsuitesv2.TestSuiteStepDelay{
 							Duration: 1000,
 						},
 					},

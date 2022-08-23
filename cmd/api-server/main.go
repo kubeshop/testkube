@@ -13,16 +13,18 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
-	testsclientv2 "github.com/kubeshop/testkube-operator/client/tests/v2"
-	testsuitesclientv1 "github.com/kubeshop/testkube-operator/client/testsuites/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/config"
+	configmap "github.com/kubeshop/testkube/internal/pkg/api/config"
+	configmongo "github.com/kubeshop/testkube/internal/pkg/api/repository/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/analytics"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -45,27 +47,22 @@ func init() {
 }
 
 func runMigrations() (err error) {
-	ui.Info("Available migrations for", api.Version)
 	results := migrations.Migrator.GetValidMigrations(api.Version, migrator.MigrationTypeServer)
 	if len(results) == 0 {
-		ui.Warn("No migrations available for", api.Version)
+		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", api.Version)
 		return nil
 	}
 
+	migrationInfo := []string{}
 	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
+		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
 	}
+	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", api.Version, "migrations", migrationInfo)
 
 	return migrations.Migrator.Run(api.Version, migrator.MigrationTypeServer)
 }
 
 func main() {
-
-	out, err := analytics.SendServerStartAnonymousInfo()
-	if err != nil {
-		ui.Debug("analytics send error", "error", err.Error())
-	}
-	ui.Debug(out)
 
 	port := os.Getenv("APISERVER_PORT")
 	namespace := "testkube"
@@ -76,7 +73,7 @@ func main() {
 	ln, err := net.Listen("tcp", ":"+port)
 	ui.ExitOnError("Checking if port "+port+"is free", err)
 	ln.Close()
-	ui.Debug("TCP Port is available", port)
+	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 
 	// DI
 	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
@@ -90,34 +87,73 @@ func main() {
 
 	scriptsClient := scriptsclient.NewClient(kubeClient, namespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, namespace)
-	testsClientV2 := testsclientv2.NewClient(kubeClient, namespace)
+	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
-	testsuitesClient := testsuitesclientv1.NewClient(kubeClient, namespace)
+	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
-	configRepository := config.NewMongoRespository(db)
+	configRepository := configmongo.NewMongoRespository(db)
+	configMapConfig, err := configmap.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
+	ui.ExitOnError("Getting config map config", err)
 
-	clusterId, err := configRepository.GetUniqueClusterId(context.Background())
-	ui.WarnOnError("Getting uniqe clusterId", err)
+	ctx := context.Background()
+	// try to load from mongo based config first
+	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
+	if err != nil {
+		// fallback to envs in case of failure (no record yet, or other error)
+		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
+	}
 
-	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV2, testsuitesClient))
+	var clusterId string
+	config, err := configMapConfig.Get(ctx)
+	if config.ClusterId != "" {
+		clusterId = config.ClusterId
+	}
+
+	if clusterId == "" {
+		config, err = configRepository.Get(ctx)
+		config.EnableTelemetry = telemetryEnabled
+		if config.ClusterId == "" {
+			config.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
+		}
+
+		clusterId = config.ClusterId
+		err = configMapConfig.Upsert(ctx, config)
+	}
+
+	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
+
+	// TODO check if this version exists somewhere in stats (probably could be removed)
+	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClient))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
-	err = apiv1.NewTestkubeAPI(
+	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
 		testResultsRepository,
-		testsClientV2,
+		testsClientV3,
 		executorsClient,
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
 		clusterId,
-	).Run()
+	)
 
+	// telemetry based functions
+	api.WithTelemetry(telemetryEnabled)
+	api.SendTelemetryStartEvent()
+	api.StartTelemetryHeartbeats()
+
+	log.DefaultLogger.Infow(
+		"starting Testkube API server",
+		"telemetryEnabled", telemetryEnabled,
+		"clusterId", clusterId, "namespace", namespace,
+	)
+
+	err = api.Run()
 	ui.ExitOnError("Running API Server", err)
 }

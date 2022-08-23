@@ -180,7 +180,7 @@ The test failed because of `AssertionError: expected undefined to equal 'testval
 
 The test variable was not passed into the test script. In this test, the parameter will have the name `testvariable` and its value will be `testvalue`.   
 
-Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
+Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but in the future, we'll pipe test output in real time.
 
 ```sh
 kubectl testkube run test kubeshop-cypress -v testvariable=testvalue -f

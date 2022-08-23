@@ -12,6 +12,8 @@ const PageDefaultLimit int = 100
 type Filter interface {
 	TestName() string
 	TestNameDefined() bool
+	LastNDays() int
+	LastNDaysDefined() bool
 	StartDate() time.Time
 	StartDateDefined() bool
 	EndDate() time.Time
@@ -28,9 +30,12 @@ type Filter interface {
 }
 
 type Repository interface {
+	Sequences
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.Execution, error)
-	// GetByNameAndTest gets execution result by name
+	// GetByName gets execution result by name
+	GetByName(ctx context.Context, id string) (testkube.Execution, error)
+	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetLatestByTest gets latest execution result by test
 	GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error)
@@ -54,8 +59,21 @@ type Repository interface {
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 	// DeleteByTest deletes execution results by test
 	DeleteByTest(ctx context.Context, testName string) error
+	// DeleteByTestSuite deletes execution results by test suite
+	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
 	// DeleteAll deletes all execution results
 	DeleteAll(ctx context.Context) error
 	// DeleteByTests deletes execution results by tests
 	DeleteByTests(ctx context.Context, testNames []string) (err error)
+	// DeleteByTestSuites deletes execution results by test suites
+	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
+	// DeleteForAllTestSuites deletes execution results for all test suites
+	DeleteForAllTestSuites(ctx context.Context) (err error)
+
+	GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+}
+
+type Sequences interface {
+	// GetNextExecutionNumber gets next execution number by test name
+	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
 }

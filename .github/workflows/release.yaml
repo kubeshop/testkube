@@ -20,7 +20,7 @@ jobs:
             path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Download Artifacts for Linux
@@ -118,21 +118,16 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      - name: Setup Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      - name: Update brew
-        run: brew update
       - name: Setup git email
         run: git config --global user.email "brewbot@kubeshop.io"
       - name: Setup git name
         run: git config --global user.name "Brew Bot"
       - name: Bump formulae
-        uses: Homebrew/actions/bump-formulae@master
+        uses: mislav/bump-homebrew-formula-action@v2
         with:
-          # Custom GitHub access token with only the 'public_repo' scope enabled
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          # Bump only these formulae if outdated
-          formulae: testkube
+          formula-name: testkube
+        env:
+          COMMITTER_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
   build-and-publish-windows-installer:
     needs: release
@@ -140,7 +135,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -162,6 +157,8 @@ jobs:
         run: |
           Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
+          Copy-Item 'build\installer\windows\tk.bat' '.\tk.bat'
+          Copy-Item 'build\installer\windows\testkube.bat' '.\testkube.bat'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
           & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
@@ -189,6 +186,13 @@ jobs:
           $hash=Get-FileHash testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+
+          #export MSI hash to environment
+          $hashsum = $hash.Hash
+          echo "::set-output name=CHECKSUM::${hashsum}"
+
+          #copy MSI to choco directory to build a nuget package
+          Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
 
@@ -211,6 +215,18 @@ jobs:
           asset_path: msi_checksum.txt
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}_checksum.txt
           asset_content_type: text/plain
+
+      - name: Update checksum in chocolateyInstall.ps1 file
+        working-directory: ./choco
+        run: |
+          $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
+          $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version -NoNewline
+
+      - name: Bump versions and push package to chocolatey repo
+        working-directory: ./choco
+        run: |
+          ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }}
 
   build-and-publish-linux-installer:
     needs: release
@@ -242,7 +258,7 @@ jobs:
           curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
-          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
 
           ### Create snapshot
           curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots

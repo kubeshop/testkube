@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
@@ -23,7 +24,7 @@ func NewCreateCmd() *cobra.Command {
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if !crdOnly {
-				validator.PersistentPreRunVersionCheck(cmd, Version)
+				validator.PersistentPreRunVersionCheck(cmd, common.Version)
 			}
 		}}
 

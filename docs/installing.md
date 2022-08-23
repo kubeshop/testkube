@@ -33,6 +33,21 @@ brew update
 brew upgrade testkube
 ```
 
+### **Installing on Windows**
+
+You can easily install latest Testkube version from our own chocolatey repository .
+
+```sh
+choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey
+choco install testkube
+```
+
+If you want to upgrade testkube, please run following command
+
+```sh
+choco upgrade testkube
+```
+
 ### **Installing on Linux with apt**
 
 You can use apt to install Testkube.
@@ -70,7 +85,7 @@ bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 If you don't like automatic scripts you can always do a manual install:
 
 1. Download binary with the version of your choice (the most recent one is recommended).
-2. Upack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz).
+2. Unpack it (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz).
 3. Move it to a location in the PATH. For example, `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`.
 
 For Windows, download the binary [here](https://github.com/kubeshop/testkube/releases), unpack the binary and add it to `%PATH%`.
@@ -98,7 +113,8 @@ The above command will install the following components in your Kubernetes clust
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
-7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag). It will not be installed, if it's already installed to your Kubernetes cluster
+7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag). It will not be installed, if it's already installed to your Kubernetes cluster(DEPRECATED since v1.5)
+
 
 Confirm that Testkube is running:
 
@@ -162,8 +178,9 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
-We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration. 
-If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).
+We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration.(DEPRECATED Since v1.5)
+
+If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).(DEPRECATED Since v1.5)
 
 To install the `testkube` chart:
 
@@ -199,7 +216,7 @@ The following Helm defaults are used in the `testkube` chart:
 | ------------------------------------ | ----------- | ------------------------------------ |
 | mongodb.auth.enabled                 | yes         | false                                |
 | mongodb.service.port                 | yes         | "27017"                              |
-| mongodb.service.portNmae             | yes         | "mongodb"                            |
+| mongodb.service.portName             | yes         | "mongodb"                            |
 | mongodb.service.nodePort             | yes         | true                                 |
 | mongodb.service.clusterIP            | yes         | ""                                   |
 | mongodb.nameOverride                 | yes         | "mongodb"                            |
@@ -210,7 +227,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.service.type            | yes         | "NodePort"                           |
 | testkube-api.service.port            | yes         | 8088                                 |
 | testkube-api.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
-| testkube-api.analyticsEnabled        | yes         | true                                 |
+| testkube-api.telemetryEnabled        | yes         | true                                 |
 | testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 |
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
 | testkube-api.storage.accessKey       | yes         | minio123                             |

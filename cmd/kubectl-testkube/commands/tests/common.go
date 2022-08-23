@@ -1,11 +1,16 @@
 package tests
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
@@ -14,15 +19,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func printExecutionDetails(execution testkube.Execution) {
-	ui.Warn("Type          :", execution.TestType)
-	ui.Warn("Name          :", execution.TestName)
+	ui.Warn("Type:             ", execution.TestType)
+	ui.Warn("Name:             ", execution.TestName)
 	if execution.Id != "" {
-		ui.Warn("Execution ID  :", execution.Id)
-		ui.Warn("Execution name:", execution.Name)
+		ui.Warn("Execution ID:     ", execution.Id)
+		ui.Warn("Execution name:   ", execution.Name)
+		if execution.Number != 0 {
+			ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
+		}
+		ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+		ui.Warn("Start time:       ", execution.StartTime.String())
+		ui.Warn("End time:         ", execution.EndTime.String())
+		ui.Warn("Duration:         ", execution.Duration)
 	}
 
 	renderer.RenderVariables(execution.Variables)
@@ -106,9 +117,19 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+	if err != nil {
+		return content, err
+	}
+
+	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return content, err
+	}
 
 	// get file content
 	if file != "" {
@@ -141,7 +162,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	var repository *testkube.Repository
-	if gitUri != "" && gitBranch != "" {
+	if gitUri != "" {
 		if testContentType == "" {
 			testContentType = "git-dir"
 		}
@@ -150,9 +171,24 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 			Type_:    "git",
 			Uri:      gitUri,
 			Branch:   gitBranch,
+			Commit:   gitCommit,
 			Path:     gitPath,
 			Username: gitUsername,
 			Token:    gitToken,
+		}
+
+		for key, val := range gitUsernameSecret {
+			repository.UsernameSecret = &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
+		}
+
+		for key, val := range gitTokenSecret {
+			repository.TokenSecret = &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
 		}
 	}
 
@@ -185,13 +221,57 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	schedule := cmd.Flag("schedule").Value.String()
+	binrayArgs, err := cmd.Flags().GetStringArray("executor-args")
+	if err != nil {
+		return options, err
+	}
+
+	executorArgs, err := prepareExecutorArgs(binrayArgs)
+	if err != nil {
+		return options, err
+	}
+
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,
 		Namespace: namespace,
 		Schedule:  schedule,
-		Variables: variables,
+	}
+
+	executionName := cmd.Flag("execution-name").Value.String()
+	envs, err := cmd.Flags().GetStringToString("env")
+	if err != nil {
+		return options, err
+	}
+
+	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
+	if err != nil {
+		return options, err
+	}
+
+	paramsFileContent := ""
+	variablesFile := cmd.Flag("variables-file").Value.String()
+	if variablesFile != "" {
+		b, err := os.ReadFile(variablesFile)
+		if err != nil {
+			return options, err
+		}
+
+		paramsFileContent = string(b)
+	}
+
+	httpProxy := cmd.Flag("http-proxy").Value.String()
+	httpsProxy := cmd.Flag("https-proxy").Value.String()
+	options.ExecutionRequest = &testkube.ExecutionRequest{
+		Name:          executionName,
+		VariablesFile: paramsFileContent,
+		Variables:     variables,
+		Args:          executorArgs,
+		Envs:          envs,
+		SecretEnvs:    secretEnvs,
+		HttpProxy:     httpProxy,
+		HttpsProxy:    httpsProxy,
 	}
 
 	// if labels are passed and are different from the existing overwrite
@@ -216,4 +296,27 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	return options, nil
 
+}
+
+func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
+	executorArgs := make([]string, 0)
+	for _, arg := range binaryArgs {
+		r := csv.NewReader(strings.NewReader(arg))
+		r.Comma = ' '
+		r.LazyQuotes = true
+		r.TrimLeadingSpace = true
+
+		records, err := r.ReadAll()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(records) != 1 {
+			return nil, errors.New("single string expected")
+		}
+
+		executorArgs = append(executorArgs, records[0]...)
+	}
+
+	return executorArgs, nil
 }

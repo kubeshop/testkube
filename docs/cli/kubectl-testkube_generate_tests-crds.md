@@ -16,14 +16,14 @@ kubectl-testkube generate tests-crds <manifestDirectory> [flags]
   -h, --help   help for tests-crds
 ```
 
-### Options inherited from Parent Commands
+### Options inherited from parent commands
 
 ```
-      --analytics-enabled   enable analytics
-  -a, --api-uri string      api uri, default value read from config if set
+  -a, --api-uri string      api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             show additional debug messages
 ```
 

@@ -1,4 +1,4 @@
-apiVersion: tests.testkube.io/v1
+apiVersion: tests.testkube.io/v2
 kind: TestSuite
 metadata:
   name: {{ .Name }}
@@ -8,18 +8,26 @@ metadata:
     {{ $key }}: {{ $value }}
   {{- end }}
 spec:
+  {{- if .Description }}
   description: {{ .Description }}
+  {{- end }}
   before:
   {{- range .Before }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name}}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end }}
     {{- end }}
   {{- end }}
   steps:
@@ -27,12 +35,18 @@ spec:
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name }}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end}}
     {{- end }}
   {{- end }}
   after:
@@ -40,27 +54,57 @@ spec:
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name }}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end }}
     {{- end }}
   {{- end }}
+  {{- if .Schedule }}
   schedule: {{ .Schedule }}
+  {{- end }}
+  {{- if .Repeats }}
   repeats: {{ .Repeats }}
-  variables:
-  {{- range $key, $value := .Variables }}
-  - name: {{ $key }}
-    value: {{ $value.Value }}
-    {{- if $value.Type_ }}
-    type: {{ $value.Type_ }}
+  {{- end }}
+  {{- if .ExecutionRequest }}
+  executionRequest:
+    {{- if .ExecutionRequest.Name }}
+    name: {{ .ExecutionRequest.Name }}
     {{- end }}
-    {{- if $value.SecretRef }}
-    secretRef:
-      namespace: {{ $value.SecretRef.Namespace }}
-      name: {{ $value.SecretRef.Name }}
-      key: {{ $value.SecretRef.Key }}
+    variables:
+    {{- range $key, $value := .ExecutionRequest.Variables }}
+    - name: {{ $key }}
+      {{- if $value.Value }}
+      value: {{ $value.Value }}
+      {{- end }}
+      {{- if $value.Type_ }}
+      type: {{ $value.Type_ }}
+      {{- end }}
+      {{- if $value.SecretRef }}
+      secretRef:
+        {{- if $value.SecretRef.Namespace }}
+        namespace: {{ $value.SecretRef.Namespace }}
+        {{- end }}
+        {{- if $value.SecretRef.Name }}
+        name: {{ $value.SecretRef.Name }}
+        {{- end }}
+        {{- if $value.SecretRef.Key }}
+        key: {{ $value.SecretRef.Key }}
+        {{- end }}
+      {{- end }}
     {{- end }}
+    {{- if .ExecutionRequest.HttpProxy }}
+    httpProxy: {{ .ExecutionRequest.HttpProxy }}
+    {{- end }}
+    {{- if .ExecutionRequest.HttpsProxy }}
+    httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+    {{- end}}
   {{- end }}

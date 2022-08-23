@@ -9,8 +9,9 @@ import (
 )
 
 var DefaultConfig = Data{
-	AnalyticsEnabled: true,
+	TelemetryEnabled: true,
 	Namespace:        "testkube",
+	APIURI:           "http://localhost:8088",
 	OAuth2Data: OAuth2Data{
 		Provider: oauth.GithubProviderType,
 	},

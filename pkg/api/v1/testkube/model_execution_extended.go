@@ -16,17 +16,24 @@ func NewExecutionWithID(id, testType, testName string) Execution {
 	}
 }
 
-func NewExecution(testNamespace, testName, executionName, testType string, content *TestContent, result ExecutionResult, variables map[string]Variable, labels map[string]string) Execution {
+func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
+	executionNumber int32, content *TestContent, result ExecutionResult,
+	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
+	labels map[string]string) Execution {
 	return Execution{
-		Id:              primitive.NewObjectID().Hex(),
-		TestName:        testName,
-		TestNamespace:   testNamespace,
-		Name:            executionName,
-		TestType:        testType,
-		ExecutionResult: &result,
-		Variables:       variables,
-		Content:         content,
-		Labels:          labels,
+		Id:                  primitive.NewObjectID().Hex(),
+		TestName:            testName,
+		TestSuiteName:       testSuiteName,
+		TestNamespace:       testNamespace,
+		Name:                executionName,
+		Number:              int32(executionNumber),
+		TestType:            testType,
+		ExecutionResult:     &result,
+		Variables:           variables,
+		TestSecretUUID:      testSecretUUID,
+		TestSuiteSecretUUID: testSuiteSecretUUID,
+		Content:             content,
+		Labels:              labels,
 	}
 }
 
@@ -52,7 +59,7 @@ func NewQueuedExecution() *Execution {
 type Executions []Execution
 
 func (executions Executions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Type", "Status", "Labels"}
+	header = []string{"Id", "Name", "Test Name", "Type", "Status", "Labels"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -62,6 +69,7 @@ func (executions Executions) Table() (header []string, output [][]string) {
 
 		output = append(output, []string{
 			e.Id,
+			e.Name,
 			e.TestName,
 			e.TestType,
 			status,

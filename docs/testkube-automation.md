@@ -5,7 +5,27 @@
 In order to automate Testkube runs, access to a  K8S cluster is needed, for example, a configured environment with the set up context and kubeconfig for communication with the K8S cluster.  
 Testkube uses your K8S context and access settings in order to interact with the cluster and tests resources, etc.
 
-In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHUb Actions and GKE K8S.
+In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHub Actions and GKE K8S.
+
+## **Teskube gihub action**
+
+The testkube github action is available here <https://github.com/marketplace/actions/testkube-cli> and it makes possible running the Testkube cli commands in a github workflow. 
+Following example shows how to create a test using the github action, a more complex example can be found [here](https://github.com/kubeshop/helm-charts/blob/59054b87f83f890f4f62cf966ac63fd7e46de336/.github/workflows/testkube-docker-action.yaml).
+
+```yaml
+
+ # Creating test
+- name: Create test
+  id: create_test
+  uses: kubeshop/testkube-docker-action@v1
+  with:
+    command: create
+    resource: test
+    namespace: testkube
+    parameters: "--type k6/script --name testkube-github-action"
+    stdin: "import http from 'k6/http';\nimport { sleep,check } from 'k6';\n\nexport default function () {\n  const baseURI = `${__ENV.TESTKUBE_HOMEPAGE_URI || 'https://testkube.kubeshop.io'}`\n  check(http.get(`${baseURI}/`), {\n    'check testkube homepage home page': (r) =>\n      r.body.includes('Your Friendly Cloud-Native Testing Framework for Kubernetes'),\n  });\n\n\n  sleep(1);\n}\n"
+
+```
 
 ## **Configuring your GH Actions for the Access to GKE**
 
@@ -19,7 +39,7 @@ To obtain set up access to a GKE (Google Kubernetes Engine) from GH (GitHub) act
 
 To install on Linux or MacOS, run:
 
-```sh
+```yaml
       # Deploy into configured GKE cluster:
       - name: Deploy
         run: |-
@@ -34,7 +54,7 @@ Testkube tests can be easily re-used with minimal modifications according to you
 
 To run tests on Linux or MacOS:
 
-```sh
+```yaml
 name: Running Testkube Tests.
 
 on:
@@ -84,22 +104,21 @@ jobs:
           location: ${{ env.GKE_ZONE_DEV }}
           credentials: ${{ secrets.GKE_SA_KEY }}
 
-      # Installing Testkube CLI:
-      - name: Install Testkube CLI
-        run: |-
-          bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
-          
       # Run Testkube test on a GKE cluster
-      - name: Run Tests
-        run: |-
-          kubectl testkube run test TEST_NAME
+      - name: Run test
+        id: run_test
+        uses: kubeshop/testkube-docker-action@v1
+        with:
+          command: run
+          resource: test
+          parameters: TEST_NAME
 ```
 
 Along with the `kubectl` command, you can pass all the standard K8s parameters such as `--namespace`, etc.
 
 If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` blocks as follow:
 
-```sh
+```yaml
 ...
       - name: Install Helm
         uses: azure/setup-helm@v1

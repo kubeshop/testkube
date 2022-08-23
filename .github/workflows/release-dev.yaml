@@ -6,26 +6,6 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  # release_creation:
-  #   name: Prepares Release on GitHub
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     id: ${{ steps.main_step.outputs.id }}
-  #   steps:
-  #     - name: Create Release
-  #       id: main_step
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ github.ref }}
-  #         release_name: testkube CLI ${{ github.ref }}
-  #         body: |
-  #           Changes in this Release
-  #           - Releasing new version of the testkube CLI for Kubectl.
-  #         draft: false
-  #         prerelease: false
-
   pre_build:
     name: Pre-build
     runs-on: ubuntu-latest
@@ -166,6 +146,8 @@ jobs:
         run: |
           Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
           Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
+          Copy-Item 'build\installer\windows\tk.bat' '.\tk.bat'
+          Copy-Item 'build\installer\windows\testkube.bat' '.\testkube.bat'          
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
           & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
@@ -220,7 +202,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
 
-    steps:      
+    steps:
       - name: Get Intermediate Artifacts
         uses: actions/download-artifact@master
         with:
@@ -246,7 +228,7 @@ jobs:
           curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
-          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube
+          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
 
           ### Create snapshot
           curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots

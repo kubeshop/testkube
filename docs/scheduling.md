@@ -41,31 +41,7 @@ Output:
   scheduled-test    | postman/collection | 2022-04-13 12:37:40 +0000 UTC |        | */1 * * * * |        |                           
 ```
 
-The scheduled test was created but it was not yet executed. 
-
-## **Run a Scheduled Test**
-
-In order to start the execution of the test on a defined schedule, use the Testkube CLI command:
-
-```sh
-kubectl testkube run test scheduled-test
-```
-
-Output:
-
-```sh
-Type          : postman/collection
-Name          : scheduled-test
-
-
-
-Test queued for execution
-
-Use the following command to get test execution details:
-$ kubectl testkube get execution 
-```
-
-Test was successfully scheduled for execution and put into the queue.
+The scheduled test was created and successfully scheduled for execution.
 Let's check a Cron job connected to this test.
 
 ```sh
@@ -179,30 +155,7 @@ Output:
   scheduled-testsuite | Run test several times |     2 |        | */1 * * * * |        |    
 ```
 
-The scheduled test suite was created, but it was not yet executed. 
-
-## **Run a Scheduled Test Suite**
-
-In order start the execution of the test suite on a defined schedule, we need to run it using Testkube CLI command:
-
-```sh
-kubectl testkube run testsuite scheduled-testsuite
-```
-
-Output:
-
-```sh
-Name          : scheduled-testsuite
-Status        : queued
-
-
-Test Suite queued for execution
-
-Use the following command to get test execution details:
-$ kubectl testkube get tse 
-```
-
-The Test Suite was successfully scheduled for execution and put into the queue.
+The scheduled test suite was created and successfully scheduled for execution.
 We will skip the Cron job details, they are fully similar to test one described above.
 
 ## **Getting Scheduled Test Suite Results**

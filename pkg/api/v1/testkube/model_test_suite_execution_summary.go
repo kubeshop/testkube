@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// test execution summary
+// Test execution summary
 type TestSuiteExecutionSummary struct {
 	// execution id
 	Id string `json:"id"`
@@ -29,6 +29,6 @@ type TestSuiteExecutionSummary struct {
 	// test suite execution duration
 	Duration  string                          `json:"duration,omitempty"`
 	Execution []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
-	// test suite execution labels
+	// test suite and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

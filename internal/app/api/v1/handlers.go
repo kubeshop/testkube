@@ -1,16 +1,16 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/pkg/analytics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/oauth"
-	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 const (
@@ -87,19 +87,39 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 	}
 }
 
-// AnalyticsHandler is analytics recording middleware
-func (s TestkubeAPI) AnalyticsHandler() fiber.Handler {
+// DebugHandler is a handler to get debug information
+func (s TestkubeAPI) DebugHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		go func(host, path, method string) {
-			out, err := analytics.SendAnonymousAPIRequestInfo(host, path, api.Version, method, s.ClusterID)
-			l := s.Log.With("measurmentId", analytics.TestkubeMeasurementID, "secret", text.Obfuscate(analytics.TestkubeMeasurementSecret), "path", path)
-			if err != nil {
-				l.Debugw("sending analytics event error", "error", err)
-			} else {
-				l.Debugw("anonymous info to tracker sent", "output", out)
-			}
-		}(c.Hostname(), c.Route().Path, c.Method()) // log route path in form /v1/tests/:name
+		clientSet, err := k8sclient.ConnectToK8s()
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not connect to cluster: %w", err))
+		}
 
-		return c.Next()
+		clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get cluster version: %w", err))
+		}
+
+		apiLogs, err := k8sclient.GetAPIServerLogs(c.Context(), clientSet, s.Namespace)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get api server logs: %w", err))
+		}
+
+		operatorLogs, err := k8sclient.GetOperatorLogs(c.Context(), clientSet, s.Namespace)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get operator logs: %w", err))
+		}
+
+		executionLogs, err := s.GetLatestExecutionLogs(c.Context())
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get execution logs: %w", err))
+		}
+
+		return c.JSON(testkube.DebugInfo{
+			ClusterVersion: clusterVersion,
+			ApiLogs:        apiLogs,
+			OperatorLogs:   operatorLogs,
+			ExecutionLogs:  executionLogs,
+		})
 	}
 }
