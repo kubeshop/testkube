@@ -65,6 +65,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -120,4 +121,5 @@ spec:
     {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
     {{- end }}
+  {{- end }}
   {{- end }}
