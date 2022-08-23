@@ -48,7 +48,7 @@ kubectl-testkube create test [flags]
       --crd-only            generate only crd
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             show additional debug messages
 ```
 

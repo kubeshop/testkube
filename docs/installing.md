@@ -113,7 +113,8 @@ The above command will install the following components in your Kubernetes clust
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
 6. Dashboard - default (can be disabled with `--no-dasboard` flag)
-7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag). It will not be installed, if it's already installed to your Kubernetes cluster
+7. Jetstack certificate manager for `testkube` namespace (can be disabled with `--no-jetstack` flag). It will not be installed, if it's already installed to your Kubernetes cluster(DEPRECATED since v1.5)
+
 
 Confirm that Testkube is running:
 
@@ -177,8 +178,9 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
-We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration. 
-If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).
+We heavily depend on [jetstack cert-manager](https://github.com/jetstack/cert-manager) for webhooks TLS configuration.(DEPRECATED Since v1.5)
+
+If it is not installed in your cluster, then please install it with the official instructions [here](https://cert-manager.io/docs/installation/).(DEPRECATED Since v1.5)
 
 To install the `testkube` chart:
 

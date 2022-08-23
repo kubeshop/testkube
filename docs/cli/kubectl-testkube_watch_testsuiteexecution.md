@@ -23,7 +23,7 @@ kubectl-testkube watch testsuiteexecution <executionID> [flags]
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             show additional debug messages
 ```
 
