@@ -12,4 +12,9 @@ spec:
   {{- range .Events }}
   - {{ . }}
   {{- end }}
+  {{- if .Uri }}
   uri: {{ .Uri }}
+  {{- end }}
+  {{- if .Selector }}
+  selector: {{ .Selector }}
+  {{- end }}

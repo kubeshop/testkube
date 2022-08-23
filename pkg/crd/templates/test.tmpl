@@ -8,48 +8,88 @@ metadata:
     {{ $key }}: {{ $value }}
   {{- end }}
 spec:
+  {{- if .Type_ }}
   type: {{ .Type_ }}
+  {{- end }}
   {{- if .Content }}
   content:
+    {{- if .Content.Type_ }}
     type: {{ .Content.Type_ }}
+    {{- end }}
     {{- if .Content.Repository }}
     repository:
+      {{- if .Content.Repository.Type_ }}
       type: {{ .Content.Repository.Type_ }}
+      {{- end }}
+      {{- if .Content.Repository.Uri }}
       uri: {{ .Content.Repository.Uri }}
+      {{- end }}
+      {{- if .Content.Repository.Branch }}
       branch: {{ .Content.Repository.Branch }}
-      commit: {{ .Content.Repository.Commit }}      
+      {{- end }}
+      {{- if .Content.Repository.Commit }}
+      commit: {{ .Content.Repository.Commit }}
+      {{- end }}
+      {{- if .Content.Repository.Path }}
       path: {{ .Content.Repository.Path }}
+      {{- end }}
       {{- if .Content.Repository.UsernameSecret }}
       usernameSecret:
+        {{- if .Content.Repository.UsernameSecret.Name }}
         name: {{ .Content.Repository.UsernameSecret.Name }}
+        {{- end }}
+        {{- if .Content.Repository.UsernameSecret.Key }}
         key: {{ .Content.Repository.UsernameSecret.Key }}
+        {{- end }}
       {{- end }}
       {{- if .Content.Repository.TokenSecret }}
       tokenSecret:
+        {{- if .Content.Repository.TokenSecret.Name }}
         name: {{ .Content.Repository.TokenSecret.Name }}
+        {{- end }}
+        {{- if .Content.Repository.TokenSecret.Key }}
         key: {{ .Content.Repository.TokenSecret.Key }}
+        {{- end }}
       {{- end }}
     {{- end }}
+    {{- if .Content.Data }}
     data: {{ .Content.Data }}
+    {{- end }}
+    {{- if .Content.Uri }}
     uri: {{ .Content.Uri }}
+    {{- end }}
   {{- end }}
+  {{- if .Schedule }}
   schedule: {{ .Schedule }}
+  {{- end }}
   {{- if .ExecutionRequest }}
   executionRequest:
+    {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
+    {{- end }}
+    {{- if .ExecutionRequest.VariablesFile }}
     variablesFile: {{ .ExecutionRequest.VariablesFile }}
+    {{- end }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
     - name: {{ $key }}
+      {{- if $value.Value }}
       value: {{ $value.Value }}
+      {{- end }}
       {{- if $value.Type_ }}
       type: {{ $value.Type_ }}
       {{- end }}
       {{- if $value.SecretRef }}
       secretRef:
+        {{- if $value.SecretRef.Namespace }}
         namespace: {{ $value.SecretRef.Namespace }}
+        {{- end }}
+        {{- if $value.SecretRef.Name }}
         name: {{ $value.SecretRef.Name }}
+        {{- end }}
+        {{- if $value.SecretRef.Key }}
         key: {{ $value.SecretRef.Key }}
+        {{- end }}
       {{- end }}
     {{- end }}
     args:
@@ -64,6 +104,10 @@ spec:
     {{- range $key, $value := .ExecutionRequest.SecretEnvs }}
       {{ $key }}: {{ $value }}
     {{- end }}
+    {{- if .ExecutionRequest.HttpProxy }}
     httpProxy: {{ .ExecutionRequest.HttpProxy }}
+    {{- end }}
+    {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+    {{- end }}
   {{- end }}
