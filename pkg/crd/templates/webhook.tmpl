@@ -10,7 +10,7 @@ metadata:
   {{- end }}
   {{- end }}
 spec:
-  {{ if ne (len .Events) 0 }}
+  {{- if ne (len .Events) 0 }}
   events:
   {{- range .Events }}
   - {{ . }}
