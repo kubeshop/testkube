@@ -8,6 +8,7 @@ import (
 
 type filter struct {
 	name       string
+	lastNDays  int
 	startDate  *time.Time
 	endDate    *time.Time
 	statuses   testkube.TestSuiteExecutionStatuses
@@ -24,6 +25,11 @@ func NewExecutionsFilter() *filter {
 
 func (f *filter) WithName(name string) *filter {
 	f.name = name
+	return f
+}
+
+func (f *filter) WithLastNDays(days int) *filter {
+	f.lastNDays = days
 	return f
 }
 
@@ -72,6 +78,14 @@ func (f filter) Name() string {
 
 func (f filter) NameDefined() bool {
 	return f.name != ""
+}
+
+func (f filter) LastNDaysDefined() bool {
+	return f.lastNDays > 0
+}
+
+func (f filter) LastNDays() int {
+	return f.lastNDays
 }
 
 func (f filter) StartDateDefined() bool {

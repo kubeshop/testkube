@@ -12,6 +12,8 @@ const PageDefaultLimit int = 100
 type Filter interface {
 	Name() string
 	NameDefined() bool
+	LastNDays() int
+	LastNDaysDefined() bool
 	StartDate() time.Time
 	StartDateDefined() bool
 	EndDate() time.Time
