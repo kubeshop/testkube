@@ -22,7 +22,7 @@ kubectl-testkube get artifact <executionID> [flags]
       --namespace string     Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled        enable oauth
   -o, --output string        output type can be one of json|yaml|pretty|go-template (default "pretty")
-      --telemetry-enabled    enable collection of anonumous telemetry data
+      --telemetry-enabled    enable collection of anonumous telemetry data (default true)
       --verbose              show additional debug messages
 ```
 
