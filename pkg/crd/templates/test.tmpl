@@ -3,9 +3,11 @@ kind: Test
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
   labels:
   {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
+  {{- end }}
   {{- end }}
 spec:
   {{- if .Type_ }}
@@ -70,6 +72,7 @@ spec:
     {{- if .ExecutionRequest.VariablesFile }}
     variablesFile: {{ .ExecutionRequest.VariablesFile }}
     {{- end }}
+    {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
     - name: {{ $key }}
@@ -92,17 +95,24 @@ spec:
         {{- end }}
       {{- end }}
     {{- end }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.Args) 0 }}
     args:
     {{- range .ExecutionRequest.Args }}
       - {{ . }}
     {{- end }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.Envs) 0 }}
     envs:
     {{- range $key, $value := .ExecutionRequest.Envs }}
       {{ $key }}: {{ $value }}
     {{- end }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.SecretEnvs) 0 }}
     secretEnvs:
     {{- range $key, $value := .ExecutionRequest.SecretEnvs }}
       {{ $key }}: {{ $value }}
+    {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.HttpProxy }}
     httpProxy: {{ .ExecutionRequest.HttpProxy }}

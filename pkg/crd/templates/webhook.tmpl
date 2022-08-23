@@ -3,14 +3,18 @@ kind: Webhook
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}  
   labels:
   {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
   {{- end }}
+  {{- end }}
 spec:
+  {{ if ne (len .Events) 0 }}
   events:
   {{- range .Events }}
   - {{ . }}
+  {{- end }}
   {{- end }}
   {{- if .Uri }}
   uri: {{ .Uri }}
