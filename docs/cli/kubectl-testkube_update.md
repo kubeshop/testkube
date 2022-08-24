@@ -19,7 +19,7 @@ kubectl-testkube update <resourceName> [flags]
   -c, --client string       client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
+      --telemetry-enabled   enable collection of anonumous telemetry data
       --verbose             show additional debug messages
 ```
 
