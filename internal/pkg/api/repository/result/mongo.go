@@ -302,6 +302,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		conditions = append(conditions, bson.M{"testname": filter.TestName()})
 	}
 
+	if filter.LastNDaysDefined() {
+		startTimeQuery["$gte"] = time.Now().Add(-time.Duration(filter.LastNDays()) * 24 * time.Hour)
+	}
+
 	if filter.StartDateDefined() {
 		startTimeQuery["$gte"] = filter.StartDate()
 	}

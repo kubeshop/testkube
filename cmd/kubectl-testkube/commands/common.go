@@ -37,52 +37,14 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 }
 
 type HelmUpgradeOrInstalTestkubeOptions struct {
-	Name, Namespace, Chart, Values            string
-	NoDashboard, NoMinio, NoJetstack, NoMongo bool
+	Name, Namespace, Chart, Values string
+	NoDashboard, NoMinio, NoMongo  bool
 }
 
 func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) error {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
-	}
-
-	if !options.NoJetstack {
-		_, err = process.Execute("kubectl", "get", "crds", "certificates.cert-manager.io")
-		if err != nil && !strings.Contains(err.Error(), "Error from server (NotFound)") {
-			return err
-		}
-
-		if err != nil {
-			ui.Info("Helm installing jetstack cert manager")
-			_, err = process.Execute(helmPath, "repo", "add", "jetstack", "https://charts.jetstack.io")
-			if err != nil && !strings.Contains(err.Error(), "Error: repository name (jetstack) already exists") {
-				return err
-			}
-
-			_, err = process.Execute(helmPath, "repo", "update")
-			if err != nil {
-				return err
-			}
-
-			command := []string{"upgrade", "--install",
-				"jetstack", "jetstack/cert-manager",
-				"--namespace", options.Namespace,
-				"--create-namespace",
-				"--version", "v1.7.1",
-				"--set", "installCRDs=true",
-			}
-
-			out, err := process.Execute(helmPath, command...)
-			if err != nil {
-				return err
-			}
-
-			ui.Info("Helm install jetstack output", string(out))
-		} else {
-			ui.Info("Found existing crd certificates.cert-manager.io. Assume that jetstack cert manager is already installed. " +
-				"Skip its installation")
-		}
 	}
 
 	ui.Info("Helm installing testkube framework")
@@ -121,6 +83,5 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
-	cmd.Flags().BoolVar(&options.NoJetstack, "no-jetstack", false, "don't install Jetstack")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 }

@@ -3,16 +3,28 @@ kind: Executor
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
   labels:
   {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
   {{- end }}
+  {{- end }}
 spec:
+  {{- if ne (len .Types) 0 }}
   types:
   {{- range .Types }}
   - {{ . }}
-  {{- end }}  
+  {{- end }}
+  {{- end }}
+  {{- if .ExecutorType }}
   executor_type: {{ .ExecutorType }}
+  {{- end }}
+  {{- if .Uri }}
   uri: {{ .Uri }}
+  {{- end }}
+  {{- if .Image }}
   image: {{ .Image }}
+  {{- end }}
+  {{- if .JobTemplate }}
   job_template: {{ .JobTemplate }}
+  {{- end }}

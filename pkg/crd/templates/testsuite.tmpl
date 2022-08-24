@@ -3,70 +3,120 @@ kind: TestSuite
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
   labels:
   {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
   {{- end }}
+  {{- end }}
 spec:
+  {{- if .Description }}
   description: {{ .Description }}
+  {{- end }}
+  {{- if ne (len .Before) 0 }}
   before:
   {{- range .Before }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name}}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end }}
     {{- end }}
   {{- end }}
+  {{- end }}
+  {{- if ne (len .Steps) 0 }}
   steps:
   {{- range .Steps }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name }}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end}}
     {{- end }}
   {{- end }}
+  {{- end }}
+  {{- if ne (len .After) 0 }}
   after:
   {{- range .After }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
     execute:
+      {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
+      {{- end }}
+      {{- if .Execute.Name }}
       name: {{ .Execute.Name }}
+      {{- end }}
     {{- end }}
     {{- if .Delay }}
     delay:
+      {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
+      {{- end }}
     {{- end }}
   {{- end }}
+  {{- end }}
+  {{- if .Schedule }}
   schedule: {{ .Schedule }}
+  {{- end }}
+  {{- if .Repeats }}
   repeats: {{ .Repeats }}
+  {{- end }}
   {{- if .ExecutionRequest }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) }}
   executionRequest:
+    {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
     - name: {{ $key }}
+      {{- if $value.Value }}
       value: {{ $value.Value }}
+      {{- end }}
       {{- if $value.Type_ }}
       type: {{ $value.Type_ }}
       {{- end }}
       {{- if $value.SecretRef }}
       secretRef:
+        {{- if $value.SecretRef.Namespace }}
         namespace: {{ $value.SecretRef.Namespace }}
+        {{- end }}
+        {{- if $value.SecretRef.Name }}
         name: {{ $value.SecretRef.Name }}
+        {{- end }}
+        {{- if $value.SecretRef.Key }}
         key: {{ $value.SecretRef.Key }}
+        {{- end }}
       {{- end }}
     {{- end }}
+    {{- end }}
+    {{- if .ExecutionRequest.HttpProxy }}
     httpProxy: {{ .ExecutionRequest.HttpProxy }}
+    {{- end }}
+    {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+    {{- end}}
+  {{- end }}
   {{- end }}

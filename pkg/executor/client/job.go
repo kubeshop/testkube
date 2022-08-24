@@ -139,41 +139,6 @@ type JobOptions struct {
 	TokenSecret    *testkube.SecretRef
 }
 
-// Watch will get valid execution after async Execute, execution will be returned when success or error occurs
-// Worker should set valid state for success or error after test completion
-// TODO add timeout - pass context with timeout
-func (c JobExecutor) Watch(id string) (events chan ResultEvent) {
-	events = make(chan ResultEvent)
-
-	go func() {
-		ticker := time.NewTicker(WatchInterval)
-		for range ticker.C {
-			result, err := c.Get(id)
-
-			events <- ResultEvent{
-				Result: result,
-				Error:  err,
-			}
-
-			if err != nil || result.IsCompleted() {
-				close(events)
-				return
-			}
-		}
-	}()
-
-	return events
-}
-
-// Get returns execution result by execution id
-func (c JobExecutor) Get(id string) (execution testkube.ExecutionResult, err error) {
-	exec, err := c.Repository.Get(context.Background(), id)
-	if err != nil {
-		return testkube.ExecutionResult{}, err
-	}
-	return *exec.ExecutionResult, nil
-}
-
 // Logs returns job logs stream channel using kubernetes api
 func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
@@ -205,12 +170,12 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 
 	result = testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err = c.CreateJob(ctx, execution, options)
+	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -244,11 +209,11 @@ func (c JobExecutor) Execute(execution testkube.Execution, options ExecuteOption
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
-func (c JobExecutor) ExecuteSync(execution testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err = c.CreateJob(ctx, execution, options)
+	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -294,7 +259,7 @@ func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
@@ -339,19 +304,19 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 
 }
 
-func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution testkube.Execution, result *testkube.ExecutionResult) {
+func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult) {
 	l.Debug("stopping execution")
 	execution.Stop()
 	err := c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
 	if err != nil {
-		l.Errorw("Update execution result erorr", "error", err)
+		l.Errorw("Update execution result error", "error", err)
 	}
 
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(execution)
+	c.metrics.IncExecuteTest(*execution)
 
-	err = c.Emitter.NotifyAll(testkube.TestkubeEventEndTest, execution)
+	err = c.Emitter.NotifyAll(testkube.TestkubeEventEndTest, *execution)
 	if err != nil {
 		c.Log.Errorw("Notify events error", "error", err)
 	}

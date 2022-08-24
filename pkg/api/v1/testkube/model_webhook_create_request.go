@@ -15,6 +15,8 @@ type WebhookCreateRequest struct {
 	Namespace string              `json:"namespace,omitempty"`
 	Uri       string              `json:"uri"`
 	Events    []TestkubeEventType `json:"events,omitempty"`
+	// Labels to filter for tests and test suites
+	Selector string `json:"selector,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

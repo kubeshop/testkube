@@ -21,7 +21,7 @@ kubectl-testkube delete test [testName] [flags]
   -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string    kubernetes namespace (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data
+      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
       --verbose             should I show additional debug messages
 ```
 
