@@ -251,7 +251,7 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 					Namespace: execution.TestNamespace,
 					Name:      v.SecretRef.Name,
 					Key:       v.SecretRef.Key,
-				}				
+				}
 			} else {
 				obfuscated.SecretRef = &testkube.SecretRef{
 					Namespace: execution.TestNamespace,
