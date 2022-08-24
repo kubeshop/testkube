@@ -246,10 +246,18 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 		if v.IsSecret() {
 			obfuscated := execution.Variables[k]
 			obfuscated.Value = ""
-			obfuscated.SecretRef = &testkube.SecretRef{
-				Namespace: execution.TestNamespace,
-				Name:      secretName,
-				Key:       v.Name,
+			if v.SecretRef != nil {
+				obfuscated.SecretRef = &testkube.SecretRef{
+					Namespace: execution.TestNamespace,
+					Name:      v.SecretRef.Name,
+					Key:       v.SecretRef.Key,
+				}				
+			} else {
+				obfuscated.SecretRef = &testkube.SecretRef{
+					Namespace: execution.TestNamespace,
+					Name:      secretName,
+					Key:       v.Name,
+				}
 			}
 			execution.Variables[k] = obfuscated
 			secrets[v.Name] = v.Value

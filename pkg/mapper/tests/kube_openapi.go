@@ -37,7 +37,11 @@ func MergeVariablesAndParams(variables map[string]testsv3.Variable, params map[s
 
 	for k, v := range variables {
 		if v.Type_ == commonv1.VariableTypeSecret {
-			out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+			if v.ValueFrom.SecretKeyRef == nil {
+				out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewSecretVariableReference(v.Name, v.ValueFrom.SecretKeyRef.Name, v.ValueFrom.SecretKeyRef.Key)
+			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
 			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
