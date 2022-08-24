@@ -25,6 +25,17 @@ func NewSecretVariable(name, value string) Variable {
 	}
 }
 
+func NewSecretVariableReference(name, secret, key string) Variable {
+	return Variable{
+		Name:  name,
+		Type_: VariableTypeSecret,
+		SecretRef: &SecretRef{
+			Name: secret,
+			Key:  key,
+		},
+	}
+}
+
 func (v *Variable) IsSecret() bool {
 	return *v.Type_ == *VariableTypeSecret
 }
