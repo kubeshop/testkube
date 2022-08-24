@@ -2675,6 +2675,9 @@ components:
           type: string
           description: test execution custom name
           example: "testing with 1000 users"
+        number:
+          type: integer
+          description: test suite execution number
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
