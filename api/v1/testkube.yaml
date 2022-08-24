@@ -2861,9 +2861,14 @@ components:
       type: object
       required:
         - type
+        - id
       properties:
+        id:
+          type: string
+          description: UUID of event
         uri:
           type: string
+          description: DEPERECATED event uri remove after rewrite @TODO
         type:
           $ref: "#/components/schemas/TestkubeEventType"
         execution:
@@ -2878,6 +2883,22 @@ components:
         - end-testsuite
         - test-failed
         - testsuite-failed
+
+    TestkubeEventResult:
+      description: Listener result after sending particular event
+      type: object
+      required:
+        - type
+      properties:
+        id:
+          type: string
+          description: UUID of event
+        error:
+          type: string
+          description: error message if any
+        result:
+          type: string
+          description: result of event
 
     TestWithExecution:
       description: Test with latest Execution result
