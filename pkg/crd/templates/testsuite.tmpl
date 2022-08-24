@@ -3,14 +3,17 @@ kind: TestSuite
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
   labels:
   {{- range $key, $value := .Labels }}
     {{ $key }}: {{ $value }}
+  {{- end }}
   {{- end }}
 spec:
   {{- if .Description }}
   description: {{ .Description }}
   {{- end }}
+  {{- if ne (len .Before) 0 }}
   before:
   {{- range .Before }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
@@ -30,6 +33,8 @@ spec:
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- end }}
+  {{- if ne (len .Steps) 0 }}
   steps:
   {{- range .Steps }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
@@ -49,6 +54,8 @@ spec:
       {{- end}}
     {{- end }}
   {{- end }}
+  {{- end }}
+  {{- if ne (len .After) 0 }}
   after:
   {{- range .After }}
   - stopTestOnFailure: {{ .StopTestOnFailure }}
@@ -68,6 +75,7 @@ spec:
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- end }}
   {{- if .Schedule }}
   schedule: {{ .Schedule }}
   {{- end }}
@@ -75,10 +83,12 @@ spec:
   repeats: {{ .Repeats }}
   {{- end }}
   {{- if .ExecutionRequest }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
     {{- end }}
+    {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
     - name: {{ $key }}
@@ -101,10 +111,12 @@ spec:
         {{- end }}
       {{- end }}
     {{- end }}
+    {{- end }}
     {{- if .ExecutionRequest.HttpProxy }}
     httpProxy: {{ .ExecutionRequest.HttpProxy }}
     {{- end }}
     {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
     {{- end}}
+  {{- end }}
   {{- end }}
