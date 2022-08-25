@@ -33,6 +33,11 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 	return
 }
 
+func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.TestSuiteExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+	return
+}
+
 func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testSuiteName}).Decode(&result)
 	return
