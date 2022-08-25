@@ -9,8 +9,9 @@ func NewInitCmd() *cobra.Command {
 	var options HelmUpgradeOrInstalTestkubeOptions
 
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Install Helm chart registry in current kubectl context and update dependencies",
+		Use:     "init",
+		Short:   "Install Helm chart registry in current kubectl context and update dependencies",
+		Aliases: []string{"install"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")
 			ui.Logo()
