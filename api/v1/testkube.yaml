@@ -2678,6 +2678,7 @@ components:
         number:
           type: integer
           description: test suite execution number
+          example: 1
         namespace:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
