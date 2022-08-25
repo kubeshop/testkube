@@ -215,5 +215,5 @@ The following Helm defaults are used in the `testkube` chart:
 Uninstall Testkube Server components using the uninstall command.
 
 ```sh
-testkube uninstall
+testkube purge
 ```
