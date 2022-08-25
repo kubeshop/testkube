@@ -24,7 +24,7 @@ You can install Testkube from Homebrew:
 ```sh
 brew install testkube
 ```
-Or directly from our tap. The Homebrew mantainers take a few days/or week to approve each one of our releases so you can use our tap to make sure you always have the most recent release.
+Or directly from our tap. The Homebrew mantainers take a few days or a week to approve each one of our releases so you can use our tap to make sure you always have the most recent release.
 ```sh
 brew tap kubeshop/homebrew-testkube
 brew install kubeshop/testkube/testkube
