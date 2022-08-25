@@ -80,7 +80,7 @@ To deploy Testkube to your K8s cluster you will need the following packages inst
 
 
 ## Using Testkube's CLI to deploy the Server Components
-The Testkube CLI provides an install command to install the Testkube server components in your cluster easly.
+The Testkube CLI provides an command to deploy the Testkube server components to your cluster easly.
 Run:
 ```shell
 testkube init
@@ -211,9 +211,7 @@ The following Helm defaults are used in the `testkube` chart:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
 ## **Uninstall Testkube**
-
-Uninstall Testkube Server components using the uninstall command.
-
-```sh
+Uninstall Testkube Server components using the purge command.
 testkube purge
-```
+
+
