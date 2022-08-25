@@ -5,11 +5,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewInstallCmd() *cobra.Command {
+func NewInitCmd() *cobra.Command {
 	var options HelmUpgradeOrInstalTestkubeOptions
 
 	cmd := &cobra.Command{
-		Use:   "install",
+		Use:   "init",
 		Short: "Install Helm chart registry in current kubectl context and update dependencies",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")

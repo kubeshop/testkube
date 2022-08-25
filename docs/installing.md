@@ -97,12 +97,12 @@ We have plans to build installers for the most popular Operating Systems and sys
 [Helm](https://helm.sh) must be installed to use charts.  
 Please refer to  Helm's [documentation](https://helm.sh/docs) to get started.
 
-The Testkube kubectl plugin provides an install command to install Testkube in your cluster. Note: you must have helm installed
+The Testkube kubectl plugin provides an init command to install Testkube in your cluster. Note: you must have helm installed
 
 Run:
 
 ```shell
-kubectl testkube install
+kubectl testkube init
 ```
 
 The above command will install the following components in your Kubernetes cluster:
@@ -240,8 +240,8 @@ The following Helm defaults are used in the `testkube` chart:
 
 ## **Uninstall Testkube**
 
-Uninstall Testkube using the uninstall command integrated into the Testkube plugin.
+Uninstall Testkube using the purge command integrated into the Testkube plugin.
 
 ```sh
-kubectl testkube uninstall
+kubectl testkube purge
 ```

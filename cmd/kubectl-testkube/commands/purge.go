@@ -6,13 +6,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewUninstallCmd() *cobra.Command {
+func NewPurgeCmd() *cobra.Command {
 	var name, namespace string
 
 	cmd := &cobra.Command{
-		Use:   "uninstall",
-		Short: "Uninstall Helm chart registry in current kubectl context",
-		Long:  `Uninstall Helm chart registry in current kubectl context`,
+		Use:   "purge",
+		Short: "Uninstall Helm chart registry from current kubectl context",
+		Long:  `Uninstall Helm chart registry from current kubectl context`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			ui.Verbose = true
@@ -23,7 +23,7 @@ func NewUninstallCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
-	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace where to install")
+	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace from where to uninstall")
 
 	return cmd
 }
