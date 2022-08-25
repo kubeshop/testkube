@@ -1,13 +1,11 @@
 package testkube
 
 import (
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/rand"
 )
 
 func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
@@ -21,15 +19,11 @@ func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
 }
 
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
-	name := request.Name
-	if name == "" {
-		name = fmt.Sprintf("%s.%s", testSuite.Name, rand.Name())
-	}
 
 	testExecution := TestSuiteExecution{
 		Id:         primitive.NewObjectID().Hex(),
 		StartTime:  time.Now(),
-		Name:       name,
+		Name:       request.Name,
 		Status:     TestSuiteExecutionStatusRunning,
 		SecretUUID: request.SecretUUID,
 		TestSuite:  testSuite.GetObjectRef(),

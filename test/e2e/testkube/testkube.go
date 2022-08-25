@@ -5,7 +5,7 @@ import (
 )
 
 /***
-kubectl testkube install
+kubectl testkube init
 kubectl get pods                         # should return 3 pods
 kubectl testkube version
 create new Postman collection (in Postman and save it somewhere)
