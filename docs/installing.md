@@ -210,8 +210,12 @@ The following Helm defaults are used in the `testkube` chart:
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
-## **Uninstall Testkube**
-Uninstall Testkube Server components using the purge command.
+## **Remove Testkube Server Components**
+Using helm
+```sh
+helm delete testkube
+```
+Using Testkube's CLI
+```sh
 testkube purge
-
-
+```
