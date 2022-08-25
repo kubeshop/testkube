@@ -590,8 +590,11 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		if err == mongo.ErrNoDocuments {
 			execution, err = s.TestExecutionResults.GetByName(ctx, id)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", id))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 			}
+		}
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		execution.Duration = types.FormatDuration(execution.Duration)
@@ -651,11 +654,11 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		return testsuiteExecution, err
 	}
 
-	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
-	request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
-
 	request.SecretUUID = secretUUID
 	if testSuite.ExecutionRequest != nil {
+		if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
+			request.Name = testSuite.ExecutionRequest.Name
+		}
 		if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
 			request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
 		}
@@ -663,6 +666,11 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
 			request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
 		}
+	}
+
+	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
+	if request.Name == "" {
+		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
 	}
 
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
