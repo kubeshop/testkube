@@ -83,7 +83,7 @@ To deploy Testkube to your K8s cluster you will need the following packages inst
 The Testkube CLI provides an install command to install the Testkube server components in your cluster easly.
 Run:
 ```shell
-testkube install
+testkube init
 ```
 note: you must have your KUBECONFIG ponting to the desired location of the installation.
 
