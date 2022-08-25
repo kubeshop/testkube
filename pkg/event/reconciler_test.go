@@ -3,21 +3,22 @@ package event
 import (
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/stretchr/testify/assert"
 )
 
 type DummyReconciler struct {
 }
 
-func (r DummyReconciler) Kind() ListenerKind {
-	return ListenerKind("dummy")
+func (r DummyReconciler) Kind() string {
+	return "dummy"
 }
 
-func (r DummyReconciler) Load() []Listener {
-	return []Listener{
+func (r DummyReconciler) Load() ([]common.Listener, error) {
+	return []common.Listener{
 		&DummyListener{},
 		&DummyListener{},
-	}
+	}, nil
 }
 
 func TestReconciler_Reconcile(t *testing.T) {

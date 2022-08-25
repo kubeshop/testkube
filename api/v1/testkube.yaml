@@ -2898,6 +2898,7 @@ components:
           description: error message if any
         result:
           type: string
+          format: error
           description: result of event
 
     TestWithExecution:

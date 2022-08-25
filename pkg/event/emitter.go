@@ -1,9 +1,12 @@
 package event
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -23,7 +26,7 @@ func NewEmitter() *Emitter {
 type Emitter struct {
 	Events    chan testkube.TestkubeEvent
 	Results   chan testkube.TestkubeEventResult
-	Listeners []Listener
+	Listeners []common.Listener
 	Log       *zap.SugaredLogger
 }
 
@@ -41,29 +44,34 @@ type WebhookHttpResponse struct {
 }
 
 // Notify notifies emitter with webhook
-func (s *Emitter) Register(listener Listener) {
-	s.Listeners = append(s.Listeners, listener)
+func (e *Emitter) Register(listener common.Listener) {
+	e.Listeners = append(e.Listeners, listener)
 }
 
 // Notify notifies emitter with webhook
-func (s *Emitter) Notify(event testkube.TestkubeEvent) {
-	s.Events <- event
+func (e *Emitter) Notify(event testkube.TestkubeEvent) {
+	e.Events <- event
 }
 
 // RunWorkers runs emitter workers responsible for sending HTTP requests
-func (s *Emitter) RunWorkers() {
-	s.Log.Debugw("Starting event emitter workers", "count", workersCount)
+func (e *Emitter) RunWorkers() {
+	e.Log.Debugw("Starting event emitter workers", "count", workersCount)
 	for i := 0; i < workersCount; i++ {
-		go s.RunWorker(s.Events, s.Results)
+		go e.RunWorker(e.Events, e.Results)
 	}
 }
 
-func (s *Emitter) RunWorker(events chan testkube.TestkubeEvent, result chan testkube.TestkubeEventResult) {
+func (e *Emitter) RunWorker(events chan testkube.TestkubeEvent, result chan testkube.TestkubeEventResult) {
 	// TODO consider scaling this part to goroutines - for now we can just scale workers
 	for event := range events {
-		s.Log.Infow("processing event", event.Log()...)
-		for _, listener := range s.Listeners {
-			result <- listener.Notify(event)
+		e.Log.Infow("processing event", event.Log()...)
+		for _, listener := range e.Listeners {
+
+			fmt.Printf("%+v\n", event.Valid(listener.Selector()))
+
+			if event.Valid(listener.Selector()) {
+				result <- listener.Notify(event)
+			}
 		}
 	}
 }
