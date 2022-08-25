@@ -2,7 +2,7 @@
 
 To get Testkube up and running you need to:
 
-1. Install the Testkube CLI
+1. Install the Testkube CLI.
 2. Use HELM or the Testkube CLI to to install Testkube Server components in your cluster.
 3. (optional) Configure Testkube's Dashboard UI Ingress for your ingress-controller, if needed.
 
