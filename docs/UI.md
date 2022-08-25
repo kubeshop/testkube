@@ -43,7 +43,7 @@ The **Definition** tab when **Test Suites** is selected displays the Test Suite 
 
 ## **UI Results Endpoint**
 
-To expose the results endpoint to open the UI there are two options:
+To expose the results endpoint to open the UI there are a few options:
 
 * Expose the results endpoint using an Ingress controller and use it in the UI at [https://demo.testkube.io](https://demo.testkube.io).
 * Install the dashboard together with Testkube.

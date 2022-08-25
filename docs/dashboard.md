@@ -16,7 +16,7 @@ Alternatively, the UI can be opened on your local machine using command ```sh ku
 
 ## **UI Results Endpoint**
 
-To expose the results endpoint to open the UI there are two options:
+To expose the results endpoint to open the UI there are a few options:
 
 * Expose the results endpoint using an Ingress controller and use it in the UI at [https://dashboard.testkube.io](https://dashboard.testkube.io).
 * Install the dashboard together with Testkube.
