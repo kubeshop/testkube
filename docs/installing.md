@@ -20,7 +20,7 @@ bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ## Through Package Managers
 ### **Homebrew (MacOS)**
 
-You can install Testkube from Homebrew:
+You can install Testkube from [Homebrew](https://brew.sh/):
 ```sh
 brew install testkube
 ```
@@ -33,7 +33,7 @@ brew install kubeshop/testkube/testkube
 
 ### **Chocolatey (Windows)**
 
-You can use [Chocolatey](https://chocolatey.org/install) to install  version from our own chocolatey repository .
+Using [Chocolatey](https://chocolatey.org/install)
 
 ```sh
 choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey
@@ -42,7 +42,7 @@ choco install testkube
 
 #### **APT (Debian/Ubuntu)**
 
-1. Download our public GPG key, and add them to the trusted keys:
+1. Download our public GPG key, and add it to the trusted keys:
 ```sh
 wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
 ```
@@ -62,30 +62,30 @@ sudo apt-get install -y testkube
 
 ## **Manual Download**
 
-If you don't want automatic scripts or package managers you can always do a manual install:
+If you don't want to use scripts or package managers you can always do a manual install:
 
-1. Download binary with the version of your choice and platform of your choice [here](https://github.com/kubeshop/testkube/releases)
-2. Unpack it. For example, (tar -zxvf testkube_0.6.5_Linux_arm64.tar.gz) for Linux
+1. Download the binary for the version and platform of your choice [here](https://github.com/kubeshop/testkube/releases)
+2. Unpack it. For example, in Linux use (tar -zxvf testkube_1.5.1_Linux_arm64.tar.gz)
 3. Move it to a location in the PATH. For example, `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`.
 
-For Windows, you will need to unpack the binary and add it to `%PATH%` as well.
+For Windows, you will need to unpack the binary and add it to the `%PATH%` as well.
 
 If you use a package manager that we don't support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
 
 
-# **2. Testkube Server Componets**
+# **2. Testkube Server Components**
 To deploy Testkube to your K8s cluster you will need the following packages installed:
 - [Kubectl docs](https://kubernetes.io/docs/tasks/tools/) 
 - [Helm docs](https://helm.sh/docs/intro/install/#through-package-managers)
 
 
-## Using Testkube's CLI to deploy the Server Components
-The Testkube CLI provides an command to deploy the Testkube server components to your cluster easly.
+## Using Testkube's CLI to Deploy the Server Components
+The Testkube CLI provides a command to easly deploy the Testkube server components to your cluster.
 Run:
 ```shell
 testkube init
 ```
-note: you must have your KUBECONFIG ponting to the desired location of the installation.
+note: you must have your KUBECONFIG pointing to the desired location of the installation.
 
 The above command will install the following components in your Kubernetes cluster:
 
@@ -144,7 +144,7 @@ replicaset.apps/testkube-minio-testkube-64cd475b94   1         1         1      
 
 By default Testkube is installed in the `testkube` namespace.
 
-## **Using HELM to deploy the Server Components**
+## **Using HELM to Deploy the Server Components**
 1. Add the Kubeshop Helm repository as follows:
 ```sh
 helm repo add testkube https://kubeshop.github.io/helm-charts
