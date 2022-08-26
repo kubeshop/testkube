@@ -97,22 +97,22 @@ func TestStorage(t *testing.T) {
 		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 
 		assert.NoError(err)
-		assert.Equal(int(12), filteredTotals.Results)
-		assert.Equal(int(12), filteredTotals.Failed)
-		assert.Equal(int(0), filteredTotals.Passed)
-		assert.Equal(int(0), filteredTotals.Queued)
-		assert.Equal(int(0), filteredTotals.Running)
+		assert.Equal(12, filteredTotals.Results)
+		assert.Equal(12, filteredTotals.Failed)
+		assert.Equal(0, filteredTotals.Passed)
+		assert.Equal(0, filteredTotals.Queued)
+		assert.Equal(0, filteredTotals.Running)
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false)
 
 		assert.NoError(err)
-		assert.Equal(int(21), totals.Results)
-		assert.Equal(int(12), totals.Failed)
-		assert.Equal(int(3), totals.Passed)
-		assert.Equal(int(3), totals.Queued)
-		assert.Equal(int(3), totals.Running)
+		assert.Equal(21, totals.Results)
+		assert.Equal(12, totals.Failed)
+		assert.Equal(3, totals.Passed)
+		assert.Equal(3, totals.Queued)
+		assert.Equal(3, totals.Running)
 	})
 
 	dateFilter := datefilter.NewDateFilter(oneDayAgo.Format(datefilter.DateFormatISO8601), "")
