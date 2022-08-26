@@ -143,11 +143,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStartDate(dateFilter.Start))
 
 		assert.NoError(err)
-		assert.Equal(int(14), totals.Results)
-		assert.Equal(int(8), totals.Failed)
-		assert.Equal(int(2), totals.Passed)
-		assert.Equal(int(2), totals.Queued)
-		assert.Equal(int(2), totals.Running)
+		assert.Equal(14, totals.Results)
+		assert.Equal(8, totals.Failed)
+		assert.Equal(2, totals.Passed)
+		assert.Equal(2, totals.Queued)
+		assert.Equal(2, totals.Running)
 	})
 
 	dateFilter = datefilter.NewDateFilter("", oneDayAgo.Format(datefilter.DateFormatISO8601))
@@ -165,11 +165,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithEndDate(dateFilter.End))
 
 		assert.NoError(err)
-		assert.Equal(int(7), totals.Results)
-		assert.Equal(int(4), totals.Failed)
-		assert.Equal(int(1), totals.Passed)
-		assert.Equal(int(1), totals.Queued)
-		assert.Equal(int(1), totals.Running)
+		assert.Equal(7, totals.Results)
+		assert.Equal(4, totals.Failed)
+		assert.Equal(1, totals.Passed)
+		assert.Equal(1, totals.Queued)
+		assert.Equal(1, totals.Running)
 	})
 
 	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
@@ -183,11 +183,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
-		assert.Equal(int(0), totals.Results)
-		assert.Equal(int(0), totals.Failed)
-		assert.Equal(int(0), totals.Passed)
-		assert.Equal(int(0), totals.Queued)
-		assert.Equal(int(0), totals.Running)
+		assert.Equal(0, totals.Results)
+		assert.Equal(0, totals.Failed)
+		assert.Equal(0, totals.Passed)
+		assert.Equal(0, totals.Queued)
+		assert.Equal(0, totals.Running)
 	})
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
@@ -212,11 +212,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, filter)
 
 		assert.NoError(err)
-		assert.Equal(int(2), totals.Results)
-		assert.Equal(int(0), totals.Failed)
-		assert.Equal(int(2), totals.Passed)
-		assert.Equal(int(0), totals.Queued)
-		assert.Equal(int(0), totals.Running)
+		assert.Equal(2, totals.Results)
+		assert.Equal(0, totals.Failed)
+		assert.Equal(2, totals.Passed)
+		assert.Equal(0, totals.Queued)
+		assert.Equal(0, totals.Running)
 	})
 
 	name := "someDifferentName"
@@ -235,11 +235,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
 
 		assert.NoError(err)
-		assert.Equal(int(1), totals.Results)
-		assert.Equal(int(0), totals.Failed)
-		assert.Equal(int(0), totals.Passed)
-		assert.Equal(int(0), totals.Queued)
-		assert.Equal(int(1), totals.Running)
+		assert.Equal(1, totals.Results)
+		assert.Equal(0, totals.Failed)
+		assert.Equal(0, totals.Passed)
+		assert.Equal(0, totals.Queued)
+		assert.Equal(1, totals.Running)
 	})
 
 	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
