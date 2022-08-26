@@ -126,12 +126,7 @@ paths:
   /test-suites/{id}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
       tags:
         - test-suites
         - api
@@ -159,12 +154,7 @@ paths:
 
     patch:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
       tags:
         - test-suites
         - api
@@ -207,12 +197,7 @@ paths:
         - test-suites
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
       summary: "Delete test suite"
       description: "Deletes a test suite"
       operationId: deleteTestSuite
@@ -234,22 +219,9 @@ paths:
         - tests
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: name of the test suite
-        - in: query
-          name: last
-          schema:
-            type: int
-          description: last N days time metrics should be returned
-        - in: query
-          name: limit
-          schema:
-            type: int
-          description: limit executions
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/LastNDays"
+        - $ref: "#/components/parameters/Limit"
       summary: "Get test suite metrics"
       description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestSuiteMetrics
@@ -275,12 +247,7 @@ paths:
   /test-suites/{id}/tests:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
       tags:
         - test-suites
         - api
@@ -344,12 +311,7 @@ paths:
   /test-suite-with-executions/{id}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
       tags:
         - test-suites
         - api
@@ -378,18 +340,9 @@ paths:
   /test-suites/{id}/executions:
     post:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/LastNDays"
       tags:
         - api
         - test-suites
@@ -438,12 +391,7 @@ paths:
 
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
+        - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/TestExecutionsStatusFilter"
@@ -475,18 +423,8 @@ paths:
   /test-suites/{id}/executions/{executionID}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite
-        - in: path
-          name: executionID
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite execution
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
       tags:
         - api
         - test-suites
@@ -513,12 +451,7 @@ paths:
   /test-suite-executions:
     post:
       parameters:
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
@@ -576,6 +509,7 @@ paths:
       description: "Returns array of test suite executions"
       operationId: listAllTestSuiteExecutions
       parameters:
+        - $ref: "#/components/parameters/LastNDays"
         - $ref: "#/components/parameters/TestName"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/PageSize"
@@ -603,12 +537,8 @@ paths:
   /test-suite-executions/{id}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test suite execution
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/LastNDays"
       tags:
         - executions
         - api
@@ -634,12 +564,7 @@ paths:
   /executions:
     post:
       parameters:
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/ConcurrencyLevel"
@@ -726,12 +651,7 @@ paths:
   /executions/{executionID}:
     get:
       parameters:
-        - in: path
-          name: executionID
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
+        - $ref: "#/components/parameters/executionID"
       tags:
         - executions
         - api
@@ -757,12 +677,7 @@ paths:
   /executions/{id}/artifacts:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
+        - $ref: "#/components/parameters/ID"
       tags:
         - artifacts
         - executions
@@ -791,12 +706,7 @@ paths:
   /executions/{id}/logs:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
+        - $ref: "#/components/parameters/ID"
       tags:
         - logs
         - executions
@@ -825,18 +735,8 @@ paths:
   /executions/{id}/artifacts/{filename}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
-        - in: path # minio/[bucket_exec_id]/cypress/video/somevideo.avi
-          name: filename
-          schema:
-            type: string
-          required: true
-          description: name of the file in the bucket
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Filename"
       tags:
         - artifacts
         - executions
@@ -959,12 +859,7 @@ paths:
   /tests/{id}:
     patch:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
+        - $ref: "#/components/parameters/ID"
       tags:
         - tests
         - api
@@ -1007,12 +902,7 @@ paths:
         - tests
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
+        - $ref: "#/components/parameters/ID"
       summary: "Get test"
       description: "Gets the specified test"
       operationId: getTest
@@ -1039,12 +929,7 @@ paths:
         - tests
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
+        - $ref: "#/components/parameters/ID"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -1066,22 +951,9 @@ paths:
         - tests
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
-        - in: query
-          name: last
-          schema:
-            type: int
-          description: last N days time metrics should be returned
-        - in: query
-          name: limit
-          schema:
-            type: int
-          description: limit executions
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/LastNDays"
+        - $ref: "#/components/parameters/Limit"
       summary: "Get test metrics"
       description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
       operationId: getTestMetrics
@@ -1143,12 +1015,7 @@ paths:
         - tests
         - api
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
+        - $ref: "#/components/parameters/ID"
       summary: "Get test with execution"
       description: "Gets the specified test with execution"
       operationId: getTestWithExecution
@@ -1174,18 +1041,8 @@ paths:
   /tests/{id}/executions:
     post:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
       tags:
         - api
         - tests
@@ -1233,12 +1090,8 @@ paths:
                   $ref: "#/components/schemas/Problem"
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/LastNDays"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/PageIndex"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
@@ -1270,18 +1123,8 @@ paths:
   /tests/{id}/executions/{executionID}:
     get:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
-        - in: path
-          name: executionID
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
       tags:
         - api
         - tests
@@ -1306,18 +1149,8 @@ paths:
                   $ref: "#/components/schemas/Problem"
     delete:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
-          required: true
-          description: ID of the test
-        - in: path
-          name: executionID
-          schema:
-            type: string
-          required: true
-          description: ID of the test execution
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
       tags:
         - api
         - tests
@@ -1342,12 +1175,7 @@ paths:
       description: "List executors available in cluster"
       operationId: listExecutors
       parameters:
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
       responses:
         200:
@@ -1436,18 +1264,8 @@ paths:
   /executors/{name}:
     delete:
       parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: Executor CRD name
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          required: true
-          description: CRD namespace
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Name"
       tags:
         - api
         - executor
@@ -1468,18 +1286,8 @@ paths:
 
     get:
       parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: Executor CRD name
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Name"
       tags:
         - api
         - executor
@@ -1556,12 +1364,7 @@ paths:
       description: "List webhooks available in cluster"
       operationId: listWebhooks
       parameters:
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
       responses:
         200:
@@ -1650,18 +1453,8 @@ paths:
   /webhooks/{name}:
     delete:
       parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: Webhook CRD name
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          required: true
-          description: CRD namespace
+        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/Namespace"
       tags:
         - api
         - webhook
@@ -1682,18 +1475,8 @@ paths:
 
     get:
       parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: Webhook CRD name
-        - in: query
-          name: namespace
-          schema:
-            type: string
-          description: kubernetes namespace
-          required: false
+        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/Namespace"
       tags:
         - api
         - webhook
@@ -1730,12 +1513,7 @@ paths:
   /config/{key}:
     patch:
       parameters:
-        - in: path
-          name: key
-          schema:
-            type: string
-          required: true
-          description: Config key
+        - $ref: "#/components/parameters/Key"
       tags:
         - api
       summary: "Update config key"
@@ -1780,47 +1558,47 @@ components:
     ExecutionsMetrics:
       type: object
       properties:
-        pass_fail_ratio:
+        passFailRatio:
           type: number
           description: Percentage pass to fail ratio
           example: 50
-        execution_duration_p50:
+        executionDurationP50:
           type: string
           description: 50th percentile of all durations
           example: "7m2.71s"
-        execution_duration_p50_ms:
+        executionDurationP50ms:
           type: int
           description: 50th percentile of all durations in milliseconds
           example: 422
-        execution_duration_p90:
+        executionDurationP90:
           type: string
           description: 90th percentile of all durations
           example: "7m2.71s"
-        execution_duration_p90_ms:
+        executionDurationP90ms:
           type: int
           description: 90th percentile of all durations in milliseconds
           example: 422
-        execution_duration_p95:
+        executionDurationP95:
           type: string
           description: 95th percentile of all durations
           example: "7m2.71s"
-        execution_duration_p95_ms:
+        executionDurationP95ms:
           type: int
           description: 95th percentile of all durations in milliseconds
           example: 422
-        execution_duration_p99:
+        executionDurationP99:
           type: string
           description: 99th percentile of all durations
           example: "7m2.71s"
-        execution_duration_p99_ms:
+        executionDurationP99ms:
           type: int
           description: 99th percentile of all durations in milliseconds
           example: 422
-        total_executions:
+        totalExecutions:
           type: int
           description: total executions number
           example: 2
-        failed_executions:
+        failedExecutions:
           type: int
           description: failed executions number
           example: 1
@@ -1837,7 +1615,7 @@ components:
           type: string
         duration:
           type: string
-        duration_ms:
+        durationMs:
           type: int
         status:
           type: string
@@ -1971,7 +1749,7 @@ components:
           description: schedule to run test suite
           example: "* * * * *"
         repeats:
-          type: integer
+          type: int
           default: 1
           example: 1
         created:
@@ -2012,7 +1790,7 @@ components:
         - name
       properties:
         duration:
-          type: integer
+          type: int
           default: 0
           description: delay duration in milliseconds
 
@@ -2065,6 +1843,10 @@ components:
           type: string
           description: "test duration"
           example: "2m"
+        durationMs:
+          type: int
+          description: "test duration in ms"
+          example: 6000
         stepResults:
           type: array
           description: "steps execution restults"
@@ -2156,6 +1938,10 @@ components:
           type: string
           description: "test suite execution duration"
           example: "00:00:09"
+        durationMs:
+          type: int
+          description: "test suite execution duration in ms"
+          example: 9009
         execution:
           type: array
           items:
@@ -2281,7 +2067,7 @@ components:
           description: "execution name"
           example: "test-suite1-example-test-1"
         number:
-          type: integer
+          type: int
           description: "execution number"
           example: 1
         envs:
@@ -2348,7 +2134,7 @@ components:
           type: string
           description: artifact file path
         size:
-          type: integer
+          type: int
           description: file size in bytes
 
     ExecutionsResult:
@@ -2387,7 +2173,7 @@ components:
           description: execution name
           example: "test-suite1-test1"
         number:
-          type: integer
+          type: int
           description: execution number
           example: 1
         testName:
@@ -2416,6 +2202,10 @@ components:
           type: string
           description: calculated test duration
           example: "00:00:13"
+        durationMs:
+          type: int
+          description: calculated test duration in ms
+          example: 10000
         labels:
           type: object
           description: "test and execution labels"
@@ -2515,19 +2305,19 @@ components:
         - running
       properties:
         results:
-          type: integer
+          type: int
           description: the total number of executions available
         passed:
-          type: integer
+          type: int
           description: the total number of passed executions available
         failed:
-          type: integer
+          type: int
           description: the total number of failed executions available
         queued:
-          type: integer
+          type: int
           description: the total number of queued executions available
         running:
-          type: integer
+          type: int
           description: the total number of running executions available
 
     ServerInfo:
@@ -2597,7 +2387,7 @@ components:
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
           example: "test-suite1"
         number:
-          type: integer
+          type: int
           description: test execution number
         executionLabels:
           type: object
@@ -2676,7 +2466,7 @@ components:
           description: test execution custom name
           example: "testing with 1000 users"
         number:
-          type: integer
+          type: int
           description: test suite execution number
           example: 1
         namespace:
@@ -2963,7 +2753,7 @@ components:
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
           example: Invalid test name
         status:
-          type: integer
+          type: int
           description: HTTP status code for this occurrence of the problem.
           example: 500
         detail:
@@ -3004,11 +2794,48 @@ components:
         default: ""
       description: text to search in name and test name
       required: false
+    ID:
+      in: path
+      name: id
+      schema:
+        type: string
+      required: true
+      description: unique id of the object
+    executionID:
+      in: path
+      name: executionID
+      schema:
+        type: string
+      required: true
+      description: unique id of the object execution
+    Filename:
+      in: path
+      name: filename
+      schema:
+        type: string
+      required: true
+      description: filename of the object usually used for artifacts
+    LastNDays:
+      in: query
+      name: last
+      schema:
+        type: int
+        default: 7
+      description: last N days to show
+      required: false
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: int
+        default: 7
+      description: limit records count same as pageSize
+      required: false
     PageSize:
       in: query
       name: pageSize
       schema:
-        type: integer
+        type: int
         default: 100
       description: the number of executions to get, setting to 0 will return only totals
       required: false
@@ -3016,7 +2843,7 @@ components:
       in: query
       name: page
       schema:
-        type: integer
+        type: int
         default: 0
       description: the page index to start at
       required: false
@@ -3066,5 +2893,23 @@ components:
       in: query
       name: concurrency
       schema:
-        type: integer
+        type: int
         default: 10
+    Namespace:
+      in: query
+      name: namespace
+      schema:
+        type: string
+        description: Namespace of the object
+    Name:
+      in: query
+      name: name
+      schema:
+        type: string
+        description: Name of the object
+    Key:
+      in: query
+      name: key
+      schema:
+        type: string
+        description: Key of the object

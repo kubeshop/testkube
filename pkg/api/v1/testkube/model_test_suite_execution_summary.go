@@ -27,8 +27,10 @@ type TestSuiteExecutionSummary struct {
 	// test suite execution end time
 	EndTime time.Time `json:"endTime,omitempty"`
 	// test suite execution duration
-	Duration  string                          `json:"duration,omitempty"`
-	Execution []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	// test suite execution duration in ms
+	DurationMs int                             `json:"durationMs,omitempty"`
+	Execution  []TestSuiteStepExecutionSummary `json:"execution,omitempty"`
 	// test suite and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -124,7 +124,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		request.Name = test.Name
 	}
 
-	request.Number = int32(s.getNextExecutionNumber(test.Name))
+	request.Number = int(s.getNextExecutionNumber(test.Name))
 	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
@@ -577,7 +577,7 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
 	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
 		s.Log.Errorw("retrieving latest execution", "error", err)
@@ -638,16 +638,17 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:        execution.Id,
-			Name:      execution.Name,
-			Number:    execution.Number,
-			TestName:  execution.TestName,
-			TestType:  execution.TestType,
-			Status:    execution.ExecutionResult.Status,
-			StartTime: execution.StartTime,
-			EndTime:   execution.EndTime,
-			Duration:  types.FormatDuration(execution.Duration),
-			Labels:    execution.Labels,
+			Id:         execution.Id,
+			Name:       execution.Name,
+			Number:     execution.Number,
+			TestName:   execution.TestName,
+			TestType:   execution.TestType,
+			Status:     execution.ExecutionResult.Status,
+			StartTime:  execution.StartTime,
+			EndTime:    execution.EndTime,
+			Duration:   types.FormatDuration(execution.Duration),
+			DurationMs: types.FormatDurationMs(execution.Duration),
+			Labels:     execution.Labels,
 		}
 	}
 

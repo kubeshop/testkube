@@ -185,7 +185,7 @@ func (r MockExecutionResultsRepository) GetExecutionTotals(ctx context.Context, 
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
+func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int, error) {
 	panic("not implemented")
 }
 
