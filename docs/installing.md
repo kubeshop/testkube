@@ -8,17 +8,17 @@ To get Testkube up and running you need to:
 
 Watch the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys).
 
-# **1. Testkube CLI**
+## **Installing the Testkube CLI**
 Package dependencies:
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-## From Scripts
+### **From Scripts**
 To install on Linux or MacOs, run
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
-## Through Package Managers
-### **Homebrew (MacOS)**
+### **Through Package Managers**
+#### **Homebrew (MacOS)**
 
 You can install Testkube from [Homebrew](https://brew.sh/):
 ```sh
@@ -31,9 +31,9 @@ brew install kubeshop/testkube/testkube
 ```
 
 
-### **Chocolatey (Windows)**
+#### **Chocolatey (Windows)**
 
-Using [Chocolatey](https://chocolatey.org/install)
+**Using [Chocolatey](https://chocolatey.org/install):**
 
 ```sh
 choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey
@@ -60,7 +60,7 @@ sudo apt-get update
 sudo apt-get install -y testkube
 ```
 
-## **Manual Download**
+### **Manual Download**
 
 If you don't want to use scripts or package managers you can always do a manual install:
 
@@ -73,13 +73,13 @@ For Windows, you will need to unpack the binary and add it to the `%PATH%` as we
 If you use a package manager that we don't support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
 
 
-# **2. Testkube Server Components**
+### **Testkube Server Components**
 To deploy Testkube to your K8s cluster you will need the following packages installed:
 - [Kubectl docs](https://kubernetes.io/docs/tasks/tools/) 
 - [Helm docs](https://helm.sh/docs/intro/install/#through-package-managers)
 
 
-## Using Testkube's CLI to Deploy the Server Components
+### **Using Testkube's CLI to Deploy the Server Components**
 The Testkube CLI provides a command to easly deploy the Testkube server components to your cluster.
 Run:
 ```shell
@@ -144,7 +144,7 @@ replicaset.apps/testkube-minio-testkube-64cd475b94   1         1         1      
 
 By default Testkube is installed in the `testkube` namespace.
 
-## **Using HELM to Deploy the Server Components**
+### **Using HELM to Deploy the Server Components**
 1. Add the Kubeshop Helm repository as follows:
 ```sh
 helm repo add testkube https://kubeshop.github.io/helm-charts
@@ -180,7 +180,7 @@ And from a namespace other than `testkube`:
 helm delete --namespace namespace_name my-testkube testkube/testkube
 ```
 
-### **Helm Properties**
+#### **Helm Properties**
 
 The following Helm defaults are used in the `testkube` chart:
 
@@ -211,11 +211,11 @@ The following Helm defaults are used in the `testkube` chart:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
 ## **Remove Testkube Server Components**
-Using helm
+### **Using Helm:**
 ```sh
 helm delete testkube
 ```
-Using Testkube's CLI
+### **Using Testkube's CLI:**
 ```sh
 testkube purge
 ```
