@@ -124,7 +124,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		request.Name = test.Name
 	}
 
-	request.Number = int(s.getNextExecutionNumber(test.Name))
+	request.Number = s.getNextExecutionNumber(test.Name)
 	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
