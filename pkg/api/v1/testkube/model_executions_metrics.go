@@ -11,27 +11,27 @@ package testkube
 
 type ExecutionsMetrics struct {
 	// Percentage pass to fail ratio
-	PassFailRatio float64 `json:"pass_fail_ratio,omitempty"`
+	PassFailRatio float64 `json:"passFailRatio,omitempty"`
 	// 50th percentile of all durations
-	ExecutionDurationP50 string `json:"execution_duration_p50,omitempty"`
+	ExecutionDurationP50 string `json:"executionDurationP50,omitempty"`
 	// 50th percentile of all durations in milliseconds
-	ExecutionDurationP50Ms int `json:"execution_duration_p50_ms,omitempty"`
+	ExecutionDurationP50ms int `json:"executionDurationP50ms,omitempty"`
 	// 90th percentile of all durations
-	ExecutionDurationP90 string `json:"execution_duration_p90,omitempty"`
+	ExecutionDurationP90 string `json:"executionDurationP90,omitempty"`
 	// 90th percentile of all durations in milliseconds
-	ExecutionDurationP90Ms int `json:"execution_duration_p90_ms,omitempty"`
+	ExecutionDurationP90ms int `json:"executionDurationP90ms,omitempty"`
 	// 95th percentile of all durations
-	ExecutionDurationP95 string `json:"execution_duration_p95,omitempty"`
+	ExecutionDurationP95 string `json:"executionDurationP95,omitempty"`
 	// 95th percentile of all durations in milliseconds
-	ExecutionDurationP95Ms int `json:"execution_duration_p95_ms,omitempty"`
+	ExecutionDurationP95ms int `json:"executionDurationP95ms,omitempty"`
 	// 99th percentile of all durations
-	ExecutionDurationP99 string `json:"execution_duration_p99,omitempty"`
+	ExecutionDurationP99 string `json:"executionDurationP99,omitempty"`
 	// 99th percentile of all durations in milliseconds
-	ExecutionDurationP99Ms int `json:"execution_duration_p99_ms,omitempty"`
+	ExecutionDurationP99ms int `json:"executionDurationP99ms,omitempty"`
 	// total executions number
-	TotalExecutions int `json:"total_executions,omitempty"`
+	TotalExecutions int `json:"totalExecutions,omitempty"`
 	// failed executions number
-	FailedExecutions int `json:"failed_executions,omitempty"`
+	FailedExecutions int `json:"failedExecutions,omitempty"`
 	// List of test/testsuite executions
 	Executions []ExecutionsMetricsExecutions `json:"executions,omitempty"`
 }

@@ -25,6 +25,7 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			StartTime:     execution.StartTime,
 			EndTime:       execution.EndTime,
 			Duration:      types.FormatDuration(execution.Duration),
+			DurationMs:    types.FormatDurationMs(execution.Duration),
 			Execution:     executionsSummary,
 			Labels:        execution.Labels,
 		}
@@ -95,7 +96,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSu
 
 	case testkube.TestSuiteStepTypeDelay:
 		stepSpec.Delay = &testsuitesv2.TestSuiteStepDelay{
-			Duration: step.Delay.Duration,
+			Duration: int32(step.Delay.Duration),
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:

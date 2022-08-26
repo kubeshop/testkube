@@ -37,9 +37,9 @@ func init() {
 	RootCmd.AddCommand(NewDownloadCmd())
 	RootCmd.AddCommand(NewGenerateCmd())
 
-	RootCmd.AddCommand(NewInstallCmd())
+	RootCmd.AddCommand(NewInitCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
-	RootCmd.AddCommand(NewUninstallCmd())
+	RootCmd.AddCommand(NewPurgeCmd())
 	RootCmd.AddCommand(NewWatchCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewMigrateCmd())

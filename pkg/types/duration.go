@@ -17,6 +17,18 @@ func FormatDuration(in string) string {
 	return FormattedDuration(duration).Format()
 }
 
+func FormatDurationMs(in string) int {
+	if in == "" {
+		return 0
+	}
+	duration, err := time.ParseDuration(in)
+	if err != nil {
+		return 0
+	}
+
+	return int(duration / time.Millisecond)
+}
+
 type FormattedDuration time.Duration
 
 func (t FormattedDuration) Format(formats ...string) string {
