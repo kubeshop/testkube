@@ -149,9 +149,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	// store secret values before saving to storage - storage will have secretRef only
-	secretVariables, err := s.createSecretsReferences(&execution)
-	if err != nil {
+	if err := s.createSecretsReferences(&execution); err != nil {
 		return execution.Errw("can't create secret variables `Secret` references: %w", err), nil
 	}
 
@@ -159,9 +157,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	if err != nil {
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
 	}
-
-	// restore secret values back - now they can be passed to execution - it'll be not saved anywhere
-	execution.Variables = secretVariables
 
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
@@ -236,16 +231,13 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 }
 
 // createSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (vars map[string]testkube.Variable, err error) {
+func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
-	vars = make(map[string]testkube.Variable, len(execution.Variables))
 
 	for k, v := range execution.Variables {
-		vars[k] = execution.Variables[k]
 		if v.IsSecret() {
 			obfuscated := execution.Variables[k]
-			obfuscated.Value = ""
 			if v.SecretRef != nil {
 				obfuscated.SecretRef = &testkube.SecretRef{
 					Namespace: execution.TestNamespace,
@@ -253,28 +245,31 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (var
 					Key:       v.SecretRef.Key,
 				}
 			} else {
+				obfuscated.Value = ""
 				obfuscated.SecretRef = &testkube.SecretRef{
 					Namespace: execution.TestNamespace,
 					Name:      secretName,
 					Key:       v.Name,
 				}
+
+				secrets[v.Name] = v.Value
 			}
+			
 			execution.Variables[k] = obfuscated
-			secrets[v.Name] = v.Value
 		}
 	}
 
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
 	if len(secrets) > 0 {
-		return vars, s.SecretClient.Create(
+		return s.SecretClient.Create(
 			secretName,
 			labels,
 			secrets,
 		)
 	}
 
-	return vars, nil
+	return nil
 }
 
 // ListExecutionsHandler returns array of available test executions
