@@ -43,10 +43,12 @@ The **Definition** tab when **Test Suites** is selected displays the Test Suite 
 
 ## **UI Results Endpoint**
 
-To expose the results endpoint to open the UI there are two options:
+To expose the results endpoint to open the UI there are a few options:
 
 * Expose the results endpoint using an Ingress controller and use it in the UI at [https://demo.testkube.io](https://demo.testkube.io).
 * Install the dashboard together with Testkube.
+
+* If you are using minikube use [http://localhost:8088/v1](http://localhost:8088/v1) as a TestKube API endpoint.
 
 This is achieved by installing Testkube using the Helm Charts located at [github.com/kubeshop/helm-charts]().
 

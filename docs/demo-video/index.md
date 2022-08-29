@@ -30,7 +30,7 @@ We can see the `Client version` but the `Server version` is not found yet, as we
 ## Installing Testkube Cluster Components
 
 ```sh 
-kubectl testkube install
+kubectl testkube init
 
 .... 
 ....

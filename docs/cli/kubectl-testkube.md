@@ -33,11 +33,11 @@ kubectl-testkube [flags]
 * [kubectl-testkube enable](kubectl-testkube_enable.md)	 - Enable feature
 * [kubectl-testkube generate](kubectl-testkube_generate.md)	 - Generate resources commands
 * [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
-* [kubectl-testkube install](kubectl-testkube_install.md)	 - Install Helm chart registry in current kubectl context and update dependencies
+* [kubectl-testkube init](kubectl-testkube_init.md)	 - Install Helm chart registry in current kubectl context and update dependencies
 * [kubectl-testkube migrate](kubectl-testkube_migrate.md)	 - manual migrate command
+* [kubectl-testkube purge](kubectl-testkube_purge.md)	 - Uninstall Helm chart registry from current kubectl context
 * [kubectl-testkube run](kubectl-testkube_run.md)	 - Runs tests or test suites
 * [kubectl-testkube status](kubectl-testkube_status.md)	 - Show status of feature or resource
-* [kubectl-testkube uninstall](kubectl-testkube_uninstall.md)	 - Uninstall Helm chart registry in current kubectl context
 * [kubectl-testkube update](kubectl-testkube_update.md)	 - Update resource
 * [kubectl-testkube upgrade](kubectl-testkube_upgrade.md)	 - Upgrade Helm chart, install dependencies and run migrations
 * [kubectl-testkube version](kubectl-testkube_version.md)	 - Shows version and build info

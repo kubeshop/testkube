@@ -114,7 +114,7 @@ func (c *Client) ListFiles(bucket string) ([]testkube.Artifact, error) {
 		if obj.Err != nil {
 			return nil, obj.Err
 		}
-		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
+		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int(obj.Size)})
 	}
 
 	return toReturn, nil

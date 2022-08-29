@@ -6,7 +6,7 @@ brew install testkube
 
 kubectl testkube version
 
-kubectl testkube install
+kubectl testkube init
 
 kubectl testkube version
 

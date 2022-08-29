@@ -36,13 +36,14 @@ type MongoRepository struct {
 
 type executionNumber struct {
 	TestName string `json:"testName"`
-	Number   int32  `json:"number"`
+	Number   int    `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
 	return
 }
+
 func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
 	return
@@ -139,7 +140,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
-		Count  int32  `bson:"count"`
+		Count  int    `bson:"count"`
 	}
 
 	query := bson.M{}
@@ -167,7 +168,7 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		return totals, err
 	}
 
-	var sum int32
+	var sum int
 
 	for _, o := range result {
 		sum += o.Count
@@ -220,7 +221,7 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
-func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error) {
 
 	execNmbr := executionNumber{TestName: testName}
 	retry := false
