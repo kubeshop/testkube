@@ -254,7 +254,7 @@ func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (err
 
 				secrets[v.Name] = v.Value
 			}
-			
+
 			execution.Variables[k] = obfuscated
 		}
 	}
