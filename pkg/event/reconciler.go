@@ -1,6 +1,8 @@
 package event
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"go.uber.org/zap"
@@ -28,6 +30,9 @@ func (s *Reconciler) Reconcile() (listeners []common.Listener) {
 	for _, reconciler := range s.Reconcilers {
 		l, err := reconciler.Load()
 		if err != nil {
+			fmt.Printf("%+v\n", err)
+			fmt.Printf("%+v\n", reconciler)
+
 			s.Log.Errorw("error loading listeners", "kind", reconciler.Kind(), "error", err)
 			continue
 		}

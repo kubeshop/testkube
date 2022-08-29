@@ -42,6 +42,11 @@ func (l *WebhookListener) Selector() string {
 func (l *WebhookListener) Events() []testkube.TestkubeEventType {
 	return l.events
 }
+func (l *WebhookListener) Metadata() map[string]string {
+	return map[string]string{
+		"uri": l.Uri,
+	}
+}
 
 func (l *WebhookListener) Notify(event testkube.TestkubeEvent) (result testkube.TestkubeEventResult) {
 	body := bytes.NewBuffer([]byte{})

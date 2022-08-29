@@ -13,6 +13,7 @@ type Listener interface {
 	Kind() string
 	Selector() string
 	Events() []testkube.TestkubeEventType
+	Metadata() map[string]string
 }
 
 type ListenerReconiler interface {

@@ -1,7 +1,9 @@
 package event
 
 import (
-	"fmt"
+	"context"
+	"sync"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -10,8 +12,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-const eventsBuffer = 10000
-const workersCount = 20
+const (
+	eventsBuffer      = 10000
+	workersCount      = 20
+	reconcileInterval = time.Second
+)
 
 // NewEmitter returns new emitter instance
 func NewEmitter() *Emitter {
@@ -24,28 +29,28 @@ func NewEmitter() *Emitter {
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	Events    chan testkube.TestkubeEvent
-	Results   chan testkube.TestkubeEventResult
-	Listeners []common.Listener
-	Log       *zap.SugaredLogger
+	Events     chan testkube.TestkubeEvent
+	Results    chan testkube.TestkubeEventResult
+	Listeners  []common.Listener
+	Reconciler Reconciler
+	Log        *zap.SugaredLogger
+	mutex      sync.Mutex
 }
 
-// WebhookResult is a wrapper for results from HTTP client for given webhook
-type WebhookResult struct {
-	Event    testkube.TestkubeEvent
-	Error    error
-	Response WebhookHttpResponse
-}
+// Register adds new listener
+func (e *Emitter) Register(listener common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 
-// WebhookHttpResponse hold body and result of webhook response
-type WebhookHttpResponse struct {
-	StatusCode int
-	Body       string
+	e.Listeners = append(e.Listeners, listener)
 }
 
 // Notify notifies emitter with webhook
-func (e *Emitter) Register(listener common.Listener) {
-	e.Listeners = append(e.Listeners, listener)
+func (e *Emitter) OverrideListeners(listeners []common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	e.Listeners = listeners
 }
 
 // Notify notifies emitter with webhook
@@ -61,17 +66,32 @@ func (e *Emitter) RunWorkers() {
 	}
 }
 
+// RunWorker runs single emitter worker loop responsible for sending events
 func (e *Emitter) RunWorker(events chan testkube.TestkubeEvent, result chan testkube.TestkubeEventResult) {
 	// TODO consider scaling this part to goroutines - for now we can just scale workers
 	for event := range events {
 		e.Log.Infow("processing event", event.Log()...)
 		for _, listener := range e.Listeners {
-
-			fmt.Printf("%+v\n", event.Valid(listener.Selector()))
-
 			if event.Valid(listener.Selector()) {
+				e.Log.Infow("processing event by listener", "metadata", listener.Metadata(), "selector", listener.Selector(), "kind", listener.Kind())
 				result <- listener.Notify(event)
 			}
+		}
+	}
+}
+
+// Reconcile reloads listeners from all registered reconcilers
+func (s *Emitter) Reconcile(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			s.Log.Infow("stopping watcher")
+			return
+		default:
+			listeners := s.Reconciler.Reconcile()
+			s.OverrideListeners(listeners)
+			s.Log.Infow("reconciled listeners", "listeners", len(s.Listeners))
+			time.Sleep(reconcileInterval)
 		}
 	}
 }

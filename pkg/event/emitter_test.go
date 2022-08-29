@@ -1,7 +1,9 @@
 package event
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
@@ -30,6 +32,10 @@ func (l DummyListener) Selector() string {
 
 func (l DummyListener) Kind() string {
 	return "dummy"
+}
+
+func (l DummyListener) Metadata() map[string]string {
+	return map[string]string{"uri": "http://localhost:8080"}
 }
 
 func TestEmitter_Register(t *testing.T) {
@@ -101,6 +107,59 @@ func TestEmitter_Notify(t *testing.T) {
 		assert.Equal(t, 1, listener1.NotificationCount)
 		assert.Equal(t, 0, listener2.NotificationCount)
 		assert.Equal(t, "1", result.Id)
+	})
+
+}
+
+func TestEmitter_Reconcile(t *testing.T) {
+
+	t.Run("emitter refersh listeners", func(t *testing.T) {
+		// given
+		emitter := NewEmitter()
+		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Reconciler.Register(&DummyReconciler{})
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// when
+		go emitter.Reconcile(ctx)
+
+		// then
+		time.Sleep(time.Millisecond)
+		assert.Len(t, emitter.Listeners, 4)
+
+		cancel()
+	})
+
+	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
+		// given first reconciler loop was done
+		emitter := NewEmitter()
+		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Reconciler.Register(&DummyReconciler{})
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go emitter.Reconcile(ctx)
+
+		time.Sleep(time.Millisecond)
+		assert.Len(t, emitter.Listeners, 4)
+
+		cancel()
+
+		// and we'll add additional reconcilers
+		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Reconciler.Register(&DummyReconciler{})
+
+		ctx, cancel = context.WithCancel(context.Background())
+
+		// when
+		go emitter.Reconcile(ctx)
+
+		// then each reconciler (4 reconcilers) should load 2 listeners
+		time.Sleep(time.Millisecond)
+		assert.Len(t, emitter.Listeners, 8)
+
+		cancel()
 	})
 
 }
