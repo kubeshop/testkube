@@ -11,7 +11,7 @@ require (
 	github.com/fluxcd/pkg/runtime v0.16.2
 	github.com/gofiber/adaptor/v2 v2.1.25
 	github.com/gofiber/fiber/v2 v2.36.0
-	github.com/gookit/color v1.5.1
+	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.4.11
 	github.com/minio/minio-go/v7 v7.0.34
