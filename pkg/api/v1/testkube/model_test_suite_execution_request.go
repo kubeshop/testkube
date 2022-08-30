@@ -14,7 +14,7 @@ type TestSuiteExecutionRequest struct {
 	// test execution custom name
 	Name string `json:"name,omitempty"`
 	// test suite execution number
-	Number int32 `json:"number,omitempty"`
+	Number int `json:"number,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace string              `json:"namespace,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
