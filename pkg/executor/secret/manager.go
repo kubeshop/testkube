@@ -15,7 +15,7 @@ type Manager interface {
 	// GetEnvs get secret envs
 	GetEnvs() (secretEnvs []string)
 	// GetVars gets secret vars
-	GetVars(vars []string) (secretVars map[string]string)
+	GetVars(variables map[string]testkube.Variable)
 }
 
 // NewEnvManager returns an implementation of the Manager
@@ -87,16 +87,20 @@ func (m EnvManager) GetEnvs() (secretEnvs []string) {
 }
 
 // GetVars gets secret vars
-func (m EnvManager) GetVars(vars []string) (secretVars map[string]string) {
-	secretVars = make(map[string]string, len(vars))
-	for _, v := range vars {
-		secretVar, ok := os.LookupEnv(fmt.Sprintf("RUNNER_SECRET_VAR_%s", v))
+func (m EnvManager) GetVars(variables map[string]testkube.Variable) {
+	for name, variable := range variables {
+		if variable.Type_ != testkube.VariableTypeSecret {
+			continue
+		}
+
+		value, ok := os.LookupEnv(fmt.Sprintf("RUNNER_SECRET_VAR_%s", name))
 		if !ok {
 			continue
 		}
 
-		secretVars[v] = secretVar
+		variable.Value = value
+		variables[name] = variable
 	}
 
-	return secretVars
+	return
 }
