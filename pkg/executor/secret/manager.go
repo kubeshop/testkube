@@ -50,7 +50,7 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 
 	// prepare secret vars
 	for name, variable := range variables {
-		if variable.Type_ != testkube.VariableTypeSecret || variable.SecretRef == nil {
+		if !variable.IsSecret() || variable.SecretRef == nil {
 			continue
 		}
 
@@ -89,7 +89,7 @@ func (m EnvManager) GetEnvs() (secretEnvs []string) {
 // GetVars gets secret vars
 func (m EnvManager) GetVars(variables map[string]testkube.Variable) {
 	for name, variable := range variables {
-		if variable.Type_ != testkube.VariableTypeSecret {
+		if !variable.IsSecret() {
 			continue
 		}
 
