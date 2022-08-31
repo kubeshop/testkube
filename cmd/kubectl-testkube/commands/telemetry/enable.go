@@ -21,9 +21,7 @@ func NewEnableTelemetryCmd() *cobra.Command {
 			}
 			if err != nil {
 				ui.PrintDisabled("Telemetry on CLI", "failed")
-				ui.PrintOnError("    Can't access config file", err)
-				ui.Info(ui.IconSuggestion+"  Suggestion:", "Do you have enough rights to handle the config file?")
-				ui.Info(ui.IconDocumentation+"  Documentation:", "https://kubeshop.github.io/testkube/")
+				ui.PrintConfigError(err)
 			} else {
 				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			}
