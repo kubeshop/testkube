@@ -25,7 +25,7 @@ kubectl-testkube delete testsuite <testSuiteName> [flags]
   -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string    kubernetes namespace (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
+      --telemetry-enabled   enable collection of anonumous telemetry data
       --verbose             should I show additional debug messages
 ```
 

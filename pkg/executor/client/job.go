@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -87,7 +88,8 @@ var (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics ExecutionCounter, emiter *webhook.Emitter) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string,
+	metrics ExecutionCounter, emiter *webhook.Emitter) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -137,6 +139,7 @@ type JobOptions struct {
 	HTTPSProxy     string
 	UsernameSecret *testkube.SecretRef
 	TokenSecret    *testkube.SecretRef
+	Variables      map[string]testkube.Variable
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -551,87 +554,7 @@ func (c *JobExecutor) Abort(jobName string) *testkube.ExecutionResult {
 
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
-	var secretEnvVars []corev1.EnvVar
-
-	i := 1
-	for secretName, secretVar := range options.SecretEnvs {
-		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-			Name: fmt.Sprintf("RUNNER_SECRET_ENV%d", i),
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: secretName,
-					},
-					Key: secretVar,
-				},
-			},
-		})
-
-		i++
-	}
-
-	var setSecrets bool
-	var data = []struct {
-		envVar    string
-		secretRef *testkube.SecretRef
-	}{
-		{
-			GitUsernameEnvVarName,
-			options.UsernameSecret,
-		},
-		{
-			GitTokenEnvVarName,
-			options.TokenSecret,
-		},
-	}
-
-	for _, value := range data {
-		if value.secretRef != nil {
-			setSecrets = true
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: value.secretRef.Name,
-						},
-						Key: value.secretRef.Key,
-					},
-				},
-			})
-		}
-	}
-
-	if options.HasSecrets && !setSecrets {
-		var data = []struct {
-			envVar    string
-			secretKey string
-		}{
-			{
-				GitUsernameEnvVarName,
-				GitUsernameSecretName,
-			},
-			{
-				GitTokenEnvVarName,
-				GitTokenSecretName,
-			},
-		}
-
-		for _, value := range data {
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(options.TestName),
-						},
-						Key: value.secretKey,
-					},
-				},
-			})
-		}
-	}
-
+	secretEnvVars := prepareSecretEnvs(options)
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from options.JobTemplate error: %w", err)
@@ -708,6 +631,77 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
+	jobOptions.Variables = execution.Variables
 
 	return
+}
+
+// prepareSecetEnvs generates secret envs from job options
+func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
+	secretEnvVars = secretenv.NewEnvManager().Prepare(options.SecretEnvs, options.Variables)
+
+	// prepare git credentials
+	var setSecrets bool
+	var data = []struct {
+		envVar    string
+		secretRef *testkube.SecretRef
+	}{
+		{
+			GitUsernameEnvVarName,
+			options.UsernameSecret,
+		},
+		{
+			GitTokenEnvVarName,
+			options.TokenSecret,
+		},
+	}
+
+	for _, value := range data {
+		if value.secretRef != nil {
+			setSecrets = true
+			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+				Name: value.envVar,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: value.secretRef.Name,
+						},
+						Key: value.secretRef.Key,
+					},
+				},
+			})
+		}
+	}
+
+	if options.HasSecrets && !setSecrets {
+		var data = []struct {
+			envVar    string
+			secretKey string
+		}{
+			{
+				GitUsernameEnvVarName,
+				GitUsernameSecretName,
+			},
+			{
+				GitTokenEnvVarName,
+				GitTokenSecretName,
+			},
+		}
+
+		for _, value := range data {
+			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+				Name: value.envVar,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secret.GetMetadataName(options.TestName),
+						},
+						Key: value.secretKey,
+					},
+				},
+			})
+		}
+	}
+
+	return secretEnvVars
 }
