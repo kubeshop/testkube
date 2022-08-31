@@ -8,13 +8,14 @@ require (
 	github.com/cli/cli/v2 v2.14.7
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
+	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/runtime v0.16.2
 	github.com/gofiber/adaptor/v2 v2.1.25
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gofiber/websocket/v2 v2.0.24
-	github.com/gookit/color v1.5.1
+	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.4.10
+	github.com/kubeshop/testkube-operator v1.4.11
 	github.com/minio/minio-go/v7 v7.0.34
 	github.com/moogar0880/problems v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -46,7 +47,6 @@ require (
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
-	github.com/fasthttp/websocket v1.5.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
