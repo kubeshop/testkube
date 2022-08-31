@@ -10,7 +10,7 @@
 package testkube
 
 // Listener result after sending particular event
-type TestkubeEventResult struct {
+type EventResult struct {
 	// UUID of event
 	Id string `json:"id,omitempty"`
 	// error message if any

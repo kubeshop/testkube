@@ -9,7 +9,7 @@ import (
 
 var _ common.Listener = &WebsocketListener{}
 
-func NewWebsocketListener(websocket Websocket, selector string, events []testkube.TestkubeEventType) *WebsocketListener {
+func NewWebsocketListener(websocket Websocket, selector string, events []testkube.EventType) *WebsocketListener {
 	return &WebsocketListener{
 		Log:       log.DefaultLogger,
 		selector:  selector,
@@ -20,7 +20,7 @@ func NewWebsocketListener(websocket Websocket, selector string, events []testkub
 
 type WebsocketListener struct {
 	Log       *zap.SugaredLogger
-	events    []testkube.TestkubeEventType
+	events    []testkube.EventType
 	Websocket Websocket
 	selector  string
 }
@@ -29,7 +29,7 @@ func (l *WebsocketListener) Selector() string {
 	return l.selector
 }
 
-func (l *WebsocketListener) Events() []testkube.TestkubeEventType {
+func (l *WebsocketListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *WebsocketListener) Metadata() map[string]string {
@@ -38,13 +38,13 @@ func (l *WebsocketListener) Metadata() map[string]string {
 	}
 }
 
-func (l *WebsocketListener) Notify(event testkube.TestkubeEvent) (result testkube.TestkubeEventResult) {
+func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	err := l.Websocket.Conn.WriteJSON(event)
 	if err != nil {
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	return testkube.NewSuccessTestkubeEventResult(event.Id, "message-sent to client")
+	return testkube.NewSuccessEventResult(event.Id, "message-sent to client")
 }
 
 func (l *WebsocketListener) Kind() string {

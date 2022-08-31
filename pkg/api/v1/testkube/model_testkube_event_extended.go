@@ -5,23 +5,23 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func NewTestkubeEventStartTest(execution *Execution) TestkubeEvent {
-	return TestkubeEvent{
+func NewEventStartTest(execution *Execution) Event {
+	return Event{
 		Id:        uuid.NewString(),
-		Type_:     TestkubeEventStartTest,
+		Type_:     EventStartTest,
 		Execution: execution,
 	}
 }
 
-func NewTestkubeEventEndTest(execution *Execution) TestkubeEvent {
-	return TestkubeEvent{
+func NewEventEndTest(execution *Execution) Event {
+	return Event{
 		Id:        uuid.NewString(),
-		Type_:     TestkubeEventEndTest,
+		Type_:     EventEndTest,
 		Execution: execution,
 	}
 }
 
-func (e TestkubeEvent) Log() []any {
+func (e Event) Log() []any {
 
 	var executionId, executionName, eventType, labels string
 	if e.Execution != nil {
@@ -45,7 +45,7 @@ func (e TestkubeEvent) Log() []any {
 	}
 }
 
-func (e TestkubeEvent) Valid(selector string) (valid bool) {
+func (e Event) Valid(selector string) (valid bool) {
 	if e.Execution == nil {
 		return false
 	}

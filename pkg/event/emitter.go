@@ -21,16 +21,16 @@ const (
 // NewEmitter returns new emitter instance
 func NewEmitter() *Emitter {
 	return &Emitter{
-		Events:  make(chan testkube.TestkubeEvent, eventsBuffer),
-		Results: make(chan testkube.TestkubeEventResult, eventsBuffer),
+		Events:  make(chan testkube.Event, eventsBuffer),
+		Results: make(chan testkube.EventResult, eventsBuffer),
 		Log:     log.DefaultLogger,
 	}
 }
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	Events    chan testkube.TestkubeEvent
-	Results   chan testkube.TestkubeEventResult
+	Events    chan testkube.Event
+	Results   chan testkube.EventResult
 	Listeners common.Listeners
 	Loader    Loader
 	Log       *zap.SugaredLogger
@@ -54,7 +54,7 @@ func (e *Emitter) OverrideListeners(listeners common.Listeners) {
 }
 
 // Notify notifies emitter with webhook
-func (e *Emitter) Notify(event testkube.TestkubeEvent) {
+func (e *Emitter) Notify(event testkube.Event) {
 	e.Events <- event
 }
 
@@ -67,7 +67,7 @@ func (e *Emitter) RunWorkers() {
 }
 
 // RunWorker runs single emitter worker loop responsible for sending events
-func (e *Emitter) RunWorker(events chan testkube.TestkubeEvent, results chan testkube.TestkubeEventResult) {
+func (e *Emitter) RunWorker(events chan testkube.Event, results chan testkube.EventResult) {
 	// TODO consider scaling this part to goroutines - for now we can just scale workers
 	for event := range events {
 		e.Log.Infow("processing event", event.Log()...)

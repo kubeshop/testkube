@@ -2637,7 +2637,7 @@ components:
         events:
           type: array
           items:
-            $ref: "#/components/schemas/TestkubeEventType"
+            $ref: "#/components/schemas/EventType"
         selector:
           type: string
           description: Labels to filter for tests and test suites
@@ -2650,7 +2650,7 @@ components:
             env: "prod"
             app: "backend"
 
-    TestkubeEvent:
+    Event:
       description: CRD based executor data
       type: object
       required:
@@ -2664,11 +2664,11 @@ components:
           type: string
           description: DEPERECATED event uri remove after rewrite @TODO
         type:
-          $ref: "#/components/schemas/TestkubeEventType"
+          $ref: "#/components/schemas/EventType"
         execution:
           $ref: "#/components/schemas/Execution"
 
-    TestkubeEventType:
+    EventType:
       type: string
       enum:
         - start-test
@@ -2678,7 +2678,7 @@ components:
         - test-failed
         - testsuite-failed
 
-    TestkubeEventResult:
+    EventResult:
       description: Listener result after sending particular event
       type: object
       required:

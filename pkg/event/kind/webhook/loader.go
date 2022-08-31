@@ -36,7 +36,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 	// and create listeners for each webhook spec
 	for _, webhook := range webhookList.Items {
-		wh := NewWebhookListener(webhook.Spec.Uri, webhook.Spec.Selector, testkube.TestkubeEventTypesFromSlice(webhook.Spec.Events))
+		wh := NewWebhookListener(webhook.Spec.Uri, webhook.Spec.Selector, testkube.EventTypesFromSlice(webhook.Spec.Events))
 		listeners = append(listeners, wh)
 	}
 

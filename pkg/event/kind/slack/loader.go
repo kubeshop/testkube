@@ -24,6 +24,6 @@ func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
 	// TODO handle slack notifications based on event types
 	// for now implementation is just a single Slack Listener for all events
 	return common.Listeners{
-		NewSlackListener("", []testkube.TestkubeEventType{}),
+		NewSlackListener("", []testkube.EventType{}),
 	}, nil
 }

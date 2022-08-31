@@ -1,22 +1,22 @@
 package testkube
 
-func (t *TestkubeEventType) String() string {
+func (t *EventType) String() string {
 	return string(*t)
 }
 
-func TestkubeEventTypePtr(t TestkubeEventType) *TestkubeEventType {
+func EventTypePtr(t EventType) *EventType {
 	return &t
 }
 
 var (
-	TestkubeEventStartTest = TestkubeEventTypePtr(START_TEST_TestkubeEventType)
-	TestkubeEventEndTest   = TestkubeEventTypePtr(END_TEST_TestkubeEventType)
+	EventStartTest = EventTypePtr(START_TEST_EventType)
+	EventEndTest   = EventTypePtr(END_TEST_EventType)
 )
 
-func TestkubeEventTypesFromSlice(types []string) []TestkubeEventType {
-	var t []TestkubeEventType
+func EventTypesFromSlice(types []string) []EventType {
+	var t []EventType
 	for _, v := range types {
-		t = append(t, TestkubeEventType(v))
+		t = append(t, EventType(v))
 	}
 	return t
 }

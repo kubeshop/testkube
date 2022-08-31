@@ -9,10 +9,10 @@ const (
 )
 
 type Listener interface {
-	Notify(event testkube.TestkubeEvent) testkube.TestkubeEventResult
+	Notify(event testkube.Event) testkube.EventResult
 	Kind() string
 	Selector() string
-	Events() []testkube.TestkubeEventType
+	Events() []testkube.EventType
 	Metadata() map[string]string
 }
 

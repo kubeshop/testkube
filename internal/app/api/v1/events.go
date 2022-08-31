@@ -16,7 +16,7 @@ func (s TestkubeAPI) EventsTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		e := testkube.NewQueuedExecution()
 		e.Id = "test-execution-id"
-		s.Events.Notify(testkube.NewTestkubeEventStartTest(e))
+		s.Events.Notify(testkube.NewEventStartTest(e))
 		return nil
 	}
 }

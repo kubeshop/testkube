@@ -203,7 +203,7 @@ func SendMessage(channelID string, message string) error {
 }
 
 // SendEvent composes an event message and sends it to slack
-func SendEvent(eventType *testkube.TestkubeEventType, execution testkube.Execution) error {
+func SendEvent(eventType *testkube.EventType, execution testkube.Execution) error {
 
 	message, err := composeMessage(execution, eventType)
 	if err != nil {
@@ -240,7 +240,7 @@ func SendEvent(eventType *testkube.TestkubeEventType, execution testkube.Executi
 				return err
 			}
 
-			if *eventType == testkube.END_TEST_TestkubeEventType {
+			if *eventType == testkube.END_TEST_EventType {
 				delete(timestamps, execution.Name)
 			} else {
 				timestamps[execution.Name] = timestamp
@@ -255,7 +255,7 @@ func SendEvent(eventType *testkube.TestkubeEventType, execution testkube.Executi
 	return nil
 }
 
-func composeMessage(execution testkube.Execution, eventType *testkube.TestkubeEventType) ([]byte, error) {
+func composeMessage(execution testkube.Execution, eventType *testkube.EventType) ([]byte, error) {
 	t, err := template.New("message").Parse(messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())

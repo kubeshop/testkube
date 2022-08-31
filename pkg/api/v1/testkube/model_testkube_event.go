@@ -10,11 +10,11 @@
 package testkube
 
 // CRD based executor data
-type TestkubeEvent struct {
+type Event struct {
 	// UUID of event
 	Id string `json:"id"`
 	// DEPERECATED event uri remove after rewrite @TODO
-	Uri       string             `json:"uri,omitempty"`
-	Type_     *TestkubeEventType `json:"type"`
-	Execution *Execution         `json:"execution,omitempty"`
+	Uri       string     `json:"uri,omitempty"`
+	Type_     *EventType `json:"type"`
+	Execution *Execution `json:"execution,omitempty"`
 }

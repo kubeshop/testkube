@@ -10,7 +10,7 @@ import (
 
 var _ common.Listener = &SlackListener{}
 
-func NewSlackListener(selector string, events []testkube.TestkubeEventType) *SlackListener {
+func NewSlackListener(selector string, events []testkube.EventType) *SlackListener {
 	return &SlackListener{
 		Log:      log.DefaultLogger,
 		selector: selector,
@@ -20,7 +20,7 @@ func NewSlackListener(selector string, events []testkube.TestkubeEventType) *Sla
 
 type SlackListener struct {
 	Log      *zap.SugaredLogger
-	events   []testkube.TestkubeEventType
+	events   []testkube.EventType
 	selector string
 }
 
@@ -28,20 +28,20 @@ func (l *SlackListener) Selector() string {
 	return l.selector
 }
 
-func (l *SlackListener) Events() []testkube.TestkubeEventType {
+func (l *SlackListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *SlackListener) Metadata() map[string]string {
 	return map[string]string{}
 }
 
-func (l *SlackListener) Notify(event testkube.TestkubeEvent) (result testkube.TestkubeEventResult) {
+func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	err := slacknotifier.SendEvent(event.Type_, *event.Execution)
 	if err != nil {
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	return testkube.NewSuccessTestkubeEventResult(event.Id, "event sent to slack")
+	return testkube.NewSuccessEventResult(event.Id, "event sent to slack")
 }
 
 func (l *SlackListener) Kind() string {

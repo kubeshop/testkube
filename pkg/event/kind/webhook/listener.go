@@ -17,7 +17,7 @@ import (
 
 var _ common.Listener = &WebhookListener{}
 
-func NewWebhookListener(uri string, selector string, events []testkube.TestkubeEventType) *WebhookListener {
+func NewWebhookListener(uri string, selector string, events []testkube.EventType) *WebhookListener {
 	return &WebhookListener{
 		Uri:        uri,
 		Log:        log.DefaultLogger,
@@ -31,7 +31,7 @@ type WebhookListener struct {
 	Uri        string
 	Log        *zap.SugaredLogger
 	HttpClient *http.Client
-	events     []testkube.TestkubeEventType
+	events     []testkube.EventType
 	selector   string
 }
 
@@ -39,7 +39,7 @@ func (l *WebhookListener) Selector() string {
 	return l.selector
 }
 
-func (l *WebhookListener) Events() []testkube.TestkubeEventType {
+func (l *WebhookListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *WebhookListener) Metadata() map[string]string {
@@ -48,7 +48,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 	}
 }
 
-func (l *WebhookListener) Notify(event testkube.TestkubeEvent) (result testkube.TestkubeEventResult) {
+func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
 
@@ -57,26 +57,26 @@ func (l *WebhookListener) Notify(event testkube.TestkubeEvent) (result testkube.
 	if err != nil {
 		err = errors.Wrap(err, "webhook send json encode error")
 		log.Errorw("webhook send json encode error", "error", err)
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
 	request, err := http.NewRequest(http.MethodPost, l.Uri, body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
 	resp, err := l.HttpClient.Do(request)
 	if err != nil {
 		log.Errorw("webhook send error", "error", err)
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
-		return testkube.NewFailedTestkubeEventResult(event.Id, err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
 	responseStr := string(data)
@@ -84,11 +84,11 @@ func (l *WebhookListener) Notify(event testkube.TestkubeEvent) (result testkube.
 	if resp.StatusCode >= 400 {
 		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
 		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode)
-		return testkube.NewFailedTestkubeEventResult(event.Id, err).WithResult(responseStr)
+		return testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 	}
 
 	log.Debugw("got webhook send result", "response", responseStr)
-	return testkube.NewSuccessTestkubeEventResult(event.Id, responseStr)
+	return testkube.NewSuccessEventResult(event.Id, responseStr)
 }
 
 func (l *WebhookListener) Kind() string {

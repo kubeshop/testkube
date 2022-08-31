@@ -9,14 +9,14 @@
  */
 package testkube
 
-type TestkubeEventType string
+type EventType string
 
-// List of TestkubeEventType
+// List of EventType
 const (
-	START_TEST_TestkubeEventType       TestkubeEventType = "start-test"
-	START_TESTSUITE_TestkubeEventType  TestkubeEventType = "start-testsuite"
-	END_TEST_TestkubeEventType         TestkubeEventType = "end-test"
-	END_TESTSUITE_TestkubeEventType    TestkubeEventType = "end-testsuite"
-	TEST_FAILED_TestkubeEventType      TestkubeEventType = "test-failed"
-	TESTSUITE_FAILED_TestkubeEventType TestkubeEventType = "testsuite-failed"
+	START_TEST_EventType       EventType = "start-test"
+	START_TESTSUITE_EventType  EventType = "start-testsuite"
+	END_TEST_EventType         EventType = "end-test"
+	END_TESTSUITE_EventType    EventType = "end-testsuite"
+	TEST_FAILED_EventType      EventType = "test-failed"
+	TESTSUITE_FAILED_EventType EventType = "testsuite-failed"
 )

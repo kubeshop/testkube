@@ -9,5 +9,5 @@ type Websocket struct {
 	Id       string
 	Conn     *websocket.Conn
 	Selector string
-	Events   []testkube.TestkubeEventType
+	Events   []testkube.EventType
 }

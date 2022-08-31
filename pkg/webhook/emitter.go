@@ -21,7 +21,7 @@ const workersCount = 20
 // NewEmitter returns new emitter instance
 func NewEmitter(webhooksClient *executorsclientv1.WebhooksClient) *Emitter {
 	return &Emitter{
-		Events:         make(chan testkube.TestkubeEvent, eventsBuffer),
+		Events:         make(chan testkube.Event, eventsBuffer),
 		Responses:      make(chan WebhookResult, eventsBuffer),
 		Log:            log.DefaultLogger,
 		WebhooksClient: webhooksClient,
@@ -31,14 +31,14 @@ func NewEmitter(webhooksClient *executorsclientv1.WebhooksClient) *Emitter {
 // Emitter handles events emitting for webhooks
 type Emitter struct {
 	WebhooksClient *executorsclientv1.WebhooksClient
-	Events         chan testkube.TestkubeEvent
+	Events         chan testkube.Event
 	Responses      chan WebhookResult
 	Log            *zap.SugaredLogger
 }
 
 // WebhookResult is a wrapper for results from HTTP client for given webhook
 type WebhookResult struct {
-	Event    testkube.TestkubeEvent
+	Event    testkube.Event
 	Error    error
 	Response WebhookHttpResponse
 }
@@ -50,7 +50,7 @@ type WebhookHttpResponse struct {
 }
 
 // Notify notifies emitter with webhook
-func (s *Emitter) Notify(event testkube.TestkubeEvent) {
+func (s *Emitter) Notify(event testkube.Event) {
 	s.Log.Infow("notifying webhook", "eventURI", event.Uri, "eventType", event.Type_)
 	s.Events <- event
 }
@@ -64,7 +64,7 @@ func (s *Emitter) RunWorkers() {
 }
 
 // Listen listens for webhook events
-func (s *Emitter) Listen(events chan testkube.TestkubeEvent) {
+func (s *Emitter) Listen(events chan testkube.Event) {
 	for event := range events {
 		s.Log.Infow("processing event", event.Log()...)
 		s.sendHttpEvent(event)
@@ -72,7 +72,7 @@ func (s *Emitter) Listen(events chan testkube.TestkubeEvent) {
 }
 
 // sendHttpEvent sends new webhook event - should be used when some event occurs
-func (s *Emitter) sendHttpEvent(event testkube.TestkubeEvent) {
+func (s *Emitter) sendHttpEvent(event testkube.Event) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
 
@@ -113,7 +113,7 @@ func (s *Emitter) sendHttpEvent(event testkube.TestkubeEvent) {
 	s.Responses <- WebhookResult{Response: webhookResponse, Event: event}
 }
 
-func (s Emitter) NotifyAll(eventType *testkube.TestkubeEventType, execution testkube.Execution) error {
+func (s Emitter) NotifyAll(eventType *testkube.EventType, execution testkube.Execution) error {
 	webhookList, err := s.WebhooksClient.GetByEvent(eventType.String())
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (s Emitter) NotifyAll(eventType *testkube.TestkubeEventType, execution test
 		}
 
 		s.Log.Debugw("NotifyAll: Sending event", "uri", wh.Spec.Uri, "type", eventType, "executionID", execution.Id, "executionName", execution.Name)
-		s.Notify(testkube.TestkubeEvent{
+		s.Notify(testkube.Event{
 			Uri:       wh.Spec.Uri,
 			Type_:     eventType,
 			Execution: &execution,
@@ -151,7 +151,7 @@ func (s Emitter) NotifyAll(eventType *testkube.TestkubeEventType, execution test
 }
 
 // TODO move it to EventEmitter as kind of SlackEvent
-func (s Emitter) sendSlackEvent(eventType *testkube.TestkubeEventType, execution testkube.Execution) {
+func (s Emitter) sendSlackEvent(eventType *testkube.EventType, execution testkube.Execution) {
 	err := slacknotifier.SendEvent(eventType, execution)
 	if err != nil {
 		s.Log.Warnw("notify slack failed", "error", err)

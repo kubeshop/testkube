@@ -14,15 +14,15 @@ type DummyListener struct {
 	SelectorString    string
 }
 
-func (l *DummyListener) Notify(event testkube.TestkubeEvent) testkube.TestkubeEventResult {
+func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
 	l.NotificationCount++
-	return testkube.TestkubeEventResult{Id: event.Id}
+	return testkube.EventResult{Id: event.Id}
 }
 
-func (l DummyListener) Events() []testkube.TestkubeEventType {
-	return []testkube.TestkubeEventType{
-		testkube.START_TEST_TestkubeEventType,
-		testkube.END_TEST_TestkubeEventType,
+func (l DummyListener) Events() []testkube.EventType {
+	return []testkube.EventType{
+		testkube.START_TEST_EventType,
+		testkube.END_TEST_EventType,
 	}
 }
 
@@ -164,18 +164,18 @@ func TestEmitter_Reconcile(t *testing.T) {
 
 }
 
-func newExampleTestEvent1() testkube.TestkubeEvent {
-	return testkube.TestkubeEvent{
+func newExampleTestEvent1() testkube.Event {
+	return testkube.Event{
 		Id:        "1",
-		Type_:     testkube.TestkubeEventStartTest,
+		Type_:     testkube.EventStartTest,
 		Execution: testkube.NewQueuedExecution(),
 	}
 }
 
-func newExampleTestEvent2() testkube.TestkubeEvent {
-	return testkube.TestkubeEvent{
+func newExampleTestEvent2() testkube.Event {
+	return testkube.Event{
 		Id:        "2",
-		Type_:     testkube.TestkubeEventStartTest,
+		Type_:     testkube.EventStartTest,
 		Execution: testkube.NewQueuedExecution(),
 	}
 }

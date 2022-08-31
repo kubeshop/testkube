@@ -166,19 +166,19 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 
-	s.Events.Notify(testkube.NewTestkubeEventStartTest(&execution))
+	s.Events.Notify(testkube.NewEventStartTest(&execution))
 
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		s.Events.Notify(testkube.NewTestkubeEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTest(&execution))
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			s.Events.Notify(testkube.NewTestkubeEventEndTest(&execution))
+			s.Events.Notify(testkube.NewEventEndTest(&execution))
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
 
@@ -199,19 +199,19 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		s.Events.Notify(testkube.NewTestkubeEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTest(&execution))
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		s.Events.Notify(testkube.NewTestkubeEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTest(&execution))
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
 	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		s.Events.Notify(testkube.NewTestkubeEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTest(&execution))
 	}
 
 	return execution, nil
