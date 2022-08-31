@@ -403,7 +403,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		}
 
 		for key, value := range testSecretMap {
-			if variable, ok := execution.Variables[key]; ok {
+			if variable, ok := execution.Variables[key]; ok && value != "" {
 				variable.Value = string(value)
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
