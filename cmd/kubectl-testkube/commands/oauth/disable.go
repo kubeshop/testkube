@@ -12,14 +12,21 @@ func NewDisableOAuthCmd() *cobra.Command {
 		Use:   "oauth",
 		Short: "disable oauth authentication for direct api",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.NL()
+			ui.Print(ui.IconRocket + "  Disabling OAuth authentication for direct api")
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
 
-			cfg.DisableOauth()
-
-			err = config.Save(cfg)
-			ui.ExitOnError("saving config file", err)
-			ui.Success("OAuth", "disabled")
+			if err == nil {
+				cfg.DisableOauth()
+				err = config.Save(cfg)
+			}
+			if err != nil {
+				ui.PrintDisabled("OAuth", "failed")
+				ui.PrintConfigError(err)
+			} else {
+				ui.PrintDisabled("OAuth", "disabled")
+			}
+			ui.NL()
 		},
 	}
 

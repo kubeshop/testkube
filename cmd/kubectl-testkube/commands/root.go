@@ -13,11 +13,10 @@ import (
 )
 
 var (
-	telemetryEnabled bool
-	client           string
-	verbose          bool
-	namespace        string
-	oauthEnabled     bool
+	client       string
+	verbose      bool
+	namespace    string
+	oauthEnabled bool
 )
 
 func init() {
@@ -57,7 +56,9 @@ var RootCmd = &cobra.Command{
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
-		if telemetryEnabled {
+		cfg, _ := config.Load()
+
+		if cfg.TelemetryEnabled {
 			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 			out, err := telemetry.SendCmdEvent(cmd, common.Version)
 			if ui.Verbose && err != nil {
@@ -112,7 +113,6 @@ func Execute() {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
 
-	RootCmd.PersistentFlags().BoolVarP(&telemetryEnabled, "telemetry-enabled", "", cfg.TelemetryEnabled, "enable collection of anonumous telemetry data")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")

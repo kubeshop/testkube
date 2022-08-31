@@ -60,6 +60,9 @@ func Failf(err string, params ...interface{})     { ui.Failf(err, params...) }
 func CommandOutput(output []byte, command string, params ...string) {
 	ui.CommandOutput(output, command, params...)
 }
+func Print(message string, subMessages ...string)           { ui.Print(message, subMessages...) }
+func PrintEnabled(message string, subMessages ...string)    { ui.PrintEnabled(message, subMessages...) }
+func PrintDisabled(message string, subMessages ...string)   { ui.PrintDisabled(message, subMessages...) }
 func Medal()                                                { ui.Medal() }
 func Completed(message string, subMessages ...string)       { ui.Completed(message, subMessages...) }
 func GroupCompleted(main string, sub ...string)             { ui.GroupCompleted(main, sub...) }
