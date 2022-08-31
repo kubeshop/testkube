@@ -1,6 +1,25 @@
 package testkube
 
-import "k8s.io/apimachinery/pkg/labels"
+import (
+	"github.com/google/uuid"
+	"k8s.io/apimachinery/pkg/labels"
+)
+
+func NewTestkubeEventStartTest(execution *Execution) TestkubeEvent {
+	return TestkubeEvent{
+		Id:        uuid.NewString(),
+		Type_:     TestkubeEventStartTest,
+		Execution: execution,
+	}
+}
+
+func NewTestkubeEventEndTest(execution *Execution) TestkubeEvent {
+	return TestkubeEvent{
+		Id:        uuid.NewString(),
+		Type_:     TestkubeEventEndTest,
+		Execution: execution,
+	}
+}
 
 func (e TestkubeEvent) Log() []any {
 

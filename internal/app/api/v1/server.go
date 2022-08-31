@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +23,9 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
+	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -30,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
-	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
 const HeartbeatInterval = time.Hour
@@ -65,10 +68,17 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		EventsEmitter:        webhook.NewEmitter(webhookClient),
-		WebhooksClient:       webhookClient,
-		Namespace:            namespace,
+		// EventsEmitter:        webhook.NewEmitter(webhookClient),
+		Events:         event.NewEmitter(),
+		WebhooksClient: webhookClient,
+		Namespace:      namespace,
 	}
+
+	// will be reused in websockets handler
+	s.WebsocketLoader = ws.NewWebsocketLoader()
+
+	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
+	s.Events.Loader.Register(s.WebsocketLoader)
 
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -87,7 +97,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.EventsEmitter); err != nil {
+	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
 		panic(err)
 	}
 
@@ -105,7 +115,6 @@ type TestkubeAPI struct {
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
-	EventsEmitter        *webhook.Emitter
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
@@ -113,6 +122,9 @@ type TestkubeAPI struct {
 	Namespace            string
 	TelemetryEnabled     bool
 	oauthParams          oauthParams
+
+	WebsocketLoader *ws.WebsocketLoader
+	Events          *event.Emitter
 }
 
 type jobTemplates struct {
@@ -275,9 +287,10 @@ func (s TestkubeAPI) Init() {
 
 	events := s.Routes.Group("/events")
 	events.Post("/flux", s.FluxEventHandler())
+	events.Get("/stream", s.EventsStreamHandler())
+	events.Get("/test", s.EventsTestHandler())
 
-	s.EventsEmitter.RunWorkers()
-	s.HandleEmitterLogs()
+	s.InitEventsEmitter()
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

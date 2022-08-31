@@ -16,7 +16,21 @@ type Listener interface {
 	Metadata() map[string]string
 }
 
-type ListenerReconiler interface {
-	Load() (listeners []Listener, err error)
+type ListenerLoader interface {
+	Load() (listeners Listeners, err error)
 	Kind() string
+}
+
+type Listeners []Listener
+
+func (l Listeners) Log() []any {
+	var result []any
+	for _, listener := range l {
+		result = append(result, map[string]any{
+			"kind":     listener.Kind(),
+			"selector": listener.Selector(),
+			"metadata": listener.Metadata(),
+		})
+	}
+	return result
 }

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -25,16 +26,22 @@ const (
 	mediaTypeYAML = "text/yaml"
 )
 
-// HandleEmitterLogs is a handler to emit logs
-func (s TestkubeAPI) HandleEmitterLogs() {
+// InitEventsEmitter is a handler to emit logs
+func (s TestkubeAPI) InitEventsEmitter() {
+	// run reconciller loop
+	go s.Events.Reconcile(context.Background())
+
+	// run workers
+	s.Events.RunWorkers()
+
 	go func() {
 		s.Log.Debug("Listening for workers results")
-		for resp := range s.EventsEmitter.Responses {
-			if resp.Error != nil {
+		for resp := range s.Events.Results {
+			if resp.Error() != "" {
 				s.Log.Errorw("got error when sending webhooks", "response", resp)
 				continue
 			}
-			s.Log.Debugw("got webhook response", "response", resp)
+			s.Log.Debugw("got event response", "response", resp)
 		}
 	}()
 }

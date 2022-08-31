@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,6 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
-
-		fmt.Printf("%+v\n", svr.URL)
 
 		l := NewWebhookListener(svr.URL, "", []testkube.TestkubeEventType{})
 

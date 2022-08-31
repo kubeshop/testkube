@@ -116,8 +116,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 	t.Run("emitter refersh listeners", func(t *testing.T) {
 		// given
 		emitter := NewEmitter()
-		emitter.Reconciler.Register(&DummyReconciler{})
-		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&DummyLoader{})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -134,8 +134,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
 		// given first reconciler loop was done
 		emitter := NewEmitter()
-		emitter.Reconciler.Register(&DummyReconciler{})
-		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&DummyLoader{})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -147,8 +147,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 		cancel()
 
 		// and we'll add additional reconcilers
-		emitter.Reconciler.Register(&DummyReconciler{})
-		emitter.Reconciler.Register(&DummyReconciler{})
+		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&DummyLoader{})
 
 		ctx, cancel = context.WithCancel(context.Background())
 
