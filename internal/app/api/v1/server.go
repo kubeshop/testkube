@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -79,6 +80,7 @@ func NewTestkubeAPI(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
+	s.Events.Loader.Register(slack.NewSlackLoader())
 
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -101,7 +103,11 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	s.Init()
+	s.InitEnvs()
+	s.InitStorage()
+	s.InitRoutes()
+	s.InitEventsEmitter()
+
 	return s
 }
 
@@ -187,7 +193,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent() {
 }
 
 // Init initializes api server settings
-func (s TestkubeAPI) Init() {
+func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
 	}
@@ -195,9 +201,13 @@ func (s TestkubeAPI) Init() {
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
 		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
+}
 
+func (s *TestkubeAPI) InitStorage() {
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
+}
 
+func (s *TestkubeAPI) InitRoutes() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
 	s.Routes.Use(s.AuthHandler())
@@ -289,8 +299,6 @@ func (s TestkubeAPI) Init() {
 	events.Post("/flux", s.FluxEventHandler())
 	events.Get("/stream", s.EventsStreamHandler())
 	events.Get("/test", s.EventsTestHandler())
-
-	s.InitEventsEmitter()
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
