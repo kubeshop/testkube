@@ -297,7 +297,6 @@ func (s *TestkubeAPI) InitRoutes() {
 	events := s.Routes.Group("/events")
 	events.Post("/flux", s.FluxEventHandler())
 	events.Get("/stream", s.EventsStreamHandler())
-	events.Get("/test", s.EventsTestHandler())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

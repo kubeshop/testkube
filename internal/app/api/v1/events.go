@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/fluxcd/pkg/runtime/events"
 )
@@ -31,15 +30,6 @@ func (s TestkubeAPI) InitEvents() {
 			s.Log.Debugw("got event response", "response", resp)
 		}
 	}()
-}
-
-func (s TestkubeAPI) EventsTestHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		e := testkube.NewQueuedExecution()
-		e.Id = "test-execution-id"
-		s.Events.Notify(testkube.NewEventStartTest(e))
-		return nil
-	}
 }
 
 func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
