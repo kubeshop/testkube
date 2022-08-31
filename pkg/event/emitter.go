@@ -55,6 +55,7 @@ func (e *Emitter) OverrideListeners(listeners common.Listeners) {
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
+	// TODO we need here some cross pod event bus like NATS or similar
 	e.Events <- event
 }
 
