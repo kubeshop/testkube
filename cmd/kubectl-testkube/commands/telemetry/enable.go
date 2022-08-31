@@ -11,13 +11,23 @@ func NewEnableTelemetryCmd() *cobra.Command {
 		Use:   "telemetry",
 		Short: "Enable collecting of anonymous telemetry data",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			ui.NL()
+			ui.Print(ui.IconRocket + "  Enabling telemetry on the testkube CLI")
 
-			cfg.EnableAnalytics()
-			err = config.Save(cfg)
-			ui.ExitOnError("saving config file", err)
-			ui.Success("Telemetry", "enabled")
+			cfg, err := config.Load()
+			if err == nil {
+				cfg.EnableAnalytics()
+				err = config.Save(cfg)
+			}
+			if err != nil {
+				ui.PrintDisabled("Telemetry on CLI", "failed")
+				ui.PrintOnError("    Can't access config file", err)
+				ui.Info(ui.IconSuggestion+"  Suggestion:", "Do you have enough rights to handle the config file?")
+				ui.Info(ui.IconDocumentation+"  Documentation:", "https://kubeshop.github.io/testkube/")
+			} else {
+				ui.PrintEnabled("Telemetry on CLI", "enabled")
+			}
+			ui.NL()
 		},
 	}
 

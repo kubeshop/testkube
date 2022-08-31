@@ -13,20 +13,24 @@ func NewStatusCmd() *cobra.Command {
 		Use:   "status [feature|resource]",
 		Short: "Show status of feature or resource",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.NL()
+			ui.Print(ui.IconRocket + "  Getting status on the testkube CLI")
+
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			ui.ExitOnError("   Loading config file failed", err)
 
 			if cfg.TelemetryEnabled {
-				ui.Success("Telemetry", "enabled")
+				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			} else {
-				ui.Success("Telemetry", "disabled")
+				ui.PrintDisabled("Telemetry on CLI", "disabled")
 			}
 
 			if cfg.OAuth2Data.Enabled {
-				ui.Success("OAuth", "enabled")
+				ui.PrintEnabled("OAuth", "enabled")
 			} else {
-				ui.Success("OAuth", "disabled")
+				ui.PrintDisabled("Oauth", "disabled")
 			}
+			ui.NL()
 		},
 	}
 
