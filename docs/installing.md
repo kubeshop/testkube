@@ -196,7 +196,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.image.repository        | yes         | "kubeshop/testkube-api-server"       |
 | testkube-api.image.pullPolicy        | yes         | "Always"                             |
 | testkube-api.image.tag               | yes         | "latest"                             |
-| testkube-api.service.type            | yes         | "NodePort"                           |
+| testkube-api.service.type            | yes         | "ClusterIP"                           |
 | testkube-api.service.port            | yes         | 8088                                 |
 | testkube-api.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
 | testkube-api.telemetryEnabled        | yes         | true                                 |
