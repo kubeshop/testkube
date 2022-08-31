@@ -69,10 +69,9 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		// EventsEmitter:        webhook.NewEmitter(webhookClient),
-		Events:         event.NewEmitter(),
-		WebhooksClient: webhookClient,
-		Namespace:      namespace,
+		Events:               event.NewEmitter(),
+		WebhooksClient:       webhookClient,
+		Namespace:            namespace,
 	}
 
 	// will be reused in websockets handler
@@ -106,7 +105,7 @@ func NewTestkubeAPI(
 	s.InitEnvs()
 	s.InitStorage()
 	s.InitRoutes()
-	s.InitEventsEmitter()
+	s.InitEvents()
 
 	return s
 }

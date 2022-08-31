@@ -1,8 +1,8 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +11,27 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/events"
 )
+
+// InitEvents is a handler to emit logs
+func (s TestkubeAPI) InitEvents() {
+	// run reconciller loop
+	go s.Events.Reconcile(context.Background())
+
+	// run workers
+	s.Events.RunWorkers()
+
+	// handle resposne logs
+	go func() {
+		s.Log.Debug("Listening for workers results")
+		for resp := range s.Events.Results {
+			if resp.Error() != "" {
+				s.Log.Errorw("got error when sending webhooks", "response", resp)
+				continue
+			}
+			s.Log.Debugw("got event response", "response", resp)
+		}
+	}()
+}
 
 func (s TestkubeAPI) EventsTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -23,13 +44,12 @@ func (s TestkubeAPI) EventsTestHandler() fiber.Handler {
 
 func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		// c.Locals is added to the *websocket.Conn
-		log.Println(c.Locals("allowed"))  // true
-		log.Println(c.Params("id"))       // 123
-		log.Println(c.Query("v"))         // 1.0
-		log.Println(c.Cookies("session")) // ""
+		s.Log.Debugw("handling websocket connection", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
+		// wait for disconnect
+		// WebsocketLoader will add WebsocketListener which will send data to `c`
 		<-s.WebsocketLoader.Add(c)
+
 		s.Log.Debugw("websocket closed", "id", c.Params("id"))
 	})
 }
