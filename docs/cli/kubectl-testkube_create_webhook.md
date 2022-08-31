@@ -29,7 +29,7 @@ kubectl-testkube create webhook [flags]
       --crd-only            generate only crd
       --namespace string    Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data (default true)
+      --telemetry-enabled   enable collection of anonumous telemetry data
       --verbose             show additional debug messages
 ```
 
