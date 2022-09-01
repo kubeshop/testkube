@@ -477,6 +477,10 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
+			request.VariablesFile = test.ExecutionRequest.VariablesFile
+		}
+
 		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
 			request.HttpProxy = test.ExecutionRequest.HttpProxy
 		}

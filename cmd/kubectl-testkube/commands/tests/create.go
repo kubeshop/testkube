@@ -97,6 +97,10 @@ func NewCreateTestsCmd() *cobra.Command {
 					options.Content.Data = fmt.Sprintf("%q", options.Content.Data)
 				}
 
+				if options.ExecutionRequest != nil && options.ExecutionRequest.VariablesFile != "" {
+					options.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", options.ExecutionRequest.VariablesFile)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
 				ui.ExitOnError("executing crd template", err)
 
