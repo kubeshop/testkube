@@ -6,19 +6,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
 const executionID = "id-1"
 
-func TestWebhook(t *testing.T) {
+func TestWebhookListener_Notify(t *testing.T) {
 
 	t.Run("send event success response", func(t *testing.T) {
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var event testkube.WebhookEvent
+			var event testkube.Event
 			err := json.NewDecoder(r.Body).Decode(&event)
 			// then
 			assert.NoError(t, err)
@@ -28,19 +27,15 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewSimpleEmitter()
-		s.RunWorkers()
+		l := NewWebhookListener(svr.URL, "", []testkube.EventType{})
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
-			Uri:       svr.URL,
+		r := l.Notify(testkube.Event{
+			Type_:     testkube.EventStartTest,
 			Execution: exampleExecution(),
 		})
 
-		// then
-		r := <-s.Responses
-		assert.Equal(t, 200, r.Response.StatusCode)
+		assert.Equal(t, "", r.Error())
 
 	})
 
@@ -53,37 +48,32 @@ func TestWebhook(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		s := NewSimpleEmitter()
-		s.RunWorkers()
+		l := NewWebhookListener(svr.URL, "", []testkube.EventType{})
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
-			Uri:       svr.URL,
+		r := l.Notify(testkube.Event{
+			Type_:     testkube.EventStartTest,
 			Execution: exampleExecution(),
 		})
 
 		// then
-		r := <-s.Responses
-		assert.Equal(t, http.StatusBadGateway, r.Response.StatusCode)
+		assert.NotEqual(t, "", r.Error())
 
 	})
 
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
-		s := NewSimpleEmitter()
-		s.RunWorkers()
+
+		s := NewWebhookListener("http://baduri.badbadbad", "", []testkube.EventType{})
 
 		// when
-		s.sendHttpEvent(testkube.WebhookEvent{
-			Type_:     testkube.WebhookTypeStartTest,
-			Uri:       "http://baduri.badbadbad",
+		r := s.Notify(testkube.Event{
+			Type_:     testkube.EventStartTest,
 			Execution: exampleExecution(),
 		})
 
 		// then
-		r := <-s.Responses
-		assert.Error(t, r.Error)
+		assert.NotEqual(t, "", r.Error())
 	})
 
 }
@@ -92,9 +82,4 @@ func exampleExecution() *testkube.Execution {
 	execution := testkube.NewQueuedExecution()
 	execution.Id = executionID
 	return execution
-}
-
-func NewSimpleEmitter() *Emitter {
-	return NewEmitter(&executorsclientv1.WebhooksClient{})
-
 }

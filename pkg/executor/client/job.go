@@ -23,12 +23,12 @@ import (
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
 const (
@@ -88,8 +88,7 @@ var (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string,
-	metrics ExecutionCounter, emiter *webhook.Emitter) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics ExecutionCounter, emiter *event.Emitter) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -121,7 +120,7 @@ type JobExecutor struct {
 	initImage   string
 	jobTemplate string
 	metrics     ExecutionCounter
-	Emitter     *webhook.Emitter
+	Emitter     *event.Emitter
 }
 
 type JobOptions struct {
@@ -319,11 +318,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	execution.ExecutionResult = result
 	c.metrics.IncExecuteTest(*execution)
 
-	err = c.Emitter.NotifyAll(testkube.WebhookTypeEndTest, *execution)
-	if err != nil {
-		c.Log.Errorw("Notify events error", "error", err)
-	}
-
+	c.Emitter.Notify(testkube.NewEventEndTest(execution))
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions

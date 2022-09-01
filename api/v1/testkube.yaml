@@ -2637,7 +2637,7 @@ components:
         events:
           type: array
           items:
-            $ref: "#/components/schemas/WebhookEventType"
+            $ref: "#/components/schemas/EventType"
         selector:
           type: string
           description: Labels to filter for tests and test suites
@@ -2650,24 +2650,50 @@ components:
             env: "prod"
             app: "backend"
 
-    WebhookEvent:
+    Event:
       description: CRD based executor data
       type: object
       required:
         - type
+        - id
       properties:
+        id:
+          type: string
+          description: UUID of event
         uri:
           type: string
+          description: DEPERECATED event uri remove after rewrite @TODO
         type:
-          $ref: "#/components/schemas/WebhookEventType"
+          $ref: "#/components/schemas/EventType"
         execution:
           $ref: "#/components/schemas/Execution"
 
-    WebhookEventType:
+    EventType:
       type: string
       enum:
         - start-test
+        - start-testsuite
         - end-test
+        - end-testsuite
+        - test-failed
+        - testsuite-failed
+
+    EventResult:
+      description: Listener result after sending particular event
+      type: object
+      required:
+        - type
+      properties:
+        id:
+          type: string
+          description: UUID of event
+        error:
+          type: string
+          description: error message if any
+        result:
+          type: string
+          format: error
+          description: result of event
 
     TestWithExecution:
       description: Test with latest Execution result

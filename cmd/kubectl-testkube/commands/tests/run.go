@@ -20,6 +20,7 @@ func NewRunTestCmd() *cobra.Command {
 	var (
 		name                     string
 		image                    string
+		iterations               int
 		watchEnabled             bool
 		binaryArgs               []string
 		variables                map[string]string
@@ -86,9 +87,11 @@ func NewRunTestCmd() *cobra.Command {
 					os.Exit(1)
 				}
 
-				execution, err := client.ExecuteTest(testName, name, options)
-				ui.ExitOnError("starting test execution "+namespacedName, err)
-				executions = append(executions, execution)
+				for i := 0; i < iterations; i++ {
+					execution, err := client.ExecuteTest(testName, name, options)
+					ui.ExitOnError("starting test execution "+namespacedName, err)
+					executions = append(executions, execution)
+				}
 			case len(selectors) != 0:
 				selector := strings.Join(selectors, ",")
 				executions, err = client.ExecuteTests(selector, concurrencyLevel, options)
@@ -146,6 +149,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_name1=secret_key1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
+	cmd.Flags().IntVar(&iterations, "iterations", 1, "how many times to run the test")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
