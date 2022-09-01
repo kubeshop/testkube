@@ -39,6 +39,10 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
 			}
 
+			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
+				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
 			return s.getCRDs(c, data, err)
 		}
@@ -64,6 +68,10 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			if test.Content != nil && test.Content.Data != "" {
 				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
+				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
@@ -144,6 +152,11 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 				if tests[i].Content != nil && tests[i].Content.Data != "" {
 					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
 				}
+
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
+					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
+				}
+
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -244,6 +257,11 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 				if tests[i].Content != nil && tests[i].Content.Data != "" {
 					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
 				}
+
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
+					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
+				}
+
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -334,6 +352,11 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			if request.Content != nil && request.Content.Data != "" {
 				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
 			}
+
+			if request.ExecutionRequest != nil && request.ExecutionRequest.VariablesFile != "" {
+				request.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", request.ExecutionRequest.VariablesFile)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}

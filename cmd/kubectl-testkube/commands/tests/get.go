@@ -43,6 +43,10 @@ func NewGetTestsCmd() *cobra.Command {
 							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
 						}
 
+						if test.Test.ExecutionRequest != nil && test.Test.ExecutionRequest.VariablesFile != "" {
+							test.Test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.Test.ExecutionRequest.VariablesFile)
+						}
+
 						common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
 						return
 					}
@@ -71,6 +75,10 @@ func NewGetTestsCmd() *cobra.Command {
 								test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
 							}
 
+							if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
+								test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
+							}
+
 							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 
@@ -87,6 +95,10 @@ func NewGetTestsCmd() *cobra.Command {
 							if test.Test != nil {
 								if test.Test.Content != nil && test.Test.Content.Data != "" {
 									test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
+								}
+
+								if test.Test.ExecutionRequest != nil && test.Test.ExecutionRequest.VariablesFile != "" {
+									test.Test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.Test.ExecutionRequest.VariablesFile)
 								}
 
 								common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
