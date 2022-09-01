@@ -17,12 +17,11 @@ kubectl-testkube delete test [testName] [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string      api uri, default value read from config if set (default "http://localhost:8088")
-  -c, --client string       Client used for connecting to testkube API one of proxy|direct (default "proxy")
-      --namespace string    kubernetes namespace (default "testkube")
-      --oauth-enabled       enable oauth
-      --telemetry-enabled   enable collection of anonumous telemetry data
-      --verbose             should I show additional debug messages
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+      --namespace string   kubernetes namespace (default "testkube")
+      --oauth-enabled      enable oauth
+      --verbose            should I show additional debug messages
 ```
 
 ### SEE ALSO

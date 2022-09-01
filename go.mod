@@ -10,9 +10,9 @@ require (
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/runtime v0.16.2
-	github.com/gofiber/adaptor/v2 v2.1.25
-	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gofiber/websocket/v2 v2.0.24
+	github.com/gofiber/adaptor/v2 v2.1.26
+	github.com/gofiber/fiber/v2 v2.37.0
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.5.0
@@ -27,7 +27,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/valyala/fasthttp v1.39.0
 	go.mongodb.org/mongo-driver v1.10.1
-	go.uber.org/zap v1.22.0
+	go.uber.org/zap v1.23.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.4
 	k8s.io/apimachinery v0.24.4
