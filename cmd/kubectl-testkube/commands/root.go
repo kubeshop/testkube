@@ -47,10 +47,11 @@ func init() {
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
+	RootCmd.SetHelpCommand(NewHelpCmd())
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "kubectl-testkube",
+	Use:   "testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
@@ -118,7 +119,6 @@ func Execute() {
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
-
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

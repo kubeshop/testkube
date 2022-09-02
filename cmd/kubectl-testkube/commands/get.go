@@ -14,10 +14,11 @@ import (
 
 func NewGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "get <resourceName>",
-		Aliases: []string{"g"},
-		Short:   "Get resources",
-		Long:    `Get available resources, get single item or list`,
+		Use:         "get <resourceName>",
+		Aliases:     []string{"g"},
+		Short:       "Get resources",
+		Long:        `Get available resources, get single item or list`,
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
