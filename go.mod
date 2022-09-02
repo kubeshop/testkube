@@ -18,6 +18,7 @@ require (
 	github.com/kubeshop/testkube-operator v1.5.0
 	github.com/minio/minio-go/v7 v7.0.35
 	github.com/moogar0880/problems v0.1.1
+	github.com/nats-io/nats.go v1.16.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_golang v1.13.0
 	github.com/segmentio/analytics-go/v3 v3.2.1
@@ -75,6 +76,9 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.12.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nats-io/nats-server/v2 v2.8.4 // indirect
+	github.com/nats-io/nkeys v0.3.0 // indirect
+	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20211223103454-d0aaa54c5899 // indirect
 	github.com/segmentio/backo-go v1.0.0 // indirect
