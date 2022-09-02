@@ -55,7 +55,12 @@ func (ui *UI) Print(message string, subMessages ...string) {
 	for _, sub := range subMessages {
 		fmt.Fprintf(ui.Writer, " %s", White(sub))
 	}
-	fmt.Println(ui.Writer)
+	fmt.Fprintln(ui.Writer)
+}
+
+func (ui *UI) Printf(format string, data ...any) {
+	fmt.Fprintf(ui.Writer, format, data...)
+	fmt.Fprintln(ui.Writer)
 }
 
 // PrintEnabled shows enabled in terminal
