@@ -291,17 +291,19 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 
 func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		s.Log.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
-
 		executionID := c.Params("executionID")
+		l := s.Log.With("executionID", executionID)
+
+		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+
 		logs, err := s.Executor.Logs(executionID)
 		if err != nil {
-			s.Log.Errorw("can't get pod logs", "error", err)
+			l.Errorw("can't get pod logs", "error", err)
 			c.Conn.Close()
 			return
 		}
 		for logLine := range logs {
-			s.Log.Debugw("sending log line to websocket", "line", logLine)
+			l.Debugw("sending log line to websocket", "line", logLine)
 			c.WriteJSON(logLine)
 		}
 	})
