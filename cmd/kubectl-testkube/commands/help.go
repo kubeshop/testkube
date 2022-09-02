@@ -37,7 +37,7 @@ func NewHelpCmd() *cobra.Command {
 			ui.Printf(RootCmd.Flags().FlagUsages())
 			ui.Print(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
 			ui.NL()
-			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://kubeshop.io/testkube"))
+			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://kubeshop.github.io/testkube/"))
 			ui.NL()
 		},
 	}
@@ -77,7 +77,11 @@ func helpMessageByGroups(cmd *cobra.Command) string {
 	for _, groupName := range groupNames {
 		commands := groups[groupName]
 
-		group := strings.Split(groupName, cmdGroupDelimiter)[1]
+		groupSplit := strings.Split(groupName, cmdGroupDelimiter)
+		group := "others"
+		if len(groupSplit) > 1 {
+			group = strings.Split(groupName, cmdGroupDelimiter)[1]
+		}
 		buf.WriteString(fmt.Sprintf("%s\n", ui.LightGray(group)))
 
 		for _, cmd := range commands {
