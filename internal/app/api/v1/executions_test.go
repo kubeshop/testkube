@@ -228,11 +228,11 @@ func (e MockExecutor) Abort(id string) *testkube.ExecutionResult {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Logs(id string) (chan output.Output, error) {
+func (e MockExecutor) Logs(execution *testkube.Execution) (chan output.Output, error) {
 	if e.LogsFn == nil {
 		panic("not implemented")
 	}
-	return e.LogsFn(id)
+	return e.LogsFn(execution.Id)
 }
 
 func getMockExecutorClient() *executorsclientv1.ExecutorsClient {

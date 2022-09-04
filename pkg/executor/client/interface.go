@@ -29,7 +29,7 @@ type Executor interface {
 	// Abort aborts pending execution, do nothing when there is no pending execution
 	Abort(id string) (execution *testkube.ExecutionResult)
 
-	Logs(id string) (logs chan output.Output, err error)
+	Logs(execution *testkube.Execution) (logs chan output.Output, err error)
 }
 
 // HTTPClient interface for getting REST based requests

@@ -98,7 +98,7 @@ type JobOptions struct {
 }
 
 // Logs returns job logs stream channel using kubernetes api
-func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
+func (c JobExecutor) Logs(execution *testkube.Execution) (out chan output.Output, err error) {
 	out = make(chan output.Output)
 	logs := make(chan []byte)
 
@@ -108,12 +108,13 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 			close(out)
 		}()
 
-		if err := c.TailJobLogs(id, logs); err != nil {
+		if err := c.TailJobLogs(execution.Id, logs); err != nil {
 			out <- output.NewOutputError(err)
 			return
 		}
 
 		for l := range logs {
+			l = []byte(testkube.ObfuscateSecrets(string(l), execution.Variables))
 			entry, err := output.GetLogEntry(l)
 			if err != nil {
 				out <- output.NewOutputError(err)
@@ -253,6 +254,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	}
 
 	l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
+	result.Output = testkube.ObfuscateSecrets(result.Output, execution.Variables)
 	err = c.Repository.UpdateResult(ctx, execution.Id, result)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
