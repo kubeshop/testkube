@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -91,13 +92,13 @@ func NewCRDTestsCmd() *cobra.Command {
 
 			firstEntry := true
 			for testType, values := range tests {
-				if !firstEntry {
-					fmt.Printf("\n---\n")
-				} else {
-					firstEntry = false
-				}
-
 				for testName, test := range values {
+					if !firstEntry {
+						fmt.Printf("\n---\n")
+					} else {
+						firstEntry = false
+					}
+
 					if _, ok := testEnvs[testType]; ok {
 						if filename, ok := testEnvs[testType][testName]; ok {
 							data, err := os.ReadFile(filename)
@@ -141,11 +142,12 @@ func NewCRDTestsCmd() *cobra.Command {
 						}
 					}
 
-					fmt.Print(crd.ExecuteTemplate(crd.TemplateTest, test))
+					yaml, err := crd.ExecuteTemplate(crd.TemplateTest, test)
+					ui.ExitOnError("getting directory content", err)
+
+					fmt.Print(yaml)
 				}
 			}
-
-			ui.ExitOnError("getting directory content", err)
 		},
 	}
 
