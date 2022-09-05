@@ -53,5 +53,5 @@ func (d CurlTestAdapter) GetSecretVariables(data string) (map[string]testkube.Va
 
 // GetType returns test type
 func (d CurlTestAdapter) GetType() string {
-	return "k6/script"
+	return "curl/test"
 }
