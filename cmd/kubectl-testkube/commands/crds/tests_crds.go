@@ -189,7 +189,6 @@ func GenerateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 
 func SanitizeName(path string) string {
 	path = strings.TrimSuffix(path, filepath.Ext(path))
-	path = strings.TrimSuffix(path, ".postman_collection")
 
 	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
 	path = reg.ReplaceAllString(path, "-")
