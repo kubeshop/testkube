@@ -14,7 +14,7 @@ const (
 	exampleInvalidJSONContent = `some non json content`
 )
 
-func TestPostmanCollectionAdapter(t *testing.T) {
+func TestPostmanCollectionAdapterIs(t *testing.T) {
 
 	t.Run("Is return true when valid content", func(t *testing.T) {
 		detector := PostmanCollectionAdapter{}

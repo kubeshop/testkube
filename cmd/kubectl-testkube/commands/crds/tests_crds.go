@@ -19,6 +19,9 @@ import (
 )
 
 func NewCRDTestsCmd() *cobra.Command {
+	// try to detect type if none passed
+	d := detector.NewDefaultDetector()
+
 	cmd := &cobra.Command{
 		Use:   "tests-crds <manifestDirectory>",
 		Short: "Generate tests CRD file based on directory",
@@ -28,38 +31,119 @@ func NewCRDTestsCmd() *cobra.Command {
 			var err error
 
 			dir := args[0]
-			firstEntry := true
+
+			tests := make(map[string]map[string]client.UpsertTestOptions, 0)
+			testEnvs := make(map[string]map[string]string, 0)
+			testSecretEnvs := make(map[string]map[string]string, 0)
 
 			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return nil
 				}
 
-				if !strings.HasSuffix(path, ".json") {
+				if filepath.Ext(path) != ".json" {
+					return nil
+				}
+
+				if envName, testType, ok := d.DetectEnvName(path); ok {
+					if _, ok := testEnvs[testType]; !ok {
+						testEnvs[testType] = make(map[string]string, 0)
+					}
+
+					testEnvs[testType][envName] = path
+					return nil
+				}
+
+				if secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
+					if _, ok := testEnvs[testType]; !ok {
+						testSecretEnvs[testType] = make(map[string]string, 0)
+					}
+
+					testSecretEnvs[testType][secretEnvName] = path
 					return nil
 				}
 
 				ns, _ := cmd.Flags().GetString("namespace")
-				yaml, err := GenerateCRD(ns, path)
+				test, err := GenerateTest(ns, path)
 				if err != nil {
 					if !errors.Is(err, ErrTypeNotDetected) {
 						return err
 					}
 
 					ui.UseStderr()
-					ui.Warn(fmt.Sprintf("for file %s got an error: %v", path, err))
+					ui.Warn(fmt.Sprintf("generate test for file %s got an error: %v", path, err))
 					return nil
 				}
 
+				testName, testType, ok := d.DetectTestName(path)
+				if !ok {
+					testName = test.Name
+					testType = test.Type_
+				}
+
+				if _, ok := tests[testType]; !ok {
+					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
+				}
+
+				tests[testType][testName] = *test
+				return nil
+			})
+
+			firstEntry := true
+			for testType, values := range tests {
 				if !firstEntry {
 					fmt.Printf("\n---\n")
 				} else {
 					firstEntry = false
 				}
 
-				fmt.Print(yaml)
-				return nil
-			})
+				for testName, test := range values {
+					if _, ok := testEnvs[testType]; ok {
+						if filename, ok := testEnvs[testType][testName]; ok {
+							data, err := os.ReadFile(filename)
+							if err != nil {
+								ui.UseStderr()
+								ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
+								continue
+							}
+
+							if test.ExecutionRequest == nil {
+								test.ExecutionRequest = &testkube.ExecutionRequest{}
+							}
+
+							test.ExecutionRequest.VariablesFile = string(data)
+						}
+					}
+
+					if _, ok := testSecretEnvs[testType]; ok {
+						if filename, ok := testSecretEnvs[testType][testName]; ok {
+							data, err := os.ReadFile(filename)
+							if err != nil {
+								ui.UseStderr()
+								ui.Warn(fmt.Sprintf("read secret variables file %s got an error: %v", filename, err))
+								continue
+							}
+
+							if adapter := d.GetAdapter(testType); adapter != nil {
+								variables, err := adapter.GetSecretVariables(string(data))
+								if err != nil {
+									ui.UseStderr()
+									ui.Warn(fmt.Sprintf("parse secret file %s got an error: %v", filename, err))
+									continue
+								}
+
+								if test.ExecutionRequest == nil {
+									test.ExecutionRequest = &testkube.ExecutionRequest{}
+								}
+
+								test.ExecutionRequest.Variables = variables
+							}
+						}
+					}
+
+					fmt.Print(crd.ExecuteTemplate(crd.TemplateTest, test))
+				}
+			}
 
 			ui.ExitOnError("getting directory content", err)
 		},
@@ -71,13 +155,13 @@ func NewCRDTestsCmd() *cobra.Command {
 var ErrTypeNotDetected = fmt.Errorf("type not detected")
 
 // TODO find a way to use internal objects as YAML
-// GenerateCRD generates CRDs based on directory of test files
-func GenerateCRD(namespace, path string) (string, error) {
+// GenerateTest generates Test based on directory of test files
+func GenerateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 	var testType string
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// try to detect type if none passed
@@ -86,11 +170,11 @@ func GenerateCRD(namespace, path string) (string, error) {
 		ui.Debug("Detected test type", detectedType)
 		testType = detectedType
 	} else {
-		return "", ErrTypeNotDetected
+		return nil, ErrTypeNotDetected
 	}
 
 	name := filepath.Base(path)
-	test := client.UpsertTestOptions{
+	test := &client.UpsertTestOptions{
 		Name:      SanitizeName(name),
 		Namespace: namespace,
 		Content: &testkube.TestContent{
@@ -100,11 +184,12 @@ func GenerateCRD(namespace, path string) (string, error) {
 		Type_: testType,
 	}
 
-	return crd.ExecuteTemplate(crd.TemplateTest, test)
+	return test, nil
 }
 
 func SanitizeName(path string) string {
-	path = strings.TrimSuffix(path, ".json")
+	path = strings.TrimSuffix(path, filepath.Ext(path))
+	path = strings.TrimSuffix(path, ".postman_collection")
 
 	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
 	path = reg.ReplaceAllString(path, "-")
