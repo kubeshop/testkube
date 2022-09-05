@@ -20,6 +20,7 @@ func ObfuscateSecrets(output string, variables Variables) string {
 	for _, v := range variables {
 		if v.Type_ == VariableTypeSecret {
 			output = strings.ReplaceAll(output, `'`+v.Value+`'`, "********")
+			output = strings.ReplaceAll(output, `"`+v.Value+`"`, "********")
 		}
 	}
 	return output
