@@ -12,7 +12,7 @@ func TestDetector(t *testing.T) {
 
 	t.Run("detect postman/collection", func(t *testing.T) {
 
-		detector := Detector{}
+		detector := Detector{Adapters: make(map[string]Adapter, 0)}
 		detector.Add(CurlTestAdapter{})
 		detector.Add(PostmanCollectionAdapter{})
 		detector.Add(K6Adapter{})
