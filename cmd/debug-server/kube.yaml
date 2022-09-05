@@ -5,7 +5,7 @@ metadata:
   labels:
     app: debug-webserver
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: debug-webserver
@@ -24,11 +24,31 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: debug
+  name: debug-service
 spec:
+  type: NodePort
   selector:
     app: debug-webserver
   ports:
     - protocol: TCP
-      port: 8080
+      port: 80
       targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: debug-webserver-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: debug-service
+            port:
+              number: 80
