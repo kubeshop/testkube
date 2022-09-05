@@ -55,7 +55,7 @@ func NewCRDTestsCmd() *cobra.Command {
 				}
 
 				if secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
-					if _, ok := testEnvs[testType]; !ok {
+					if _, ok := testSecretEnvs[testType]; !ok {
 						testSecretEnvs[testType] = make(map[string]string, 0)
 					}
 
@@ -111,7 +111,7 @@ func NewCRDTestsCmd() *cobra.Command {
 								test.ExecutionRequest = &testkube.ExecutionRequest{}
 							}
 
-							test.ExecutionRequest.VariablesFile = string(data)
+							test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
 						}
 					}
 
