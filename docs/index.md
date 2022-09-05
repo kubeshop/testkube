@@ -41,7 +41,7 @@ run your first tests!
 
 Check out our blog posts that highlight Testkube functionality:
 
-- [Testkube Blog Post](https://kubeshop.io/blog-projects/testkube) - May 10, 2022
+- [Testkube Release v1.5](https://kubeshop.io/blog/testkube-v15-release-notes) - August 29, 2022
 
 ## **Questions or Comments?**
 
