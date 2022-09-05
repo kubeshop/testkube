@@ -1,6 +1,8 @@
 package testkube
 
-import "regexp"
+import (
+	"strings"
+)
 
 type Variables map[string]Variable
 
@@ -17,8 +19,7 @@ func VariablesToMap(v Variables) map[string]string {
 func ObfuscateSecrets(output string, variables Variables) string {
 	for _, v := range variables {
 		if v.Type_ == VariableTypeSecret {
-			re := regexp.MustCompile(`(` + v.Name + `',\s*')([^\s']*)`)
-			output = re.ReplaceAllString(output, "$1*****")
+			output = strings.ReplaceAll(output, `'`+v.Value+`'`, "********")
 		}
 	}
 	return output
