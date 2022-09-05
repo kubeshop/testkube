@@ -11,9 +11,12 @@ Watch the full installation video from our product experts: [Testkube Installati
 ## **Installing the Testkube CLI**
 Package dependencies:
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Helm](https://helm.sh/)
+
+Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
 
 ### **From Scripts**
-To install on Linux or MacOs, run
+To install on Linux or MacOS, run
 ```sh
 bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
 ```
