@@ -41,7 +41,7 @@ func ObfuscateSecrets(output string, variables Variables, testName string) strin
 		secretValue := ""
 		if *v.Type_ == SECRET_VariableType {
 			secretValue = v.Value
-			if *v.Type_ == SECRET_VariableType && v.SecretRef != nil {
+			if v.SecretRef != nil {
 				secretValue = secretKeyValues[v.SecretRef.Key]
 			}
 		}
