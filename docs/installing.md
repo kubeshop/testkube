@@ -13,7 +13,7 @@ Package dependencies:
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Helm](https://helm.sh/)
 
-Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them up manually in advance.
+Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
 
 ### **From Scripts**
 To install on Linux or MacOS, run
