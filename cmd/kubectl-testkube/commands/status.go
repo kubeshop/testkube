@@ -10,8 +10,9 @@ import (
 
 func NewStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "status [feature|resource]",
-		Short: "Show status of feature or resource",
+		Use:         "status [feature|resource]",
+		Short:       "Show status of feature or resource",
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
 			ui.Print(ui.IconRocket + "  Getting status on the testkube CLI")

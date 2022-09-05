@@ -1712,7 +1712,7 @@ components:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step before whole suite
           example:
-            - stopTestOn: true,
+            - stopTestOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"
@@ -1722,7 +1722,7 @@ components:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Steps to run
           example:
-            - stopTestOn: true,
+            - stopTestOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"
@@ -1732,7 +1732,7 @@ components:
             $ref: "#/components/schemas/TestSuiteStep"
           description: Run this step after whole suite
           example:
-            - stopTestOn: true,
+            - stopTestOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"

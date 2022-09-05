@@ -13,9 +13,10 @@ import (
 
 func NewDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete <resourceName>",
-		Aliases: []string{"remove"},
-		Short:   "Delete resources",
+		Use:         "delete <resourceName>",
+		Aliases:     []string{"remove"},
+		Short:       "Delete resources",
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)

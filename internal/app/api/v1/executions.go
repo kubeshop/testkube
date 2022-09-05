@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -286,6 +287,26 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 
 		return c.JSON(results)
 	}
+}
+
+func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		executionID := c.Params("executionID")
+		l := s.Log.With("executionID", executionID)
+
+		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+
+		logs, err := s.Executor.Logs(executionID)
+		if err != nil {
+			l.Errorw("can't get pod logs", "error", err)
+			c.Conn.Close()
+			return
+		}
+		for logLine := range logs {
+			l.Debugw("sending log line to websocket", "line", logLine)
+			c.WriteJSON(logLine)
+		}
+	})
 }
 
 // ExecutionLogsHandler streams the logs from a test execution

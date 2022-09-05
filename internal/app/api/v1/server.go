@@ -41,8 +41,8 @@ const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
-	executionsResults result.Repository,
-	testExecutionsResults testresult.Repository,
+	testExecutionResults result.Repository,
+	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
@@ -62,8 +62,8 @@ func NewTestkubeAPI(
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
-		TestExecutionResults: testExecutionsResults,
-		ExecutionResults:     executionsResults,
+		TestExecutionResults: testsuiteExecutionsResults,
+		ExecutionResults:     testExecutionResults,
 		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
@@ -98,7 +98,7 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
+	if s.Executor, err = client.NewJobExecutor(testExecutionResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
 		panic(err)
 	}
 
@@ -238,6 +238,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID", s.GetExecutionHandler())
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
+	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
 	tests := s.Routes.Group("/tests")
