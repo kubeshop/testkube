@@ -12,9 +12,9 @@ type Adapter interface {
 	// IsTestName detecs if filename has a conventional test name
 	IsTestName(filename string) (string, bool)
 	// IsEnvName detecs if filename has a conventional env name
-	IsEnvName(filename string) (string, bool)
+	IsEnvName(filename string) (string, string, bool)
 	// IsSecretEnvName detecs if filename has a conventional secret env name
-	IsSecretEnvName(filename string) (string, bool)
+	IsSecretEnvName(filename string) (string, string, bool)
 	// GetSecretVariables retuns secret variables
 	GetSecretVariables(data string) (map[string]testkube.Variable, error)
 	// GetType returns test type

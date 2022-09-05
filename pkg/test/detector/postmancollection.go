@@ -47,13 +47,33 @@ func (d PostmanCollectionAdapter) IsTestName(filename string) (string, bool) {
 }
 
 // IsEnvName detecs if filename has a conventional env name
-func (d PostmanCollectionAdapter) IsEnvName(filename string) (string, bool) {
-	return checkName(filename, ".postman_environment")
+func (d PostmanCollectionAdapter) IsEnvName(filename string) (string, string, bool) {
+	filename, found := checkName(filename, ".postman_environment")
+	if !found {
+		return "", "", false
+	}
+
+	names := strings.Split(filename, ".")
+	if len(names) != 2 {
+		return "", "", false
+	}
+
+	return names[0], names[1], true
 }
 
 // IsSecretEnvName detecs if filename has a conventional secret env name
-func (d PostmanCollectionAdapter) IsSecretEnvName(filename string) (string, bool) {
-	return checkName(filename, ".postman_secret_environment")
+func (d PostmanCollectionAdapter) IsSecretEnvName(filename string) (string, string, bool) {
+	filename, found := checkName(filename, ".postman_secret_environment")
+	if !found {
+		return "", "", false
+	}
+
+	names := strings.Split(filename, ".")
+	if len(names) != 2 {
+		return "", "", false
+	}
+
+	return names[0], names[1], true
 }
 
 // GetSecretVariables retuns secret variables

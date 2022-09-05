@@ -37,13 +37,13 @@ func (d CurlTestAdapter) IsTestName(filename string) (string, bool) {
 }
 
 // IsEnvName detecs if filename has a conventional env name
-func (d CurlTestAdapter) IsEnvName(filename string) (string, bool) {
-	return "", false
+func (d CurlTestAdapter) IsEnvName(filename string) (string, string, bool) {
+	return "", "", false
 }
 
 // IsSecretEnvName detecs if filename has a conventional secret env name
-func (d CurlTestAdapter) IsSecretEnvName(filename string) (string, bool) {
-	return "", false
+func (d CurlTestAdapter) IsSecretEnvName(filename string) (string, string, bool) {
+	return "", "", false
 }
 
 // GetSecretVariables retuns secret variables

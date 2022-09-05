@@ -43,10 +43,10 @@ func (d *Detector) DetectTestName(filename string) (name, testType string, found
 }
 
 // DetectEnvName detects env name
-func (d *Detector) DetectEnvName(filename string) (name, testType string, found bool) {
+func (d *Detector) DetectEnvName(filename string) (name, env, testType string, found bool) {
 	for _, adapter := range d.Adapters {
-		if name, found := adapter.IsEnvName(filename); found {
-			return name, adapter.GetType(), found
+		if name, env, found := adapter.IsEnvName(filename); found {
+			return name, env, adapter.GetType(), found
 		}
 	}
 
@@ -54,10 +54,10 @@ func (d *Detector) DetectEnvName(filename string) (name, testType string, found 
 }
 
 // DetectSecretEnvName detecs secret env name
-func (d *Detector) DetectSecretEnvName(filename string) (name, testType string, found bool) {
+func (d *Detector) DetectSecretEnvName(filename string) (name, env, testType string, found bool) {
 	for _, adapter := range d.Adapters {
-		if name, found := adapter.IsSecretEnvName(filename); found {
-			return name, adapter.GetType(), found
+		if name, env, found := adapter.IsSecretEnvName(filename); found {
+			return name, env, adapter.GetType(), found
 		}
 	}
 

@@ -29,13 +29,13 @@ func (d K6Adapter) IsTestName(filename string) (string, bool) {
 }
 
 // IsEnvName detecs if filename has a conventional env name
-func (d K6Adapter) IsEnvName(filename string) (string, bool) {
-	return "", false
+func (d K6Adapter) IsEnvName(filename string) (string, string, bool) {
+	return "", "", false
 }
 
 // IsSecretEnvName detecs if filename has a conventional secret env name
-func (d K6Adapter) IsSecretEnvName(filename string) (string, bool) {
-	return "", false
+func (d K6Adapter) IsSecretEnvName(filename string) (string, string, bool) {
+	return "", "", false
 }
 
 // GetSecretVariables retuns secret variables

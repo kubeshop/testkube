@@ -29,15 +29,13 @@ func NewCRDTestsCmd() *cobra.Command {
 		Long:  `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
 		Args:  validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
-			var err error
-
 			dir := args[0]
 
 			tests := make(map[string]map[string]client.UpsertTestOptions, 0)
-			testEnvs := make(map[string]map[string]string, 0)
-			testSecretEnvs := make(map[string]map[string]string, 0)
+			testEnvs := make(map[string]map[string]map[string]string, 0)
+			testSecretEnvs := make(map[string]map[string]map[string]string, 0)
 
-			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return nil
 				}
@@ -46,21 +44,29 @@ func NewCRDTestsCmd() *cobra.Command {
 					return nil
 				}
 
-				if envName, testType, ok := d.DetectEnvName(path); ok {
+				if testName, envName, testType, ok := d.DetectEnvName(path); ok {
 					if _, ok := testEnvs[testType]; !ok {
-						testEnvs[testType] = make(map[string]string, 0)
+						testEnvs[testType] = make(map[string]map[string]string, 0)
 					}
 
-					testEnvs[testType][envName] = path
+					if _, ok := testEnvs[testType][envName]; !ok {
+						testEnvs[testType][envName] = make(map[string]string, 0)
+					}
+
+					testEnvs[testType][envName][testName] = path
 					return nil
 				}
 
-				if secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
+				if secretTestName, secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
 					if _, ok := testSecretEnvs[testType]; !ok {
-						testSecretEnvs[testType] = make(map[string]string, 0)
+						testSecretEnvs[testType] = make(map[string]map[string]string, 0)
 					}
 
-					testSecretEnvs[testType][secretEnvName] = path
+					if _, ok := testEnvs[testType][secretEnvName]; !ok {
+						testEnvs[testType][secretEnvName] = make(map[string]string, 0)
+					}
+
+					testSecretEnvs[testType][secretEnvName][secretTestName] = path
 					return nil
 				}
 
@@ -90,17 +96,14 @@ func NewCRDTestsCmd() *cobra.Command {
 				return nil
 			})
 
-			firstEntry := true
+			ui.ExitOnError("getting directory content", err)
+
+			var envTests []client.UpsertTestOptions
 			for testType, values := range tests {
 				for testName, test := range values {
-					if !firstEntry {
-						fmt.Printf("\n---\n")
-					} else {
-						firstEntry = false
-					}
-
-					if _, ok := testEnvs[testType]; ok {
-						if filename, ok := testEnvs[testType][testName]; ok {
+					testMap := map[string]client.UpsertTestOptions{}
+					for envName := range testEnvs[testType] {
+						if filename, ok := testEnvs[testType][envName][testName]; ok {
 							data, err := os.ReadFile(filename)
 							if err != nil {
 								ui.UseStderr()
@@ -108,16 +111,18 @@ func NewCRDTestsCmd() *cobra.Command {
 								continue
 							}
 
-							if test.ExecutionRequest == nil {
-								test.ExecutionRequest = &testkube.ExecutionRequest{}
+							envTest := test
+							envTest.Name = SanitizeName(envTest.Name + "-" + envName)
+							envTest.ExecutionRequest = &testkube.ExecutionRequest{
+								VariablesFile: fmt.Sprintf("%q", strings.TrimSpace(string(data))),
 							}
 
-							test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
+							testMap[envTest.Name] = envTest
 						}
 					}
 
-					if _, ok := testSecretEnvs[testType]; ok {
-						if filename, ok := testSecretEnvs[testType][testName]; ok {
+					for secretEnvName := range testSecretEnvs[testType] {
+						if filename, ok := testSecretEnvs[testType][secretEnvName][testName]; ok {
 							data, err := os.ReadFile(filename)
 							if err != nil {
 								ui.UseStderr()
@@ -133,20 +138,44 @@ func NewCRDTestsCmd() *cobra.Command {
 									continue
 								}
 
-								if test.ExecutionRequest == nil {
-									test.ExecutionRequest = &testkube.ExecutionRequest{}
+								secretEnvTest := test
+								secretEnvTest.Name = SanitizeName(secretEnvTest.Name + "-" + secretEnvName)
+								if envTest, ok := testMap[secretEnvTest.Name]; ok {
+									secretEnvTest = envTest
 								}
 
-								test.ExecutionRequest.Variables = variables
+								if secretEnvTest.ExecutionRequest == nil {
+									secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+								}
+
+								secretEnvTest.ExecutionRequest.Variables = variables
+								testMap[secretEnvTest.Name] = secretEnvTest
 							}
 						}
 					}
 
-					yaml, err := crd.ExecuteTemplate(crd.TemplateTest, test)
-					ui.ExitOnError("getting directory content", err)
+					if len(testMap) == 0 {
+						testMap[test.Name] = test
+					}
 
-					fmt.Print(yaml)
+					for _, envTest := range testMap {
+						envTests = append(envTests, envTest)
+					}
 				}
+			}
+
+			firstEntry := true
+			for _, test := range envTests {
+				if !firstEntry {
+					fmt.Printf("\n---\n")
+				} else {
+					firstEntry = false
+				}
+
+				yaml, err := crd.ExecuteTemplate(crd.TemplateTest, test)
+				ui.ExitOnError("executing test template", err)
+
+				fmt.Print(yaml)
 			}
 		},
 	}
