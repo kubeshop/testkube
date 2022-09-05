@@ -57,3 +57,7 @@ You can also pass additional arguments to `k6` binary thanks to `--args` flag:
 $ kubectl testkube run test -f k6-test --args '--vus 100 --no-connection-reuse'
 ```
 
+### **K6 Test Results**
+
+A k6 test will be successful in Testkube when all checks and thresholds are successful. In case of an error thrown, the test will have `failed` status, even if there is no failure in the summary report in the test logs. For details check [this k6 issue](https://github.com/grafana/k6/issues/1680).
+
