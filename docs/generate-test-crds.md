@@ -1,6 +1,6 @@
 # File Naming Convention for Test CRD Generation
 
-We support following file naming convention for Postman files to support multple environment files:
+We support the following file naming convention for Postman files to support multiple environment files:
 
 ## Test filename convention
 
