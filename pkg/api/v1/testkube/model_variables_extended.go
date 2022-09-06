@@ -29,20 +29,17 @@ func ObfuscateSecrets(output string, variables Variables, testName string) strin
 		namespace = ns
 	}
 	secretClient, err := secret.NewClient(namespace)
-	var secretKeyValues map[string]string
-	if err == nil {
-		secretKeyValues, err = secretClient.Get(secret.GetMetadataName(testName))
-		if err != nil && !errors.IsNotFound(err) {
-			log.DefaultLogger.Warnw("error getting secret", "error", err)
-		}
-	}
+	secretKeyValues := getSecretKeyValue(err, secretClient, testName)
 
 	for _, v := range variables {
 		secretValue := ""
 		if *v.Type_ == SECRET_VariableType {
 			secretValue = v.Value
 			if v.SecretRef != nil {
-				secretValue = secretKeyValues[v.SecretRef.Key]
+				skv := getSecretKeyValue(err, secretClient, v.SecretRef.Name)
+				secretValue = skv[v.SecretRef.Key]
+			} else {
+				secretValue = secretKeyValues[v.Name]
 			}
 		}
 
@@ -52,4 +49,15 @@ func ObfuscateSecrets(output string, variables Variables, testName string) strin
 		}
 	}
 	return output
+}
+
+func getSecretKeyValue(err error, secretClient *secret.Client, secretName string) map[string]string {
+	var secretKeyValues map[string]string
+	if err == nil {
+		secretKeyValues, err = secretClient.Get(secret.GetMetadataName(secretName))
+		if err != nil && !errors.IsNotFound(err) {
+			log.DefaultLogger.Warnw("error getting secret", "error", err)
+		}
+	}
+	return secretKeyValues
 }
