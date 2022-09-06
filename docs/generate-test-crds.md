@@ -11,7 +11,7 @@ For example, mytest.postman_collection.json
 ## Test environment filename convention
 
 <Test name>.<Test env>.postman_environment.json - where `Test name` is reused from the test files and 
-`Test env` is pointing to particular testing environment.
+`Test env` is pointing to a particular testing environment.
 
 For example, mytest.prod.postman_collection.json
 
