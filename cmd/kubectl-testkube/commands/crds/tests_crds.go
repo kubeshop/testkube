@@ -19,16 +19,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewCRDTestsCmd is command to generate test CRDs
 func NewCRDTestsCmd() *cobra.Command {
-	// try to detect type if none passed
-	d := detector.NewDefaultDetector()
-
 	cmd := &cobra.Command{
 		Use:   "tests-crds <manifestDirectory>",
 		Short: "Generate tests CRD file based on directory",
 		Long:  `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
 		Args:  validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
+			// try to detect type if none passed
+			d := detector.NewDefaultDetector()
 			dir := args[0]
 
 			tests := make(map[string]map[string]client.UpsertTestOptions, 0)
@@ -71,7 +71,7 @@ func NewCRDTestsCmd() *cobra.Command {
 				}
 
 				ns, _ := cmd.Flags().GetString("namespace")
-				test, err := GenerateTest(ns, path)
+				test, err := generateTest(ns, path)
 				if err != nil {
 					if !errors.Is(err, ErrTypeNotDetected) {
 						return err
@@ -98,96 +98,18 @@ func NewCRDTestsCmd() *cobra.Command {
 
 			ui.ExitOnError("getting directory content", err)
 
-			var envTests []client.UpsertTestOptions
-			for testType, values := range tests {
-				for testName, test := range values {
-					testMap := map[string]client.UpsertTestOptions{}
-					for envName := range testEnvs[testType] {
-						if filename, ok := testEnvs[testType][envName][testName]; ok {
-							data, err := os.ReadFile(filename)
-							if err != nil {
-								ui.UseStderr()
-								ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
-								continue
-							}
-
-							envTest := test
-							envTest.Name = SanitizeName(envTest.Name + "-" + envName)
-							envTest.ExecutionRequest = &testkube.ExecutionRequest{
-								VariablesFile: fmt.Sprintf("%q", strings.TrimSpace(string(data))),
-							}
-
-							testMap[envTest.Name] = envTest
-						}
-					}
-
-					for secretEnvName := range testSecretEnvs[testType] {
-						if filename, ok := testSecretEnvs[testType][secretEnvName][testName]; ok {
-							data, err := os.ReadFile(filename)
-							if err != nil {
-								ui.UseStderr()
-								ui.Warn(fmt.Sprintf("read secret variables file %s got an error: %v", filename, err))
-								continue
-							}
-
-							if adapter := d.GetAdapter(testType); adapter != nil {
-								variables, err := adapter.GetSecretVariables(string(data))
-								if err != nil {
-									ui.UseStderr()
-									ui.Warn(fmt.Sprintf("parse secret file %s got an error: %v", filename, err))
-									continue
-								}
-
-								secretEnvTest := test
-								secretEnvTest.Name = SanitizeName(secretEnvTest.Name + "-" + secretEnvName)
-								if envTest, ok := testMap[secretEnvTest.Name]; ok {
-									secretEnvTest = envTest
-								}
-
-								if secretEnvTest.ExecutionRequest == nil {
-									secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
-								}
-
-								secretEnvTest.ExecutionRequest.Variables = variables
-								testMap[secretEnvTest.Name] = secretEnvTest
-							}
-						}
-					}
-
-					if len(testMap) == 0 {
-						testMap[test.Name] = test
-					}
-
-					for _, envTest := range testMap {
-						envTests = append(envTests, envTest)
-					}
-				}
-			}
-
-			firstEntry := true
-			for _, test := range envTests {
-				if !firstEntry {
-					fmt.Printf("\n---\n")
-				} else {
-					firstEntry = false
-				}
-
-				yaml, err := crd.ExecuteTemplate(crd.TemplateTest, test)
-				ui.ExitOnError("executing test template", err)
-
-				fmt.Print(yaml)
-			}
+			generateCRDs(addEnvToTests(tests, testEnvs, testSecretEnvs))
 		},
 	}
 
 	return cmd
 }
 
+// ErrTypeNotDetected is not detcted test type error
 var ErrTypeNotDetected = fmt.Errorf("type not detected")
 
-// TODO find a way to use internal objects as YAML
-// GenerateTest generates Test based on directory of test files
-func GenerateTest(namespace, path string) (*client.UpsertTestOptions, error) {
+// generateTest generates Test based on directory of test files
+func generateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 	var testType string
 
 	content, err := os.ReadFile(path)
@@ -206,7 +128,7 @@ func GenerateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 
 	name := filepath.Base(path)
 	test := &client.UpsertTestOptions{
-		Name:      SanitizeName(name),
+		Name:      sanitizeName(name),
 		Namespace: namespace,
 		Content: &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeString),
@@ -218,7 +140,8 @@ func GenerateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 	return test, nil
 }
 
-func SanitizeName(path string) string {
+// sanitizeName sanitizes test name
+func sanitizeName(path string) string {
 	path = strings.TrimSuffix(path, filepath.Ext(path))
 
 	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
@@ -232,4 +155,93 @@ func SanitizeName(path string) string {
 	}
 
 	return path
+}
+
+// addEnvToTest adds env files to tests
+func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
+	testEnvs, testSecretEnvs map[string]map[string]map[string]string) (envTests []client.UpsertTestOptions) {
+	d := detector.NewDefaultDetector()
+	for testType, values := range tests {
+		for testName, test := range values {
+			testMap := map[string]client.UpsertTestOptions{}
+			for envName := range testEnvs[testType] {
+				if filename, ok := testEnvs[testType][envName][testName]; ok {
+					data, err := os.ReadFile(filename)
+					if err != nil {
+						ui.UseStderr()
+						ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
+						continue
+					}
+
+					envTest := test
+					envTest.Name = sanitizeName(envTest.Name + "-" + envName)
+					envTest.ExecutionRequest = &testkube.ExecutionRequest{
+						VariablesFile: fmt.Sprintf("%q", strings.TrimSpace(string(data))),
+					}
+
+					testMap[envTest.Name] = envTest
+				}
+			}
+
+			for secretEnvName := range testSecretEnvs[testType] {
+				if filename, ok := testSecretEnvs[testType][secretEnvName][testName]; ok {
+					data, err := os.ReadFile(filename)
+					if err != nil {
+						ui.UseStderr()
+						ui.Warn(fmt.Sprintf("read secret variables file %s got an error: %v", filename, err))
+						continue
+					}
+
+					if adapter := d.GetAdapter(testType); adapter != nil {
+						variables, err := adapter.GetSecretVariables(string(data))
+						if err != nil {
+							ui.UseStderr()
+							ui.Warn(fmt.Sprintf("parse secret file %s got an error: %v", filename, err))
+							continue
+						}
+
+						secretEnvTest := test
+						secretEnvTest.Name = sanitizeName(secretEnvTest.Name + "-" + secretEnvName)
+						if envTest, ok := testMap[secretEnvTest.Name]; ok {
+							secretEnvTest = envTest
+						}
+
+						if secretEnvTest.ExecutionRequest == nil {
+							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+						}
+
+						secretEnvTest.ExecutionRequest.Variables = variables
+						testMap[secretEnvTest.Name] = secretEnvTest
+					}
+				}
+			}
+
+			if len(testMap) == 0 {
+				testMap[test.Name] = test
+			}
+
+			for _, envTest := range testMap {
+				envTests = append(envTests, envTest)
+			}
+		}
+	}
+
+	return envTests
+}
+
+// generateCRDs generates CRDs for tests
+func generateCRDs(envTests []client.UpsertTestOptions) {
+	firstEntry := true
+	for _, test := range envTests {
+		if !firstEntry {
+			fmt.Printf("\n---\n")
+		} else {
+			firstEntry = false
+		}
+
+		yaml, err := crd.ExecuteTemplate(crd.TemplateTest, test)
+		ui.ExitOnError("executing test template", err)
+
+		fmt.Print(yaml)
+	}
 }
