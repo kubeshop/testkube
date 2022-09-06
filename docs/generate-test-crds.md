@@ -24,3 +24,38 @@ For example, mytest.prod.postman_secret_environment.json
 
 It's expected that each variable value in secret environment file is provided in a form of `secret-name=secret-key`
 In this case it will be added to a list of Test secret variables.
+For example,
+
+```sh
+{
+        "id": "f8a038bf-3766-4424-94ee-381a69f55b9a",
+        "name": "Testing secret env",
+        "values": [
+                {
+                        "key": "secvar1",
+                        "value": "var-secrets=homepage",
+                        "enabled": true
+                },
+                {
+                        "key": "secvar2",
+                        "value": "var-secrets=apikey",
+                        "enabled": false
+                }
+        ],
+        "_postman_variable_scope": "environment",
+        "_postman_exported_at": "2022-09-04T04:47:42.590Z",
+        "_postman_exported_using": "Postman/9.14.14"
+}
+```
+
+will add this section to Test CRD (only secvar1, because secvar2 is disabled):
+
+```sh
+  executionRequest:
+    variables:
+    - name: secvar1
+      type: secret
+      secretRef:
+        name: var-secrets
+        key: homepage
+```
