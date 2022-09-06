@@ -1,4 +1,4 @@
-# File naming convention for test crd generation
+# File naming convention for test CRD generation
 
 We support following file naming convention for Postman files to support multple environment files:
 
@@ -9,12 +9,14 @@ We support following file naming convention for Postman files to support multple
 For example, mytest.postman_collection.json
 
 ## Test environment filename convention
+
 <Test name>.<Test env>.postman_environment.json - where `Test name` is reused from test files and 
 `Test env` is pointing to particular testing environment.
 
 For example, mytest.prod.postman_collection.json
 
 ## Test secret environment filename convention
+
 <Test name>.<Test env>.postman_secret_environment.json - where `Test name` is reused from test files and 
 `Test env` is pointing to particular testing environment.
 
