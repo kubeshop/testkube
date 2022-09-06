@@ -22,7 +22,7 @@ For example, mytest.prod.postman_collection.json.
 
 For example, mytest.prod.postman_secret_environment.json.
 
-It's expected that each variable value in secret environment file is provided in a form of `secret-name=secret-key`
+It is expected that each variable value in a secret environment file is provided in the form of `secret-name=secret-key`.
 In this case it will be added to a list of Test secret variables.
 For example,
 
