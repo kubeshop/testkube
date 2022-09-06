@@ -2,7 +2,7 @@
 
 We support the following file naming convention for Postman files to support multiple environment files:
 
-## Test filename convention
+## Test Filename Convention
 
 <Test name>.postman_collection.json - where `Test name` should be reused for environments files.
 
