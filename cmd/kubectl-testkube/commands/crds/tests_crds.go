@@ -62,8 +62,8 @@ func NewCRDTestsCmd() *cobra.Command {
 						testSecretEnvs[testType] = make(map[string]map[string]string, 0)
 					}
 
-					if _, ok := testEnvs[testType][secretEnvName]; !ok {
-						testEnvs[testType][secretEnvName] = make(map[string]string, 0)
+					if _, ok := testSecretEnvs[testType][secretEnvName]; !ok {
+						testSecretEnvs[testType][secretEnvName] = make(map[string]string, 0)
 					}
 
 					testSecretEnvs[testType][secretEnvName][secretTestName] = path
