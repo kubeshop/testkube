@@ -6,7 +6,7 @@ We support the following file naming convention for Postman files to support mul
 
 <Test name>.postman_collection.json - where `Test name` should be reused for the environment files.
 
-For example, mytest.postman_collection.json
+For example, mytest.postman_collection.json.
 
 ## Test environment filename convention
 
