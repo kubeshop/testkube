@@ -86,7 +86,7 @@ func (d PostmanCollectionAdapter) GetSecretVariables(data string) (map[string]te
 	vars := make(map[string]testkube.Variable, 0)
 	for _, value := range envFile.Values {
 		references := strings.Split(value.Value, "=")
-		if len(references) != 2 {
+		if len(references) != 2 || !value.Enabled {
 			continue
 		}
 
