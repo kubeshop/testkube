@@ -15,7 +15,7 @@ For example, mytest.postman_collection.json.
 
 For example, mytest.prod.postman_collection.json.
 
-## Test secret environment filename convention
+## Test Secret Environment File Naming Convention
 
 <Test name>.<Test env>.postman_secret_environment.json - where `Test name` is reused from test files and 
 `Test env` is pointing to particular testing environment.
