@@ -20,7 +20,7 @@ For example, mytest.prod.postman_collection.json.
 <Test name>.<Test env>.postman_secret_environment.json - where `Test name` is reused from test files and 
 `Test env` is pointing to particular testing environment.
 
-For example, mytest.prod.postman_secret_environment.json
+For example, mytest.prod.postman_secret_environment.json.
 
 It's expected that each variable value in secret environment file is provided in a form of `secret-name=secret-key`
 In this case it will be added to a list of Test secret variables.
