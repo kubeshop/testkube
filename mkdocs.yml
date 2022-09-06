@@ -74,6 +74,7 @@ nav:
   - Integrations:
       - Integrating with CI/CD: testkube-automation.md
       - Integrating with Slack: slack-integration.md
+      - Test CRD generation: generate-test-crds.md
   - Authentication:
       - OAuth for UI: oauth-ui.md
       - OAuth for CLI: oauth-cli.md
