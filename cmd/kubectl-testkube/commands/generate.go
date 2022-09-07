@@ -9,9 +9,10 @@ import (
 
 func NewGenerateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "generate <resourceName>",
-		Aliases: []string{},
-		Short:   "Generate resources commands",
+		Use:         "generate <resourceName>",
+		Aliases:     []string{},
+		Short:       "Generate resources commands",
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)

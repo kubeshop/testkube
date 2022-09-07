@@ -12,9 +12,10 @@ import (
 
 func NewWatchCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "watch <resourceName>",
-		Aliases: []string{"r", "start"},
-		Short:   "Watch tests or test suites",
+		Use:         "watch <resourceName>",
+		Aliases:     []string{"r", "start"},
+		Short:       "Watch tests or test suites",
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)

@@ -11,15 +11,17 @@ func NewStatusTelemetryCmd() *cobra.Command {
 		Use:   "telemetry",
 		Short: "Get telemetry status",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.NL()
+			ui.Print(ui.IconRocket + "  Getting telemetry status on the testkube CLI")
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
-
+			ui.ExitOnError("   Loading config file failed", err)
 			if cfg.TelemetryEnabled {
-				ui.Success("Telemetry", "enabled")
+				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			} else {
-				ui.Success("Telemetry", "disabled")
+				ui.PrintDisabled("Telemetry on CLI", "disabled")
 			}
+			ui.NL()
 		},
 	}
 

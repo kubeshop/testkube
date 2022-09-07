@@ -1,0 +1,68 @@
+{
+	"info": {
+		"_postman_id": "2256b413-1c9d-4e3f-9ec4-a50c00cec6e7",
+		"name": "VeryLong",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3706349"
+	},
+	"item": [
+		{
+			"name": "Getall",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    for(i=0; i<100;i++) {",
+							"        let j = i",
+							"        setTimeout(function(){",
+							"            console.log(\"running \", j, \"request\")",
+							"            pm.sendRequest('https://testkube.io/?no='+j, function (err, response) {",
+							"                pm.expect(response.code).to.eq(200);",
+							"            });",
+							"        }, 1000*j);",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://kubeshop.github.io",
+					"protocol": "https",
+					"host": [
+						"kubeshop",
+						"github",
+						"io"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

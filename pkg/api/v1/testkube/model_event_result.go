@@ -9,10 +9,12 @@
  */
 package testkube
 
-type WebhookEventType string
-
-// List of WebhookEventType
-const (
-	START_TEST_WebhookEventType WebhookEventType = "start-test"
-	END_TEST_WebhookEventType   WebhookEventType = "end-test"
-)
+// Listener result after sending particular event
+type EventResult struct {
+	// UUID of event
+	Id string `json:"id,omitempty"`
+	// error message if any
+	Error_ string `json:"error,omitempty"`
+	// result of event
+	Result string `json:"result,omitempty"`
+}

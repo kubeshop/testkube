@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -26,28 +27,29 @@ func GetExecutionResult(b []byte) (is bool, result testkube.ExecutionResult) {
 // {"type": "line", "message": "GET /results"}
 // {"type": "result", "result": {"id": "2323", "output": "-----"}}
 func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string, err error) {
-	scanner := bufio.NewScanner(bytes.NewReader(b))
-
-	// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 1024*1024)
+	reader := bufio.NewReader(bytes.NewReader(b))
 
 	// try to locate execution result should be the last one
 	// but there could be some buffers or go routines used so go through whole
 	// array too
 	result.Status = testkube.ExecutionStatusFailed
-	for scanner.Scan() {
-		b := scanner.Bytes()
-
+	for {
+		b, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			break
+		}
 		if len(b) < 2 || b[0] != byte('{') {
 			// empty or non json line
 			continue
 		}
-		log, err := GetLogEntry(scanner.Bytes())
+		log, err := GetLogEntry(b)
 		if err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
-			logs = append(logs, fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, scanner.Text()))
+			logs = append(logs, fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)))
 			continue
 		}
 
@@ -67,5 +69,5 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 
 	}
 
-	return result, logs, scanner.Err()
+	return result, logs, err
 }

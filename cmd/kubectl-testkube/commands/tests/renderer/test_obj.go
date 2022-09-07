@@ -59,7 +59,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	if test.ExecutionRequest != nil {
 		ui.Warn("Execution request: ")
 		if test.ExecutionRequest.Name != "" {
-			ui.Warn("  Name:        ", test.ExecutionRequest.Name)
+			ui.Warn("  Name:           ", test.ExecutionRequest.Name)
 		}
 
 		if len(test.ExecutionRequest.Variables) > 0 {
@@ -67,25 +67,29 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if len(test.ExecutionRequest.Args) > 0 {
-			ui.Warn("  Args:        ", test.ExecutionRequest.Args...)
+			ui.Warn("  Args:           ", test.ExecutionRequest.Args...)
 		}
 
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
-			ui.Warn("  Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
+			ui.Warn("  Envs:           ", testkube.MapToString(test.ExecutionRequest.Envs))
 		}
 
 		if len(test.ExecutionRequest.SecretEnvs) > 0 {
 			ui.NL()
-			ui.Warn("  Secret Envs: ", testkube.MapToString(test.ExecutionRequest.SecretEnvs))
+			ui.Warn("  Secret Envs:    ", testkube.MapToString(test.ExecutionRequest.SecretEnvs))
+		}
+
+		if test.ExecutionRequest.VariablesFile != "" {
+			ui.Warn("  Variables file: ", "\n", test.ExecutionRequest.VariablesFile)
 		}
 
 		if test.ExecutionRequest.HttpProxy != "" {
-			ui.Warn("  Http proxy:  ", test.ExecutionRequest.HttpProxy)
+			ui.Warn("  Http proxy:     ", test.ExecutionRequest.HttpProxy)
 		}
 
 		if test.ExecutionRequest.HttpsProxy != "" {
-			ui.Warn("  Https proxy: ", test.ExecutionRequest.HttpsProxy)
+			ui.Warn("  Https proxy:    ", test.ExecutionRequest.HttpsProxy)
 		}
 	}
 

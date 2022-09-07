@@ -10,8 +10,11 @@
 package testkube
 
 // CRD based executor data
-type WebhookEvent struct {
-	Uri       string            `json:"uri,omitempty"`
-	Type_     *WebhookEventType `json:"type"`
-	Execution *Execution        `json:"execution,omitempty"`
+type Event struct {
+	// UUID of event
+	Id string `json:"id"`
+	// DEPERECATED event uri remove after rewrite @TODO
+	Uri       string     `json:"uri,omitempty"`
+	Type_     *EventType `json:"type"`
+	Execution *Execution `json:"execution,omitempty"`
 }

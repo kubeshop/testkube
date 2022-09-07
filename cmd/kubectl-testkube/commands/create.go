@@ -15,9 +15,10 @@ func NewCreateCmd() *cobra.Command {
 	var crdOnly bool
 
 	cmd := &cobra.Command{
-		Use:     "create <resourceName>",
-		Aliases: []string{"c"},
-		Short:   "Create resource",
+		Use:         "create <resourceName>",
+		Aliases:     []string{"c"},
+		Short:       "Create resource",
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)

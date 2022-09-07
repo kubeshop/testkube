@@ -18,29 +18,30 @@ import (
 func NewCreateTestsCmd() *cobra.Command {
 
 	var (
-		testName              string
-		testContentType       string
-		file                  string
-		executorType          string
-		uri                   string
-		gitUri                string
-		gitBranch             string
-		gitCommit             string
-		gitPath               string
-		gitUsername           string
-		gitToken              string
-		labels                map[string]string
-		variables             map[string]string
-		secretVariables       map[string]string
-		schedule              string
-		executorArgs          []string
-		executionName         string
-		variablesFile         string
-		envs                  map[string]string
-		secretEnvs            map[string]string
-		httpProxy, httpsProxy string
-		gitUsernameSecret     map[string]string
-		gitTokenSecret        map[string]string
+		testName                 string
+		testContentType          string
+		file                     string
+		executorType             string
+		uri                      string
+		gitUri                   string
+		gitBranch                string
+		gitCommit                string
+		gitPath                  string
+		gitUsername              string
+		gitToken                 string
+		labels                   map[string]string
+		variables                map[string]string
+		secretVariables          map[string]string
+		schedule                 string
+		executorArgs             []string
+		executionName            string
+		variablesFile            string
+		envs                     map[string]string
+		secretEnvs               map[string]string
+		httpProxy, httpsProxy    string
+		gitUsernameSecret        map[string]string
+		gitTokenSecret           map[string]string
+		secretVariableReferences map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -96,6 +97,10 @@ func NewCreateTestsCmd() *cobra.Command {
 					options.Content.Data = fmt.Sprintf("%q", options.Content.Data)
 				}
 
+				if options.ExecutionRequest != nil && options.ExecutionRequest.VariablesFile != "" {
+					options.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", options.ExecutionRequest.VariablesFile)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
 				ui.ExitOnError("executing crd template", err)
 
@@ -131,6 +136,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 
 	return cmd
 }
