@@ -1,41 +1,18 @@
-# Website
+Testkube docs
 
-This website is built using [Docusaurus 2](https://docusaurus.io/), a modern static website generator.
+You can find the docs here: https://kubeshop.github.io/testkube/
 
-### Installation
+Edit the docs
 
+If you're editing the docs, follow this workflow:
+
+1. Spin up local development with `yarn start`
+2. Update the docs inside the `/docs` folder
+3. Make sure to add the corresponding meta data on top of your markdown file if you want a specific label on the navigation or change the sort order:
+
+```md
+---
+sidebar_position: 10
+sidebar_label: cURL
+---
 ```
-$ yarn
-```
-
-### Local Development
-
-```
-$ yarn start
-```
-
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-### Build
-
-```
-$ yarn build
-```
-
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-### Deployment
-
-Using SSH:
-
-```
-$ USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
