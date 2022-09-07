@@ -13,7 +13,7 @@ For example, mytest.postman_collection.json.
 <Test name>.<Test env>.postman_environment.json - where `Test name` is reused from the test files and 
 `Test env` is pointing to a particular testing environment.
 
-For example, mytest.prod.postman_collection.json.
+For example, mytest.prod.postman_environment.json.
 
 ## Test Secret Environment File Naming Convention
 
