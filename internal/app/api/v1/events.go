@@ -17,9 +17,9 @@ func (s TestkubeAPI) InitEvents() {
 	go s.Events.Reconcile(context.Background())
 
 	// run workers
-	s.Events.RunWorkers()
+	s.Events.Listen()
 
-	// handle resposne logs
+	// handle response logs
 	go func() {
 		s.Log.Debug("Listening for workers results")
 		for resp := range s.Events.Results {

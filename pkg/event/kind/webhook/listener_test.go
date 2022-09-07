@@ -27,7 +27,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener(svr.URL, "", []testkube.EventType{})
+		l := NewWebhookListener("l1", svr.URL, "", testkube.EventType(""))
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -48,7 +48,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener(svr.URL, "", []testkube.EventType{})
+		l := NewWebhookListener("l1", svr.URL, "", testkube.EventType(""))
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -64,7 +64,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
 
-		s := NewWebhookListener("http://baduri.badbadbad", "", []testkube.EventType{})
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testkube.EventType(""))
 
 		// when
 		r := s.Notify(testkube.Event{

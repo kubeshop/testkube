@@ -17,7 +17,7 @@ func TestWebsocketListener(t *testing.T) {
 		Conn: &websocket.Conn{},
 	}
 
-	l := NewWebsocketListener(ws, "", []testkube.EventType{})
+	l := NewWebsocketListener(ws, "", testkube.EventType(""))
 
 	// when
 	result := l.Notify(testkube.NewEventStartTest(testkube.NewQueuedExecution()))

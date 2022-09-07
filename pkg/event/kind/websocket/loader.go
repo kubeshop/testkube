@@ -23,8 +23,10 @@ func (r *WebsocketLoader) Kind() string {
 
 func (r *WebsocketLoader) Load() (listeners common.Listeners, err error) {
 	for _, ws := range r.Websockets {
-		wh := NewWebsocketListener(ws, ws.Selector, ws.Events)
-		listeners = append(listeners, wh)
+		for _, t := range ws.Events {
+			wh := NewWebsocketListener(ws, ws.Selector, t)
+			listeners = append(listeners, wh)
+		}
 	}
 
 	return listeners, nil

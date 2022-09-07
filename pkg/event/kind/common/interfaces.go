@@ -9,15 +9,24 @@ const (
 )
 
 type Listener interface {
+	// Name uniquely identifies listener
+	Name() string
+	// Notify sends event to listener
 	Notify(event testkube.Event) testkube.EventResult
+	// Kind of listener
 	Kind() string
+	// Selector is used to filter events
 	Selector() string
-	Events() []testkube.EventType
+	// Event is used to filter events
+	Event() testkube.EventType
+	// Metadata with additional information about listener
 	Metadata() map[string]string
 }
 
 type ListenerLoader interface {
+	// Load listeners from configuration
 	Load() (listeners Listeners, err error)
+	// Kind of listener
 	Kind() string
 }
 

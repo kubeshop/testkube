@@ -19,17 +19,17 @@ type Loader struct {
 }
 
 // Register registers new listener reconciler
-func (s *Loader) Register(reconciler common.ListenerLoader) {
-	s.Loaders = append(s.Loaders, reconciler)
+func (s *Loader) Register(loader common.ListenerLoader) {
+	s.Loaders = append(s.Loaders, loader)
 }
 
 // Reconcile loop for reconciling listeners from different sources
 func (s *Loader) Reconcile() (listeners common.Listeners) {
 	listeners = make(common.Listeners, 0)
-	for _, reconciler := range s.Loaders {
-		l, err := reconciler.Load()
+	for _, loader := range s.Loaders {
+		l, err := loader.Load()
 		if err != nil {
-			s.Log.Errorw("error loading listeners", "kind", reconciler.Kind(), "error", err)
+			s.Log.Errorw("error loading listeners", "kind", loader.Kind(), "error", err)
 			continue
 		}
 		listeners = append(listeners, l...)

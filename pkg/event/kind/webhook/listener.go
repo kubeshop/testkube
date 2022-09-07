@@ -17,30 +17,36 @@ import (
 
 var _ common.Listener = &WebhookListener{}
 
-func NewWebhookListener(uri string, selector string, events []testkube.EventType) *WebhookListener {
+func NewWebhookListener(name, uri, selector string, event testkube.EventType) *WebhookListener {
 	return &WebhookListener{
+		name:       name,
 		Uri:        uri,
 		Log:        log.DefaultLogger,
 		HttpClient: thttp.NewClient(),
 		selector:   selector,
-		events:     events,
+		event:      event,
 	}
 }
 
 type WebhookListener struct {
+	name       string
 	Uri        string
 	Log        *zap.SugaredLogger
 	HttpClient *http.Client
-	events     []testkube.EventType
+	event      testkube.EventType
 	selector   string
+}
+
+func (l *WebhookListener) Name() string {
+	return common.ListenerName(l.name)
 }
 
 func (l *WebhookListener) Selector() string {
 	return l.selector
 }
 
-func (l *WebhookListener) Events() []testkube.EventType {
-	return l.events
+func (l *WebhookListener) Event() testkube.EventType {
+	return l.event
 }
 func (l *WebhookListener) Metadata() map[string]string {
 	return map[string]string{

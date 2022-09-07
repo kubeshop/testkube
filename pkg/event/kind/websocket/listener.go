@@ -9,28 +9,32 @@ import (
 
 var _ common.Listener = &WebsocketListener{}
 
-func NewWebsocketListener(websocket Websocket, selector string, events []testkube.EventType) *WebsocketListener {
+func NewWebsocketListener(websocket Websocket, selector string, event testkube.EventType) *WebsocketListener {
 	return &WebsocketListener{
 		Log:       log.DefaultLogger,
 		selector:  selector,
 		Websocket: websocket,
-		events:    events,
+		event:     event,
 	}
 }
 
 type WebsocketListener struct {
 	Log       *zap.SugaredLogger
-	events    []testkube.EventType
+	event     testkube.EventType
 	Websocket Websocket
 	selector  string
+}
+
+func (l *WebsocketListener) Name() string {
+	return common.ListenerName("websocket." + l.Websocket.Id)
 }
 
 func (l *WebsocketListener) Selector() string {
 	return l.selector
 }
 
-func (l *WebsocketListener) Events() []testkube.EventType {
-	return l.events
+func (l *WebsocketListener) Event() testkube.EventType {
+	return l.event
 }
 func (l *WebsocketListener) Metadata() map[string]string {
 	return map[string]string{

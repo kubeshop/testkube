@@ -1,5 +1,14 @@
 package testkube
 
+var AllEventTypes = []EventType{
+	START_TEST_EventType,
+	START_TESTSUITE_EventType,
+	END_TEST_EventType,
+	END_TESTSUITE_EventType,
+	TEST_FAILED_EventType,
+	TESTSUITE_FAILED_EventType,
+}
+
 func (t *EventType) String() string {
 	return string(*t)
 }

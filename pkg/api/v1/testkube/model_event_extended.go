@@ -21,6 +21,13 @@ func NewEventEndTest(execution *Execution) Event {
 	}
 }
 
+func (e Event) Type() EventType {
+	if e.Type_ != nil {
+		return *e.Type_
+	}
+	return EventType("")
+}
+
 func (e Event) Log() []any {
 
 	var executionId, executionName, eventType, labels string

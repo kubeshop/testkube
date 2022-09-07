@@ -26,7 +26,7 @@ func (r *DummyLoader) Load() (common.Listeners, error) {
 	}, nil
 }
 
-func TestLoader_Reconcile(t *testing.T) {
+func TestLoader_UpdateListeners(t *testing.T) {
 
 	t.Run("reconcile updates listeners list based on registered reconcilers", func(t *testing.T) {
 		// given reconciler with two registered reconcilers that return two listeners each

@@ -10,26 +10,32 @@ import (
 
 var _ common.Listener = &SlackListener{}
 
-func NewSlackListener(selector string, events []testkube.EventType) *SlackListener {
+func NewSlackListener(name, selector string, event testkube.EventType) *SlackListener {
 	return &SlackListener{
+		name:     name,
 		Log:      log.DefaultLogger,
 		selector: selector,
-		events:   events,
+		event:    event,
 	}
 }
 
 type SlackListener struct {
+	name     string
 	Log      *zap.SugaredLogger
-	events   []testkube.EventType
+	event    testkube.EventType
 	selector string
+}
+
+func (l *SlackListener) Name() string {
+	return l.name
 }
 
 func (l *SlackListener) Selector() string {
 	return l.selector
 }
 
-func (l *SlackListener) Events() []testkube.EventType {
-	return l.events
+func (l *SlackListener) Event() testkube.EventType {
+	return l.event
 }
 func (l *SlackListener) Metadata() map[string]string {
 	return map[string]string{}
