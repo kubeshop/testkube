@@ -1,0 +1,1858 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Your Kubernetes Testing Friend">
+      
+      
+        <meta name="author" content="Kubeshop testkube Team">
+      
+      
+      <link rel="icon" href="../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.3.1, mkdocs-material-8.4.3">
+    
+    
+      
+        <title>SoapUI - Testkube</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6b80c2a2.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+
+  <script id="__analytics">function __md_analytics(){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga("create","UA-204665550-6","auto"),ga("set","anonymizeIp",!0),ga("send","pageview"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){var e;this.value&&(e=document.location.pathname,ga("send","pageview",e+"?q="+this.value))}),document$.subscribe(function(){var a=document.forms.feedback;if(void 0!==a)for(var e of a.querySelectorAll("[type=submit]"))e.addEventListener("click",function(e){e.preventDefault();var t=document.location.pathname,e=this.getAttribute("data-md-value");ga("send","event","feedback","click",t,e),a.firstElementChild.disabled=!0;e=a.querySelector(".md-feedback__note [data-md-value='"+e+"']");e&&(e.hidden=!1)}),a.hidden=!1}),location$.subscribe(function(e){ga("send","pageview",e.pathname)})});var e=document.createElement("script");e.async=!0,e.src="https://www.google-analytics.com/analytics.js",document.getElementById("__analytics").insertAdjacentElement("afterEnd",e)}</script>
+
+  
+    <script>var consent;"undefined"==typeof __md_analytics||(consent=__md_get("__consent"))&&consent.analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#soapui-tests" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Testkube" class="md-header__button md-logo" aria-label="Testkube" data-md-component="logo">
+      
+  <img src="../img/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Testkube
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              SoapUI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kubeshop/testkube" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    kubeshop/testkube
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Testkube" class="md-nav__button md-logo" aria-label="Testkube" data-md-component="logo">
+      
+  <img src="../img/logo.png" alt="logo">
+
+    </a>
+    Testkube
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kubeshop/testkube" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    kubeshop/testkube
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Welcome
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installing/" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Using Testkube
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Using Testkube" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Using Testkube
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../UI/" class="md-nav__link">
+        UI
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_2">
+          Test Suites
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Test Suites" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          Test Suites
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testsuites-creating/" class="md-nav__link">
+        Creating
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testsuites-running/" class="md-nav__link">
+        Running
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testsuites-getting-results/" class="md-nav__link">
+        Getting results
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_4_3" type="checkbox" id="__nav_4_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_3">
+          Tests
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Tests" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_3">
+          <span class="md-nav__icon md-icon"></span>
+          Tests
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tests-creating/" class="md-nav__link">
+        Creating
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tests-variables/" class="md-nav__link">
+        Adding Test Variables
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tests-running/" class="md-nav__link">
+        Running
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tests-getting-results/" class="md-nav__link">
+        Getting Results
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scheduling/" class="md-nav__link">
+        Scheduling
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifacts-storage/" class="md-nav__link">
+        Artifact Storage
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        Metrics
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Test Types
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Test Types" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Test Types
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-cypress/" class="md-nav__link">
+        Cypress
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-postman/" class="md-nav__link">
+        Postman
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          SoapUI
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        SoapUI
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-a-soapui-test" class="md-nav__link">
+    Running a SoapUI Test
+  </a>
+  
+    <nav class="md-nav" aria-label="Running a SoapUI Test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-files-as-input" class="md-nav__link">
+    Using Files as Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-strings-as-input" class="md-nav__link">
+    Using Strings as Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-tests" class="md-nav__link">
+    Running the Tests
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-parameters-and-arguments-in-your-tests" class="md-nav__link">
+    Using Parameters and Arguments in Your Tests
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports-plugins-and-extensions" class="md-nav__link">
+    Reports, Plugins and Extensions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-k6/" class="md-nav__link">
+        K6
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-kubepug/" class="md-nav__link">
+        KubePug
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-artillery/" class="md-nav__link">
+        Artillery.io
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-maven/" class="md-nav__link">
+        Maven
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-gradle/" class="md-nav__link">
+        Gradle
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-ginkgo/" class="md-nav__link">
+        Ginkgo
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-curl/" class="md-nav__link">
+        Curl
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor-custom/" class="md-nav__link">
+        Creating New Test Types
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          CLI Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="CLI Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          CLI Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_abort/" class="md-nav__link">
+        Abort Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_completion/" class="md-nav__link">
+        Completion Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_config/" class="md-nav__link">
+        Config Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_create/" class="md-nav__link">
+        Create Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_dashboard/" class="md-nav__link">
+        Dashboard Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_debug/" class="md-nav__link">
+        Debug Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_delete/" class="md-nav__link">
+        Delete Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_disable/" class="md-nav__link">
+        Disable Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_download/" class="md-nav__link">
+        Download Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_enable/" class="md-nav__link">
+        Enable Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_generate/" class="md-nav__link">
+        Generate Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_get/" class="md-nav__link">
+        Get Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_install/" class="md-nav__link">
+        Install Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_migrate/" class="md-nav__link">
+        Migrate Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_run/" class="md-nav__link">
+        Run Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_migrate/" class="md-nav__link">
+        Migrate Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_status/" class="md-nav__link">
+        Status Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_update/" class="md-nav__link">
+        Update Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_upgrade/" class="md-nav__link">
+        Upgrade Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_version/" class="md-nav__link">
+        Version Command
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/kubectl-testkube_watch/" class="md-nav__link">
+        Watch Command
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../openapi/" class="md-nav__link">
+        OpenAPI Definition
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_8" type="checkbox" id="__nav_8" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_8">
+          Integrations
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Integrations" data-md-level="1">
+        <label class="md-nav__title" for="__nav_8">
+          <span class="md-nav__icon md-icon"></span>
+          Integrations
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testkube-automation/" class="md-nav__link">
+        Integrating with CI/CD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../slack-integration/" class="md-nav__link">
+        Integrating with Slack
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate-test-crds/" class="md-nav__link">
+        Test CRD generation
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_9" type="checkbox" id="__nav_9" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_9">
+          Authentication
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Authentication" data-md-level="1">
+        <label class="md-nav__title" for="__nav_9">
+          <span class="md-nav__icon md-icon"></span>
+          Authentication
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oauth-ui/" class="md-nav__link">
+        OAuth for UI
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oauth-cli/" class="md-nav__link">
+        OAuth for CLI
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          Contributing
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Contributing" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          Contributing
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        Contributing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_10_2" type="checkbox" id="__nav_10_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10_2">
+          Development
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Development" data-md-level="2">
+        <label class="md-nav__title" for="__nav_10_2">
+          <span class="md-nav__icon md-icon"></span>
+          Development
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        Local Runs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development-crds/" class="md-nav__link">
+        Custom Resources
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        Architecture
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        Telemetry
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-a-soapui-test" class="md-nav__link">
+    Running a SoapUI Test
+  </a>
+  
+    <nav class="md-nav" aria-label="Running a SoapUI Test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-files-as-input" class="md-nav__link">
+    Using Files as Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-strings-as-input" class="md-nav__link">
+    Using Strings as Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-tests" class="md-nav__link">
+    Running the Tests
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-parameters-and-arguments-in-your-tests" class="md-nav__link">
+    Using Parameters and Arguments in Your Tests
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports-plugins-and-extensions" class="md-nav__link">
+    Reports, Plugins and Extensions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+
+  <a href="https://github.com/kubeshop/testkube/blob/main/docs/executor-soapui.md" title="Edit this page" class="md-content__button md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+<h1 id="soapui-tests">SoapUI Tests</h1>
+<p><strong>Check out our <a href="https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube">blog post</a> to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.</strong></p>
+<p><a href="https://www.soapui.org">SoapUI</a> is an open-source tool used for end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.</p>
+<h2 id="running-a-soapui-test"><strong>Running a SoapUI Test</strong></h2>
+<p>In order to run a SoapUI test using Testkube, begin by creating a Testkube Test.</p>
+<p>An example of an exported SoapUI test looks the following:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
+<span class="nt">&lt;con:soapui-project</span> <span class="na">xmlns:con=</span><span class="s">&quot;http://eviware.com/soapui/config&quot;</span> <span class="na">id=</span><span class="s">&quot;68931eeb-521d-4870-972f-9d0f99c75cc2&quot;</span> <span class="na">activeEnvironment=</span><span class="s">&quot;Default&quot;</span> <span class="na">name=</span><span class="s">&quot;Testkube project&quot;</span> <span class="na">resourceRoot=</span><span class="s">&quot;${projectDir}&quot;</span> <span class="na">soapui-version=</span><span class="s">&quot;5.7.0&quot;</span> <span class="na">abortOnError=</span><span class="s">&quot;false&quot;</span> <span class="na">runType=</span><span class="s">&quot;SEQUENTIAL&quot;</span><span class="nt">&gt;</span>
+   <span class="nt">&lt;con:settings&gt;</span>
+      <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.smartbear.swagger.ExportSwaggerAction$FormBase Path&quot;</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.smartbear.swagger.ExportSwaggerAction$FormTarget File&quot;</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.smartbear.swagger.ExportSwaggerAction$FormFormat&quot;</span><span class="nt">&gt;</span>json<span class="nt">&lt;/con:setting&gt;</span>
+      <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.smartbear.swagger.ExportSwaggerAction$FormAPI Version&quot;</span><span class="nt">&gt;</span>Swagger 2.0<span class="nt">&lt;/con:setting&gt;</span>
+      <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.smartbear.swagger.ExportSwaggerAction$FormSwagger Version&quot;</span><span class="nt">&gt;</span>Swagger 2.0<span class="nt">&lt;/con:setting&gt;</span>
+   <span class="nt">&lt;/con:settings&gt;</span>
+   <span class="nt">&lt;con:interface</span> <span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span> <span class="na">xsi:type=</span><span class="s">&quot;con:RestService&quot;</span> <span class="na">id=</span><span class="s">&quot;4bcedf3f-ac64-4f45-9615-7d58b15b9ca1&quot;</span> <span class="na">wadlVersion=</span><span class="s">&quot;http://wadl.dev.java.net/2009/02&quot;</span> <span class="na">name=</span><span class="s">&quot;https://kubeshop.io&quot;</span> <span class="na">type=</span><span class="s">&quot;rest&quot;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;con:definitionCache</span> <span class="na">type=</span><span class="s">&quot;TEXT&quot;</span> <span class="na">rootPart=</span><span class="s">&quot;&quot;</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;con:endpoints&gt;</span>
+         <span class="nt">&lt;con:endpoint&gt;</span>https://kubeshop.io<span class="nt">&lt;/con:endpoint&gt;</span>
+      <span class="nt">&lt;/con:endpoints&gt;</span>
+      <span class="nt">&lt;con:resource</span> <span class="na">name=</span><span class="s">&quot;&quot;</span> <span class="na">path=</span><span class="s">&quot;&quot;</span> <span class="na">id=</span><span class="s">&quot;538412a5-540d-4772-aca8-2b19e456af77&quot;</span><span class="nt">&gt;</span>
+         <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+         <span class="nt">&lt;con:parameters</span> <span class="nt">/&gt;</span>
+         <span class="nt">&lt;con:method</span> <span class="na">name=</span><span class="s">&quot;1&quot;</span> <span class="na">id=</span><span class="s">&quot;fa5cf353-bafd-4aa1-9fa6-301d0d5c6e95&quot;</span> <span class="na">method=</span><span class="s">&quot;GET&quot;</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+            <span class="nt">&lt;con:parameters</span> <span class="nt">/&gt;</span>
+            <span class="nt">&lt;con:representation</span> <span class="na">type=</span><span class="s">&quot;RESPONSE&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:mediaType&gt;</span>text/html<span class="nt">&lt;/con:mediaType&gt;</span>
+               <span class="nt">&lt;con:status&gt;</span>200<span class="nt">&lt;/con:status&gt;</span>
+               <span class="nt">&lt;con:params</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:element&gt;</span>html<span class="nt">&lt;/con:element&gt;</span>
+            <span class="nt">&lt;/con:representation&gt;</span>
+            <span class="nt">&lt;con:representation</span> <span class="na">type=</span><span class="s">&quot;RESPONSE&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:mediaType&gt;</span>application/json<span class="nt">&lt;/con:mediaType&gt;</span>
+               <span class="nt">&lt;con:status&gt;</span>200<span class="nt">&lt;/con:status&gt;</span>
+               <span class="nt">&lt;con:params</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:element</span> <span class="na">xmlns:pet=</span><span class="s">&quot;https://kubeshop.io/&quot;</span><span class="nt">&gt;</span>pet:Response<span class="nt">&lt;/con:element&gt;</span>
+            <span class="nt">&lt;/con:representation&gt;</span>
+            <span class="nt">&lt;con:representation</span> <span class="na">type=</span><span class="s">&quot;RESPONSE&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:mediaType&gt;</span>text/html; charset=utf-8<span class="nt">&lt;/con:mediaType&gt;</span>
+               <span class="nt">&lt;con:status&gt;</span>200<span class="nt">&lt;/con:status&gt;</span>
+               <span class="nt">&lt;con:params</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:element&gt;</span>html<span class="nt">&lt;/con:element&gt;</span>
+            <span class="nt">&lt;/con:representation&gt;</span>
+            <span class="nt">&lt;con:request</span> <span class="na">name=</span><span class="s">&quot;Request 1&quot;</span> <span class="na">id=</span><span class="s">&quot;e5ee1b97-e7a5-4fd0-9ecd-6671558f25bc&quot;</span> <span class="na">mediaType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:settings&gt;</span>
+                  <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers&quot;</span><span class="nt">&gt;</span><span class="ni">&amp;lt;</span>xml-fragment/<span class="ni">&amp;gt;</span><span class="nt">&lt;/con:setting&gt;</span>
+               <span class="nt">&lt;/con:settings&gt;</span>
+               <span class="nt">&lt;con:endpoint&gt;</span>https://kubeshop.io<span class="nt">&lt;/con:endpoint&gt;</span>
+               <span class="nt">&lt;con:request</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:originalUri&gt;</span>https://kubeshop.io/<span class="nt">&lt;/con:originalUri&gt;</span>
+               <span class="nt">&lt;con:credentials&gt;</span>
+                  <span class="nt">&lt;con:authType&gt;</span>No Authorization<span class="nt">&lt;/con:authType&gt;</span>
+               <span class="nt">&lt;/con:credentials&gt;</span>
+               <span class="nt">&lt;con:jmsConfig</span> <span class="na">JMSDeliveryMode=</span><span class="s">&quot;PERSISTENT&quot;</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:jmsPropertyConfig</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;con:parameters</span> <span class="nt">/&gt;</span>
+            <span class="nt">&lt;/con:request&gt;</span>
+         <span class="nt">&lt;/con:method&gt;</span>
+      <span class="nt">&lt;/con:resource&gt;</span>
+   <span class="nt">&lt;/con:interface&gt;</span>
+   <span class="nt">&lt;con:testSuite</span> <span class="na">id=</span><span class="s">&quot;d01755ab-653a-42e9-82ef-97ffea557480&quot;</span> <span class="na">name=</span><span class="s">&quot;Testkube TestSuite&quot;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;con:runType&gt;</span>SEQUENTIAL<span class="nt">&lt;/con:runType&gt;</span>
+      <span class="nt">&lt;con:testCase</span> <span class="na">id=</span><span class="s">&quot;8803628b-cc8d-4aaa-bbba-e1bc878f202b&quot;</span> <span class="na">failOnError=</span><span class="s">&quot;true&quot;</span> <span class="na">failTestCaseOnErrors=</span><span class="s">&quot;true&quot;</span> <span class="na">keepSession=</span><span class="s">&quot;false&quot;</span> <span class="na">maxResults=</span><span class="s">&quot;0&quot;</span> <span class="na">name=</span><span class="s">&quot;Kubeshop TestCase&quot;</span> <span class="na">searchProperties=</span><span class="s">&quot;true&quot;</span><span class="nt">&gt;</span>
+         <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+         <span class="nt">&lt;con:testStep</span> <span class="na">type=</span><span class="s">&quot;restrequest&quot;</span> <span class="na">name=</span><span class="s">&quot;1 - Request 1&quot;</span> <span class="na">id=</span><span class="s">&quot;00e86b82-8ef2-483f-837b-7669bebe3c87&quot;</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+            <span class="nt">&lt;con:config</span> <span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span> <span class="na">service=</span><span class="s">&quot;https://kubeshop.io&quot;</span> <span class="na">resourcePath=</span><span class="s">&quot;&quot;</span> <span class="na">methodName=</span><span class="s">&quot;1&quot;</span> <span class="na">xsi:type=</span><span class="s">&quot;con:RestRequestStep&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:restRequest</span> <span class="na">name=</span><span class="s">&quot;1 - Request 1&quot;</span> <span class="na">id=</span><span class="s">&quot;e5ee1b97-e7a5-4fd0-9ecd-6671558f25bc&quot;</span> <span class="na">mediaType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;con:settings&gt;</span>
+                     <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers&quot;</span><span class="nt">&gt;</span><span class="ni">&amp;lt;</span>xml-fragment/<span class="ni">&amp;gt;</span><span class="nt">&lt;/con:setting&gt;</span>
+                  <span class="nt">&lt;/con:settings&gt;</span>
+                  <span class="nt">&lt;con:endpoint&gt;</span>https://kubeshop.io<span class="nt">&lt;/con:endpoint&gt;</span>
+                  <span class="nt">&lt;con:request</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:originalUri&gt;</span>https://kubeshop.io<span class="nt">&lt;/con:originalUri&gt;</span>
+                  <span class="nt">&lt;con:assertion</span> <span class="na">type=</span><span class="s">&quot;Valid HTTP Status Codes&quot;</span> <span class="na">id=</span><span class="s">&quot;c88e07cf-dd80-4b11-b21d-7cad8474202b&quot;</span> <span class="na">name=</span><span class="s">&quot;Valid HTTP Status Codes&quot;</span><span class="nt">&gt;</span>
+                     <span class="nt">&lt;con:configuration&gt;</span>
+                        <span class="nt">&lt;codes&gt;</span>200<span class="nt">&lt;/codes&gt;</span>
+                     <span class="nt">&lt;/con:configuration&gt;</span>
+                  <span class="nt">&lt;/con:assertion&gt;</span>
+                  <span class="nt">&lt;con:assertion</span> <span class="na">type=</span><span class="s">&quot;Simple Contains&quot;</span> <span class="na">id=</span><span class="s">&quot;7072dc46-6b93-43b4-b6bd-0464db7b249e&quot;</span> <span class="na">name=</span><span class="s">&quot;Contains&quot;</span><span class="nt">&gt;</span>
+                     <span class="nt">&lt;con:configuration&gt;</span>
+                        <span class="nt">&lt;token&gt;</span>testkube<span class="nt">&lt;/token&gt;</span>
+                        <span class="nt">&lt;ignoreCase&gt;</span>true<span class="nt">&lt;/ignoreCase&gt;</span>
+                        <span class="nt">&lt;useRegEx&gt;</span>false<span class="nt">&lt;/useRegEx&gt;</span>
+                     <span class="nt">&lt;/con:configuration&gt;</span>
+                  <span class="nt">&lt;/con:assertion&gt;</span>
+                  <span class="nt">&lt;con:credentials&gt;</span>
+                     <span class="nt">&lt;con:authType&gt;</span>No Authorization<span class="nt">&lt;/con:authType&gt;</span>
+                  <span class="nt">&lt;/con:credentials&gt;</span>
+                  <span class="nt">&lt;con:jmsConfig</span> <span class="na">JMSDeliveryMode=</span><span class="s">&quot;PERSISTENT&quot;</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:jmsPropertyConfig</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:parameters</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;/con:restRequest&gt;</span>
+            <span class="nt">&lt;/con:config&gt;</span>
+         <span class="nt">&lt;/con:testStep&gt;</span>
+         <span class="nt">&lt;con:properties</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;/con:testCase&gt;</span>
+      <span class="nt">&lt;con:testCase</span> <span class="na">id=</span><span class="s">&quot;4c0fc01b-16db-41e9-9844-d4c2a88d27f2&quot;</span> <span class="na">failOnError=</span><span class="s">&quot;true&quot;</span> <span class="na">failTestCaseOnErrors=</span><span class="s">&quot;true&quot;</span> <span class="na">keepSession=</span><span class="s">&quot;false&quot;</span> <span class="na">maxResults=</span><span class="s">&quot;0&quot;</span> <span class="na">name=</span><span class="s">&quot;Testkube TestCase&quot;</span> <span class="na">searchProperties=</span><span class="s">&quot;true&quot;</span><span class="nt">&gt;</span>
+         <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+         <span class="nt">&lt;con:testStep</span> <span class="na">type=</span><span class="s">&quot;restrequest&quot;</span> <span class="na">name=</span><span class="s">&quot;REST Request&quot;</span> <span class="na">id=</span><span class="s">&quot;e1be7e01-5d4d-424e-b2f9-7daf84aaafa9&quot;</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;con:settings</span> <span class="nt">/&gt;</span>
+            <span class="nt">&lt;con:config</span> <span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span> <span class="na">service=</span><span class="s">&quot;https://kubeshop.io&quot;</span> <span class="na">methodName=</span><span class="s">&quot;1&quot;</span> <span class="na">resourcePath=</span><span class="s">&quot;&quot;</span> <span class="na">xsi:type=</span><span class="s">&quot;con:RestRequestStep&quot;</span><span class="nt">&gt;</span>
+               <span class="nt">&lt;con:restRequest</span> <span class="na">name=</span><span class="s">&quot;REST Request&quot;</span> <span class="na">id=</span><span class="s">&quot;191f16b4-cb04-4ffa-b8f9-da0e788c8262&quot;</span> <span class="na">mediaType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;con:settings&gt;</span>
+                     <span class="nt">&lt;con:setting</span> <span class="na">id=</span><span class="s">&quot;com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers&quot;</span><span class="nt">&gt;</span><span class="ni">&amp;lt;</span>xml-fragment/<span class="ni">&amp;gt;</span><span class="nt">&lt;/con:setting&gt;</span>
+                  <span class="nt">&lt;/con:settings&gt;</span>
+                  <span class="nt">&lt;con:encoding&gt;</span>UTF-8<span class="nt">&lt;/con:encoding&gt;</span>
+                  <span class="nt">&lt;con:endpoint&gt;</span>https://kubeshop.github.io/testkube/<span class="nt">&lt;/con:endpoint&gt;</span>
+                  <span class="nt">&lt;con:request</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:originalUri&gt;</span>https://kubeshop.io<span class="nt">&lt;/con:originalUri&gt;</span>
+                  <span class="nt">&lt;con:assertion</span> <span class="na">type=</span><span class="s">&quot;Simple Contains&quot;</span> <span class="na">id=</span><span class="s">&quot;d9497693-01e2-4e3e-8ce5-5a292f9b6e41&quot;</span> <span class="na">name=</span><span class="s">&quot;Contains&quot;</span><span class="nt">&gt;</span>
+                     <span class="nt">&lt;con:configuration&gt;</span>
+                        <span class="nt">&lt;token&gt;</span>kubectl<span class="nt">&lt;/token&gt;</span>
+                        <span class="nt">&lt;ignoreCase&gt;</span>false<span class="nt">&lt;/ignoreCase&gt;</span>
+                        <span class="nt">&lt;useRegEx&gt;</span>false<span class="nt">&lt;/useRegEx&gt;</span>
+                     <span class="nt">&lt;/con:configuration&gt;</span>
+                  <span class="nt">&lt;/con:assertion&gt;</span>
+                  <span class="nt">&lt;con:credentials&gt;</span>
+                     <span class="nt">&lt;con:authType&gt;</span>No Authorization<span class="nt">&lt;/con:authType&gt;</span>
+                  <span class="nt">&lt;/con:credentials&gt;</span>
+                  <span class="nt">&lt;con:jmsConfig</span> <span class="na">JMSDeliveryMode=</span><span class="s">&quot;PERSISTENT&quot;</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:jmsPropertyConfig</span> <span class="nt">/&gt;</span>
+                  <span class="nt">&lt;con:parameters</span> <span class="nt">/&gt;</span>
+               <span class="nt">&lt;/con:restRequest&gt;</span>
+            <span class="nt">&lt;/con:config&gt;</span>
+         <span class="nt">&lt;/con:testStep&gt;</span>
+         <span class="nt">&lt;con:properties</span> <span class="nt">/&gt;</span>
+      <span class="nt">&lt;/con:testCase&gt;</span>
+      <span class="nt">&lt;con:properties</span> <span class="nt">/&gt;</span>
+   <span class="nt">&lt;/con:testSuite&gt;</span>
+   <span class="nt">&lt;con:properties</span> <span class="nt">/&gt;</span>
+   <span class="nt">&lt;con:wssContainer</span> <span class="nt">/&gt;</span>
+   <span class="nt">&lt;con:oAuth2ProfileContainer</span> <span class="nt">/&gt;</span>
+   <span class="nt">&lt;con:oAuth1ProfileContainer</span> <span class="nt">/&gt;</span>
+   <span class="nt">&lt;con:sensitiveInformation</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;/con:soapui-project&gt;</span>
+</code></pre></div>
+<h3 id="using-files-as-input"><strong>Using Files as Input</strong></h3>
+<p>Testkube and the SoapUI executor accept a project file as input.</p>
+<div class="highlight"><pre><span></span><code>$ kubectl testkube create <span class="nb">test</span> --file example-project.xml --type soapui/xml --name example-test
+Test created  / example-test 🥇
+</code></pre></div>
+<h3 id="using-strings-as-input"><strong>Using Strings as Input</strong></h3>
+<div class="highlight"><pre><span></span><code>$ cat example-project.xml <span class="p">|</span> kubectl testkube create <span class="nb">test</span> --type soapui/xml --name example-test-string
+Test created  / example-test-string 🥇
+</code></pre></div>
+<h3 id="running-the-tests"><strong>Running the Tests</strong></h3>
+<p>To run the created test, use:</p>
+<div class="highlight"><pre><span></span><code>$ kubectl testkube run <span class="nb">test</span> example-test
+
+Type          : soapui/xml
+Name          : example-test
+Execution ID  : 624eedd443ed8485ae9289e2
+Execution name: illegally-credible-mouse
+
+
+
+Test execution started
+
+Watch <span class="nb">test</span> execution <span class="k">until</span> complete:
+$ kubectl testkube watch execution 624eedd443ed8485ae9289e2
+
+
+Use following <span class="nb">command</span> to get <span class="nb">test</span> execution details:
+$ kubectl testkube get execution 624eedd443ed8485ae9289e2
+</code></pre></div>
+<h3 id="using-parameters-and-arguments-in-your-tests"><strong>Using Parameters and Arguments in Your Tests</strong></h3>
+<p>SoapUI lets you configure your test runs using different parameters. To see all available command line arguments, check the <a href="https://www.soapui.org/docs/test-automation/running-functional-tests/">official SoapUI docs</a>.</p>
+<p>To use parameters when working with Testkube, use the <code>kubectl testkube run</code> command with the <code>--args</code> parameter.</p>
+<p>An example would be:</p>
+<div class="highlight"><pre><span></span><code>$ kubectl testkube run <span class="nb">test</span> -f example-test --args <span class="s1">&#39;-I -c &quot;Testkube TestCase&quot;&#39;</span>
+
+Type          : soapui/xml
+Name          : successful-test
+Execution ID  : 625404e5a4cc6d2861193c60
+Execution name: currently-amused-pug
+
+
+Getting pod logs
+Execution <span class="nv">completed</span> <span class="o">================================</span>
+<span class="o">=</span>
+<span class="o">=</span> <span class="nv">SOAPUI_HOME</span> <span class="o">=</span> /usr/local/SmartBear/SoapUI-5.7.0
+<span class="o">=</span>
+<span class="o">================================</span>
+SoapUI <span class="m">5</span>.7.0 TestCase Runner
+<span class="m">08</span>:14:18,671 INFO  <span class="o">[</span>DefaultSoapUICore<span class="o">]</span> Creating new settings at <span class="o">[</span>/root/soapui-settings.xml<span class="o">]</span>
+<span class="m">08</span>:14:27,457 INFO  <span class="o">[</span>PluginManager<span class="o">]</span> <span class="m">0</span> plugins loaded <span class="k">in</span> <span class="m">11</span> ms
+<span class="m">08</span>:14:27,459 INFO  <span class="o">[</span>DefaultSoapUICore<span class="o">]</span> All plugins loaded
+<span class="m">08</span>:14:37,509 INFO  <span class="o">[</span>WsdlProject<span class="o">]</span> Loaded project from <span class="o">[</span>file:/tmp/test-content2412821894<span class="o">]</span>
+<span class="m">08</span>:14:37,579 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> Running SoapUI tests <span class="k">in</span> project <span class="o">[</span>Testkube project<span class="o">]</span>
+<span class="m">08</span>:14:37,580 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> Running TestCase <span class="o">[</span>Testkube TestCase<span class="o">]</span>
+<span class="m">08</span>:14:37,653 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> Running SoapUI testcase <span class="o">[</span>Testkube TestCase<span class="o">]</span>
+<span class="m">08</span>:14:37,700 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> running step <span class="o">[</span>REST Request<span class="o">]</span>
+<span class="m">08</span>:14:41,816 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> Assertion <span class="o">[</span>Contains<span class="o">]</span> has status VALID
+<span class="m">08</span>:14:41,878 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> Finished running SoapUI testcase <span class="o">[</span>Testkube TestCase<span class="o">]</span>, <span class="nb">time</span> taken: 866ms, status: FINISHED
+<span class="m">08</span>:14:41,909 INFO  <span class="o">[</span>SoapUITestCaseRunner<span class="o">]</span> TestCase <span class="o">[</span>Testkube TestCase<span class="o">]</span> finished with status <span class="o">[</span>FINISHED<span class="o">]</span> <span class="k">in</span> 866ms
+
+
+.
+Use the following <span class="nb">command</span> to get <span class="nb">test</span> execution details:
+$ kubectl testkube get execution 625404e5a4cc6d2861193c60
+</code></pre></div>
+<h2 id="reports-plugins-and-extensions"><strong>Reports, Plugins and Extensions</strong></h2>
+<p>In order to use reports, add the plugins and extensions as described in the <a href="https://www.soapui.org/docs/test-automation/running-in-docker/">SoapUI docs</a>. This is currently not supported by Testkube.
+If you are interested in using this feature, please create an <a href="https://github.com/kubeshop/testkube/issues">issue</a> in the <a href="https://github.com/kubeshop/testkube">Testkube repository</a>.</p>
+
+
+  
+
+
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../executor-postman/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Postman" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Postman
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../executor-k6/" class="md-footer__link md-footer__link--next" aria-label="Next: K6" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              K6
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2022 <a href="https://kubeshop.io">Kubeshop</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+  
+
+
+
+  
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.
+</p>
+<input type="checkbox" class="md-toggle" id="__settings">
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+      
+        
+        
+      
+      <li class="task-list-item">
+        <label class="task-list-control">
+          <input type="checkbox" name="analytics" checked>
+          <span class="task-list-indicator"></span>
+          Google Analytics
+        <label>
+      </li>
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout(function(){document.querySelector("[data-md-component=consent]").hidden=!1},250);var action,form=document.forms.consent;for(action of["submit","reset"])form.addEventListener(action,function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);console.log(new FormData(form)),__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map(function(e){return[e,!0]}))),location.hash="",location.reload()})</script>
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.expand"], "search": "../assets/javascripts/workers/search.ecf98df9.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.2ab50757.min.js"></script>
+      
+    
+  </body>
+</html>

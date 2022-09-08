@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testkube-example-service
+  labels:
+    app: testkube-example-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: testkube-example-service
+          image: kubeshop/testkube-example-service:latest
+          ports:
+            - containerPort: 80

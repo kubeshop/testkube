@@ -1,0 +1,87 @@
+@startuml components_api
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Component.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include DEVICONS/jenkins.puml
+!include DEVICONS/kubernetes.puml
+!include DEVICONS/html5.puml
+!include DEVICONS/go.puml
+!include DEVICONS/mongodb.puml
+!include FONTAWESOME/chart_line.puml
+!include FONTAWESOME/file_alt.puml
+!include FONTAWESOME/envelope_open.puml
+
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for testkube API
+
+Person_Ext(kubectl, "Engineers kubectl", "kubectl testkube client")
+System_Ext(cicd, "CI/CD System", "Continous integration/delivery systems communicating with testkube", "jenkins")
+System_Ext(web, "WebUI", "Single Page app for managing testkube", "html5")
+System_Ext(metrics, "Metrics", "Metrics system", "chart_line")
+System_Ext(logs, "Logs", "Logs aggregator", "file_alt")
+
+
+Container_Boundary(api, "API Application") {
+    Component(apiServer, "API REST Server", "OpenAPI v3 REST server", "Listens for commands to execute", "go")
+    Component(executorClient, "Kubernetes Jobs scheduler", "kubernetes client", "Orchestrates runs to valid registered executor", "go")
+    Component(metricsMiddleware, "Metrics endpoints middleware", "Prometheus HTTP endpoints", "Provides Prometheus enpoints with metrics, technical and business", "go")
+	ComponentDb(db, "MongoDB", "Storage", "Stores execution results, can be external", "mongodb")
+
+    Rel(apiServer, executorClient, "Runs exeution of test", "HTTP")
+    Rel(apiServer, metricsMiddleware , "Stores metrics")
+    Rel(apiServer, db, "Stores results")
+}
+
+Container_Boundary(webhooks, "Webhooks receivers") {
+    Component(extsystem1 , "External system 1", "webhooks", "Listens for Testkube 'test completed' webhook events", "envelope_open")
+    Component(extsystem2 , "External system 2", "webhooks", "Listens for both Testkube 'test started, test completed'  webhook events", "envelope_open")
+}
+
+
+
+Container_Boundary(executors, "Test runners") {
+    Component(postmanExecutor, "Postman Collections Job", "Kubernetes Job", "Executes exported postman collections", "go")
+    Component(cypressExecutor, "Cypress Projects Job", "Kubernetes Job", "Executes exported postman collections", "go")
+    Component(curlExecutor, "CURL executor", "Kubernetes Job", "Executes curl commands", "go")
+
+	Rel(executorClient, cypressExecutor, "executes cypress based tests")
+	Rel(executorClient, postmanExecutor, "executes postman collections tests")
+	Rel(executorClient, curlExecutor, "executes curl tests")
+
+}
+
+Person_Ext(engineer, "Engineer", "kubectl apply -f test.yaml")
+
+Container_Boundary(kubernetes, "Kubernetes Custom Resources") {
+	System_Ext(testsCrds, "Tests CRD", "YAML", "kubernetes")
+	System_Ext(executorsCrds, "Executors CRD", "YAML", "kubernetes")
+
+	Rel(postmanExecutor, executorsCrds, "registers itself in cluster as executor")
+	Rel(curlExecutor, executorsCrds, "registers itself in cluster as executor")
+	Rel(cypressExecutor, executorsCrds, "registers itself in cluster as executor")
+}
+
+System_Ext(sut2, "SUT 1", "System Under Test", "html5")
+System_Ext(sut1, "SUT 2", "System Under Test", "html5")
+
+Rel(postmanExecutor, sut1, "runs test")
+Rel(cypressExecutor, sut2, "runs test")
+
+Rel(engineer, testsCrds, "applying test definition to cluster")
+Rel(kubectl, apiServer, "runs tests, getting results")
+Rel(cicd, apiServer, "runs tests getting results")
+Rel(web, apiServer, "runs tests, getting restuls")
+Rel(apiServer, testsCrds, "reads informations about test details from Custom Resources")
+Rel(metricsMiddleware, metrics, "stores test runs metrics")
+
+Rel(apiServer, extsystem1, "event test start")
+Rel(apiServer, extsystem2, "event test start")
+Rel(apiServer, extsystem2, "event test completed")
+Rel(apiServer, logs, "store logs")
+
+@enduml
