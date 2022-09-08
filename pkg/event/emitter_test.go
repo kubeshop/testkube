@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,6 +75,7 @@ func TestEmitter_SendXMessages(t *testing.T) {
 	eventsCount := 1
 	// when sending X events
 	for i := 0; i < eventsCount; i++ {
+		log.DefaultLogger.Infof("sending event %d", i)
 		evt.Id = fmt.Sprintf("EventID%d", i)
 		emitter.Notify(evt)
 	}

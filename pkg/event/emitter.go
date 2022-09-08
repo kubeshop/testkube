@@ -30,15 +30,15 @@ func NewEmitter() *Emitter {
 	}
 
 	// // and automatic JSON encoder
-	// ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	// if err != nil {
-	// 	log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
-	// }
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
+	}
 
 	return &Emitter{
 		Results: make(chan testkube.EventResult, eventsBuffer),
 		Log:     log.DefaultLogger,
-		Bus:     bus.NewNATSEventBus(nc),
+		Bus:     bus.NewNATSEventBus(ec),
 	}
 }
 
@@ -100,36 +100,24 @@ func (e *Emitter) Listen(ctx context.Context) {
 	}()
 
 	for _, l := range e.Listeners {
-
 		go func(l common.Listener) {
 			log := e.Log.With("listen-on", l.Event(), "queue-group", l.Name(), "selector", l.Selector())
 
-			log.Infow("starting listener")
-			events, err := e.Bus.Subscribe(l.Event(), l.Name())
-			if err != nil {
-				log.Errorw("error subscribing to event", "event", l.Event(), "name", l.Name(), "error", err)
-				return
-			}
-
-			for {
-				select {
-
-				case <-ctx.Done():
-					log.Infow("stopping events listener")
-					e.Bus.Unsubscribe(l.Event(), l.Name())
-					return
-
-				case event := <-events:
-					d := append(event.Log(), "listener-selector", l.Selector(), "labels", event.Execution.Labels, "valid", event.Valid(l.Selector()))
-					log.Infow("received event", d...)
-					if event.Valid(l.Selector()) {
-						log.Infow("handling event", event.Log()...)
-						e.Results <- l.Notify(event)
-					} else {
-						log.Infow("dropping event not matching selector", event.Log()...)
-					}
+			log.Debugw("starting listener")
+			err := e.Bus.Subscribe(l.Event(), l.Name(), func(event testkube.Event) error {
+				if event.Valid(l.Selector()) {
+					result := l.Notify(event)
+					log.Infow("handling result", "restult", result)
+					e.Results <- result
+					log.Infow("handling result end", "restult", result)
+				} else {
+					log.Infow("dropping event not matching selector", event.Log()...)
 				}
+				return nil
+			})
 
+			if err != nil {
+				log.Errorw("error subscribing to event", "error", err)
 			}
 		}(l)
 	}

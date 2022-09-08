@@ -8,7 +8,8 @@ import (
 
 func NewLoader() *Loader {
 	return &Loader{
-		Log: log.DefaultLogger,
+		Log:     log.DefaultLogger,
+		Loaders: make([]common.ListenerLoader, 0),
 	}
 }
 
