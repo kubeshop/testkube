@@ -29,7 +29,7 @@ describe('The Home Page', () => {
 ## **Creating the Testkube Test Script**
 
 Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
-We will use default Cypress executor (Testkube Cypress image).
+We will use the default Cypress executor (Testkube Cypress image).
 
 ```sh
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
