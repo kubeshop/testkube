@@ -54,10 +54,10 @@ func TestLoader_UpdateListeners(t *testing.T) {
 		assert.Len(t, listeners, 4)
 	})
 
-	t.Run("failed reconcillers are omited", func(t *testing.T) {
+	t.Run("failed loaders are omited", func(t *testing.T) {
 		// given reconciler with two registered reconcilers that return two listeners each
 		reconciler := NewLoader()
-		reconciler.Register(&DummyLoader{Err: fmt.Errorf("reconciler error")})
+		reconciler.Register(&DummyLoader{Err: fmt.Errorf("loader error")})
 		reconciler.Register(&DummyLoader{})
 
 		// when

@@ -16,7 +16,7 @@ func NewEventStartTest(execution *Execution) Event {
 func NewEventEndTest(execution *Execution) Event {
 	return Event{
 		Id:        uuid.NewString(),
-		Type_:     EventEndTest,
+		Type_:     EventEndTestSuccess,
 		Execution: execution,
 	}
 }
@@ -44,6 +44,7 @@ func (e Event) Log() []any {
 	}
 
 	return []any{
+		"id", e.Id,
 		"uri", e.Uri,
 		"type", eventType,
 		"executionId", executionId,

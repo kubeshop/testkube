@@ -29,23 +29,21 @@ func NewEmitter() *Emitter {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 	}
 
-	// and automatic JSON encoder
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
-	}
+	// // and automatic JSON encoder
+	// ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	// if err != nil {
+	// 	log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
+	// }
 
 	return &Emitter{
-		Events:  make(chan testkube.Event, eventsBuffer),
 		Results: make(chan testkube.EventResult, eventsBuffer),
 		Log:     log.DefaultLogger,
-		Bus:     bus.NewNATSEventBus(ec),
+		Bus:     bus.NewNATSEventBus(nc),
 	}
 }
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	Events    chan testkube.Event
 	Results   chan testkube.EventResult
 	Listeners common.Listeners
 	Loader    Loader
@@ -67,11 +65,11 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	for i, new := range e.Listeners {
+	for i, new := range listeners {
 		found := false
 		for j, old := range e.Listeners {
 			if new.Name() == old.Name() {
-				e.Listeners[i] = listeners[j]
+				e.Listeners[j] = listeners[j]
 				found = true
 			}
 		}
@@ -87,15 +85,25 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 func (e *Emitter) Notify(event testkube.Event) {
 	err := e.Bus.Publish(event)
 	if err != nil {
+		panic(err)
 		e.Log.Errorw("error publishing event", event.Log()...)
 	}
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
-func (e *Emitter) Listen() {
+func (e *Emitter) Listen(ctx context.Context) {
+	// clean after closing Emitter
+	go func() {
+		<-ctx.Done()
+		e.Log.Warn("closing event bus")
+		e.Bus.Close()
+	}()
+
 	for _, l := range e.Listeners {
+
 		go func(l common.Listener) {
-			log := e.Log.With("listener", l.Event(), "name", l.Name(), "selector", l.Selector())
+			log := e.Log.With("listen-on", l.Event(), "queue-group", l.Name(), "selector", l.Selector())
+
 			log.Infow("starting listener")
 			events, err := e.Bus.Subscribe(l.Event(), l.Name())
 			if err != nil {
@@ -103,15 +111,25 @@ func (e *Emitter) Listen() {
 				return
 			}
 
-			for event := range events {
-				log.Debugw("received event", event.Log()...)
-				if event.Valid(l.Selector()) {
-					log.Infow("event matching", event.Log()...)
-					// TODO consider scaling to go routines
-					e.Results <- l.Notify(event)
-				} else {
-					log.Debugw("event not matching selector", event.Log()...)
+			for {
+				select {
+
+				case <-ctx.Done():
+					log.Infow("stopping events listener")
+					e.Bus.Unsubscribe(l.Event(), l.Name())
+					return
+
+				case event := <-events:
+					d := append(event.Log(), "listener-selector", l.Selector(), "labels", event.Execution.Labels, "valid", event.Valid(l.Selector()))
+					log.Infow("received event", d...)
+					if event.Valid(l.Selector()) {
+						log.Infow("handling event", event.Log()...)
+						e.Results <- l.Notify(event)
+					} else {
+						log.Infow("dropping event not matching selector", event.Log()...)
+					}
 				}
+
 			}
 		}(l)
 	}

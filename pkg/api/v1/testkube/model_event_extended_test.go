@@ -7,6 +7,7 @@ import (
 )
 
 func TestEmitter_IsValidEvent(t *testing.T) {
+
 	t.Run("should pass only events with given selector", func(t *testing.T) {
 		// given
 		execution := NewQueuedExecution()
@@ -15,6 +16,31 @@ func TestEmitter_IsValidEvent(t *testing.T) {
 
 		// when
 		valid := e.Valid("test=1")
+
+		// then
+		assert.True(t, valid)
+	})
+
+	t.Run("should not pass events with not matching selector", func(t *testing.T) {
+		// given
+		execution := NewQueuedExecution()
+		execution.Labels = map[string]string{"test": "2"}
+		e := Event{Type_: EventStartTest, Execution: execution}
+
+		// when
+		valid := e.Valid("test=1")
+
+		// then
+		assert.False(t, valid)
+	})
+
+	t.Run("should pass events without selector", func(t *testing.T) {
+		// given
+		execution := NewQueuedExecution()
+		e := Event{Type_: EventStartTest, Execution: execution}
+
+		// when
+		valid := e.Valid("")
 
 		// then
 		assert.True(t, valid)

@@ -176,6 +176,7 @@ type messageArgs struct {
 var (
 	slackClient *slack.Client
 	timestamps  map[string]string
+	Ready       bool
 )
 
 func init() {
@@ -183,6 +184,7 @@ func init() {
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
 		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackClient = slack.New(token, slack.OptionDebug(true))
+		Ready = true
 	} else {
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
@@ -240,7 +242,7 @@ func SendEvent(eventType *testkube.EventType, execution testkube.Execution) erro
 				return err
 			}
 
-			if *eventType == testkube.END_TEST_EventType {
+			if *eventType == testkube.END_TEST_SUCCESS_EventType {
 				delete(timestamps, execution.Name)
 			} else {
 				timestamps[execution.Name] = timestamp

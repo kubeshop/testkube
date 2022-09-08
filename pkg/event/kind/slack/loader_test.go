@@ -3,12 +3,13 @@ package slack
 import (
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSlackLoader_Load(t *testing.T) {
 
-	t.Run("loads single Slack listener", func(t *testing.T) {
+	t.Run("loads Slack listeners for all event types", func(t *testing.T) {
 		// given
 		l := NewSlackLoader()
 
@@ -17,7 +18,7 @@ func TestSlackLoader_Load(t *testing.T) {
 
 		// then
 		assert.NoError(t, err)
-		assert.Len(t, listeners, 1)
+		assert.Len(t, listeners, len(testkube.AllEventTypes))
 	})
 
 }

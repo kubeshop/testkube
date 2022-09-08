@@ -48,7 +48,7 @@ func TestGenerateYAML(t *testing.T) {
 				Name:      "name2",
 				Namespace: "namespace2",
 				Uri:       "http://localhost",
-				Events:    []testkube.EventType{*testkube.EventEndTest},
+				Events:    []testkube.EventType{*testkube.EventEndTestSuccess},
 				Selector:  "app=backend",
 				Labels:    map[string]string{"key2": "value2"},
 			},

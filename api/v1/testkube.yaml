@@ -2672,11 +2672,11 @@ components:
       type: string
       enum:
         - start-test
+        - end-test-success
+        - end-test-failed
         - start-testsuite
-        - end-test
-        - end-testsuite
-        - test-failed
-        - testsuite-failed
+        - end-testsuite-success
+        - end-testsuite-failed
 
     EventResult:
       description: Listener result after sending particular event
