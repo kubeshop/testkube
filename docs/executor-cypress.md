@@ -279,7 +279,7 @@ Test execution completed in 1m45.405939s
 In the Cypress world, usually you want to have control over your Runtime environment. Testkube can easily handle that for you! 
 We're building several Cypress images to handle features that different versions of Cypress can support.
 
-To use a different executor you can use one of our pre-built ones (for Cypress 8, 9, 10 and Custom Testkube imgae) or build your own Docker image based on a Cypress executor.
+To use a different executor you can use one of our pre-built ones (for Cypress 8, 9, 10 and Custom Testkube images) or build your own Docker image based on a Cypress executor.
 
 Let's assume we need official Cypress 10 for our test runs. To handle that issue, create a new Cypress executor:
 
