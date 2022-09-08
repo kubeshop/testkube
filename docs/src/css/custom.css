@@ -226,7 +226,7 @@ pre code {
 }
 
 .footer--dark {
-  --ifm-footer-background-color: var(--ifm-background-surface-color-hover);
+  --ifm-footer-background-color: var(--ifm-color-gray-1000);
 }
 
 p:hover,
