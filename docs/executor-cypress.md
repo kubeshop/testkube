@@ -29,6 +29,7 @@ describe('The Home Page', () => {
 ## **Creating the Testkube Test Script**
 
 Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
+We will use default Cypress executor (Testkube Cypress image).
 
 ```sh
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
@@ -271,6 +272,46 @@ Use the following command to get test execution details:
 $ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
 Test execution completed in 1m45.405939s
+```
+
+## Using different Cypress images 
+
+In the Cypress world, usually you want to have control over your Runtime environment. Testkube can easily handle that for you! 
+We're building several Cypress images to handle features that different versions of Cypress can support.
+
+To use a different executor you can use one of our pre-built ones (for Cypress 8, 9, 10 and Custom Testkube imgae) or build your own Docker image based on a Cypress executor.
+
+Let's assume we need official Cypress 10 for our test runs. To handle that issue, create a new Cypress executor:
+
+content of `cypress-v10-executor.yaml`
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: cypress-v10-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-cypress-executor:1.1.7-cypress10   # <-- we're buidling cypress versions
+  types:
+  - cypress:v10/test # <-- just create different test type with naming convention "framework:version/type"
+```
+
+> Tip: Look for recent executor versions here https://hub.docker.com/repository/registry-1.docker.io/kubeshop/testkube-cypress-executor/tags?page=1&ordering=last_updated.
+
+
+And add it to your cluster: 
+```sh
+kubectl apply -f cypress-v10-executor.yaml 
+```
+
+Now, create a new test with a type which our new executor can handle e.g.: `cypress:v10/test`
+
+```sh 
+ # create test
+ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-path examples --type cypress:v10/test --name cypress-v10-example-test --git-branch main
+
+# and run it
+kubectl testkube run test cypress-v10-example-test -f
 ```
 
 ## **Summary**
