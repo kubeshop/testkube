@@ -46,9 +46,9 @@ func (l *WebsocketListener) Metadata() map[string]string {
 		ids += w.Id + " "
 	}
 	return map[string]string{
-		"name":    l.Name(),
-		"selecor": l.Selector(),
-		"id":      ids,
+		"name":     l.Name(),
+		"selector": l.Selector(),
+		"id":       ids,
 	}
 }
 

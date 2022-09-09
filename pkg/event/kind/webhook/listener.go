@@ -50,7 +50,10 @@ func (l *WebhookListener) Events() []testkube.EventType {
 }
 func (l *WebhookListener) Metadata() map[string]string {
 	return map[string]string{
-		"uri": l.Uri,
+		"name":     l.Name(),
+		"uri":      l.Uri,
+		"selector": l.selector,
+		"events":   fmt.Sprintf("%v", l.events),
 	}
 }
 

@@ -1,6 +1,8 @@
 package slack
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -38,7 +40,10 @@ func (l *SlackListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *SlackListener) Metadata() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		"name":   l.Name(),
+		"events": fmt.Sprintf("%v", l.Events()),
+	}
 }
 
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
