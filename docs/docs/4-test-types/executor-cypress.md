@@ -304,7 +304,7 @@ spec:
 
 
 And add it to your cluster: 
-```sh
+```bash
 kubectl apply -f cypress-v10-executor.yaml 
 ```
 
