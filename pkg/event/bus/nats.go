@@ -75,7 +75,7 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 
 	key := fmt.Sprintf("%s.%s", SubscriptionName, queue)
 	if s, ok := n.subscriptions.Load(key); ok {
-		s.(*nats.Subscription).Unsubscribe()
+		s.(*nats.Subscription).Drain()
 	}
 	return nil
 }
