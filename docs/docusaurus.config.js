@@ -193,6 +193,30 @@ const config = {
             from: "/testkube/executor-custom",
             to: "/testkube/test-types/executor-custom",
           },
+          {
+            from: "/testkube/UI",
+            to: "/testkube/using-testkube/UI",
+          },
+          {
+            from: "/testkube/tests-running",
+            to: "/testkube/using-testkube/tests/tests-running",
+          },
+          {
+            from: "/testkube/tests-creating",
+            to: "/testkube/using-testkube/tests/tests-creating",
+          },
+          {
+            from: "/testkube/tests-variables",
+            to: "/testkube/using-testkube/tests/tests-variables",
+          },
+          {
+            from: "/testkube/testsuites-running",
+            to: "/testkube/using-testkube/test-suites/testsuites-running",
+          },
+          {
+            from: "/testkube/testsuites-creating",
+            to: "/testkube/using-testkube/test-suites/testsuites-creating",
+          },
         ],
       },
     ],
