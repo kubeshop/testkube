@@ -124,7 +124,7 @@ const config = {
         indexName: "testkube",
 
         // Optional: see doc section below
-        contextualSearch: true,
+        contextualSearch: false,
 
         // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
         // externalUrlRegex: "external\\.com|domain\\.com",
@@ -143,6 +143,60 @@ const config = {
         respectPrefersColorScheme: false,
       },
     }),
+  plugins: [
+    [
+      "@docusaurus/plugin-client-redirects",
+      {
+        redirects: [
+          // /docs/oldDoc -> /docs/newDoc
+          {
+            from: "/testkube/executor-cypress",
+            to: "/testkube/test-types/executor-cypress",
+          },
+          {
+            from: "/testkube/executor-postman",
+            to: "/testkube/test-types/executor-postman",
+          },
+          {
+            from: "/testkube/executor-soapui",
+            to: "/testkube/test-types/executor-soapui",
+          },
+          {
+            from: "/testkube/executor-k6",
+            to: "/testkube/test-types/executor-k6",
+          },
+          {
+            from: "/testkube/executor-kubepug",
+            to: "/testkube/test-types/executor-kubepug",
+          },
+          {
+            from: "/testkube/executor-artillery",
+            to: "/testkube/test-types/executor-artillery",
+          },
+          {
+            from: "/testkube/executor-maven",
+            to: "/testkube/test-types/executor-maven",
+          },
+          {
+            from: "/testkube/executor-gradle",
+            to: "/testkube/test-types/executor-gradle",
+          },
+          {
+            from: "/testkube/executor-ginkgo",
+            to: "/testkube/test-types/executor-ginkgo",
+          },
+          {
+            from: "/testkube/executor-curl",
+            to: "/testkube/test-types/executor-curl",
+          },
+          {
+            from: "/testkube/executor-custom",
+            to: "/testkube/test-types/executor-custom",
+          },
+        ],
+      },
+    ],
+  ],
 };
 
 module.exports = config;
