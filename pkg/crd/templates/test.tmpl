@@ -123,5 +123,20 @@ spec:
     {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
     {{- end }}
+    {{- if .ExecutionRequest.Image }}
+    image: {{ .ExecutionRequest.Image }}
+    {{- end }}
+    {{- if gt (len .ExecutionRequest.Command) 0 }}
+    command:
+    {{- range $cmd := .ExecutionRequest.Command}}
+    - {{ $cmd -}}
+    {{- end}}
+    {{- end -}}
+    {{- if gt (len .ExecutionRequest.ImagePullSecrets) 0 }}
+    imagePullSecrets:
+    {{- range $secret := .ExecutionRequest.ImagePullSecrets}}
+    - name: {{ $secret.Name -}}
+    {{- end}}
+    {{- end}}
   {{- end }}
   {{- end }}

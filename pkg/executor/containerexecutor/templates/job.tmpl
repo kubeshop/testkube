@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+spec:
+  template:
+    spec:
+	  {{- if ne .InitImage ""}}
+      initContainers:
+      - name: {{ .Name }}-init
+        image: {{ .InitImage }}
+        imagePullPolicy: Always
+        command:
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+      {{- end}}
+      containers:
+      - name: {{ .Name }}
+        image: {{ .Image }}
+        imagePullPolicy: Always
+		{{- if gt (len .Command) 0 }}
+        command:
+        {{- range $cmd := .Command}}
+        - {{ $cmd -}}
+		{{- end}}
+		{{- end -}}
+
+		{{- if gt (len .Args) 0 }}
+        args:
+        {{- range $arg := .Args}}
+        - {{ $arg -}}
+		{{- end}}
+		{{- end}}
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+      volumes:
+      - name: data-volume
+        emptyDir: {}
+      restartPolicy: Never
+      {{- if gt (len .ImagePullSecrets) 0 }}
+      imagePullSecrets:
+      {{- range $secret := .ImagePullSecrets}}
+      - name: {{ $secret -}}
+      {{- end}}
+      {{- end}}
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 180

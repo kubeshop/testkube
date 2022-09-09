@@ -34,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -107,11 +108,20 @@ func NewTestkubeAPI(
 		s.Log.Warnf("load default executors %w", err)
 	}
 
-	if err = s.jobTemplates.decodeFromEnv(); err != nil {
+	if err = s.jobTemplates.decodeFromEnv("TESTKUBE_TEMPLATE"); err != nil {
 		panic(err)
 	}
 
+	if err = s.containerJobTemplates.decodeFromEnv("TESTKUBE_CONTAINER_TEMPLATE"); err != nil {
+		s.Log.Warn("failed to load container job template")
+		s.containerJobTemplates.Job = ""
+	}
+
 	if s.Executor, err = client.NewJobExecutor(testExecutionResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
+		panic(err)
+	}
+
+	if s.ContainerExecutor, err = containerexecutor.NewContainerExecutor(testExecutionResults, s.Namespace, initImage, s.containerJobTemplates.Job, s.Metrics, s.Events); err != nil {
 		panic(err)
 	}
 
@@ -125,33 +135,35 @@ func NewTestkubeAPI(
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults     result.Repository
-	TestExecutionResults testresult.Repository
-	Executor             client.Executor
-	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
-	TestsClient          *testsclientv3.TestsClient
-	ExecutorsClient      *executorsclientv1.ExecutorsClient
-	SecretClient         *secret.Client
-	WebhooksClient       *executorsclientv1.WebhooksClient
-	TestKubeClientset    testkubeclientset.Interface
-	TestSourcesClient    *testsourcesclientv1.TestSourcesClient
-	Metrics              Metrics
-	Storage              storage.Client
-	storageParams        storageParams
-	jobTemplates         jobTemplates
-	Namespace            string
-	oauthParams          oauthParams
-	WebsocketLoader      *ws.WebsocketLoader
-	Events               *event.Emitter
-	ConfigMap            *config.ConfigMapConfig
+	ExecutionResults      result.Repository
+	TestExecutionResults  testresult.Repository
+	Executor              client.Executor
+	ContainerExecutor     client.Executor
+	TestsSuitesClient     *testsuitesclientv2.TestSuitesClient
+	TestsClient           *testsclientv3.TestsClient
+	ExecutorsClient       *executorsclientv1.ExecutorsClient
+	SecretClient          *secret.Client
+	WebhooksClient        *executorsclientv1.WebhooksClient
+	TestKubeClientset     testkubeclientset.Interface
+	TestSourcesClient     *testsourcesclientv1.TestSourcesClient
+	Metrics               Metrics
+	Storage               storage.Client
+	storageParams         storageParams
+	jobTemplates          jobTemplates
+	containerJobTemplates jobTemplates
+	Namespace             string
+	oauthParams           oauthParams
+	WebsocketLoader       *ws.WebsocketLoader
+	Events                *event.Emitter
+	ConfigMap             *config.ConfigMapConfig
 }
 
 type jobTemplates struct {
 	Job string
 }
 
-func (j *jobTemplates) decodeFromEnv() error {
-	err := envconfig.Process("TESTKUBE_TEMPLATE", j)
+func (j *jobTemplates) decodeFromEnv(env string) error {
+	err := envconfig.Process(env, j)
 	if err != nil {
 		return err
 	}

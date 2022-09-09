@@ -4,6 +4,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -127,5 +128,16 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		Sync:                executionRequest.Sync,
 		HttpProxy:           executionRequest.HttpProxy,
 		HttpsProxy:          executionRequest.HttpsProxy,
+		Image:               executionRequest.Image,
+		ImagePullSecrets:    mapImagePullSecrets(executionRequest.ImagePullSecrets),
+		Command:             executionRequest.Command,
 	}
+}
+
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []v1.LocalObjectReference {
+	var res []v1.LocalObjectReference
+	for _, secret := range secrets {
+		res = append(res, v1.LocalObjectReference{Name: secret.Name})
+	}
+	return res
 }

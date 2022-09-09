@@ -2597,6 +2597,10 @@ components:
           type: string
           description: "test duration"
           example: "88s"
+        durationMs:
+          type: integer
+          description: "test duration in milliseconds"
+          example: 10000
         executionResult:
           required: true
           $ref: "#/components/schemas/ExecutionResult"
@@ -2908,6 +2912,13 @@ components:
           description: test suite secret uuid, if it's run as a part of test suite
           readOnly: true
           example: "7934600f-b367-48dd-b981-4353304362fb"
+        command:
+          type: array
+          description: "container executor image command"
+          items:
+            type: string
+          example:
+            - "curl"
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2921,6 +2932,11 @@ components:
           type: string
           description: container image, executor will run inside this image
           example: kubeshop/testkube-executor-custom:1.10.11-dev-0a9c91
+        imagePullSecrets:
+          type: array
+          description: "container image pull secrets"
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -3071,6 +3087,27 @@ components:
         image:
           description: Image for kube-job
           type: string
+        imagePullSecrets:
+          type: array
+          description: "container image pull secrets"
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
+        command:
+          type: array
+          description: "container executor image command"
+          items:
+            type: string
+          example:
+            - "curl"
+        args:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+            - "--repeats"
+            - "5"
+            - "--insecure"
         types:
           description: Types defines what types can be handled by executor e.g.
             "postman/collection", ":curl/command" etc
@@ -3317,6 +3354,13 @@ components:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
           $ref: "#/components/schemas/TestTriggerSelector"
+
+    LocalObjectReference:
+      description: Reference to Kubernetes object
+      type: object
+      properties:
+        name:
+          type: string
 
     TestTriggerSelector:
       type: object
