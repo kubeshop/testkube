@@ -11,7 +11,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -22,23 +21,15 @@ const (
 
 // NewEmitter returns new emitter instance
 func NewEmitter() *Emitter {
-
-	// TODO move it to config
-	nc, err := nats.Connect("localhost")
+	nc, err := bus.NewNATSConnection()
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
-	}
-
-	// // and automatic JSON encoder
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 
 	return &Emitter{
 		Results: make(chan testkube.EventResult, eventsBuffer),
 		Log:     log.DefaultLogger,
-		Bus:     bus.NewNATSEventBus(ec),
+		Bus:     bus.NewNATSBus(nc),
 	}
 }
 

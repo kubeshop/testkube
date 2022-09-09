@@ -85,7 +85,7 @@ func TestNATS(t *testing.T) {
 	defer ec.Close()
 
 	// and NATS event bus
-	n := NewNATSEventBus(ec)
+	n := NewNATSBus(ec)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
