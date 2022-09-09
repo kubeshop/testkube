@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )
 
@@ -17,31 +18,24 @@ type WebsocketLoader struct {
 	Websockets []Websocket
 }
 
-func (r *WebsocketLoader) Kind() string {
+func (l *WebsocketLoader) Kind() string {
 	return "websocket"
 }
 
-func (r *WebsocketLoader) Load() (listeners common.Listeners, err error) {
-	for _, ws := range r.Websockets {
-		for _, t := range ws.Events {
-			wh := NewWebsocketListener(ws, ws.Selector, t)
-			listeners = append(listeners, wh)
-		}
-	}
-
-	return listeners, nil
+func (l *WebsocketLoader) Load() (listeners common.Listeners, err error) {
+	return common.Listeners{NewWebsocketListener(l.Websockets)}, nil
 }
 
-func (r *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
+func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
 	var end chan bool
 	id := uuid.NewString()
 
 	conn.SetCloseHandler(func(code int, text string) error {
-		for i, websocket := range r.Websockets {
+		for i, websocket := range l.Websockets {
 			if websocket.Id == id {
-				r.mutex.Lock()
-				r.Websockets = append(r.Websockets[:i], r.Websockets[i+1:]...)
-				r.mutex.Unlock()
+				l.mutex.Lock()
+				l.Websockets = append(l.Websockets[:i], l.Websockets[i+1:]...)
+				l.mutex.Unlock()
 				break
 			}
 		}
@@ -50,8 +44,8 @@ func (r *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
 		return nil
 	})
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	r.Websockets = append(r.Websockets, Websocket{Id: id, Conn: conn})
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.Websockets = append(l.Websockets, Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes})
 	return end
 }

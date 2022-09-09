@@ -30,7 +30,7 @@ func (s *Loader) Reconcile() (listeners common.Listeners) {
 	for _, loader := range s.Loaders {
 		l, err := loader.Load()
 		if err != nil {
-			s.Log.Errorw("error loading listeners", "kind", loader.Kind(), "error", err)
+			s.Log.Errorw("error loading listeners", "error", err)
 			continue
 		}
 		listeners = append(listeners, l...)

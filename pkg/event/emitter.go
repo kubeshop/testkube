@@ -62,6 +62,7 @@ func (e *Emitter) Register(listener common.Listener) {
 
 // UpdateListeners updates listeners list
 func (e *Emitter) UpdateListeners(listeners common.Listeners) {
+
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
@@ -69,12 +70,14 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 		found := false
 		for j, old := range e.Listeners {
 			if new.Name() == old.Name() {
-				e.Listeners[j] = listeners[j]
+				e.Listeners[j] = listeners[i]
 				found = true
 			}
 		}
+		// if listener is not registered yet we need to subscribe
 		if !found {
 			e.Listeners = append(e.Listeners, listeners[i])
+			e.startListener(listeners[i])
 		}
 	}
 
@@ -84,10 +87,7 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	err := e.Bus.Publish(event)
-	if err != nil {
-		panic(err)
-		e.Log.Errorw("error publishing event", event.Log()...)
-	}
+	e.Log.Infow("event published", append(event.Log(), "error", err)...)
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
@@ -96,30 +96,41 @@ func (e *Emitter) Listen(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
 		e.Log.Warn("closing event bus")
+
+		for _, l := range e.Listeners {
+			go e.Bus.Unsubscribe(l.Name())
+		}
+
 		e.Bus.Close()
 	}()
 
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
 	for _, l := range e.Listeners {
-		go func(l common.Listener) {
-			log := e.Log.With("listen-on", l.Event(), "queue-group", l.Name(), "selector", l.Selector())
+		go e.startListener(l)
+	}
+}
 
-			log.Debugw("starting listener")
-			err := e.Bus.Subscribe(l.Event(), l.Name(), func(event testkube.Event) error {
-				if event.Valid(l.Selector()) {
-					result := l.Notify(event)
-					log.Infow("handling result", "restult", result)
-					e.Results <- result
-					log.Infow("handling result end", "restult", result)
-				} else {
-					log.Infow("dropping event not matching selector", event.Log()...)
-				}
-				return nil
-			})
+func (e *Emitter) startListener(l common.Listener) {
+	e.Log.Infow("starting listener", l.Name(), l.Metadata())
+	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
 
-			if err != nil {
-				log.Errorw("error subscribing to event", "error", err)
-			}
-		}(l)
+	if err != nil {
+		e.Log.Errorw("error subscribing to event", "error", err)
+	}
+}
+
+func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
+	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
+	return func(event testkube.Event) error {
+		if event.Valid(l.Selector(), l.Events()) {
+			l.Notify(event)
+			log.Infow("listener notified", "event", event.Id, "executionId", event.Execution.Id)
+		} else {
+			log.Infow("dropping event not matching selector or type", event.Log()...)
+		}
+		return nil
 	}
 }
 

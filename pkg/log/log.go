@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -14,12 +13,7 @@ func New() *zap.SugaredLogger {
 
 	atomicLevel.SetLevel(zap.InfoLevel)
 	if envs.IsTrue("DEBUG") {
-		fmt.Printf("%+v\n", "DEBUG=1")
-
 		atomicLevel.SetLevel(zap.DebugLevel)
-	} else {
-		fmt.Printf("%+v\n", "DEBUG=1")
-
 	}
 
 	zapCfg := zap.NewProductionConfig()

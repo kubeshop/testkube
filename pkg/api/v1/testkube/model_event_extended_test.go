@@ -15,7 +15,7 @@ func TestEmitter_IsValidEvent(t *testing.T) {
 		e := Event{Type_: EventStartTest, Execution: execution}
 
 		// when
-		valid := e.Valid("test=1")
+		valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -28,7 +28,7 @@ func TestEmitter_IsValidEvent(t *testing.T) {
 		e := Event{Type_: EventStartTest, Execution: execution}
 
 		// when
-		valid := e.Valid("test=1")
+		valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.False(t, valid)
@@ -40,7 +40,7 @@ func TestEmitter_IsValidEvent(t *testing.T) {
 		e := Event{Type_: EventStartTest, Execution: execution}
 
 		// when
-		valid := e.Valid("")
+		valid := e.Valid("", AllEventTypes)
 
 		// then
 		assert.True(t, valid)

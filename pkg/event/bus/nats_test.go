@@ -54,8 +54,7 @@ func TestMultipleMessages(t *testing.T) {
 	for j := 0; j < eventCount; j++ {
 		err := nc.Publish("test1", []byte(fmt.Sprintf(`{"id":"%d","type":"test"}`, j)))
 		if err != nil {
-			fmt.Printf("ERR: %+v\n", err)
-
+			t.Errorf("got publish error %v", err)
 		}
 	}
 
@@ -81,7 +80,7 @@ func TestNATS(t *testing.T) {
 	defer nc.Close()
 
 	// and automatic JSON encoder
-	ec, err := nats.NewEncodedConn(nc, nats.DEFAULT_ENCODER)
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	assert.NoError(t, err)
 	defer ec.Close()
 
@@ -91,13 +90,13 @@ func TestNATS(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	// when 2 subscriptions are made
-	err = n.Subscribe(event.Type(), "test1", func(evt testkube.Event) error {
+	err = n.Subscribe("test1", func(evt testkube.Event) error {
 		assert.Equal(t, "123", evt.Id)
 		wg.Done()
 		return nil
 	})
 	assert.NoError(t, err)
-	err = n.Subscribe(event.Type(), "test2", func(evt testkube.Event) error {
+	err = n.Subscribe("test2", func(evt testkube.Event) error {
 		assert.Equal(t, "123", evt.Id)
 		wg.Done()
 		return nil

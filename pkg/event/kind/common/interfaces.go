@@ -18,7 +18,7 @@ type Listener interface {
 	// Selector is used to filter events
 	Selector() string
 	// Event is used to filter events
-	Event() testkube.EventType
+	Events() []testkube.EventType
 	// Metadata with additional information about listener
 	Metadata() map[string]string
 }
@@ -27,7 +27,6 @@ type ListenerLoader interface {
 	// Load listeners from configuration
 	Load() (listeners Listeners, err error)
 	// Kind of listener
-	Kind() string
 }
 
 type Listeners []Listener
@@ -37,9 +36,10 @@ func (l Listeners) Log() []any {
 	for _, listener := range l {
 		result = append(result, map[string]any{
 			"kind":     listener.Kind(),
+			"events":   listener.Events(),
 			"selector": listener.Selector(),
 			"metadata": listener.Metadata(),
 		})
 	}
-	return result
+	return []any{"listeners", result}
 }

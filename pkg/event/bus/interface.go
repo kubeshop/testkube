@@ -6,7 +6,7 @@ type Handler func(event testkube.Event) error
 
 type Bus interface {
 	Publish(event testkube.Event) error
-	Subscribe(eventType testkube.EventType, queue string, handler Handler) error
-	Unsubscribe(eventType testkube.EventType, queue string) error
+	Subscribe(queue string, handler Handler) error
+	Unsubscribe(queue string) error
 	Close() error
 }

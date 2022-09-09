@@ -1,9 +1,11 @@
 package webhook
 
 import (
+	"fmt"
+
 	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
 var _ common.ListenerLoader = &WebhooksLoader{}
@@ -36,10 +38,9 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 	// and create listeners for each webhook spec
 	for _, webhook := range webhookList.Items {
-		for _, t := range webhook.Spec.Events {
-			wh := NewWebhookListener(webhook.ObjectMeta.Name, webhook.Spec.Uri, webhook.Spec.Selector, testkube.EventType(t))
-			listeners = append(listeners, wh)
-		}
+		types := webhooks.MapStringArrayToCRDEvents(webhook.Spec.Events)
+		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
+		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types))
 	}
 
 	return listeners, nil

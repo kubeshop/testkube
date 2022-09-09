@@ -22,10 +22,5 @@ func (r *SlackLoader) Kind() string {
 // Load returns single listener for slack (as we don't have any sophisticated config yet)
 func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
 	// TODO handle slack notifications based on event types, for now we just load all
-	for _, t := range testkube.AllEventTypes {
-		sl := NewSlackListener("slack", "", t)
-		listeners = append(listeners, sl)
-	}
-
-	return listeners, nil
+	return common.Listeners{NewSlackListener("slack", "", testkube.AllEventTypes)}, nil
 }

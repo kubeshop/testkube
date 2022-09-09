@@ -53,8 +53,20 @@ func (e Event) Log() []any {
 	}
 }
 
-func (e Event) Valid(selector string) (valid bool) {
+func (e Event) Valid(selector string, types []EventType) (valid bool) {
 	if e.Execution == nil {
+		return false
+	}
+
+	typesMatch := false
+	for _, t := range types {
+		if t == e.Type() {
+			typesMatch = true
+			break
+		}
+	}
+
+	if !typesMatch {
 		return false
 	}
 
@@ -69,5 +81,4 @@ func (e Event) Valid(selector string) (valid bool) {
 	}
 
 	return
-
 }
