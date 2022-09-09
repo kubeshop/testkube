@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"os"
@@ -19,6 +20,7 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -48,6 +50,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	configMap *config.ConfigMapConfig,
 	clusterId string,
 ) TestkubeAPI {
 
@@ -72,6 +75,7 @@ func NewTestkubeAPI(
 		Events:               event.NewEmitter(),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
+		ConfigMap:            configMap,
 	}
 
 	// will be reused in websockets handler
@@ -125,11 +129,11 @@ type TestkubeAPI struct {
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
-	TelemetryEnabled     bool
 	oauthParams          oauthParams
 
 	WebsocketLoader *ws.WebsocketLoader
 	Events          *event.Emitter
+	ConfigMap       *config.ConfigMapConfig
 }
 
 type jobTemplates struct {
@@ -172,14 +176,14 @@ type oauthParams struct {
 	Scopes       string
 }
 
-// WithTelemetry enable or disable anonymous telemetry data passing to testkube engineers
-func (s *TestkubeAPI) WithTelemetry(enabled bool) {
-	s.TelemetryEnabled = enabled
-}
-
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
 func (s TestkubeAPI) SendTelemetryStartEvent() {
-	if !s.TelemetryEnabled {
+	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
+	if err != nil {
+		s.Log.Errorw("error getting config map", "error", err)
+	}
+
+	if !telemetryEnabled {
 		return
 	}
 
@@ -299,31 +303,38 @@ func (s *TestkubeAPI) InitRoutes() {
 	events.Post("/flux", s.FluxEventHandler())
 	events.Get("/stream", s.EventsStreamHandler())
 
+	configs := s.Routes.Group("/config")
+	configs.Get("/", s.GetConfigsHandler())
+	configs.Patch("/", s.UpdateConfigsHandler())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats() {
-	if !s.TelemetryEnabled {
-		return
-	}
 
 	go func() {
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
-			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-			host, err := os.Hostname()
+			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
 			if err != nil {
-				l.Debugw("getting hostname error", "hostname", host, "error", err)
+				s.Log.Errorw("error getting config map", "error", err)
 			}
-			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
-			if err != nil {
-				l.Debugw("sending heartbeat telemetry event error", "error", err)
-			} else {
-				l.Debugw("sending heartbeat telemetry event", "output", out)
-			}
+			if telemetryEnabled {
+				l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+				host, err := os.Hostname()
+				if err != nil {
+					l.Debugw("getting hostname error", "hostname", host, "error", err)
+				}
+				out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
+				if err != nil {
+					l.Debugw("sending heartbeat telemetry event error", "error", err)
+				} else {
+					l.Debugw("sending heartbeat telemetry event", "output", out)
+				}
 
+			}
 			<-ticker.C
 		}
 	}()

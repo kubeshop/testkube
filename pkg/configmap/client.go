@@ -84,7 +84,7 @@ func (c *Client) Apply(id string, stringData map[string]string) error {
 
 	configMapSpec := NewApplySpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Apply(ctx, configMapSpec, metav1.ApplyOptions{
-		FieldManager: "application/apply-patch"}); err != nil {
+		FieldManager: "application/apply-patch", Force: true}); err != nil {
 		return err
 	}
 
