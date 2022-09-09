@@ -4,6 +4,7 @@ import (
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	v1 "k8s.io/api/core/v1"
 )
 
 // MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list
@@ -115,11 +116,27 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		Variables:           MergeVariablesAndParams(specExecutionRequest.Variables, nil),
 		TestSecretUUID:      specExecutionRequest.TestSecretUUID,
 		TestSuiteSecretUUID: specExecutionRequest.TestSuiteSecretUUID,
+		Command:             specExecutionRequest.Command,
 		Args:                specExecutionRequest.Args,
+		Image:               specExecutionRequest.Image,
+		ImagePullSecrets:    MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
 		Envs:                specExecutionRequest.Envs,
 		SecretEnvs:          specExecutionRequest.SecretEnvs,
 		Sync:                specExecutionRequest.Sync,
 		HttpProxy:           specExecutionRequest.HttpProxy,
 		HttpsProxy:          specExecutionRequest.HttpsProxy,
 	}
+}
+
+// MapImagePullSecrets maps Kubernetes spec to testkube model
+func MapImagePullSecrets(lor []v1.LocalObjectReference) []testkube.LocalObjectReference {
+	if lor == nil {
+		return nil
+	}
+	var res []testkube.LocalObjectReference
+	for _, ref := range lor {
+		res = append(res, testkube.LocalObjectReference{Name: ref.Name})
+	}
+
+	return res
 }

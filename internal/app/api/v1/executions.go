@@ -18,6 +18,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -28,6 +29,8 @@ const (
 	DefaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
 	latestExecutions = 5
+
+	containerType = "container"
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
@@ -132,10 +135,25 @@ func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
-		logs, err := s.Executor.Logs(executionID)
+		defer func() {
+			c.Conn.Close()
+		}()
+
+		execution, err := s.ExecutionResults.Get(context.Background(), executionID)
+		if err != nil {
+			l.Errorw("can't find execuction ", "error", err)
+			return
+		}
+
+		executor, err := s.getExecutorByTestType(execution.TestType)
+		if err != nil {
+			l.Errorw("can't get executor", "error", err)
+			return
+		}
+
+		logs, err := executor.Logs(executionID)
 		if err != nil {
 			l.Errorw("can't get pod logs", "error", err)
-			c.Conn.Close()
 			return
 		}
 		for logLine := range logs {
@@ -181,7 +199,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 				return
 			}
 
-			s.streamLogsFromJob(executionID, w)
+			s.streamLogsFromJob(executionID, execution.TestType, w)
 		}))
 
 		return nil
@@ -339,11 +357,19 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 }
 
 // streamLogsFromJob streams logs in chunks to writer from the running execution
-func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
+func (s *TestkubeAPI) streamLogsFromJob(executionID, testType string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Infow("getting logs from Kubernetes job")
 
-	logs, err := s.Executor.Logs(executionID)
+	executor, err := s.getExecutorByTestType(testType)
+	if err != nil {
+		output.PrintError(os.Stdout, err)
+		s.Log.Errorw("getting logs error", "error", err)
+		w.Flush()
+		return
+	}
+
+	logs, err := executor.Logs(executionID)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 	if err != nil {
 		output.PrintError(os.Stdout, err)
@@ -436,4 +462,17 @@ func (s *TestkubeAPI) getExecutionLogs(execution testkube.Execution) ([]string, 
 	}
 
 	return result, nil
+}
+
+func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, error) {
+	executorCR, err := s.ExecutorsClient.GetByType(testType)
+	if err != nil {
+		return nil, fmt.Errorf("can't get executor spec: %w", err)
+	}
+	switch executorCR.Spec.ExecutorType {
+	case containerType:
+		return s.ContainerExecutor, nil
+	default:
+		return s.Executor, nil
+	}
 }

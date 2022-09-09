@@ -3,6 +3,7 @@ package executors
 import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,11 +30,22 @@ func MapAPIToCRD(request testkube.ExecutorCreateRequest) executorv1.Executor {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.ExecutorSpec{
-			ExecutorType: request.ExecutorType,
-			Types:        request.Types,
-			URI:          request.Uri,
-			Image:        request.Image,
-			JobTemplate:  request.JobTemplate,
+			ExecutorType:     request.ExecutorType,
+			Types:            request.Types,
+			URI:              request.Uri,
+			Image:            request.Image,
+			ImagePullSecrets: mapImagePullSecrets(request.ImagePullSecrets),
+			Command:          request.Command,
+			Args:             request.Args,
+			JobTemplate:      request.JobTemplate,
 		},
 	}
+}
+
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []v1.LocalObjectReference {
+	var res []v1.LocalObjectReference
+	for _, secret := range secrets {
+		res = append(res, v1.LocalObjectReference{Name: secret.Name})
+	}
+	return res
 }

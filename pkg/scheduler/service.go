@@ -17,6 +17,7 @@ import (
 type Scheduler struct {
 	metrics              v1.Metrics
 	executor             client.Executor
+	containerExecutor    client.Executor
 	executionResults     result.Repository
 	testExecutionResults testresult.Repository
 	executorsClient      executorsv1.Interface
@@ -30,6 +31,7 @@ type Scheduler struct {
 
 func NewScheduler(
 	executor client.Executor,
+	containerExecutor client.Executor,
 	executionResults result.Repository,
 	testExecutionResults testresult.Repository,
 	executorsClient executorsv1.Interface,
@@ -42,6 +44,7 @@ func NewScheduler(
 ) *Scheduler {
 	return &Scheduler{
 		executor:             executor,
+		containerExecutor:    containerExecutor,
 		secretClient:         secretClient,
 		executionResults:     executionResults,
 		testExecutionResults: testExecutionResults,

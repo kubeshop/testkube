@@ -56,6 +56,7 @@ func NewTestkubeAPI(
 	clusterId string,
 	eventsEmitter *event.Emitter,
 	executor client.Executor,
+	containerExecutor client.Executor,
 	metrics metrics.Metrics,
 	jobTemplates *JobTemplates,
 	scheduler *scheduler.Scheduler,
@@ -86,6 +87,7 @@ func NewTestkubeAPI(
 		Namespace:            namespace,
 		ConfigMap:            configMap,
 		Executor:             executor,
+		ContainerExecutor:    containerExecutor,
 		jobTemplates:         jobTemplates,
 		scheduler:            scheduler,
 	}
@@ -110,6 +112,7 @@ type TestkubeAPI struct {
 	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
+	ContainerExecutor    client.Executor
 	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
 	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient

@@ -36,6 +36,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 		gitTokenSecret           map[string]string
 		secretVariableReferences map[string]string
 		copyFiles                []string
+		image                    string
+		command                  []string
+		imagePullSecretNames     []string
 	)
 
 	cmd := &cobra.Command{
@@ -97,6 +100,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringArrayVarP(&command, "command", "c", []string{}, "command passed to image in container executor")
 
 	return cmd
 }

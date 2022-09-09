@@ -15,6 +15,12 @@ type Executor struct {
 	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
 	Image string `json:"image,omitempty"`
+	// container image pull secrets
+	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	// container executor image command
+	Command []string `json:"command,omitempty"`
+	// additional executor binary arguments
+	Args []string `json:"args,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
 	Types []string `json:"types,omitempty"`
 	// URI for rest based executors
