@@ -310,7 +310,7 @@ kubectl apply -f cypress-v10-executor.yaml
 
 Now, create a new test with a type which our new executor can handle e.g.: `cypress:v10/test`
 
-```sh 
+```bash 
  # create test
  kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-path examples --type cypress:v10/test --name cypress-v10-example-test --git-branch main
 
