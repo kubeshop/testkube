@@ -204,7 +204,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
-	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.Log.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
 		s.Events.Notify(testkube.NewEventEndTest(&execution))

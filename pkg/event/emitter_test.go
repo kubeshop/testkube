@@ -1,85 +1,20 @@
+//go:build integration
+
 package event
 
 import (
 	"context"
 	"os"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 	"github.com/stretchr/testify/assert"
 )
 
 func init() {
 	os.Setenv("DEBUG", "true")
-}
-
-var _ common.Listener = &DummyListener{}
-
-type DummyListener struct {
-	Id                string
-	NotificationCount int32
-	SelectorString    string
-}
-
-func (l *DummyListener) GetNotificationCount() int {
-	cnt := atomic.LoadInt32(&l.NotificationCount)
-	return int(cnt)
-}
-
-func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
-	atomic.AddInt32(&l.NotificationCount, 1)
-	return testkube.EventResult{Id: event.Id}
-}
-
-func (l *DummyListener) Name() string {
-	if l.Id != "" {
-		return l.Id
-	}
-	return "dummy"
-}
-
-func (l *DummyListener) Events() []testkube.EventType {
-	return testkube.AllEventTypes
-}
-
-func (l *DummyListener) Selector() string {
-	return l.SelectorString
-}
-
-func (l *DummyListener) Kind() string {
-	return "dummy"
-}
-
-func (l *DummyListener) Metadata() map[string]string {
-	return map[string]string{"uri": "http://localhost:8080"}
-}
-
-func TestEmitter_SendXMessages(t *testing.T) {
-	// given
-
-	emitter := NewEmitter()
-
-	// given listener with matching selector
-	listener1 := &DummyListener{Id: "id-1"}
-
-	// and emitter with registered listeners
-	emitter.Register(listener1)
-
-	// listening emitter
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	emitter.Listen(ctx)
-
-	// events
-	emitter.Notify(newExampleTestEvent1())
-
-	// wait for messages to completed
-	time.Sleep(10 * time.Millisecond)
-
-	assert.Equal(t, 1, listener1.GetNotificationCount())
 }
 
 func TestEmitter_Register(t *testing.T) {
@@ -88,7 +23,7 @@ func TestEmitter_Register(t *testing.T) {
 		// given
 		emitter := NewEmitter()
 		// when
-		emitter.Register(&DummyListener{Id: "l1"})
+		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
 		assert.Equal(t, 1, len(emitter.Listeners))
@@ -102,9 +37,9 @@ func TestEmitter_Listen(t *testing.T) {
 		// given
 		emitter := NewEmitter()
 		// given listener with matching selector
-		listener1 := &DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
+		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
 		// and listener with non matching selector
-		listener2 := &DummyListener{Id: "l2", SelectorString: "type=NotMe"}
+		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=NotMe"}
 
 		// and emitter with registered listeners
 		emitter.Register(listener1)
@@ -140,9 +75,9 @@ func TestEmitter_Notify(t *testing.T) {
 		emitter := NewEmitter()
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
-		listener1 := &DummyListener{Id: "l3"}
+		listener1 := &dummy.DummyListener{Id: "l3"}
 		// * second on pod2
-		listener2 := &DummyListener{Id: "l3"}
+		listener2 := &dummy.DummyListener{Id: "l3"}
 
 		emitter.Register(listener1)
 		emitter.Register(listener2)
@@ -167,8 +102,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 	t.Run("emitter refersh listeners", func(t *testing.T) {
 		// given
 		emitter := NewEmitter()
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -185,8 +120,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
 		// given first reconciler loop was done
 		emitter := NewEmitter()
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -198,8 +133,8 @@ func TestEmitter_Reconcile(t *testing.T) {
 		cancel()
 
 		// and we'll add additional reconcilers
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
 
 		ctx, cancel = context.WithCancel(context.Background())
 
