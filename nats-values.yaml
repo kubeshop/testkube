@@ -1,8 +1,0 @@
-nats:
-  jetstream:
-    fileStorage:
-      # add if enabled was previously the default setting
-      # not recommended; it would be better to migrate to a StatefulSet with storage enabled
-      enabled: false
-      # add if size was previously the default setting
-      size: 1Gi
