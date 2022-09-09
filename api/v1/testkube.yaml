@@ -2660,13 +2660,12 @@ components:
         id:
           type: string
           description: UUID of event
-        uri:
-          type: string
-          description: DEPERECATED event uri remove after rewrite @TODO
         type:
           $ref: "#/components/schemas/EventType"
-        execution:
+        testExecution:
           $ref: "#/components/schemas/Execution"
+        testSuiteExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
 
     EventType:
       type: string

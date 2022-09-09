@@ -679,6 +679,8 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		s.Log.Infow("Inserting test execution", "error", err)
 	}
 
+	s.Events.Notify(testkube.NewEventStartTestSuite(&testsuiteExecution))
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
@@ -715,6 +717,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				hasFailedSteps = true
+
 				s.Log.Errorw("saving test suite execution results error", "error", err)
 				continue
 			}
@@ -731,6 +734,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		if hasFailedSteps {
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
+			s.Events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
+		} else {
+			s.Events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 		}
 
 		s.Metrics.IncExecuteTestSuite(*testsuiteExecution)

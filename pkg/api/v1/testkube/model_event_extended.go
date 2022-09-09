@@ -7,17 +7,49 @@ import (
 
 func NewEventStartTest(execution *Execution) Event {
 	return Event{
-		Id:        uuid.NewString(),
-		Type_:     EventStartTest,
-		Execution: execution,
+		Id:            uuid.NewString(),
+		Type_:         EventStartTest,
+		TestExecution: execution,
 	}
 }
 
-func NewEventEndTest(execution *Execution) Event {
+func NewEventEndTestSuccess(execution *Execution) Event {
 	return Event{
-		Id:        uuid.NewString(),
-		Type_:     EventEndTestSuccess,
-		Execution: execution,
+		Id:            uuid.NewString(),
+		Type_:         EventEndTestSuccess,
+		TestExecution: execution,
+	}
+}
+
+func NewEventEndTestFailed(execution *Execution) Event {
+	return Event{
+		Id:            uuid.NewString(),
+		Type_:         EventEndTestFailed,
+		TestExecution: execution,
+	}
+}
+
+func NewEventStartTestSuite(execution *TestSuiteExecution) Event {
+	return Event{
+		Id:                 uuid.NewString(),
+		Type_:              EventStartTest,
+		TestSuiteExecution: execution,
+	}
+}
+
+func NewEventEndTestSuiteSuccess(execution *TestSuiteExecution) Event {
+	return Event{
+		Id:                 uuid.NewString(),
+		Type_:              EventEndTestSuiteSuccess,
+		TestSuiteExecution: execution,
+	}
+}
+
+func NewEventEndTestSuiteFailed(execution *TestSuiteExecution) Event {
+	return Event{
+		Id:                 uuid.NewString(),
+		Type_:              EventEndTestSuiteFailed,
+		TestSuiteExecution: execution,
 	}
 }
 
@@ -29,32 +61,45 @@ func (e Event) Type() EventType {
 }
 
 func (e Event) Log() []any {
+	var id, name, eventType, labelsStr string
+	var labels map[string]string
 
-	var executionId, executionName, eventType, labels string
-	if e.Execution != nil {
-		executionId = e.Execution.Id
-		executionName = e.Execution.Name
-		for k, v := range e.Execution.Labels {
-			labels += k + "=" + v + " "
-		}
+	if e.TestSuiteExecution != nil {
+		id = e.TestSuiteExecution.Id
+		name = e.TestSuiteExecution.Name
+		labels = e.TestSuiteExecution.Labels
+	} else if e.TestExecution != nil {
+		id = e.TestExecution.Id
+		name = e.TestExecution.Name
+		labels = e.TestExecution.Labels
 	}
 
 	if e.Type_ != nil {
 		eventType = e.Type_.String()
 	}
 
+	for k, v := range labels {
+		labelsStr += k + "=" + v + " "
+	}
+
 	return []any{
 		"id", e.Id,
-		"uri", e.Uri,
 		"type", eventType,
-		"executionId", executionId,
-		"executionName", executionName,
-		"labels", labels,
+		"executionId", id,
+		"executionName", name,
+		"labels", labelsStr,
 	}
 }
 
 func (e Event) Valid(selector string, types []EventType) (valid bool) {
-	if e.Execution == nil {
+	var executionLabels map[string]string
+
+	// load labels from event test execution or test-suite execution
+	if e.TestSuiteExecution != nil {
+		executionLabels = e.TestSuiteExecution.Labels
+	} else if e.TestExecution != nil {
+		executionLabels = e.TestExecution.Labels
+	} else {
 		return false
 	}
 
@@ -77,7 +122,7 @@ func (e Event) Valid(selector string, types []EventType) (valid bool) {
 			return false
 		}
 
-		valid = selector.Matches(labels.Set(e.Execution.Labels))
+		valid = selector.Matches(labels.Set(executionLabels))
 	}
 
 	return

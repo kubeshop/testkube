@@ -47,7 +47,7 @@ func (l *SlackListener) Metadata() map[string]string {
 }
 
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	err := slacknotifier.SendEvent(event.Type_, *event.Execution)
+	err := slacknotifier.SendEvent(event.Type_, *event.TestExecution)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}

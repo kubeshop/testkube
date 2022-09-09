@@ -23,7 +23,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&event)
 			// then
 			assert.NoError(t, err)
-			assert.Equal(t, executionID, event.Execution.Id)
+			assert.Equal(t, executionID, event.TestExecution.Id)
 		})
 
 		svr := httptest.NewServer(testHandler)
@@ -33,8 +33,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:     testkube.EventStartTest,
-			Execution: exampleExecution(),
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
@@ -54,8 +54,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:     testkube.EventStartTest,
-			Execution: exampleExecution(),
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
 		})
 
 		// then
@@ -70,8 +70,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := s.Notify(testkube.Event{
-			Type_:     testkube.EventStartTest,
-			Execution: exampleExecution(),
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
 		})
 
 		// then
