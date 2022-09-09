@@ -14,7 +14,7 @@ func NewDocsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
 			root.DisableAutoGenTag = true
-			return doc.GenMarkdownTree(root, "docs/cli")
+			return doc.GenMarkdownTree(root, "docs/docs/5-cli-reference")
 		},
 	}
 }
