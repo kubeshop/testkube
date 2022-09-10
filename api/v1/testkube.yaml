@@ -1512,18 +1512,48 @@ paths:
 
   /config/{key}:
     patch:
-      parameters:
-        - $ref: "#/components/parameters/Key"
       tags:
         - api
-      summary: "Update config key"
-      description: "Updates config key in cluster storage state"
+      summary: "Update config"
+      description: "Updates config in cluster storage state"
       operationId: updateConfigKey
+      requestBody:
+        description: config request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Config"
       responses:
         200:
           description: update successful
+          content:
+            application/json:
+              schema:
+                ref: "#/components/schemas/Config"
         502:
           description: "problem with updating key in cluster storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      tags:
+        - api
+      summary: "Get config"
+      description: "Get config from cluster storage state"
+      operationId: getConfig
+      responses:
+        200:
+          description: get successful
+          content:
+            application/json:
+              schema:
+                ref: "#/components/schemas/Config"
+        502:
+          description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
               schema:
@@ -2723,6 +2753,7 @@ components:
       required:
         - id
         - clusterId
+        - enableTelemetry
       properties:
         id:
           type: string
@@ -2933,9 +2964,3 @@ components:
       schema:
         type: string
         description: Name of the object
-    Key:
-      in: query
-      name: key
-      schema:
-        type: string
-        description: Key of the object

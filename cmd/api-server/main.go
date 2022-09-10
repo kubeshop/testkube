@@ -140,11 +140,11 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		configMapConfig,
 		clusterId,
 	)
 
 	// telemetry based functions
-	api.WithTelemetry(telemetryEnabled)
 	api.SendTelemetryStartEvent()
 	api.StartTelemetryHeartbeats()
 
