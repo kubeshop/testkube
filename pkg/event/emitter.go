@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -29,6 +30,7 @@ func NewEmitter() *Emitter {
 	return &Emitter{
 		Results: make(chan testkube.EventResult, eventsBuffer),
 		Log:     log.DefaultLogger,
+		Loader:  NewLoader(),
 		Bus:     bus.NewNATSBus(nc),
 	}
 }
@@ -37,7 +39,7 @@ func NewEmitter() *Emitter {
 type Emitter struct {
 	Results   chan testkube.EventResult
 	Listeners common.Listeners
-	Loader    Loader
+	Loader    *Loader
 	Log       *zap.SugaredLogger
 	mutex     sync.Mutex
 	Bus       bus.Bus
@@ -116,6 +118,8 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
+			fmt.Printf("%+v\n", l)
+
 			l.Notify(event)
 			log.Infow("listener notified", "event", event.Id, "executionId", event.TestExecution.Id)
 		} else {

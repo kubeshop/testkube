@@ -165,3 +165,11 @@ func newExampleTestEvent2() testkube.Event {
 		Execution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
 	}
 }
+
+func TestEmitter_Register(t *testing.T) {
+
+	wsl := websockets.NewWebsocketLoader()
+	e := NewEmitter()
+	e.Loader.Register(wsl)
+
+}

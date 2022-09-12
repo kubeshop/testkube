@@ -10,12 +10,12 @@ import (
 )
 
 func NewWebsocketLoader() *WebsocketLoader {
-	return &WebsocketLoader{}
+	return &WebsocketLoader{Listener: NewWebsocketListener()}
 }
 
 type WebsocketLoader struct {
-	mutex      sync.Mutex
-	Websockets []Websocket
+	mutex    sync.Mutex
+	Listener *WebsocketListener
 }
 
 func (l *WebsocketLoader) Kind() string {
@@ -23,7 +23,7 @@ func (l *WebsocketLoader) Kind() string {
 }
 
 func (l *WebsocketLoader) Load() (listeners common.Listeners, err error) {
-	return common.Listeners{NewWebsocketListener(l.Websockets)}, nil
+	return common.Listeners{l.Listener}, nil
 }
 
 func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
@@ -31,10 +31,10 @@ func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
 	id := uuid.NewString()
 
 	conn.SetCloseHandler(func(code int, text string) error {
-		for i, websocket := range l.Websockets {
+		for i, websocket := range l.Listener.Websockets {
 			if websocket.Id == id {
 				l.mutex.Lock()
-				l.Websockets = append(l.Websockets[:i], l.Websockets[i+1:]...)
+				l.Listener.Websockets = append(l.Listener.Websockets[:i], l.Listener.Websockets[i+1:]...)
 				l.mutex.Unlock()
 				break
 			}
@@ -46,6 +46,7 @@ func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	l.Websockets = append(l.Websockets, Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes})
+	l.Listener.Websockets = append(l.Listener.Websockets, Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes})
+	conn.WriteJSON(map[string]string{"message": "connected to Testkube Events", "id": id})
 	return end
 }

@@ -12,11 +12,11 @@ import (
 
 var _ common.Listener = &WebsocketListener{}
 
-func NewWebsocketListener(websockets []Websocket) *WebsocketListener {
+func NewWebsocketListener() *WebsocketListener {
 	return &WebsocketListener{
 		Log:        log.DefaultLogger,
 		selector:   "",
-		Websockets: websockets,
+		Websockets: []Websocket{},
 		events:     testkube.AllEventTypes,
 	}
 }
@@ -41,14 +41,15 @@ func (l *WebsocketListener) Events() []testkube.EventType {
 }
 
 func (l *WebsocketListener) Metadata() map[string]string {
-	ids := ""
+	ids := "["
 	for _, w := range l.Websockets {
 		ids += w.Id + " "
 	}
+	ids += "]"
 	return map[string]string{
 		"name":     l.Name(),
 		"selector": l.Selector(),
-		"id":       ids,
+		"clients":  ids,
 	}
 }
 
@@ -56,6 +57,7 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 	var success, failed []string
 
 	for _, w := range l.Websockets {
+		l.Log.Infow("notifying websocket", "id", w.Id, "event", event.Type)
 		err := w.Conn.WriteJSON(event)
 		if err != nil {
 			failed = append(failed, w.Id)

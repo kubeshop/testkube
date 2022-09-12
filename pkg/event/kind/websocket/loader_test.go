@@ -20,7 +20,7 @@ func TestLoader_Add(t *testing.T) {
 		l.Add(ws)
 
 		// then
-		assert.Equal(t, 2, len(l.Websockets))
+		assert.Equal(t, 2, len(l.Listener.Websockets))
 	})
 
 	t.Run("should remove websocket on connection close", func(t *testing.T) {
@@ -30,14 +30,14 @@ func TestLoader_Add(t *testing.T) {
 		l := NewWebsocketLoader()
 		ws := newTestWebsocket()
 		l.Add(ws)
-		assert.Equal(t, 1, len(l.Websockets))
+		assert.Equal(t, 1, len(l.Listener.Websockets))
 
 		// when
 		// on close is handled on frame with CloseMessage
-		l.Websockets[0].Conn.Close()
+		l.Listener.Websockets[0].Conn.Close()
 
 		// then
-		assert.Equal(t, 0, len(l.Websockets))
+		assert.Equal(t, 0, len(l.Listener.Websockets))
 	})
 }
 

@@ -12,12 +12,11 @@ func TestWebsocketListener(t *testing.T) {
 	t.Skip("not implemented")
 
 	// given
-	ws := []Websocket{{
+	l := NewWebsocketListener()
+	l.Websockets = []Websocket{{
 		Id:   "1",
 		Conn: &websocket.Conn{},
 	}}
-
-	l := NewWebsocketListener(ws)
 
 	// when
 	result := l.Notify(testkube.NewEventStartTest(testkube.NewQueuedExecution()))
