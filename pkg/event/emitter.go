@@ -2,7 +2,6 @@ package event
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -52,8 +51,6 @@ func (e *Emitter) Register(listener common.Listener) {
 // UpdateListeners updates listeners list
 func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
-	fmt.Printf("updating %+v with %+v\n", e.Listeners, listeners)
-
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
@@ -65,17 +62,12 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 				found = true
 			}
 		}
-
-		fmt.Printf("listener[%d] found %+v %v\n", i, new, found)
 		// if listener is not registered yet we need to subscribe
 		if !found {
 			e.Listeners = append(e.Listeners, listeners[i])
 			e.startListener(listeners[i])
 		}
 	}
-
-	fmt.Printf("updated %+v\n", e.Listeners)
-
 }
 
 // Notify notifies emitter with webhook
