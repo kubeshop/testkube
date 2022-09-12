@@ -87,8 +87,8 @@ func TestEmitter_Listen(t *testing.T) {
 		// listening emitter
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		emitter.Listen(ctx)
 
+		emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
