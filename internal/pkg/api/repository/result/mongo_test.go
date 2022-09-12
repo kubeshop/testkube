@@ -99,9 +99,9 @@ func TestStorage(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
 		assert.Equal(int32(12), filteredTotals.Failed)
-		assert.Equal(0, filteredTotals.Passed)
-		assert.Equal(0, filteredTotals.Queued)
-		assert.Equal(0, filteredTotals.Running)
+		assert.Equal(int32(0), filteredTotals.Passed)
+		assert.Equal(int32(0), filteredTotals.Queued)
+		assert.Equal(int32(0), filteredTotals.Running)
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
@@ -348,13 +348,13 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("limit should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestMetrics(context.Background(), testName, 1, 100)
 		assert.NoError(err)
-		assert.Equal(1, metrics.TotalExecutions)
+		assert.Equal(int32(1), metrics.TotalExecutions)
 	})
 
 	t.Run("filter last n days should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestMetrics(context.Background(), testName, 100, 1)
 		assert.NoError(err)
-		assert.Equal(19, metrics.TotalExecutions)
+		assert.Equal(int32(19), metrics.TotalExecutions)
 	})
 }
 
