@@ -16,7 +16,7 @@ kubectl-testkube create executor [flags]
       --executor-type string   executor type (defaults to job) (default "job")
   -h, --help                   help for executor
   -i, --image string           if uri is git repository we can set additional branch parameter
-  -j, --job-template string    if executor needs to be launched using custom job specification
+  -j, --job-template string    if executor needs to be launched using custom job specification, then a path to template file should be provided
   -l, --label stringToString   label key value pair: --label key1=value1 (default [])
   -n, --name string            unique test name - mandatory
   -t, --types stringArray      types handled by executor
