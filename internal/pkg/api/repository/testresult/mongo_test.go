@@ -76,7 +76,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
-		assert.Equal(20, metrics.TotalExecutions)
+		assert.Equal(int32(20), metrics.TotalExecutions)
 		assert.Equal(5, metrics.FailedExecutions)
 		assert.Len(metrics.Executions, 20)
 	})

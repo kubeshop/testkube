@@ -97,7 +97,7 @@ func TestStorage(t *testing.T) {
 		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 
 		assert.NoError(err)
-		assert.Equal(12, filteredTotals.Results)
+		assert.Equal(int32(12), filteredTotals.Results)
 		assert.Equal(12, filteredTotals.Failed)
 		assert.Equal(0, filteredTotals.Passed)
 		assert.Equal(0, filteredTotals.Queued)
@@ -330,7 +330,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
-		assert.Equal(20, metrics.TotalExecutions)
+		assert.Equal(int32(20), metrics.TotalExecutions)
 		assert.Equal(5, metrics.FailedExecutions)
 		assert.Len(metrics.Executions, 20)
 	})
