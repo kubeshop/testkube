@@ -243,8 +243,9 @@ github.com/go-test/deep v1.0.4/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3a
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/gofiber/adaptor/v2 v2.1.26 h1:L/vcmySP12LlOS/ifZ3olgRct/92/2LHu+69rHVIneA=
 github.com/gofiber/adaptor/v2 v2.1.26/go.mod h1:ufH3ik6czF6EATRXkS3cETFXYuBTBQCFyzJlM/ZYvB8=
-github.com/gofiber/fiber/v2 v2.37.0 h1:KVboSQ7e0wDbSFXNjXKqoigwp9HYUqgWn4uGFaUO1P8=
 github.com/gofiber/fiber/v2 v2.37.0/go.mod h1:xm3pDGlfE1xqVKb77iH8weLU0FFoTeWeK3nbiYM2Nh0=
+github.com/gofiber/fiber/v2 v2.37.1 h1:QK2032gjv0ulegpv/qlTEBoXQD3eFFzCHXcNN12UZCs=
+github.com/gofiber/fiber/v2 v2.37.1/go.mod h1:j3UslgQeJQP3mNhBxHnLLE8TPqA1Fd/lrl4gD25rRUY=
 github.com/gofiber/websocket/v2 v2.0.25 h1:lmA+TiC/gYkvTUSJcmVHvg0w5Uq4oTFtAqhHFRmlRq4=
 github.com/gofiber/websocket/v2 v2.0.25/go.mod h1:mo0hgtdmPvFpMKIPPIWAAIbPe37JU4E2mLT1BjMsi54=
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
