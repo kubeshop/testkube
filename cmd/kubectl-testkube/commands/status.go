@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/telemetry"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewStatusCmd() *cobra.Command {
@@ -24,6 +26,16 @@ func NewStatusCmd() *cobra.Command {
 				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			} else {
 				ui.PrintDisabled("Telemetry on CLI", "disabled")
+			}
+
+			client, _ := common.GetClient(cmd)
+
+			config, err := client.GetConfig()
+			ui.ExitOnError("   Getting API config failed", err)
+			if config.EnableTelemetry {
+				ui.PrintEnabled("Telemetry on API", "enabled")
+			} else {
+				ui.PrintDisabled("Telemetry on API", "disabled")
 			}
 
 			if cfg.OAuth2Data.Enabled {

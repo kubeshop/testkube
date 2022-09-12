@@ -430,19 +430,22 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 				continue
 			}
 
-			scanner := bufio.NewScanner(stream)
+			reader := bufio.NewReader(stream)
 
-			// set default bufio scanner buffer (to limit bufio.Scanner: token too long errors on very long lines)
-			buf := make([]byte, 0, 64*1024)
-			scanner.Buffer(buf, 1024*1024)
-
-			for scanner.Scan() {
-				c.Log.Debug("TailPodLogs stream scan", "out", scanner.Text(), "pod", pod.Name)
-				logs <- scanner.Bytes()
+			for {
+				b, err := reader.ReadBytes('\n')
+				if err != nil {
+					if err == io.EOF {
+						err = nil
+					}
+					break
+				}
+				c.Log.Debug("TailPodLogs stream scan", "out", b, "pod", pod.Name)
+				logs <- b
 			}
 
-			if scanner.Err() != nil {
-				c.Log.Errorw("scanner error", "error", scanner.Err())
+			if err != nil {
+				c.Log.Errorw("scanner error", "error", err)
 			}
 		}
 	}()

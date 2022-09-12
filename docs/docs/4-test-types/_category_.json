@@ -1,0 +1,9 @@
+{
+    "label": "Test Types",
+    "position": 2,
+    "link": {
+      "type": "generated-index",
+      "description": "Supported Test Types / Executors within Testkube"
+    }
+  }
+  
