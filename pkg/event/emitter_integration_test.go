@@ -57,7 +57,10 @@ func TestEmitter_NATS_Listen(t *testing.T) {
 		// listening emitter
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
 		emitter.Listen(ctx)
+		// wait for listeners to start
+		time.Sleep(time.Millisecond * 50)
 
 		// events
 		event1 := newExampleTestEvent1()
@@ -94,7 +97,10 @@ func TestEmitter_NATS_Notify(t *testing.T) {
 		// and listening emitter
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
 		emitter.Listen(ctx)
+		// wait for listeners to start
+		time.Sleep(time.Millisecond * 50)
 
 		// when event sent to queue group
 		emitter.Notify(newExampleTestEvent1())
