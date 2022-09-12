@@ -118,8 +118,6 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
-			fmt.Printf("%+v\n", l)
-
 			l.Notify(event)
 			log.Infow("listener notified", "event", event.Id, "executionId", event.TestExecution.Id)
 		} else {

@@ -13,16 +13,19 @@ import (
 )
 
 type EventBusMock struct {
-	events chan testkube.Event
+	events map[string]chan testkube.Event
 }
 
 func (b *EventBusMock) Publish(event testkube.Event) error {
-	b.events <- event
+	for _, e := range b.events {
+		e <- event
+	}
 	return nil
 }
 func (b *EventBusMock) Subscribe(queue string, handler bus.Handler) error {
+	b.events[queue] = make(chan testkube.Event)
 	go func() {
-		for e := range b.events {
+		for e := range b.events[queue] {
 			handler(e)
 		}
 	}()
@@ -34,7 +37,9 @@ func (b *EventBusMock) Unsubscribe(queue string) error {
 
 }
 func (b *EventBusMock) Close() error {
-	b.events = make(chan testkube.Event, 1000)
+	for i := range b.events {
+		b.events[i] = make(chan testkube.Event, 1000)
+	}
 	return nil
 }
 
@@ -42,7 +47,7 @@ var eventBus bus.Bus
 
 func init() {
 	os.Setenv("DEBUG", "true")
-	eventBus = &EventBusMock{events: make(chan testkube.Event, 1000)}
+	eventBus = &EventBusMock{events: make(map[string]chan testkube.Event)}
 }
 
 func TestEmitter_Register(t *testing.T) {
@@ -65,9 +70,9 @@ func TestEmitter_Listen(t *testing.T) {
 		// given
 		emitter := NewEmitter(eventBus)
 		// given listener with matching selector
-		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
-		// and listener with non matching selector
-		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=NotMe"}
+		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
+		// and listener with second matic selector
+		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
 
 		// and emitter with registered listeners
 		emitter.Register(listener1)
@@ -78,21 +83,24 @@ func TestEmitter_Listen(t *testing.T) {
 		defer cancel()
 		emitter.Listen(ctx)
 
+		// wait for listeners to start
+		time.Sleep(time.Millisecond * 50)
+
 		// events
 		event1 := newExampleTestEvent1()
-		event1.TestExecution.Labels = map[string]string{"type": "OnlyMe"}
+		event1.TestExecution.Labels = map[string]string{"type": "listener1"}
 		event2 := newExampleTestEvent2()
+		event2.TestExecution.Labels = map[string]string{"type": "listener2"}
 
 		// when
 		emitter.Notify(event1)
 		emitter.Notify(event2)
 
+		time.Sleep(time.Millisecond * 50)
 		// then
-		time.Sleep(time.Millisecond * 100)
 
 		assert.Equal(t, 1, listener1.GetNotificationCount())
-		assert.Equal(t, 0, listener2.GetNotificationCount())
-		t.Log("T3 completed")
+		assert.Equal(t, 1, listener2.GetNotificationCount())
 	})
 
 }
@@ -115,10 +123,12 @@ func TestEmitter_Notify(t *testing.T) {
 		defer cancel()
 		emitter.Listen(ctx)
 
+		time.Sleep(time.Millisecond * 50)
+
 		// when event sent to queue group
 		emitter.Notify(newExampleTestEvent1())
 
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 50)
 
 		// then only one listener should be notified
 		assert.Equal(t, 1, listener2.GetNotificationCount()+listener1.GetNotificationCount())
