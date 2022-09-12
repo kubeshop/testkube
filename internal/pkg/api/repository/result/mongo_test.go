@@ -98,7 +98,7 @@ func TestStorage(t *testing.T) {
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
-		assert.Equal(12, filteredTotals.Failed)
+		assert.Equal(int32(12), filteredTotals.Failed)
 		assert.Equal(0, filteredTotals.Passed)
 		assert.Equal(0, filteredTotals.Queued)
 		assert.Equal(0, filteredTotals.Running)
@@ -331,7 +331,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(int32(20), metrics.TotalExecutions)
-		assert.Equal(5, metrics.FailedExecutions)
+		assert.Equal(int32(5), metrics.FailedExecutions)
 		assert.Len(metrics.Executions, 20)
 	})
 
