@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,19 +14,23 @@ import (
 )
 
 type EventBusMock struct {
-	events map[string]chan testkube.Event
+	events sync.Map
 }
 
 func (b *EventBusMock) Publish(event testkube.Event) error {
-	for _, e := range b.events {
-		e <- event
-	}
+	b.events.Range(func(key, e interface{}) bool {
+		e.(chan testkube.Event) <- event
+		return true
+	})
 	return nil
 }
 func (b *EventBusMock) Subscribe(queue string, handler bus.Handler) error {
-	b.events[queue] = make(chan testkube.Event)
+
+	ch := make(chan testkube.Event)
+	b.events.Store(queue, ch)
+
 	go func() {
-		for e := range b.events[queue] {
+		for e := range ch {
 			handler(e)
 		}
 	}()
@@ -37,9 +42,10 @@ func (b *EventBusMock) Unsubscribe(queue string) error {
 
 }
 func (b *EventBusMock) Close() error {
-	for i := range b.events {
-		b.events[i] = make(chan testkube.Event, 1000)
-	}
+	b.events.Range(func(key, e interface{}) bool {
+		b.events.Delete(key)
+		return true
+	})
 	return nil
 }
 
@@ -47,7 +53,7 @@ var eventBus bus.Bus
 
 func init() {
 	os.Setenv("DEBUG", "true")
-	eventBus = &EventBusMock{events: make(map[string]chan testkube.Event)}
+	eventBus = &EventBusMock{}
 }
 
 func TestEmitter_Register(t *testing.T) {
