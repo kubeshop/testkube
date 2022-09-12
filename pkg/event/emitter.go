@@ -109,7 +109,6 @@ func (e *Emitter) Listen(ctx context.Context) {
 func (e *Emitter) startListener(l common.Listener) {
 	e.Log.Infow("starting listener", l.Name(), l.Metadata())
 	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
-
 	if err != nil {
 		e.Log.Errorw("error subscribing to event", "error", err)
 	}

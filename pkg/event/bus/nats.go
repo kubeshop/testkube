@@ -62,9 +62,11 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 	// async subscribe on queue
 	s, err := n.nc.QueueSubscribe(SubscriptionName, queue, handler)
 
-	// store subscription for later unsubscribe
-	key := fmt.Sprintf("%s.%s", SubscriptionName, queue)
-	n.subscriptions.Store(key, s)
+	if err == nil {
+		// store subscription for later unsubscribe
+		key := n.queueName(SubscriptionName, queue)
+		n.subscriptions.Store(key, s)
+	}
 
 	return err
 }
@@ -73,9 +75,9 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	key := fmt.Sprintf("%s.%s", SubscriptionName, queue)
+	key := n.queueName(SubscriptionName, queue)
 	if s, ok := n.subscriptions.Load(key); ok {
-		s.(*nats.Subscription).Drain()
+		return s.(*nats.Subscription).Drain()
 	}
 	return nil
 }
@@ -83,4 +85,8 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 func (n *NATSBus) Close() error {
 	n.nc.Close()
 	return nil
+}
+
+func (n *NATSBus) queueName(subscription, queue string) string {
+	return fmt.Sprintf("%s.%s", SubscriptionName, queue)
 }
