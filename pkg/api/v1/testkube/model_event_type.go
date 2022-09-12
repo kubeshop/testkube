@@ -13,10 +13,10 @@ type EventType string
 
 // List of EventType
 const (
-	START_TEST_EventType       EventType = "start-test"
-	START_TESTSUITE_EventType  EventType = "start-testsuite"
-	END_TEST_EventType         EventType = "end-test"
-	END_TESTSUITE_EventType    EventType = "end-testsuite"
-	TEST_FAILED_EventType      EventType = "test-failed"
-	TESTSUITE_FAILED_EventType EventType = "testsuite-failed"
+	START_TEST_EventType            EventType = "start-test"
+	END_TEST_SUCCESS_EventType      EventType = "end-test-success"
+	END_TEST_FAILED_EventType       EventType = "end-test-failed"
+	START_TESTSUITE_EventType       EventType = "start-testsuite"
+	END_TESTSUITE_SUCCESS_EventType EventType = "end-testsuite-success"
+	END_TESTSUITE_FAILED_EventType  EventType = "end-testsuite-failed"
 )

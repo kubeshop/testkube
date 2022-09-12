@@ -8,8 +8,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
-func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
-	return TestSuiteExecution{
+func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
+	return &TestSuiteExecution{
 		TestSuite: &ObjectRef{
 			Name:      name,
 			Namespace: namespace,

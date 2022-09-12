@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,10 +27,12 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -63,6 +66,13 @@ func NewTestkubeAPI(
 
 	httpConfig.ClusterID = clusterId
 
+	// configure NATS event bus
+	nc, err := bus.NewNATSConnection()
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	eventBus := bus.NewNATSBus(nc)
+
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testsuiteExecutionsResults,
@@ -72,7 +82,7 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		Events:               event.NewEmitter(),
+		Events:               event.NewEmitter(eventBus),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 		ConfigMap:            configMap,
@@ -307,9 +317,21 @@ func (s *TestkubeAPI) InitRoutes() {
 	configs.Get("/", s.GetConfigsHandler())
 	configs.Patch("/", s.UpdateConfigsHandler())
 
+	debug := s.Routes.Group("/debug")
+	debug.Get("/listeners", s.GetDebugListenersHandler())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
+
+	// mount dashboard on /ui
+	dashboardURI := os.Getenv("TESTKUBE_DASHBOARD_URI")
+	if dashboardURI == "" {
+		dashboardURI = "http://testkube-dashboard"
+	}
+	s.Log.Infow("dashboard uri", "uri", dashboardURI)
+	s.Mux.All("/", proxy.Forward(dashboardURI))
+
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats() {

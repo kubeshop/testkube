@@ -2690,23 +2690,22 @@ components:
         id:
           type: string
           description: UUID of event
-        uri:
-          type: string
-          description: DEPERECATED event uri remove after rewrite @TODO
         type:
           $ref: "#/components/schemas/EventType"
-        execution:
+        testExecution:
           $ref: "#/components/schemas/Execution"
+        testSuiteExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
 
     EventType:
       type: string
       enum:
         - start-test
+        - end-test-success
+        - end-test-failed
         - start-testsuite
-        - end-test
-        - end-testsuite
-        - test-failed
-        - testsuite-failed
+        - end-testsuite-success
+        - end-testsuite-failed
 
     EventResult:
       description: Listener result after sending particular event

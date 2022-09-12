@@ -136,6 +136,8 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
+	apiVersion := api.Version
+
 	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
@@ -156,7 +158,9 @@ func main() {
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
 		"telemetryEnabled", telemetryEnabled,
-		"clusterId", clusterId, "namespace", namespace,
+		"clusterId", clusterId,
+		"namespace", namespace,
+		"version", apiVersion,
 	)
 
 	err = api.Run()

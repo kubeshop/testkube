@@ -29,10 +29,6 @@ import (
 )
 
 const (
-	// testResourceURI is test resource uri for cron job call
-	testResourceURI = "tests"
-	// testSuiteResourceURI is test suite resource uri for cron job call
-	testSuiteResourceURI = "test-suites"
 	// defaultConcurrencyLevel is a default concurrency level for worker pool
 	defaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
@@ -167,14 +163,14 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		s.Events.Notify(testkube.NewEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			s.Events.Notify(testkube.NewEventEndTest(&execution))
+			s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
 
@@ -195,19 +191,20 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		s.Events.Notify(testkube.NewEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		s.Events.Notify(testkube.NewEventEndTest(&execution))
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
-	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.Log.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
-	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		s.Events.Notify(testkube.NewEventEndTest(&execution))
+	// notify immediately onlly when sync run otherwise job results handler need notify about test finish
+	if options.Sync && execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		s.Events.Notify(testkube.NewEventEndTestSuccess(&execution))
 	}
 
 	return execution, nil
