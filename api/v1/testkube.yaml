@@ -1510,7 +1510,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /config/:
+  /config:
     patch:
       tags:
         - api
