@@ -21,17 +21,13 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter() *Emitter {
-	nc, err := bus.NewNATSConnection()
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
-	}
-
+func NewEmitter(eventBus bus.Bus) *Emitter {
 	return &Emitter{
-		Results: make(chan testkube.EventResult, eventsBuffer),
-		Log:     log.DefaultLogger,
-		Loader:  NewLoader(),
-		Bus:     bus.NewNATSBus(nc),
+		Results:   make(chan testkube.EventResult, eventsBuffer),
+		Log:       log.DefaultLogger,
+		Loader:    NewLoader(),
+		Bus:       eventBus,
+		Listeners: make(common.Listeners, 0),
 	}
 }
 
@@ -56,6 +52,8 @@ func (e *Emitter) Register(listener common.Listener) {
 // UpdateListeners updates listeners list
 func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
+	fmt.Printf("updating %+v with %+v\n", e.Listeners, listeners)
+
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
@@ -67,6 +65,8 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 				found = true
 			}
 		}
+
+		fmt.Printf("listener[%d] found %+v %v\n", i, new, found)
 		// if listener is not registered yet we need to subscribe
 		if !found {
 			e.Listeners = append(e.Listeners, listeners[i])
@@ -74,7 +74,8 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 		}
 	}
 
-	e.Listeners = listeners
+	fmt.Printf("updated %+v\n", e.Listeners)
+
 }
 
 // Notify notifies emitter with webhook
@@ -130,17 +131,18 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 }
 
 // Reconcile reloads listeners from all registered reconcilers
-func (s *Emitter) Reconcile(ctx context.Context) {
+func (e *Emitter) Reconcile(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.Log.Infow("stopping reconciler")
+			e.Log.Infow("stopping reconciler")
 			return
 		default:
-			listeners := s.Loader.Reconcile()
-			s.UpdateListeners(listeners)
-			s.Log.Debugw("reconciled listeners", s.Listeners.Log()...)
+			listeners := e.Loader.Reconcile()
+			e.UpdateListeners(listeners)
+			e.Log.Debugw("reconciled listeners", e.Listeners.Log()...)
 			time.Sleep(reconcileInterval)
+
 		}
 	}
 }

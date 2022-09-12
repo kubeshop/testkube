@@ -11,6 +11,7 @@ import (
 func TestLoader_Add(t *testing.T) {
 
 	t.Run("adds connection to websockets pool", func(t *testing.T) {
+		t.Skip("not implemented - TODO find a way to get real websocket connection")
 		// given
 		l := NewWebsocketLoader()
 		ws := newTestWebsocket()

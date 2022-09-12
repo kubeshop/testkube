@@ -13,8 +13,8 @@ func TestLoader_UpdateListeners(t *testing.T) {
 	t.Run("reconcile updates listeners list based on registered reconcilers", func(t *testing.T) {
 		// given reconciler with two registered reconcilers that return two listeners each
 		reconciler := NewLoader()
-		reconciler.Register(&dummy.DummyLoader{})
-		reconciler.Register(&dummy.DummyLoader{})
+		reconciler.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
+		reconciler.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
 		// when
 		listeners := reconciler.Reconcile()

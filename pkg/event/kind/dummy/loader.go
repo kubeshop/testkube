@@ -1,9 +1,14 @@
 package dummy
 
-import "github.com/kubeshop/testkube/pkg/event/kind/common"
+import (
+	"fmt"
+
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
+)
 
 type DummyLoader struct {
-	Err error
+	IdPrefix string
+	Err      error
 }
 
 func (r DummyLoader) Kind() string {
@@ -15,7 +20,11 @@ func (r *DummyLoader) Load() (common.Listeners, error) {
 		return nil, r.Err
 	}
 	return common.Listeners{
-		&DummyListener{},
-		&DummyListener{},
+		&DummyListener{Id: r.name(1)},
+		&DummyListener{Id: r.name(2)},
 	}, nil
+}
+
+func (r *DummyLoader) name(i int) string {
+	return fmt.Sprintf("%s.%d", r.IdPrefix, i)
 }

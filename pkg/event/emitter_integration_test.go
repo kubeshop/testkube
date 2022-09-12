@@ -1,3 +1,5 @@
+//go:build integration
+
 package event
 
 import (
@@ -7,45 +9,24 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 	"github.com/stretchr/testify/assert"
 )
 
-type EventBusMock struct {
-	events chan testkube.Event
-}
-
-func (b *EventBusMock) Publish(event testkube.Event) error {
-	b.events <- event
-	return nil
-}
-func (b *EventBusMock) Subscribe(queue string, handler bus.Handler) error {
-	go func() {
-		for e := range b.events {
-			handler(e)
-		}
-	}()
-	return nil
-}
-
-func (b *EventBusMock) Unsubscribe(queue string) error {
-	return nil
-
-}
-func (b *EventBusMock) Close() error {
-	b.events = make(chan testkube.Event, 1000)
-	return nil
-}
-
+// tests based on real NATS event bus
 var eventBus bus.Bus
 
 func init() {
 	os.Setenv("DEBUG", "true")
-	eventBus = &EventBusMock{events: make(chan testkube.Event, 1000)}
+	// configure NATS event bus
+	nc, err := bus.NewNATSConnection()
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	eventBus = bus.NewNATSBus(nc)
 }
 
-func TestEmitter_Register(t *testing.T) {
+func TestEmitter_NATS_Register(t *testing.T) {
 
 	t.Run("Register adds new listener", func(t *testing.T) {
 		// given
@@ -60,7 +41,7 @@ func TestEmitter_Register(t *testing.T) {
 	})
 }
 
-func TestEmitter_Listen(t *testing.T) {
+func TestEmitter_NATS_Listen(t *testing.T) {
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
 		// given
 		emitter := NewEmitter(eventBus)
@@ -80,7 +61,7 @@ func TestEmitter_Listen(t *testing.T) {
 
 		// events
 		event1 := newExampleTestEvent1()
-		event1.TestExecution.Labels = map[string]string{"type": "OnlyMe"}
+		event1.Execution.Labels = map[string]string{"type": "OnlyMe"}
 		event2 := newExampleTestEvent2()
 
 		// when
@@ -97,7 +78,7 @@ func TestEmitter_Listen(t *testing.T) {
 
 }
 
-func TestEmitter_Notify(t *testing.T) {
+func TestEmitter_NATS_Notify(t *testing.T) {
 	t.Run("notifies listeners in queue groups", func(t *testing.T) {
 		// given
 		emitter := NewEmitter(eventBus)
@@ -125,35 +106,53 @@ func TestEmitter_Notify(t *testing.T) {
 	})
 }
 
-func TestEmitter_Reconcile(t *testing.T) {
+func TestEmitter_NATS_Reconcile(t *testing.T) {
+
+	t.Run("emitter refersh listeners", func(t *testing.T) {
+		// given
+		emitter := NewEmitter(eventBus)
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// when
+		go emitter.Reconcile(ctx)
+
+		// then
+		time.Sleep(time.Millisecond)
+		assert.Len(t, emitter.Listeners, 4)
+
+		cancel()
+	})
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
 		// given first reconciler loop was done
 		emitter := NewEmitter(eventBus)
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
 		go emitter.Reconcile(ctx)
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(time.Millisecond)
 		assert.Len(t, emitter.Listeners, 4)
 
 		cancel()
 
-		// and we'll add additional new loader
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"}) // existing one
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy3"})
+		// and we'll add additional reconcilers
+		emitter.Loader.Register(&dummy.DummyLoader{})
+		emitter.Loader.Register(&dummy.DummyLoader{})
 
 		ctx, cancel = context.WithCancel(context.Background())
 
 		// when
 		go emitter.Reconcile(ctx)
 
-		// then each reconciler (3 reconcilers) should load 2 listeners
-		time.Sleep(100 * time.Millisecond)
-		assert.Len(t, emitter.Listeners, 6)
+		// then each reconciler (4 reconcilers) should load 2 listeners
+		time.Sleep(time.Millisecond)
+		assert.Len(t, emitter.Listeners, 8)
 
 		cancel()
 	})
@@ -162,16 +161,24 @@ func TestEmitter_Reconcile(t *testing.T) {
 
 func newExampleTestEvent1() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID1",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID1", "test/test", "test"),
+		Id:        "eventID1",
+		Type_:     testkube.EventStartTest,
+		Execution: testkube.NewExecutionWithID("executionID1", "test/test", "test"),
 	}
 }
 
 func newExampleTestEvent2() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID2",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
+		Id:        "eventID2",
+		Type_:     testkube.EventStartTest,
+		Execution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
 	}
+}
+
+func TestEmitter_NATS_Register(t *testing.T) {
+
+	wsl := websockets.NewWebsocketLoader()
+	e := NewEmitter()
+	e.Loader.Register(wsl)
+
 }

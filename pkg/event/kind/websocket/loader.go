@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/gofiber/websocket/v2"
@@ -10,7 +11,9 @@ import (
 )
 
 func NewWebsocketLoader() *WebsocketLoader {
-	return &WebsocketLoader{Listener: NewWebsocketListener()}
+	return &WebsocketLoader{
+		Listener: NewWebsocketListener(),
+	}
 }
 
 type WebsocketLoader struct {
@@ -47,6 +50,8 @@ func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	l.Listener.Websockets = append(l.Listener.Websockets, Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes})
+	fmt.Printf("%+v\n", conn)
+
 	conn.WriteJSON(map[string]string{"message": "connected to Testkube Events", "id": id})
 	return end
 }

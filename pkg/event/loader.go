@@ -29,6 +29,8 @@ func (s *Loader) Reconcile() (listeners common.Listeners) {
 	listeners = make(common.Listeners, 0)
 	for _, loader := range s.Loaders {
 		l, err := loader.Load()
+		s.Log.Debugf("Got listeners from loader %T %+v\n", loader, l)
+
 		if err != nil {
 			s.Log.Errorw("error loading listeners", "error", err)
 			continue
