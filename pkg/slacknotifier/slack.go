@@ -290,7 +290,7 @@ func composeTestsuiteMessage(execution testkube.TestSuiteExecution, eventType te
 		EndTime:     execution.EndTime.String(),
 		Duration:    execution.Duration,
 		TotalSteps:  len(execution.StepResults),
-		FailedSteps: 0,
+		FailedSteps: execution.FailedStepsCount(),
 		BackTick:    "`",
 	}
 
@@ -324,7 +324,7 @@ func composeTestMessage(execution testkube.Execution, eventType testkube.EventTy
 		EndTime:     execution.EndTime.String(),
 		Duration:    execution.Duration,
 		TotalSteps:  len(execution.ExecutionResult.Steps),
-		FailedSteps: execution.ExecutionResult.GetFailedStepsCount(),
+		FailedSteps: execution.ExecutionResult.FailedStepsCount(),
 		BackTick:    "`",
 	}
 
