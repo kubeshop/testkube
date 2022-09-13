@@ -32,7 +32,7 @@ func NewEventEndTestFailed(execution *Execution) Event {
 func NewEventStartTestSuite(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
-		Type_:              EventStartTest,
+		Type_:              EventStartTestSuite,
 		TestSuiteExecution: execution,
 	}
 }
