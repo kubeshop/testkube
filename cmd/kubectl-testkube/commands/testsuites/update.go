@@ -25,6 +25,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 		secretVariables          map[string]string
 		httpProxy, httpsProxy    string
 		secretVariableReferences map[string]string
+		configFiles              []string
 	)
 
 	cmd := &cobra.Command{
@@ -103,6 +104,7 @@ func NewUpdateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringArrayVarP(&configFiles, "config-files", "", []string{}, "configuration file path mappings from host to pod of form source:destination")
 
 	return cmd
 }
