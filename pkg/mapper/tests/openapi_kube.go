@@ -3,6 +3,7 @@ package tests
 import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,11 +42,24 @@ func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
 func MapCRDVariables(in map[string]testkube.Variable) map[string]testsv3.Variable {
 	out := map[string]testsv3.Variable{}
 	for k, v := range in {
-		out[k] = testsv3.Variable{
+		variable := testsv3.Variable{
 			Name:  v.Name,
 			Type_: string(*v.Type_),
 			Value: v.Value,
 		}
+
+		if v.SecretRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.SecretRef.Name,
+					},
+					Key: v.SecretRef.Key,
+				},
+			}
+		}
+
+		out[k] = variable
 	}
 	return out
 }
@@ -98,7 +112,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	return &testsv3.ExecutionRequest{
 		Name:                executionRequest.Name,
 		TestSuiteName:       executionRequest.TestSuiteName,
-		Number:              executionRequest.Number,
+		Number:              int32(executionRequest.Number),
 		ExecutionLabels:     executionRequest.ExecutionLabels,
 		Namespace:           executionRequest.Namespace,
 		VariablesFile:       executionRequest.VariablesFile,

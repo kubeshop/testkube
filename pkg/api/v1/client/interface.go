@@ -14,6 +14,7 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 	ServiceAPI
+	ConfigAPI
 }
 
 // TestAPI describes test api methods
@@ -79,9 +80,10 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
-// ConfigAPI describes webhook api methods
+// ConfigAPI describes config api methods
 type ConfigAPI interface {
-	UpdateKey(key string, value any) (config testkube.Config, err error)
+	UpdateConfig(config testkube.Config) (outputConfig testkube.Config, err error)
+	GetConfig() (config testkube.Config, err error)
 }
 
 // ServiceAPI describes service api methods

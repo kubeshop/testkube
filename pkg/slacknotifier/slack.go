@@ -176,6 +176,7 @@ type messageArgs struct {
 var (
 	slackClient *slack.Client
 	timestamps  map[string]string
+	Ready       bool
 )
 
 func init() {
@@ -183,6 +184,7 @@ func init() {
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
 		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackClient = slack.New(token, slack.OptionDebug(true))
+		Ready = true
 	} else {
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
@@ -203,9 +205,24 @@ func SendMessage(channelID string, message string) error {
 }
 
 // SendEvent composes an event message and sends it to slack
-func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Execution) error {
+func SendEvent(event testkube.Event) error {
+	var (
+		message []byte
+		err     error
+		name    string
+	)
 
-	message, err := composeMessage(execution, eventType)
+	if event.TestExecution != nil {
+		message, err = composeTestMessage(*event.TestExecution, event.Type())
+		name = event.TestExecution.Name
+	} else if event.TestSuiteExecution != nil {
+		message, err = composeTestsuiteMessage(*event.TestSuiteExecution, event.Type())
+		name = event.TestSuiteExecution.Name
+	} else {
+		log.DefaultLogger.Warnw("event type is not handled by Slack notifier", "event", event)
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -226,7 +243,7 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 
 		if len(channels) > 0 {
 			channelID := channels[0].GroupConversation.ID
-			prevTimestamp, ok := timestamps[execution.Name]
+			prevTimestamp, ok := timestamps[name]
 			var timestamp string
 
 			if ok {
@@ -240,10 +257,10 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 				return err
 			}
 
-			if *eventType == testkube.END_TEST_WebhookEventType {
-				delete(timestamps, execution.Name)
+			if event.IsSuccess() {
+				delete(timestamps, name)
 			} else {
-				timestamps[execution.Name] = timestamp
+				timestamps[name] = timestamp
 			}
 		} else {
 			log.DefaultLogger.Warnw("Testkube bot is not added to any channel")
@@ -255,7 +272,7 @@ func SendEvent(eventType *testkube.WebhookEventType, execution testkube.Executio
 	return nil
 }
 
-func composeMessage(execution testkube.Execution, eventType *testkube.WebhookEventType) ([]byte, error) {
+func composeTestsuiteMessage(execution testkube.TestSuiteExecution, eventType testkube.EventType) ([]byte, error) {
 	t, err := template.New("message").Parse(messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
@@ -264,7 +281,40 @@ func composeMessage(execution testkube.Execution, eventType *testkube.WebhookEve
 
 	args := messageArgs{
 		ExecutionID: execution.Name,
-		EventType:   string(*eventType),
+		EventType:   string(eventType),
+		Namespace:   execution.TestSuite.Namespace,
+		Labels:      testkube.MapToString(execution.Labels),
+		TestName:    execution.TestSuite.Name,
+		Status:      string(*execution.Status),
+		StartTime:   execution.StartTime.String(),
+		EndTime:     execution.EndTime.String(),
+		Duration:    execution.Duration,
+		TotalSteps:  len(execution.StepResults),
+		FailedSteps: execution.FailedStepsCount(),
+		BackTick:    "`",
+	}
+
+	log.DefaultLogger.Infow("Execution changed", "status", execution.Status)
+
+	var message bytes.Buffer
+	err = t.Execute(&message, args)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error())
+		return nil, err
+	}
+	return message.Bytes(), nil
+}
+
+func composeTestMessage(execution testkube.Execution, eventType testkube.EventType) ([]byte, error) {
+	t, err := template.New("message").Parse(messageTemplate)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
+		return nil, err
+	}
+
+	args := messageArgs{
+		ExecutionID: execution.Name,
+		EventType:   string(eventType),
 		Namespace:   execution.TestNamespace,
 		Labels:      testkube.MapToString(execution.Labels),
 		TestName:    execution.TestName,
@@ -274,7 +324,7 @@ func composeMessage(execution testkube.Execution, eventType *testkube.WebhookEve
 		EndTime:     execution.EndTime.String(),
 		Duration:    execution.Duration,
 		TotalSteps:  len(execution.ExecutionResult.Steps),
-		FailedSteps: execution.ExecutionResult.GetFailedStepsCount(),
+		FailedSteps: execution.ExecutionResult.FailedStepsCount(),
 		BackTick:    "`",
 	}
 

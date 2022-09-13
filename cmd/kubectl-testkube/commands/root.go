@@ -13,11 +13,10 @@ import (
 )
 
 var (
-	telemetryEnabled bool
-	client           string
-	verbose          bool
-	namespace        string
-	oauthEnabled     bool
+	client       string
+	verbose      bool
+	namespace    string
+	oauthEnabled bool
 )
 
 func init() {
@@ -37,9 +36,9 @@ func init() {
 	RootCmd.AddCommand(NewDownloadCmd())
 	RootCmd.AddCommand(NewGenerateCmd())
 
-	RootCmd.AddCommand(NewInstallCmd())
+	RootCmd.AddCommand(NewInitCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
-	RootCmd.AddCommand(NewUninstallCmd())
+	RootCmd.AddCommand(NewPurgeCmd())
 	RootCmd.AddCommand(NewWatchCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
@@ -48,16 +47,19 @@ func init() {
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
+	RootCmd.SetHelpCommand(NewHelpCmd())
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "kubectl-testkube",
+	Use:   "testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
-		if telemetryEnabled {
+		cfg, _ := config.Load()
+
+		if cfg.TelemetryEnabled {
 			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 			out, err := telemetry.SendCmdEvent(cmd, common.Version)
 			if ui.Verbose && err != nil {
@@ -112,13 +114,11 @@ func Execute() {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
 
-	RootCmd.PersistentFlags().BoolVarP(&telemetryEnabled, "telemetry-enabled", "", cfg.TelemetryEnabled, "enable collection of anonumous telemetry data")
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
-
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

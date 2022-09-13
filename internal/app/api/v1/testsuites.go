@@ -407,7 +407,6 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
@@ -426,31 +425,32 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 					LatestExecution: &execution,
 				})
 			} else {
-				testSuiteWithExecutions = append(testSuiteWithExecutions, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecution{
 					TestSuite: &testSuites[i],
 				})
 			}
 		}
 
-		sort.Slice(testSuiteWithExecutions, func(i, j int) bool {
-			return testSuiteWithExecutions[i].TestSuite.Created.After(testSuiteWithExecutions[j].TestSuite.Created)
-		})
-
 		sort.Slice(results, func(i, j int) bool {
-			iTime := results[i].LatestExecution.EndTime
-			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-				iTime = results[i].LatestExecution.StartTime
+			iTime := results[i].TestSuite.Created
+			if results[i].LatestExecution != nil {
+				iTime = results[i].LatestExecution.EndTime
+				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
+					iTime = results[i].LatestExecution.StartTime
+				}
 			}
 
-			jTime := results[j].LatestExecution.EndTime
-			if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-				jTime = results[j].LatestExecution.StartTime
+			jTime := results[j].TestSuite.Created
+			if results[j].LatestExecution != nil {
+				jTime = results[j].LatestExecution.EndTime
+				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
+					jTime = results[j].LatestExecution.StartTime
+				}
 			}
 
 			return iTime.After(jTime)
 		})
 
-		testSuiteWithExecutions = append(testSuiteWithExecutions, results...)
 		status := c.Query("status")
 		if status != "" {
 			statusList, err := testkube.ParseTestSuiteExecutionStatusList(status, ",")
@@ -460,18 +460,18 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 			statusMap := statusList.ToMap()
 			// filter items array
-			for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
-				if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
-					if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok {
+			for i := len(results) - 1; i >= 0; i-- {
+				if results[i].LatestExecution != nil && results[i].LatestExecution.Status != nil {
+					if _, ok := statusMap[*results[i].LatestExecution.Status]; ok {
 						continue
 					}
 				}
 
-				testSuiteWithExecutions = append(testSuiteWithExecutions[:i], testSuiteWithExecutions[i+1:]...)
+				results = append(results[:i], results[i+1:]...)
 			}
 		}
 
-		return c.JSON(testSuiteWithExecutions)
+		return c.JSON(results)
 	}
 }
 
@@ -587,7 +587,12 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		ctx := context.Background()
 		id := c.Params("executionID")
 		execution, err := s.TestExecutionResults.Get(ctx, id)
-
+		if err == mongo.ErrNoDocuments {
+			execution, err = s.TestExecutionResults.GetByName(ctx, id)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+			}
+		}
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -603,7 +608,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		}
 
 		for key, value := range secretMap {
-			if variable, ok := execution.Variables[key]; ok {
+			if variable, ok := execution.Variables[key]; ok && value != "" {
 				variable.Value = string(value)
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
@@ -654,7 +659,6 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
 			request.Name = testSuite.ExecutionRequest.Name
 		}
-
 		if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
 			request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
 		}
@@ -664,11 +668,18 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		}
 	}
 
+	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
+	if request.Name == "" {
+		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
+	}
+
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
 		s.Log.Infow("Inserting test execution", "error", err)
 	}
+
+	s.Events.Notify(testkube.NewEventStartTestSuite(&testsuiteExecution))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -706,6 +717,7 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 			err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				hasFailedSteps = true
+
 				s.Log.Errorw("saving test suite execution results error", "error", err)
 				continue
 			}
@@ -722,6 +734,9 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		if hasFailedSteps {
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
+			s.Events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
+		} else {
+			s.Events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 		}
 
 		s.Metrics.IncExecuteTestSuite(*testsuiteExecution)

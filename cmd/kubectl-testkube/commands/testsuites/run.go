@@ -27,6 +27,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		selectors                []string
 		concurrencyLevel         int
 		httpProxy, httpsProxy    string
+		secretVariableReferences map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -114,6 +115,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label adds a label to execution in form of key value pair: --execution-label key1=value1")
+	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 
 	return cmd
 }

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
+
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,11 +21,18 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/internal/pkg/api/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/event/kind/slack"
+	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
+	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -30,20 +40,20 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
-	"github.com/kubeshop/testkube/pkg/webhook"
 )
 
 const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
-	executionsResults result.Repository,
-	testExecutionsResults testresult.Repository,
+	testExecutionResults result.Repository,
+	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	configMap *config.ConfigMapConfig,
 	clusterId string,
 ) TestkubeAPI {
 
@@ -56,19 +66,34 @@ func NewTestkubeAPI(
 
 	httpConfig.ClusterID = clusterId
 
+	// configure NATS event bus
+	nc, err := bus.NewNATSConnection()
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	eventBus := bus.NewNATSBus(nc)
+
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
-		TestExecutionResults: testExecutionsResults,
-		ExecutionResults:     executionsResults,
+		TestExecutionResults: testsuiteExecutionsResults,
+		ExecutionResults:     testExecutionResults,
 		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		Metrics:              NewMetrics(),
-		EventsEmitter:        webhook.NewEmitter(webhookClient),
+		Events:               event.NewEmitter(eventBus),
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
+		ConfigMap:            configMap,
 	}
+
+	// will be reused in websockets handler
+	s.WebsocketLoader = ws.NewWebsocketLoader()
+
+	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
+	s.Events.Loader.Register(s.WebsocketLoader)
+	s.Events.Loader.Register(slack.NewSlackLoader())
 
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -87,11 +112,15 @@ func NewTestkubeAPI(
 		panic(err)
 	}
 
-	if s.Executor, err = client.NewJobExecutor(executionsResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.EventsEmitter); err != nil {
+	if s.Executor, err = client.NewJobExecutor(testExecutionResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
 		panic(err)
 	}
 
-	s.Init()
+	s.InitEnvs()
+	s.InitStorage()
+	s.InitRoutes()
+	s.InitEvents()
+
 	return s
 }
 
@@ -105,14 +134,16 @@ type TestkubeAPI struct {
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
-	EventsEmitter        *webhook.Emitter
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
-	TelemetryEnabled     bool
 	oauthParams          oauthParams
+
+	WebsocketLoader *ws.WebsocketLoader
+	Events          *event.Emitter
+	ConfigMap       *config.ConfigMapConfig
 }
 
 type jobTemplates struct {
@@ -155,14 +186,14 @@ type oauthParams struct {
 	Scopes       string
 }
 
-// WithTelemetry enable or disable anonymous telemetry data passing to testkube engineers
-func (s *TestkubeAPI) WithTelemetry(enabled bool) {
-	s.TelemetryEnabled = enabled
-}
-
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
 func (s TestkubeAPI) SendTelemetryStartEvent() {
-	if !s.TelemetryEnabled {
+	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
+	if err != nil {
+		s.Log.Errorw("error getting config map", "error", err)
+	}
+
+	if !telemetryEnabled {
 		return
 	}
 
@@ -175,7 +206,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent() {
 }
 
 // Init initializes api server settings
-func (s TestkubeAPI) Init() {
+func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
 	}
@@ -183,9 +214,13 @@ func (s TestkubeAPI) Init() {
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
 		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
+}
 
+func (s *TestkubeAPI) InitStorage() {
 	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
+}
 
+func (s *TestkubeAPI) InitRoutes() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
 	s.Routes.Use(s.AuthHandler())
@@ -217,6 +252,7 @@ func (s TestkubeAPI) Init() {
 	executions.Get("/:executionID", s.GetExecutionHandler())
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
+	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 
 	tests := s.Routes.Group("/tests")
@@ -275,35 +311,52 @@ func (s TestkubeAPI) Init() {
 
 	events := s.Routes.Group("/events")
 	events.Post("/flux", s.FluxEventHandler())
+	events.Get("/stream", s.EventsStreamHandler())
 
-	s.EventsEmitter.RunWorkers()
-	s.HandleEmitterLogs()
+	configs := s.Routes.Group("/config")
+	configs.Get("/", s.GetConfigsHandler())
+	configs.Patch("/", s.UpdateConfigsHandler())
+
+	debug := s.Routes.Group("/debug")
+	debug.Get("/listeners", s.GetDebugListenersHandler())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
+
+	// mount dashboard on /ui
+	dashboardURI := os.Getenv("TESTKUBE_DASHBOARD_URI")
+	if dashboardURI == "" {
+		dashboardURI = "http://testkube-dashboard"
+	}
+	s.Log.Infow("dashboard uri", "uri", dashboardURI)
+	s.Mux.All("/", proxy.Forward(dashboardURI))
+
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats() {
-	if !s.TelemetryEnabled {
-		return
-	}
 
 	go func() {
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
-			l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-			host, err := os.Hostname()
+			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
 			if err != nil {
-				l.Debugw("getting hostname error", "hostname", host, "error", err)
+				s.Log.Errorw("error getting config map", "error", err)
 			}
-			out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
-			if err != nil {
-				l.Debugw("sending heartbeat telemetry event error", "error", err)
-			} else {
-				l.Debugw("sending heartbeat telemetry event", "output", out)
-			}
+			if telemetryEnabled {
+				l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+				host, err := os.Hostname()
+				if err != nil {
+					l.Debugw("getting hostname error", "hostname", host, "error", err)
+				}
+				out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
+				if err != nil {
+					l.Debugw("sending heartbeat telemetry event error", "error", err)
+				} else {
+					l.Debugw("sending heartbeat telemetry event", "output", out)
+				}
 
+			}
 			<-ticker.C
 		}
 	}()

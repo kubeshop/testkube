@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,10 +29,6 @@ import (
 )
 
 const (
-	// testResourceURI is test resource uri for cron job call
-	testResourceURI = "tests"
-	// testSuiteResourceURI is test suite resource uri for cron job call
-	testSuiteResourceURI = "test-suites"
 	// defaultConcurrencyLevel is a default concurrency level for worker pool
 	defaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
@@ -124,7 +121,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		request.Name = test.Name
 	}
 
-	request.Number = int32(s.getNextExecutionNumber(test.Name))
+	request.Number = s.getNextExecutionNumber(test.Name)
 	request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 
 	// test name + test execution name should be unique
@@ -149,9 +146,7 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	// store secret values before saving to storage - storage will have secretRef only
-	secretVariables, err := s.createSecretsReferences(&execution)
-	if err != nil {
+	if err := s.createSecretsReferences(&execution); err != nil {
 		return execution.Errw("can't create secret variables `Secret` references: %w", err), nil
 	}
 
@@ -160,34 +155,22 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
 	}
 
-	// restore secret values back - now they can be passed to execution - it'll be not saved anywhere
-	execution.Variables = secretVariables
-
 	s.Log.Infow("calling executor with options", "options", options.Request)
 	execution.Start()
 
-	err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeStartTest, execution)
-	if err != nil {
-		s.Log.Errorw("Notify events error", "error", err)
-	}
+	s.Events.Notify(testkube.NewEventStartTest(&execution))
 
 	// update storage with current execution status
 	err = s.ExecutionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-		if err != nil {
-			s.Log.Errorw("Notify events error", "error", err)
-		}
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
 	options.HasSecrets = true
 	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
 		if !errors.IsNotFound(err) {
-			err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-			if err != nil {
-				s.Log.Errorw("Notify events error", "error", err)
-			}
+			s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 			return execution.Errw("can't get secrets: %w", err), nil
 		}
 
@@ -208,65 +191,65 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 
 	// update storage with current execution status
 	if uerr := s.ExecutionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
-		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-		if err != nil {
-			s.Log.Errorw("Notify events error", "error", err)
-		}
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
-		errNotify := s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-		if errNotify != nil {
-			s.Log.Infow("Notify events", "error", errNotify)
-		}
+		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("test execution failed: %w", err), nil
 	}
 
-	s.Log.Infow("test executed", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
+	s.Log.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
-	if execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		err = s.EventsEmitter.NotifyAll(testkube.WebhookTypeEndTest, execution)
-		if err != nil {
-			s.Log.Errorw("Notify events error", "error", err)
-		}
+	// notify immediately onlly when sync run otherwise job results handler need notify about test finish
+	if options.Sync && execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
+		s.Events.Notify(testkube.NewEventEndTestSuccess(&execution))
 	}
 
 	return execution, nil
 }
 
 // createSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (vars map[string]testkube.Variable, err error) {
+func (s TestkubeAPI) createSecretsReferences(execution *testkube.Execution) (err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
-	vars = make(map[string]testkube.Variable, len(execution.Variables))
 
 	for k, v := range execution.Variables {
-		vars[k] = execution.Variables[k]
 		if v.IsSecret() {
 			obfuscated := execution.Variables[k]
-			obfuscated.Value = ""
-			obfuscated.SecretRef = &testkube.SecretRef{
-				Namespace: execution.TestNamespace,
-				Name:      secretName,
-				Key:       v.Name,
+			if v.SecretRef != nil {
+				obfuscated.SecretRef = &testkube.SecretRef{
+					Namespace: execution.TestNamespace,
+					Name:      v.SecretRef.Name,
+					Key:       v.SecretRef.Key,
+				}
+			} else {
+				obfuscated.Value = ""
+				obfuscated.SecretRef = &testkube.SecretRef{
+					Namespace: execution.TestNamespace,
+					Name:      secretName,
+					Key:       v.Name,
+				}
+
+				secrets[v.Name] = v.Value
 			}
+
 			execution.Variables[k] = obfuscated
-			secrets[v.Name] = v.Value
 		}
 	}
 
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
 	if len(secrets) > 0 {
-		return vars, s.SecretClient.Create(
+		return s.SecretClient.Create(
 			secretName,
 			labels,
 			secrets,
 		)
 	}
 
-	return vars, nil
+	return nil
 }
 
 // ListExecutionsHandler returns array of available test executions
@@ -301,6 +284,26 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 
 		return c.JSON(results)
 	}
+}
+
+func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		executionID := c.Params("executionID")
+		l := s.Log.With("executionID", executionID)
+
+		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+
+		logs, err := s.Executor.Logs(executionID)
+		if err != nil {
+			l.Errorw("can't get pod logs", "error", err)
+			c.Conn.Close()
+			return
+		}
+		for logLine := range logs {
+			l.Debugw("sending log line to websocket", "line", logLine)
+			c.WriteJSON(logLine)
+		}
+	})
 }
 
 // ExecutionLogsHandler streams the logs from a test execution
@@ -400,7 +403,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		}
 
 		for key, value := range testSecretMap {
-			if variable, ok := execution.Variables[key]; ok {
+			if variable, ok := execution.Variables[key]; ok && value != "" {
 				variable.Value = string(value)
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
@@ -492,6 +495,10 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
+			request.VariablesFile = test.ExecutionRequest.VariablesFile
+		}
+
 		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
 			request.HttpProxy = test.ExecutionRequest.HttpProxy
 		}
@@ -577,9 +584,9 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
 	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
-	if err == nil {
+	if err != nil {
 		s.Log.Errorw("retrieving latest execution", "error", err)
 		return number
 	}
@@ -638,16 +645,17 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 
 	for i, execution := range executions {
 		result[i] = testkube.ExecutionSummary{
-			Id:        execution.Id,
-			Name:      execution.Name,
-			Number:    execution.Number,
-			TestName:  execution.TestName,
-			TestType:  execution.TestType,
-			Status:    execution.ExecutionResult.Status,
-			StartTime: execution.StartTime,
-			EndTime:   execution.EndTime,
-			Duration:  types.FormatDuration(execution.Duration),
-			Labels:    execution.Labels,
+			Id:         execution.Id,
+			Name:       execution.Name,
+			Number:     execution.Number,
+			TestName:   execution.TestName,
+			TestType:   execution.TestType,
+			Status:     execution.ExecutionResult.Status,
+			StartTime:  execution.StartTime,
+			EndTime:    execution.EndTime,
+			Duration:   types.FormatDuration(execution.Duration),
+			DurationMs: types.FormatDurationMs(execution.Duration),
+			Labels:     execution.Labels,
 		}
 	}
 

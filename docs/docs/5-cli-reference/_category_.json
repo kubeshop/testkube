@@ -1,0 +1,9 @@
+{
+    "label": "CLI Reference",
+    "position": 5,
+    "link": {
+      "type": "generated-index",
+      "description": "Documentation about the Testkube CLI"
+    }
+  }
+  

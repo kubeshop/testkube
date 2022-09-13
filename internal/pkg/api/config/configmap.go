@@ -50,7 +50,7 @@ func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err
 	return config.EnableTelemetry, nil
 }
 
-// Get gets execution result by id
+// Get config
 func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err error) {
 	data, err := c.client.Get(c.name)
 	if err != nil {

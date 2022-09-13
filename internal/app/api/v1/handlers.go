@@ -25,20 +25,6 @@ const (
 	mediaTypeYAML = "text/yaml"
 )
 
-// HandleEmitterLogs is a handler to emit logs
-func (s TestkubeAPI) HandleEmitterLogs() {
-	go func() {
-		s.Log.Debug("Listening for workers results")
-		for resp := range s.EventsEmitter.Responses {
-			if resp.Error != nil {
-				s.Log.Errorw("got error when sending webhooks", "response", resp)
-				continue
-			}
-			s.Log.Debugw("got webhook response", "response", resp)
-		}
-	}()
-}
-
 // AuthHandler is auth middleware
 func (s TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

@@ -4,6 +4,7 @@ import (
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
@@ -32,7 +33,7 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 	}
 
 	test.Description = cr.Spec.Description
-	test.Repeats = int32(cr.Spec.Repeats)
+	test.Repeats = int(cr.Spec.Repeats)
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
 	test.Created = cr.CreationTimestamp.Time
@@ -57,7 +58,7 @@ func mapCRStepToAPI(crstep testsuitesv2.TestSuiteStepSpec) (teststep testkube.Te
 	case crstep.Delay != nil:
 		teststep = testkube.TestSuiteStep{
 			Delay: &testkube.TestSuiteStepDelay{
-				Duration: crstep.Delay.Duration,
+				Duration: int(crstep.Delay.Duration),
 			},
 		}
 	}
@@ -80,11 +81,24 @@ func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
 func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv2.Variable {
 	out := map[string]testsuitesv2.Variable{}
 	for k, v := range in {
-		out[k] = testsuitesv2.Variable{
+		variable := testsuitesv2.Variable{
 			Name:  v.Name,
 			Type_: string(*v.Type_),
 			Value: v.Value,
 		}
+
+		if v.SecretRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.SecretRef.Name,
+					},
+					Key: v.SecretRef.Key,
+				},
+			}
+		}
+
+		out[k] = variable
 	}
 	return out
 }
@@ -97,7 +111,11 @@ func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params 
 
 	for k, v := range variables {
 		if v.Type_ == commonv1.VariableTypeSecret {
-			out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+			if v.ValueFrom.SecretKeyRef == nil {
+				out[k] = testkube.NewSecretVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewSecretVariableReference(v.Name, v.ValueFrom.SecretKeyRef.Name, v.ValueFrom.SecretKeyRef.Key)
+			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
 			out[k] = testkube.NewBasicVariable(v.Name, v.Value)

@@ -39,6 +39,10 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
 			}
 
+			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
+				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
 			return s.getCRDs(c, data, err)
 		}
@@ -64,6 +68,10 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			if test.Content != nil && test.Content.Data != "" {
 				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
+			}
+
+			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
+				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
@@ -144,6 +152,11 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 				if tests[i].Content != nil && tests[i].Content.Data != "" {
 					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
 				}
+
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
+					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
+				}
+
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -244,6 +257,11 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 				if tests[i].Content != nil && tests[i].Content.Data != "" {
 					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
 				}
+
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
+					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
+				}
+
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -251,7 +269,6 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		testWithExecutions := make([]testkube.TestWithExecution, 0, len(tests))
 		results := make([]testkube.TestWithExecution, 0, len(tests))
 		testNames := make([]string, len(tests))
 		for i := range tests {
@@ -270,31 +287,32 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 					LatestExecution: &execution,
 				})
 			} else {
-				testWithExecutions = append(testWithExecutions, testkube.TestWithExecution{
+				results = append(results, testkube.TestWithExecution{
 					Test: &tests[i],
 				})
 			}
 		}
 
-		sort.Slice(testWithExecutions, func(i, j int) bool {
-			return testWithExecutions[i].Test.Created.After(testWithExecutions[j].Test.Created)
-		})
-
 		sort.Slice(results, func(i, j int) bool {
-			iTime := results[i].LatestExecution.EndTime
-			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-				iTime = results[i].LatestExecution.StartTime
+			iTime := results[i].Test.Created
+			if results[i].LatestExecution != nil {
+				iTime = results[i].LatestExecution.EndTime
+				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
+					iTime = results[i].LatestExecution.StartTime
+				}
 			}
 
-			jTime := results[j].LatestExecution.EndTime
-			if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-				jTime = results[j].LatestExecution.StartTime
+			jTime := results[j].Test.Created
+			if results[j].LatestExecution != nil {
+				jTime = results[j].LatestExecution.EndTime
+				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
+					jTime = results[j].LatestExecution.StartTime
+				}
 			}
 
 			return iTime.After(jTime)
 		})
 
-		testWithExecutions = append(testWithExecutions, results...)
 		status := c.Query("status")
 		if status != "" {
 			statusList, err := testkube.ParseExecutionStatusList(status, ",")
@@ -304,19 +322,19 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 
 			statusMap := statusList.ToMap()
 			// filter items array
-			for i := len(testWithExecutions) - 1; i >= 0; i-- {
-				if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
-					testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil {
-					if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok {
+			for i := len(results) - 1; i >= 0; i-- {
+				if results[i].LatestExecution != nil && results[i].LatestExecution.ExecutionResult != nil &&
+					results[i].LatestExecution.ExecutionResult.Status != nil {
+					if _, ok := statusMap[*results[i].LatestExecution.ExecutionResult.Status]; ok {
 						continue
 					}
 				}
 
-				testWithExecutions = append(testWithExecutions[:i], testWithExecutions[i+1:]...)
+				results = append(results[:i], results[i+1:]...)
 			}
 		}
 
-		return c.JSON(testWithExecutions)
+		return c.JSON(results)
 	}
 }
 
@@ -334,6 +352,11 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			if request.Content != nil && request.Content.Data != "" {
 				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
 			}
+
+			if request.ExecutionRequest != nil && request.ExecutionRequest.VariablesFile != "" {
+				request.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", request.ExecutionRequest.VariablesFile)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}

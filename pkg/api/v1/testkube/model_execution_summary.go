@@ -20,7 +20,7 @@ type ExecutionSummary struct {
 	// execution name
 	Name string `json:"name"`
 	// execution number
-	Number int32 `json:"number,omitempty"`
+	Number int `json:"number,omitempty"`
 	// name of the test
 	TestName string `json:"testName"`
 	// name of the test
@@ -34,6 +34,8 @@ type ExecutionSummary struct {
 	EndTime time.Time `json:"endTime,omitempty"`
 	// calculated test duration
 	Duration string `json:"duration,omitempty"`
+	// calculated test duration in ms
+	DurationMs int `json:"durationMs,omitempty"`
 	// test and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -15,6 +15,7 @@ func (ui *UI) PrintOnError(item string, errors ...error) {
 
 func (ui *UI) printAndExit(item string, exitOnError bool, errors ...error) {
 	if len(errors) > 0 && ui.hasErrors(errors...) {
+		ui.NL()
 		for _, err := range errors {
 			if err != nil {
 				writer := Writer
@@ -22,7 +23,7 @@ func (ui *UI) printAndExit(item string, exitOnError bool, errors ...error) {
 					writer = os.Stderr
 				}
 
-				fmt.Fprintf(writer, "%s %s (error: %s)\n\n", LightRed("⨯"), Red(item), err)
+				fmt.Fprintf(writer, "%s (error: %s)\n\n", Red(item), err)
 				if exitOnError {
 					os.Exit(1)
 				}

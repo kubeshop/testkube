@@ -50,6 +50,39 @@ func (ui *UI) Debug(message string, subMessages ...string) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) Print(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", White(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", White(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
+func (ui *UI) Printf(format string, data ...any) {
+	fmt.Fprintf(ui.Writer, format, data...)
+	fmt.Fprintln(ui.Writer)
+}
+
+// PrintEnabled shows enabled in terminal
+func (ui *UI) PrintEnabled(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, IconMedal+"  ")
+	fmt.Fprintf(ui.Writer, "%s", White(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", Green(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
+// PrintDisabled shows insuccess in terminal
+func (ui *UI) PrintDisabled(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, IconCross+"  ")
+	fmt.Fprintf(ui.Writer, "%s", White(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", LightMagenta(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
 func (ui *UI) Info(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", DarkGray(message))
 	for _, sub := range subMessages {

@@ -22,7 +22,7 @@ func TestTrimSSEChunk(t *testing.T) {
 // TestStreamToLogsChannelOldErrorFormat parses old output error format and return type field
 func TestStreamToLogsChannelOldErrorFormat(t *testing.T) {
 	log := make(chan output.Output)
-	in := []byte(`data: {"type": "error", "message": "some message"}\n\n`)
+	in := []byte(`data: {"type": "error", "message": "some message"}` + "\n\n")
 	buf := bytes.NewBuffer(in)
 
 	go StreamToLogsChannel(buf, log)

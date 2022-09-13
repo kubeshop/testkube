@@ -1,9 +1,12 @@
 package telemetry
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewEnableTelemetryCmd() *cobra.Command {
@@ -11,13 +14,31 @@ func NewEnableTelemetryCmd() *cobra.Command {
 		Use:   "telemetry",
 		Short: "Enable collecting of anonymous telemetry data",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			ui.NL()
+			ui.Print(ui.IconRocket + "  Enabling telemetry on the testkube CLI")
 
-			cfg.EnableAnalytics()
-			err = config.Save(cfg)
-			ui.ExitOnError("saving config file", err)
-			ui.Success("Telemetry", "enabled")
+			cfg, err := config.Load()
+			if err == nil {
+				cfg.EnableAnalytics()
+				err = config.Save(cfg)
+			}
+			if err != nil {
+				ui.PrintDisabled("Telemetry on CLI", "failed")
+				ui.PrintConfigError(err)
+			} else {
+				ui.PrintEnabled("Telemetry on CLI", "enabled")
+			}
+
+			client, _ := common.GetClient(cmd)
+			_, err = client.UpdateConfig(testkube.Config{EnableTelemetry: true})
+
+			if err != nil {
+				ui.PrintDisabled("Telemetry on API", "failed")
+				ui.PrintConfigError(err)
+			} else {
+				ui.PrintEnabled("Telemetry on API", "enabled")
+			}
+			ui.NL()
 		},
 	}
 

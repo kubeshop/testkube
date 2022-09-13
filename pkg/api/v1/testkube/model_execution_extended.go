@@ -7,17 +7,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewExecutionWithID(id, testType, testName string) Execution {
-	return Execution{
-		Id:              id,
-		ExecutionResult: &ExecutionResult{},
-		TestName:        testName,
-		TestType:        testType,
+func NewExecutionWithID(id, testType, testName string) *Execution {
+	return &Execution{
+		Id: id,
+		ExecutionResult: &ExecutionResult{
+			Status: ExecutionStatusQueued,
+		},
+		TestName: testName,
+		TestType: testType,
+		Labels:   map[string]string{},
 	}
 }
 
 func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
-	executionNumber int32, content *TestContent, result ExecutionResult,
+	executionNumber int, content *TestContent, result ExecutionResult,
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
 	return Execution{
@@ -26,7 +29,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
 		Name:                executionName,
-		Number:              int32(executionNumber),
+		Number:              int(executionNumber),
 		TestType:            testType,
 		ExecutionResult:     &result,
 		Variables:           variables,

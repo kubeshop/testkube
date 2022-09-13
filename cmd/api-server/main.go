@@ -95,7 +95,12 @@ func main() {
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
 	configRepository := configmongo.NewMongoRespository(db)
-	configMapConfig, err := configmap.NewConfigMapConfig(os.Getenv("APISERVER_CONFIG"), namespace)
+	configName := fmt.Sprintf("testkube-api-server-config-%s", namespace)
+	if os.Getenv("APISERVER_CONFIG") != "" {
+		configName = os.Getenv("APISERVER_CONFIG")
+	}
+
+	configMapConfig, err := configmap.NewConfigMapConfig(configName, namespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	ctx := context.Background()
@@ -131,6 +136,8 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
+	apiVersion := api.Version
+
 	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
@@ -140,18 +147,20 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		configMapConfig,
 		clusterId,
 	)
 
 	// telemetry based functions
-	api.WithTelemetry(telemetryEnabled)
 	api.SendTelemetryStartEvent()
 	api.StartTelemetryHeartbeats()
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
 		"telemetryEnabled", telemetryEnabled,
-		"clusterId", clusterId, "namespace", namespace,
+		"clusterId", clusterId,
+		"namespace", namespace,
+		"version", apiVersion,
 	)
 
 	err = api.Run()

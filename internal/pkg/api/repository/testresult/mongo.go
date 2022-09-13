@@ -33,6 +33,11 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 	return
 }
 
+func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.TestSuiteExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+	return
+}
+
 func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testSuiteName}).Decode(&result)
 	return
@@ -111,7 +116,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
-		Count  int32  `bson:"count"`
+		Count  int    `bson:"count"`
 	}
 
 	query := bson.M{}
@@ -137,7 +142,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		return totals, err
 	}
 
-	var sum int32
+	var sum int
 
 	for _, o := range result {
 		sum += o.Count
