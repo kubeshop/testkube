@@ -1,0 +1,47 @@
+# $ tk create test --type cypress:v10/test --git-uri https://github.com/kubeshop/testkube --git-branch cypress-tests --git-path test/cypress/executors/cypress-10 --name cypress-10-executor-test --crd-only
+# //TODO: WIP
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-10-executor-test
+  namespace: testkube
+spec:
+  type: cypress:v10/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-10
+
+
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-9-executor-test
+  namespace: testkube
+spec:
+  type: cypress:v9/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-9
+
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-8-executor-test
+  namespace: testkube
+spec:
+  type: cypress:v8/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-8
