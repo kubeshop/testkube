@@ -87,3 +87,29 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		assert.True(t, valid)
 	})
 }
+
+func TestEvent_IsSuccess(t *testing.T) {
+
+	t.Run("should return true for success events", func(t *testing.T) {
+		events := map[EventType]bool{
+			START_TEST_EventType:            false,
+			START_TESTSUITE_EventType:       false,
+			END_TEST_FAILED_EventType:       false,
+			END_TEST_SUCCESS_EventType:      true,
+			END_TESTSUITE_FAILED_EventType:  false,
+			END_TESTSUITE_SUCCESS_EventType: true,
+		}
+
+		for eventType, expected := range events {
+			// given
+			e := Event{Type_: &eventType}
+
+			// when
+			success := e.IsSuccess()
+
+			// then
+			assert.Equal(t, expected, success)
+		}
+	})
+
+}
