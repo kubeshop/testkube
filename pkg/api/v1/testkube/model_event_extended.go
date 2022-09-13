@@ -1,6 +1,8 @@
 package testkube
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -58,6 +60,10 @@ func (e Event) Type() EventType {
 		return *e.Type_
 	}
 	return EventType("")
+}
+
+func (e Event) IsSuccess() bool {
+	return strings.Contains(e.Type().String(), "success")
 }
 
 func (e Event) Log() []any {
