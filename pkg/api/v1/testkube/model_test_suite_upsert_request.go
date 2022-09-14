@@ -29,8 +29,10 @@ type TestSuiteUpsertRequest struct {
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite
-	Schedule         string                     `json:"schedule,omitempty"`
-	Repeats          int32                      `json:"repeats,omitempty"`
-	Created          time.Time                  `json:"created,omitempty"`
+	Schedule string    `json:"schedule,omitempty"`
+	Repeats  int32     `json:"repeats,omitempty"`
+	Created  time.Time `json:"created,omitempty"`
+	// list of files that need to be copied into the tests of form source:destination
+	ConfigFiles      []string                   `json:"configFiles,omitempty"`
 	ExecutionRequest *TestSuiteExecutionRequest `json:"executionRequest,omitempty"`
 }
