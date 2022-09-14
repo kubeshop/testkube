@@ -1703,7 +1703,6 @@ components:
           example: "name"
 
     SecretRef:
-      readOnly: true
       required:
         - name
         - key
