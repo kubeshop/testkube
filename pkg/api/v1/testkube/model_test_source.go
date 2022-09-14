@@ -18,4 +18,10 @@ type TestSource struct {
 	Data string `json:"data,omitempty"`
 	// test content
 	Uri string `json:"uri,omitempty"`
+	// test source name
+	Name string `json:"name,omitempty"`
+	// test source namespace
+	Namespace string `json:"namespace,omitempty"`
+	// test source labels
+	Labels map[string]string `json:"labels,omitempty"`
 }

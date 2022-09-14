@@ -1,0 +1,57 @@
+apiVersion: tests.testkube.io/v1
+kind: TestSource
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}
+spec:
+  {{- if .Type_ }}
+  type: {{ .Type_ }}
+  {{- end }}
+  {{- if .Content.Repository }}
+  repository:
+    {{- if .Repository.Type_ }}
+    type: {{ .Repository.Type_ }}
+    {{- end }}
+    {{- if .Repository.Uri }}
+    uri: {{ .Repository.Uri }}
+    {{- end }}
+    {{- if .Repository.Branch }}
+    branch: {{ .Repository.Branch }}
+    {{- end }}
+    {{- if .Repository.Commit }}
+    commit: {{ .Repository.Commit }}
+    {{- end }}
+    {{- if .Repository.Path }}
+    path: {{ .Repository.Path }}
+    {{- end }}
+    {{- if .Repository.UsernameSecret }}
+    usernameSecret:
+      {{- if .Repository.UsernameSecret.Name }}
+      name: {{ .Repository.UsernameSecret.Name }}
+      {{- end }}
+      {{- if .Repository.UsernameSecret.Key }}
+      key: {{ .Repository.UsernameSecret.Key }}
+      {{- end }}
+    {{- end }}
+    {{- if .Repository.TokenSecret }}
+    tokenSecret:
+      {{- if .Repository.TokenSecret.Name }}
+      name: {{ .Repository.TokenSecret.Name }}
+      {{- end }}
+      {{- if .Repository.TokenSecret.Key }}
+      key: {{ .Repository.TokenSecret.Key }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if .Data }}
+  data: {{ .Data }}
+  {{- end }}
+  {{- if .Uri }}
+  uri: {{ .Uri }}
+  {{- end }}
