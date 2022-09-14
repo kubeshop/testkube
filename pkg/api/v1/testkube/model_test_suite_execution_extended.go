@@ -51,6 +51,15 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 	return testExecution
 }
 
+func (e TestSuiteExecution) FailedStepsCount() (count int) {
+	for _, stepResult := range e.StepResults {
+		if stepResult.Execution.IsFailed() {
+			count++
+		}
+	}
+	return
+}
+
 func (e TestSuiteExecution) IsCompleted() bool {
 	return *e.Status == *TestSuiteExecutionStatusFailed || *e.Status == *TestSuiteExecutionStatusPassed
 }
