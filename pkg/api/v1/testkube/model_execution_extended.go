@@ -133,10 +133,19 @@ func (e *Execution) CalculateDuration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
+
 func (e Execution) IsFailed() bool {
 	if e.ExecutionResult == nil {
 		return true
 	}
 
 	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
+}
+
+func (e Execution) IsRunning() bool {
+	if e.ExecutionResult == nil {
+		return false
+	}
+
+	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus || *e.ExecutionResult.Status == QUEUED_ExecutionStatus
 }

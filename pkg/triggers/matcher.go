@@ -19,13 +19,13 @@ func (s *Service) Match(ctx context.Context, e *Event) error {
 		status := s.getStatusForTrigger(t)
 		if status.ActiveTests {
 			s.l.Infof(
-				"skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
+				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
 				t.Namespace, t.Name, e.Type, e.Resource,
 			)
 			return nil
 		}
-		s.l.Infof("event %s matches trigger %s/%s for resource %s", e.Type, t.Namespace, t.Name, e.Resource)
-		s.l.Infof("triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
+		s.l.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.Type, t.Namespace, t.Name, e.Resource)
+		s.l.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
 		if err := s.Execute(ctx, t); err != nil {
 			return err
 		}

@@ -172,7 +172,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 			s.l.Debugf(
-				"trigger service: watcher component: adding testtrigger %s/%s for resource %s and event %s",
+				"trigger service: watcher component: adding testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.AddTrigger(t)
@@ -187,7 +187,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 			s.l.Debugf(
-				"trigger service: watcher component: updating testtrigger %s/%s for resource %s and event %s",
+				"trigger service: watcher component: updating testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.UpdateTrigger(t)
@@ -199,7 +199,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 			s.l.Debugf(
-				"trigger service: watcher component: deleting testtrigger %s/%s for resource %s and event %s",
+				"trigger service: watcher component: deleting testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.RemoveTrigger(t)

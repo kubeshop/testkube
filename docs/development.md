@@ -31,7 +31,7 @@ make run-executor
 If you want to debug an API server locally, you can run a local kube-proxy which makes all calls to kube proxy URIs directly to API server instances.
 
 ```sh
-make api-proxy
+make run-proxy
 ```
 
 And when calling any of `kubectl testkube` subcommands just pass direct client flag (`-cdirect`)
