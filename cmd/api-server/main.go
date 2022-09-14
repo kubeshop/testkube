@@ -163,7 +163,7 @@ func main() {
 		clusterId,
 	)
 
-	log.DefaultLogger.Info("starting trigger watcher")
+	log.DefaultLogger.Info("starting trigger service")
 	triggerService := triggers.NewService(clientset, testTriggerClientset, testsuitesClient, testsClientV3, &api, log.DefaultLogger)
 	err = triggerService.Run(ctx)
 	if err != nil {

@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-type StatusKey string
+type statusKey string
 
-func NewStatusKey(namespace, name string) StatusKey {
-	return StatusKey(fmt.Sprintf("%s/%s", namespace, name))
+func newStatusKey(namespace, name string) statusKey {
+	return statusKey(fmt.Sprintf("%s/%s", namespace, name))
 }
 
-type TriggerStatus struct {
+type triggerStatus struct {
 	ActiveTests           bool
 	LastExecutionStarted  *time.Time
 	LastExecutionFinished *time.Time
@@ -20,18 +20,22 @@ type TriggerStatus struct {
 	TestSuiteExecutionIDs []string
 }
 
-func (s *TriggerStatus) Start() {
+func newTriggerStatus() *triggerStatus {
+	return &triggerStatus{}
+}
+
+func (s *triggerStatus) start() {
 	s.ActiveTests = true
 	now := time.Now()
 	s.LastExecutionStarted = &now
 	s.LastExecutionFinished = nil
 }
 
-func (s *TriggerStatus) AddExecutionID(id string) {
+func (s *triggerStatus) addExecutionID(id string) {
 	s.ExecutionIDs = append(s.ExecutionIDs, id)
 }
 
-func (s *TriggerStatus) RemoveExecutionID(targetID string) {
+func (s *triggerStatus) removeExecutionID(targetID string) {
 	for i, id := range s.ExecutionIDs {
 		if id == targetID {
 			s.ExecutionIDs = append(s.ExecutionIDs[:i], s.ExecutionIDs[i+1:]...)
@@ -39,11 +43,11 @@ func (s *TriggerStatus) RemoveExecutionID(targetID string) {
 	}
 }
 
-func (s *TriggerStatus) AddTestSuiteExecutionID(id string) {
+func (s *triggerStatus) addTestSuiteExecutionID(id string) {
 	s.ExecutionIDs = append(s.TestSuiteExecutionIDs, id)
 }
 
-func (s *TriggerStatus) RemoveTestSuiteExecutionID(targetID string) {
+func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
 	for i, id := range s.TestSuiteExecutionIDs {
 		if id == targetID {
 			s.ExecutionIDs = append(s.TestSuiteExecutionIDs[:i], s.TestSuiteExecutionIDs[i+1:]...)
@@ -51,7 +55,7 @@ func (s *TriggerStatus) RemoveTestSuiteExecutionID(targetID string) {
 	}
 }
 
-func (s *TriggerStatus) Finish() {
+func (s *triggerStatus) finish() {
 	s.ActiveTests = false
 	now := time.Now()
 	s.LastExecutionFinished = &now
@@ -59,11 +63,7 @@ func (s *TriggerStatus) Finish() {
 	s.TestSuiteExecutionIDs = nil
 }
 
-func NewTriggerStatus() *TriggerStatus {
-	return &TriggerStatus{}
-}
-
-func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *TriggerStatus {
-	key := NewStatusKey(t.Namespace, t.Name)
+func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {
+	key := newStatusKey(t.Namespace, t.Name)
 	return s.triggerStatus[key]
 }

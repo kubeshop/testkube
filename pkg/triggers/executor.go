@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/mongo"
 	"strconv"
 )
 
@@ -19,7 +18,7 @@ const (
 	ExecutionTestSuite = "testsuite"
 )
 
-func (s *Service) Execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
+func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 
 	concurrencyLevel, err := strconv.Atoi(v1.DefaultConcurrencyLevel)
@@ -43,7 +42,7 @@ func (s *Service) Execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {
-			status.AddExecutionID(r.Result.Id)
+			status.addExecutionID(r.Result.Id)
 			results = append(results, r.Result)
 		}
 	case ExecutionTestSuite:
@@ -61,39 +60,17 @@ func (s *Service) Execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {
-			status.AddTestSuiteExecutionID(r.Result.Id)
+			status.addTestSuiteExecutionID(r.Result.Id)
 			results = append(results, r.Result)
 		}
 	default:
 		return errors.Errorf("invalid execution: %s", t.Spec.Execution)
 	}
 
-	status.Start()
+	status.start()
 	s.l.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
 
 	return nil
-}
-
-func (s *Service) checkForRunningExecutions2(ctx context.Context, status *TriggerStatus) (active bool, err error) {
-	for _, id := range status.ExecutionIDs {
-		execution, err := s.tk.TestExecutionResults.Get(ctx, id)
-		if err == mongo.ErrNoDocuments {
-			s.l.Warnf("trigger service: executor component: no execution found for id %s", id)
-			status.RemoveExecutionID(id)
-			continue
-		} else if err != nil {
-			return false, errors.Errorf("error fetching execution result: %v", err)
-		}
-		if execution.IsCompleted() || execution.IsFailed() {
-			s.l.Debugf("trigger service: executor component: execution %s is completed or failed", id)
-			status.RemoveExecutionID(id)
-		}
-		if execution.IsRunning() {
-			s.l.Debugf("trigger service: executor component: execution %s is running", id)
-			active = true
-		}
-	}
-	return active, nil
 }
 
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {

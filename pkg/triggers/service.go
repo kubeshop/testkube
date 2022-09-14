@@ -13,10 +13,10 @@ import (
 )
 
 type Service struct {
-	informers     *Informers
+	informers     *k8sInformers
 	triggers      []*testtriggersv1.TestTrigger
 	started       time.Time
-	triggerStatus map[StatusKey]*TriggerStatus
+	triggerStatus map[statusKey]*triggerStatus
 	tcs           testtriggerclientsetv1.Interface
 	cs            *kubernetes.Clientset
 	tsc           *testsuitesclientv2.TestSuitesClient
@@ -42,7 +42,7 @@ func NewService(
 		l:             l,
 		started:       time.Now(),
 		triggers:      make([]*testtriggersv1.TestTrigger, 0),
-		triggerStatus: make(map[StatusKey]*TriggerStatus),
+		triggerStatus: make(map[statusKey]*triggerStatus),
 	}
 }
 
@@ -64,13 +64,13 @@ func (s *Service) Run(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) AddTrigger(t *testtriggersv1.TestTrigger) {
+func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
 	s.triggers = append(s.triggers, t)
-	key := NewStatusKey(t.Namespace, t.Name)
-	s.triggerStatus[key] = NewTriggerStatus()
+	key := newStatusKey(t.Namespace, t.Name)
+	s.triggerStatus[key] = newTriggerStatus()
 }
 
-func (s *Service) UpdateTrigger(target *testtriggersv1.TestTrigger) {
+func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
 	for i, t := range s.triggers {
 		if t.Namespace == target.Namespace && t.Name == target.Name {
 			s.triggers[i] = target
@@ -79,7 +79,7 @@ func (s *Service) UpdateTrigger(target *testtriggersv1.TestTrigger) {
 	}
 }
 
-func (s *Service) RemoveTrigger(target *testtriggersv1.TestTrigger) {
+func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 	for i, t := range s.triggers {
 		if t.Namespace == target.Namespace && t.Name == target.Name {
 			s.triggers = append(s.triggers[:i], s.triggers[i+1:]...)
@@ -87,6 +87,6 @@ func (s *Service) RemoveTrigger(target *testtriggersv1.TestTrigger) {
 			break
 		}
 	}
-	key := NewStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(target.Namespace, target.Name)
 	delete(s.triggerStatus, key)
 }

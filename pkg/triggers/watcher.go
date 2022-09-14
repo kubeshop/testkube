@@ -6,11 +6,11 @@ import (
 	testtriggers_v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	testtriggersinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/testtrigger/v1"
-	apps_v1 "k8s.io/api/apps/v1"
-	core_v1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	informersappsv1 "k8s.io/client-go/informers/apps/v1"
-	informers_core_v1 "k8s.io/client-go/informers/core/v1"
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -30,13 +30,13 @@ const (
 	CauseDeploymentContainersModified Cause        = "deployment_containers_modified"
 )
 
-type Informers struct {
-	podInformer         informers_core_v1.PodInformer
+type k8sInformers struct {
+	podInformer         informerscorev1.PodInformer
 	deploymentInformer  informersappsv1.DeploymentInformer
 	testtriggerInformer testtriggersinformerv1.TestTriggerInformer
 }
 
-func (s *Service) createInformers(ctx context.Context) (*Informers, error) {
+func (s *Service) createInformers(ctx context.Context) (*k8sInformers, error) {
 	f := informers.NewSharedInformerFactory(s.cs, 0)
 	podInformer := f.Core().V1().Pods()
 	deploymentInformer := f.Apps().V1().Deployments()
@@ -53,7 +53,7 @@ func (s *Service) createInformers(ctx context.Context) (*Informers, error) {
 	deploymentInformer.Informer().AddEventHandler(s.deploymentEventHandler(ctx))
 	testtriggerInformer.Informer().AddEventHandler(s.testtriggerEventHandler())
 
-	return &Informers{
+	return &k8sInformers{
 		podInformer:         podInformer,
 		deploymentInformer:  deploymentInformer,
 		testtriggerInformer: testtriggerInformer,
@@ -63,7 +63,7 @@ func (s *Service) createInformers(ctx context.Context) (*Informers, error) {
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
-			pod, ok := obj.(*core_v1.Pod)
+			pod, ok := obj.(*corev1.Pod)
 			if !ok {
 				s.l.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -77,19 +77,19 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: pod %s/%s created", pod.Namespace, pod.Name)
 			event := newPodEvent(EventCreated, pod)
-			if err := s.Match(ctx, event); err != nil {
+			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching create pod event: %v", err)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			pod, ok := obj.(*core_v1.Pod)
+			pod, ok := obj.(*corev1.Pod)
 			if !ok {
 				s.l.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
 			event := newPodEvent(EventDeleted, pod)
-			if err := s.Match(ctx, event); err != nil {
+			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching delete pod event: %v", err)
 			}
 		},
@@ -99,7 +99,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
-			deployment, ok := obj.(*apps_v1.Deployment)
+			deployment, ok := obj.(*appsv1.Deployment)
 			if !ok {
 				s.l.Errorf("failed to process create deployment event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -113,12 +113,12 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 			}
 			s.l.Debugf("emiting event: deployment %s/%s created", deployment.Namespace, deployment.Name)
 			event := newDeploymentEvent(deployment, EventCreated, nil)
-			if err := s.Match(ctx, event); err != nil {
+			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching create deployment event: %v", err)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			oldDeployment, ok := oldObj.(*apps_v1.Deployment)
+			oldDeployment, ok := oldObj.(*appsv1.Deployment)
 			if !ok {
 				s.l.Errorf(
 					"failed to process update deployment event for old deployment due to it being an unexpected type, received type %+v",
@@ -126,7 +126,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				)
 				return
 			}
-			newDeployment, ok := newObj.(*apps_v1.Deployment)
+			newDeployment, ok := newObj.(*appsv1.Deployment)
 			if !ok {
 				s.l.Errorf(
 					"failed to process update deployment event for new deployment due to it being an unexpected type, received type %+v",
@@ -144,19 +144,19 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
 			event := newDeploymentEvent(newDeployment, EventModified, causes)
-			if err := s.Match(ctx, event); err != nil {
+			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			deployment, ok := obj.(*apps_v1.Deployment)
+			deployment, ok := obj.(*appsv1.Deployment)
 			if !ok {
 				s.l.Errorf("failed to process create deployment event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: deployment %s/%s deleted", deployment.Namespace, deployment.Name)
 			event := newDeploymentEvent(deployment, EventDeleted, nil)
-			if err := s.Match(ctx, event); err != nil {
+			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching delete deployment event: %v", err)
 			}
 		},
@@ -175,7 +175,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				"trigger service: watcher component: adding testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
-			s.AddTrigger(t)
+			s.addTrigger(t)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			t, ok := newObj.(*testtriggers_v1.TestTrigger)
@@ -190,7 +190,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				"trigger service: watcher component: updating testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
-			s.UpdateTrigger(t)
+			s.updateTrigger(t)
 		},
 		DeleteFunc: func(obj interface{}) {
 			t, ok := obj.(*testtriggers_v1.TestTrigger)
@@ -202,7 +202,7 @@ func (s *Service) testtriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				"trigger service: watcher component: deleting testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
-			s.RemoveTrigger(t)
+			s.removeTrigger(t)
 		},
 	}
 }
