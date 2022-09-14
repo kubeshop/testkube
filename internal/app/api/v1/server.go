@@ -306,6 +306,14 @@ func (s *TestkubeAPI) InitRoutes() {
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
 	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
 
+	testsources := s.Routes.Group("/test-sources")
+	testsources.Post("/", s.CreateTestSourceHandler())
+	testsources.Get("/", s.ListTestSourcesHandler())
+	testsources.Get("/:name", s.GetTestSourceHandler())
+	testsources.Patch("/:name", s.UpdateTestSourceHandler())
+	testsources.Delete("/:name", s.DeleteTestSourceHandler())
+	testsources.Delete("/", s.DeleteTestSourcesHandler())
+
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
 
