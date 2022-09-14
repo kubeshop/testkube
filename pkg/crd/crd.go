@@ -25,7 +25,7 @@ const (
 	// TemplateTestSuite is test suite crd template
 	TemplateTestSuite Template = "testsuite"
 	// TemplateTestSource is test source crd template
-	TemplateTestSource Template = "testsource"	
+	TemplateTestSource Template = "testsource"
 )
 
 // Gettable is an interface of gettable objects
