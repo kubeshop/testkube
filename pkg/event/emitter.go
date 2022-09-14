@@ -91,7 +91,8 @@ func (s *Emitter) Reconcile(ctx context.Context) {
 		default:
 			listeners := s.Loader.Reconcile()
 			s.OverrideListeners(listeners)
-			s.Log.Debugw("reconciled listeners", s.Listeners.Log()...)
+			// TODO: Uncomment
+			//s.Log.Debugw("reconciled listeners", s.Listeners.Log()...)
 			time.Sleep(reconcileInterval)
 		}
 	}

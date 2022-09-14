@@ -4,6 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/client/testtriggers/v1"
+	testtriggerclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/triggers"
 	"net"
 	"os"
 
@@ -91,6 +95,7 @@ func main() {
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
+	testtriggersClient := testtriggersv1.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
@@ -131,6 +136,20 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
+	clientset, err := k8sclient.ConnectToK8s()
+	if err != nil {
+		ui.ExitOnError("Creating k8s clientset", err)
+	}
+
+	cfg, err := k8sclient.GetK8sClientConfig()
+	if err != nil {
+		ui.ExitOnError("Getting k8s client config", err)
+	}
+	testTriggerClientset, err := testtriggerclientsetv1.NewForConfig(cfg)
+	if err != nil {
+		ui.ExitOnError("Creating TestTrigger clientset", err)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
@@ -140,8 +159,16 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		testtriggersClient,
 		clusterId,
 	)
+
+	log.DefaultLogger.Info("starting trigger watcher")
+	triggerService := triggers.NewService(clientset, testTriggerClientset, testsuitesClient, testsClientV3, &api, log.DefaultLogger)
+	err = triggerService.Run(ctx)
+	if err != nil {
+		ui.ExitOnError("Running trigger service", err)
+	}
 
 	// telemetry based functions
 	api.WithTelemetry(telemetryEnabled)

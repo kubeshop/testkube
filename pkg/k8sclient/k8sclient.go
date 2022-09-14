@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"k8s.io/client-go/dynamic"
 	"os"
 	"path"
 	"time"
@@ -25,6 +26,35 @@ const (
 
 // ConnectToK8s establishes a connection to the k8s and returns a *kubernetes.Clientset
 func ConnectToK8s() (*kubernetes.Clientset, error) {
+	config, err := GetK8sClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, nil
+}
+
+// ConnectToK8sDynamic establishes a connection to the k8s and returns a dynamic.Interface
+func ConnectToK8sDynamic() (dynamic.Interface, error) {
+	config, err := GetK8sClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, nil
+}
+
+func GetK8sClientConfig() (*rest.Config, error) {
 	var err error
 	var config *rest.Config
 	k8sConfigExists := false
@@ -49,12 +79,7 @@ func ConnectToK8s() (*kubernetes.Clientset, error) {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
+	return config, nil
 }
 
 // GetIngressAddress gets the hostname or ip address of the ingress with name.

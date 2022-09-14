@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
+	testtriggersclientv1 "github.com/kubeshop/testkube-operator/client/testtriggers/v1"
 	"os"
 	"strconv"
 	"time"
@@ -48,6 +49,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	testtriggersClient *testtriggersclientv1.TestTriggersClient,
 	clusterId string,
 ) TestkubeAPI {
 
@@ -68,6 +70,7 @@ func NewTestkubeAPI(
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
+		TestTriggersClient:   testtriggersClient,
 		Metrics:              NewMetrics(),
 		Events:               event.NewEmitter(),
 		WebhooksClient:       webhookClient,
@@ -120,6 +123,7 @@ type TestkubeAPI struct {
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
+	TestTriggersClient   *testtriggersclientv1.TestTriggersClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams

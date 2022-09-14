@@ -33,8 +33,8 @@ const (
 	testResourceURI = "tests"
 	// testSuiteResourceURI is test suite resource uri for cron job call
 	testSuiteResourceURI = "test-suites"
-	// defaultConcurrencyLevel is a default concurrency level for worker pool
-	defaultConcurrencyLevel = "10"
+	// DefaultConcurrencyLevel is a default concurrency level for worker pool
+	DefaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
 	latestExecutions = 5
 )
@@ -71,14 +71,14 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		var results []testkube.Execution
 		if len(tests) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestRequests(tests, request))
+			go workerpoolService.SendRequests(s.PrepareTestRequests(tests, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -100,7 +100,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
 	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
 	for i := range work {
