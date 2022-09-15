@@ -206,6 +206,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.service.type            | yes         | "NodePort"                           |
 | testkube-api.service.port            | yes         | 8088                                 |
 | testkube-api.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
+| testkube-api.nats.uri                | yes         | "nats://testkube-nats"               |
 | testkube-api.telemetryEnabled        | yes         | true                                 |
 | testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 |
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
@@ -217,6 +218,10 @@ The following Helm defaults are used in the `testkube` chart:
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
+>For more configuration parameters of `NATS` chart please visit:
+<https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+
+
 ## **Remove Testkube Server Components**
 ### **Using Helm:**
 ```bash
@@ -226,3 +231,31 @@ helm delete testkube
 ```bash
 testkube purge
 ```
+
+## Intallation on OpenShift 
+
+Because of upgrade issues from Mongo 11 to 13 Testkube can't work on root-less OpenShift environment by default. Fortunately we was able to install it manually. 
+
+To do it we'll need empty OpenShift cluster and follow steps below: 
+
+1. Save mongo chart values (let's name it `values.yaml`)
+
+```yaml 
+securityContext:
+  enabled: true
+  fsGroup: 1000650001
+  runAsUser: 1000650001
+
+podSecurityContext:
+  enabled: false
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1000650001
+  runAsNonRoot: true
+
+volumePermissions:
+  enabled: false
+```
+
+
