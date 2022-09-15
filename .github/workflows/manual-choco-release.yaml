@@ -1,4 +1,4 @@
-name: Manual trigger
+name: Manual trigger for Choco release
 
 on:
   workflow_dispatch
