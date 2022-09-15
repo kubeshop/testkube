@@ -40,13 +40,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Output
-        run: echo ${{needs.get_tag.outputs.output1}}
-
       - name: Calculate Checksum
         working-directory: ./choco/tools
         id: checksum
         run: |
+          #Download latest release msi
           Invoke-WebRequest -URI https://github.com/kubeshop/testkube/releases/download/v${{needs.get_tag.outputs.output1}}/testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi -OutFile testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi
 
           $hash=Get-FileHash testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi
