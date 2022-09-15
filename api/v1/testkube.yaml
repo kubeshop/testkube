@@ -2499,6 +2499,13 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        configFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
 
     TestSuiteExecutionRequest:
       description: test suite execution request body

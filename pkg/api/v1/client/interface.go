@@ -119,7 +119,7 @@ type ExecuteTestOptions struct {
 	HTTPProxy                     string
 	HTTPSProxy                    string
 	Image                         string
-	ExecutionConfigFiles          []string
+	ExecutionConfigFiles          map[string][]byte
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

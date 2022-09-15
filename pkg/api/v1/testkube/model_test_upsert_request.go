@@ -27,7 +27,7 @@ type TestUpsertRequest struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test
 	Schedule string `json:"schedule,omitempty"`
-	// list of files that need to be copied into the tests of form source:destination
+	// list of files that need to be copied into the test of form source:destination
 	ConfigFiles      []string          `json:"configFiles,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
 }
