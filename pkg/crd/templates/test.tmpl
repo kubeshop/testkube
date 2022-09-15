@@ -61,6 +61,9 @@ spec:
     uri: {{ .Content.Uri }}
     {{- end }}
   {{- end }}
+  {{- if .Source }}
+  source: {{ .Source }}
+  {{- end }}  
   {{- if .Schedule }}
   schedule: {{ .Schedule }}
   {{- end }}

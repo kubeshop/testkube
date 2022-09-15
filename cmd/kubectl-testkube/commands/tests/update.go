@@ -21,6 +21,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		gitPath                  string
 		gitUsername              string
 		gitToken                 string
+		sourceName               string
 		labels                   map[string]string
 		variables                map[string]string
 		secretVariables          map[string]string
@@ -79,6 +80,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
+	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: -v key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: -s key1=value1")
