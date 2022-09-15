@@ -28,6 +28,3 @@ choco pack
 
 #push package
 choco push .\Testkube.$version.nupkg --key $api_key --source $chocolatey_repo
-
-
-choco push .\Testkube.$version.nupkg --key $api_key --source $chocolatey_repo
