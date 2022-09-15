@@ -1,6 +1,7 @@
 package testsources
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -49,12 +50,11 @@ func NewCreateTestSourceCmd() *cobra.Command {
 				}
 			}
 
-			options := apiv1.UpsertTestSourceOptions{
-				Name:      name,
-				Namespace: namespace,
-				Uri:       uri,
-				Labels:    labels,
-			}
+			err = validateUpsertOptions(cmd)
+			ui.ExitOnError("validating passed flags", err)
+
+			options, err := NewUpsertTestSourceOptionsFromFlags(cmd, nil)
+			ui.ExitOnError("getting test source options", err)
 
 			if !crdOnly {
 				_, err := client.CreateTestSource(options)
@@ -62,6 +62,10 @@ func NewCreateTestSourceCmd() *cobra.Command {
 
 				ui.Success("TestSource created", name)
 			} else {
+				if options.Data != "" {
+					options.Data = fmt.Sprintf("%q", options.Data)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateTestSource, options)
 				ui.ExitOnError("executing crd template", err)
 
@@ -85,4 +89,57 @@ func NewCreateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 
 	return cmd
+}
+
+func validateUpsertOptions(cmd *cobra.Command) error {
+	gitUri := cmd.Flag("git-uri").Value.String()
+	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
+	gitPath := cmd.Flag("git-path").Value.String()
+	gitUsername := cmd.Flag("git-username").Value.String()
+	gitToken := cmd.Flag("git-token").Value.String()
+	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+	if err != nil {
+		return err
+	}
+
+	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return err
+	}
+
+	file := cmd.Flag("file").Value.String()
+	uri := cmd.Flag("uri").Value.String()
+
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
+
+	if hasGitParams && uri != "" {
+		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
+	}
+	if hasGitParams && file != "" {
+		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
+	}
+
+	if file != "" && uri != "" {
+		return fmt.Errorf("please pass only one of `--file` and `--uri`")
+	}
+
+	if hasGitParams && gitUri == "" {
+		return fmt.Errorf("please pass valid `--git-uri` flag")
+	}
+
+	if len(gitUsernameSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git username")
+	}
+
+	if len(gitTokenSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git token")
+	}
+
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
+		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
+	}
+
+	return nil
 }

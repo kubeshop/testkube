@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
 	"github.com/spf13/cobra"
 
+	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err error) {
@@ -101,4 +104,34 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 	}
 
 	return source, nil
+}
+
+func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiclientv1.UpsertTestSourceOptions, err error) {
+	source, err := newSourceFromFlags(cmd)
+	ui.ExitOnError("creating source from passed parameters", err)
+
+	name := cmd.Flag("name").Value.String()
+	namespace := cmd.Flag("namespace").Value.String()
+	labels, err := cmd.Flags().GetStringToString("label")
+	if err != nil {
+		return options, err
+	}
+
+	options = apiclientv1.UpsertTestSourceOptions{
+		Name:       name,
+		Namespace:  namespace,
+		Type_:      source.Type_,
+		Data:       source.Data,
+		Repository: source.Repository,
+		Uri:        source.Uri,
+	}
+
+	// if labels are passed and are different from the existing overwrite
+	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
+		options.Labels = labels
+	} else {
+		options.Labels = testLabels
+	}
+
+	return options, nil
 }

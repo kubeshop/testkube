@@ -12,7 +12,21 @@ package testkube
 type TestSources []TestSource
 
 func (list TestSources) Table() (header []string, output [][]string) {
-	header = []string{"Name", "URI", "Events", "Selector", "Labels"}
+	header = []string{"Name", "Type_", "URI", "Labels"}
+
+	for _, e := range list {
+		uri := e.Uri
+		if uri == "" && e.Repository != nil {
+			uri = e.Repository.Uri
+		}
+
+		output = append(output, []string{
+			e.Name,
+			e.Type_,
+			uri,
+			MapToString(e.Labels),
+		})
+	}
 
 	return
 }
