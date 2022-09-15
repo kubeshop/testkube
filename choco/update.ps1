@@ -1,5 +1,6 @@
 $version = $args[0]
 $api_key = $args[1]
+$chocolatey_repo = $args[2]
 
 #update verification.txt and chocolateyInstall.ps1 files
 $folder = "tools"
@@ -26,4 +27,7 @@ Set-Content -Path $file -Value $update_version -NoNewline
 choco pack
 
 #push package
-choco push .\Testkube.$version.nupkg --source https://chocolatey.testkube.io/ --key $api_key
+choco push .\Testkube.$version.nupkg --key $api_key --source $chocolatey_repo
+
+
+choco push .\Testkube.$version.nupkg --key $api_key --source $chocolatey_repo
