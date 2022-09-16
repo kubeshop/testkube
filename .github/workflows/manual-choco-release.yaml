@@ -8,7 +8,7 @@ env:
 
 jobs:
   get_tag:
-    runs-on: get_tag-latest
+    runs-on: ubuntu-latest
     outputs:
       output1: ${{ steps.tag.outputs.VERSION }}
 
