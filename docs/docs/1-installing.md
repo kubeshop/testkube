@@ -205,7 +205,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.image.tag               | yes         | "latest"                             |
 | testkube-api.service.type            | yes         | "NodePort"                           |
 | testkube-api.service.port            | yes         | 8088                                 |
-| testkube-api.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
+| testkube-api.mongodb.dsn             | yes         | "mongodb://testkube-mongodb:27017"   |
 | testkube-api.nats.uri                | yes         | "nats://testkube-nats"               |
 | testkube-api.telemetryEnabled        | yes         | true                                 |
 | testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 |
