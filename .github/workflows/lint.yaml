@@ -30,7 +30,7 @@ jobs:
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-           ${{ runner.os }}-go-
+            ${{ runner.os }}-go-
       - name: Linting GO code
         uses: golangci/golangci-lint-action@v3
         with:
