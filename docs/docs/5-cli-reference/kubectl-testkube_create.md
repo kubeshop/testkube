@@ -28,6 +28,7 @@ kubectl-testkube create <resourceName> [flags]
 * [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [kubectl-testkube create executor](kubectl-testkube_create_executor.md)	 - Create new Executor
 * [kubectl-testkube create test](kubectl-testkube_create_test.md)	 - Create new Test
+* [kubectl-testkube create testsource](kubectl-testkube_create_testsource.md)	 - Create new TestSource
 * [kubectl-testkube create testsuite](kubectl-testkube_create_testsuite.md)	 - Create new TestSuite
 * [kubectl-testkube create webhook](kubectl-testkube_create_webhook.md)	 - Create new Webhook
 

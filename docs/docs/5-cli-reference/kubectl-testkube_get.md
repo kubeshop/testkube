@@ -35,6 +35,7 @@ kubectl-testkube get <resourceName> [flags]
 * [kubectl-testkube get execution](kubectl-testkube_get_execution.md)	 - Lists or gets test executions
 * [kubectl-testkube get executor](kubectl-testkube_get_executor.md)	 - Gets executor details
 * [kubectl-testkube get test](kubectl-testkube_get_test.md)	 - Get all available tests
+* [kubectl-testkube get testsource](kubectl-testkube_get_testsource.md)	 - Get test source details
 * [kubectl-testkube get testsuite](kubectl-testkube_get_testsuite.md)	 - Get test suite by name
 * [kubectl-testkube get testsuiteexecution](kubectl-testkube_get_testsuiteexecution.md)	 - Gets TestSuite Execution details
 * [kubectl-testkube get webhook](kubectl-testkube_get_webhook.md)	 - Get webhook details

@@ -34,6 +34,7 @@ kubectl-testkube create test [flags]
       --secret-env stringToString                  secret envs in a form of secret_name1=secret_key1 passed to executor (default [])
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --source string                              source name - will be used together with content parameters
       --test-content-type string                   content type of test one of string|file-uri|git-file|git-dir
   -t, --type string                                test type (defaults to postman/collection)
       --uri string                                 URI of resource - will be loaded by http GET
