@@ -363,9 +363,9 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		s.Log.Infow("creating test", "request", request)
 
-		testSpec := testsmapper.MapToSpec(request)
-		testSpec.Namespace = s.Namespace
-		test, err := s.TestsClient.Create(testSpec)
+		test := testsmapper.MapToSpec(request)
+		test.Namespace = s.Namespace
+		createdTest, err := s.TestsClient.Create(test)
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -379,7 +379,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		c.Status(http.StatusCreated)
-		return c.JSON(test)
+		return c.JSON(createdTest)
 	}
 }
 
@@ -405,7 +405,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
 		test.Labels = request.Labels
-		test, err = s.TestsClient.Update(test)
+		updatedTest, err := s.TestsClient.Update(test)
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
 
@@ -419,7 +419,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(test)
+		return c.JSON(updatedTest)
 	}
 }
 
