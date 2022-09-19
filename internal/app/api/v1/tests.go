@@ -405,7 +405,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
 		test.Labels = request.Labels
-		updateTest, err := s.TestsClient.Update(test)
+		updatedTest, err := s.TestsClient.Update(test)
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
 
@@ -419,7 +419,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(updateTest)
+		return c.JSON(updatedTest)
 	}
 }
 
