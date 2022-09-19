@@ -161,6 +161,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		SecretEnvs:    options.SecretEnvs,
 		HttpProxy:     options.HTTPProxy,
 		HttpsProxy:    options.HTTPSProxy,
+		ConfigFiles:   options.ExecutionConfigFiles,
 	}
 
 	body, err := json.Marshal(request)
