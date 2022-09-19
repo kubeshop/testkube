@@ -480,7 +480,7 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		testSourceCR, err := s.TestSourcesClient.Get(testCR.Spec.Source)
 		if err != nil {
 			return options, fmt.Errorf("can't get test source custom resource %w", err)
-		}		
+		}
 
 		testCR.Spec.Content = mergeContents(testCR.Spec.Content, testSourceCR.Spec)
 	}
@@ -624,7 +624,7 @@ func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.Tes
 
 	if testSource.Uri != "" {
 		testContent.Uri = testSource.Uri
-	}	
+	}
 
 	if testSource.Repository != nil {
 		if testContent.Repository == nil {
@@ -632,31 +632,31 @@ func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.Tes
 		}
 
 		testContent.Repository.Type_ = testSource.Repository.Type_
-		testContent.Repository.Uri = testSource.Repository.Uri		
+		testContent.Repository.Uri = testSource.Repository.Uri
 
 		if testSource.Repository.Branch != "" {
 			testContent.Repository.Branch = testSource.Repository.Branch
-		}			
+		}
 
 		if testSource.Repository.Commit != "" {
 			testContent.Repository.Commit = testSource.Repository.Commit
-		}	
+		}
 
 		if testSource.Repository.Path != "" {
 			testContent.Repository.Path = testSource.Repository.Path
-		}		
-		
+		}
+
 		if testSource.Repository.UsernameSecret != nil {
 			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.UsernameSecret.Name,
-				Key: testSource.Repository.UsernameSecret.Key,
+				Key:  testSource.Repository.UsernameSecret.Key,
 			}
 		}
 
 		if testSource.Repository.TokenSecret != nil {
 			testContent.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.TokenSecret.Name,
-				Key: testSource.Repository.TokenSecret.Key,
+				Key:  testSource.Repository.TokenSecret.Key,
 			}
 		}
 	}
