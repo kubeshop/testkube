@@ -217,20 +217,3 @@ func uiShellWatchExecution(id string) {
 
 	ui.NL()
 }
-
-// readConfigFiles reads files
-func readConfigFiles(configFiles []string) (map[string][]byte, error) {
-	files := map[string][]byte{}
-	for _, f := range configFiles {
-		paths := strings.Split(f, ":")
-		if len(paths) != 2 {
-			return nil, fmt.Errorf("invalid file format, expecting sourcePath:destinationPath")
-		}
-		contents, err := os.ReadFile(paths[0])
-		if err != nil {
-			return nil, fmt.Errorf("could not read executor config file: %w", err)
-		}
-		files[paths[1]] = contents
-	}
-	return files, nil
-}
