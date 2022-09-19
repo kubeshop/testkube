@@ -11,6 +11,6 @@ const (
 	DashboardURI       string = "http://dashboard.testkube.io"
 	CurrentApiVersion  string = apiclient.Version
 	DashboardName      string = "testkube-dashboard"
-	DashboardPort      int    = 80
+	DashboardPort      int    = 8080
 	DashboardLocalPort int    = 8080
 )
