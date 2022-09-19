@@ -16,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -475,6 +476,15 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
+	if testCR.Spec.Source != "" {
+		testSourceCR, err := s.TestSourcesClient.Get(testCR.Spec.Source)
+		if err != nil {
+			return options, fmt.Errorf("can't get test source custom resource %w", err)
+		}		
+
+		testCR.Spec.Content = mergeContents(testCR.Spec.Content, testSourceCR.Spec)
+	}
+
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
 	if test.ExecutionRequest != nil {
@@ -604,6 +614,54 @@ func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]stri
 	}
 
 	return envs
+}
+
+func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.TestSourceSpec) *testsv3.TestContent {
+	testContent.Type_ = testSource.Type_
+	if testSource.Data != "" {
+		testContent.Data = testSource.Data
+	}
+
+	if testSource.Uri != "" {
+		testContent.Uri = testSource.Uri
+	}	
+
+	if testSource.Repository != nil {
+		if testContent.Repository == nil {
+			testContent.Repository = &testsv3.Repository{}
+		}
+
+		testContent.Repository.Type_ = testSource.Repository.Type_
+		testContent.Repository.Uri = testSource.Repository.Uri		
+
+		if testSource.Repository.Branch != "" {
+			testContent.Repository.Branch = testSource.Repository.Branch
+		}			
+
+		if testSource.Repository.Commit != "" {
+			testContent.Repository.Commit = testSource.Repository.Commit
+		}	
+
+		if testSource.Repository.Path != "" {
+			testContent.Repository.Path = testSource.Repository.Path
+		}		
+		
+		if testSource.Repository.UsernameSecret != nil {
+			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
+				Name: testSource.Repository.UsernameSecret.Name,
+				Key: testSource.Repository.UsernameSecret.Key,
+			}
+		}
+
+		if testSource.Repository.TokenSecret != nil {
+			testContent.Repository.TokenSecret = &testsv3.SecretRef{
+				Name: testSource.Repository.TokenSecret.Name,
+				Key: testSource.Repository.TokenSecret.Key,
+			}
+		}
+	}
+
+	return testContent
 }
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
