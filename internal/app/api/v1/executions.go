@@ -14,7 +14,6 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
@@ -23,7 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/secret"
+
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -165,16 +164,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	if err != nil {
 		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
-	}
-
-	options.HasSecrets = true
-	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
-		if !errors.IsNotFound(err) {
-			s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
-			return execution.Errw("can't get secrets: %w", err), nil
-		}
-
-		options.HasSecrets = false
 	}
 
 	var result testkube.ExecutionResult

@@ -28,7 +28,6 @@ import (
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 const (
@@ -132,7 +131,6 @@ type JobOptions struct {
 	TestName       string
 	InitImage      string
 	JobTemplate    string
-	HasSecrets     bool
 	SecretEnvs     map[string]string
 	HTTPProxy      string
 	HTTPSProxy     string
@@ -326,7 +324,6 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:          options.ExecutorSpec.Image,
 		ImageOverride:  options.ImageOverride,
-		HasSecrets:     options.HasSecrets,
 		JobTemplate:    options.ExecutorSpec.JobTemplate,
 		TestName:       options.TestName,
 		Namespace:      options.Namespace,
@@ -639,7 +636,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 	secretEnvVars = secretenv.NewEnvManager().Prepare(options.SecretEnvs, options.Variables)
 
 	// prepare git credentials
-	var setSecrets bool
 	var data = []struct {
 		envVar    string
 		secretRef *testkube.SecretRef
@@ -656,7 +652,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 
 	for _, value := range data {
 		if value.secretRef != nil {
-			setSecrets = true
 			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
 				Name: value.envVar,
 				ValueFrom: &corev1.EnvVarSource{
@@ -665,36 +660,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 							Name: value.secretRef.Name,
 						},
 						Key: value.secretRef.Key,
-					},
-				},
-			})
-		}
-	}
-
-	if options.HasSecrets && !setSecrets {
-		var data = []struct {
-			envVar    string
-			secretKey string
-		}{
-			{
-				GitUsernameEnvVarName,
-				GitUsernameSecretName,
-			},
-			{
-				GitTokenEnvVarName,
-				GitTokenSecretName,
-			},
-		}
-
-		for _, value := range data {
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(options.TestName),
-						},
-						Key: value.secretKey,
 					},
 				},
 			})
