@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
 )
 
@@ -25,7 +27,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 		testSource := testsourcesmapper.MapAPIToCRD(request)
 		testSource.Namespace = s.Namespace
 
-		created, err := s.TestSourcesClient.Create(&testSource)
+		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -53,7 +55,7 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		testSource.Spec = testSourceSpec.Spec
 		testSource.Labels = request.Labels
 
-		testSource, err = s.TestSourcesClient.Update(testSource)
+		testSource, err = s.TestSourcesClient.Update(testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -127,4 +129,29 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 		c.Status(http.StatusNoContent)
 		return nil
 	}
+}
+
+func getTestSourceSecretsData(testSource *testkube.TestSourceUpsertRequest) map[string]string {
+	// create secrets for test
+	username := ""
+	token := ""
+	if testSource.Repository != nil {
+		username = testSource.Repository.Username
+		token = testSource.Repository.Token
+	}
+
+	if username == "" && token == "" {
+		return nil
+	}
+
+	data := make(map[string]string, 0)
+	if username != "" {
+		data[client.GitUsernameSecretName] = username
+	}
+
+	if token != "" {
+		data[client.GitTokenSecretName] = token
+	}
+
+	return data
 }
