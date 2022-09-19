@@ -3,7 +3,7 @@
 
 ![img.gif](img/check-dashboard-api-endpoint.gif)
 
-- Make sure endpoint is providing data, e.g accessing executors path
+- Make sure endpoint is providing data, e.g. accessing executors path
 
 ```sh
 curl <endpoint>/v1/executors 
