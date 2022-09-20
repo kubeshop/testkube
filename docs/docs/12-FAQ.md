@@ -24,4 +24,9 @@ pod/testkube-mongodb-74587998bb-8pzl2                       1/1     Running   0 
 pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0          5d23h
 ```
 
-- If these options do not solve the problem, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
+### How to access the Service Under Test(SUT) using Testkube?
+
+- Services inside the same kubernetes cluster can be accessed using the address \<service-name\>.\<service-namespace\>.svc.cluster.local:\<port-number\>, if there are network restrictions configured, testkube will need permissions to access the SUT over the local network of the cluster
+- If Testkube and the SUT are not in the same cluster, SUT will have to be exposed to Testkube using an Ingress or a Load Balancer
+
+If any of these answers does not answer or solve the issue that you encountered, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
