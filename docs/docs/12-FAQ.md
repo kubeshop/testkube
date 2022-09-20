@@ -1,4 +1,4 @@
-### Why UI is not working or doesn't have results?
+### Why is the UI not working or does not return results?
 - Make sure the api endpoint is configured
 
 ![img.gif](img/check-dashboard-api-endpoint.gif)
