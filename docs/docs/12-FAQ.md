@@ -3,13 +3,13 @@
 
 ![img.gif](img/check-dashboard-api-endpoint.gif)
 
-- Make sure endpoint is providing data, e.g. accessing executors path
+- Make sure the endpoint is providing data, e.g. accessing the executors path:
 
 ```sh
 curl <endpoint>/v1/executors 
 ```
 
-- If it is not providing data make sure that all the testkube components are running properly
+- If no data is provided, make sure that all the Testkube components are running properly:
 
 ```sh
 kubectl get pods -n testkube
@@ -21,4 +21,4 @@ pod/testkube-mongodb-74587998bb-8pzl2                       1/1     Running   0 
 pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0          5d23h
 ```
 
-- If any of this doesn't help contact us on [Discord](https://discord.com/invite/6zupCZFQbe)
+- If these options do not solve the problem, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
