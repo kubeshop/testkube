@@ -6,6 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources/renderer"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -17,9 +18,10 @@ func NewGetTestSourceCmd() *cobra.Command {
 	var crdOnly bool
 
 	cmd := &cobra.Command{
-		Use:   "testsource <testSourceName>",
-		Short: "Get test source details",
-		Long:  `Get test source, you can change output format, to get single details pass name as first arg`,
+		Use:     "testsource <testSourceName>",
+		Aliases: []string{"testsources", "tsc"},
+		Short:   "Get test source details",
+		Long:    `Get test source, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 
@@ -34,7 +36,7 @@ func NewGetTestSourceCmd() *cobra.Command {
 					return
 				}
 
-				err = render.Obj(cmd, testSource, os.Stdout)
+				err = render.Obj(cmd, testSource, os.Stdout, renderer.TestSourceRenderer)
 				ui.ExitOnError("rendering obj", err)
 			} else {
 				testSources, err := client.ListTestSources(strings.Join(selectors, ","))

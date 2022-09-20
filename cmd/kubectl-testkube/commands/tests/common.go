@@ -235,10 +235,12 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		return options, err
 	}
 
+	sourceName := cmd.Flag("source").Value.String()
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,
+		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
 	}

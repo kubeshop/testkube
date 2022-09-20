@@ -23,9 +23,10 @@ func NewUpdateTestSourceCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "testsource",
-		Short: "Update TestSource",
-		Long:  `Update new TestSource Custom Resource`,
+		Use:     "testsource",
+		Aliases: []string{"testsources", "tsc"},
+		Short:   "Update TestSource",
+		Long:    `Update new TestSource Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
