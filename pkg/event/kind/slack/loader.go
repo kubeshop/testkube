@@ -31,6 +31,6 @@ func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
 	if slacknotifier.Ready {
 		return common.Listeners{NewSlackListener("slack", "", testkube.AllEventTypes)}, nil
 	}
-	r.Log.Infow("Slack notifier is not ready or not configured properly", "kind", r.Kind())
+	r.Log.Debugw("Slack notifier is not ready or not configured properly, omiting", "kind", r.Kind())
 	return common.Listeners{}, nil
 }

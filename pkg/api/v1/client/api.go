@@ -36,10 +36,10 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 }
 
 // NewDirectAPIClient returns direct api client
-func NewDirectAPIClient(httpClient *http.Client, apiURI string) APIClient {
+func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI string) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewDirectClient[testkube.Test](httpClient, apiURI),
+			NewDirectClient[testkube.Test](httpClient, apiURI).WithSSEClient(sseClient),
 			NewDirectClient[testkube.Execution](httpClient, apiURI),
 			NewDirectClient[testkube.TestWithExecution](httpClient, apiURI),
 			NewDirectClient[testkube.ExecutionsResult](httpClient, apiURI),

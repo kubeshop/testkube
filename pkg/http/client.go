@@ -24,3 +24,9 @@ func NewClient() *http.Client {
 		Transport: netTransport,
 	}
 }
+
+func NewSSEClient() *http.Client {
+	return &http.Client{
+		Timeout: time.Hour,
+	}
+}
