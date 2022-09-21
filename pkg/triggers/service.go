@@ -2,6 +2,8 @@ package triggers
 
 import (
 	"context"
+	"time"
+
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
@@ -9,21 +11,24 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
-	"time"
 )
 
+var defaultScraperInterval = 5 * time.Second
+
 type Service struct {
-	informers     *k8sInformers
-	triggers      []*testtriggersv1.TestTrigger
-	started       time.Time
-	triggerStatus map[statusKey]*triggerStatus
-	tcs           testtriggerclientsetv1.Interface
-	cs            *kubernetes.Clientset
-	tsc           *testsuitesclientv2.TestSuitesClient
-	tc            *testsclientv3.TestsClient
-	tk            *v1.TestkubeAPI
-	l             *zap.SugaredLogger
+	scraperInterval time.Duration
+	triggers        []*testtriggersv1.TestTrigger
+	started         time.Time
+	triggerStatus   map[statusKey]*triggerStatus
+	tcs             testtriggerclientsetv1.Interface
+	cs              *kubernetes.Clientset
+	tsc             *testsuitesclientv2.TestSuitesClient
+	tc              *testsclientv3.TestsClient
+	tk              *v1.TestkubeAPI
+	l               *zap.SugaredLogger
 }
+
+type Option func(*Service)
 
 func NewService(
 	cs *kubernetes.Clientset,
@@ -32,18 +37,30 @@ func NewService(
 	tc *testsclientv3.TestsClient,
 	tk *v1.TestkubeAPI,
 	l *zap.SugaredLogger,
+	opts ...Option,
 ) *Service {
-	return &Service{
-		cs:            cs,
-		tcs:           tcs,
-		tsc:           tsc,
-		tc:            tc,
-		tk:            tk,
-		l:             l,
-		started:       time.Now(),
-		triggers:      make([]*testtriggersv1.TestTrigger, 0),
-		triggerStatus: make(map[statusKey]*triggerStatus),
+	s := &Service{
+		scraperInterval: defaultScraperInterval,
+		cs:              cs,
+		tcs:             tcs,
+		tsc:             tsc,
+		tc:              tc,
+		tk:              tk,
+		l:               l,
+		started:         time.Now(),
+		triggers:        make([]*testtriggersv1.TestTrigger, 0),
+		triggerStatus:   make(map[statusKey]*triggerStatus),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
+}
+
+func (s *Service) WithScraperInterval(interval time.Duration) {
+	s.scraperInterval = interval
 }
 
 func (s *Service) Run(ctx context.Context) error {

@@ -2,12 +2,13 @@ package triggers
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (s *Service) runExecutionScraper(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(s.scraperInterval)
 	s.l.Debugf("trigger service: starting execution scraper")
 
 	for {
@@ -33,29 +34,33 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 }
 
 func (s *Service) checkForRunningExecutions(ctx context.Context, status *triggerStatus) {
+	s.checkForRunningTestExecutions(ctx, status)
+	s.checkForRunningTestSuiteExecutions(ctx, status)
+}
+
+func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *triggerStatus) {
 	for _, id := range status.ExecutionIDs {
 		execution, err := s.tk.ExecutionResults.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
-			s.l.Warnf("trigger service: execution scraper component: no execution found for id %s", id)
+			s.l.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
 			continue
 		} else if err != nil {
-			s.l.Errorf("trigger service: execution scraper component: error fetching execution result: %v", err)
+			s.l.Errorf("trigger service: execution scraper component: error fetching test execution result: %v", err)
 			continue
 		}
 		if !execution.IsRunning() {
-			s.l.Debugf("trigger service: execution scraper component: execution %s is finished", id)
+			s.l.Debugf("trigger service: execution scraper component: test execution %s is finished", id)
 			status.removeExecutionID(id)
 		}
 	}
 }
-
 func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status *triggerStatus) {
 	for _, id := range status.TestSuiteExecutionIDs {
 		execution, err := s.tk.TestExecutionResults.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.l.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
-			status.removeExecutionID(id)
+			status.removeTestSuiteExecutionID(id)
 			continue
 		} else if err != nil {
 			s.l.Errorf("trigger service: execution scraper component: error fetching testsuite execution result: %v", err)
@@ -63,7 +68,7 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 		}
 		if !execution.IsRunning() {
 			s.l.Debugf("trigger service: execution scraper component: testsuite execution %s is finished", id)
-			status.removeExecutionID(id)
+			status.removeTestSuiteExecutionID(id)
 		}
 	}
 }

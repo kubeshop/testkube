@@ -1,8 +1,9 @@
 package triggers
 
 import (
-	core_v1 "k8s.io/api/core/v1"
 	"time"
+
+	core_v1 "k8s.io/api/core/v1"
 )
 
 func findContainer(containers []core_v1.Container, target string) *core_v1.Container {

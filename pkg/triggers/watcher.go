@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+
 	"github.com/google/go-cmp/cmp"
 	testtriggers_v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
@@ -25,11 +26,11 @@ func (s *Service) createInformers(ctx context.Context) (*k8sInformers, error) {
 	f := informers.NewSharedInformerFactory(s.cs, 0)
 	podInformer := f.Core().V1().Pods()
 	deploymentInformer := f.Apps().V1().Deployments()
-	//daemonsetInformer := w.f.Apps().V1().DaemonSets()
-	//statefulsetInformer := w.f.Apps().V1().StatefulSets()
-	//serviceInformer := w.f.Core().V1().Services()
-	//ingressInformer := w.f.Networking().V1().Ingresses()
-	//eventInformer := w.f.Events().V1()
+	// daemonsetInformer := w.f.Apps().V1().DaemonSets()
+	// statefulsetInformer := w.f.Apps().V1().StatefulSets()
+	// serviceInformer := w.f.Core().V1().Services()
+	// ingressInformer := w.f.Networking().V1().Ingresses()
+	// eventInformer := w.f.Events().V1()
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactory(s.tcs, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()

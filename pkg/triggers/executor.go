@@ -3,6 +3,8 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
@@ -10,7 +12,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
-	"strconv"
 )
 
 const (

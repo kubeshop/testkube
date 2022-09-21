@@ -2,8 +2,9 @@ package triggers
 
 import (
 	"fmt"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"time"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
 
 type statusKey string
@@ -44,13 +45,13 @@ func (s *triggerStatus) removeExecutionID(targetID string) {
 }
 
 func (s *triggerStatus) addTestSuiteExecutionID(id string) {
-	s.ExecutionIDs = append(s.TestSuiteExecutionIDs, id)
+	s.TestSuiteExecutionIDs = append(s.TestSuiteExecutionIDs, id)
 }
 
 func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
 	for i, id := range s.TestSuiteExecutionIDs {
 		if id == targetID {
-			s.ExecutionIDs = append(s.TestSuiteExecutionIDs[:i], s.TestSuiteExecutionIDs[i+1:]...)
+			s.TestSuiteExecutionIDs = append(s.TestSuiteExecutionIDs[:i], s.TestSuiteExecutionIDs[i+1:]...)
 		}
 	}
 }
