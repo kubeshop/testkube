@@ -614,7 +614,7 @@ func IsPodReadyForLogs(c *kubernetes.Clientset, podName, namespace string) wait.
 	}
 }
 
-// IsPodCompleted defines if pod is ready or failed for logs scrapping
+// IsPodCompleted defines if pod is completed or failed
 func IsPodCompleted(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
