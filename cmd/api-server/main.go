@@ -171,7 +171,16 @@ func main() {
 	)
 
 	log.DefaultLogger.Info("starting trigger service")
-	triggerService := triggers.NewService(clientset, testkubeClientset, testsuitesClient, testsClientV3, &api, log.DefaultLogger)
+	triggerService := triggers.NewService(
+		clientset,
+		testkubeClientset,
+		testsuitesClient,
+		testsClientV3,
+		&api,
+		resultsRepository,
+		testResultsRepository,
+		log.DefaultLogger,
+	)
 	err = triggerService.Run(ctx)
 	if err != nil {
 		ui.ExitOnError("Running trigger service", err)

@@ -18,7 +18,7 @@ func (s *Service) match(ctx context.Context, e *event) error {
 			continue
 		}
 		status := s.getStatusForTrigger(t)
-		if status.ActiveTests {
+		if status.hasActiveTests() {
 			s.l.Infof(
 				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
 				t.Namespace, t.Name, e.eventType, e.resource,
@@ -27,7 +27,7 @@ func (s *Service) match(ctx context.Context, e *event) error {
 		}
 		s.l.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
 		s.l.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
-		if err := s.execute(ctx, t); err != nil {
+		if err := s.executor(ctx, t); err != nil {
 			return err
 		}
 	}

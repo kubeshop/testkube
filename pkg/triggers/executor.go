@@ -19,6 +19,8 @@ const (
 	ExecutionTestSuite = "testsuite"
 )
 
+type ExecutorF func(context.Context, *testtriggersv1.TestTrigger) error
+
 func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 

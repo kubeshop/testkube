@@ -14,54 +14,55 @@ func newStatusKey(namespace, name string) statusKey {
 }
 
 type triggerStatus struct {
-	ActiveTests           bool
-	LastExecutionStarted  *time.Time
-	LastExecutionFinished *time.Time
-	ExecutionIDs          []string
-	TestSuiteExecutionIDs []string
+	lastExecutionStarted  *time.Time
+	lastExecutionFinished *time.Time
+	testExecutionIDs      []string
+	testSuiteExecutionIDs []string
 }
 
 func newTriggerStatus() *triggerStatus {
 	return &triggerStatus{}
 }
 
+func (s *triggerStatus) hasActiveTests() bool {
+	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0
+}
+
 func (s *triggerStatus) start() {
-	s.ActiveTests = true
 	now := time.Now()
-	s.LastExecutionStarted = &now
-	s.LastExecutionFinished = nil
+	s.lastExecutionStarted = &now
+	s.lastExecutionFinished = nil
 }
 
 func (s *triggerStatus) addExecutionID(id string) {
-	s.ExecutionIDs = append(s.ExecutionIDs, id)
+	s.testExecutionIDs = append(s.testExecutionIDs, id)
 }
 
 func (s *triggerStatus) removeExecutionID(targetID string) {
-	for i, id := range s.ExecutionIDs {
+	for i, id := range s.testExecutionIDs {
 		if id == targetID {
-			s.ExecutionIDs = append(s.ExecutionIDs[:i], s.ExecutionIDs[i+1:]...)
+			s.testExecutionIDs = append(s.testExecutionIDs[:i], s.testExecutionIDs[i+1:]...)
 		}
 	}
 }
 
 func (s *triggerStatus) addTestSuiteExecutionID(id string) {
-	s.TestSuiteExecutionIDs = append(s.TestSuiteExecutionIDs, id)
+	s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs, id)
 }
 
 func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
-	for i, id := range s.TestSuiteExecutionIDs {
+	for i, id := range s.testSuiteExecutionIDs {
 		if id == targetID {
-			s.TestSuiteExecutionIDs = append(s.TestSuiteExecutionIDs[:i], s.TestSuiteExecutionIDs[i+1:]...)
+			s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs[:i], s.testSuiteExecutionIDs[i+1:]...)
 		}
 	}
 }
 
-func (s *triggerStatus) finish() {
-	s.ActiveTests = false
+func (s *triggerStatus) done() {
 	now := time.Now()
-	s.LastExecutionFinished = &now
-	s.ExecutionIDs = nil
-	s.TestSuiteExecutionIDs = nil
+	s.lastExecutionFinished = &now
+	s.testExecutionIDs = nil
+	s.testSuiteExecutionIDs = nil
 }
 
 func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {

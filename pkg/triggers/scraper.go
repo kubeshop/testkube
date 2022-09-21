@@ -18,29 +18,23 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 		case <-ticker.C:
 			s.l.Debugf("trigger service: execution scraper component: starting new ticker iteration")
 			for triggerName, status := range s.triggerStatus {
-				if status.ActiveTests {
-					if len(status.ExecutionIDs) == 0 && len(status.TestSuiteExecutionIDs) == 0 {
+				if status.hasActiveTests() {
+					s.l.Debugf("triggerStatus: %+v", *status)
+					s.checkForRunningTestExecutions(ctx, status)
+					s.checkForRunningTestSuiteExecutions(ctx, status)
+					if !status.hasActiveTests() {
 						s.l.Debugf("marking status as finished for testtrigger %s", triggerName)
-						status.finish()
-						return
+						status.done()
 					}
 				}
-				s.l.Debugf("triggerStatus: %+v", *status)
-				s.checkForRunningExecutions(ctx, status)
-				s.checkForRunningTestSuiteExecutions(ctx, status)
 			}
 		}
 	}
 }
 
-func (s *Service) checkForRunningExecutions(ctx context.Context, status *triggerStatus) {
-	s.checkForRunningTestExecutions(ctx, status)
-	s.checkForRunningTestSuiteExecutions(ctx, status)
-}
-
 func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *triggerStatus) {
-	for _, id := range status.ExecutionIDs {
-		execution, err := s.tk.ExecutionResults.Get(ctx, id)
+	for _, id := range status.testExecutionIDs {
+		execution, err := s.trr.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.l.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
@@ -56,8 +50,8 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 	}
 }
 func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status *triggerStatus) {
-	for _, id := range status.TestSuiteExecutionIDs {
-		execution, err := s.tk.TestExecutionResults.Get(ctx, id)
+	for _, id := range status.testSuiteExecutionIDs {
+		execution, err := s.tsrr.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.l.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
 			status.removeTestSuiteExecutionID(id)

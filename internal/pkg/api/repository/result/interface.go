@@ -29,6 +29,9 @@ type Filter interface {
 	Type() string
 }
 
+// nolint
+//
+//go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
 type Repository interface {
 	Sequences
 	// Get gets execution result by id

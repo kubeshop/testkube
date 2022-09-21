@@ -11,16 +11,17 @@ func TestTriggerStatus(t *testing.T) {
 
 	status := newTriggerStatus()
 
+	status.testSuiteExecutionIDs = []string{"test-suite-execution-1"}
 	status.start()
 
-	assert.True(t, status.ActiveTests)
-	assert.NotNil(t, status.LastExecutionStarted)
-	assert.Nil(t, status.LastExecutionFinished)
+	assert.True(t, status.hasActiveTests())
+	assert.NotNil(t, status.lastExecutionStarted)
+	assert.Nil(t, status.lastExecutionFinished)
 
-	status.finish()
+	status.done()
 
-	assert.False(t, status.ActiveTests)
-	assert.NotNil(t, status.LastExecutionStarted)
-	assert.NotNil(t, status.LastExecutionFinished)
-	assert.True(t, status.LastExecutionFinished.After(*status.LastExecutionStarted))
+	assert.False(t, status.hasActiveTests())
+	assert.NotNil(t, status.lastExecutionStarted)
+	assert.NotNil(t, status.lastExecutionFinished)
+	assert.True(t, status.lastExecutionFinished.After(*status.lastExecutionStarted))
 }
