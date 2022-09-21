@@ -10,11 +10,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/secret"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -365,16 +365,11 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		test := testsmapper.MapToSpec(request)
 		test.Namespace = s.Namespace
-		createdTest, err := s.TestsClient.Create(test)
+		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Create(secret.GetMetadataName(request.Name), test.Labels, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -405,17 +400,11 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
 		test.Labels = request.Labels
-		updatedTest, err := s.TestsClient.Update(test)
+		updatedTest, err := s.TestsClient.Update(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// update secrets for scipt
-		stringData := GetSecretsStringData(request.Content)
-		if err = s.SecretClient.Apply(secret.GetMetadataName(request.Name), test.Labels, stringData); err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
@@ -434,13 +423,6 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		// delete secrets for test
-		if err = s.SecretClient.Delete(secret.GetMetadataName(name)); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
 		}
 
 		// delete executions for test
@@ -483,13 +465,6 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete all secrets for tests
-		if err = s.SecretClient.DeleteAll(selector); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete all executions for tests
 		if selector == "" {
 			err = s.ExecutionResults.DeleteAll(c.Context())
@@ -505,13 +480,27 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	}
 }
 
-func GetSecretsStringData(content *testkube.TestContent) map[string]string {
+func getTestSecretsData(content *testkube.TestContent) map[string]string {
 	// create secrets for test
-	stringData := map[string]string{client.GitUsernameSecretName: "", client.GitTokenSecretName: ""}
+	username := ""
+	token := ""
 	if content != nil && content.Repository != nil {
-		stringData[client.GitUsernameSecretName] = content.Repository.Username
-		stringData[client.GitTokenSecretName] = content.Repository.Token
+		username = content.Repository.Username
+		token = content.Repository.Token
 	}
 
-	return stringData
+	if username == "" && token == "" {
+		return nil
+	}
+
+	data := make(map[string]string, 0)
+	if username != "" {
+		data[client.GitUsernameSecretName] = username
+	}
+
+	if token != "" {
+		data[client.GitTokenSecretName] = token
+	}
+
+	return data
 }

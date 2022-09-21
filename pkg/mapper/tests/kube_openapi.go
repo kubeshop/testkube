@@ -22,6 +22,7 @@ func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Namespace = crTest.Namespace
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
+	test.Source = crTest.Spec.Source
 	test.Type_ = crTest.Spec.Type_
 	test.Labels = crTest.Labels
 	test.Schedule = crTest.Spec.Schedule
@@ -106,7 +107,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	return &testkube.ExecutionRequest{
 		Name:                specExecutionRequest.Name,
 		TestSuiteName:       specExecutionRequest.TestSuiteName,
-		Number:              int(specExecutionRequest.Number),
+		Number:              int32(specExecutionRequest.Number),
 		ExecutionLabels:     specExecutionRequest.ExecutionLabels,
 		Namespace:           specExecutionRequest.Namespace,
 		VariablesFile:       specExecutionRequest.VariablesFile,

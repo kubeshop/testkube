@@ -76,8 +76,8 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
-		assert.Equal(20, metrics.TotalExecutions)
-		assert.Equal(5, metrics.FailedExecutions)
+		assert.Equal(int32(20), metrics.TotalExecutions)
+		assert.Equal(int32(5), metrics.FailedExecutions)
 		assert.Len(metrics.Executions, 20)
 	})
 
@@ -94,13 +94,13 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("limit should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 1, 100)
 		assert.NoError(err)
-		assert.Equal(1, metrics.TotalExecutions)
+		assert.Equal(int32(1), metrics.TotalExecutions)
 	})
 
 	t.Run("filter last n days should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestSuiteMetrics(context.Background(), testName, 100, 1)
 		assert.NoError(err)
-		assert.Equal(19, metrics.TotalExecutions)
+		assert.Equal(int32(19), metrics.TotalExecutions)
 	})
 }
 

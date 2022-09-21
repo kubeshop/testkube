@@ -15,23 +15,23 @@ type ExecutionsMetrics struct {
 	// 50th percentile of all durations
 	ExecutionDurationP50 string `json:"executionDurationP50,omitempty"`
 	// 50th percentile of all durations in milliseconds
-	ExecutionDurationP50ms int `json:"executionDurationP50ms,omitempty"`
+	ExecutionDurationP50ms int32 `json:"executionDurationP50ms,omitempty"`
 	// 90th percentile of all durations
 	ExecutionDurationP90 string `json:"executionDurationP90,omitempty"`
 	// 90th percentile of all durations in milliseconds
-	ExecutionDurationP90ms int `json:"executionDurationP90ms,omitempty"`
+	ExecutionDurationP90ms int32 `json:"executionDurationP90ms,omitempty"`
 	// 95th percentile of all durations
 	ExecutionDurationP95 string `json:"executionDurationP95,omitempty"`
 	// 95th percentile of all durations in milliseconds
-	ExecutionDurationP95ms int `json:"executionDurationP95ms,omitempty"`
+	ExecutionDurationP95ms int32 `json:"executionDurationP95ms,omitempty"`
 	// 99th percentile of all durations
 	ExecutionDurationP99 string `json:"executionDurationP99,omitempty"`
 	// 99th percentile of all durations in milliseconds
-	ExecutionDurationP99ms int `json:"executionDurationP99ms,omitempty"`
+	ExecutionDurationP99ms int32 `json:"executionDurationP99ms,omitempty"`
 	// total executions number
-	TotalExecutions int `json:"totalExecutions,omitempty"`
+	TotalExecutions int32 `json:"totalExecutions,omitempty"`
 	// failed executions number
-	FailedExecutions int `json:"failedExecutions,omitempty"`
+	FailedExecutions int32 `json:"failedExecutions,omitempty"`
 	// List of test/testsuite executions
 	Executions []ExecutionsMetricsExecutions `json:"executions,omitempty"`
 }

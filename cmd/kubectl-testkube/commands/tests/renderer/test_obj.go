@@ -56,6 +56,11 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 	}
 
+	if test.Source != "" {
+		ui.NL()
+		ui.Warn("Source: ", test.Source)
+	}
+
 	if test.ExecutionRequest != nil {
 		ui.Warn("Execution request: ")
 		if test.ExecutionRequest.Name != "" {

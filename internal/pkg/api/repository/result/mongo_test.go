@@ -97,22 +97,22 @@ func TestStorage(t *testing.T) {
 		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 
 		assert.NoError(err)
-		assert.Equal(12, filteredTotals.Results)
-		assert.Equal(12, filteredTotals.Failed)
-		assert.Equal(0, filteredTotals.Passed)
-		assert.Equal(0, filteredTotals.Queued)
-		assert.Equal(0, filteredTotals.Running)
+		assert.Equal(int32(12), filteredTotals.Results)
+		assert.Equal(int32(12), filteredTotals.Failed)
+		assert.Equal(int32(0), filteredTotals.Passed)
+		assert.Equal(int32(0), filteredTotals.Queued)
+		assert.Equal(int32(0), filteredTotals.Running)
 	})
 
 	t.Run("getting totals without filters should return all the executions", func(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false)
 
 		assert.NoError(err)
-		assert.Equal(21, totals.Results)
-		assert.Equal(12, totals.Failed)
-		assert.Equal(3, totals.Passed)
-		assert.Equal(3, totals.Queued)
-		assert.Equal(3, totals.Running)
+		assert.Equal(int32(21), totals.Results)
+		assert.Equal(int32(12), totals.Failed)
+		assert.Equal(int32(3), totals.Passed)
+		assert.Equal(int32(3), totals.Queued)
+		assert.Equal(int32(3), totals.Running)
 	})
 
 	dateFilter := datefilter.NewDateFilter(oneDayAgo.Format(datefilter.DateFormatISO8601), "")
@@ -143,11 +143,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStartDate(dateFilter.Start))
 
 		assert.NoError(err)
-		assert.Equal(14, totals.Results)
-		assert.Equal(8, totals.Failed)
-		assert.Equal(2, totals.Passed)
-		assert.Equal(2, totals.Queued)
-		assert.Equal(2, totals.Running)
+		assert.Equal(int32(14), totals.Results)
+		assert.Equal(int32(8), totals.Failed)
+		assert.Equal(int32(2), totals.Passed)
+		assert.Equal(int32(2), totals.Queued)
+		assert.Equal(int32(2), totals.Running)
 	})
 
 	dateFilter = datefilter.NewDateFilter("", oneDayAgo.Format(datefilter.DateFormatISO8601))
@@ -165,11 +165,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithEndDate(dateFilter.End))
 
 		assert.NoError(err)
-		assert.Equal(7, totals.Results)
-		assert.Equal(4, totals.Failed)
-		assert.Equal(1, totals.Passed)
-		assert.Equal(1, totals.Queued)
-		assert.Equal(1, totals.Running)
+		assert.Equal(int32(7), totals.Results)
+		assert.Equal(int32(4), totals.Failed)
+		assert.Equal(int32(1), totals.Passed)
+		assert.Equal(int32(1), totals.Queued)
+		assert.Equal(int32(1), totals.Running)
 	})
 
 	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
@@ -183,11 +183,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
-		assert.Equal(0, totals.Results)
-		assert.Equal(0, totals.Failed)
-		assert.Equal(0, totals.Passed)
-		assert.Equal(0, totals.Queued)
-		assert.Equal(0, totals.Running)
+		assert.Equal(int32(0), totals.Results)
+		assert.Equal(int32(0), totals.Failed)
+		assert.Equal(int32(0), totals.Passed)
+		assert.Equal(int32(0), totals.Queued)
+		assert.Equal(int32(0), totals.Running)
 	})
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
@@ -212,11 +212,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, filter)
 
 		assert.NoError(err)
-		assert.Equal(2, totals.Results)
-		assert.Equal(0, totals.Failed)
-		assert.Equal(2, totals.Passed)
-		assert.Equal(0, totals.Queued)
-		assert.Equal(0, totals.Running)
+		assert.Equal(int32(2), totals.Results)
+		assert.Equal(int32(0), totals.Failed)
+		assert.Equal(int32(2), totals.Passed)
+		assert.Equal(int32(0), totals.Queued)
+		assert.Equal(int32(0), totals.Running)
 	})
 
 	name := "someDifferentName"
@@ -235,11 +235,11 @@ func TestStorage(t *testing.T) {
 		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
 
 		assert.NoError(err)
-		assert.Equal(1, totals.Results)
-		assert.Equal(0, totals.Failed)
-		assert.Equal(0, totals.Passed)
-		assert.Equal(0, totals.Queued)
-		assert.Equal(1, totals.Running)
+		assert.Equal(int32(1), totals.Results)
+		assert.Equal(int32(0), totals.Failed)
+		assert.Equal(int32(0), totals.Passed)
+		assert.Equal(int32(0), totals.Queued)
+		assert.Equal(int32(1), totals.Running)
 	})
 
 	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
@@ -330,8 +330,8 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 	t.Run("getting execution metrics for test data", func(t *testing.T) {
 		assert.NoError(err)
-		assert.Equal(20, metrics.TotalExecutions)
-		assert.Equal(5, metrics.FailedExecutions)
+		assert.Equal(int32(20), metrics.TotalExecutions)
+		assert.Equal(int32(5), metrics.FailedExecutions)
 		assert.Len(metrics.Executions, 20)
 	})
 
@@ -348,13 +348,13 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("limit should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestMetrics(context.Background(), testName, 1, 100)
 		assert.NoError(err)
-		assert.Equal(1, metrics.TotalExecutions)
+		assert.Equal(int32(1), metrics.TotalExecutions)
 	})
 
 	t.Run("filter last n days should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestMetrics(context.Background(), testName, 100, 1)
 		assert.NoError(err)
-		assert.Equal(19, metrics.TotalExecutions)
+		assert.Equal(int32(19), metrics.TotalExecutions)
 	})
 }
 

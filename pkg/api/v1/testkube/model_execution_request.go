@@ -16,7 +16,7 @@ type ExecutionRequest struct {
 	// unique test suite name (CRD Test suite name), if it's run as a part of test suite
 	TestSuiteName string `json:"testSuiteName,omitempty"`
 	// test execution number
-	Number int `json:"number,omitempty"`
+	Number int32 `json:"number,omitempty"`
 	// test execution labels
 	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
