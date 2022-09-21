@@ -465,13 +465,6 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// delete all secrets for tests
-		if err = s.SecretClient.DeleteAll(selector); err != nil {
-			if !errors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-		}
-
 		// delete all executions for tests
 		if selector == "" {
 			err = s.ExecutionResults.DeleteAll(c.Context())
