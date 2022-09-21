@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
+	"os"
+
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
-	"net"
-	"os"
 
 	"github.com/kelseyhightower/envconfig"
 

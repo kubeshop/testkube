@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"os"
 	"strconv"
 	"time"
+
+	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
