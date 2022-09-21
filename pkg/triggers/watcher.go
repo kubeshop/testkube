@@ -6,28 +6,13 @@ import (
 	testtriggers_v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	testtriggersinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	informersappsv1 "k8s.io/client-go/informers/apps/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/tools/cache"
-)
-
-type EventType string
-type ResourceType string
-type Cause string
-
-const (
-	ResourcePod                       ResourceType = "pod"
-	ResourceDeployment                ResourceType = "deployment"
-	EventCreated                      EventType    = "created"
-	EventModified                     EventType    = "modified"
-	EventDeleted                      EventType    = "deleted"
-	CauseDeploymentScaleUpdate        Cause        = "deployment_scale_update"
-	CauseDeploymentImageUpdate        Cause        = "deployment_image_update"
-	CauseDeploymentEnvUpdate          Cause        = "deployment_env_update"
-	CauseDeploymentContainersModified Cause        = "deployment_containers_modified"
 )
 
 type k8sInformers struct {
@@ -76,7 +61,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: pod %s/%s created", pod.Namespace, pod.Name)
-			event := newPodEvent(EventCreated, pod)
+			event := newPodEvent(testtrigger.EventCreated, pod)
 			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching create pod event: %v", err)
 			}
@@ -88,7 +73,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
-			event := newPodEvent(EventDeleted, pod)
+			event := newPodEvent(testtrigger.EventDeleted, pod)
 			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching delete pod event: %v", err)
 			}
@@ -112,7 +97,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.l.Debugf("emiting event: deployment %s/%s created", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(deployment, EventCreated, nil)
+			event := newDeploymentEvent(deployment, testtrigger.EventCreated, nil)
 			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching create deployment event: %v", err)
 			}
@@ -143,7 +128,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				newDeployment.Namespace, newDeployment.Name,
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
-			event := newDeploymentEvent(newDeployment, EventModified, causes)
+			event := newDeploymentEvent(newDeployment, testtrigger.EventModified, causes)
 			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
@@ -155,7 +140,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.l.Debugf("trigger service: watcher component: emiting event: deployment %s/%s deleted", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(deployment, EventDeleted, nil)
+			event := newDeploymentEvent(deployment, testtrigger.EventDeleted, nil)
 			if err := s.match(ctx, event); err != nil {
 				s.l.Errorf("event matcher returned an error while matching delete deployment event: %v", err)
 			}

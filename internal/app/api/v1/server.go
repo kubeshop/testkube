@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"os"
 	"strconv"
@@ -312,10 +311,12 @@ func (s *TestkubeAPI) InitRoutes() {
 	testTriggers.Get("/", s.ListTestTriggersHandler())
 	testTriggers.Post("/", s.CreateTestTriggerHandler())
 	testTriggers.Delete("/", s.DeleteTestTriggersHandler())
-	fmt.Println("HAHAHAHHAHA")
 	testTriggers.Get("/:id", s.GetTestTriggerHandler())
 	testTriggers.Patch("/:id", s.UpdateTestTriggerHandler())
 	testTriggers.Delete("/:id", s.DeleteTestTriggerHandler())
+
+	keymap := s.Routes.Group("/keymap")
+	keymap.Get("/triggers", s.GetTestTriggerKeyMapHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())

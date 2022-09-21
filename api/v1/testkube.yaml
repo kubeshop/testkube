@@ -35,8 +35,30 @@ tags:
     description: "Webhook operations"
   - name: test-triggers
     description: "Test Triggers CRUD operations"
+  - name: keymap
+    description: "Keymap for fields in a form"
 
 paths:
+  /keymap/triggers:
+    get:
+      tags:
+        - keymap
+        - api
+      summary: Test triggers keymap
+      description: Returns a keymap (supported/allowed fields) for the test trigger UI screen
+      operationId: getKeyMap
+      responses:
+        200:
+          description: successful get operation
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: "#/components/schemas/TestTriggerKeyMap"
+            text/yaml:
+              schema:
+                type: string
   /triggers:
     get:
       tags:
@@ -3052,6 +3074,36 @@ components:
           example:
             env: "prod"
             app: "backend"
+
+    TestTriggerKeyMap:
+      type: object
+      properties:
+        resources:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event"]
+        actions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["run"]
+        executions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["test", "testsuite"]
+        events:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: mapping between resources and supported events
+          example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
 
     #
     # Errors

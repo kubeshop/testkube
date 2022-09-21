@@ -2,6 +2,8 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubeshop/testkube/pkg/keymap/triggers"
+	triggerskeymapmapper "github.com/kubeshop/testkube/pkg/mapper/keymap/triggers"
 	testtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/testtriggers"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +47,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// UpdateTestTriggerHandler updates an existing TestTrigger CRD based on TestTrigger content
+// UpdateTestTriggerHandler is a handler for updates an existing TestTrigger CRD based on TestTrigger content
 func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestTriggerUpsertRequest
@@ -78,7 +80,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// GetTestTriggerHandler for getting TestTrigger object
+// GetTestTriggerHandler is a handler for getting TestTrigger object
 func (s TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
@@ -102,7 +104,7 @@ func (s TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// DeleteTestTriggerHandler for deleting TestTrigger by id
+// DeleteTestTriggerHandler is a handler for deleting TestTrigger by id
 func (s TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
@@ -120,7 +122,7 @@ func (s TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// DeleteTestTriggersHandler for deleting all or selected TestTriggers
+// DeleteTestTriggersHandler is a handler for deleting all or selected TestTriggers
 func (s TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var err error
@@ -157,7 +159,7 @@ func (s TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 	}
 }
 
-// ListTestTriggersHandler for listing all available TestTriggers
+// ListTestTriggersHandler is a handler for listing all available TestTriggers
 func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		selector := c.Query("selector")
@@ -175,5 +177,12 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 		}
 
 		return c.JSON(testTriggers)
+	}
+}
+
+// GetTestTriggerKeyMapHandler is a handler for listing supported TestTrigger field combinations
+func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
 	}
 }

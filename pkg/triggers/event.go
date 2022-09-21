@@ -1,24 +1,25 @@
 package triggers
 
 import (
+	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type event struct {
-	resource  ResourceType
+	resource  testtrigger.ResourceType
 	name      string
 	namespace string
 	labels    map[string]string
 	object    runtime.Object
-	eventType EventType
-	causes    []Cause
+	eventType testtrigger.EventType
+	causes    []testtrigger.Cause
 }
 
-func newPodEvent(eventType EventType, pod *corev1.Pod) *event {
+func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *event {
 	return &event{
-		resource:  ResourcePod,
+		resource:  testtrigger.ResourcePod,
 		name:      pod.Name,
 		namespace: pod.Namespace,
 		labels:    pod.Labels,
@@ -27,9 +28,9 @@ func newPodEvent(eventType EventType, pod *corev1.Pod) *event {
 	}
 }
 
-func newDeploymentEvent(deployment *appsv1.Deployment, eventType EventType, causes []Cause) *event {
+func newDeploymentEvent(deployment *appsv1.Deployment, eventType testtrigger.EventType, causes []testtrigger.Cause) *event {
 	return &event{
-		resource:  ResourceDeployment,
+		resource:  testtrigger.ResourceDeployment,
 		name:      deployment.Name,
 		namespace: deployment.Namespace,
 		labels:    deployment.Labels,
