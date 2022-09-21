@@ -1,0 +1,77 @@
+---
+sidebar_position: 0
+sidebar_label: Welcome
+hide_table_of_contents: true
+---
+
+import Card from "@site/src/components/Card";
+import CardWrapper from "@site/src/components/CardWrapper";
+
+# Testkube
+
+<p class="intro--index">
+  <small>
+    The Kubernetes-native testing framework for Testers and Developers.
+  </small>
+</p>
+
+<CardWrapper>
+  <Card color="#34D399" title="Installation" hotkey="I" link="/installing">
+    Installation steps and prerequisites.
+  </Card>
+  <Card color="#FACC15" title="Getting started" hotkey="S" link="/getting-started">
+    Quick Start guides around setting up testkube for your needs.
+  </Card>
+  <Card color="#38BDF8" title="Guides" hotkey="G" link="/category/using-testkube">
+    Comprehensive guides how to use Testkube and how to get the most out of it.
+  </Card>
+  <Card color="#F472B6" title="Test Types" hotkey="E" link="/category/test-types">
+    Discover the executors we support and learn how to use and extend them.
+  </Card>
+  <Card color="#F87171" title="CLI Reference" hotkey="C" link="/category/cli-reference">
+    A reference of all commands, args and flags available through the CLI.
+  </Card>
+  <Card color="#818CF8" title="Control Plane" hotkey="D" link="/using-testkube/UI">
+    Learn how to use the Testkube UI to evaluate and observe your tests.
+  </Card>
+</CardWrapper>
+
+## How does Testkube work?
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-intro.gif" />
+</p>
+
+Testkube decouples test artifacts and execution from CI/CD tooling. Tests are meant to be part of a cluster's state and can be executed as needed:
+
+- Manually via kubectl CLI.
+- Externally triggered via API (CI, external tooling, etc).
+- Automatically on deployment of annotated/labeled services/pods/etc (WIP).
+
+### The main Testkube components are:
+
+- Kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with API server.
+- API Server - Work orchestrator, Runs executors, gathers execution results.
+- Custom Resource Descriptors (CRD) Operator - Watches Testkube Custom Resources (CR), handles changes, communicates with API Server.
+- Executors - Run tests defined for specific runner, currently available for [Postman](4-test-types/executor-postman.md), [Cypress](4-test-types/executor-cypress.md), [K6](4-test-types/executor-k6.md) and [Curl](4-test-types/executor-curl.md).
+- Results DB - For centralized test results management.
+- A simple browser-based [User Interface](3-using-testkube/UI.md) for monitoring test results.
+
+### Testkube attempts to:
+
+- Avoid vendor lock-in for test orchestration and execution in CI/CD pipelines.
+- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc.,
+  in your clusters, without having to wrap them in docker-images or provide network access.
+- Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
+- Centralize all test results in a consistent format for actionable QA analytics.
+- Provide a modular architecture for adding new types of test scripts and executors.
+
+## Blog Posts
+
+Check out our blog posts that highlight Testkube functionality:
+
+- [Testkube Release v1.5](https://kubeshop.io/blog/testkube-v15-release-notes) - August 29, 2022
+
+## Questions or Comments?
+
+What do you think of Testkube? We'd LOVE to hear from you! Please share your experiences and, of course, ideas on how we can make it better. Feel free to reach out on our [Discord server](https://discord.gg/uNuhy6GDyn).

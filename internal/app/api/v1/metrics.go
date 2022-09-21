@@ -36,6 +36,11 @@ var testSuiteUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test suites updated events",
 }, []string{"result"})
 
+var testTriggerUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtriggers_updates_count",
+	Help: "The total number of test trigger updated events",
+}, []string{"result"})
+
 var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_aborts_count",
 	Help: "The total number of tests aborted by type events",
@@ -49,6 +54,7 @@ func NewMetrics() Metrics {
 		TestSuiteCreations:  testSuiteCreationCount,
 		TestUpdates:         testUpdatesCount,
 		TestSuiteUpdates:    testSuiteUpdatesCount,
+		TestTriggerUpdates:  testTriggerUpdatesCount,
 		TestAbort:           testAbortCount,
 	}
 }
@@ -60,6 +66,7 @@ type Metrics struct {
 	TestSuiteCreations  *prometheus.CounterVec
 	TestUpdates         *prometheus.CounterVec
 	TestSuiteUpdates    *prometheus.CounterVec
+	TestTriggerUpdates  *prometheus.CounterVec
 	TestAbort           *prometheus.CounterVec
 }
 
@@ -106,6 +113,17 @@ func (m Metrics) IncUpdateTest(testType string, err error) {
 }
 
 func (m Metrics) IncUpdateTestSuite(err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestSuiteUpdates.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateTestTrigger(err error) {
 	result := "updated"
 	if err != nil {
 		result = "error"

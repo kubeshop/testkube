@@ -24,12 +24,21 @@ const (
 	TemplateTest Template = "test"
 	// TemplateTestSuite is test suite crd template
 	TemplateTestSuite Template = "testsuite"
+	// TemplateTestTrigger is test trigger crd template
+	TemplateTestTrigger Template = "testtrigger"
 )
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.Webhook | testkube.TestUpsertRequest |
-		testkube.TestSuiteUpsertRequest | testkube.ExecutorCreateRequest | testkube.WebhookCreateRequest
+	testkube.Test |
+		testkube.TestSuite |
+		testkube.Webhook |
+		testkube.TestUpsertRequest |
+		testkube.TestSuiteUpsertRequest |
+		testkube.ExecutorCreateRequest |
+		testkube.WebhookCreateRequest |
+		testkube.TestTrigger |
+		testkube.TestTriggerUpsertRequest
 }
 
 // ExecuteTemplate executes crd template

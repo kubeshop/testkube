@@ -1,6 +1,8 @@
 package slack
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -10,8 +12,9 @@ import (
 
 var _ common.Listener = &SlackListener{}
 
-func NewSlackListener(selector string, events []testkube.EventType) *SlackListener {
+func NewSlackListener(name, selector string, events []testkube.EventType) *SlackListener {
 	return &SlackListener{
+		name:     name,
 		Log:      log.DefaultLogger,
 		selector: selector,
 		events:   events,
@@ -19,9 +22,14 @@ func NewSlackListener(selector string, events []testkube.EventType) *SlackListen
 }
 
 type SlackListener struct {
+	name     string
 	Log      *zap.SugaredLogger
 	events   []testkube.EventType
 	selector string
+}
+
+func (l *SlackListener) Name() string {
+	return l.name
 }
 
 func (l *SlackListener) Selector() string {
@@ -32,11 +40,14 @@ func (l *SlackListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *SlackListener) Metadata() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		"name":   l.Name(),
+		"events": fmt.Sprintf("%v", l.Events()),
+	}
 }
 
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	err := slacknotifier.SendEvent(event.Type_, *event.Execution)
+	err := slacknotifier.SendEvent(event)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}

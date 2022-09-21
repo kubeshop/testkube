@@ -8,8 +8,9 @@ import (
 
 func TestSlackLoader_Load(t *testing.T) {
 
-	t.Run("loads single Slack listener", func(t *testing.T) {
+	t.Run("loads Slack listeners for all event types", func(t *testing.T) {
 		// given
+		// default slack notifier is not ready by default
 		l := NewSlackLoader()
 
 		// when
@@ -17,7 +18,7 @@ func TestSlackLoader_Load(t *testing.T) {
 
 		// then
 		assert.NoError(t, err)
-		assert.Len(t, listeners, 1)
+		assert.Len(t, listeners, 0)
 	})
 
 }

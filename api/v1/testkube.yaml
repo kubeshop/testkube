@@ -33,8 +33,188 @@ tags:
     description: "Executor operations"
   - name: webhook
     description: "Webhook operations"
+  - name: test-triggers
+    description: "Test Triggers CRUD operations"
 
 paths:
+  /triggers:
+    get:
+      tags:
+        - test-triggers
+        - api
+      summary: List test triggers
+      description: List test triggers from the kubernetes cluster
+      operationId: listTestTriggers
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    post:
+      tags:
+        - test-triggers
+        - api
+      summary: "Create new test trigger"
+      description: "Create new test trigger CRD inside a Kubernetes cluster"
+      operationId: createTestTrigger
+      requestBody:
+        description: test trigger body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    delete:
+      tags:
+        - test-triggers
+        - api
+      summary: "Delete test triggers"
+      description: "Deletes all or labeled test triggers"
+      operationId: deleteTestTriggers
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /triggers/{id}:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - test-triggers
+        - api
+      summary: Get test trigger by ID
+      description: Get test trigger by ID from CRD in kubernetes cluster
+      operationId: getTestTriggerByID
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - test-triggers
+        - api
+      summary: "Update test trigger"
+      description: "Update test trigger"
+      operationId: updateTestTrigger
+      requestBody:
+        description: test suite details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTrigger"
+        400:
+          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    delete:
+      tags:
+        - test-triggers
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Delete test trigger
+      description: Deletes a test trigger
+      operationId: deleteTestTrigger
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suites:
     post:
       tags:
@@ -1512,18 +1692,48 @@ paths:
 
   /config/{key}:
     patch:
-      parameters:
-        - $ref: "#/components/parameters/Key"
       tags:
         - api
-      summary: "Update config key"
-      description: "Updates config key in cluster storage state"
+      summary: "Update config"
+      description: "Updates config in cluster storage state"
       operationId: updateConfigKey
+      requestBody:
+        description: config request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Config"
       responses:
         200:
           description: update successful
+          content:
+            application/json:
+              schema:
+                ref: "#/components/schemas/Config"
         502:
           description: "problem with updating key in cluster storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      tags:
+        - api
+      summary: "Get config"
+      description: "Get config from cluster storage state"
+      operationId: getConfig
+      responses:
+        200:
+          description: get successful
+          content:
+            application/json:
+              schema:
+                ref: "#/components/schemas/Config"
+        502:
+          description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
               schema:
@@ -1673,7 +1883,6 @@ components:
           example: "name"
 
     SecretRef:
-      readOnly: true
       required:
         - name
         - key
@@ -2524,6 +2733,22 @@ components:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
+    TestTriggerUpsertRequest:
+      description: test trigger create or update request body
+      type: object
+      required:
+        - name
+        - namespace
+        - resource
+        - resourceSelector
+        - event
+        - action
+        - execution
+        - testSelector
+      allOf:
+        - $ref: "#/components/schemas/TestTrigger"
+        - $ref: "#/components/schemas/ObjectRef"
+
     ExecutorCreateRequest:
       description: executor create request body
       type: object
@@ -2660,23 +2885,22 @@ components:
         id:
           type: string
           description: UUID of event
-        uri:
-          type: string
-          description: DEPERECATED event uri remove after rewrite @TODO
         type:
           $ref: "#/components/schemas/EventType"
-        execution:
+        testExecution:
           $ref: "#/components/schemas/Execution"
+        testSuiteExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
 
     EventType:
       type: string
       enum:
         - start-test
+        - end-test-success
+        - end-test-failed
         - start-testsuite
-        - end-test
-        - end-testsuite
-        - test-failed
-        - testsuite-failed
+        - end-testsuite-success
+        - end-testsuite-failed
 
     EventResult:
       description: Listener result after sending particular event
@@ -2723,6 +2947,7 @@ components:
       required:
         - id
         - clusterId
+        - enableTelemetry
       properties:
         id:
           type: string
@@ -2761,6 +2986,72 @@ components:
             items:
               type: string
             example: ["logline1", "logline2", "logline3"]
+
+    TestTrigger:
+      type: object
+      required:
+        - resource
+        - resourceSelector
+        - event
+        - execution
+        - testSelector
+      properties:
+        name:
+          type: string
+          description: test trigger name
+          example: "test1"
+        namespace:
+          type: string
+          description: test trigger namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test trigger labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        resource:
+          type: string
+          description: Kubernetes resource for which we are creating trigger
+          example: pod
+        resourceSelector:
+          $ref: "#/components/schemas/TestTriggerSelector"
+        event:
+          type: string
+          description: listen for event for selected resource
+          example: modified
+        action:
+          type: string
+          description: action to perform when an event matches this trigger
+          example: run
+        execution:
+          type: string
+          description: TestKube resource on which an action will be executed
+          example: testsuite
+        testSelector:
+          $ref: "#/components/schemas/TestTriggerSelector"
+
+    TestTriggerSelector:
+      type: object
+      properties:
+        name:
+          type: string
+          description: kubernetes resource name selector
+          example: nginx
+        namespace:
+          type: string
+          description: resource namespace
+          example: testkube
+        labels:
+          type: object
+          description: kubernetes resource labels selector
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     #
     # Errors
@@ -2933,9 +3224,3 @@ components:
       schema:
         type: string
         description: Name of the object
-    Key:
-      in: query
-      name: key
-      schema:
-        type: string
-        description: Key of the object

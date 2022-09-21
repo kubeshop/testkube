@@ -269,7 +269,6 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		testWithExecutions := make([]testkube.TestWithExecution, 0, len(tests))
 		results := make([]testkube.TestWithExecution, 0, len(tests))
 		testNames := make([]string, len(tests))
 		for i := range tests {
@@ -288,31 +287,32 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 					LatestExecution: &execution,
 				})
 			} else {
-				testWithExecutions = append(testWithExecutions, testkube.TestWithExecution{
+				results = append(results, testkube.TestWithExecution{
 					Test: &tests[i],
 				})
 			}
 		}
 
-		sort.Slice(testWithExecutions, func(i, j int) bool {
-			return testWithExecutions[i].Test.Created.After(testWithExecutions[j].Test.Created)
-		})
-
 		sort.Slice(results, func(i, j int) bool {
-			iTime := results[i].LatestExecution.EndTime
-			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-				iTime = results[i].LatestExecution.StartTime
+			iTime := results[i].Test.Created
+			if results[i].LatestExecution != nil {
+				iTime = results[i].LatestExecution.EndTime
+				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
+					iTime = results[i].LatestExecution.StartTime
+				}
 			}
 
-			jTime := results[j].LatestExecution.EndTime
-			if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-				jTime = results[j].LatestExecution.StartTime
+			jTime := results[j].Test.Created
+			if results[j].LatestExecution != nil {
+				jTime = results[j].LatestExecution.EndTime
+				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
+					jTime = results[j].LatestExecution.StartTime
+				}
 			}
 
 			return iTime.After(jTime)
 		})
 
-		testWithExecutions = append(testWithExecutions, results...)
 		status := c.Query("status")
 		if status != "" {
 			statusList, err := testkube.ParseExecutionStatusList(status, ",")
@@ -322,19 +322,19 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 
 			statusMap := statusList.ToMap()
 			// filter items array
-			for i := len(testWithExecutions) - 1; i >= 0; i-- {
-				if testWithExecutions[i].LatestExecution != nil && testWithExecutions[i].LatestExecution.ExecutionResult != nil &&
-					testWithExecutions[i].LatestExecution.ExecutionResult.Status != nil {
-					if _, ok := statusMap[*testWithExecutions[i].LatestExecution.ExecutionResult.Status]; ok {
+			for i := len(results) - 1; i >= 0; i-- {
+				if results[i].LatestExecution != nil && results[i].LatestExecution.ExecutionResult != nil &&
+					results[i].LatestExecution.ExecutionResult.Status != nil {
+					if _, ok := statusMap[*results[i].LatestExecution.ExecutionResult.Status]; ok {
 						continue
 					}
 				}
 
-				testWithExecutions = append(testWithExecutions[:i], testWithExecutions[i+1:]...)
+				results = append(results[:i], results[i+1:]...)
 			}
 		}
 
-		return c.JSON(testWithExecutions)
+		return c.JSON(results)
 	}
 }
 
@@ -363,9 +363,9 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		s.Log.Infow("creating test", "request", request)
 
-		testSpec := testsmapper.MapToSpec(request)
-		testSpec.Namespace = s.Namespace
-		test, err := s.TestsClient.Create(testSpec)
+		test := testsmapper.MapToSpec(request)
+		test.Namespace = s.Namespace
+		createdTest, err := s.TestsClient.Create(test)
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -379,7 +379,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		c.Status(http.StatusCreated)
-		return c.JSON(test)
+		return c.JSON(createdTest)
 	}
 }
 
@@ -405,7 +405,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		testSpec := testsmapper.MapToSpec(request)
 		test.Spec = testSpec.Spec
 		test.Labels = request.Labels
-		test, err = s.TestsClient.Update(test)
+		updatedTest, err := s.TestsClient.Update(test)
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
 
@@ -419,7 +419,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(test)
+		return c.JSON(updatedTest)
 	}
 }
 

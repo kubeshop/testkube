@@ -5,7 +5,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	testtriggers_v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
-	testtriggersinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/testtrigger/v1"
+	testtriggersinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
@@ -33,7 +33,7 @@ const (
 type k8sInformers struct {
 	podInformer         informerscorev1.PodInformer
 	deploymentInformer  informersappsv1.DeploymentInformer
-	testtriggerInformer testtriggersinformerv1.TestTriggerInformer
+	testTriggerInformer testtriggersinformerv1.TestTriggerInformer
 }
 
 func (s *Service) createInformers(ctx context.Context) (*k8sInformers, error) {
@@ -46,17 +46,17 @@ func (s *Service) createInformers(ctx context.Context) (*k8sInformers, error) {
 	//ingressInformer := w.f.Networking().V1().Ingresses()
 	//eventInformer := w.f.Events().V1()
 
-	testTriggerInformerFactory := externalversions.NewSharedInformerFactory(s.tcs, 0)
-	testtriggerInformer := testTriggerInformerFactory.TestTrigger().V1().TestTriggers()
+	testkubeInformerFactory := externalversions.NewSharedInformerFactory(s.tcs, 0)
+	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
 
 	podInformer.Informer().AddEventHandler(s.podEventHandler(ctx))
 	deploymentInformer.Informer().AddEventHandler(s.deploymentEventHandler(ctx))
-	testtriggerInformer.Informer().AddEventHandler(s.testtriggerEventHandler())
+	testTriggerInformer.Informer().AddEventHandler(s.testtriggerEventHandler())
 
 	return &k8sInformers{
 		podInformer:         podInformer,
 		deploymentInformer:  deploymentInformer,
-		testtriggerInformer: testtriggerInformer,
+		testTriggerInformer: testTriggerInformer,
 	}, nil
 }
 

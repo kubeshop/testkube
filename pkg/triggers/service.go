@@ -57,7 +57,7 @@ func (s *Service) Run(ctx context.Context) error {
 	s.l.Debugf("trigger service is starting deployment informer")
 	go informers.deploymentInformer.Informer().Run(ctx.Done())
 	s.l.Debugf("trigger service is starting testtrigger informer")
-	go informers.testtriggerInformer.Informer().Run(ctx.Done())
+	go informers.testTriggerInformer.Informer().Run(ctx.Done())
 
 	go s.runExecutionScraper(ctx)
 

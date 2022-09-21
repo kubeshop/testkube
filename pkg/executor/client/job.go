@@ -318,7 +318,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	execution.ExecutionResult = result
 	c.metrics.IncExecuteTest(*execution)
 
-	c.Emitter.Notify(testkube.NewEventEndTest(execution))
+	c.Emitter.Notify(testkube.NewEventEndTestSuccess(execution))
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions

@@ -1,9 +1,12 @@
 package telemetry
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewDisableTelemetryCmd() *cobra.Command {
@@ -25,6 +28,17 @@ func NewDisableTelemetryCmd() *cobra.Command {
 			} else {
 				ui.PrintDisabled("Telemetry on CLI", "disabled")
 			}
+
+			client, _ := common.GetClient(cmd)
+			_, err = client.UpdateConfig(testkube.Config{EnableTelemetry: false})
+
+			if err != nil {
+				ui.PrintDisabled("Telemetry on API", "failed")
+				ui.PrintConfigError(err)
+			} else {
+				ui.PrintDisabled("Telemetry on API", "disabled")
+			}
+
 			ui.NL()
 		},
 	}

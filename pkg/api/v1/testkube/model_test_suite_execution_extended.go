@@ -8,8 +8,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
-func NewQueuedTestSuiteExecution(name, namespace string) TestSuiteExecution {
-	return TestSuiteExecution{
+func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
+	return &TestSuiteExecution{
 		TestSuite: &ObjectRef{
 			Name:      name,
 			Namespace: namespace,
@@ -49,6 +49,15 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 	}
 
 	return testExecution
+}
+
+func (e TestSuiteExecution) FailedStepsCount() (count int) {
+	for _, stepResult := range e.StepResults {
+		if stepResult.Execution.IsFailed() {
+			count++
+		}
+	}
+	return
 }
 
 func (e TestSuiteExecution) IsCompleted() bool {
