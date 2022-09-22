@@ -311,7 +311,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
 
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			s.Log.Debug("starting stream writer")
+			s.Log.Debug("start streaming logs")
 			w.Flush()
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
@@ -557,7 +557,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 // streamLogsFromJob streams logs in chunks to writer from the running execution
 func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
-	s.Log.Debug("getting logs from Kubernetes job")
+	s.Log.Infow("getting logs from Kubernetes job")
 
 	logs, err := s.Executor.Logs(executionID)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
@@ -568,10 +568,11 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 		return
 	}
 
+	s.Log.Infow("looping through logs channel")
 	// loop through pods log lines - it's blocking channel
 	// and pass single log output as sse data chunk
 	for out := range logs {
-		s.Log.Debugw("got log", "out", out)
+		s.Log.Debugw("got log line from pod", "out", out)
 		fmt.Fprintf(w, "data: ")
 		err = enc.Encode(out)
 		if err != nil {

@@ -267,7 +267,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodCompleted(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
@@ -380,8 +380,8 @@ func (c *JobExecutor) TailJobLogs(id string, logs chan []byte) (err error) {
 				return c.GetLastLogLineError(ctx, pod)
 
 			default:
-				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				l.Debug("tailing job logs: waiting for pod to be ready")
+				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReadyForLogs(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return c.GetLastLogLineError(ctx, pod)
 				}
@@ -593,8 +593,26 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-// IsPodReady defines if pod is ready or failed for logs scrapping
-func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+// IsPodReadyForLogs defines if pod is ready or failed for logs scrapping
+func IsPodReadyForLogs(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		switch pod.Status.Phase {
+		case corev1.PodRunning, corev1.PodSucceeded:
+			return true, nil
+		case corev1.PodFailed:
+			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
+		}
+		return false, nil
+	}
+}
+
+// IsPodCompleted defines if pod is completed or failed
+func IsPodCompleted(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {

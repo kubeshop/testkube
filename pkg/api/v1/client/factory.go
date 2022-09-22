@@ -42,7 +42,12 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			return client, err
 		}
 
-		client = NewDirectAPIClient(httpClient, options.APIURI)
+		httpSSEClient, err := GetHTTTPSSEClient(token)
+		if err != nil {
+			return client, err
+		}
+
+		client = NewDirectAPIClient(httpClient, httpSSEClient, options.APIURI)
 	case ClientProxy:
 		clientset, err := GetClientSet("")
 		if err != nil {
