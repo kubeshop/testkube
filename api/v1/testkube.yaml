@@ -2168,6 +2168,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        configFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
+
 
     Artifact:
       type: object
