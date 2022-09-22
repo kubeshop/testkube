@@ -131,6 +131,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		return content, err
 	}
 
+	sourceName := cmd.Flag("source").Value.String()
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
@@ -144,12 +145,15 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		}
 	}
 
-	// content is correct when is passed from file, by uri, ur by git repo
-	if len(fileContent) == 0 && uri == "" && gitUri == "" {
+	// content is correct when is passed from file, by uri, by git repo or by test source
+	if len(fileContent) == 0 && uri == "" && gitUri == "" && sourceName == "" {
 		return content, fmt.Errorf("empty test content, please pass some test content to create test")
 	}
 
-	if gitUri != "" && testContentType == "" {
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
+
+	if hasGitParams && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeGitDir)
 	}
 
@@ -162,7 +166,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	var repository *testkube.Repository
-	if gitUri != "" {
+	if hasGitParams {
 		if testContentType == "" {
 			testContentType = "git-dir"
 		}
@@ -231,10 +235,12 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		return options, err
 	}
 
+	sourceName := cmd.Flag("source").Value.String()
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,
+		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
 	}

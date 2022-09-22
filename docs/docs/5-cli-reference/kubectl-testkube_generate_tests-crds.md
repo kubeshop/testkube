@@ -13,7 +13,9 @@ kubectl-testkube generate tests-crds <manifestDirectory> [flags]
 ### Options
 
 ```
-  -h, --help   help for tests-crds
+      --env stringToString          envs in a form of name1=val1 passed to executor (default [])
+      --executor-args stringArray   executor binary additional arguments
+  -h, --help                        help for tests-crds
 ```
 
 ### Options inherited from parent commands

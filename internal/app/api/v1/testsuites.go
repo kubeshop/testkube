@@ -80,7 +80,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Spec = testSuiteSpec.Spec
 		testSuite.Labels = request.Labels
-		testSuite, err = s.TestsSuitesClient.Update(testSuite)
+		updated, err := s.TestsSuitesClient.Update(testSuite)
 
 		s.Metrics.IncUpdateTestSuite(err)
 
@@ -88,7 +88,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(testSuite)
+		return c.JSON(updated)
 	}
 }
 

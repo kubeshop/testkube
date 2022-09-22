@@ -29,7 +29,7 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 		q.Insert(float64(duration))
 
 		metrics.Executions[j].Duration = utils.RoundDuration(duration).String()
-		metrics.Executions[j].DurationMs = int(duration / time.Millisecond)
+		metrics.Executions[j].DurationMs = int32(duration / time.Millisecond)
 	}
 
 	if metrics.TotalExecutions > 0 {
@@ -46,10 +46,10 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 	metrics.ExecutionDurationP95 = utils.RoundDuration(durationP95).String()
 	metrics.ExecutionDurationP99 = utils.RoundDuration(durationP99).String()
 
-	metrics.ExecutionDurationP50ms = int(durationP50 / time.Millisecond)
-	metrics.ExecutionDurationP90ms = int(durationP90 / time.Millisecond)
-	metrics.ExecutionDurationP95ms = int(durationP95 / time.Millisecond)
-	metrics.ExecutionDurationP99ms = int(durationP99 / time.Millisecond)
+	metrics.ExecutionDurationP50ms = int32(durationP50 / time.Millisecond)
+	metrics.ExecutionDurationP90ms = int32(durationP90 / time.Millisecond)
+	metrics.ExecutionDurationP95ms = int32(durationP95 / time.Millisecond)
+	metrics.ExecutionDurationP99ms = int32(durationP99 / time.Millisecond)
 
 	return
 

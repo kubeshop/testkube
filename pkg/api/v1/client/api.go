@@ -29,9 +29,10 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.TestSuiteWithExecution](client, config),
 			NewProxyClient[testkube.TestSuiteExecutionsResult](client, config),
 		),
-		ExecutorClient: NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
-		WebhookClient:  NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
-		ConfigClient:   NewConfigClient(NewProxyClient[testkube.Config](client, config)),
+		ExecutorClient:   NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
+		WebhookClient:    NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
+		ConfigClient:     NewConfigClient(NewProxyClient[testkube.Config](client, config)),
+		TestSourceClient: NewTestSourceClient(NewProxyClient[testkube.TestSource](client, config)),
 	}
 }
 
@@ -53,9 +54,10 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI 
 			NewDirectClient[testkube.TestSuiteWithExecution](httpClient, apiURI),
 			NewDirectClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI),
 		),
-		ExecutorClient: NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI)),
-		WebhookClient:  NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI)),
-		ConfigClient:   NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI)),
+		ExecutorClient:   NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI)),
+		WebhookClient:    NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI)),
+		ConfigClient:     NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI)),
+		TestSourceClient: NewTestSourceClient(NewDirectClient[testkube.TestSource](httpClient, apiURI)),
 	}
 }
 
@@ -66,4 +68,5 @@ type APIClient struct {
 	ExecutorClient
 	WebhookClient
 	ConfigClient
+	TestSourceClient
 }

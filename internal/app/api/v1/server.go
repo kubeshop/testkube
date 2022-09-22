@@ -19,6 +19,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/config"
@@ -53,6 +54,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	testsourcesClient *testsourcesclientv1.TestSourcesClient,
 	configMap *config.ConfigMapConfig,
 	clusterId string,
 ) TestkubeAPI {
@@ -84,6 +86,7 @@ func NewTestkubeAPI(
 		Metrics:              NewMetrics(),
 		Events:               event.NewEmitter(eventBus),
 		WebhooksClient:       webhookClient,
+		TestSourcesClient:    testsourcesClient,
 		Namespace:            namespace,
 		ConfigMap:            configMap,
 	}
@@ -134,16 +137,16 @@ type TestkubeAPI struct {
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
+	TestSourcesClient    *testsourcesclientv1.TestSourcesClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
 	oauthParams          oauthParams
-
-	WebsocketLoader *ws.WebsocketLoader
-	Events          *event.Emitter
-	ConfigMap       *config.ConfigMapConfig
+	WebsocketLoader      *ws.WebsocketLoader
+	Events               *event.Emitter
+	ConfigMap            *config.ConfigMapConfig
 }
 
 type jobTemplates struct {
@@ -302,6 +305,14 @@ func (s *TestkubeAPI) InitRoutes() {
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
 	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
+
+	testsources := s.Routes.Group("/test-sources")
+	testsources.Post("/", s.CreateTestSourceHandler())
+	testsources.Get("/", s.ListTestSourcesHandler())
+	testsources.Get("/:name", s.GetTestSourceHandler())
+	testsources.Patch("/:name", s.UpdateTestSourceHandler())
+	testsources.Delete("/:name", s.DeleteTestSourceHandler())
+	testsources.Delete("/", s.DeleteTestSourcesHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
