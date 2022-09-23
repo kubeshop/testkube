@@ -307,7 +307,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult) {
 	l.Debug("stopping execution")
 	execution.Stop()
-	err := c.Repository.EndExecution(ctx, execution.Id, execution.EndTime, execution.CalculateDuration())
+	err := c.Repository.EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
 	}

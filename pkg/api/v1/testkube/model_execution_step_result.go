@@ -12,8 +12,9 @@ package testkube
 // execution result data
 type ExecutionStepResult struct {
 	// step name
-	Name     string `json:"name"`
-	Duration string `json:"duration,omitempty"`
+	Name       string `json:"name"`
+	Duration   string `json:"duration,omitempty"`
+	DurationMs int32  `json:"durationMs,omitempty"`
 	// execution step status
 	Status           string            `json:"status"`
 	AssertionResults []AssertionResult `json:"assertionResults,omitempty"`

@@ -49,7 +49,7 @@ type Repository interface {
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
+	EndExecution(ctx context.Context, execution testkube.TestSuiteExecution) error
 	// DeleteByTestSuite deletes execution results by test suite
 	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
 	// DeleteAll deletes all execution results
