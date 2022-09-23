@@ -1,13 +1,15 @@
 package v1
 
 import (
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"
 	triggerskeymapmapper "github.com/kubeshop/testkube/pkg/mapper/keymap/triggers"
 	testtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/testtriggers"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -23,11 +25,6 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTriggerUpsertRequest{request})
-			return s.getCRDs(c, data, err)
-		}
-
 		testTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
 		if testTrigger.Namespace == "" {
 			testTrigger.Namespace = s.Namespace
@@ -37,13 +34,19 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 		created, err := s.TestKubeClientset.TestsV1().TestTriggers(s.Namespace).Create(c.UserContext(), &testTrigger, v1.CreateOptions{})
 
-		s.Metrics.IncCreateTestSuite(err)
+		s.Metrics.IncCreateTestTrigger(err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		c.Status(http.StatusCreated)
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(created)})
+			return s.getCRDs(c, data, err)
+		}
+
 		return c.JSON(created)
 	}
 }
@@ -77,27 +80,35 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		c.Status(http.StatusOK)
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(updated)})
+			return s.getCRDs(c, data, err)
+		}
+
 		return c.JSON(updated)
 	}
 }
 
 // GetTestTriggerHandler is a handler for getting TestTrigger object
-func (s TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
 		name := c.Params("id")
-		crdTestTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), name, v1.GetOptions{})
+		testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), name, v1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		testTrigger := testtriggersmapper.MapCRDToAPI(crdTestTrigger)
+		c.Status(http.StatusOK)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testTrigger})
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(testTrigger)})
 			return s.getCRDs(c, data, err)
 		}
 
@@ -106,13 +117,13 @@ func (s TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 }
 
 // DeleteTestTriggerHandler is a handler for deleting TestTrigger by id
-func (s TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
 		name := c.Params("id")
 		err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Delete(c.UserContext(), name, v1.DeleteOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
 
@@ -124,32 +135,19 @@ func (s TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 }
 
 // DeleteTestTriggersHandler is a handler for deleting all or selected TestTriggers
-func (s TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var err error
-		var testTriggerNames []string
-
 		namespace := c.Query("namespace", s.Namespace)
 		selector := c.Query("selector")
-		if selector == "" {
-			err = s.TestKubeClientset.TestsV1().TestTriggers(namespace).DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
-		} else {
-			listOpts := v1.ListOptions{LabelSelector: selector}
-			testTriggerList, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).List(c.UserContext(), listOpts)
+		if selector != "" {
+			_, err := labels.Parse(selector)
 			if err != nil {
-				if !errors.IsNotFound(err) {
-					return s.Error(c, http.StatusBadGateway, err)
-				}
-			} else {
-				for _, item := range testTriggerList.Items {
-					testTriggerNames = append(testTriggerNames, item.Name)
-				}
+				return errors.WithMessage(err, "error validating selector")
 			}
-			err = s.TestKubeClientset.TestsV1().TestTriggers(namespace).DeleteCollection(c.UserContext(), v1.DeleteOptions{}, listOpts)
 		}
-
-		if err != nil {
-			if errors.IsNotFound(err) {
+		listOpts := v1.ListOptions{LabelSelector: selector}
+		if err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).DeleteCollection(c.UserContext(), v1.DeleteOptions{}, listOpts); err != nil {
+			if k8serrors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
 
@@ -163,17 +161,24 @@ func (s TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 // ListTestTriggersHandler is a handler for listing all available TestTriggers
 func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		selector := c.Query("selector")
 		namespace := c.Query("namespace", s.Namespace)
+		selector := c.Query("selector")
+		if selector != "" {
+			_, err := labels.Parse(selector)
+			if err != nil {
+				return errors.WithMessage(err, "error validating selector")
+			}
+		}
 		opts := v1.ListOptions{LabelSelector: selector}
-		crdTestTriggers, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).List(c.UserContext(), opts)
+		testTriggers, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).List(c.UserContext(), opts)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		testTriggers := testtriggersmapper.MapTestTriggerListKubeToAPI(crdTestTriggers)
+		c.Status(http.StatusOK)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testTriggers)
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testtriggersmapper.MapTestTriggerListKubeToAPI(testTriggers))
 			return s.getCRDs(c, data, err)
 		}
 

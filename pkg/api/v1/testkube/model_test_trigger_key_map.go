@@ -11,11 +11,11 @@ package testkube
 
 type TestTriggerKeyMap struct {
 	// list of supported values for resources
-	Resources []string `json:"resources,omitempty"`
+	Resources []string `json:"resources"`
 	// list of supported values for resources
-	Actions []string `json:"actions,omitempty"`
+	Actions []string `json:"actions"`
 	// list of supported values for resources
-	Executions []string `json:"executions,omitempty"`
+	Executions []string `json:"executions"`
 	// mapping between resources and supported events
-	Events map[string][]string `json:"events,omitempty"`
+	Events map[string][]string `json:"events"`
 }

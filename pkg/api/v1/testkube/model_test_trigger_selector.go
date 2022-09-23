@@ -13,7 +13,6 @@ type TestTriggerSelector struct {
 	// kubernetes resource name selector
 	Name string `json:"name,omitempty"`
 	// resource namespace
-	Namespace string `json:"namespace,omitempty"`
-	// kubernetes resource labels selector
-	Labels map[string]string `json:"labels,omitempty"`
+	Namespace     string                                       `json:"namespace,omitempty"`
+	LabelSelector *IoK8sApimachineryPkgApisMetaV1LabelSelector `json:"labelSelector,omitempty"`
 }

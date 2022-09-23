@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	runner2 "github.com/kubeshop/testkube/pkg/scheduler"
 	"net"
 	"os"
 
@@ -156,6 +159,14 @@ func main() {
 
 	apiVersion := api.Version
 
+	// configure NATS event bus
+	nc, err := bus.NewNATSConnection()
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	eventBus := bus.NewNATSBus(nc)
+	eventsEmitter := event.NewEmitter(eventBus)
+
 	api := apiv1.NewTestkubeAPI(
 		namespace,
 		resultsRepository,
@@ -168,19 +179,31 @@ func main() {
 		testkubeClientset,
 		configMapConfig,
 		clusterId,
+		eventsEmitter,
 	)
 
-	log.DefaultLogger.Info("starting trigger service")
+	runner := runner2.NewRunner(
+		api.Executor,
+		resultsRepository,
+		testResultsRepository,
+		executorsClient,
+		testsClientV3,
+		testsuitesClient,
+		secretClient,
+		eventsEmitter,
+		log.DefaultLogger,
+	)
 	triggerService := triggers.NewService(
+		runner,
 		clientset,
 		testkubeClientset,
 		testsuitesClient,
 		testsClientV3,
-		&api,
 		resultsRepository,
 		testResultsRepository,
 		log.DefaultLogger,
 	)
+	log.DefaultLogger.Info("starting trigger service")
 	err = triggerService.Run(ctx)
 	if err != nil {
 		ui.ExitOnError("Running trigger service", err)

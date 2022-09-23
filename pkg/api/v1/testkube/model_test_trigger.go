@@ -15,15 +15,12 @@ type TestTrigger struct {
 	// test trigger namespace
 	Namespace string `json:"namespace,omitempty"`
 	// test trigger labels
-	Labels map[string]string `json:"labels,omitempty"`
-	// Kubernetes resource for which we are creating trigger
-	Resource         string               `json:"resource"`
-	ResourceSelector *TestTriggerSelector `json:"resourceSelector"`
+	Labels           map[string]string     `json:"labels,omitempty"`
+	Resource         *TestTriggerResources `json:"resource"`
+	ResourceSelector *TestTriggerSelector  `json:"resourceSelector"`
 	// listen for event for selected resource
-	Event string `json:"event"`
-	// action to perform when an event matches this trigger
-	Action string `json:"action,omitempty"`
-	// TestKube resource on which an action will be executed
-	Execution    string               `json:"execution"`
-	TestSelector *TestTriggerSelector `json:"testSelector"`
+	Event        string                 `json:"event"`
+	Action       *TestTriggerActions    `json:"action"`
+	Execution    *TestTriggerExecutions `json:"execution"`
+	TestSelector *TestTriggerSelector   `json:"testSelector"`
 }

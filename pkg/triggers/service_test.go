@@ -8,6 +8,8 @@ import (
 )
 
 func TestService_addTrigger(t *testing.T) {
+	t.Parallel()
+
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
 	testTrigger := v1.TestTrigger{
@@ -23,6 +25,8 @@ func TestService_addTrigger(t *testing.T) {
 }
 
 func TestService_removeTrigger(t *testing.T) {
+	t.Parallel()
+
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
 	testTrigger1 := v1.TestTrigger{
@@ -49,6 +53,8 @@ func TestService_removeTrigger(t *testing.T) {
 }
 
 func TestService_updateTrigger(t *testing.T) {
+	t.Parallel()
+	
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
 	oldTestTrigger := v1.TestTrigger{

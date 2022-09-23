@@ -3,6 +3,7 @@ package testtriggers
 import (
 	testsv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // MapTestTriggerListKubeToAPI maps TestTriggerList CRD to list of OpenAPI spec TestTrigger
@@ -16,24 +17,45 @@ func MapTestTriggerListKubeToAPI(crd *testsv1.TestTriggerList) (testTriggers []t
 }
 
 // MapCRDToAPI maps TestTrigger CRD to OpenAPI spec TestTrigger
-func MapCRDToAPI(crd *testsv1.TestTrigger) (testTrigger testkube.TestTrigger) {
-	testTrigger.Name = crd.Name
-	testTrigger.Namespace = crd.Namespace
-	testTrigger.Labels = crd.Labels
-	testTrigger.Resource = crd.Spec.Resource
-	testTrigger.ResourceSelector = mapSelectorFromCRDSpec(crd.Spec.ResourceSelector)
-	testTrigger.Event = crd.Spec.Event
-	testTrigger.Action = crd.Spec.Action
-	testTrigger.Execution = crd.Spec.Execution
-	testTrigger.TestSelector = mapSelectorFromCRDSpec(crd.Spec.TestSelector)
+func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
+	resource := testkube.TestTriggerResources(crd.Spec.Resource)
+	action := testkube.TestTriggerActions(crd.Spec.Action)
+	execution := testkube.TestTriggerExecutions(crd.Spec.Execution)
 
-	return
+	return testkube.TestTrigger{
+		Name:             crd.Name,
+		Namespace:        crd.Namespace,
+		Labels:           crd.Labels,
+		Resource:         &resource,
+		ResourceSelector: mapSelectorFromCRD(crd.Spec.ResourceSelector),
+		Event:            crd.Spec.Event,
+		Action:           &action,
+		Execution:        &execution,
+		TestSelector:     mapSelectorFromCRD(crd.Spec.TestSelector),
+	}
 }
 
-func mapSelectorFromCRDSpec(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
+func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
 	return &testkube.TestTriggerSelector{
-		Name:      selector.Name,
-		Namespace: selector.Namespace,
-		Labels:    selector.Labels,
+		Name:          selector.Name,
+		Namespace:     selector.Namespace,
+		LabelSelector: mapLabelSelectorFromCRD(selector.LabelSelector),
+	}
+}
+
+func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
+	var matchExpressions []testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement
+	for _, e := range labelSelector.MatchExpressions {
+		expression := testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement{
+			Key:      e.Key,
+			Operator: string(e.Operator),
+			Values:   e.Values,
+		}
+		matchExpressions = append(matchExpressions, expression)
+	}
+
+	return &testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{
+		MatchExpressions: matchExpressions,
+		MatchLabels:      labelSelector.MatchLabels,
 	}
 }

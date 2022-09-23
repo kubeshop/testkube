@@ -2,11 +2,11 @@ package triggers
 
 import (
 	"context"
-
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
-func (s *Service) match(ctx context.Context, e *event) error {
+func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, t := range s.triggers {
 		if t.Spec.Resource != string(e.resource) {
 			continue
@@ -19,14 +19,14 @@ func (s *Service) match(ctx context.Context, e *event) error {
 		}
 		status := s.getStatusForTrigger(t)
 		if status.hasActiveTests() {
-			s.l.Infof(
+			s.logger.Infof(
 				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
 				t.Namespace, t.Name, e.eventType, e.resource,
 			)
 			return nil
 		}
-		s.l.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
-		s.l.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
+		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
+		s.logger.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
 		if err := s.executor(ctx, t); err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func (s *Service) match(ctx context.Context, e *event) error {
 	return nil
 }
 
-func matchEventOrCause(targetEvent string, event *event) bool {
+func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	if targetEvent == string(event.eventType) {
 		return true
 	}
@@ -46,21 +46,12 @@ func matchEventOrCause(targetEvent string, event *event) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *event) bool {
+func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent) bool {
 	if selector.Name != "" {
-		if selector.Name == event.name && namespace == event.namespace {
-			return true
-		}
+		return selector.Name == event.name && namespace == event.namespace
 	}
-	if len(selector.Labels) > 0 && len(event.labels) > 0 {
-		for targetLabel, targetValue := range selector.Labels {
-			value, ok := event.labels[targetLabel]
-			if ok {
-				if targetValue == value {
-					return true
-				}
-			}
-		}
+	if selector.LabelSelector != nil && len(event.labels) > 0 {
+		return labels.Equals(selector.LabelSelector.MatchLabels, event.labels)
 	}
 	return false
 }

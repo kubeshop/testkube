@@ -27,6 +27,6 @@ type ExecutorCreateRequest struct {
 	JobTemplate string `json:"jobTemplate,omitempty"`
 	// executor labels
 	Labels map[string]string `json:"labels,omitempty"`
-	// Available executor featues
+	// Available executor features
 	Features []string `json:"features,omitempty"`
 }

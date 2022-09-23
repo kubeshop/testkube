@@ -29,12 +29,10 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -58,6 +56,7 @@ func NewTestkubeAPI(
 	testkubeClientset testkubeclientset.Interface,
 	configMap *config.ConfigMapConfig,
 	clusterId string,
+	eventsEmitter *event.Emitter,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -69,13 +68,6 @@ func NewTestkubeAPI(
 
 	httpConfig.ClusterID = clusterId
 
-	// configure NATS event bus
-	nc, err := bus.NewNATSConnection()
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
-	}
-	eventBus := bus.NewNATSBus(nc)
-
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
 		TestExecutionResults: testsuiteExecutionsResults,
@@ -86,7 +78,7 @@ func NewTestkubeAPI(
 		TestsSuitesClient:    testsuitesClient,
 		TestKubeClientset:    testkubeClientset,
 		Metrics:              NewMetrics(),
-		Events:               event.NewEmitter(eventBus),
+		Events:               eventsEmitter,
 		WebhooksClient:       webhookClient,
 		Namespace:            namespace,
 		ConfigMap:            configMap,

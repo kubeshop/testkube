@@ -14,20 +14,37 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
-			Resource:         request.Resource,
-			ResourceSelector: mapTestTriggerUpsertRequestSelectorToTestTriggerSelectorCRD(request.ResourceSelector),
+			Resource:         string(*request.Resource),
+			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
 			Event:            request.Event,
-			Action:           request.Action,
-			Execution:        request.Execution,
-			TestSelector:     mapTestTriggerUpsertRequestSelectorToTestTriggerSelectorCRD(request.TestSelector),
+			Action:           string(*request.Action),
+			Execution:        string(*request.Execution),
+			TestSelector:     mapSelectorToCRD(request.TestSelector),
 		},
 	}
 }
 
-func mapTestTriggerUpsertRequestSelectorToTestTriggerSelectorCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
+func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
 	return testsv1.TestTriggerSelector{
-		Name:      selector.Name,
-		Namespace: selector.Namespace,
-		Labels:    selector.Labels,
+		Name:          selector.Name,
+		Namespace:     selector.Namespace,
+		LabelSelector: mapLabelSelectorToCRD(selector.LabelSelector),
+	}
+}
+
+func mapLabelSelectorToCRD(labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) *metav1.LabelSelector {
+	var matchExpressions []metav1.LabelSelectorRequirement
+	for _, e := range labelSelector.MatchExpressions {
+		expression := metav1.LabelSelectorRequirement{
+			Key:      e.Key,
+			Operator: metav1.LabelSelectorOperator(e.Operator),
+			Values:   e.Values,
+		}
+		matchExpressions = append(matchExpressions, expression)
+	}
+
+	return &metav1.LabelSelector{
+		MatchLabels:      labelSelector.MatchLabels,
+		MatchExpressions: matchExpressions,
 	}
 }

@@ -12,7 +12,7 @@ import (
 func TestService_match(t *testing.T) {
 	t.Parallel()
 
-	e := &event{
+	e := &watcherEvent{
 		resource:  "pod",
 		name:      "test-pod",
 		namespace: "testkube",
@@ -43,7 +43,7 @@ func TestService_match(t *testing.T) {
 		},
 		triggers:      []*testtriggersv1.TestTrigger{testTrigger1},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
-		l:             log.DefaultLogger,
+		logger:        log.DefaultLogger,
 	}
 
 	err := s.match(context.Background(), e)
@@ -53,7 +53,7 @@ func TestService_match(t *testing.T) {
 func TestService_noMatch(t *testing.T) {
 	t.Parallel()
 
-	e := &event{
+	e := &watcherEvent{
 		resource:  "deployment",
 		name:      "test-deployment",
 		namespace: "testkube",
@@ -76,14 +76,15 @@ func TestService_noMatch(t *testing.T) {
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{}
+	testExecutorF := func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		assert.Fail(t, "should not match event")
+		return nil
+	}
 	s := &Service{
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
-			assert.Fail(t, "should not match event")
-			return nil
-		},
+		executor:      testExecutorF,
 		triggers:      []*testtriggersv1.TestTrigger{testTrigger1},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
-		l:             log.DefaultLogger,
+		logger:        log.DefaultLogger,
 	}
 
 	err := s.match(context.Background(), e)

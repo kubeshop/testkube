@@ -36,6 +36,11 @@ var testSuiteUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test suites updated events",
 }, []string{"result"})
 
+var testTriggerCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtrigger_creations_count",
+	Help: "The total number of test trigger created events",
+}, []string{"result"})
+
 var testTriggerUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testtriggers_updates_count",
 	Help: "The total number of test trigger updated events",
@@ -48,26 +53,28 @@ var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutions:      testExecutionCount,
-		TestSuiteExecutions: testSuiteExecutionCount,
-		TestCreations:       testCreationCount,
-		TestSuiteCreations:  testSuiteCreationCount,
-		TestUpdates:         testUpdatesCount,
-		TestSuiteUpdates:    testSuiteUpdatesCount,
-		TestTriggerUpdates:  testTriggerUpdatesCount,
-		TestAbort:           testAbortCount,
+		TestExecutions:       testExecutionCount,
+		TestSuiteExecutions:  testSuiteExecutionCount,
+		TestCreations:        testCreationCount,
+		TestSuiteCreations:   testSuiteCreationCount,
+		TestUpdates:          testUpdatesCount,
+		TestSuiteUpdates:     testSuiteUpdatesCount,
+		TestTriggerCreations: testTriggerCreationCount,
+		TestTriggerUpdates:   testTriggerUpdatesCount,
+		TestAbort:            testAbortCount,
 	}
 }
 
 type Metrics struct {
-	TestExecutions      *prometheus.CounterVec
-	TestSuiteExecutions *prometheus.CounterVec
-	TestCreations       *prometheus.CounterVec
-	TestSuiteCreations  *prometheus.CounterVec
-	TestUpdates         *prometheus.CounterVec
-	TestSuiteUpdates    *prometheus.CounterVec
-	TestTriggerUpdates  *prometheus.CounterVec
-	TestAbort           *prometheus.CounterVec
+	TestExecutions       *prometheus.CounterVec
+	TestSuiteExecutions  *prometheus.CounterVec
+	TestCreations        *prometheus.CounterVec
+	TestSuiteCreations   *prometheus.CounterVec
+	TestUpdates          *prometheus.CounterVec
+	TestSuiteUpdates     *prometheus.CounterVec
+	TestTriggerCreations *prometheus.CounterVec
+	TestTriggerUpdates   *prometheus.CounterVec
+	TestAbort            *prometheus.CounterVec
 }
 
 func (m Metrics) IncExecuteTest(execution testkube.Execution) {
@@ -123,17 +130,6 @@ func (m Metrics) IncUpdateTestSuite(err error) {
 	}).Inc()
 }
 
-func (m Metrics) IncUpdateTestTrigger(err error) {
-	result := "updated"
-	if err != nil {
-		result = "error"
-	}
-
-	m.TestSuiteUpdates.With(map[string]string{
-		"result": result,
-	}).Inc()
-}
-
 func (m Metrics) IncCreateTest(testType string, err error) {
 	result := "created"
 	if err != nil {
@@ -153,6 +149,28 @@ func (m Metrics) IncCreateTestSuite(err error) {
 	}
 
 	m.TestSuiteCreations.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncCreateTestTrigger(err error) {
+	result := "created"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestTriggerCreations.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateTestTrigger(err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestSuiteUpdates.With(map[string]string{
 		"result": result,
 	}).Inc()
 }

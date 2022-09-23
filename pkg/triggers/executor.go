@@ -2,7 +2,7 @@ package triggers
 
 import (
 	"context"
-	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
@@ -13,6 +13,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
 )
+
+type Execution string
 
 const (
 	ExecutionTest      = "test"
@@ -41,7 +43,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.ExecutionRequest{}
 
 		wp := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
-		go wp.SendRequests(s.tk.PrepareTestRequests(tests, request))
+		go wp.SendRequests(s.runner.PrepareTestRequests(tests, request))
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {
@@ -59,7 +61,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.TestSuiteExecutionRequest{}
 
 		wp := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
-		go wp.SendRequests(s.tk.PrepareTestSuiteRequests(testSuites, request))
+		go wp.SendRequests(s.runner.PrepareTestSuiteRequests(testSuites, request))
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {
@@ -71,7 +73,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 	}
 
 	status.start()
-	s.l.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
+	s.logger.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
 
 	return nil
 }
@@ -79,17 +81,21 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {
 	var tests []testsv3.Test
 	if t.Spec.TestSelector.Name != "" {
-		s.l.Debugf("trigger service: executor component: fetching testsv3.Test with name %s", t.Spec.TestSelector.Name)
-		test, err := s.tc.Get(t.Spec.TestSelector.Name)
+		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with name %s", t.Spec.TestSelector.Name)
+		test, err := s.testsClient.Get(t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
 		tests = append(tests, *test)
 	}
-	if len(t.Spec.TestSelector.Labels) > 0 {
-		s.l.Debugf("trigger service: executor component: fetching testsv3.Test with labels %v", t.Spec.TestSelector.Labels)
-		selectors := labelsToSelector(t.Spec.TestSelector.Labels)
-		testList, err := s.tc.List(selectors)
+	if t.Spec.TestSelector.LabelSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "error creating selector from test resource label selector")
+		}
+		stringifiedSelector := selector.String()
+		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with labels %s", stringifiedSelector)
+		testList, err := s.testsClient.List(stringifiedSelector)
 		if err != nil {
 			return nil, err
 		}
@@ -101,34 +107,25 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv2.TestSuite, error) {
 	var testSuites []testsuitesv2.TestSuite
 	if t.Spec.TestSelector.Name != "" {
-		s.l.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with name %s", t.Spec.TestSelector.Name)
-		testSuite, err := s.tsc.Get(t.Spec.TestSelector.Name)
+		s.logger.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with name %s", t.Spec.TestSelector.Name)
+		testSuite, err := s.testSuitesClient.Get(t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
 		testSuites = append(testSuites, *testSuite)
 	}
-	if len(t.Spec.TestSelector.Labels) > 0 {
-		s.l.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with label %v", t.Spec.TestSelector.Labels)
-		selectors := labelsToSelector(t.Spec.TestSelector.Labels)
-		testSuitesList, err := s.tsc.List(selectors)
+	if t.Spec.TestSelector.LabelSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "error creating selector from test resource label selector")
+		}
+		stringifiedSelector := selector.String()
+		s.logger.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with label %s", stringifiedSelector)
+		testSuitesList, err := s.testSuitesClient.List(stringifiedSelector)
 		if err != nil {
 			return nil, err
 		}
 		testSuites = append(testSuites, testSuitesList.Items...)
 	}
 	return testSuites, nil
-}
-
-func labelsToSelector(labels map[string]string) string {
-	stringified := ""
-	for k, v := range labels {
-		labelAsString := fmt.Sprintf("%s=%s", k, v)
-		if stringified == "" {
-			stringified += labelAsString
-		} else {
-			stringified += fmt.Sprintf(",%s", labelAsString)
-		}
-	}
-	return stringified
 }

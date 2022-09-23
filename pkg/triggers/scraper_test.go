@@ -13,76 +13,82 @@ import (
 	"time"
 )
 
-func TestService_runExecutionScraper_completed(t *testing.T) {
+func TestService_runExecutionScraper(t *testing.T) {
 	t.Parallel()
 
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	t.Run("completed jobs", func(t *testing.T) {
+		t.Parallel()
 
-	mockResultRepository := result.NewMockRepository(mockCtrl)
-	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 
-	mockResultRepository.EXPECT().Get(gomock.Any(), "test-execution-1").Return(testkube.Execution{}, mongo.ErrNoDocuments)
-	testSuiteExecutionStatus := testkube.PASSED_TestSuiteExecutionStatus
-	mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
-	mockTestResultRepository.EXPECT().Get(gomock.Any(), "test-suite-execution-1").Return(mockTestSuiteExecution, nil)
+		ctx, cancel := context.WithTimeout(context.Background(), 3100*time.Millisecond)
+		defer cancel()
 
-	statusKey1 := newStatusKey("testkube", "test-trigger-1")
-	statusKey2 := newStatusKey("testkube", "test-trigger-2")
-	triggerStatus1 := &triggerStatus{testExecutionIDs: []string{"test-execution-1"}}
-	triggerStatus2 := &triggerStatus{testSuiteExecutionIDs: []string{"test-suite-execution-1"}}
-	triggerStatusMap := map[statusKey]*triggerStatus{
-		statusKey1: triggerStatus1,
-		statusKey2: triggerStatus2,
-	}
-	s := &Service{
-		triggerStatus:   triggerStatusMap,
-		trr:             mockResultRepository,
-		tsrr:            mockTestResultRepository,
-		scraperInterval: 1 * time.Second,
-		l:               log.DefaultLogger,
-	}
+		mockResultRepository := result.NewMockRepository(mockCtrl)
+		mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+		mockResultRepository.EXPECT().Get(gomock.Any(), "test-execution-1").Return(testkube.Execution{}, mongo.ErrNoDocuments)
+		testSuiteExecutionStatus := testkube.PASSED_TestSuiteExecutionStatus
+		mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
+		mockTestResultRepository.EXPECT().Get(gomock.Any(), "test-suite-execution-1").Return(mockTestSuiteExecution, nil)
 
-	s.runExecutionScraper(ctx)
+		statusKey1 := newStatusKey("testkube", "test-trigger-1")
+		statusKey2 := newStatusKey("testkube", "test-trigger-2")
+		triggerStatus1 := &triggerStatus{testExecutionIDs: []string{"test-execution-1"}}
+		triggerStatus2 := &triggerStatus{testSuiteExecutionIDs: []string{"test-suite-execution-1"}}
+		triggerStatusMap := map[statusKey]*triggerStatus{
+			statusKey1: triggerStatus1,
+			statusKey2: triggerStatus2,
+		}
+		s := &Service{
+			triggerStatus:        triggerStatusMap,
+			resultRepository:     mockResultRepository,
+			testResultRepository: mockTestResultRepository,
+			scraperInterval:      1 * time.Second,
+			logger:               log.DefaultLogger,
+		}
 
-	for testTrigger, status := range s.triggerStatus {
-		assert.Falsef(t, status.hasActiveTests(), "TestTrigger V1 %s should not have active tests", testTrigger)
-	}
-}
+		s.runExecutionScraper(ctx)
 
-func TestService_runExecutionScraper_running(t *testing.T) {
-	t.Parallel()
+		for testTrigger, status := range s.triggerStatus {
+			assert.Falsef(t, status.hasActiveTests(), "TestTrigger V1 %s should not have active tests", testTrigger)
+		}
+	})
 
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	t.Run("active jobs", func(t *testing.T) {
+		t.Parallel()
 
-	mockResultRepository := result.NewMockRepository(mockCtrl)
-	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 
-	testSuiteExecutionStatus := testkube.RUNNING_TestSuiteExecutionStatus
-	mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
-	mockTestResultRepository.EXPECT().Get(gomock.Any(), "test-suite-execution-1").Return(mockTestSuiteExecution, nil).Times(3)
+		ctx, cancel := context.WithTimeout(context.Background(), 3100*time.Millisecond)
+		defer cancel()
 
-	statusKey1 := newStatusKey("testkube", "test-trigger-1")
-	triggerStatus1 := &triggerStatus{testSuiteExecutionIDs: []string{"test-suite-execution-1"}}
-	triggerStatusMap := map[statusKey]*triggerStatus{
-		statusKey1: triggerStatus1,
-	}
-	s := &Service{
-		triggerStatus:   triggerStatusMap,
-		trr:             mockResultRepository,
-		tsrr:            mockTestResultRepository,
-		scraperInterval: 1 * time.Second,
-		l:               log.DefaultLogger,
-	}
+		mockResultRepository := result.NewMockRepository(mockCtrl)
+		mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
-	ctx, _ := context.WithTimeout(context.Background(), 3100*time.Millisecond)
+		testSuiteExecutionStatus := testkube.RUNNING_TestSuiteExecutionStatus
+		mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
+		mockTestResultRepository.EXPECT().Get(gomock.Any(), "test-suite-execution-1").Return(mockTestSuiteExecution, nil).Times(3)
 
-	s.runExecutionScraper(ctx)
+		statusKey1 := newStatusKey("testkube", "test-trigger-1")
+		triggerStatus1 := &triggerStatus{testSuiteExecutionIDs: []string{"test-suite-execution-1"}}
+		triggerStatusMap := map[statusKey]*triggerStatus{
+			statusKey1: triggerStatus1,
+		}
+		s := &Service{
+			triggerStatus:        triggerStatusMap,
+			resultRepository:     mockResultRepository,
+			testResultRepository: mockTestResultRepository,
+			scraperInterval:      1 * time.Second,
+			logger:               log.DefaultLogger,
+		}
 
-	for testTrigger, status := range s.triggerStatus {
-		assert.Truef(t, status.hasActiveTests(), "TestTrigger V1 %s should not have finished tests", testTrigger)
-	}
+		s.runExecutionScraper(ctx)
+
+		for testTrigger, status := range s.triggerStatus {
+			assert.Truef(t, status.hasActiveTests(), "TestTrigger V1 %s should not have finished tests", testTrigger)
+		}
+	})
 }

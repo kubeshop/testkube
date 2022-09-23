@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type event struct {
+type watcherEvent struct {
 	resource  testtrigger.ResourceType
 	name      string
 	namespace string
@@ -17,8 +17,8 @@ type event struct {
 	causes    []testtrigger.Cause
 }
 
-func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *event {
-	return &event{
+func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *watcherEvent {
+	return &watcherEvent{
 		resource:  testtrigger.ResourcePod,
 		name:      pod.Name,
 		namespace: pod.Namespace,
@@ -28,8 +28,8 @@ func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *event {
 	}
 }
 
-func newDeploymentEvent(deployment *appsv1.Deployment, eventType testtrigger.EventType, causes []testtrigger.Cause) *event {
-	return &event{
+func newDeploymentEvent(deployment *appsv1.Deployment, eventType testtrigger.EventType, causes []testtrigger.Cause) *watcherEvent {
+	return &watcherEvent{
 		resource:  testtrigger.ResourceDeployment,
 		name:      deployment.Name,
 		namespace: deployment.Namespace,

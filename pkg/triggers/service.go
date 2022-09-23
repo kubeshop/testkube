@@ -4,13 +4,13 @@ import (
 	"context"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"time"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
-	testtriggerclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
+	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -18,47 +18,47 @@ import (
 var defaultScraperInterval = 5 * time.Second
 
 type Service struct {
-	executor        ExecutorF
-	scraperInterval time.Duration
-	triggers        []*testtriggersv1.TestTrigger
-	started         time.Time
-	triggerStatus   map[statusKey]*triggerStatus
-	tcs             testtriggerclientsetv1.Interface
-	cs              *kubernetes.Clientset
-	tsc             *testsuitesclientv2.TestSuitesClient
-	tc              *testsclientv3.TestsClient
-	tk              *v1.TestkubeAPI
-	trr             result.Repository
-	tsrr            testresult.Repository
-	l               *zap.SugaredLogger
+	executor             ExecutorF
+	scraperInterval      time.Duration
+	triggers             []*testtriggersv1.TestTrigger
+	started              time.Time
+	triggerStatus        map[statusKey]*triggerStatus
+	runner               *scheduler.Scheduler
+	clientset            kubernetes.Interface
+	testKubeClientset    testkubeclientsetv1.Interface
+	testSuitesClient     testsuitesclientv2.Interface
+	testsClient          testsclientv3.Interface
+	resultRepository     result.Repository
+	testResultRepository testresult.Repository
+	logger               *zap.SugaredLogger
 }
 
 type Option func(*Service)
 
 func NewService(
-	cs *kubernetes.Clientset,
-	tcs testtriggerclientsetv1.Interface,
-	tsc *testsuitesclientv2.TestSuitesClient,
-	tc *testsclientv3.TestsClient,
-	tk *v1.TestkubeAPI,
-	trr result.Repository,
-	tsrr testresult.Repository,
-	l *zap.SugaredLogger,
+	runner *scheduler.Scheduler,
+	clientset *kubernetes.Clientset,
+	testTriggersClientset testkubeclientsetv1.Interface,
+	testSuitesClient testsuitesclientv2.Interface,
+	testsClient testsclientv3.Interface,
+	resultRepository result.Repository,
+	testResultRepository testresult.Repository,
+	logger *zap.SugaredLogger,
 	opts ...Option,
 ) *Service {
 	s := &Service{
-		scraperInterval: defaultScraperInterval,
-		cs:              cs,
-		tcs:             tcs,
-		tsc:             tsc,
-		tc:              tc,
-		tk:              tk,
-		trr:             trr,
-		tsrr:            tsrr,
-		l:               l,
-		started:         time.Now(),
-		triggers:        make([]*testtriggersv1.TestTrigger, 0),
-		triggerStatus:   make(map[statusKey]*triggerStatus),
+		scraperInterval:      defaultScraperInterval,
+		runner:               runner,
+		clientset:            clientset,
+		testKubeClientset:    testTriggersClientset,
+		testSuitesClient:     testSuitesClient,
+		testsClient:          testsClient,
+		resultRepository:     resultRepository,
+		testResultRepository: testResultRepository,
+		logger:               logger,
+		started:              time.Now(),
+		triggers:             make([]*testtriggersv1.TestTrigger, 0),
+		triggerStatus:        make(map[statusKey]*triggerStatus),
 	}
 	if s.executor == nil {
 		s.executor = s.execute
@@ -80,17 +80,7 @@ func (s *Service) WithExecutor(executor ExecutorF) {
 }
 
 func (s *Service) Run(ctx context.Context) error {
-	informers, err := s.createInformers(ctx)
-	if err != nil {
-		return err
-	}
-
-	s.l.Debugf("trigger service: starting pod informer")
-	go informers.podInformer.Informer().Run(ctx.Done())
-	s.l.Debugf("trigger service: starting deployment informer")
-	go informers.deploymentInformer.Informer().Run(ctx.Done())
-	s.l.Debugf("trigger service: starting testtrigger informer")
-	go informers.testTriggerInformer.Informer().Run(ctx.Done())
+	s.runWatcher(ctx)
 
 	go s.runExecutionScraper(ctx)
 
