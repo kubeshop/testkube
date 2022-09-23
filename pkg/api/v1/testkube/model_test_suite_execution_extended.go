@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/types"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
@@ -68,7 +68,7 @@ func (e TestSuiteExecution) IsCompleted() bool {
 func (e *TestSuiteExecution) Stop() {
 	duration := e.CalculateDuration()
 	e.EndTime = time.Now()
-	e.Duration = types.FormatDuration(duration.String())
+	e.Duration = utils.RoundDuration(duration).String()
 	e.DurationMs = int32(duration.Milliseconds())
 }
 

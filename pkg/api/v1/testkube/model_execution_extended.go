@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/types"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -120,8 +120,9 @@ func (e *Execution) Start() {
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
-	e.Duration = types.FormatDuration(e.CalculateDuration().String())
-	e.DurationMs = int32(e.CalculateDuration().Milliseconds())
+	duration := e.CalculateDuration()
+	e.Duration = utils.RoundDuration(duration).String()
+	e.DurationMs = int32(duration.Milliseconds())
 }
 
 func (e *Execution) CalculateDuration() time.Duration {
