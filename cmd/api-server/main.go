@@ -186,19 +186,20 @@ func main() {
 		eventsEmitter,
 	)
 
-	runner := scheduler.NewScheduler(
+	scheduler := scheduler.NewScheduler(
 		api.Executor,
 		resultsRepository,
 		testResultsRepository,
 		executorsClient,
 		testsClientV3,
 		testsuitesClient,
+		testsourcesClient,
 		secretClient,
 		eventsEmitter,
 		log.DefaultLogger,
 	)
 	triggerService := triggers.NewService(
-		runner,
+		scheduler,
 		clientset,
 		testkubeClientset,
 		testsuitesClient,

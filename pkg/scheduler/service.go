@@ -3,6 +3,7 @@ package scheduler
 import (
 	executorsv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -21,6 +22,7 @@ type Scheduler struct {
 	executorsClient      executorsv1.Interface
 	testsClient          testsv3.Interface
 	testSuitesClient     testsuitesv2.Interface
+	testSourcesClient    testsourcesv1.Interface
 	secretClient         secret.Interface
 	events               *event.Emitter
 	logger               *zap.SugaredLogger
@@ -33,6 +35,7 @@ func NewScheduler(
 	executorsClient executorsv1.Interface,
 	testsClient testsv3.Interface,
 	testSuitesClient testsuitesv2.Interface,
+	testSourcesClient testsourcesv1.Interface,
 	secretClient secret.Interface,
 	events *event.Emitter,
 	logger *zap.SugaredLogger,
@@ -45,6 +48,7 @@ func NewScheduler(
 		executorsClient:      executorsClient,
 		testsClient:          testsClient,
 		testSuitesClient:     testSuitesClient,
+		testSourcesClient:    testSourcesClient,
 		events:               events,
 		logger:               logger,
 	}

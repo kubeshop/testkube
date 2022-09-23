@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -38,6 +39,7 @@ func TestExecute(t *testing.T) {
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
 	mockTestSuitesClient := testsuitesv2.NewMockInterface(mockCtrl)
+	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
@@ -93,6 +95,7 @@ func TestExecute(t *testing.T) {
 		mockExecutorsClient,
 		mockTestsClient,
 		mockTestSuitesClient,
+		mockTestSourcesClient,
 		mockSecretClient,
 		mockEventEmitter,
 		log.DefaultLogger,
