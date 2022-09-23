@@ -11,9 +11,9 @@ package testkube
 
 // problem response in case of error
 type Problem struct {
-	// Type contains a URI that identifies the problem type. This URI will,
+	// Type contains a URI that identifies the problem type.
 	Type_ string `json:"type,omitempty"`
-	// Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
+	// Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except for purposes of localization.
 	Title string `json:"title,omitempty"`
 	// HTTP status code for this occurrence of the problem.
 	Status int32 `json:"status,omitempty"`

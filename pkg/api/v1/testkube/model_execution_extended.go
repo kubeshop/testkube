@@ -147,3 +147,19 @@ func (e Execution) IsFailed() bool {
 
 	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
 }
+
+func (e Execution) IsRunning() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus
+}
+
+func (e Execution) IsQueued() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == QUEUED_ExecutionStatus
+}

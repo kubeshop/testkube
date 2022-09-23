@@ -15,12 +15,14 @@ type ResultEvent struct {
 }
 
 // Executor abstraction to implement new executors
+//
+//go:generate mockgen -destination=./mock_executor.go -package=client "github.com/kubeshop/testkube/pkg/executor/client" Executor
 type Executor interface {
 	// Execute starts new external test execution, reads data and returns ID
 	// execution is started asynchronously client can check later for results
 	Execute(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 
-	// Execute starts new external test execution, reads data and returns ID
+	// ExecuteSync starts new external test execution, reads data and returns ID
 	// execution is started synchronously client is blocked
 	ExecuteSync(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
 

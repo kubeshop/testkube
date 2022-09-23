@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Test execution
+// test execution
 type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`

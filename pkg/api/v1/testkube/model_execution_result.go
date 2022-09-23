@@ -14,7 +14,7 @@ type ExecutionResult struct {
 	Status *ExecutionStatus `json:"status"`
 	// RAW Test execution output, depends of reporter used in particular tool
 	Output string `json:"output,omitempty"`
-	// output type depends of reporter used in partucular tool
+	// output type depends of reporter used in particular tool
 	OutputType string `json:"outputType,omitempty"`
 	// error message when status is error, separate to output as output can be partial in case of error
 	ErrorMessage string `json:"errorMessage,omitempty"`

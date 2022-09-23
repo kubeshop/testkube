@@ -13,9 +13,10 @@ require (
 	github.com/gofiber/adaptor/v2 v2.1.26
 	github.com/gofiber/fiber/v2 v2.37.1
 	github.com/gofiber/websocket/v2 v2.0.25
+	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.5.3
+	github.com/kubeshop/testkube-operator v1.5.5
 	github.com/minio/minio-go/v7 v7.0.36
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.16.0
@@ -111,7 +112,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/go-cmp v0.5.8
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.13 // indirect
