@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -120,10 +119,8 @@ func (e *Execution) Start() {
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
-	e.Duration = types.FormatDuration(e.CalculateDuration().String())
-	e.DurationMs = int32(e.CalculateDuration().Milliseconds())
+	e.Duration = e.CalculateDuration().String()
 }
-
 func (e *Execution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
@@ -139,10 +136,19 @@ func (e *Execution) CalculateDuration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
+
 func (e Execution) IsFailed() bool {
 	if e.ExecutionResult == nil {
 		return true
 	}
 
 	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
+}
+
+func (e Execution) IsRunning() bool {
+	if e.ExecutionResult == nil {
+		return false
+	}
+
+	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus || *e.ExecutionResult.Status == QUEUED_ExecutionStatus
 }

@@ -512,14 +512,14 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var results []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(testSuites, request))
+			go workerpoolService.SendRequests(s.PrepareTestSuiteRequests(testSuites, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -542,7 +542,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+func (s TestkubeAPI) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution] {
 	requests := make([]workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution], len(work))
 	for i := range work {
@@ -685,8 +685,11 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 	wg.Add(1)
 	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
 		defer func(testExecution *testkube.TestSuiteExecution) {
-			testExecution.Stop()
-			err = s.TestExecutionResults.EndExecution(ctx, *testExecution)
+			duration := testExecution.CalculateDuration()
+			testExecution.EndTime = time.Now()
+			testExecution.Duration = duration.String()
+
+			err = s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
 			if err != nil {
 				s.Log.Errorw("error setting end time", "error", err.Error())
 			}

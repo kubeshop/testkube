@@ -1,0 +1,30 @@
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}
+spec:
+  {{- if .Resource }}
+  resource: {{ .Resource }}
+  {{- end }}
+  {{- if .ResourceSelector }}
+  resourceSelector: {{ toYaml .ResourceSelector | nindent 4 }}
+  {{- end }}
+  {{- if .Event }}
+  event: {{ .Event }}
+  {{- end }}
+  {{- if .Action }}
+  action: {{ .Action }}
+  {{- end }}
+  {{- if .Execution }}
+  execution: {{ .Execution }}
+  {{- end }}
+  {{- if .TestSelector }}
+  testSelector: {{ toYaml .TestSelector | nindent 4 }}
+  {{- end }}

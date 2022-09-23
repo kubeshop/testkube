@@ -27,6 +27,9 @@ type Filter interface {
 	Selector() string
 }
 
+// nolint
+//
+//go:generate mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/internal/pkg/api/repository/testresult" Repository
 type Repository interface {
 	// Get gets execution result by id
 	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
@@ -49,7 +52,7 @@ type Repository interface {
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, execution testkube.TestSuiteExecution) error
+	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
 	// DeleteByTestSuite deletes execution results by test suite
 	DeleteByTestSuite(ctx context.Context, testSuiteName string) error
 	// DeleteAll deletes all execution results

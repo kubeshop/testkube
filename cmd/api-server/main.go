@@ -7,6 +7,14 @@ import (
 	"net"
 	"os"
 
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/scheduler"
+
+	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/triggers"
+
 	"github.com/kelseyhightower/envconfig"
 
 	kubeclient "github.com/kubeshop/testkube-operator/client"
@@ -138,7 +146,29 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
+	clientset, err := k8sclient.ConnectToK8s()
+	if err != nil {
+		ui.ExitOnError("Creating k8s clientset", err)
+	}
+
+	cfg, err := k8sclient.GetK8sClientConfig()
+	if err != nil {
+		ui.ExitOnError("Getting k8s client config", err)
+	}
+	testkubeClientset, err := testkubeclientset.NewForConfig(cfg)
+	if err != nil {
+		ui.ExitOnError("Creating TestKube Clientset", err)
+	}
+
 	apiVersion := api.Version
+
+	// configure NATS event bus
+	nc, err := bus.NewNATSConnection()
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	eventBus := bus.NewNATSBus(nc)
+	eventsEmitter := event.NewEmitter(eventBus)
 
 	api := apiv1.NewTestkubeAPI(
 		namespace,
@@ -149,10 +179,40 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		testkubeClientset,
 		testsourcesClient,
 		configMapConfig,
 		clusterId,
+		eventsEmitter,
 	)
+
+	scheduler := scheduler.NewScheduler(
+		api.Executor,
+		resultsRepository,
+		testResultsRepository,
+		executorsClient,
+		testsClientV3,
+		testsuitesClient,
+		testsourcesClient,
+		secretClient,
+		eventsEmitter,
+		log.DefaultLogger,
+	)
+	triggerService := triggers.NewService(
+		scheduler,
+		clientset,
+		testkubeClientset,
+		testsuitesClient,
+		testsClientV3,
+		resultsRepository,
+		testResultsRepository,
+		log.DefaultLogger,
+	)
+	log.DefaultLogger.Info("starting trigger service")
+	err = triggerService.Run(ctx)
+	if err != nil {
+		ui.ExitOnError("Running trigger service", err)
+	}
 
 	// telemetry based functions
 	api.SendTelemetryStartEvent()

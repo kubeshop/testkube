@@ -125,7 +125,7 @@ func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params 
 	return out
 }
 
-// MapExecutionRequestFromSpec maps CRD to OpenAPI spec ExecutionREquest
+// MapExecutionRequestFromSpec maps CRD to OpenAPI spec ExecutionRequest
 func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExecutionRequest) *testkube.TestSuiteExecutionRequest {
 	if specExecutionRequest == nil {
 		return nil
