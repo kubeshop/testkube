@@ -120,6 +120,7 @@ func (e *Execution) Start() {
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
 	e.Duration = e.CalculateDuration().String()
+	e.DurationMs = int32(e.CalculateDuration().Milliseconds())
 }
 func (e *Execution) CalculateDuration() time.Duration {
 

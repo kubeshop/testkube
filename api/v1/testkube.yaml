@@ -2221,7 +2221,7 @@ components:
         source:
           type: string
           description: reference to test source resource
-          example: "my-private-repository-test" 
+          example: "my-private-repository-test"
         created:
           type: string
           format: date-time
@@ -2261,7 +2261,7 @@ components:
           type: string
           description: test content
           example: "https://github.com/kubeshop/testkube"
-        
+
     TestSource:
       description: Test source resource for shared test content
       type: object
@@ -2281,7 +2281,7 @@ components:
           description: "test source labels"
           additionalProperties:
             type: string
-  
+
     TestSourceUpsertRequest:
       description: test create request body
       type: object
@@ -2378,6 +2378,10 @@ components:
           type: string
           description: "test duration"
           example: "88s"
+        durationMs:
+          type: integer
+          description: "test duration in milliseconds"
+          example: "10000"
         executionResult:
           required: true
           description: result get from executor
