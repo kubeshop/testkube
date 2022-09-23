@@ -99,7 +99,7 @@ func TestExecute(t *testing.T) {
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
-		runner:           rnr,
+		scheduler:        rnr,
 		testsClient:      mockTestsClient,
 		testSuitesClient: mockTestSuitesClient,
 		logger:           log.DefaultLogger,

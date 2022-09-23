@@ -44,7 +44,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.ExecutionRequest{}
 
 		wp := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
-		go wp.SendRequests(s.runner.PrepareTestRequests(tests, request))
+		go wp.SendRequests(s.tk.PrepareTestRequests(tests, request))
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {
@@ -62,7 +62,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.TestSuiteExecutionRequest{}
 
 		wp := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
-		go wp.SendRequests(s.runner.PrepareTestSuiteRequests(testSuites, request))
+		go wp.SendRequests(s.tk.PrepareTestSuiteRequests(testSuites, request))
 		go wp.Run(ctx)
 
 		for r := range wp.GetResponses() {

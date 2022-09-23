@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -24,11 +25,12 @@ type Service struct {
 	triggers             []*testtriggersv1.TestTrigger
 	started              time.Time
 	triggerStatus        map[statusKey]*triggerStatus
-	runner               *scheduler.Scheduler
+	scheduler            *scheduler.Scheduler
 	clientset            kubernetes.Interface
 	testKubeClientset    testkubeclientsetv1.Interface
 	testSuitesClient     testsuitesclientv2.Interface
 	testsClient          testsclientv3.Interface
+	tk                   *v1.TestkubeAPI
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
 	logger               *zap.SugaredLogger
@@ -37,7 +39,7 @@ type Service struct {
 type Option func(*Service)
 
 func NewService(
-	runner *scheduler.Scheduler,
+	scheduler *scheduler.Scheduler,
 	clientset *kubernetes.Clientset,
 	testTriggersClientset testkubeclientsetv1.Interface,
 	testSuitesClient testsuitesclientv2.Interface,
@@ -45,11 +47,12 @@ func NewService(
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
 	logger *zap.SugaredLogger,
+	tk *v1.TestkubeAPI,
 	opts ...Option,
 ) *Service {
 	s := &Service{
 		scraperInterval:      defaultScraperInterval,
-		runner:               runner,
+		scheduler:            scheduler,
 		clientset:            clientset,
 		testKubeClientset:    testTriggersClientset,
 		testSuitesClient:     testSuitesClient,
@@ -58,6 +61,7 @@ func NewService(
 		testResultRepository: testResultRepository,
 		logger:               logger,
 		started:              time.Now(),
+		tk:                   tk,
 		triggers:             make([]*testtriggersv1.TestTrigger, 0),
 		triggerStatus:        make(map[statusKey]*triggerStatus),
 	}

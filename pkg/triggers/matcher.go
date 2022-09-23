@@ -2,9 +2,11 @@ package triggers
 
 import (
 	"context"
+	"go.uber.org/zap"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
@@ -15,7 +17,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(t.Spec.Event, e) {
 			continue
 		}
-		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e) {
+		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 			continue
 		}
 		status := s.getStatusForTrigger(t)
@@ -47,12 +49,24 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent) bool {
+func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
 	if selector.Name != "" {
 		return selector.Name == event.name && namespace == event.namespace
 	}
 	if selector.LabelSelector != nil && len(event.labels) > 0 {
-		return labels.Equals(selector.LabelSelector.MatchLabels, event.labels)
+		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
+		if err != nil {
+			logger.Errorf("error creating k8s selector from label selector: %v", err)
+			return false
+		}
+		resourceLabelSet := labels.Set(event.labels)
+		_, err = resourceLabelSet.AsValidatedSelector()
+		if err != nil {
+			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
+			return false
+		}
+
+		return k8sSelector.Matches(resourceLabelSet)
 	}
 	return false
 }
