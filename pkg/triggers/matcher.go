@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )

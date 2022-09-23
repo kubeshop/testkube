@@ -2,6 +2,9 @@ package triggers
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
@@ -9,8 +12,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
-	"testing"
-	"time"
 )
 
 func TestService_runExecutionScraper(t *testing.T) {

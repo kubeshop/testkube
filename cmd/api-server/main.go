@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
+	"os"
+
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	runner2 "github.com/kubeshop/testkube/pkg/scheduler"
-	"net"
-	"os"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/k8sclient"

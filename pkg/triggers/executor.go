@@ -2,8 +2,9 @@ package triggers
 
 import (
 	"context"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"

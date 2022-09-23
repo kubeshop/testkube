@@ -1,9 +1,10 @@
 package v1
 
 import (
+	"net/http"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"

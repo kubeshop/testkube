@@ -2,6 +2,8 @@ package triggers
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
@@ -20,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestExecute(t *testing.T) {

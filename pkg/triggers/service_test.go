@@ -1,10 +1,11 @@
 package triggers
 
 import (
+	"testing"
+
 	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestService_addTrigger(t *testing.T) {
@@ -54,7 +55,7 @@ func TestService_removeTrigger(t *testing.T) {
 
 func TestService_updateTrigger(t *testing.T) {
 	t.Parallel()
-	
+
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
 	oldTestTrigger := v1.TestTrigger{

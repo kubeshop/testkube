@@ -2,10 +2,11 @@ package triggers
 
 import (
 	"context"
+	"time"
+
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
-	"time"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"

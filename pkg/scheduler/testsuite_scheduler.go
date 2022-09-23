@@ -3,13 +3,14 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
-	"sync"
-	"time"
 )
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
