@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -30,7 +29,6 @@ type Service struct {
 	testKubeClientset    testkubeclientsetv1.Interface
 	testSuitesClient     testsuitesclientv2.Interface
 	testsClient          testsclientv3.Interface
-	tk                   *v1.TestkubeAPI
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
 	logger               *zap.SugaredLogger
@@ -47,7 +45,6 @@ func NewService(
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
 	logger *zap.SugaredLogger,
-	tk *v1.TestkubeAPI,
 	opts ...Option,
 ) *Service {
 	s := &Service{
@@ -61,7 +58,6 @@ func NewService(
 		testResultRepository: testResultRepository,
 		logger:               logger,
 		started:              time.Now(),
-		tk:                   tk,
 		triggers:             make([]*testtriggersv1.TestTrigger, 0),
 		triggerStatus:        make(map[statusKey]*triggerStatus),
 	}

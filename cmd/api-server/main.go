@@ -207,7 +207,6 @@ func main() {
 		resultsRepository,
 		testResultsRepository,
 		log.DefaultLogger,
-		&api,
 	)
 	log.DefaultLogger.Info("starting trigger service")
 	err = triggerService.Run(ctx)
