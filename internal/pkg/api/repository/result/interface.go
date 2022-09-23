@@ -54,7 +54,7 @@ type Repository interface {
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
+	EndExecution(ctx context.Context, execution testkube.Execution) error
 	// GetLabels get all available labels
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 	// DeleteByTest deletes execution results by test

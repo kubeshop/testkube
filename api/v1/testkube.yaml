@@ -2377,11 +2377,11 @@ components:
         duration:
           type: string
           description: "test duration"
-          example: "88s"
+          example: "00:05:22"
         durationMs:
           type: integer
           description: "test duration in milliseconds"
-          example: "10000"
+          example: 10000
         executionResult:
           required: true
           description: result get from executor
@@ -2540,6 +2540,9 @@ components:
           type: string
           format: duration
           example: "10m0s"
+        durationMs:
+          type: integer
+          example: 13033
         status:
           type: string
           description: execution step status
