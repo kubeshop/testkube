@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -126,10 +127,12 @@ func (t ProxyClient[A]) GetURI(pathTemplate string, params ...interface{}) strin
 
 // GetLogs returns logs stream from job pods, based on job pods logs
 func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
-	resp, err := t.getProxy(http.MethodGet).
+	resp, err := t.getSSEProxy(http.MethodGet).
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
+		Timeout(time.Hour).
 		Stream(context.Background())
+
 	if err != nil {
 		return err
 	}
@@ -173,6 +176,19 @@ func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
 		Namespace(t.config.Namespace).
 		Resource("services").
 		SetHeader("Content-Type", "application/json").
+		Name(fmt.Sprintf("%s:%d", t.config.ServiceName, t.config.ServicePort)).
+		SubResource("proxy")
+}
+
+func (t ProxyClient[A]) getSSEProxy(requestType string) *rest.Request {
+	restClient := t.client.CoreV1().RESTClient().(*rest.RESTClient)
+	restClient.Client.Timeout = time.Hour
+	fmt.Printf("%+v\n", restClient.Client.Transport)
+
+	return restClient.Verb(requestType).
+		Namespace(t.config.Namespace).
+		Resource("services").
+		SetHeader("Accept", "text/event-stream").
 		Name(fmt.Sprintf("%s:%d", t.config.ServiceName, t.config.ServicePort)).
 		SubResource("proxy")
 }
