@@ -1473,11 +1473,11 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /executors/{name}:
+  /executors/{id}:
     delete:
       parameters:
         - $ref: "#/components/parameters/Namespace"
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       tags:
         - api
         - executor
@@ -1499,7 +1499,7 @@ paths:
     get:
       parameters:
         - $ref: "#/components/parameters/Namespace"
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       tags:
         - api
         - executor
@@ -1662,10 +1662,10 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /webhooks/{name}:
+  /webhooks/{id}:
     delete:
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
       tags:
         - api
@@ -1687,7 +1687,7 @@ paths:
 
     get:
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
       tags:
         - api
@@ -1722,7 +1722,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /config/{key}:
+  /config:
     patch:
       tags:
         - api
@@ -1795,6 +1795,198 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-sources:
+    get:
+      tags:
+        - test-sources
+        - api
+      summary: "List test sources"
+      description: "List test sources available in cluster"
+      operationId: listTestSources
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestSource"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - test-sources
+        - api
+      summary: "Create new test source"
+      description: "Create new test source based on variables passed in request"
+      operationId: createTestSource
+      requestBody:
+        description: test source request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSourceUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+        400:
+          description: "problem with test source definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - test-sources
+        - api
+      summary: "Delete test sources"
+      description: "Deletes labeled test sources"
+      operationId: deleteTestSources
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-sources/{id}:
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - test-sources
+        - api
+      summary: "Update test source"
+      description: "Update test source based on test content or git based data"
+      operationId: updateTestSource
+      requestBody:
+        description: test source body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSourceUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+        400:
+          description: "problem with test source definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - test-sources
+      summary: "Delete test source"
+      description: "Deletes test source by its name"
+      operationId: deleteTestSource
+      responses:
+        204:
+          description: test source deleted successfuly
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - test-sources
+      summary: "Get test source data"
+      description: "Returns test sources data"
+      operationId: getTestSource
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting test source data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ExecutionsMetrics:
@@ -1809,7 +2001,7 @@ components:
           description: 50th percentile of all durations
           example: "7m2.71s"
         executionDurationP50ms:
-          type: int
+          type: integer
           description: 50th percentile of all durations in milliseconds
           example: 422
         executionDurationP90:
@@ -1817,7 +2009,7 @@ components:
           description: 90th percentile of all durations
           example: "7m2.71s"
         executionDurationP90ms:
-          type: int
+          type: integer
           description: 90th percentile of all durations in milliseconds
           example: 422
         executionDurationP95:
@@ -1825,7 +2017,7 @@ components:
           description: 95th percentile of all durations
           example: "7m2.71s"
         executionDurationP95ms:
-          type: int
+          type: integer
           description: 95th percentile of all durations in milliseconds
           example: 422
         executionDurationP99:
@@ -1833,15 +2025,15 @@ components:
           description: 99th percentile of all durations
           example: "7m2.71s"
         executionDurationP99ms:
-          type: int
+          type: integer
           description: 99th percentile of all durations in milliseconds
           example: 422
         totalExecutions:
-          type: int
+          type: integer
           description: total executions number
           example: 2
         failedExecutions:
-          type: int
+          type: integer
           description: failed executions number
           example: 1
         executions:
@@ -1858,7 +2050,7 @@ components:
         duration:
           type: string
         durationMs:
-          type: int
+          type: integer
         status:
           type: string
         name:
@@ -1990,7 +2182,7 @@ components:
           description: schedule to run test suite
           example: "* * * * *"
         repeats:
-          type: int
+          type: integer
           default: 1
           example: 1
         created:
@@ -2031,7 +2223,7 @@ components:
         - name
       properties:
         duration:
-          type: int
+          type: integer
           default: 0
           description: delay duration in milliseconds
 
@@ -2085,7 +2277,7 @@ components:
           description: "test duration"
           example: "2m"
         durationMs:
-          type: int
+          type: integer
           description: "test duration in ms"
           example: 6000
         stepResults:
@@ -2180,7 +2372,7 @@ components:
           description: "test suite execution duration"
           example: "00:00:09"
         durationMs:
-          type: int
+          type: integer
           description: "test suite execution duration in ms"
           example: 9009
         execution:
@@ -2238,6 +2430,10 @@ components:
         content:
           $ref: "#/components/schemas/TestContent"
           description: test content
+        source:
+          type: string
+          description: reference to test source resource
+          example: "my-private-repository-test" 
         created:
           type: string
           format: date-time
@@ -2277,6 +2473,46 @@ components:
           type: string
           description: test content
           example: "https://github.com/kubeshop/testkube"
+        
+    TestSource:
+      description: Test source resource for shared test content
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+  
+    TestSourceUpsertRequest:
+      description: test create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
 
     Execution:
       type: object
@@ -2308,7 +2544,7 @@ components:
           description: "execution name"
           example: "test-suite1-example-test-1"
         number:
-          type: int
+          type: integer
           description: "execution number"
           example: 1
         envs:
@@ -2375,7 +2611,7 @@ components:
           type: string
           description: artifact file path
         size:
-          type: int
+          type: integer
           description: file size in bytes
 
     ExecutionsResult:
@@ -2414,7 +2650,7 @@ components:
           description: execution name
           example: "test-suite1-test1"
         number:
-          type: int
+          type: integer
           description: execution number
           example: 1
         testName:
@@ -2444,7 +2680,7 @@ components:
           description: calculated test duration
           example: "00:00:13"
         durationMs:
-          type: int
+          type: integer
           description: calculated test duration in ms
           example: 10000
         labels:
@@ -2546,19 +2782,19 @@ components:
         - running
       properties:
         results:
-          type: int
+          type: integer
           description: the total number of executions available
         passed:
-          type: int
+          type: integer
           description: the total number of passed executions available
         failed:
-          type: int
+          type: integer
           description: the total number of failed executions available
         queued:
-          type: int
+          type: integer
           description: the total number of queued executions available
         running:
-          type: int
+          type: integer
           description: the total number of running executions available
 
     ServerInfo:
@@ -2628,7 +2864,7 @@ components:
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
           example: "test-suite1"
         number:
-          type: int
+          type: integer
           description: test execution number
         executionLabels:
           type: object
@@ -2707,7 +2943,7 @@ components:
           description: test execution custom name
           example: "testing with 1000 users"
         number:
-          type: int
+          type: integer
           description: test suite execution number
           example: 1
         namespace:
@@ -3152,7 +3388,7 @@ components:
           description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except for purposes of localization.
           example: Invalid test name
         status:
-          type: int
+          type: integer
           description: HTTP status code for this occurrence of the problem.
           example: 500
         detail:
@@ -3218,7 +3454,7 @@ components:
       in: query
       name: last
       schema:
-        type: int
+        type: integer
         default: 7
       description: last N days to show
       required: false
@@ -3226,7 +3462,7 @@ components:
       in: query
       name: limit
       schema:
-        type: int
+        type: integer
         default: 7
       description: limit records count same as pageSize
       required: false
@@ -3234,7 +3470,7 @@ components:
       in: query
       name: pageSize
       schema:
-        type: int
+        type: integer
         default: 100
       description: the number of executions to get, setting to 0 will return only totals
       required: false
@@ -3242,7 +3478,7 @@ components:
       in: query
       name: page
       schema:
-        type: int
+        type: integer
         default: 0
       description: the page index to start at
       required: false
@@ -3292,7 +3528,7 @@ components:
       in: query
       name: concurrency
       schema:
-        type: int
+        type: integer
         default: 10
     Namespace:
       in: query

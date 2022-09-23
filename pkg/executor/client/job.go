@@ -28,7 +28,6 @@ import (
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 const (
@@ -132,7 +131,6 @@ type JobOptions struct {
 	TestName       string
 	InitImage      string
 	JobTemplate    string
-	HasSecrets     bool
 	SecretEnvs     map[string]string
 	HTTPProxy      string
 	HTTPSProxy     string
@@ -269,7 +267,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodCompleted(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
@@ -326,7 +324,6 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:          options.ExecutorSpec.Image,
 		ImageOverride:  options.ImageOverride,
-		HasSecrets:     options.HasSecrets,
 		JobTemplate:    options.ExecutorSpec.JobTemplate,
 		TestName:       options.TestName,
 		Namespace:      options.Namespace,
@@ -383,8 +380,8 @@ func (c *JobExecutor) TailJobLogs(id string, logs chan []byte) (err error) {
 				return c.GetLastLogLineError(ctx, pod)
 
 			default:
-				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				l.Debug("tailing job logs: waiting for pod to be ready")
+				if err = wait.PollImmediate(pollInterval, pollTimeout, IsPodReadyForLogs(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return c.GetLastLogLineError(ctx, pod)
 				}
@@ -596,8 +593,26 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-// IsPodReady defines if pod is ready or failed for logs scrapping
-func IsPodReady(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+// IsPodReadyForLogs defines if pod is ready or failed for logs scrapping
+func IsPodReadyForLogs(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		switch pod.Status.Phase {
+		case corev1.PodRunning, corev1.PodSucceeded:
+			return true, nil
+		case corev1.PodFailed:
+			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
+		}
+		return false, nil
+	}
+}
+
+// IsPodCompleted defines if pod is completed or failed
+func IsPodCompleted(c *kubernetes.Clientset, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
@@ -639,7 +654,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 	secretEnvVars = secretenv.NewEnvManager().Prepare(options.SecretEnvs, options.Variables)
 
 	// prepare git credentials
-	var setSecrets bool
 	var data = []struct {
 		envVar    string
 		secretRef *testkube.SecretRef
@@ -656,7 +670,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 
 	for _, value := range data {
 		if value.secretRef != nil {
-			setSecrets = true
 			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
 				Name: value.envVar,
 				ValueFrom: &corev1.EnvVarSource{
@@ -665,36 +678,6 @@ func prepareSecretEnvs(options JobOptions) (secretEnvVars []corev1.EnvVar) {
 							Name: value.secretRef.Name,
 						},
 						Key: value.secretRef.Key,
-					},
-				},
-			})
-		}
-	}
-
-	if options.HasSecrets && !setSecrets {
-		var data = []struct {
-			envVar    string
-			secretKey string
-		}{
-			{
-				GitUsernameEnvVarName,
-				GitUsernameSecretName,
-			},
-			{
-				GitTokenEnvVarName,
-				GitTokenSecretName,
-			},
-		}
-
-		for _, value := range data {
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: secret.GetMetadataName(options.TestName),
-						},
-						Key: value.secretKey,
 					},
 				},
 			})

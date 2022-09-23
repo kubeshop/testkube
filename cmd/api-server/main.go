@@ -9,7 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	runner2 "github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -22,6 +22,7 @@ import (
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
@@ -99,6 +100,7 @@ func main() {
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
+	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
 
 	resultsRepository := result.NewMongoRespository(db)
 	testResultsRepository := testresult.NewMongoRespository(db)
@@ -178,12 +180,13 @@ func main() {
 		secretClient,
 		webhooksClient,
 		testkubeClientset,
+		testsourcesClient,
 		configMapConfig,
 		clusterId,
 		eventsEmitter,
 	)
 
-	runner := runner2.NewRunner(
+	runner := scheduler.NewScheduler(
 		api.Executor,
 		resultsRepository,
 		testResultsRepository,

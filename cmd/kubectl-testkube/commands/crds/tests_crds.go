@@ -182,9 +182,11 @@ func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
 
 					envTest := test
 					envTest.Name = sanitizeName(envTest.Name + "-" + envName)
-					envTest.ExecutionRequest = &testkube.ExecutionRequest{
-						VariablesFile: fmt.Sprintf("%q", strings.TrimSpace(string(data))),
+
+					if envTest.ExecutionRequest == nil {
+						envTest.ExecutionRequest = &testkube.ExecutionRequest{}
 					}
+					envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
 
 					testMap[envTest.Name] = envTest
 				}

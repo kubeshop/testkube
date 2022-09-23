@@ -91,25 +91,24 @@ spec:
     {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
-    - name: {{ $key }}
-      {{- if $value.Value }}
-      value: {{ $value.Value }}
-      {{- end }}
-      {{- if $value.Type_ }}
-      type: {{ $value.Type_ }}
-      {{- end }}
-      {{- if $value.SecretRef }}
-      secretRef:
-        {{- if $value.SecretRef.Namespace }}
-        namespace: {{ $value.SecretRef.Namespace }}
+      {{ $key }}:
+        name: {{ $key }}
+        {{- if $value.Value }}
+        value: {{ $value.Value }}
         {{- end }}
-        {{- if $value.SecretRef.Name }}
-        name: {{ $value.SecretRef.Name }}
+        {{- if $value.Type_ }}
+        type: {{ $value.Type_ }}
         {{- end }}
-        {{- if $value.SecretRef.Key }}
-        key: {{ $value.SecretRef.Key }}
+        {{- if $value.SecretRef }}
+        valueFrom:
+          secretKeyRef:
+            {{- if $value.SecretRef.Name }}
+            name: {{ $value.SecretRef.Name }}
+            {{- end }}
+            {{- if $value.SecretRef.Key }}
+            key: {{ $value.SecretRef.Key }}
+            {{- end }}
         {{- end }}
-      {{- end }}
     {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.HttpProxy }}

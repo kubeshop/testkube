@@ -26,7 +26,7 @@ type Scheduler struct {
 	logger               *zap.SugaredLogger
 }
 
-func NewRunner(
+func NewScheduler(
 	executor client.Executor,
 	executionResults result.Repository,
 	testExecutionResults testresult.Repository,

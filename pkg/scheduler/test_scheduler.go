@@ -9,10 +9,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
@@ -86,16 +84,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
-	options.HasSecrets = true
-	if _, err = s.secretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-			return execution.Errw("can't get secrets: %w", err), nil
-		}
-
-		options.HasSecrets = false
-	}
-
 	var result testkube.ExecutionResult
 
 	// sync/async test execution
@@ -129,7 +117,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	return execution, nil
 }
 
-func (s *Scheduler) getNextExecutionNumber(testName string) int {
+func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
 	number, err := s.executionResults.GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
 		s.logger.Errorw("retrieving latest execution", "error", err)
@@ -187,7 +175,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
-		options.Request.Number,
+		int(options.Request.Number),
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,

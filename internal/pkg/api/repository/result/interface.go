@@ -76,5 +76,5 @@ type Repository interface {
 
 type Sequences interface {
 	// GetNextExecutionNumber gets next execution number by test name
-	GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error)
+	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
 }

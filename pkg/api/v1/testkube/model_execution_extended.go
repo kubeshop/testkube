@@ -29,7 +29,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
 		Name:                executionName,
-		Number:              int(executionNumber),
+		Number:              int32(executionNumber),
 		TestType:            testType,
 		ExecutionResult:     &result,
 		Variables:           variables,

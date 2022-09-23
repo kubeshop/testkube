@@ -142,19 +142,19 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		return totals, err
 	}
 
-	var sum int
+	var sum int32
 
 	for _, o := range result {
-		sum += o.Count
+		sum += int32(o.Count)
 		switch testkube.TestSuiteExecutionStatus(o.Status) {
 		case testkube.QUEUED_TestSuiteExecutionStatus:
-			totals.Queued = o.Count
+			totals.Queued = int32(o.Count)
 		case testkube.RUNNING_TestSuiteExecutionStatus:
-			totals.Running = o.Count
+			totals.Running = int32(o.Count)
 		case testkube.PASSED_TestSuiteExecutionStatus:
-			totals.Passed = o.Count
+			totals.Passed = int32(o.Count)
 		case testkube.FAILED_TestSuiteExecutionStatus:
-			totals.Failed = o.Count
+			totals.Failed = int32(o.Count)
 		}
 	}
 	totals.Results = sum

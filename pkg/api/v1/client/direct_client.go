@@ -47,18 +47,31 @@ func GetHTTTPClient(token *oauth2.Token) (*http.Client, error) {
 	return httpClient, nil
 }
 
+// GetHTTPSSEClient prepares http client
+func GetHTTTPSSEClient(token *oauth2.Token) (*http.Client, error) {
+	httpClient := phttp.NewSSEClient()
+	if token != nil {
+		httpClient.Transport = &transport{headers: map[string]string{
+			"Authorization": oauth.AuthorizationPrefix + " " + token.AccessToken}}
+	}
+
+	return httpClient, nil
+}
+
 // NewDirectClient returns new direct client
 func NewDirectClient[A All](httpClient *http.Client, apiURI string) DirectClient[A] {
 	return DirectClient[A]{
-		client: httpClient,
-		apiURI: apiURI,
+		client:    httpClient,
+		sseClient: httpClient,
+		apiURI:    apiURI,
 	}
 }
 
 // DirectClient implements direct client
 type DirectClient[A All] struct {
-	client *http.Client
-	apiURI string
+	client    *http.Client
+	sseClient *http.Client
+	apiURI    string
 }
 
 // baseExecute is base execute method
@@ -92,6 +105,11 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 	}
 
 	return resp, nil
+}
+
+func (t DirectClient[A]) WithSSEClient(client *http.Client) DirectClient[A] {
+	t.sseClient = client
+	return t
 }
 
 // Execute is a method to make an api call for a single object
@@ -150,7 +168,7 @@ func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
 	}
 
 	req.Header.Set("Accept", "text/event-stream")
-	resp, err := t.client.Do(req)
+	resp, err := t.sseClient.Do(req)
 	if err != nil {
 		return err
 	}

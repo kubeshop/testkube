@@ -12,13 +12,13 @@ package testkube
 // various execution counters
 type ExecutionsTotals struct {
 	// the total number of executions available
-	Results int `json:"results"`
+	Results int32 `json:"results"`
 	// the total number of passed executions available
-	Passed int `json:"passed"`
+	Passed int32 `json:"passed"`
 	// the total number of failed executions available
-	Failed int `json:"failed"`
+	Failed int32 `json:"failed"`
 	// the total number of queued executions available
-	Queued int `json:"queued"`
+	Queued int32 `json:"queued"`
 	// the total number of running executions available
-	Running int `json:"running"`
+	Running int32 `json:"running"`
 }

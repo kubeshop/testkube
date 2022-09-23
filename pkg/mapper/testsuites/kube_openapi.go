@@ -33,7 +33,7 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 	}
 
 	test.Description = cr.Spec.Description
-	test.Repeats = int(cr.Spec.Repeats)
+	test.Repeats = int32(cr.Spec.Repeats)
 	test.Labels = cr.Labels
 	test.Schedule = cr.Spec.Schedule
 	test.Created = cr.CreationTimestamp.Time
@@ -58,7 +58,7 @@ func mapCRStepToAPI(crstep testsuitesv2.TestSuiteStepSpec) (teststep testkube.Te
 	case crstep.Delay != nil:
 		teststep = testkube.TestSuiteStep{
 			Delay: &testkube.TestSuiteStepDelay{
-				Duration: int(crstep.Delay.Duration),
+				Duration: int32(crstep.Delay.Duration),
 			},
 		}
 	}

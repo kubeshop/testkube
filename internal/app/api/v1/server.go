@@ -21,6 +21,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/config"
@@ -54,6 +55,7 @@ func NewTestkubeAPI(
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
 	testkubeClientset testkubeclientset.Interface,
+	testsourcesClient *testsourcesclientv1.TestSourcesClient,
 	configMap *config.ConfigMapConfig,
 	clusterId string,
 	eventsEmitter *event.Emitter,
@@ -80,6 +82,7 @@ func NewTestkubeAPI(
 		Metrics:              NewMetrics(),
 		Events:               eventsEmitter,
 		WebhooksClient:       webhookClient,
+		TestSourcesClient:    testsourcesClient,
 		Namespace:            namespace,
 		ConfigMap:            configMap,
 	}
@@ -131,16 +134,16 @@ type TestkubeAPI struct {
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	TestKubeClientset    testkubeclientset.Interface
+	TestSourcesClient    *testsourcesclientv1.TestSourcesClient
 	Metrics              Metrics
 	Storage              storage.Client
 	storageParams        storageParams
 	jobTemplates         jobTemplates
 	Namespace            string
 	oauthParams          oauthParams
-
-	WebsocketLoader *ws.WebsocketLoader
-	Events          *event.Emitter
-	ConfigMap       *config.ConfigMapConfig
+	WebsocketLoader      *ws.WebsocketLoader
+	Events               *event.Emitter
+	ConfigMap            *config.ConfigMapConfig
 }
 
 type jobTemplates struct {
@@ -310,6 +313,14 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	keymap := s.Routes.Group("/keymap")
 	keymap.Get("/triggers", s.GetTestTriggerKeyMapHandler())
+
+	testsources := s.Routes.Group("/test-sources")
+	testsources.Post("/", s.CreateTestSourceHandler())
+	testsources.Get("/", s.ListTestSourcesHandler())
+	testsources.Get("/:name", s.GetTestSourceHandler())
+	testsources.Patch("/:name", s.UpdateTestSourceHandler())
+	testsources.Delete("/:name", s.DeleteTestSourceHandler())
+	testsources.Delete("/", s.DeleteTestSourcesHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())

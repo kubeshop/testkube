@@ -14,16 +14,16 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/secret"
+
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -165,16 +165,6 @@ func (s TestkubeAPI) executeTest(ctx context.Context, test testkube.Test, reques
 	if err != nil {
 		s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
-	}
-
-	options.HasSecrets = true
-	if _, err = s.SecretClient.Get(secret.GetMetadataName(execution.TestName)); err != nil {
-		if !errors.IsNotFound(err) {
-			s.Events.Notify(testkube.NewEventEndTestFailed(&execution))
-			return execution.Errw("can't get secrets: %w", err), nil
-		}
-
-		options.HasSecrets = false
 	}
 
 	var result testkube.ExecutionResult
@@ -321,7 +311,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
 
 		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			s.Log.Debug("starting stream writer")
+			s.Log.Debug("start streaming logs")
 			w.Flush()
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
@@ -486,6 +476,15 @@ func (s TestkubeAPI) GetExecuteOptions(namespace, id string, request testkube.Ex
 		return options, fmt.Errorf("can't get test custom resource %w", err)
 	}
 
+	if testCR.Spec.Source != "" {
+		testSourceCR, err := s.TestSourcesClient.Get(testCR.Spec.Source)
+		if err != nil {
+			return options, fmt.Errorf("can't get test source custom resource %w", err)
+		}
+
+		testCR.Spec.Content = mergeContents(testCR.Spec.Content, testSourceCR.Spec)
+	}
+
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
 	if test.ExecutionRequest != nil {
@@ -558,7 +557,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 // streamLogsFromJob streams logs in chunks to writer from the running execution
 func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
-	s.Log.Debug("getting logs from Kubernetes job")
+	s.Log.Infow("getting logs from Kubernetes job")
 
 	logs, err := s.Executor.Logs(executionID)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
@@ -569,10 +568,11 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 		return
 	}
 
+	s.Log.Infow("looping through logs channel")
 	// loop through pods log lines - it's blocking channel
 	// and pass single log output as sse data chunk
 	for out := range logs {
-		s.Log.Debugw("got log", "out", out)
+		s.Log.Debugw("got log line from pod", "out", out)
 		fmt.Fprintf(w, "data: ")
 		err = enc.Encode(out)
 		if err != nil {
@@ -584,7 +584,7 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID string, w *bufio.Writer) {
 	}
 }
 
-func (s TestkubeAPI) getNextExecutionNumber(testName string) int {
+func (s TestkubeAPI) getNextExecutionNumber(testName string) int32 {
 	number, err := s.ExecutionResults.GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
 		s.Log.Errorw("retrieving latest execution", "error", err)
@@ -617,6 +617,54 @@ func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]stri
 	return envs
 }
 
+func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.TestSourceSpec) *testsv3.TestContent {
+	testContent.Type_ = testSource.Type_
+	if testSource.Data != "" {
+		testContent.Data = testSource.Data
+	}
+
+	if testSource.Uri != "" {
+		testContent.Uri = testSource.Uri
+	}
+
+	if testSource.Repository != nil {
+		if testContent.Repository == nil {
+			testContent.Repository = &testsv3.Repository{}
+		}
+
+		testContent.Repository.Type_ = testSource.Repository.Type_
+		testContent.Repository.Uri = testSource.Repository.Uri
+
+		if testSource.Repository.Branch != "" {
+			testContent.Repository.Branch = testSource.Repository.Branch
+		}
+
+		if testSource.Repository.Commit != "" {
+			testContent.Repository.Commit = testSource.Repository.Commit
+		}
+
+		if testSource.Repository.Path != "" {
+			testContent.Repository.Path = testSource.Repository.Path
+		}
+
+		if testSource.Repository.UsernameSecret != nil {
+			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
+				Name: testSource.Repository.UsernameSecret.Name,
+				Key:  testSource.Repository.UsernameSecret.Key,
+			}
+		}
+
+		if testSource.Repository.TokenSecret != nil {
+			testContent.Repository.TokenSecret = &testsv3.SecretRef{
+				Name: testSource.Repository.TokenSecret.Name,
+				Key:  testSource.Repository.TokenSecret.Key,
+			}
+		}
+	}
+
+	return testContent
+}
+
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
 		options.Namespace,
@@ -624,7 +672,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.Request.TestSuiteName,
 		options.Request.Name,
 		options.TestSpec.Type_,
-		options.Request.Number,
+		int(options.Request.Number),
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
 		testkube.NewRunningExecutionResult(),
 		options.Request.Variables,

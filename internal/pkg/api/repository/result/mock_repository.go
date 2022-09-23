@@ -260,10 +260,10 @@ func (mr *MockRepositoryMockRecorder) GetLatestByTests(arg0, arg1, arg2 interfac
 }
 
 // GetNextExecutionNumber mocks base method.
-func (m *MockRepository) GetNextExecutionNumber(arg0 context.Context, arg1 string) (int, error) {
+func (m *MockRepository) GetNextExecutionNumber(arg0 context.Context, arg1 string) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNextExecutionNumber", arg0, arg1)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
