@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
@@ -62,6 +63,13 @@ func (e TestSuiteExecution) FailedStepsCount() (count int) {
 
 func (e TestSuiteExecution) IsCompleted() bool {
 	return *e.Status == *TestSuiteExecutionStatusFailed || *e.Status == *TestSuiteExecutionStatusPassed
+}
+
+func (e *TestSuiteExecution) Stop() {
+	duration := e.CalculateDuration()
+	e.EndTime = time.Now()
+	e.Duration = utils.RoundDuration(duration).String()
+	e.DurationMs = int32(duration.Milliseconds())
 }
 
 func (e *TestSuiteExecution) CalculateDuration() time.Duration {

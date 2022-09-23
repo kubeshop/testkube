@@ -46,7 +46,9 @@ type Execution struct {
 	// test end time
 	EndTime time.Time `json:"endTime,omitempty"`
 	// test duration
-	Duration        string           `json:"duration,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	// test duration in milliseconds
+	DurationMs      int32            `json:"durationMs,omitempty"`
 	ExecutionResult *ExecutionResult `json:"executionResult,omitempty"`
 	// test and execution labels
 	Labels map[string]string `json:"labels,omitempty"`

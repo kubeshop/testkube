@@ -205,7 +205,7 @@ func (r MockExecutionResultsRepository) StartExecution(ctx context.Context, id s
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
+func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, execution testkube.Execution) error {
 	panic("not implemented")
 }
 

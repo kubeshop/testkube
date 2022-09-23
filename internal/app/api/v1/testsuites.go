@@ -685,11 +685,8 @@ func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.Te
 	wg.Add(1)
 	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
 		defer func(testExecution *testkube.TestSuiteExecution) {
-			duration := testExecution.CalculateDuration()
-			testExecution.EndTime = time.Now()
-			testExecution.Duration = duration.String()
-
-			err = s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
+			testExecution.Stop()
+			err = s.TestExecutionResults.EndExecution(ctx, *testExecution)
 			if err != nil {
 				s.Log.Errorw("error setting end time", "error", err.Error())
 			}

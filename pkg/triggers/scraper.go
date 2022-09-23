@@ -43,7 +43,7 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 			s.logger.Errorf("trigger service: execution scraper component: error fetching test execution result: %v", err)
 			continue
 		}
-		if !execution.IsRunning() {
+		if !execution.IsRunning() && !execution.IsQueued() {
 			s.logger.Debugf("trigger service: execution scraper component: test execution %s is finished", id)
 			status.removeExecutionID(id)
 		}
@@ -60,7 +60,7 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 			s.logger.Errorf("trigger service: execution scraper component: error fetching testsuite execution result: %v", err)
 			continue
 		}
-		if !execution.IsRunning() {
+		if !execution.IsRunning() && !execution.IsQueued() {
 			s.logger.Debugf("trigger service: execution scraper component: testsuite execution %s is finished", id)
 			status.removeTestSuiteExecutionID(id)
 		}

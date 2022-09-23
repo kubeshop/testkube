@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -119,8 +120,11 @@ func (e *Execution) Start() {
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
-	e.Duration = e.CalculateDuration().String()
+	duration := e.CalculateDuration()
+	e.Duration = utils.RoundDuration(duration).String()
+	e.DurationMs = int32(duration.Milliseconds())
 }
+
 func (e *Execution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
@@ -136,7 +140,6 @@ func (e *Execution) CalculateDuration() time.Duration {
 
 	return end.Sub(e.StartTime)
 }
-
 func (e Execution) IsFailed() bool {
 	if e.ExecutionResult == nil {
 		return true
@@ -147,8 +150,16 @@ func (e Execution) IsFailed() bool {
 
 func (e Execution) IsRunning() bool {
 	if e.ExecutionResult == nil {
-		return false
+		return true
 	}
 
-	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus || *e.ExecutionResult.Status == QUEUED_ExecutionStatus
+	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus
+}
+
+func (e Execution) IsQueued() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == QUEUED_ExecutionStatus
 }

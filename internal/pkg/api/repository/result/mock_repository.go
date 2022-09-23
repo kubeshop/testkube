@@ -121,17 +121,17 @@ func (mr *MockRepositoryMockRecorder) DeleteForAllTestSuites(arg0 interface{}) *
 }
 
 // EndExecution mocks base method.
-func (m *MockRepository) EndExecution(arg0 context.Context, arg1 string, arg2 time.Time, arg3 time.Duration) error {
+func (m *MockRepository) EndExecution(arg0 context.Context, arg1 testkube.Execution) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EndExecution", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EndExecution", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EndExecution indicates an expected call of EndExecution.
-func (mr *MockRepositoryMockRecorder) EndExecution(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) EndExecution(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndExecution", reflect.TypeOf((*MockRepository)(nil).EndExecution), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndExecution", reflect.TypeOf((*MockRepository)(nil).EndExecution), arg0, arg1)
 }
 
 // Get mocks base method.
