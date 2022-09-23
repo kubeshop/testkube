@@ -122,9 +122,8 @@ func (e *Execution) Stop() {
 	e.EndTime = time.Now()
 	e.Duration = types.FormatDuration(e.CalculateDuration().String())
 	e.DurationMs = int32(e.CalculateDuration().Milliseconds())
-	fmt.Printf("%+v\n", e.DurationMs)
-
 }
+
 func (e *Execution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
