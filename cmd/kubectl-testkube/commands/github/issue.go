@@ -7,6 +7,7 @@ import (
 	"html/template"
 
 	prShared "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+	"github.com/cli/cli/v2/utils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/skratchdot/open-golang/open"
@@ -61,11 +62,11 @@ func OpenTicket(d testkube.DebugInfo) error {
 		return err
 	}
 
-	if !prShared.ValidURL(openURL) {
+	if !utils.ValidURL(openURL) {
 		return fmt.Errorf("cannot open in browser: maximum URL length exceeded")
 	}
 
-	ui.Info(fmt.Sprintf("Opening %s in your browser.\n", prShared.DisplayURL(openURL)))
+	ui.Info(fmt.Sprintf("Opening %s in your browser.\n", utils.DisplayURL(openURL)))
 
 	return open.Start(openURL)
 }
