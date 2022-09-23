@@ -2,8 +2,9 @@ package triggers
 
 import (
 	"context"
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"testing"
+
+	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
