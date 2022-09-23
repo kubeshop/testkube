@@ -30,6 +30,6 @@ type TestSuite struct {
 	Repeats  int32     `json:"repeats,omitempty"`
 	Created  time.Time `json:"created,omitempty"`
 	// list of files that need to be copied into the tests of form source:destination
-	ConfigFiles      []string                   `json:"configFiles,omitempty"`
+	CopyFiles        []string                   `json:"copyFiles,omitempty"`
 	ExecutionRequest *TestSuiteExecutionRequest `json:"executionRequest,omitempty"`
 }

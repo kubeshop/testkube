@@ -51,5 +51,5 @@ type Execution struct {
 	// test and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// map of files with target location as key and contents as value
-	ConfigFiles map[string][]byte `json:"configFiles,omitempty"`
+	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
 }

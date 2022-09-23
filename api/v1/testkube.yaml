@@ -2188,7 +2188,7 @@ components:
         created:
           type: string
           format: date-time
-        configFiles:
+        copyFiles:
           type: array
           items:
             type: string
@@ -2457,7 +2457,7 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
-        configFiles:
+        copyFiles:
           type: array
           items:
             type: string
@@ -2616,7 +2616,7 @@ components:
           example:
             env: "prod"
             app: "backend"
-        configFiles:
+        copyFiles:
           type: object
           additionalProperties:
             type: array
@@ -2955,7 +2955,7 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
-        configFiles:
+        copyFiles:
           type: object
           additionalProperties:
             type: array

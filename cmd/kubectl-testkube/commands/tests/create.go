@@ -43,7 +43,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitUsernameSecret        map[string]string
 		gitTokenSecret           map[string]string
 		secretVariableReferences map[string]string
-		configFiles              []string
+		copyFiles                []string
 	)
 
 	cmd := &cobra.Command{
@@ -140,7 +140,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
-	cmd.Flags().StringArrayVarP(&configFiles, "config-files", "", []string{}, "configuration file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 
 	return cmd
 }

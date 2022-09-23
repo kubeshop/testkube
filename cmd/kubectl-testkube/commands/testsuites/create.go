@@ -29,7 +29,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		executionName            string
 		httpProxy, httpsProxy    string
 		secretVariableReferences map[string]string
-		configFiles              []string
+		copyFiles                []string
 	)
 
 	cmd := &cobra.Command{
@@ -119,7 +119,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
-	cmd.Flags().StringArrayVarP(&configFiles, "config-files", "", []string{}, "configuration file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 
 	return cmd
 }

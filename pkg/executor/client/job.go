@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -171,6 +172,7 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+	spew.Dump(options.Request.CopyFiles)
 
 	result = testkube.NewRunningExecutionResult()
 
@@ -211,6 +213,7 @@ func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptio
 // Execution is started synchronously client will be blocked
 func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
+	spew.Dump(options.Request.CopyFiles)
 
 	ctx := context.Background()
 	err = c.CreateJob(ctx, *execution, options)

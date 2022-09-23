@@ -8,17 +8,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_readConfigFiles(t *testing.T) {
+func Test_readCopyFiles(t *testing.T) {
 	t.Run("Files exist, files are properly read", func(t *testing.T) {
-		files, err := createConfigFiles()
+		files, err := createCopyFiles()
 		assert.NoError(t, err)
 
-		configFiles := []string{}
+		copyFiles := []string{}
 		for _, f := range files {
-			configFiles = append(configFiles, fmt.Sprintf("%s:%s_b", f.Name(), f.Name()))
+			copyFiles = append(copyFiles, fmt.Sprintf("%s:%s_b", f.Name(), f.Name()))
 		}
 
-		gotFiles, err := readConfigFiles(configFiles)
+		gotFiles, err := readCopyFiles(copyFiles)
 		assert.NoError(t, err)
 
 		for _, f := range gotFiles {
@@ -29,13 +29,13 @@ func Test_readConfigFiles(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Files don't exist, an error is thrown", func(t *testing.T) {
-		configFiles := []string{"/tmp/file_does_not_exist:/path_not_important"}
-		_, err := readConfigFiles(configFiles)
+		copyFiles := []string{"/tmp/file_does_not_exist:/path_not_important"}
+		_, err := readCopyFiles(copyFiles)
 		assert.Error(t, err)
 	})
 }
 
-func createConfigFiles() ([]*os.File, error) {
+func createCopyFiles() ([]*os.File, error) {
 	files := []*os.File{}
 	for i := 0; i < 5; i++ {
 		file, err := os.CreateTemp("/tmp", fmt.Sprintf("config_%d", i))

@@ -35,7 +35,7 @@ func NewRunTestCmd() *cobra.Command {
 		httpProxy, httpsProxy    string
 		executionLabels          map[string]string
 		secretVariableReferences map[string]string
-		configFiles              []string
+		copyFiles                []string
 	)
 
 	cmd := &cobra.Command{
@@ -52,10 +52,10 @@ func NewRunTestCmd() *cobra.Command {
 				paramsFileContent = string(b)
 			}
 
-			files := map[string][]byte{}
+			cFiles := map[string][]byte{}
 			var err error
-			if len(configFiles) != 0 {
-				files, err = readConfigFiles(configFiles)
+			if len(copyFiles) != 0 {
+				cFiles, err = readCopyFiles(copyFiles)
 				ui.ExitOnError("could not read config files", err)
 			}
 
@@ -80,7 +80,7 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                    httpsProxy,
 				Envs:                          envs,
 				Image:                         image,
-				ExecutionConfigFiles:          files,
+				CopyFiles:                     cFiles,
 			}
 
 			switch {
@@ -163,7 +163,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
-	cmd.Flags().StringArrayVarP(&configFiles, "config-files", "", []string{}, "configuration file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 
 	return cmd
 }

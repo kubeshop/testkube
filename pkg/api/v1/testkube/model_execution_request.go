@@ -43,5 +43,5 @@ type ExecutionRequest struct {
 	// https proxy for executor containers
 	HttpsProxy string `json:"httpsProxy,omitempty"`
 	// map of files with target location as key and contents as value
-	ConfigFiles map[string][]byte `json:"configFiles,omitempty"`
+	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
 }

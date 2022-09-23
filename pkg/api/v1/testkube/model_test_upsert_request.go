@@ -30,6 +30,6 @@ type TestUpsertRequest struct {
 	// schedule to run test
 	Schedule string `json:"schedule,omitempty"`
 	// list of files that need to be copied into the test of form source:destination
-	ConfigFiles      []string          `json:"configFiles,omitempty"`
+	CopyFiles        []string          `json:"copyFiles,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
 }

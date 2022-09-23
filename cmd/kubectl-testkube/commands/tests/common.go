@@ -225,12 +225,17 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	schedule := cmd.Flag("schedule").Value.String()
-	binrayArgs, err := cmd.Flags().GetStringArray("executor-args")
+	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
 	if err != nil {
 		return options, err
 	}
 
-	executorArgs, err := prepareExecutorArgs(binrayArgs)
+	executorArgs, err := prepareExecutorArgs(binaryArgs)
+	if err != nil {
+		return options, err
+	}
+
+	copyFiles, err := cmd.Flags().GetStringArray("copy-files")
 	if err != nil {
 		return options, err
 	}
@@ -243,6 +248,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
+		CopyFiles: copyFiles,
 	}
 
 	executionName := cmd.Flag("execution-name").Value.String()
@@ -327,17 +333,17 @@ func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
 	return executorArgs, nil
 }
 
-// readConfigFiles reads files
-func readConfigFiles(configFiles []string) (map[string][]byte, error) {
+// readCopyFiles reads files
+func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
 	files := map[string][]byte{}
-	for _, f := range configFiles {
+	for _, f := range copyFiles {
 		paths := strings.Split(f, ":")
 		if len(paths) != 2 {
 			return nil, fmt.Errorf("invalid file format, expecting sourcePath:destinationPath")
 		}
 		contents, err := os.ReadFile(paths[0])
 		if err != nil {
-			return nil, fmt.Errorf("could not read executor config file: %w", err)
+			return nil, fmt.Errorf("could not read executor copy file: %w", err)
 		}
 		files[paths[1]] = contents
 	}
