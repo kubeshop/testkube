@@ -368,7 +368,7 @@ func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, erro
 		if len(fPair) != 2 {
 			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
 		}
-		files[fPair[0]] = fPair[1]
+		files[fPair[1]] = fPair[0]
 	}
 
 	for _, fileMapping := range executionFiles {
@@ -376,11 +376,11 @@ func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, erro
 		if len(fPair) != 2 {
 			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
 		}
-		files[fPair[0]] = fPair[1]
+		files[fPair[1]] = fPair[0]
 	}
 
 	result := []string{}
-	for source, destination := range files {
+	for destination, source := range files {
 		result = append(result, fmt.Sprintf("%s:%s", source, destination))
 	}
 
