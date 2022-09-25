@@ -38,7 +38,6 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 	test.Schedule = cr.Spec.Schedule
 	test.Created = cr.CreationTimestamp.Time
 	test.ExecutionRequest = MapExecutionRequestFromSpec(cr.Spec.ExecutionRequest)
-	test.CopyFiles = cr.Spec.CopyFiles
 
 	return
 }

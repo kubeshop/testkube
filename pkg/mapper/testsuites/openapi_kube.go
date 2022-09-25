@@ -79,7 +79,6 @@ func MapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 			After:            mapTestStepsToCRD(request.After),
 			Schedule:         request.Schedule,
 			ExecutionRequest: MapExecutionRequestToSpecExecutionRequest(request.ExecutionRequest),
-			CopyFiles:        request.CopyFiles,
 		},
 	}
 }
