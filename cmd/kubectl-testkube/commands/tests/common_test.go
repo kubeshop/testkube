@@ -35,6 +35,69 @@ func Test_readCopyFiles(t *testing.T) {
 	})
 }
 
+func Test_mergeCopyFiles(t *testing.T) {
+	t.Run("Two empty lists should return empty list", func(t *testing.T) {
+		testFiles := []string{}
+		executionFiles := []string{}
+
+		result, err := mergeCopyFiles(testFiles, executionFiles)
+		assert.NoError(t, err)
+		assert.Empty(t, result)
+	})
+	t.Run("First list populated, second list empty should return first list", func(t *testing.T) {
+		testFiles := []string{
+			"/test/file:/tmp/test/file",
+		}
+		executionFiles := []string{}
+
+		result, err := mergeCopyFiles(testFiles, executionFiles)
+		assert.NoError(t, err)
+		assert.Equal(t, testFiles, result)
+	})
+	t.Run("First list empty, second list populated should return second list", func(t *testing.T) {
+		testFiles := []string{}
+		executionFiles := []string{
+			"/test/file:/tmp/test/file",
+		}
+
+		result, err := mergeCopyFiles(testFiles, executionFiles)
+		assert.NoError(t, err)
+		assert.Equal(t, executionFiles, result)
+	})
+	t.Run("Two populated lists with no overlapping should return merged list", func(t *testing.T) {
+		testFiles := []string{
+			"/test/file1:/tmp/test/file1",
+			"/test/file2:/tmp/test/file2",
+			"/test/file3:/tmp/test/file3",
+		}
+		executionFiles := []string{
+			"/test/file4:/tmp/test/file4",
+			"/test/file5:/tmp/test/file5",
+			"/test/file6:/tmp/test/file6",
+		}
+
+		result, err := mergeCopyFiles(testFiles, executionFiles)
+		assert.NoError(t, err)
+		assert.Equal(t, 6, len(result))
+	})
+	t.Run("Two populated lists with one overlapping element should return merged list with no duplicates", func(t *testing.T) {
+		testFiles := []string{
+			"/test/file1:/tmp/test/file1",
+			"/test/file2:/tmp/test/file2",
+			"/test/file3:/tmp/test/file3",
+		}
+		executionFiles := []string{
+			"/test/file4:/tmp/test/file4",
+			"/test/file5:/tmp/test/file5",
+			"/test/file1:/tmp/test/file1",
+		}
+
+		result, err := mergeCopyFiles(testFiles, executionFiles)
+		assert.NoError(t, err)
+		assert.Equal(t, 5, len(result))
+	})
+}
+
 func createCopyFiles() ([]*os.File, error) {
 	files := []*os.File{}
 	for i := 0; i < 5; i++ {
