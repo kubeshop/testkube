@@ -2188,13 +2188,6 @@ components:
         created:
           type: string
           format: date-time
-        copyFiles:
-          type: array
-          items:
-            type: string
-          description: list of files that need to be copied into the tests of form source:destination
-          example:
-            - /user/home/settings/runnerconfig.txt:/tmp/settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
 
