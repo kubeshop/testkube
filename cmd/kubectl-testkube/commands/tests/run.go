@@ -44,19 +44,11 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			paramsFileContent := ""
 			if variablesFile != "" {
 				b, err := os.ReadFile(variablesFile)
 				ui.ExitOnError("reading variables file", err)
 				paramsFileContent = string(b)
-			}
-
-			cFiles := map[string][]byte{}
-			var err error
-			if len(copyFiles) != 0 {
-				cFiles, err = readCopyFiles(copyFiles)
-				ui.ExitOnError("could not read config files", err)
 			}
 
 			envs, err := cmd.Flags().GetStringToString("env")
@@ -80,7 +72,6 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                    httpsProxy,
 				Envs:                          envs,
 				Image:                         image,
-				CopyFiles:                     cFiles,
 			}
 
 			switch {
@@ -88,12 +79,21 @@ func NewRunTestCmd() *cobra.Command {
 				testName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-				_, err = client.GetTest(testName)
+				test, err := client.GetTest(testName)
 				if err != nil {
 					ui.UseStderr()
 					ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
 					ui.Debug(err.Error())
 					os.Exit(1)
+				}
+
+				if len(test.CopyFiles) != 0 || len(copyFiles) != 0 {
+					copyFileList, err := mergeCopyFiles(test.CopyFiles, copyFiles)
+					ui.ExitOnError("could not merge files", err)
+
+					ui.Warn("Testkube will use the following file mappings:", copyFileList...)
+					options.CopyFiles, err = readCopyFiles(copyFileList)
+					ui.ExitOnError("could not read config files", err)
 				}
 
 				for i := 0; i < iterations; i++ {

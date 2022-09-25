@@ -349,3 +349,40 @@ func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
 	}
 	return files, nil
 }
+
+// mergeCopyFiles merges the lists of files to be copied into the running test
+// the files set on execution overwrite the files set on test levels
+func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, error) {
+	if len(testFiles) == 0 {
+		return executionFiles, nil
+	}
+
+	if len(executionFiles) == 0 {
+		return testFiles, nil
+	}
+
+	files := map[string]string{}
+
+	for _, fileMapping := range testFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[0]] = fPair[1]
+	}
+
+	for _, fileMapping := range executionFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[0]] = fPair[1]
+	}
+
+	result := []string{}
+	for source, destination := range files {
+		result = append(result, fmt.Sprintf("%s:%s", source, destination))
+	}
+
+	return result, nil
+}
