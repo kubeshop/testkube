@@ -171,7 +171,6 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
-
 	result = testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()

@@ -63,7 +63,7 @@ If you need to update your test after change in Postman, re-export it to a file 
 kubectl testkube update test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
-To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster: 
+To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster:
 
 Output:
 
@@ -89,9 +89,9 @@ NAME   AGE
 test   32s
 ```
 
-Get the details of a test: 
+Get the details of a test:
 
-```bash 
+```bash
 kubectl get tests -ntestkube test-example -oyaml
 ```bash
 $ kubectl testkube get test test
@@ -324,6 +324,20 @@ spec:
 ```
 
 As we can see, this test has `spec.repository` with git repository data. This data can now be used by the executor to download test data.
+
+### **Mapping local files**
+
+Local files can be added into a Testkube Test. This can be set on both Test and Execution level passing the file in the format `source_path:destination_path` using the flag `--copy-files`. The file will be copied upon execution from the machine running `kubectl`.
+
+```bash
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-settings --type maven/test --name maven-example-file-test --git-branch main --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml"
+```
+
+Output:
+
+```bash
+Test created maven-example-file-test 🥇
+```
 
 ## **Summary**
 

@@ -2450,6 +2450,13 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
+        copyFiles:
+          type: array
+          items:
+            type: string
+          description: list of files that need to be copied into the test of form source:destination
+          example:
+            - /user/home/settings/runnerconfig.txt:/tmp/settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/ExecutionRequest"
 
@@ -2602,6 +2609,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        copyFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
+
 
     Artifact:
       type: object
@@ -2933,6 +2948,13 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        copyFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
