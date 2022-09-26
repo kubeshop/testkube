@@ -10,6 +10,7 @@ const (
 	TestContentTypeFileURI TestContentType = "file-uri"
 	TestContentTypeGitFile TestContentType = "git-file"
 	TestContentTypeGitDir  TestContentType = "git-dir"
+	TestContentTypeEmpty   TestContentType = ""
 )
 
 var ErrTestContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
