@@ -4,11 +4,11 @@ sidebar_label: Container Executor
 ---
 # What is a Container Executor?
 
-TestKube container executor allows you to run your own container images for executing tests. TestKube orchestrates the Tests using the container image as Kubernetes Jobs.
+The TestKube Container Executor allows you to run your own container images for executing tests. TestKube orchestrates the Tests using the container image as Kubernetes Jobs.
 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
 
-In order to use container executor, create a new executor with `executor_type: container` and your custom type. For example:
+In order to use the Container Executor, create a new executor with `executor_type: container` and your custom type. For example:
 
 ```yaml
 apiVersion: executor.testkube.io/v1
@@ -45,7 +45,7 @@ spec:
 
 Executing this test will run a Kubernetes Job with a `curlimages/curl:7.85.0` image, `secret-name` image pull secret, `curl` command, and `https://testkube.kubeshop.io/` argument.
 
-You can provide image, args, command, and image pull secrets in HTTP Request, Test Spec, and Executor spec. The container executor merges all the data using the following order:
+You can provide image, args, command, and image pull secrets in the HTTP Request, Test Spec, and Executor spec. The container executor merges all the data using the following order:
 
 1. HTTP Request.
 2. Test.Spec.ExecutionRequest fields are used if they are not filled before.
