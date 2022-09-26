@@ -28,3 +28,21 @@ spec:
   {{- if .JobTemplate }}
   job_template: {{ .JobTemplate }}
   {{- end }}
+  {{- if gt (len .Args) 0 }}
+  args:
+  {{- range $arg := .Args}}
+  - {{ $arg -}}
+  {{- end}}
+  {{- end}}
+  {{- if gt (len .Command) 0 }}
+  command:
+  {{- range $cmd := .Command}}
+  - {{ $cmd -}}
+  {{- end}}
+  {{- end -}}
+  {{- if gt (len .ImagePullSecrets) 0 }}
+  imagePullSecrets:
+  {{- range $secret := .ImagePullSecrets}}
+  - name: {{ $secret.Name -}}
+  {{- end}}
+  {{- end}}

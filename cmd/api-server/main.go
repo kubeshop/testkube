@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -188,13 +189,19 @@ func main() {
 		ui.ExitOnError("Creating executor client")
 	}
 
-	jobTemplates, err := apiv1.NewJobTemplatesFromEnv()
+	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_TEMPLATE")
 	if err != nil {
 		ui.ExitOnError("Creating job templates")
 	}
 
+	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, namespace)
+	if err != nil {
+		ui.ExitOnError("Creating container executor")
+	}
+
 	scheduler := scheduler.NewScheduler(
 		executor,
+		containerExecutor,
 		resultsRepository,
 		testResultsRepository,
 		executorsClient,
@@ -221,6 +228,7 @@ func main() {
 		clusterId,
 		eventsEmitter,
 		executor,
+		containerExecutor,
 		metrics,
 		jobTemplates,
 		scheduler,
@@ -258,6 +266,39 @@ func main() {
 	ui.ExitOnError("Running API Server", err)
 }
 
+func newContainerExecutor(
+	testExecutionResults result.Repository,
+	executorsClient executorsclientv1.Interface,
+	eventsEmitter *event.Emitter,
+	metrics metrics.Metrics,
+	namespace string,
+) (executor client.Executor, err error) {
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			return nil, errors.WithMessage(err, "error parsing as bool envvar: TESTKUBE_READONLY_EXECUTORS")
+		}
+	}
+
+	defaultExecutors := os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")
+
+	initImage, err := loadDefaultExecutors(executorsClient, namespace, defaultExecutors, readOnlyExecutors)
+	if err != nil {
+		return nil, errors.WithMessage(err, "error loading default executors")
+	}
+
+	var jobTemplate string
+	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_CONTAINER_TEMPLATE")
+	if err != nil {
+		jobTemplate = ""
+	} else {
+		jobTemplate = jobTemplates.Job
+	}
+
+	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, metrics, eventsEmitter)
+}
+
 func newExecutorClient(
 	testExecutionResults result.Repository,
 	executorsClient executorsclientv1.Interface,
@@ -279,7 +320,7 @@ func newExecutorClient(
 		return nil, errors.WithMessage(err, "error loading default executors")
 	}
 
-	jobTemplates, err := apiv1.NewJobTemplatesFromEnv()
+	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_TEMPLATE")
 	if err != nil {
 		return nil, errors.WithMessage(err, "error creating job templates from envvars")
 	}

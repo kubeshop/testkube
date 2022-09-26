@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -14,9 +15,9 @@ import (
 
 func NewCreateExecutorCmd() *cobra.Command {
 	var (
-		types                                       []string
-		name, executorType, image, uri, jobTemplate string
-		labels                                      map[string]string
+		types, command, executorArgs, imagePullSecretNames []string
+		name, executorType, image, uri, jobTemplate        string
+		labels                                             map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -50,18 +51,27 @@ func NewCreateExecutorCmd() *cobra.Command {
 				jobTemplateContent = string(b)
 			}
 
+			var imageSecrets []testkube.LocalObjectReference
+			for _, secretName := range imagePullSecretNames {
+				imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+			}
+
 			options := apiClient.CreateExecutorOptions{
-				Name:         name,
-				Namespace:    namespace,
-				Types:        types,
-				ExecutorType: executorType,
-				Image:        image,
-				Uri:          uri,
-				JobTemplate:  jobTemplateContent,
-				Labels:       labels,
+				Name:             name,
+				Namespace:        namespace,
+				Types:            types,
+				ExecutorType:     executorType,
+				Image:            image,
+				ImagePullSecrets: imageSecrets,
+				Command:          command,
+				Args:             executorArgs,
+				Uri:              uri,
+				JobTemplate:      jobTemplateContent,
+				Labels:           labels,
 			}
 
 			if !crdOnly {
+
 				_, err = client.CreateExecutor(options)
 				ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)
 
@@ -80,11 +90,14 @@ func NewCreateExecutorCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test name - mandatory")
-	cmd.Flags().StringArrayVarP(&types, "types", "t", []string{}, "types handled by executor")
-	cmd.Flags().StringVar(&executorType, "executor-type", "job", "executor type (defaults to job)")
+	cmd.Flags().StringArrayVarP(&types, "types", "t", []string{}, "test types handled by executor")
+	cmd.Flags().StringVar(&executorType, "executor-type", "job", "executor type, container or job (defaults to job)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
-	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVar(&image, "image", "", "image used for container executor")
+	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
+	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in container executor")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 

@@ -275,15 +275,32 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	httpProxy := cmd.Flag("http-proxy").Value.String()
 	httpsProxy := cmd.Flag("https-proxy").Value.String()
+	image := cmd.Flag("image").Value.String()
+	command, err := cmd.Flags().GetStringArray("command")
+	if err != nil {
+		return options, err
+	}
+	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+	if err != nil {
+		return options, err
+	}
+	var imageSecrets []testkube.LocalObjectReference
+	for _, secretName := range imagePullSecretNames {
+		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+	}
+
 	options.ExecutionRequest = &testkube.ExecutionRequest{
-		Name:          executionName,
-		VariablesFile: paramsFileContent,
-		Variables:     variables,
-		Args:          executorArgs,
-		Envs:          envs,
-		SecretEnvs:    secretEnvs,
-		HttpProxy:     httpProxy,
-		HttpsProxy:    httpsProxy,
+		Name:             executionName,
+		VariablesFile:    paramsFileContent,
+		Variables:        variables,
+		Image:            image,
+		Command:          command,
+		Args:             executorArgs,
+		ImagePullSecrets: imageSecrets,
+		Envs:             envs,
+		SecretEnvs:       secretEnvs,
+		HttpProxy:        httpProxy,
+		HttpsProxy:       httpsProxy,
 	}
 
 	// if labels are passed and are different from the existing overwrite

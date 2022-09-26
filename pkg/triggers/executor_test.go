@@ -91,6 +91,7 @@ func TestExecute(t *testing.T) {
 
 	rnr := scheduler.NewScheduler(
 		mockExecutor,
+		mockExecutor,
 		mockResultRepository,
 		mockTestResultRepository,
 		mockExecutorsClient,

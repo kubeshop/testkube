@@ -15,6 +15,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	containerType = "container"
+)
+
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
 	testkube.Test, testkube.ExecutionRequest, testkube.Execution] {
 	requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(work))
@@ -87,12 +91,19 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	var result testkube.ExecutionResult
+	var executor client.Executor
+	switch options.ExecutorSpec.ExecutorType {
+	case containerType:
+		executor = s.containerExecutor
+	default:
+		executor = s.executor
+	}
 
 	// sync/async test execution
 	if options.Sync {
-		result, err = s.executor.ExecuteSync(&execution, options)
+		result, err = executor.ExecuteSync(&execution, options)
 	} else {
-		result, err = s.executor.Execute(&execution, options)
+		result, err = executor.Execute(&execution, options)
 	}
 
 	// set execution result to one created

@@ -11,9 +11,9 @@ type JobTemplates struct {
 	Job string
 }
 
-func NewJobTemplatesFromEnv() (*JobTemplates, error) {
+func NewJobTemplatesFromEnv(env string) (*JobTemplates, error) {
 	j := JobTemplates{}
-	err := envconfig.Process("TESTKUBE_TEMPLATE", &j)
+	err := envconfig.Process(env, &j)
 	if err != nil {
 		return nil, err
 	}
