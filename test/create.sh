@@ -22,6 +22,7 @@ kubectl delete test testkube-api-performance -ntestkube || true
 kubectl delete secret testkube-api-performance-secrets -ntestkube || true
 kubectl testkube create test --file test/perf/api-server.js --type "k6/script" --name testkube-api-performance
 
+
 # -------- other tests ----------
 
 kubectl delete test testkube-todo-frontend -ntestkube || true
