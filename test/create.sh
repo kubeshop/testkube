@@ -22,13 +22,6 @@ kubectl delete test testkube-api-performance -ntestkube || true
 kubectl delete secret testkube-api-performance-secrets -ntestkube || true
 kubectl testkube create test --file test/perf/api-server.js --type "k6/script" --name testkube-api-performance
 
-# Executor tests
-kubectl delete -f test/executors/cypress-v10.yaml -f test/executors/cypress-v9.yaml -f test/executors/cypress-v8.yaml --ignore-not-found=true
-kubectl apply -f test/executors/cypress-v10.yaml -f test/executors/cypress-v9.yaml -f test/executors/cypress-v8.yaml
-
-kubectl delete -f test/cypress/executor-smoke/crd/crd.yaml --ignore-not-found=true
-kubectl apply -f test/cypress/executor-smoke/crd/crd.yaml
-
 # -------- other tests ----------
 
 kubectl delete test testkube-todo-frontend -ntestkube || true
@@ -60,6 +53,3 @@ cat test/suites/testsuite-example-1.json | kubectl testkube create testsuite --n
 
 kubectl delete testsuite kubeshop-sites-test -ntestkube || true
 cat test/suites/testsuite-example-2.json | kubectl testkube create testsuite --name kubeshop-sites-test  --label app=sites
-
-kubectl delete testsuite executor-smoke-tests -ntestkube --ignore-not-found=true
-cat test/suites/executors-smoke-tests.json | kubectl testkube create testsuite --name executors-smoke-tests --label app=testkube
