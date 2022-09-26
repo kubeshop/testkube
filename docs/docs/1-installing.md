@@ -232,7 +232,7 @@ helm delete testkube
 testkube purge
 ```
 
-## Intallation on OpenShift 
+## Installation on OpenShift 
 
 Because of upgrade issues from Mongo 11 to 13 Testkube can't work on root-less OpenShift environment by default. Fortunately we was able to install it manually. 
 
@@ -273,6 +273,6 @@ helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values valu
 helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
 ```
 
-Please notice that we've just installed MongoDB with `testkube-mongodb` helm release name it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've intalled with different name / namespace please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
+Please notice that we've just installed MongoDB with `testkube-mongodb` helm release name it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with different name / namespace please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
 
 That's all your Testkube instance should be able to run on Openshift now. 
