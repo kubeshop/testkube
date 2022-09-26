@@ -2,11 +2,12 @@ package v1
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 
@@ -15,10 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 
 	"github.com/kelseyhightower/envconfig"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
@@ -28,7 +25,6 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
@@ -59,6 +55,10 @@ func NewTestkubeAPI(
 	configMap *config.ConfigMapConfig,
 	clusterId string,
 	eventsEmitter *event.Emitter,
+	executor client.Executor,
+	metrics metrics.Metrics,
+	jobTemplates *JobTemplates,
+	scheduler *scheduler.Scheduler,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -79,12 +79,15 @@ func NewTestkubeAPI(
 		SecretClient:         secretClient,
 		TestsSuitesClient:    testsuitesClient,
 		TestKubeClientset:    testkubeClientset,
-		Metrics:              NewMetrics(),
+		Metrics:              metrics,
 		Events:               eventsEmitter,
 		WebhooksClient:       webhookClient,
 		TestSourcesClient:    testsourcesClient,
 		Namespace:            namespace,
 		ConfigMap:            configMap,
+		Executor:             executor,
+		jobTemplates:         jobTemplates,
+		scheduler:            scheduler,
 	}
 
 	// will be reused in websockets handler
@@ -93,27 +96,6 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(slack.NewSlackLoader())
-
-	readOnlyExecutors := false
-	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
-		readOnlyExecutors, err = strconv.ParseBool(value)
-		if err != nil {
-			s.Log.Warnf("parse bool env %w", err)
-		}
-	}
-
-	initImage, err := s.loadDefaultExecutors(s.Namespace, os.Getenv("TESTKUBE_DEFAULT_EXECUTORS"), readOnlyExecutors)
-	if err != nil {
-		s.Log.Warnf("load default executors %w", err)
-	}
-
-	if err = s.jobTemplates.decodeFromEnv(); err != nil {
-		panic(err)
-	}
-
-	if s.Executor, err = client.NewJobExecutor(testExecutionResults, s.Namespace, initImage, s.jobTemplates.Job, s.Metrics, s.Events); err != nil {
-		panic(err)
-	}
 
 	s.InitEnvs()
 	s.InitStorage()
@@ -135,39 +117,16 @@ type TestkubeAPI struct {
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	TestKubeClientset    testkubeclientset.Interface
 	TestSourcesClient    *testsourcesclientv1.TestSourcesClient
-	Metrics              Metrics
+	Metrics              metrics.Metrics
 	Storage              storage.Client
 	storageParams        storageParams
-	jobTemplates         jobTemplates
 	Namespace            string
 	oauthParams          oauthParams
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
 	ConfigMap            *config.ConfigMapConfig
-}
-
-type jobTemplates struct {
-	Job string
-}
-
-func (j *jobTemplates) decodeFromEnv() error {
-	err := envconfig.Process("TESTKUBE_TEMPLATE", j)
-	if err != nil {
-		return err
-	}
-	templates := []*string{&j.Job}
-	for i := range templates {
-		if *templates[i] != "" {
-			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
-			if err != nil {
-				return err
-			}
-
-			*templates[i] = string(dataDecoded)
-		}
-	}
-
-	return nil
+	jobTemplates         *JobTemplates
+	scheduler            *scheduler.Scheduler
 }
 
 type storageParams struct {
@@ -443,73 +402,4 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
-}
-
-// loadDefaultExecutors loads default executors
-func (s TestkubeAPI) loadDefaultExecutors(namespace, data string, readOnlyExecutors bool) (initImage string, err error) {
-	var executors []testkube.ExecutorDetails
-
-	if data == "" {
-		return "", nil
-	}
-
-	dataDecoded, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return "", err
-	}
-
-	if err := json.Unmarshal([]byte(dataDecoded), &executors); err != nil {
-		return "", err
-	}
-
-	for _, executor := range executors {
-		if executor.Executor == nil {
-			continue
-		}
-
-		if executor.Name == "executor-init" {
-			initImage = executor.Executor.Image
-			continue
-		}
-
-		if readOnlyExecutors {
-			continue
-		}
-
-		features := []executorv1.Feature{}
-		for _, f := range executor.Executor.Features {
-			features = append(features, executorv1.Feature(f))
-		}
-
-		obj := &executorv1.Executor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      executor.Name,
-				Namespace: namespace,
-			},
-			Spec: executorv1.ExecutorSpec{
-				Types:        executor.Executor.Types,
-				ExecutorType: executor.Executor.ExecutorType,
-				Image:        executor.Executor.Image,
-				Features:     features,
-			},
-		}
-
-		result, err := s.ExecutorsClient.Get(executor.Name)
-		if err != nil && !errors.IsNotFound(err) {
-			return "", err
-		}
-
-		if err != nil {
-			if _, err = s.ExecutorsClient.Create(obj); err != nil {
-				return "", err
-			}
-		} else {
-			result.Spec = obj.Spec
-			if _, err = s.ExecutorsClient.Update(result); err != nil {
-				return "", err
-			}
-		}
-	}
-
-	return initImage, nil
 }
