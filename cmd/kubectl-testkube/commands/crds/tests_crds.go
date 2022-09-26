@@ -182,12 +182,16 @@ func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
 
 					envTest := test
 					envTest.Name = sanitizeName(envTest.Name + "-" + envName)
+					if test.ExecutionRequest != nil {
+						envTest.ExecutionRequest = &testkube.ExecutionRequest{}
+						*envTest.ExecutionRequest = *test.ExecutionRequest
+					}
 
 					if envTest.ExecutionRequest == nil {
 						envTest.ExecutionRequest = &testkube.ExecutionRequest{}
 					}
-					envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
 
+					envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
 					testMap[envTest.Name] = envTest
 				}
 			}
@@ -211,6 +215,11 @@ func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
 
 						secretEnvTest := test
 						secretEnvTest.Name = sanitizeName(secretEnvTest.Name + "-" + secretEnvName)
+						if test.ExecutionRequest != nil {
+							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+							*secretEnvTest.ExecutionRequest = *test.ExecutionRequest
+						}
+
 						if envTest, ok := testMap[secretEnvTest.Name]; ok {
 							secretEnvTest = envTest
 						}
