@@ -5,7 +5,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
+	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/event"
