@@ -138,6 +138,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
 		Image:           options.Image,
+		CopyFiles:       options.CopyFiles,
 	}
 
 	body, err := json.Marshal(request)
@@ -160,6 +161,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		SecretEnvs:    options.SecretEnvs,
 		HttpProxy:     options.HTTPProxy,
 		HttpsProxy:    options.HTTPSProxy,
+		CopyFiles:     options.CopyFiles,
 	}
 
 	body, err := json.Marshal(request)

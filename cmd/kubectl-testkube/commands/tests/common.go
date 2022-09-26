@@ -225,12 +225,17 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	schedule := cmd.Flag("schedule").Value.String()
-	binrayArgs, err := cmd.Flags().GetStringArray("executor-args")
+	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
 	if err != nil {
 		return options, err
 	}
 
-	executorArgs, err := prepareExecutorArgs(binrayArgs)
+	executorArgs, err := prepareExecutorArgs(binaryArgs)
+	if err != nil {
+		return options, err
+	}
+
+	copyFiles, err := cmd.Flags().GetStringArray("copy-files")
 	if err != nil {
 		return options, err
 	}
@@ -243,6 +248,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
+		CopyFiles: copyFiles,
 	}
 
 	executionName := cmd.Flag("execution-name").Value.String()
@@ -325,4 +331,58 @@ func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
 	}
 
 	return executorArgs, nil
+}
+
+// readCopyFiles reads files
+func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
+	files := map[string][]byte{}
+	for _, f := range copyFiles {
+		paths := strings.Split(f, ":")
+		if len(paths) != 2 {
+			return nil, fmt.Errorf("invalid file format, expecting sourcePath:destinationPath")
+		}
+		contents, err := os.ReadFile(paths[0])
+		if err != nil {
+			return nil, fmt.Errorf("could not read executor copy file: %w", err)
+		}
+		files[paths[1]] = contents
+	}
+	return files, nil
+}
+
+// mergeCopyFiles merges the lists of files to be copied into the running test
+// the files set on execution overwrite the files set on test levels
+func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, error) {
+	if len(testFiles) == 0 {
+		return executionFiles, nil
+	}
+
+	if len(executionFiles) == 0 {
+		return testFiles, nil
+	}
+
+	files := map[string]string{}
+
+	for _, fileMapping := range testFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[1]] = fPair[0]
+	}
+
+	for _, fileMapping := range executionFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[1]] = fPair[0]
+	}
+
+	result := []string{}
+	for destination, source := range files {
+		result = append(result, fmt.Sprintf("%s:%s", source, destination))
+	}
+
+	return result, nil
 }

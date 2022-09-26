@@ -27,6 +27,7 @@ func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Labels = crTest.Labels
 	test.Schedule = crTest.Spec.Schedule
 	test.ExecutionRequest = MapExecutionRequestFromSpec(crTest.Spec.ExecutionRequest)
+	test.CopyFiles = crTest.Spec.CopyFiles
 	return
 }
 

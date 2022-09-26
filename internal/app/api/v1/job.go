@@ -13,19 +13,19 @@ type JobTemplates struct {
 
 func NewJobTemplatesFromEnv() (*JobTemplates, error) {
 	j := JobTemplates{}
-	err := envconfig.Process("TESTKUBE_TEMPLATE", j)
+	err := envconfig.Process("TESTKUBE_TEMPLATE", &j)
 	if err != nil {
 		return nil, err
 	}
-	templates := []string{j.Job}
+	templates := []*string{&j.Job}
 	for i := range templates {
-		if templates[i] != "" {
-			dataDecoded, err := base64.StdEncoding.DecodeString(templates[i])
+		if *templates[i] != "" {
+			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
 			if err != nil {
 				return nil, errors.WithMessage(err, "error decoding base64 string")
 			}
 
-			templates[i] = string(dataDecoded)
+			*templates[i] = string(dataDecoded)
 		}
 	}
 

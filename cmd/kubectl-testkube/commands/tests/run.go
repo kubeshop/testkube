@@ -35,6 +35,7 @@ func NewRunTestCmd() *cobra.Command {
 		httpProxy, httpsProxy    string
 		executionLabels          map[string]string
 		secretVariableReferences map[string]string
+		copyFiles                []string
 	)
 
 	cmd := &cobra.Command{
@@ -43,7 +44,6 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			paramsFileContent := ""
 			if variablesFile != "" {
 				b, err := os.ReadFile(variablesFile)
@@ -79,12 +79,21 @@ func NewRunTestCmd() *cobra.Command {
 				testName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-				_, err = client.GetTest(testName)
+				test, err := client.GetTest(testName)
 				if err != nil {
 					ui.UseStderr()
 					ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
 					ui.Debug(err.Error())
 					os.Exit(1)
+				}
+
+				if len(test.CopyFiles) != 0 || len(copyFiles) != 0 {
+					copyFileList, err := mergeCopyFiles(test.CopyFiles, copyFiles)
+					ui.ExitOnError("could not merge files", err)
+
+					ui.Warn("Testkube will use the following file mappings:", copyFileList...)
+					options.CopyFiles, err = readCopyFiles(copyFileList)
+					ui.ExitOnError("could not read config files", err)
 				}
 
 				for i := 0; i < iterations; i++ {
@@ -154,6 +163,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 
 	return cmd
 }
