@@ -39,6 +39,8 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 		return f.FetchGitFile(content.Repository)
 	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
+	case testkube.TestContentTypeEmpty:
+		return path, nil
 	default:
 		return path, fmt.Errorf("unhandled content type: '%s'", content.Type_)
 	}
