@@ -121,16 +121,16 @@ jobs:
           name: bin-artifacts
           path: dist
           retention-days: 1
-      - name: Setup git email
-        run: git config --global user.email "brewbot@kubeshop.io"
-      - name: Setup git name
-        run: git config --global user.name "Brew Bot"
-      - name: Bump formulae
-        uses: mislav/bump-homebrew-formula-action@v2
-        with:
-          formula-name: testkube
-        env:
-          COMMITTER_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#      - name: Setup git email
+#        run: git config --global user.email "brewbot@kubeshop.io"
+#      - name: Setup git name
+#        run: git config --global user.name "Brew Bot"
+#      - name: Bump formulae
+#        uses: mislav/bump-homebrew-formula-action@v2
+#        with:
+#          formula-name: testkube
+#        env:
+#          COMMITTER_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
   build-and-publish-windows-installer:
     needs: release
