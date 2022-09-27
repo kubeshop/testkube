@@ -122,6 +122,7 @@ func (e *Execution) Stop() {
 	e.EndTime = time.Now()
 	duration := e.CalculateDuration()
 	e.Duration = utils.RoundDuration(duration).String()
+	e.DurationMs = int32(duration.Milliseconds())
 }
 
 func (e *Execution) CalculateDuration() time.Duration {
