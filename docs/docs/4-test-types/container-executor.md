@@ -28,7 +28,7 @@ spec:
 
 In the above example, all Tests of `curl-container/test` will be executed by this Executor. Then you can create a new test that uses this Executor:
 
-```
+```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
@@ -43,7 +43,11 @@ spec:
       TESTKUBE_ENV: example
 ```
 
-Executing this test will run a Kubernetes Job with a `curlimages/curl:7.85.0` image, `secret-name` image pull secret, `curl` command, and `https://testkube.kubeshop.io/` argument.
+Executing this test will run a Kubernetes Job with:
+- `curlimages/curl:7.85.0` image
+- `secret-name` image pull secret
+- `curl` command
+- `https://testkube.kubeshop.io/` argument
 
 You can provide image, args, command, and image pull secrets in the HTTP Request, Test Spec, and Executor spec. The container executor merges all the data using the following order:
 
