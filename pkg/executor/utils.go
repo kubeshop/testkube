@@ -3,6 +3,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -78,14 +79,54 @@ func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 			return false, err
 		}
 
-		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
+		if pod.Status.Phase == corev1.PodSucceeded {
 			return true, nil
-		case corev1.PodFailed:
-			return true, fmt.Errorf("pod %s/%s failed", pod.Namespace, pod.Name)
 		}
+
+		if err = isPodFailed(pod); err != nil {
+			return true, err
+		}
+
 		return false, nil
 	}
+}
+
+// isWaitStateFailed defines possible failed wait state
+// those states are defined and throwed as errors in Kubernetes runtime
+// https://github.com/kubernetes/kubernetes/blob/127f33f63d118d8d61bebaba2a240c60f71c824a/pkg/kubelet/kuberuntime/kuberuntime_container.go#L59
+func isWaitStateFailed(state string) bool {
+	var failedWaitingStates = []string{
+		"CreateContainerConfigError",
+		"PreCreateHookError",
+		"CreateContainerError",
+		"PreStartHookError",
+		"PostStartHookError",
+	}
+
+	for _, fws := range failedWaitingStates {
+		if state == fws {
+			return true
+		}
+	}
+
+	return false
+}
+
+// pod can be in wait state with reason which is error for us on the end
+func isPodFailed(pod *corev1.Pod) (err error) {
+	if pod.Status.Phase == corev1.PodFailed {
+		return errors.New(pod.Status.Message)
+	}
+
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		waitState := initContainerStatus.State.Waiting
+		// TODO there could be more edge cases but didn't found any constants in go libraries
+		if waitState != nil && isWaitStateFailed(waitState.Reason) {
+			return errors.New(waitState.Message)
+		}
+	}
+
+	return
 }
 
 // GetJobPods returns job pods
