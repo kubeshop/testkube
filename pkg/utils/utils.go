@@ -1,6 +1,9 @@
 package utils
 
-import "time"
+import (
+	"bufio"
+	"time"
+)
 
 func ContainsTag(tags []string, tag string) bool {
 	for _, t := range tags {
@@ -31,4 +34,25 @@ func RoundDuration(duration time.Duration, to ...time.Duration) time.Duration {
 		roundTo = to[0]
 	}
 	return duration.Round(roundTo)
+}
+
+// ReadLongLine reads long line
+func ReadLongLine(r *bufio.Reader) (line []byte, err error) {
+	var buffer []byte
+	var isPrefix bool
+
+	for {
+		buffer, isPrefix, err = r.ReadLine()
+		if err != nil {
+			break
+		}
+
+		if !isPrefix {
+			break
+		}
+
+		line = append(line, buffer...)
+	}
+
+	return line, err
 }

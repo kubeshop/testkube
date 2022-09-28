@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -370,7 +371,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 			reader := bufio.NewReader(stream)
 
 			for {
-				b, err := reader.ReadBytes('\n')
+				b, err := utils.ReadLongLine(reader)
 				if err != nil {
 					if err == io.EOF {
 						err = nil
