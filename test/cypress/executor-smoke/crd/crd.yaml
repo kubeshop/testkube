@@ -1,0 +1,174 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-legacy-executor-smoke-electron
+  namespace: testkube
+spec:
+  type: cypress/project
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-10
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-10-executor-smoke-electron
+  namespace: testkube
+spec:
+  type: cypress:v10/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-10
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-10-executor-smoke-chrome
+  namespace: testkube
+spec:
+  type: cypress:v10/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-10
+  executionRequest:
+    args:
+      - --browser
+      - chrome
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-10-executor-smoke-firefox
+  namespace: testkube
+spec:
+  type: cypress:v10/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-10
+  executionRequest:
+    args:
+      - --browser
+      - firefox
+---
+# Disabled - known bug: https://github.com/kubeshop/testkube/issues/2286
+# apiVersion: tests.testkube.io/v3
+# kind: Test
+# metadata:
+#   name: cypress-9-executor-smoke-electron
+#   namespace: testkube
+# spec:
+#   type: cypress:v9/test
+#   content:
+#     type: git-dir
+#     repository:
+#       type: git
+#       uri: https://github.com/kubeshop/testkube
+#       branch: cypress-tests
+#       path: test/cypress/executors/cypress-9
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-9-executor-smoke-chrome
+  namespace: testkube
+spec:
+  type: cypress:v9/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-9
+  executionRequest:
+    args:
+      - --browser
+      - chrome
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-9-executor-smoke-firefox
+  namespace: testkube
+spec:
+  type: cypress:v9/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-9
+  executionRequest:
+    args:
+      - --browser
+      - firefox
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-8-executor-smoke-electron
+  namespace: testkube
+spec:
+  type: cypress:v8/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-8
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-8-executor-smoke-chrome
+  namespace: testkube
+spec:
+  type: cypress:v8/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-8
+  executionRequest:
+    args:
+      - --browser
+      - chrome
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-8-executor-smoke-firefox
+  namespace: testkube
+spec:
+  type: cypress:v8/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: cypress-tests
+      path: test/cypress/executors/cypress-8
+  executionRequest:
+    args:
+      - --browser
+      - firefox

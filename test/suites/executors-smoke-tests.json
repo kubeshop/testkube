@@ -1,0 +1,16 @@
+{
+	"name": "executors-smoke-tests",
+	"description": "Executors smoke tests",
+	"steps": [
+		{"execute": {"name": "cypress-legacy-executor-smoke-electron"}},
+		{"execute": {"name": "cypress-10-executor-smoke-electron"}},
+		{"execute": {"name": "cypress-10-executor-smoke-chrome"}},
+		{"execute": {"name": "cypress-10-executor-smoke-firefox"}},
+		{"execute": {"name": "cypress-9-executor-smoke-electron"}},
+		{"execute": {"name": "cypress-9-executor-smoke-chrome"}},
+		{"execute": {"name": "cypress-9-executor-smoke-firefox"}},
+		{"execute": {"name": "cypress-8-executor-smoke-electron"}},
+		{"execute": {"name": "cypress-8-executor-smoke-chrome"}},
+		{"execute": {"name": "cypress-8-executor-smoke-firefox"}}
+	]
+}
