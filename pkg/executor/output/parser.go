@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func GetLogEntry(b []byte) (out Output, err error) {
@@ -34,7 +35,7 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 	// array too
 	result.Status = testkube.ExecutionStatusFailed
 	for {
-		b, err := reader.ReadBytes('\n')
+		b, err := utils.ReadLongLine(reader)
 		if err != nil {
 			if err == io.EOF {
 				err = nil
