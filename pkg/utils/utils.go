@@ -43,6 +43,7 @@ func ReadLongLine(r *bufio.Reader) (line []byte, err error) {
 
 	for {
 		buffer, isPrefix, err = r.ReadLine()
+		line = append(line, buffer...)
 		if err != nil {
 			break
 		}
@@ -50,8 +51,6 @@ func ReadLongLine(r *bufio.Reader) (line []byte, err error) {
 		if !isPrefix {
 			break
 		}
-
-		line = append(line, buffer...)
 	}
 
 	return line, err
