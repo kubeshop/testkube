@@ -24,16 +24,16 @@ pod/testkube-mongodb-74587998bb-8pzl2                       1/1     Running   0 
 pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0          5d23h
 ```
 
-### Dashboard opening using cli is not working
+### Opening the Dashboard Using CLI Is Not Working
 
-If there is a timeout error reported
+If there is a timeout error reported:
 
 ```sh
 kubectl-testkube dashboard
 checking readiness of services (error: timed-out waiting for dashboard and api)
 ```
 
-Make sure that there is not another dashboard process running in the background like in the example bellow
+Make sure that there is not another dashboard process running in the background like in the example below:
 
 ```sh
 ps aux | grep dashboard
