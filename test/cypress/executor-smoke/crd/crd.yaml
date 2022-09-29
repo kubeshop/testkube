@@ -10,8 +10,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-10
+      branch: main
+      path: test/cypress/executor-smoke/cypress-10
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -25,8 +25,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-10
+      branch: main
+      path: test/cypress/executor-smoke/cypress-10
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -40,8 +40,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-10
+      branch: main
+      path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
       - --browser
@@ -59,8 +59,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-10
+      branch: main
+      path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
       - --browser
@@ -79,8 +79,8 @@ spec:
 #     repository:
 #       type: git
 #       uri: https://github.com/kubeshop/testkube
-#       branch: cypress-tests
-#       path: test/cypress/executors/cypress-9
+#       branch: main
+#       path: test/cypress/executor-smoke/cypress-9
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -94,8 +94,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-9
+      branch: main
+      path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
       - --browser
@@ -113,8 +113,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-9
+      branch: main
+      path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
       - --browser
@@ -132,8 +132,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-8
+      branch: main
+      path: test/cypress/executor-smoke/cypress-8
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -147,8 +147,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-8
+      branch: main
+      path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
       - --browser
@@ -166,8 +166,8 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
-      path: test/cypress/executors/cypress-8
+      branch: main
+      path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
       - --browser
