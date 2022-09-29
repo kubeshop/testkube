@@ -102,7 +102,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
-	cmd.Flags().StringArrayVarP(&command, "command", "c", []string{}, "command passed to image in container executor")
+	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in container executor")
 
 	return cmd
 }
