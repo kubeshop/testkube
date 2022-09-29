@@ -81,20 +81,21 @@ type JobExecutor struct {
 }
 
 type JobOptions struct {
-	Name           string
-	Namespace      string
-	Image          string
-	ImageOverride  string
-	Jsn            string
-	TestName       string
-	InitImage      string
-	JobTemplate    string
-	SecretEnvs     map[string]string
-	HTTPProxy      string
-	HTTPSProxy     string
-	UsernameSecret *testkube.SecretRef
-	TokenSecret    *testkube.SecretRef
-	Variables      map[string]testkube.Variable
+	Name             string
+	Namespace        string
+	Image            string
+	ImagePullSecrets []string
+	ImageOverride    string
+	Jsn              string
+	TestName         string
+	InitImage        string
+	JobTemplate      string
+	SecretEnvs       map[string]string
+	HTTPProxy        string
+	HTTPSProxy       string
+	UsernameSecret   *testkube.SecretRef
+	TokenSecret      *testkube.SecretRef
+	Variables        map[string]testkube.Variable
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -483,6 +484,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 		jobOptions.JobTemplate = jobTemplate
 	}
 	jobOptions.Variables = execution.Variables
-
+	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	return
 }

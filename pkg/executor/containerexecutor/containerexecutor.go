@@ -310,23 +310,9 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		image = options.ExecutorSpec.Image
 	}
 
-	var imagePullSecrets []string
-	switch {
-	case len(options.Request.ImagePullSecrets) != 0:
-
-		imagePullSecrets = mapImagePullSecrets(options.Request.ImagePullSecrets)
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.ImagePullSecrets) != 0:
-
-		imagePullSecrets = mapK8sImagePullSecrets(options.TestSpec.ExecutionRequest.ImagePullSecrets)
-	case len(options.ExecutorSpec.ImagePullSecrets) != 0:
-
-		imagePullSecrets = mapK8sImagePullSecrets(options.ExecutorSpec.ImagePullSecrets)
-	}
-
 	return &JobOptions{
 		Image:            image,
-		ImagePullSecrets: imagePullSecrets,
+		ImagePullSecrets: options.ImagePullSecretNames,
 		Args:             args,
 		Command:          command,
 		TestName:         options.TestName,

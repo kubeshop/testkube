@@ -15,7 +15,6 @@ import (
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -91,23 +90,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	}
 
 	jobOptions.Variables = execution.Variables
-
+	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	return jobOptions, nil
-}
-
-// TODO: generics
-func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []string {
-	var res []string
-	for _, secret := range secrets {
-		res = append(res, secret.Name)
-	}
-	return res
-}
-
-func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
-	var res []string
-	for _, secret := range secrets {
-		res = append(res, secret.Name)
-	}
-	return res
 }

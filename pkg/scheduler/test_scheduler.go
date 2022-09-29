@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
+	v1 "k8s.io/api/core/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
@@ -254,18 +255,33 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		tokenSecret = test.Content.Repository.TokenSecret
 	}
 
+	var imagePullSecrets []string
+	switch {
+	case len(request.ImagePullSecrets) != 0:
+
+		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
+	case testCR.Spec.ExecutionRequest != nil &&
+		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
+
+		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
+	case len(executorCR.Spec.ImagePullSecrets) != 0:
+
+		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	}
+
 	return client.ExecuteOptions{
-		TestName:       id,
-		Namespace:      namespace,
-		TestSpec:       testCR.Spec,
-		ExecutorName:   executorCR.ObjectMeta.Name,
-		ExecutorSpec:   executorCR.Spec,
-		Request:        request,
-		Sync:           request.Sync,
-		Labels:         testCR.Labels,
-		UsernameSecret: usernameSecret,
-		TokenSecret:    tokenSecret,
-		ImageOverride:  request.Image,
+		TestName:             id,
+		Namespace:            namespace,
+		TestSpec:             testCR.Spec,
+		ExecutorName:         executorCR.ObjectMeta.Name,
+		ExecutorSpec:         executorCR.Spec,
+		Request:              request,
+		Sync:                 request.Sync,
+		Labels:               testCR.Labels,
+		UsernameSecret:       usernameSecret,
+		TokenSecret:          tokenSecret,
+		ImageOverride:        request.Image,
+		ImagePullSecretNames: imagePullSecrets,
 	}, nil
 }
 
@@ -339,4 +355,21 @@ func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.Tes
 	}
 
 	return testContent
+}
+
+// TODO: generics
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []string {
+	var res []string
+	for _, secret := range secrets {
+		res = append(res, secret.Name)
+	}
+	return res
+}
+
+func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
+	var res []string
+	for _, secret := range secrets {
+		res = append(res, secret.Name)
+	}
+	return res
 }

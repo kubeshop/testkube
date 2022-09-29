@@ -47,7 +47,7 @@ func TestExecuteSync(t *testing.T) {
 	}
 
 	execution := &testkube.Execution{Id: "1"}
-	options := client.ExecuteOptions{}
+	options := client.ExecuteOptions{ImagePullSecretNames: []string{"secret-name1"}}
 	res, err := ce.ExecuteSync(execution, options)
 	assert.NoError(t, err)
 	assert.Equal(t, testkube.PASSED_ExecutionStatus, *res.Status)
