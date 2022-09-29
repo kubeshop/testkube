@@ -14,6 +14,8 @@ type Client interface {
 	ExecutorAPI
 	WebhookAPI
 	ServiceAPI
+	ConfigAPI
+	TestSourceAPI
 }
 
 // TestAPI describes test api methods
@@ -74,14 +76,15 @@ type ExecutorAPI interface {
 type WebhookAPI interface {
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
 	GetWebhook(name string) (webhook testkube.Webhook, err error)
-	ListWebhooks(selector string) (executors testkube.Webhooks, err error)
+	ListWebhooks(selector string) (webhooks testkube.Webhooks, err error)
 	DeleteWebhook(name string) (err error)
 	DeleteWebhooks(selector string) (err error)
 }
 
-// ConfigAPI describes webhook api methods
+// ConfigAPI describes config api methods
 type ConfigAPI interface {
-	UpdateKey(key string, value any) (config testkube.Config, err error)
+	UpdateConfig(config testkube.Config) (outputConfig testkube.Config, err error)
+	GetConfig() (config testkube.Config, err error)
 }
 
 // ServiceAPI describes service api methods
@@ -90,13 +93,23 @@ type ServiceAPI interface {
 	GetDebugInfo() (info testkube.DebugInfo, err error)
 }
 
+// TestSourceAPI describes test source api methods
+type TestSourceAPI interface {
+	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
+	UpdateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
+	GetTestSource(name string) (testSource testkube.TestSource, err error)
+	ListTestSources(selector string) (testSources testkube.TestSources, err error)
+	DeleteTestSource(name string) (err error)
+	DeleteTestSources(selector string) (err error)
+}
+
 // TODO consider replacing below types by testkube.*
 
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
 // UpsertTestOptions - is mapping for now to OpenAPI schema for creating/changing test
-// if needed can beextended to custom struct
+// if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
 // CreateExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
@@ -104,6 +117,10 @@ type CreateExecutorOptions testkube.ExecutorCreateRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
+
+// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating/changing test source
+// if needed can be extended to custom struct
+type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
 
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
@@ -117,6 +134,7 @@ type ExecuteTestOptions struct {
 	HTTPProxy                     string
 	HTTPSProxy                    string
 	Image                         string
+	CopyFiles                     map[string][]byte
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -131,7 +149,7 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo
+		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo | testkube.TestSource
 }
 
 // Executable is an interface of executable objects

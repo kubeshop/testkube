@@ -91,7 +91,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 			ui.ExitOnError("validating schedule", err)
 
 			if !crdOnly {
-				_, err = client.CreateTestSuite((apiClient.UpsertTestSuiteOptions(options)))
+				_, err = client.CreateTestSuite(apiClient.UpsertTestSuiteOptions(options))
 				ui.ExitOnError("creating test suite "+options.Name+" in namespace "+options.Namespace, err)
 
 				ui.Success("Test suite created", options.Name)

@@ -41,7 +41,7 @@ cat <<EOF > my_postman_collection.json
 					"script": {
 						"exec": [
 							"pm.test(\"Body matches string\", function () {",
-							"    pm.expect(pm.response.text()).to.include(\"K8s Accelerator\");",
+							"    pm.expect(pm.response.text()).to.include(\"Accelerator\");",
 							"});"
 						],
 						"type": "text/javascript"

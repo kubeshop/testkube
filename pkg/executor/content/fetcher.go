@@ -3,13 +3,15 @@ package content
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"net/url"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/git"
+
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
@@ -37,6 +39,8 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 		return f.FetchGitFile(content.Repository)
 	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
+	case testkube.TestContentTypeEmpty:
+		return path, nil
 	default:
 		return path, fmt.Errorf("unhandled content type: '%s'", content.Type_)
 	}
@@ -47,7 +51,7 @@ func (f Fetcher) FetchString(str string) (path string, err error) {
 	return f.saveTempFile(strings.NewReader(str))
 }
 
-//FetchURI stores uri as local file
+// FetchURI stores uri as local file
 func (f Fetcher) FetchURI(uri string) (path string, err error) {
 	client := http.NewClient()
 	resp, err := client.Get(uri)

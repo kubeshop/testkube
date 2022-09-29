@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Test execution
+// test execution
 type Execution struct {
 	// execution id
 	Id string `json:"id,omitempty"`
@@ -28,7 +28,7 @@ type Execution struct {
 	// execution name
 	Name string `json:"name,omitempty"`
 	// execution number
-	Number int `json:"number,omitempty"`
+	Number int32 `json:"number,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// additional arguments/flags passed to executor binary
@@ -46,8 +46,12 @@ type Execution struct {
 	// test end time
 	EndTime time.Time `json:"endTime,omitempty"`
 	// test duration
-	Duration        string           `json:"duration,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	// test duration in milliseconds
+	DurationMs      int32            `json:"durationMs,omitempty"`
 	ExecutionResult *ExecutionResult `json:"executionResult,omitempty"`
 	// test and execution labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// map of files with target location as key and contents as value
+	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
 }

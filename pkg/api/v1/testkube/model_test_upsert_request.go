@@ -22,10 +22,14 @@ type TestUpsertRequest struct {
 	// test type
 	Type_   string       `json:"type,omitempty"`
 	Content *TestContent `json:"content,omitempty"`
-	Created time.Time    `json:"created,omitempty"`
+	// reference to test source resource
+	Source  string    `json:"source,omitempty"`
+	Created time.Time `json:"created,omitempty"`
 	// test labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test
-	Schedule         string            `json:"schedule,omitempty"`
+	Schedule string `json:"schedule,omitempty"`
+	// list of files that need to be copied into the test of form source:destination
+	CopyFiles        []string          `json:"copyFiles,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
 }

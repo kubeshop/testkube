@@ -29,16 +29,18 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.TestSuiteWithExecution](client, config),
 			NewProxyClient[testkube.TestSuiteExecutionsResult](client, config),
 		),
-		ExecutorClient: NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
-		WebhookClient:  NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
+		ExecutorClient:   NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
+		WebhookClient:    NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
+		ConfigClient:     NewConfigClient(NewProxyClient[testkube.Config](client, config)),
+		TestSourceClient: NewTestSourceClient(NewProxyClient[testkube.TestSource](client, config)),
 	}
 }
 
 // NewDirectAPIClient returns direct api client
-func NewDirectAPIClient(httpClient *http.Client, apiURI string) APIClient {
+func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI string) APIClient {
 	return APIClient{
 		TestClient: NewTestClient(
-			NewDirectClient[testkube.Test](httpClient, apiURI),
+			NewDirectClient[testkube.Test](httpClient, apiURI).WithSSEClient(sseClient),
 			NewDirectClient[testkube.Execution](httpClient, apiURI),
 			NewDirectClient[testkube.TestWithExecution](httpClient, apiURI),
 			NewDirectClient[testkube.ExecutionsResult](httpClient, apiURI),
@@ -52,8 +54,10 @@ func NewDirectAPIClient(httpClient *http.Client, apiURI string) APIClient {
 			NewDirectClient[testkube.TestSuiteWithExecution](httpClient, apiURI),
 			NewDirectClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI),
 		),
-		ExecutorClient: NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI)),
-		WebhookClient:  NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI)),
+		ExecutorClient:   NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI)),
+		WebhookClient:    NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI)),
+		ConfigClient:     NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI)),
+		TestSourceClient: NewTestSourceClient(NewDirectClient[testkube.TestSource](httpClient, apiURI)),
 	}
 }
 
@@ -63,4 +67,6 @@ type APIClient struct {
 	TestSuiteClient
 	ExecutorClient
 	WebhookClient
+	ConfigClient
+	TestSourceClient
 }

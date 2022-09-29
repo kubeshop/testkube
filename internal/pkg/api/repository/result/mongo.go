@@ -168,19 +168,19 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		return totals, err
 	}
 
-	var sum int
+	var sum int32
 
 	for _, o := range result {
-		sum += o.Count
+		sum += int32(o.Count)
 		switch testkube.TestSuiteExecutionStatus(o.Status) {
 		case testkube.QUEUED_TestSuiteExecutionStatus:
-			totals.Queued = o.Count
+			totals.Queued = int32(o.Count)
 		case testkube.RUNNING_TestSuiteExecutionStatus:
-			totals.Running = o.Count
+			totals.Running = int32(o.Count)
 		case testkube.PASSED_TestSuiteExecutionStatus:
-			totals.Passed = o.Count
+			totals.Passed = int32(o.Count)
 		case testkube.FAILED_TestSuiteExecutionStatus:
-			totals.Failed = o.Count
+			totals.Failed = int32(o.Count)
 		}
 	}
 	totals.Results = sum
@@ -221,7 +221,7 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
-func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error) {
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
 
 	execNmbr := executionNumber{TestName: testName}
 	retry := false
@@ -239,7 +239,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName s
 		if err != nil {
 			execNmbr.Number = 1
 		} else {
-			execNmbr.Number = execution.Number + 1
+			execNmbr.Number = int(execution.Number) + 1
 		}
 		_, err = r.Sequences.InsertOne(ctx, execNmbr)
 	} else {
@@ -256,7 +256,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName s
 		}
 	}
 
-	return execNmbr.Number, nil
+	return int32(execNmbr.Number), nil
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
@@ -281,8 +281,8 @@ func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTi
 }
 
 // EndExecution updates execution end time
-func (r *MongoRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"endtime": endTime, "duration": duration.String()}})
+func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.Execution) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": e.Id}, bson.M{"$set": bson.M{"endtime": e.EndTime, "duration": e.Duration, "durationms": e.DurationMs}})
 	return
 }
 

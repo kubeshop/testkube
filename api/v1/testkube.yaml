@@ -12,7 +12,7 @@ info:
 
 externalDocs:
   description: "Find out more about Testkube"
-  url: http://testkube.io
+  url: https://testkube.kubeshop.io/
 
 tags:
   - name: api
@@ -33,8 +33,220 @@ tags:
     description: "Executor operations"
   - name: webhook
     description: "Webhook operations"
+  - name: test-triggers
+    description: "Test Triggers CRUD operations"
+  - name: keymap
+    description: "Keymap for fields in a form"
 
 paths:
+  /keymap/triggers:
+    get:
+      tags:
+        - keymap
+        - api
+      summary: Test triggers keymap
+      description: Returns a keymap (supported/allowed fields) for the test trigger UI screen
+      operationId: getKeyMap
+      responses:
+        200:
+          description: successful get operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTriggerKeyMap"
+
+
+  /triggers:
+    get:
+      tags:
+        - test-triggers
+        - api
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Selector"
+      summary: List test triggers
+      description: List test triggers from the kubernetes cluster
+      operationId: listTestTriggers
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    post:
+      tags:
+        - test-triggers
+        - api
+      summary: "Create new test trigger"
+      description: "Create new test trigger CRD inside a Kubernetes cluster"
+      operationId: createTestTrigger
+      requestBody:
+        description: test trigger body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestTriggerUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    delete:
+      tags:
+        - test-triggers
+        - api
+      summary: "Delete test triggers"
+      description: "Deletes all or labeled test triggers"
+      operationId: deleteTestTriggers
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /triggers/{id}:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
+      tags:
+        - test-triggers
+        - api
+      summary: Get test trigger by ID
+      description: Get test trigger by ID from CRD in kubernetes cluster
+      operationId: getTestTriggerByID
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
+      tags:
+        - test-triggers
+        - api
+      summary: "Update test trigger"
+      description: "Update test trigger"
+      operationId: updateTestTrigger
+      requestBody:
+        description: test trigger details body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestTriggerUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    delete:
+      tags:
+        - test-triggers
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
+      summary: Delete test trigger
+      description: Deletes a test trigger
+      operationId: deleteTestTrigger
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suites:
     post:
       tags:
@@ -223,7 +435,7 @@ paths:
         - $ref: "#/components/parameters/LastNDays"
         - $ref: "#/components/parameters/Limit"
       summary: "Get test suite metrics"
-      description: "Gets test suite metrics for given tests executions, with particular execution statuse and timings"
+      description: "Gets test suite metrics for given tests executions, with particular execution status and timings"
       operationId: getTestSuiteMetrics
       responses:
         200:
@@ -955,7 +1167,7 @@ paths:
         - $ref: "#/components/parameters/LastNDays"
         - $ref: "#/components/parameters/Limit"
       summary: "Get test metrics"
-      description: "Gets test metrics for given tests executions, with particular execution statuse and timings"
+      description: "Gets test metrics for given tests executions, with particular execution status and timings"
       operationId: getTestMetrics
       responses:
         200:
@@ -1261,11 +1473,11 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /executors/{name}:
+  /executors/{id}:
     delete:
       parameters:
         - $ref: "#/components/parameters/Namespace"
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       tags:
         - api
         - executor
@@ -1287,7 +1499,7 @@ paths:
     get:
       parameters:
         - $ref: "#/components/parameters/Namespace"
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       tags:
         - api
         - executor
@@ -1450,10 +1662,10 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /webhooks/{name}:
+  /webhooks/{id}:
     delete:
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
       tags:
         - api
@@ -1475,7 +1687,7 @@ paths:
 
     get:
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
       tags:
         - api
@@ -1510,20 +1722,50 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /config/{key}:
+  /config:
     patch:
-      parameters:
-        - $ref: "#/components/parameters/Key"
       tags:
         - api
-      summary: "Update config key"
-      description: "Updates config key in cluster storage state"
+      summary: "Update config"
+      description: "Updates config in cluster storage state"
       operationId: updateConfigKey
+      requestBody:
+        description: config request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Config"
       responses:
         200:
           description: update successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Config"
         502:
           description: "problem with updating key in cluster storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      tags:
+        - api
+      summary: "Get config"
+      description: "Get config from cluster storage state"
+      operationId: getConfig
+      responses:
+        200:
+          description: get successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Config"
+        502:
+          description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
               schema:
@@ -1553,6 +1795,198 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-sources:
+    get:
+      tags:
+        - test-sources
+        - api
+      summary: "List test sources"
+      description: "List test sources available in cluster"
+      operationId: listTestSources
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestSource"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - test-sources
+        - api
+      summary: "Create new test source"
+      description: "Create new test source based on variables passed in request"
+      operationId: createTestSource
+      requestBody:
+        description: test source request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSourceUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+        400:
+          description: "problem with test source definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - test-sources
+        - api
+      summary: "Delete test sources"
+      description: "Deletes labeled test sources"
+      operationId: deleteTestSources
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-sources/{id}:
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - test-sources
+        - api
+      summary: "Update test source"
+      description: "Update test source based on test content or git based data"
+      operationId: updateTestSource
+      requestBody:
+        description: test source body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSourceUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+        400:
+          description: "problem with test source definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - test-sources
+      summary: "Delete test source"
+      description: "Deletes test source by its name"
+      operationId: deleteTestSource
+      responses:
+        204:
+          description: test source deleted successfuly
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - test-sources
+      summary: "Get test source data"
+      description: "Returns test sources data"
+      operationId: getTestSource
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSource"
+            text/yaml:
+              schema:
+                type: string
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting test source data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ExecutionsMetrics:
@@ -1567,7 +2001,7 @@ components:
           description: 50th percentile of all durations
           example: "7m2.71s"
         executionDurationP50ms:
-          type: int
+          type: integer
           description: 50th percentile of all durations in milliseconds
           example: 422
         executionDurationP90:
@@ -1575,7 +2009,7 @@ components:
           description: 90th percentile of all durations
           example: "7m2.71s"
         executionDurationP90ms:
-          type: int
+          type: integer
           description: 90th percentile of all durations in milliseconds
           example: 422
         executionDurationP95:
@@ -1583,7 +2017,7 @@ components:
           description: 95th percentile of all durations
           example: "7m2.71s"
         executionDurationP95ms:
-          type: int
+          type: integer
           description: 95th percentile of all durations in milliseconds
           example: 422
         executionDurationP99:
@@ -1591,15 +2025,15 @@ components:
           description: 99th percentile of all durations
           example: "7m2.71s"
         executionDurationP99ms:
-          type: int
+          type: integer
           description: 99th percentile of all durations in milliseconds
           example: 422
         totalExecutions:
-          type: int
+          type: integer
           description: total executions number
           example: 2
         failedExecutions:
-          type: int
+          type: integer
           description: failed executions number
           example: 1
         executions:
@@ -1616,7 +2050,7 @@ components:
         duration:
           type: string
         durationMs:
-          type: int
+          type: integer
         status:
           type: string
         name:
@@ -1673,7 +2107,6 @@ components:
           example: "name"
 
     SecretRef:
-      readOnly: true
       required:
         - name
         - key
@@ -1749,7 +2182,7 @@ components:
           description: schedule to run test suite
           example: "* * * * *"
         repeats:
-          type: int
+          type: integer
           default: 1
           example: 1
         created:
@@ -1790,7 +2223,7 @@ components:
         - name
       properties:
         duration:
-          type: int
+          type: integer
           default: 0
           description: delay duration in milliseconds
 
@@ -1844,12 +2277,12 @@ components:
           description: "test duration"
           example: "2m"
         durationMs:
-          type: int
+          type: integer
           description: "test duration in ms"
           example: 6000
         stepResults:
           type: array
-          description: "steps execution restults"
+          description: "steps execution results"
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
             description: test execution results
@@ -1939,7 +2372,7 @@ components:
           description: "test suite execution duration"
           example: "00:00:09"
         durationMs:
-          type: int
+          type: integer
           description: "test suite execution duration in ms"
           example: 9009
         execution:
@@ -1997,6 +2430,10 @@ components:
         content:
           $ref: "#/components/schemas/TestContent"
           description: test content
+        source:
+          type: string
+          description: reference to test source resource
+          example: "my-private-repository-test" 
         created:
           type: string
           format: date-time
@@ -2013,6 +2450,13 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
+        copyFiles:
+          type: array
+          items:
+            type: string
+          description: list of files that need to be copied into the test of form source:destination
+          example:
+            - /user/home/settings/runnerconfig.txt:/tmp/settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/ExecutionRequest"
 
@@ -2036,10 +2480,50 @@ components:
           type: string
           description: test content
           example: "https://github.com/kubeshop/testkube"
+        
+    TestSource:
+      description: Test source resource for shared test content
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+  
+    TestSourceUpsertRequest:
+      description: test create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
 
     Execution:
       type: object
-      description: Test execution
+      description: test execution
       properties:
         id:
           type: string
@@ -2067,7 +2551,7 @@ components:
           description: "execution name"
           example: "test-suite1-example-test-1"
         number:
-          type: int
+          type: integer
           description: "execution number"
           example: 1
         envs:
@@ -2113,10 +2597,14 @@ components:
           type: string
           description: "test duration"
           example: "88s"
+        durationMs:
+          type: integer
+          description: "test duration in milliseconds"
+          example: 10000
         executionResult:
           required: true
-          description: result get from executor
           $ref: "#/components/schemas/ExecutionResult"
+          description: result get from executor
         labels:
           type: object
           description: "test and execution labels"
@@ -2125,6 +2613,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        copyFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
+
 
     Artifact:
       type: object
@@ -2134,7 +2630,7 @@ components:
           type: string
           description: artifact file path
         size:
-          type: int
+          type: integer
           description: file size in bytes
 
     ExecutionsResult:
@@ -2173,7 +2669,7 @@ components:
           description: execution name
           example: "test-suite1-test1"
         number:
-          type: int
+          type: integer
           description: execution number
           example: 1
         testName:
@@ -2203,7 +2699,7 @@ components:
           description: calculated test duration
           example: "00:00:13"
         durationMs:
-          type: int
+          type: integer
           description: calculated test duration in ms
           example: 10000
         labels:
@@ -2237,7 +2733,7 @@ components:
           description: "RAW Test execution output, depends of reporter used in particular tool"
         outputType:
           type: string
-          description: "output type depends of reporter used in partucular tool"
+          description: "output type depends of reporter used in particular tool"
           enum:
             - text/plain
             - application/junit+xml
@@ -2305,19 +2801,19 @@ components:
         - running
       properties:
         results:
-          type: int
+          type: integer
           description: the total number of executions available
         passed:
-          type: int
+          type: integer
           description: the total number of passed executions available
         failed:
-          type: int
+          type: integer
           description: the total number of failed executions available
         queued:
-          type: int
+          type: integer
           description: the total number of queued executions available
         running:
-          type: int
+          type: integer
           description: the total number of running executions available
 
     ServerInfo:
@@ -2387,7 +2883,7 @@ components:
           description: unique test suite name (CRD Test suite name), if it's run as a part of test suite
           example: "test-suite1"
         number:
-          type: int
+          type: integer
           description: test execution number
         executionLabels:
           type: object
@@ -2416,6 +2912,13 @@ components:
           description: test suite secret uuid, if it's run as a part of test suite
           readOnly: true
           example: "7934600f-b367-48dd-b981-4353304362fb"
+        command:
+          type: array
+          description: "container executor image command"
+          items:
+            type: string
+          example:
+            - "curl"
         args:
           type: array
           description: "additional executor binary arguments"
@@ -2429,6 +2932,11 @@ components:
           type: string
           description: container image, executor will run inside this image
           example: kubeshop/testkube-executor-custom:1.10.11-dev-0a9c91
+        imagePullSecrets:
+          type: array
+          description: "container image pull secrets"
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
         envs:
           type: object
           description: "environment variables passed to executor"
@@ -2456,6 +2964,13 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        copyFiles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: byte
+          description: map of files with target location as key and contents as value
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -2466,7 +2981,7 @@ components:
           description: test execution custom name
           example: "testing with 1000 users"
         number:
-          type: int
+          type: integer
           description: test suite execution number
           example: 1
         namespace:
@@ -2524,6 +3039,22 @@ components:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
+    TestTriggerUpsertRequest:
+      description: test trigger create or update request body
+      type: object
+      required:
+        - name
+        - namespace
+        - resource
+        - resourceSelector
+        - event
+        - action
+        - execution
+        - testSelector
+      allOf:
+        - $ref: "#/components/schemas/TestTrigger"
+        - $ref: "#/components/schemas/ObjectRef"
+
     ExecutorCreateRequest:
       description: executor create request body
       type: object
@@ -2556,6 +3087,27 @@ components:
         image:
           description: Image for kube-job
           type: string
+        imagePullSecrets:
+          type: array
+          description: "container image pull secrets"
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
+        command:
+          type: array
+          description: "container executor image command"
+          items:
+            type: string
+          example:
+            - "curl"
+        args:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+            - "--repeats"
+            - "5"
+            - "--insecure"
         types:
           description: Types defines what types can be handled by executor e.g.
             "postman/collection", ":curl/command" etc
@@ -2577,7 +3129,7 @@ components:
             env: "prod"
             app: "backend"
         features:
-          description: Available executor featues
+          description: Available executor features
           type: array
           items:
             type: string
@@ -2615,8 +3167,8 @@ components:
           type: string
           description: Message/event data passed from executor (like log lines etc)
         result:
-          description: Execution result when job is finished
           $ref: "#/components/schemas/ExecutionResult"
+          description: Execution result when job is finished
 
     Webhook:
       description: CRD based webhook data
@@ -2660,23 +3212,22 @@ components:
         id:
           type: string
           description: UUID of event
-        uri:
-          type: string
-          description: DEPERECATED event uri remove after rewrite @TODO
         type:
           $ref: "#/components/schemas/EventType"
-        execution:
+        testExecution:
           $ref: "#/components/schemas/Execution"
+        testSuiteExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
 
     EventType:
       type: string
       enum:
         - start-test
+        - end-test-success
+        - end-test-failed
         - start-testsuite
-        - end-test
-        - end-testsuite
-        - test-failed
-        - testsuite-failed
+        - end-testsuite-success
+        - end-testsuite-failed
 
     EventResult:
       description: Listener result after sending particular event
@@ -2723,6 +3274,7 @@ components:
       required:
         - id
         - clusterId
+        - enableTelemetry
       properties:
         id:
           type: string
@@ -2762,6 +3314,129 @@ components:
               type: string
             example: ["logline1", "logline2", "logline3"]
 
+    TestTrigger:
+      type: object
+      required:
+        - resource
+        - resourceSelector
+        - event
+        - action
+        - execution
+        - testSelector
+      properties:
+        name:
+          type: string
+          description: test trigger name
+          example: "test1"
+        namespace:
+          type: string
+          description: test trigger namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test trigger labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        resource:
+          $ref: "#/components/schemas/TestTriggerResources"
+        resourceSelector:
+          $ref: "#/components/schemas/TestTriggerSelector"
+        event:
+          type: string
+          description: listen for event for selected resource
+          example: modified
+        action:
+          $ref: "#/components/schemas/TestTriggerActions"
+        execution:
+          $ref: "#/components/schemas/TestTriggerExecutions"
+        testSelector:
+          $ref: "#/components/schemas/TestTriggerSelector"
+
+    LocalObjectReference:
+      description: Reference to Kubernetes object
+      type: object
+      properties:
+        name:
+          type: string
+
+    TestTriggerSelector:
+      type: object
+      properties:
+        name:
+          type: string
+          description: kubernetes resource name selector
+          example: nginx
+        namespace:
+          type: string
+          description: resource namespace
+          example: testkube
+        labelSelector:
+          $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+          description: label selector for Kubernetes resources
+
+    TestTriggerResources:
+      description: supported kubernetes resources for test triggers
+      type: string
+      enum:
+        - pod
+        - deployment
+        - statefulset
+        - daemonset
+        - service
+        - ingress
+        - event
+
+    TestTriggerExecutions:
+      description: supported test resources for test triggers
+      type: string
+      enum:
+        - test
+        - testsuite
+
+    TestTriggerActions:
+      description: supported actions for test triggers
+      type: string
+      enum:
+        - run
+
+    TestTriggerKeyMap:
+      type: object
+      required:
+        - resources
+        - actions
+        - executions
+        - events
+      properties:
+        resources:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event"]
+        actions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["run"]
+        executions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for resources
+          example: ["test", "testsuite"]
+        events:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: mapping between resources and supported events
+          example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
+
     #
     # Errors
     #
@@ -2772,14 +3447,14 @@ components:
       properties:
         type:
           type: string
-          description: Type contains a URI that identifies the problem type. This URI will,
-          example: http://kubeshop.io/testkube/problems/invalidtestname
+          description: Type contains a URI that identifies the problem type.
+          example: https://kubeshop.io/testkube/problems/invalidtestname
         title:
           type: string
-          description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except forpurposes of localization.
+          description: Title is a short, human-readable summary of the problem type. This title SHOULD NOT change from occurrence to occurrence of the problem, except for purposes of localization.
           example: Invalid test name
         status:
-          type: int
+          type: integer
           description: HTTP status code for this occurrence of the problem.
           example: 500
         detail:
@@ -2845,7 +3520,7 @@ components:
       in: query
       name: last
       schema:
-        type: int
+        type: integer
         default: 7
       description: last N days to show
       required: false
@@ -2853,7 +3528,7 @@ components:
       in: query
       name: limit
       schema:
-        type: int
+        type: integer
         default: 7
       description: limit records count same as pageSize
       required: false
@@ -2861,7 +3536,7 @@ components:
       in: query
       name: pageSize
       schema:
-        type: int
+        type: integer
         default: 100
       description: the number of executions to get, setting to 0 will return only totals
       required: false
@@ -2869,7 +3544,7 @@ components:
       in: query
       name: page
       schema:
-        type: int
+        type: integer
         default: 0
       description: the page index to start at
       required: false
@@ -2894,14 +3569,14 @@ components:
       name: status
       schema:
         $ref: "#/components/schemas/TestSuiteExecutionStatus"
-      description: optional status filter containing multiple values separted by comma
+      description: optional status filter containing multiple values separated by comma
       required: false
     ExecutionsStatusFilter:
       in: query
       name: status
       schema:
         $ref: "#/components/schemas/ExecutionStatus"
-      description: optional status filter containing multiple values separted by comma
+      description: optional status filter containing multiple values separated by comma
       required: false
     Selector:
       in: query
@@ -2919,7 +3594,7 @@ components:
       in: query
       name: concurrency
       schema:
-        type: int
+        type: integer
         default: 10
     Namespace:
       in: query
@@ -2933,9 +3608,3 @@ components:
       schema:
         type: string
         description: Name of the object
-    Key:
-      in: query
-      name: key
-      schema:
-        type: string
-        description: Key of the object

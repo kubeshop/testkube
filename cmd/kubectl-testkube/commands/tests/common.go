@@ -131,6 +131,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		return content, err
 	}
 
+	sourceName := cmd.Flag("source").Value.String()
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
@@ -144,12 +145,15 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		}
 	}
 
-	// content is correct when is passed from file, by uri, ur by git repo
-	if len(fileContent) == 0 && uri == "" && gitUri == "" {
+	// content is correct when is passed from file, by uri, by git repo or by test source
+	if len(fileContent) == 0 && uri == "" && gitUri == "" && sourceName == "" {
 		return content, fmt.Errorf("empty test content, please pass some test content to create test")
 	}
 
-	if gitUri != "" && testContentType == "" {
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
+
+	if hasGitParams && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeGitDir)
 	}
 
@@ -162,7 +166,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	var repository *testkube.Repository
-	if gitUri != "" {
+	if hasGitParams {
 		if testContentType == "" {
 			testContentType = "git-dir"
 		}
@@ -221,22 +225,30 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	schedule := cmd.Flag("schedule").Value.String()
-	binrayArgs, err := cmd.Flags().GetStringArray("executor-args")
+	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
 	if err != nil {
 		return options, err
 	}
 
-	executorArgs, err := prepareExecutorArgs(binrayArgs)
+	executorArgs, err := prepareExecutorArgs(binaryArgs)
 	if err != nil {
 		return options, err
 	}
 
+	copyFiles, err := cmd.Flags().GetStringArray("copy-files")
+	if err != nil {
+		return options, err
+	}
+
+	sourceName := cmd.Flag("source").Value.String()
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
 		Content:   content,
+		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
+		CopyFiles: copyFiles,
 	}
 
 	executionName := cmd.Flag("execution-name").Value.String()
@@ -263,15 +275,32 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	httpProxy := cmd.Flag("http-proxy").Value.String()
 	httpsProxy := cmd.Flag("https-proxy").Value.String()
+	image := cmd.Flag("image").Value.String()
+	command, err := cmd.Flags().GetStringArray("command")
+	if err != nil {
+		return options, err
+	}
+	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+	if err != nil {
+		return options, err
+	}
+	var imageSecrets []testkube.LocalObjectReference
+	for _, secretName := range imagePullSecretNames {
+		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+	}
+
 	options.ExecutionRequest = &testkube.ExecutionRequest{
-		Name:          executionName,
-		VariablesFile: paramsFileContent,
-		Variables:     variables,
-		Args:          executorArgs,
-		Envs:          envs,
-		SecretEnvs:    secretEnvs,
-		HttpProxy:     httpProxy,
-		HttpsProxy:    httpsProxy,
+		Name:             executionName,
+		VariablesFile:    paramsFileContent,
+		Variables:        variables,
+		Image:            image,
+		Command:          command,
+		Args:             executorArgs,
+		ImagePullSecrets: imageSecrets,
+		Envs:             envs,
+		SecretEnvs:       secretEnvs,
+		HttpProxy:        httpProxy,
+		HttpsProxy:       httpsProxy,
 	}
 
 	// if labels are passed and are different from the existing overwrite
@@ -319,4 +348,58 @@ func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
 	}
 
 	return executorArgs, nil
+}
+
+// readCopyFiles reads files
+func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
+	files := map[string][]byte{}
+	for _, f := range copyFiles {
+		paths := strings.Split(f, ":")
+		if len(paths) != 2 {
+			return nil, fmt.Errorf("invalid file format, expecting sourcePath:destinationPath")
+		}
+		contents, err := os.ReadFile(paths[0])
+		if err != nil {
+			return nil, fmt.Errorf("could not read executor copy file: %w", err)
+		}
+		files[paths[1]] = contents
+	}
+	return files, nil
+}
+
+// mergeCopyFiles merges the lists of files to be copied into the running test
+// the files set on execution overwrite the files set on test levels
+func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, error) {
+	if len(testFiles) == 0 {
+		return executionFiles, nil
+	}
+
+	if len(executionFiles) == 0 {
+		return testFiles, nil
+	}
+
+	files := map[string]string{}
+
+	for _, fileMapping := range testFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[1]] = fPair[0]
+	}
+
+	for _, fileMapping := range executionFiles {
+		fPair := strings.Split(fileMapping, ":")
+		if len(fPair) != 2 {
+			return []string{}, fmt.Errorf("invalid copy file mapping, expected source:destination, got: %s", fileMapping)
+		}
+		files[fPair[1]] = fPair[0]
+	}
+
+	result := []string{}
+	for destination, source := range files {
+		result = append(result, fmt.Sprintf("%s:%s", source, destination))
+	}
+
+	return result, nil
 }

@@ -29,6 +29,7 @@ type Filter interface {
 	Type() string
 }
 
+//go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
 type Repository interface {
 	Sequences
 	// Get gets execution result by id
@@ -54,7 +55,7 @@ type Repository interface {
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error
+	EndExecution(ctx context.Context, execution testkube.Execution) error
 	// GetLabels get all available labels
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 	// DeleteByTest deletes execution results by test
@@ -75,5 +76,5 @@ type Repository interface {
 
 type Sequences interface {
 	// GetNextExecutionNumber gets next execution number by test name
-	GetNextExecutionNumber(ctx context.Context, testName string) (number int, err error)
+	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
 }

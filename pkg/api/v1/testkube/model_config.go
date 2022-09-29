@@ -13,5 +13,5 @@ package testkube
 type Config struct {
 	Id              string `json:"id"`
 	ClusterId       string `json:"clusterId"`
-	EnableTelemetry bool   `json:"enableTelemetry,omitempty"`
+	EnableTelemetry bool   `json:"enableTelemetry"`
 }

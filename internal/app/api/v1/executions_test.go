@@ -8,51 +8,20 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
-
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
+	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-func TestParamsNilAssign(t *testing.T) {
-
-	t.Run("merge two maps", func(t *testing.T) {
-
-		p1 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "1")}
-		p2 := map[string]testkube.Variable{"p2": testkube.NewBasicVariable("p2", "2")}
-
-		out := mergeVariables(p1, p2)
-
-		assert.Equal(t, 2, len(out))
-		assert.Equal(t, "1", out["p1"].Value)
-	})
-
-	t.Run("merge two maps with override", func(t *testing.T) {
-
-		p1 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "1")}
-		p2 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "2")}
-
-		out := mergeVariables(p1, p2)
-
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "2", out["p1"].Value)
-	})
-
-	t.Run("merge with nil map", func(t *testing.T) {
-
-		p2 := map[string]testkube.Variable{"p2": testkube.NewBasicVariable("p2", "2")}
-
-		out := mergeVariables(nil, p2)
-
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "2", out["p2"].Value)
-	})
-
-}
 
 func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
@@ -64,6 +33,7 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 			Log: log.DefaultLogger,
 		},
 		ExecutionResults: &resultRepo,
+		ExecutorsClient:  getMockExecutorClient(),
 		Executor:         executor,
 	}
 	app.Get("/executions/:executionID/logs", s.ExecutionLogsHandler())
@@ -94,7 +64,8 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 			route:        "/executions/running-1234/logs",
 			expectedCode: 200,
 			execution: testkube.Execution{
-				Id: "running-1234",
+				Id:       "running-1234",
+				TestType: "curl/test",
 				ExecutionResult: &testkube.ExecutionResult{
 					Status: testkube.StatusPtr(testkube.RUNNING_ExecutionStatus),
 				},
@@ -185,7 +156,7 @@ func (r MockExecutionResultsRepository) GetExecutionTotals(ctx context.Context, 
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int, error) {
+func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
 	panic("not implemented")
 }
 
@@ -205,7 +176,7 @@ func (r MockExecutionResultsRepository) StartExecution(ctx context.Context, id s
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, id string, endTime time.Time, duration time.Duration) error {
+func (r MockExecutionResultsRepository) EndExecution(ctx context.Context, execution testkube.Execution) error {
 	panic("not implemented")
 }
 
@@ -262,4 +233,34 @@ func (e MockExecutor) Logs(id string) (chan output.Output, error) {
 		panic("not implemented")
 	}
 	return e.LogsFn(id)
+}
+
+func getMockExecutorClient() *executorsclientv1.ExecutorsClient {
+	scheme := runtime.NewScheme()
+	executorv1.AddToScheme(scheme)
+
+	initObjects := []k8sclient.Object{
+		&executorv1.Executor{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Executor",
+				APIVersion: "executor.testkube.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sample",
+				Namespace: "default",
+			},
+			Spec: executorv1.ExecutorSpec{
+				Types:        []string{"curl/test"},
+				ExecutorType: "",
+				JobTemplate:  "",
+			},
+			Status: executorv1.ExecutorStatus{},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(initObjects...).
+		Build()
+	return executorsclientv1.NewClient(fakeClient, "")
 }

@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewExecutionWithID(id, testType, testName string) Execution {
-	return Execution{
-		Id:              id,
-		ExecutionResult: &ExecutionResult{},
-		TestName:        testName,
-		TestType:        testType,
+func NewExecutionWithID(id, testType, testName string) *Execution {
+	return &Execution{
+		Id: id,
+		ExecutionResult: &ExecutionResult{
+			Status: ExecutionStatusQueued,
+		},
+		TestName: testName,
+		TestType: testType,
+		Labels:   map[string]string{},
 	}
 }
 
@@ -26,7 +30,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
 		Name:                executionName,
-		Number:              int(executionNumber),
+		Number:              int32(executionNumber),
 		TestType:            testType,
 		ExecutionResult:     &result,
 		Variables:           variables,
@@ -116,8 +120,11 @@ func (e *Execution) Start() {
 
 func (e *Execution) Stop() {
 	e.EndTime = time.Now()
-	e.Duration = e.CalculateDuration().String()
+	duration := e.CalculateDuration()
+	e.Duration = utils.RoundDuration(duration).String()
+	e.DurationMs = int32(duration.Milliseconds())
 }
+
 func (e *Execution) CalculateDuration() time.Duration {
 
 	end := e.EndTime
@@ -139,4 +146,20 @@ func (e Execution) IsFailed() bool {
 	}
 
 	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
+}
+
+func (e Execution) IsRunning() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == RUNNING_ExecutionStatus
+}
+
+func (e Execution) IsQueued() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == QUEUED_ExecutionStatus
 }

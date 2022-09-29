@@ -24,3 +24,10 @@ func NewClient() *http.Client {
 		Transport: netTransport,
 	}
 }
+
+// NewSSEClient is HTTP client with long timeout to be able to read SSE endpoints
+func NewSSEClient() *http.Client {
+	return &http.Client{
+		Timeout: time.Hour,
+	}
+}

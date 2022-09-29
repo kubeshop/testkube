@@ -4,6 +4,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ func NewUpdateCmd() *cobra.Command {
 
 	cmd.AddCommand(tests.NewUpdateTestsCmd())
 	cmd.AddCommand(testsuites.NewUpdateTestSuitesCmd())
+	cmd.AddCommand(testsources.NewUpdateTestSourceCmd())
 
 	return cmd
 }

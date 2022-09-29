@@ -2,162 +2,137 @@ package event
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 	"github.com/stretchr/testify/assert"
 )
 
-type DummyListener struct {
-	NotificationCount int
-	SelectorString    string
-}
+var eventBus bus.Bus
 
-func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
-	l.NotificationCount++
-	return testkube.EventResult{Id: event.Id}
-}
-
-func (l DummyListener) Events() []testkube.EventType {
-	return []testkube.EventType{
-		testkube.START_TEST_EventType,
-		testkube.END_TEST_EventType,
-	}
-}
-
-func (l DummyListener) Selector() string {
-	return l.SelectorString
-}
-
-func (l DummyListener) Kind() string {
-	return "dummy"
-}
-
-func (l DummyListener) Metadata() map[string]string {
-	return map[string]string{"uri": "http://localhost:8080"}
+func init() {
+	os.Setenv("DEBUG", "true")
+	eventBus = bus.NewEventBusMock()
 }
 
 func TestEmitter_Register(t *testing.T) {
-	t.Run("adds new listener", func(t *testing.T) {
-		// given
-		emitter := NewEmitter()
 
+	t.Run("Register adds new listener", func(t *testing.T) {
+		// given
+		emitter := NewEmitter(eventBus)
 		// when
-		emitter.Register(&DummyListener{})
+		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
 		assert.Equal(t, 1, len(emitter.Listeners))
+
+		t.Log("T1 completed")
 	})
 }
 
-func TestEmitter_Notify(t *testing.T) {
-	t.Run("notifies listeners", func(t *testing.T) {
-		// given
-		emitter := NewEmitter()
-
-		listener1 := &DummyListener{}
-		listener2 := &DummyListener{}
-
-		emitter.Register(listener1)
-		emitter.Register(listener2)
-
-		emitter.RunWorkers()
-
-		// when
-		emitter.Notify(newExampleTestEvent1())
-
-		// make sure all workers are done for two listeners, wait for them to complete
-		<-emitter.Results
-		result := <-emitter.Results
-
-		// then
-		assert.Equal(t, 1, listener1.NotificationCount)
-		assert.Equal(t, 1, listener2.NotificationCount)
-		assert.Equal(t, "1", result.Id)
-	})
-
+func TestEmitter_Listen(t *testing.T) {
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
 		// given
-		emitter := NewEmitter()
+		emitter := NewEmitter(eventBus)
+		// given listener with matching selector
+		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
+		// and listener with second matic selector
+		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
 
-		listener1 := &DummyListener{}
-		listener1.SelectorString = "type=OnlyMe"
-		listener2 := &DummyListener{}
-		listener2.SelectorString = "type=NotMe"
-
+		// and emitter with registered listeners
 		emitter.Register(listener1)
 		emitter.Register(listener2)
 
-		emitter.RunWorkers()
+		// listening emitter
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
+		emitter.Listen(ctx)
+		// wait for listeners to start
+		time.Sleep(time.Millisecond * 50)
+
+		// events
 		event1 := newExampleTestEvent1()
-		event1.Execution.Labels = map[string]string{"type": "OnlyMe"}
+		event1.TestExecution.Labels = map[string]string{"type": "listener1"}
 		event2 := newExampleTestEvent2()
+		event2.TestExecution.Labels = map[string]string{"type": "listener2"}
 
 		// when
 		emitter.Notify(event1)
 		emitter.Notify(event2)
 
+		time.Sleep(time.Millisecond * 50)
 		// then
 
-		// make sure all workers are done for one listener, wait for them to complete
-		result := <-emitter.Results
-
-		assert.Equal(t, 1, listener1.NotificationCount)
-		assert.Equal(t, 0, listener2.NotificationCount)
-		assert.Equal(t, "1", result.Id)
+		assert.Equal(t, 1, listener1.GetNotificationCount())
+		assert.Equal(t, 1, listener2.GetNotificationCount())
 	})
 
 }
 
-func TestEmitter_Reconcile(t *testing.T) {
-
-	t.Run("emitter refersh listeners", func(t *testing.T) {
+func TestEmitter_Notify(t *testing.T) {
+	t.Run("notifies listeners in queue groups", func(t *testing.T) {
 		// given
-		emitter := NewEmitter()
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		emitter := NewEmitter(eventBus)
+		// and 2 listeners subscribed to the same queue
+		// * first on pod1
+		listener1 := &dummy.DummyListener{Id: "l3"}
+		// * second on pod2
+		listener2 := &dummy.DummyListener{Id: "l3"}
 
+		emitter.Register(listener1)
+		emitter.Register(listener2)
+
+		// and listening emitter
 		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		emitter.Listen(ctx)
 
-		// when
-		go emitter.Reconcile(ctx)
+		time.Sleep(time.Millisecond * 50)
 
-		// then
-		time.Sleep(time.Millisecond)
-		assert.Len(t, emitter.Listeners, 4)
+		// when event sent to queue group
+		emitter.Notify(newExampleTestEvent1())
 
-		cancel()
+		time.Sleep(time.Millisecond * 50)
+
+		// then only one listener should be notified
+		assert.Equal(t, 1, listener2.GetNotificationCount()+listener1.GetNotificationCount())
 	})
+}
+
+func TestEmitter_Reconcile(t *testing.T) {
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
 		// given first reconciler loop was done
-		emitter := NewEmitter()
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		emitter := NewEmitter(eventBus)
+		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
+		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
 		ctx, cancel := context.WithCancel(context.Background())
 
 		go emitter.Reconcile(ctx)
 
-		time.Sleep(time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		assert.Len(t, emitter.Listeners, 4)
 
 		cancel()
 
-		// and we'll add additional reconcilers
-		emitter.Loader.Register(&DummyLoader{})
-		emitter.Loader.Register(&DummyLoader{})
+		// and we'll add additional new loader
+		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"}) // existing one
+		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy3"})
 
 		ctx, cancel = context.WithCancel(context.Background())
 
 		// when
 		go emitter.Reconcile(ctx)
 
-		// then each reconciler (4 reconcilers) should load 2 listeners
-		time.Sleep(time.Millisecond)
-		assert.Len(t, emitter.Listeners, 8)
+		// then each reconciler (3 reconcilers) should load 2 listeners
+		time.Sleep(100 * time.Millisecond)
+		assert.Len(t, emitter.Listeners, 6)
 
 		cancel()
 	})
@@ -166,16 +141,16 @@ func TestEmitter_Reconcile(t *testing.T) {
 
 func newExampleTestEvent1() testkube.Event {
 	return testkube.Event{
-		Id:        "1",
-		Type_:     testkube.EventStartTest,
-		Execution: testkube.NewQueuedExecution(),
+		Id:            "eventID1",
+		Type_:         testkube.EventStartTest,
+		TestExecution: testkube.NewExecutionWithID("executionID1", "test/test", "test"),
 	}
 }
 
 func newExampleTestEvent2() testkube.Event {
 	return testkube.Event{
-		Id:        "2",
-		Type_:     testkube.EventStartTest,
-		Execution: testkube.NewQueuedExecution(),
+		Id:            "eventID2",
+		Type_:         testkube.EventStartTest,
+		TestExecution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
 	}
 }

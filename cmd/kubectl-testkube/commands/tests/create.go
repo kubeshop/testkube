@@ -29,6 +29,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitPath                  string
 		gitUsername              string
 		gitToken                 string
+		sourceName               string
 		labels                   map[string]string
 		variables                map[string]string
 		secretVariables          map[string]string
@@ -42,6 +43,10 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitUsernameSecret        map[string]string
 		gitTokenSecret           map[string]string
 		secretVariableReferences map[string]string
+		copyFiles                []string
+		image                    string
+		command                  []string
+		imagePullSecretNames     []string
 	)
 
 	cmd := &cobra.Command{
@@ -123,6 +128,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
+	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
@@ -137,6 +143,10 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringVar(&image, "image", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 
 	return cmd
 }
@@ -160,6 +170,7 @@ func validateCreateOptions(cmd *cobra.Command) error {
 
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
+	sourceName := cmd.Flag("source").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
 		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
@@ -176,7 +187,7 @@ func validateCreateOptions(cmd *cobra.Command) error {
 	}
 
 	if hasGitParams {
-		if gitUri == "" {
+		if gitUri == "" && sourceName == "" {
 			return fmt.Errorf("please pass valid `--git-uri` flag")
 		}
 		if gitBranch != "" && gitCommit != "" {

@@ -205,7 +205,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.image.tag               | yes         | "latest"                             |
 | testkube-api.service.type            | yes         | "NodePort"                           |
 | testkube-api.service.port            | yes         | 8088                                 |
-| testkube-api.mongoDSN                | yes         | "mongodb://testkube-mongodb:27017"   |
+| testkube-api.mongodb.dsn             | yes         | "mongodb://testkube-mongodb:27017"   |
+| testkube-api.nats.uri                | yes         | "nats://testkube-nats"               |
 | testkube-api.telemetryEnabled        | yes         | true                                 |
 | testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 |
 | testkube-api.storage.accessKeyId     | yes         | minio                                |
@@ -217,6 +218,10 @@ The following Helm defaults are used in the `testkube` chart:
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
+>For more configuration parameters of `NATS` chart please visit:
+<https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+
+
 ## **Remove Testkube Server Components**
 ### **Using Helm:**
 ```bash
@@ -226,3 +231,48 @@ helm delete testkube
 ```bash
 testkube purge
 ```
+
+## Installation on OpenShift 
+
+Because of upgrade issues from Mongo 11 to 13 Testkube can't work on root-less OpenShift environment by default. Fortunately we was able to install it manually. 
+
+To do it we'll need empty OpenShift cluster and follow steps below: 
+
+1. Save mongo chart values (let's name it `values.yaml`)
+
+```yaml 
+securityContext:
+  enabled: true
+  fsGroup: 1000650001
+  runAsUser: 1000650001
+
+podSecurityContext:
+  enabled: false
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1000650001
+  runAsNonRoot: true
+
+volumePermissions:
+  enabled: false
+
+auth: 
+   enabled: false
+```
+
+2. Install MongoDB 
+
+```sh
+helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values values.yaml
+```
+
+3. Install Testkube configured to use our Custom MongoDB instance
+
+```
+helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
+```
+
+Please notice that we've just installed MongoDB with `testkube-mongodb` helm release name it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with different name / namespace please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
+
+That's all your Testkube instance should be able to run on Openshift now. 

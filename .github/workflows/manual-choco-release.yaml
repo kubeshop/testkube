@@ -1,0 +1,64 @@
+name: Manual trigger for Choco release
+
+on:
+  workflow_dispatch
+
+env:
+  OFFICIAL_CHOCO_REPO: https://push.chocolatey.org/
+
+jobs:
+  get_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      output1: ${{ steps.tag.outputs.VERSION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get latest release tag
+        id: tag
+        run: |
+          #Get latest release tag
+          curl -s -f --output /dev/null --connect-timeout 5 https://api.github.com/repos/kubeshop/testkube/releases/latest
+
+          export VERSION=$(curl -s -f https://api.github.com/repos/kubeshop/testkube/releases/latest | jq -r .tag_name | cut -c2-)
+          echo "::set-output name=VERSION::${VERSION}"
+
+      - name: Echo release tag
+        run: echo ${{ steps.tag.outputs.VERSION }}
+
+  package_and_publish_choco:
+    needs: get_tag
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Checksum
+        working-directory: ./choco/tools
+        id: checksum
+        run: |
+          #Download latest release msi
+          Invoke-WebRequest -URI https://github.com/kubeshop/testkube/releases/download/v${{needs.get_tag.outputs.output1}}/testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi -OutFile testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi
+
+          $hash=Get-FileHash testkube_${{needs.get_tag.outputs.output1}}_Windows_i386.msi
+          $hashsum = $hash.Hash
+          echo "::set-output name=CHECKSUM::${hashsum}"
+
+      - name: Update checksum in chocolateyInstall.ps1 file
+        working-directory: ./choco
+        run: |
+          $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
+          $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version -NoNewline
+
+      - name: Bump versions and push package to chocolatey repo
+        working-directory: ./choco
+        run: |
+          ./update.ps1 ${{needs.get_tag.outputs.output1}} ${{ secrets.OFFICIAL_CHOCO_API_KEY }} ${{ env.OFFICIAL_CHOCO_REPO }}

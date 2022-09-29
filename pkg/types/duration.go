@@ -17,7 +17,7 @@ func FormatDuration(in string) string {
 	return FormattedDuration(duration).Format()
 }
 
-func FormatDurationMs(in string) int {
+func FormatDurationMs(in string) int32 {
 	if in == "" {
 		return 0
 	}
@@ -26,7 +26,7 @@ func FormatDurationMs(in string) int {
 		return 0
 	}
 
-	return int(duration / time.Millisecond)
+	return int32(duration / time.Millisecond)
 }
 
 type FormattedDuration time.Duration

@@ -1,7 +1,3 @@
----
-sidebar_position: 1
-sidebar_label: Local Runs
----
 # Development
 
 ## **Running with CRDs on Kubernetes Cluster**
@@ -35,7 +31,7 @@ make run-executor
 If you want to debug an API server locally, you can run a local kube-proxy which makes all calls to kube proxy URIs directly to API server instances.
 
 ```bash
-make api-proxy
+make run-proxy
 ```
 
 And when calling any of `kubectl testkube` subcommands just pass direct client flag (`-cdirect`)
@@ -75,4 +71,3 @@ To create/run tests pointed to in-cluster executors, start the API Server with t
 ```bash
 make run-api-telepresence
 ```
-

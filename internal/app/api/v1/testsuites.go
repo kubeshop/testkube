@@ -7,8 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -80,7 +78,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 		testSuite.Spec = testSuiteSpec.Spec
 		testSuite.Labels = request.Labels
-		testSuite, err = s.TestsSuitesClient.Update(testSuite)
+		updated, err := s.TestsSuitesClient.Update(testSuite)
 
 		s.Metrics.IncUpdateTestSuite(err)
 
@@ -88,7 +86,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(testSuite)
+		return c.JSON(updated)
 	}
 }
 
@@ -407,7 +405,6 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		testSuiteWithExecutions := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
@@ -426,31 +423,32 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 					LatestExecution: &execution,
 				})
 			} else {
-				testSuiteWithExecutions = append(testSuiteWithExecutions, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecution{
 					TestSuite: &testSuites[i],
 				})
 			}
 		}
 
-		sort.Slice(testSuiteWithExecutions, func(i, j int) bool {
-			return testSuiteWithExecutions[i].TestSuite.Created.After(testSuiteWithExecutions[j].TestSuite.Created)
-		})
-
 		sort.Slice(results, func(i, j int) bool {
-			iTime := results[i].LatestExecution.EndTime
-			if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-				iTime = results[i].LatestExecution.StartTime
+			iTime := results[i].TestSuite.Created
+			if results[i].LatestExecution != nil {
+				iTime = results[i].LatestExecution.EndTime
+				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
+					iTime = results[i].LatestExecution.StartTime
+				}
 			}
 
-			jTime := results[j].LatestExecution.EndTime
-			if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-				jTime = results[j].LatestExecution.StartTime
+			jTime := results[j].TestSuite.Created
+			if results[j].LatestExecution != nil {
+				jTime = results[j].LatestExecution.EndTime
+				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
+					jTime = results[j].LatestExecution.StartTime
+				}
 			}
 
 			return iTime.After(jTime)
 		})
 
-		testSuiteWithExecutions = append(testSuiteWithExecutions, results...)
 		status := c.Query("status")
 		if status != "" {
 			statusList, err := testkube.ParseTestSuiteExecutionStatusList(status, ",")
@@ -460,18 +458,18 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 			statusMap := statusList.ToMap()
 			// filter items array
-			for i := len(testSuiteWithExecutions) - 1; i >= 0; i-- {
-				if testSuiteWithExecutions[i].LatestExecution != nil && testSuiteWithExecutions[i].LatestExecution.Status != nil {
-					if _, ok := statusMap[*testSuiteWithExecutions[i].LatestExecution.Status]; ok {
+			for i := len(results) - 1; i >= 0; i-- {
+				if results[i].LatestExecution != nil && results[i].LatestExecution.Status != nil {
+					if _, ok := statusMap[*results[i].LatestExecution.Status]; ok {
 						continue
 					}
 				}
 
-				testSuiteWithExecutions = append(testSuiteWithExecutions[:i], testSuiteWithExecutions[i+1:]...)
+				results = append(results[:i], results[i+1:]...)
 			}
 		}
 
-		return c.JSON(testSuiteWithExecutions)
+		return c.JSON(results)
 	}
 }
 
@@ -512,14 +510,14 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var results []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", defaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
-			go workerpoolService.SendRequests(s.prepareTestSuiteRequests(testSuites, request))
+			go workerpoolService.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
 			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
@@ -540,19 +538,6 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		c.Status(http.StatusCreated)
 		return c.JSON(results)
 	}
-}
-
-func (s TestkubeAPI) prepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
-	testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution] {
-	requests := make([]workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution], len(work))
-	for i := range work {
-		requests[i] = workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]{
-			Object:  testsuitesmapper.MapCRToAPI(work[i]),
-			Options: request,
-			ExecFn:  s.executeTestSuite,
-		}
-	}
-	return requests
 }
 
 func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
@@ -643,156 +628,6 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 		}
 
 		return c.JSON(testsmapper.MapTestArrayKubeToAPI(crTests))
-	}
-}
-
-func (s TestkubeAPI) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
-	testsuiteExecution testkube.TestSuiteExecution, err error) {
-	s.Log.Debugw("Got test to execute", "test", testSuite)
-	secretUUID, err := s.TestsSuitesClient.GetCurrentSecretUUID(testSuite.Name)
-	if err != nil {
-		return testsuiteExecution, err
-	}
-
-	request.SecretUUID = secretUUID
-	if testSuite.ExecutionRequest != nil {
-		if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
-			request.Name = testSuite.ExecutionRequest.Name
-		}
-		if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
-			request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
-		}
-
-		if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
-			request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
-		}
-	}
-
-	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
-	if request.Name == "" {
-		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
-	}
-
-	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
-	err = s.TestExecutionResults.Insert(ctx, testsuiteExecution)
-	if err != nil {
-		s.Log.Infow("Inserting test execution", "error", err)
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
-		defer func(testExecution *testkube.TestSuiteExecution) {
-			duration := testExecution.CalculateDuration()
-			testExecution.EndTime = time.Now()
-			testExecution.Duration = duration.String()
-
-			err = s.TestExecutionResults.EndExecution(ctx, testExecution.Id, testExecution.EndTime, duration)
-			if err != nil {
-				s.Log.Errorw("error setting end time", "error", err.Error())
-			}
-
-			wg.Done()
-		}(testsuiteExecution)
-
-		hasFailedSteps := false
-		cancellSteps := false
-		for i := range testsuiteExecution.StepResults {
-			if cancellSteps {
-				testsuiteExecution.StepResults[i].Execution.ExecutionResult.Cancel()
-				continue
-			}
-
-			// start execution of given step
-			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
-			err = s.TestExecutionResults.Update(ctx, *testsuiteExecution)
-			if err != nil {
-				s.Log.Infow("Updating test execution", "error", err)
-			}
-
-			s.executeTestStep(ctx, *testsuiteExecution, request, &testsuiteExecution.StepResults[i])
-
-			err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
-			if err != nil {
-				hasFailedSteps = true
-				s.Log.Errorw("saving test suite execution results error", "error", err)
-				continue
-			}
-
-			if testsuiteExecution.StepResults[i].IsFailed() {
-				hasFailedSteps = true
-				if testsuiteExecution.StepResults[i].Step.StopTestOnFailure {
-					cancellSteps = true
-					continue
-				}
-			}
-		}
-
-		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
-		if hasFailedSteps {
-			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
-		}
-
-		s.Metrics.IncExecuteTestSuite(*testsuiteExecution)
-
-		err := s.TestExecutionResults.Update(ctx, *testsuiteExecution)
-		if err != nil {
-			s.Log.Errorw("saving final test suite execution result error", "error", err)
-		}
-
-	}(&testsuiteExecution, request)
-
-	// wait for sync test suite execution
-	if request.Sync {
-		wg.Wait()
-	}
-
-	return testsuiteExecution, nil
-}
-
-func (s TestkubeAPI) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteStepExecutionResult) {
-
-	var testSuiteName string
-	if testsuiteExecution.TestSuite != nil {
-		testSuiteName = testsuiteExecution.TestSuite.Name
-	}
-
-	step := result.Step
-
-	l := s.Log.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
-
-	switch step.Type() {
-
-	case testkube.TestSuiteStepTypeExecuteTest:
-		executeTestStep := step.Execute
-		request := testkube.ExecutionRequest{
-			Name:                fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
-			TestSuiteName:       testSuiteName,
-			Namespace:           executeTestStep.Namespace,
-			Variables:           testsuiteExecution.Variables,
-			TestSuiteSecretUUID: request.SecretUUID,
-			Sync:                true,
-			HttpProxy:           request.HttpProxy,
-			HttpsProxy:          request.HttpsProxy,
-			ExecutionLabels:     request.ExecutionLabels,
-		}
-
-		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
-		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
-		if err != nil {
-			result.Err(err)
-			return
-		}
-		result.Execution = &execution
-
-	case testkube.TestSuiteStepTypeDelay:
-		l.Debug("delaying execution")
-		time.Sleep(time.Millisecond * time.Duration(step.Delay.Duration))
-		result.Execution.ExecutionResult.Success()
-
-	default:
-		result.Err(fmt.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 	}
 }
 

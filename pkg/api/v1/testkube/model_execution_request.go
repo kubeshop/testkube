@@ -16,7 +16,7 @@ type ExecutionRequest struct {
 	// unique test suite name (CRD Test suite name), if it's run as a part of test suite
 	TestSuiteName string `json:"testSuiteName,omitempty"`
 	// test execution number
-	Number int `json:"number,omitempty"`
+	Number int32 `json:"number,omitempty"`
 	// test execution labels
 	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
@@ -28,10 +28,14 @@ type ExecutionRequest struct {
 	TestSecretUUID string `json:"testSecretUUID,omitempty"`
 	// test suite secret uuid, if it's run as a part of test suite
 	TestSuiteSecretUUID string `json:"testSuiteSecretUUID,omitempty"`
+	// container executor image command
+	Command []string `json:"command,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// container image, executor will run inside this image
 	Image string `json:"image,omitempty"`
+	// container image pull secrets
+	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// environment variables passed to executor
 	Envs map[string]string `json:"envs,omitempty"`
 	// execution variables passed to executor from secrets
@@ -42,4 +46,6 @@ type ExecutionRequest struct {
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
 	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// map of files with target location as key and contents as value
+	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
 }
