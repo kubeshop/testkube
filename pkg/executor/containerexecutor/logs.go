@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -90,7 +91,7 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 			reader := bufio.NewReader(stream)
 
 			for {
-				b, err := reader.ReadBytes('\n')
+				b, err := utils.ReadLongLine(reader)
 				if err != nil {
 					if err == io.EOF {
 						err = nil

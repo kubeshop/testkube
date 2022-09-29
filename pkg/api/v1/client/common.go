@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // Version is client version literal
@@ -22,7 +23,7 @@ func StreamToLogsChannel(resp io.Reader, logs chan output.Output) {
 	reader := bufio.NewReader(resp)
 
 	for {
-		b, err := reader.ReadBytes('\n')
+		b, err := utils.ReadLongLine(reader)
 		if err != nil {
 			if err == io.EOF {
 				err = nil
