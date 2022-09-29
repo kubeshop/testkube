@@ -42,14 +42,14 @@ user         75985   0.0  0.1 409292320  43584 s001  S+   12:32PM   0:00.12 kube
 user         75984   0.0  0.1 409263376  37488 s001  S+   12:32PM   0:00.22 testkube dashboard
 ```
 
-Also there might be some other process listening on the same port. To debug this try port-forwarding manually:
+Also, there might be some other process listening on the same port. To debug this, try port-forwarding manually:
 
 ```
 kubectl port-forward svc/testkube-dashboard 8080
 kubectl port-forward svc/testkube-api-server 8088
 ```
 
-Then see if there are any errors, and try accessing:
+Check for errors and try accessing:
 [http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1](http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1)
 
 If you see errors like:
