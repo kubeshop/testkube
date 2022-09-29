@@ -10,7 +10,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-10
 ---
 apiVersion: tests.testkube.io/v3
@@ -25,7 +25,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-10
 ---
 apiVersion: tests.testkube.io/v3
@@ -40,7 +40,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-10
   executionRequest:
     args:
@@ -59,7 +59,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-10
   executionRequest:
     args:
@@ -79,7 +79,7 @@ spec:
 #     repository:
 #       type: git
 #       uri: https://github.com/kubeshop/testkube
-#       branch: cypress-tests
+#       branch: main
 #       path: test/cypress/executors/cypress-9
 ---
 apiVersion: tests.testkube.io/v3
@@ -94,7 +94,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-9
   executionRequest:
     args:
@@ -113,7 +113,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-9
   executionRequest:
     args:
@@ -132,7 +132,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-8
 ---
 apiVersion: tests.testkube.io/v3
@@ -147,7 +147,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-8
   executionRequest:
     args:
@@ -166,7 +166,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-tests
+      branch: main
       path: test/cypress/executors/cypress-8
   executionRequest:
     args:
