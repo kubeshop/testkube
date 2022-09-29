@@ -24,6 +24,24 @@ pod/testkube-mongodb-74587998bb-8pzl2                       1/1     Running   0 
 pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0          5d23h
 ```
 
+### Opening the Dashboard Using CLI Is Not Working
+
+If there is a timeout error reported:
+
+```sh
+kubectl-testkube dashboard
+checking readiness of services (error: timed-out waiting for dashboard and api)
+```
+
+Make sure that there is not another dashboard process running in the background like in the example below:
+
+```sh
+ps aux | grep dashboard
+user         76005   0.0  0.0 408628368   1648 s002  S+   12:32PM   0:00.00 grep dashboard
+user         75985   0.0  0.1 409292320  43584 s001  S+   12:32PM   0:00.12 kubectl port-forward --namespace testkube deployment/testkube-dashboard 8080:8080
+user         75984   0.0  0.1 409263376  37488 s001  S+   12:32PM   0:00.22 testkube dashboard
+```
+
 ### Access the Service Under Test(SUT) Using Testkube
 
 - Services inside the same Kubernetes cluster can be accessed using the address \<service-name\>.\<service-namespace\>.svc.cluster.local:\<port-number\>. If there are network restrictions configured, Testkube will need permissions to access the SUT over the local network of the cluster.
