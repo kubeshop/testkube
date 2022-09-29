@@ -42,6 +42,24 @@ user         75985   0.0  0.1 409292320  43584 s001  S+   12:32PM   0:00.12 kube
 user         75984   0.0  0.1 409263376  37488 s001  S+   12:32PM   0:00.22 testkube dashboard
 ```
 
+Also, there might be some other process listening on the same port. To debug this, try port-forwarding manually:
+
+```
+kubectl port-forward svc/testkube-dashboard 8080
+kubectl port-forward svc/testkube-api-server 8088
+```
+
+Check for errors and try accessing:
+[http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1](http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1)
+
+If you see errors like:
+```
+Unable to listen on port 8080: Listeners failed to create with the following errors: [unable to create listener: Error listen tcp4 127.0.0.1:8080: bind: address already in use unable to create listener: Error listen tcp6 [::1]:8080: bind: address already in use]
+error: unable to listen on any of the requested ports: [{8080 8080}]
+```
+
+Please stop the application that listens on 8080, 8088 ports.
+
 ### Access the Service Under Test(SUT) Using Testkube
 
 - Services inside the same Kubernetes cluster can be accessed using the address \<service-name\>.\<service-namespace\>.svc.cluster.local:\<port-number\>. If there are network restrictions configured, Testkube will need permissions to access the SUT over the local network of the cluster.
