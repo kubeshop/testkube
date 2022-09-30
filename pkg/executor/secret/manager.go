@@ -21,7 +21,6 @@ type Manager interface {
 
 // NewEnvManager returns an implementation of the Manager
 func NewEnvManager() *EnvManager {
-
 	return &EnvManager{}
 }
 
@@ -114,6 +113,9 @@ func (m EnvManager) GetVars(variables map[string]testkube.Variable) {
 }
 
 func (m EnvManager) Obfuscate(p []byte) []byte {
+	if m.Variables == nil {
+		return p
+	}
 	m.GetVars(m.Variables)
 	for _, variable := range m.Variables {
 		if !variable.IsSecret() {
