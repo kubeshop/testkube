@@ -365,7 +365,7 @@ func (s *TestkubeAPI) streamLogsFromJob(execution *testkube.Execution, w *bufio.
 	enc := json.NewEncoder(w)
 	s.Log.Infow("getting logs from Kubernetes job")
 
-	executor, err := s.getExecutorByTestType(testType)
+	executor, err := s.getExecutorByTestType(execution.TestType)
 	if err != nil {
 		output.PrintError(os.Stdout, err)
 		s.Log.Errorw("getting logs error", "error", err)
@@ -373,7 +373,7 @@ func (s *TestkubeAPI) streamLogsFromJob(execution *testkube.Execution, w *bufio.
 		return
 	}
 
-	logs, err := s.Executor.Logs(execution)
+	logs, err := executor.Logs(execution)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 	if err != nil {
 		output.PrintError(os.Stdout, err)
