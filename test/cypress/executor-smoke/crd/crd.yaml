@@ -10,8 +10,16 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-10
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -25,8 +33,16 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-10
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -40,12 +56,20 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
       - --browser
       - chrome
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -59,12 +83,20 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
       - --browser
       - firefox
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 # Disabled - known bug: https://github.com/kubeshop/testkube/issues/2286
 # apiVersion: tests.testkube.io/v3
@@ -79,7 +111,7 @@ spec:
 #     repository:
 #       type: git
 #       uri: https://github.com/kubeshop/testkube
-#       branch: main
+#       branch: cypress-envs
 #       path: test/cypress/executor-smoke/cypress-9
 ---
 apiVersion: tests.testkube.io/v3
@@ -94,7 +126,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -113,7 +145,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -132,7 +164,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-8
 ---
 apiVersion: tests.testkube.io/v3
@@ -147,7 +179,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
@@ -166,7 +198,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: cypress-envs
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
