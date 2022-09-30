@@ -17,7 +17,7 @@ require (
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.5.8
-	github.com/minio/minio-go/v7 v7.0.38
+	github.com/minio/minio-go/v7 v7.0.39
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.17.0
 	github.com/olekukonko/tablewriter v0.0.5
