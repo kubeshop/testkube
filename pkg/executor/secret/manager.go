@@ -3,6 +3,7 @@ package secret
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
@@ -24,8 +25,15 @@ func NewEnvManager() *EnvManager {
 	return &EnvManager{}
 }
 
+func EnvManagerWithVars(variables map[string]testkube.Variable) Manager {
+	return &EnvManager{
+		Variables: variables,
+	}
+}
+
 // EnvManager manages secret exchange from job pods using env
 type EnvManager struct {
+	Variables map[string]testkube.Variable
 }
 
 // Prepare prepares secret env vars based on secret envs and variables
@@ -103,4 +111,17 @@ func (m EnvManager) GetVars(variables map[string]testkube.Variable) {
 	}
 
 	return
+}
+
+func (m EnvManager) Obfuscate(p []byte) []byte {
+	m.GetVars(m.Variables)
+	for _, variable := range m.Variables {
+		if !variable.IsSecret() {
+			continue
+		}
+
+		p = []byte(strings.ReplaceAll(string(p), variable.Value, "********"))
+	}
+
+	return p
 }
