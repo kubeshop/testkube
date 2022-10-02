@@ -15,7 +15,7 @@ func TestJSONWrapWritter(t *testing.T) {
 
 		buff := bytes.NewBuffer([]byte(""))
 
-		writer := NewJSONWrapWriter(buff, *secret.NewEnvManager())
+		writer := NewJSONWrapWriter(buff, secret.NewEnvManager())
 		line1 := "some log line"
 		_, err := writer.Write([]byte(line1))
 		assert.NoError(t, err)
