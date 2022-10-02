@@ -8,7 +8,7 @@ import (
 )
 
 // NewJSONWrapWriter returns new NewJSONWrapWriter instance
-func NewJSONWrapWriter(writer io.Writer, envMngr secret.EnvManager) *JSONWrapWriter {
+func NewJSONWrapWriter(writer io.Writer, envMngr *secret.EnvManager) *JSONWrapWriter {
 	return &JSONWrapWriter{
 		encoder:    json.NewEncoder(writer),
 		envManager: envMngr,
@@ -18,10 +18,13 @@ func NewJSONWrapWriter(writer io.Writer, envMngr secret.EnvManager) *JSONWrapWri
 // JSONWrapWriter wraps bytes stream into json Output of type line
 type JSONWrapWriter struct {
 	encoder    *json.Encoder
-	envManager secret.EnvManager
+	envManager *secret.EnvManager
 }
 
 // Write io.Writer method implementation
 func (w *JSONWrapWriter) Write(p []byte) (int, error) {
-	return len(p), w.encoder.Encode(NewOutputLine(w.envManager.Obfuscate(p)))
+	if w.envManager != nil {
+		p = w.envManager.Obfuscate(p)
+	}
+	return len(p), w.encoder.Encode(NewOutputLine(p))
 }
