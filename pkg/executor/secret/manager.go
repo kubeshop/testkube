@@ -17,6 +17,8 @@ type Manager interface {
 	GetEnvs() (secretEnvs []string)
 	// GetVars gets secret vars
 	GetVars(variables map[string]testkube.Variable)
+	// Obfuscate obfuscates secret values
+	Obfuscate(p []byte) []byte
 }
 
 // NewEnvManager returns an implementation of the Manager
@@ -24,7 +26,7 @@ func NewEnvManager() *EnvManager {
 	return &EnvManager{}
 }
 
-func EnvManagerWithVars(variables map[string]testkube.Variable) Manager {
+func NewEnvManagerWithVars(variables map[string]testkube.Variable) *EnvManager {
 	return &EnvManager{
 		Variables: variables,
 	}
