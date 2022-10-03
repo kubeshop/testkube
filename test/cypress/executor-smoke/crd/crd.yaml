@@ -10,7 +10,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     variables:
@@ -33,7 +33,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     variables:
@@ -56,7 +56,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
@@ -83,7 +83,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
@@ -111,7 +111,7 @@ spec:
 #     repository:
 #       type: git
 #       uri: https://github.com/kubeshop/testkube
-#       branch: cypress-envs
+#       branch: main
 #       path: test/cypress/executor-smoke/cypress-9
 ---
 apiVersion: tests.testkube.io/v3
@@ -126,7 +126,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -145,7 +145,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -164,7 +164,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
 ---
 apiVersion: tests.testkube.io/v3
@@ -179,7 +179,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
@@ -198,7 +198,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: cypress-envs
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
