@@ -13,6 +13,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,6 +31,7 @@ func TestExecute(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	metrics := metrics.NewMetrics()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -90,6 +92,7 @@ func TestExecute(t *testing.T) {
 	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), mockExecutionResult).Return(nil)
 
 	rnr := scheduler.NewScheduler(
+		metrics,
 		mockExecutor,
 		mockExecutor,
 		mockResultRepository,

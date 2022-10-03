@@ -30,6 +30,7 @@ type Scheduler struct {
 }
 
 func NewScheduler(
+	metrics v1.Metrics,
 	executor client.Executor,
 	containerExecutor client.Executor,
 	executionResults result.Repository,
@@ -43,6 +44,7 @@ func NewScheduler(
 	logger *zap.SugaredLogger,
 ) *Scheduler {
 	return &Scheduler{
+		metrics:              metrics,
 		executor:             executor,
 		containerExecutor:    containerExecutor,
 		secretClient:         secretClient,

@@ -200,6 +200,7 @@ func main() {
 	}
 
 	scheduler := scheduler.NewScheduler(
+		metrics,
 		executor,
 		containerExecutor,
 		resultsRepository,
