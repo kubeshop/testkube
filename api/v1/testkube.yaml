@@ -84,7 +84,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -117,7 +117,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
         502:
@@ -125,7 +125,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -147,7 +147,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -177,7 +177,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -221,7 +221,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -243,7 +243,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -2433,7 +2433,7 @@ components:
         source:
           type: string
           description: reference to test source resource
-          example: "my-private-repository-test" 
+          example: "my-private-repository-test"
         created:
           type: string
           format: date-time
@@ -2480,7 +2480,7 @@ components:
           type: string
           description: test content
           example: "https://github.com/kubeshop/testkube"
-        
+
     TestSource:
       description: Test source resource for shared test content
       type: object
@@ -2500,7 +2500,7 @@ components:
           description: "test source labels"
           additionalProperties:
             type: string
-  
+
     TestSourceUpsertRequest:
       description: test create request body
       type: object
@@ -3601,6 +3601,7 @@ components:
       name: namespace
       schema:
         type: string
+        default: "testkube"
         description: Namespace of the object
     Name:
       in: query
