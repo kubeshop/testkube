@@ -24,7 +24,7 @@ func NewEnvManager() *EnvManager {
 	return &EnvManager{}
 }
 
-func EnvManagerWithVars(variables map[string]testkube.Variable) Manager {
+func EnvManagerWithVars(variables map[string]testkube.Variable) *EnvManager {
 	return &EnvManager{
 		Variables: variables,
 	}
