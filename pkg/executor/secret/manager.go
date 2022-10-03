@@ -17,6 +17,8 @@ type Manager interface {
 	GetEnvs() (secretEnvs []string)
 	// GetVars gets secret vars
 	GetVars(variables map[string]testkube.Variable)
+	// Obfuscate obfuscates secret values
+	Obfuscate(p []byte) []byte
 }
 
 // NewEnvManager returns an implementation of the Manager
