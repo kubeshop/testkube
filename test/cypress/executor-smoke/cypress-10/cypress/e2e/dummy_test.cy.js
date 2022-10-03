@@ -8,4 +8,7 @@ describe('Testkube website', () => {
   it(`Validate NON_CYPRESS_ENV ENV (${Cypress.env('NON_CYPRESS_ENV')})`, () => {
     expect('NON_CYPRESS_ENV_value').to.equal(Cypress.env('NON_CYPRESS_ENV')) //NON_CYPRESS_ENV - need to be loaded with --env parameter
   })
+  it(`Validate cypress env  (${Cypress.env()})`, () => {
+    expect('').to.equal(Cypress.env())
+  })
 })
