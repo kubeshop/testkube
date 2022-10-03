@@ -25,10 +25,14 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
+	var labelSelector *metav1.LabelSelector
+	if selector.LabelSelector != nil {
+		labelSelector = mapLabelSelectorToCRD(selector.LabelSelector)
+	}
 	return testsv1.TestTriggerSelector{
 		Name:          selector.Name,
 		Namespace:     selector.Namespace,
-		LabelSelector: mapLabelSelectorToCRD(selector.LabelSelector),
+		LabelSelector: labelSelector,
 	}
 }
 

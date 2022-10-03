@@ -43,12 +43,14 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 		c.Status(http.StatusCreated)
 
+		apiTestTrigger := testtriggersmapper.MapCRDToAPI(created)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(created)})
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
 			return s.getCRDs(c, data, err)
 		}
 
-		return c.JSON(created)
+		return c.JSON(apiTestTrigger)
 	}
 }
 
@@ -83,12 +85,14 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 
 		c.Status(http.StatusOK)
 
+		apiTestTrigger := testtriggersmapper.MapCRDToAPI(updated)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(updated)})
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
 			return s.getCRDs(c, data, err)
 		}
 
-		return c.JSON(updated)
+		return c.JSON(apiTestTrigger)
 	}
 }
 
@@ -108,12 +112,14 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 
 		c.Status(http.StatusOK)
 
+		apiTestTrigger := testtriggersmapper.MapCRDToAPI(testTrigger)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(testTrigger)})
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
 			return s.getCRDs(c, data, err)
 		}
 
-		return c.JSON(testTrigger)
+		return c.JSON(apiTestTrigger)
 	}
 }
 
@@ -178,12 +184,14 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 
 		c.Status(http.StatusOK)
 
+		apiTestTriggers := testtriggersmapper.MapTestTriggerListKubeToAPI(testTriggers)
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testtriggersmapper.MapTestTriggerListKubeToAPI(testTriggers))
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, apiTestTriggers)
 			return s.getCRDs(c, data, err)
 		}
 
-		return c.JSON(testTriggers)
+		return c.JSON(apiTestTriggers)
 	}
 }
 

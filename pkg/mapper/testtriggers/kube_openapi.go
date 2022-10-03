@@ -36,10 +36,14 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 }
 
 func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
+	var labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector
+	if selector.LabelSelector != nil {
+		labelSelector = mapLabelSelectorFromCRD(selector.LabelSelector)
+	}
 	return &testkube.TestTriggerSelector{
 		Name:          selector.Name,
 		Namespace:     selector.Namespace,
-		LabelSelector: mapLabelSelectorFromCRD(selector.LabelSelector),
+		LabelSelector: labelSelector,
 	}
 }
 

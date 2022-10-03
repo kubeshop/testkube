@@ -14,7 +14,30 @@ spec:
   resource: {{ .Resource }}
   {{- end }}
   {{- if .ResourceSelector }}
-  resourceSelector: {{ toYaml .ResourceSelector | nindent 4 }}
+  resourceSelector:
+    {{- if .ResourceSelector.Name }}
+    name: {{ .ResourceSelector.Name }}
+    {{- end }}
+    {{- if .ResourceSelector.Namespace }}
+    namespace: {{ .ResourceSelector.Namespace }}
+    {{- end }}
+    {{- if .ResourceSelector.LabelSelector }}
+    labelSelector:
+        {{- if .ResourceSelector.LabelSelector.MatchLabels }}
+        matchLabels:
+            {{- range $key, $value := .ResourceSelector.LabelSelector.MatchLabels }}
+            {{ $key }}: {{ $value }}
+            {{- end }}
+        {{- end }}
+        {{- if .ResourceSelector.LabelSelector.MatchExpressions }}
+        matchExpressions:
+            {{- range $exp := .ResourceSelector.LabelSelector.MatchExpressions }}
+            key: {{ $exp.Key }}
+            operator: {{ $exp.Operator }}
+            values: {{ $exp.Values }}
+            {{- end }}
+        {{- end }}
+    {{- end }}
   {{- end }}
   {{- if .Event }}
   event: {{ .Event }}
@@ -26,5 +49,28 @@ spec:
   execution: {{ .Execution }}
   {{- end }}
   {{- if .TestSelector }}
-  testSelector: {{ toYaml .TestSelector | nindent 4 }}
+  testSelector:
+    {{- if .TestSelector.Name }}
+    name: {{ .TestSelector.Name }}
+    {{- end }}
+    {{- if .TestSelector.Namespace }}
+    namespace: {{ .TestSelector.Namespace }}
+    {{- end }}
+    {{- if .TestSelector.LabelSelector }}
+    labelSelector:
+        {{- if .TestSelector.LabelSelector.MatchLabels }}
+        matchLabels:
+            {{- range $key, $value := .TestSelector.LabelSelector.MatchLabels }}
+            {{ $key }}: {{ $value }}
+            {{- end }}
+        {{- end }}
+        {{- if .TestSelector.LabelSelector.MatchExpressions }}
+        matchExpressions:
+            {{- range $exp := .TestSelector.LabelSelector.MatchExpressions }}
+            key: {{ $exp.Key }}
+            operator: {{ $exp.Operator }}
+            values: {{ $exp.Values }}
+            {{- end }}
+        {{- end }}
+    {{- end }}
   {{- end }}
