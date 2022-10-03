@@ -55,9 +55,9 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 2. Test.Spec.ExecutionRequest fields are used if they are not filled before.
 3. Executor.Spec fields are used if they are not filled before.
 
-## Input data
+## Input Data
 
-You can provide input data via string, files, and git repostories via TestKube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
+You can provide input data via string, files, and Git repositories via TestKube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
 
 ```
 apiVersion: tests.testkube.io/v3
