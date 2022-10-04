@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
-      branch: build-test-results #TODO: change after checks
+      branch: main
       path: examples/hello-gradle-jdk18
   executionRequest:
     variables:
@@ -20,8 +20,6 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
-    args:
-      - --debug --scan  #TODO: remove after checks
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
