@@ -9,7 +9,7 @@ Kubernetes resources.
 
 ## **Architecture**
 
-Testkube uses [informers](https://pkg.go.dev/k8s.io/client-go/informers) to watch Kubernetes resources and register handlers
+Testkube uses [Informers](https://pkg.go.dev/k8s.io/client-go/informers) to watch Kubernetes resources and register handlers
 on certain actions on the watched Kubernetes resources.
 
 Informers are a reliable, scalable and fault-tolerant Kubernetes concept where each informer registers handlers with the
