@@ -68,13 +68,14 @@ func TestNewJobSpecEmptyArgs(t *testing.T) {
 
 func TestNewJobSpecWithArgs(t *testing.T) {
 	jobOptions := &JobOptions{
-		Name:             "name",
-		Namespace:        "namespace",
-		InitImage:        "kubeshop/testkube-executor-init:0.7.10",
-		Image:            "curl",
-		ImagePullSecrets: []string{"secret-name"},
-		Command:          []string{"/bin/curl"},
-		Args:             []string{"-v", "https://testkube.kubeshop.io"},
+		Name:                  "name",
+		Namespace:             "namespace",
+		InitImage:             "kubeshop/testkube-executor-init:0.7.10",
+		Image:                 "curl",
+		ImagePullSecrets:      []string{"secret-name"},
+		Command:               []string{"/bin/curl"},
+		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
+		ActiveDeadlineSeconds: 100,
 	}
 	spec, err := NewJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)

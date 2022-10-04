@@ -46,6 +46,8 @@ type ExecutionRequest struct {
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
 	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// duration in seconds the test may be active, until its stopped
+	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
 	// map of files with target location as key and contents as value
 	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
 }
