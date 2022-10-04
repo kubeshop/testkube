@@ -1,0 +1,10 @@
+{
+	"name": "executor-gradle-smoke-tests",
+	"description": "gradle executor smoke tests",
+	"steps": [
+		{"execute": {"name": "gradle-executor-smoke-jdk18"}},
+		{"execute": {"name": "gradle-executor-smoke-jdk17"}},
+		{"execute": {"name": "gradle-executor-smoke-jdk11"}},
+		{"execute": {"name": "gradle-executor-smoke-jdk8"}}
+	]
+}

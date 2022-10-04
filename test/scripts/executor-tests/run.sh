@@ -34,7 +34,25 @@ cypress_create() {
   kubectl apply -f test/cypress/executor-smoke/crd/crd.yaml
 
   # TestsSuites
-  cat test/suites/executor-cypress-smoke-tests.json | kubectl testkube create testsuite --name executor-cypress-smoke-tests --label app=testkube
+  cat test/suites/executor-cypress-smoke-tests.json | kubectl testkube create testsuite --name executor-cypress-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+}
+
+gradle_create() {
+  print_title "Gradle - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml --ignore-not-found=true
+    kubectl delete -f test/gradle/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-gradle-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+  
+  # Executors (not created by default)
+  kubectl apply -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml
+
+  # # Tests
+  kubectl apply -f test/gradle/executor-smoke/crd/crd.yaml
+
+  # # TestsSuites
+  cat test/suites/executor-gradle-smoke-tests.json | kubectl testkube create testsuite --name executor-gradle-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
 k6_create() {
@@ -48,12 +66,32 @@ k6_create() {
   kubectl apply -f test/k6/executor-smoke/crd/crd.yaml
 
   # TestsSuites
-  cat test/suites/executor-k6-smoke-tests.json | kubectl testkube create testsuite --name executor-k6-smoke-tests --label app=testkube
+  cat test/suites/executor-k6-smoke-tests.json | kubectl testkube create testsuite --name executor-k6-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+}
+
+maven_create() {
+  print_title "Maven - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/executors/maven-jdk-18.yaml -f test/executors/maven-jdk-11.yaml -f test/executors/maven-jdk-8.yaml --ignore-not-found=true
+    kubectl delete -f test/maven/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-maven-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+  
+  # Executors (not created by default)
+  kubectl apply -f test/executors/maven-jdk-18.yaml -f test/executors/maven-jdk-11.yaml -f test/executors/maven-jdk-8.yaml
+
+  # Tests
+  kubectl apply -f test/maven/executor-smoke/crd/crd.yaml
+
+  # # TestsSuites
+  cat test/suites/executor-maven-smoke-tests.json | kubectl testkube create testsuite --name executor-maven-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
 run() {
   cypress_create
+  gradle_create
   k6_create
+  maven_create
 }
 
 run

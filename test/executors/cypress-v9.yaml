@@ -4,6 +4,6 @@ metadata:
   name: cypress-v9-executor
   namespace: testkube
 spec:
-  image: kubeshop/testkube-cypress-executor:1.1.7-cypress9
+  image: kubeshop/testkube-cypress-executor:1.1-cypress9
   types:
   - cypress:v9/test
