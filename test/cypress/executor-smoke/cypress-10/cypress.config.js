@@ -1,9 +1,17 @@
-module.exports = (on, config) => {
-  on('task', {
-    log(message) {
-      console.log(message)
+const { defineConfig } = require('cypress')
 
-      return null
-    },
-  })
-}
+module.exports = defineConfig({
+  // setupNodeEvents can be defined in either
+  // the e2e or component configuration
+  e2e: {
+    setupNodeEvents(on, config) {
+      on('task', {
+        log(message) {
+          console.log(message)
+      
+          return null
+        },
+      })
+    }
+  }
+})
