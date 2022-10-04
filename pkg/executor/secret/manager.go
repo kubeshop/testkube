@@ -1,9 +1,9 @@
 package secret
 
 import (
+	"bytes"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
@@ -124,7 +124,7 @@ func (m EnvManager) Obfuscate(p []byte) []byte {
 			continue
 		}
 
-		p = []byte(strings.ReplaceAll(string(p), variable.Value, "********"))
+		p = bytes.ReplaceAll(p, []byte(variable.Value), []byte("*****"))
 	}
 
 	return p
