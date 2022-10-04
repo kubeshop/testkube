@@ -67,7 +67,7 @@ Supported values:
 
 ### Example
 
-Example which creates a test trigger with the name **testtrigger-example** in the **default** namespace for **pods**
+Here is an example which creates a test trigger with the name **testtrigger-example** in the **default** namespace for **pods**
 that have the **testkube.io/tier: backend** label which gets triggered on **modified** event and **runs** a **testsuite**
 identified by the name **sanity-test** in the **frontend** namespace:
 
