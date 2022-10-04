@@ -4,6 +4,9 @@ metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
 spec:
+  {{- if gt .ActiveDeadlineSeconds 0}}
+  activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
+  {{- end}}
   template:
     spec:
 	  {{- if ne .InitImage ""}}

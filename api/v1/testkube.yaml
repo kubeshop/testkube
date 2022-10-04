@@ -2964,6 +2964,11 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        activeDeadlineSeconds:
+          type: integer
+          format: int64
+          description: duration in seconds the test may be active, until its stopped
+          example: 1
         copyFiles:
           type: object
           additionalProperties:
