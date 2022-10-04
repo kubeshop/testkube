@@ -1,0 +1,50 @@
+name: Manual trigger for Homebrew Formula Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag-name:
+        description: 'The git tag to bump the formula to'
+        required: false
+  schedule:
+    - cron: "0 0 * * 0"
+
+jobs:
+  homebrew:
+    name: Bump Homebrew formula
+    runs-on: ubuntu-latest
+    steps:
+      #If the tag was not provided during workflow run, then the latest will be used
+      - name: Get latest release tag
+        if: ${{ github.event.inputs.tag-name == '' }}
+        id: tag
+        run: |
+          #Get latest release tag
+          curl -s -f --output /dev/null --connect-timeout 5 https://api.github.com/repos/kubeshop/testkube/releases/latest
+
+          export VERSION=$(curl -s -f https://api.github.com/repos/kubeshop/testkube/releases/latest | jq -r .tag_name | cut -c2-)
+          echo "::set-output name=VERSION::${VERSION}"
+
+      - name: Setup Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Update brew
+        run: brew update
+      # Run if no tag was provided as an input, latest will be used.
+      - name: Update Homebrew formula
+        if: ${{ github.event.inputs.tag-name == '' }}
+        uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          formula: Testkube
+          tag: ${{ steps.tag.outputs.VERSION }}
+          force: true
+      # Run if a tag was provided as an input.
+      - name: Update Homebrew formula
+        if: ${{ github.event.inputs.tag-name != '' }}
+        uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          formula: Testkube
+          tag: ${{ github.event.inputs.tag-name }}
+          force: true

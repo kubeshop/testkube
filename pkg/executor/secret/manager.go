@@ -1,9 +1,9 @@
 package secret
 
 import (
+	"bytes"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +17,8 @@ type Manager interface {
 	GetEnvs() (secretEnvs []string)
 	// GetVars gets secret vars
 	GetVars(variables map[string]testkube.Variable)
+	// Obfuscate obfuscates secret values
+	Obfuscate(p []byte) []byte
 }
 
 // NewEnvManager returns an implementation of the Manager
@@ -24,7 +26,7 @@ func NewEnvManager() *EnvManager {
 	return &EnvManager{}
 }
 
-func EnvManagerWithVars(variables map[string]testkube.Variable) Manager {
+func NewEnvManagerWithVars(variables map[string]testkube.Variable) *EnvManager {
 	return &EnvManager{
 		Variables: variables,
 	}
@@ -122,7 +124,7 @@ func (m EnvManager) Obfuscate(p []byte) []byte {
 			continue
 		}
 
-		p = []byte(strings.ReplaceAll(string(p), variable.Value, "********"))
+		p = bytes.ReplaceAll(p, []byte(variable.Value), []byte("*****"))
 	}
 
 	return p
