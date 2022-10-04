@@ -48,10 +48,10 @@ gradle_create() {
   # Executors (not created by default)
   kubectl apply -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml
 
-  # # Tests
+  # Tests
   kubectl apply -f test/gradle/executor-smoke/crd/crd.yaml
 
-  # # TestsSuites
+  # TestsSuites
   cat test/suites/executor-gradle-smoke-tests.json | kubectl testkube create testsuite --name executor-gradle-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
@@ -83,7 +83,7 @@ maven_create() {
   # Tests
   kubectl apply -f test/maven/executor-smoke/crd/crd.yaml
 
-  # # TestsSuites
+  # TestsSuites
   cat test/suites/executor-maven-smoke-tests.json | kubectl testkube create testsuite --name executor-maven-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
