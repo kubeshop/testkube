@@ -63,7 +63,7 @@ Supported values:
 * **event**     - created, modified, deleted
 * **execution** - test, testsuite
 
-**NOTE**: all resources support the above-mentioned events, a list of finer-grained events is in the works, stay tuned...
+**NOTE**: All resources support the above-mentioned events, a list of finer-grained events is in the works, stay tuned...
 
 ### Example
 
