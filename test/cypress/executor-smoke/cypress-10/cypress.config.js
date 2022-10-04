@@ -1,4 +1,4 @@
-module.exports = = (on, config) => {
+module.exports = (on, config) => {
   on('task', {
     log(message) {
       console.log(message)
