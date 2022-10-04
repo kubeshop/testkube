@@ -1,7 +1,8 @@
-const { defineConfig } = require("cypress");
+module.exports = = (on, config) => {
+  on('task', {
+    log(message) {
+      console.log(message)
 
-module.exports = defineConfig({
-  e2e: {
-    baseUrl: 'https://testkube.kubeshop.io/'
-  },
-});
+      return null
+    },
+  })
