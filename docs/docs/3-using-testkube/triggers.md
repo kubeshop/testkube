@@ -93,4 +93,4 @@ spec:
 
 ## API
 
-Testkube exposes CRUD operations on test triggers in the REST API. Check out the OpenAPI docs for more info.
+Testkube exposes CRUD operations on test triggers in the REST API. Check out the [Open API](6-openapi.md) docs for more info.
