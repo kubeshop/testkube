@@ -1,0 +1,10 @@
+config:
+  target: "https://testkube.kubeshop.io/"
+  phases:
+  - duration: 1
+    arrivalRate: 1
+scenarios:
+- flow:
+  - get:
+      url: "/"
+  - think: 0.1

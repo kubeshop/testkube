@@ -1,0 +1,14 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: artillery-executor-smoke
+  namespace: testkube
+spec:
+  type: artillery/test
+  content:
+    type: git-file
+    repository:
+      type: git-file
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-artillery
+      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
