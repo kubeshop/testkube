@@ -4,10 +4,12 @@ set -e
 # params
 delete='false'
 run='false'
-executor_type=''
+executor_type='all'
+help='false'
 
-while getopts 'dre:' flag; do
+while getopts 'hdre:' flag; do
   case "${flag}" in
+    h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
     r) run='true' ;;
     e) executor_type="${OPTARG}" ;; # TODO: executor selection
@@ -17,6 +19,20 @@ done
 print_title() {
   border="=================="
   printf "$border\n  $1\n$border\n"
+}
+
+artillery_create() {
+  print_title "Artillery - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/artillery/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-artillery-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+
+  # Tests
+  kubectl apply -f test/artillery/executor-smoke/crd/crd.yaml
+
+  # TestsSuites
+  cat test/suites/executor-artillery-smoke-tests.json | kubectl testkube create testsuite --name executor-artillery-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
 cypress_create() {
@@ -88,10 +104,33 @@ maven_create() {
 }
 
 run() {
-  cypress_create
-  gradle_create
-  k6_create
-  maven_create
+  case $executor_type in
+    all)
+      artillery_create
+      cypress_create
+      gradle_create
+      k6_create
+      maven_create
+      ;;
+    artillery)
+      artillery_create
+      ;;
+    cypress)
+      cypress_create
+      ;;
+    gradle)
+      gradle_create
+      ;;
+    k6)
+      k6_create
+      ;;
+    maven)
+      maven_create
+      ;;
+    *)
+      echo "Error: Incorrect executor name \"$executor_type\""; exit 1
+      ;;
+  esac
 }
 
 run

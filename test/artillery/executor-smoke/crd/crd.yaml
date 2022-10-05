@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: artillery-test
+  name: artillery-executor-smoke
   namespace: testkube
 spec:
   type: artillery/test
