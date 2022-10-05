@@ -115,6 +115,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		CopyFiles: map[string][]byte{
 			"": {},
 		},
+		ActiveDeadlineSeconds: 10,
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

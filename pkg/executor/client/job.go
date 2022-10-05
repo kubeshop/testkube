@@ -81,21 +81,22 @@ type JobExecutor struct {
 }
 
 type JobOptions struct {
-	Name             string
-	Namespace        string
-	Image            string
-	ImagePullSecrets []string
-	ImageOverride    string
-	Jsn              string
-	TestName         string
-	InitImage        string
-	JobTemplate      string
-	SecretEnvs       map[string]string
-	HTTPProxy        string
-	HTTPSProxy       string
-	UsernameSecret   *testkube.SecretRef
-	TokenSecret      *testkube.SecretRef
-	Variables        map[string]testkube.Variable
+	Name                  string
+	Namespace             string
+	Image                 string
+	ImagePullSecrets      []string
+	ImageOverride         string
+	Jsn                   string
+	TestName              string
+	InitImage             string
+	JobTemplate           string
+	SecretEnvs            map[string]string
+	HTTPProxy             string
+	HTTPSProxy            string
+	UsernameSecret        *testkube.SecretRef
+	TokenSecret           *testkube.SecretRef
+	Variables             map[string]testkube.Variable
+	ActiveDeadlineSeconds int64
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -280,16 +281,17 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
 func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
-		Image:          options.ExecutorSpec.Image,
-		ImageOverride:  options.ImageOverride,
-		JobTemplate:    options.ExecutorSpec.JobTemplate,
-		TestName:       options.TestName,
-		Namespace:      options.Namespace,
-		SecretEnvs:     options.Request.SecretEnvs,
-		HTTPProxy:      options.Request.HttpProxy,
-		HTTPSProxy:     options.Request.HttpsProxy,
-		UsernameSecret: options.UsernameSecret,
-		TokenSecret:    options.TokenSecret,
+		Image:                 options.ExecutorSpec.Image,
+		ImageOverride:         options.ImageOverride,
+		JobTemplate:           options.ExecutorSpec.JobTemplate,
+		TestName:              options.TestName,
+		Namespace:             options.Namespace,
+		SecretEnvs:            options.Request.SecretEnvs,
+		HTTPProxy:             options.Request.HttpProxy,
+		HTTPSProxy:            options.Request.HttpsProxy,
+		UsernameSecret:        options.UsernameSecret,
+		TokenSecret:           options.TokenSecret,
+		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 	}
 }
 

@@ -241,6 +241,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if request.HttpsProxy == "" && test.ExecutionRequest.HttpsProxy != "" {
 			request.HttpsProxy = test.ExecutionRequest.HttpsProxy
 		}
+
+		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
+			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
+		}
 	}
 
 	// get executor from kubernetes CRs
