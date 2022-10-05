@@ -18,14 +18,7 @@ jobs:
           fileDir: "./temp/"
           encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
 
-      - name: Read
-        id: file
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: ${{ steps.write_file.outputs.filePath }}
-
       - name: Echo package.json
-        run: echo "${{ steps.package.outputs.content }}"
-
+        run: cat "${{ steps.write_file.outputs.filePath  }}"
 
 
