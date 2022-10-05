@@ -19,7 +19,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -42,7 +42,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -69,7 +69,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -96,7 +96,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 # Disabled - known bug: https://github.com/kubeshop/testkube/issues/2286
 # apiVersion: tests.testkube.io/v3

@@ -1,0 +1,11 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1-jdk18
+  types:
+  - maven:jdk18/project
+  - maven:jdk18/test
+  - maven:jdk18/integration-test 

@@ -1,0 +1,85 @@
+# https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
+
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-executor-smoke-jdk18
+  namespace: testkube
+spec:
+  type: gradle:jdk18/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle-jdk18
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: TESTKUBE_GRADLE
+        value: "true"
+        type: basic
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-executor-smoke-jdk17
+  namespace: testkube
+spec:
+  type: gradle:jdk17/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: TESTKUBE_GRADLE
+        value: "true"
+        type: basic
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-executor-smoke-jdk11
+  namespace: testkube
+spec:
+  type: gradle:jdk11/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: TESTKUBE_GRADLE
+        value: "true"
+        type: basic
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-executor-smoke-jdk8
+  namespace: testkube
+spec:
+  type: gradle:jdk8/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: TESTKUBE_GRADLE
+        value: "true"
+        type: basic
