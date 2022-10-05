@@ -1,0 +1,31 @@
+name: Get cert
+
+on:
+  push:
+    branches:
+      - get-windows-cert
+
+jobs:
+  cert:
+    name: Get cert
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get MSFT Cert
+        id: write_file
+        uses: timheuer/base64-to-file@v1.1
+        with:
+          fileName: "kubeshop_msft.p12"
+          fileDir: "./temp/"
+          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
+
+      - name: Read
+        id: file
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ${{ steps.write_file.outputs.filePath }}
+
+      - name: Echo package.json
+        run: echo "${{ steps.package.outputs.content }}"
+
+
+
