@@ -86,7 +86,7 @@ $ cat /data/test-content
 }
 ```
 
-When using git or git directory sources, the content is placed inside `/data/repo` directory. For example:
+When using Git or Git directory sources, the content is placed inside `/data/repo` directory. For example:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
