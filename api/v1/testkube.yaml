@@ -1869,6 +1869,45 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+        - test-sources
+        - api
+      summary: "Process test source batch (create, update, delete)"
+      description: "Process test source batch based on variables passed in request"
+      operationId: processTestSourceBatch
+      requestBody:
+        description: test source batch request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/TestSourceUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestSourceBatchResult"
+        400:
+          description: "problem with test source definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"                 
     delete:
       tags:
         - test-sources
@@ -3441,6 +3480,29 @@ components:
               type: string
           description: mapping between resources and supported events
           example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
+
+    TestSourceBatchResult:
+      description: Test source batch result
+      type: object
+      properties:
+        created:
+          type: array
+          items:
+            type: string
+          description: created test sources
+          example: ["name1", "name2", "name3"]
+        updated:
+          type: array
+          items:
+            type: string
+          description: updated test sources            
+          example: ["name4", "name5", "name6"]
+        deleted:
+          type: array
+          items:
+            type: string
+          description: deleted test sources
+          example: ["name7", "name8", "name9"]
 
     #
     # Errors
