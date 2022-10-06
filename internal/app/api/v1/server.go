@@ -279,6 +279,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsources := s.Routes.Group("/test-sources")
 	testsources.Post("/", s.CreateTestSourceHandler())
 	testsources.Get("/", s.ListTestSourcesHandler())
+	testsources.Patch("/", s.ProcessTestSourceBatchHandler())
 	testsources.Get("/:name", s.GetTestSourceHandler())
 	testsources.Patch("/:name", s.UpdateTestSourceHandler())
 	testsources.Delete("/:name", s.DeleteTestSourceHandler())
