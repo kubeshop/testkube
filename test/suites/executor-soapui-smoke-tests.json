@@ -1,0 +1,7 @@
+{
+	"name": "executor-soapui-smoke-tests",
+	"description": "soapui executor smoke tests",
+	"steps": [
+		{"execute": {"name": "soapui-executor-smoke"}}
+	]
+}

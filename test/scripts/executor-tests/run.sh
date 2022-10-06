@@ -103,6 +103,20 @@ maven_create() {
   cat test/suites/executor-maven-smoke-tests.json | kubectl testkube create testsuite --name executor-maven-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
+soapui_create() {
+  print_title "soapui - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/soapui/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-soapui-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+
+  # Tests
+  kubectl apply -f test/soapui/executor-smoke/crd/crd.yaml
+
+  # TestsSuites
+  cat test/suites/executor-soapui-smoke-tests.json | kubectl testkube create testsuite --name executor-soapui-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+}
+
 run() {
   case $executor_type in
     all)
@@ -126,6 +140,9 @@ run() {
       ;;
     maven)
       maven_create
+      ;;
+    soapui)
+      soapui_create
       ;;
     *)
       echo "Error: Incorrect executor name \"$executor_type\""; exit 1

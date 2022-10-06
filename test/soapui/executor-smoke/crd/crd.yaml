@@ -1,14 +1,14 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: artillery-executor-smoke
+  name: soapui-executor-smoke
   namespace: testkube
 spec:
-  type: artillery/test
+  type: soapui/xml
   content:
     type: git-file
     repository:
       type: git-file
       uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
+      branch: soapui-executor-tests
+      path: test/soapui/executor-smoke/soapui-smoke-test.xml
