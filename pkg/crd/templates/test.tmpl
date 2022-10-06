@@ -138,5 +138,9 @@ spec:
     - name: {{ $secret.Name -}}
     {{- end}}
     {{- end}}
+    {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
+    activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}
+    {{- end}}
+
   {{- end }}
   {{- end }}
