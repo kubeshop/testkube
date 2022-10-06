@@ -12,7 +12,7 @@ require (
 	github.com/fluxcd/pkg/runtime v0.19.0
 	github.com/gofiber/adaptor/v2 v2.1.26
 	github.com/gofiber/fiber/v2 v2.38.1
-	github.com/gofiber/websocket/v2 v2.0.25
+	github.com/gofiber/websocket/v2 v2.1.0
 	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
