@@ -85,6 +85,20 @@ k6_create() {
   cat test/suites/executor-k6-smoke-tests.json | kubectl testkube create testsuite --name executor-k6-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
+kubepug_create() {
+  print_title "kubepug - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/kubepug/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-kubepug-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+
+  # Tests
+  kubectl apply -f test/kubepug/executor-smoke/crd/crd.yaml
+
+  # TestsSuites
+  cat test/suites/executor-kubepug-smoke-tests.json | kubectl testkube create testsuite --name executor-kubepug-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+}
+
 maven_create() {
   print_title "Maven - create"
   if [ "$delete" = true ] ; then
@@ -137,6 +151,9 @@ run() {
       ;;
     k6)
       k6_create
+      ;;
+    kubepug)
+      kubepug_create
       ;;
     maven)
       maven_create
