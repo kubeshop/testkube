@@ -59,7 +59,7 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 
 You can provide input data via string, files, and Git repositories via TestKube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
 
-```
+```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
@@ -78,10 +78,34 @@ spec:
 
 Puts data into `/data/test-content` file:
 
-```
+```bash
 $ cat /data/test-content
 {
   "project": "testkube",
   "is": "awesome"
 }
+```
+
+When using Git or Git directory sources, the content is placed inside `/data/repo` directory. For example:
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: custom-container
+  namespace: testkube
+spec:
+  content:
+    repository:
+      branch: main
+      type: git-dir
+      uri: https://github.com/kubeshop/testkube-executor-init
+    type: git-dir
+```
+
+Downloads into `/data/repo` directory
+
+```bash
+$ ls /data/repO
+CODE_OF_CONDUCT.md  CONTRIBUTING.md  LICENSE  Makefile  README.md  build  cmd  go.mod  go.sum  pkg
 ```
