@@ -47,6 +47,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		image                    string
 		command                  []string
 		imagePullSecretNames     []string
+		timeout                  int64
 	)
 
 	cmd := &cobra.Command{
@@ -147,7 +148,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&image, "image", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
-
+	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	return cmd
 }
 

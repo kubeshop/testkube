@@ -280,6 +280,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	if err != nil {
 		return options, err
 	}
+	timeout, err := cmd.Flags().GetInt64("timeout")
+	if err != nil {
+		return options, err
+	}
+
 	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
 	if err != nil {
 		return options, err
@@ -290,17 +295,18 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 	}
 
 	options.ExecutionRequest = &testkube.ExecutionRequest{
-		Name:             executionName,
-		VariablesFile:    paramsFileContent,
-		Variables:        variables,
-		Image:            image,
-		Command:          command,
-		Args:             executorArgs,
-		ImagePullSecrets: imageSecrets,
-		Envs:             envs,
-		SecretEnvs:       secretEnvs,
-		HttpProxy:        httpProxy,
-		HttpsProxy:       httpsProxy,
+		Name:                  executionName,
+		VariablesFile:         paramsFileContent,
+		Variables:             variables,
+		Image:                 image,
+		Command:               command,
+		Args:                  executorArgs,
+		ImagePullSecrets:      imageSecrets,
+		Envs:                  envs,
+		SecretEnvs:            secretEnvs,
+		HttpProxy:             httpProxy,
+		HttpsProxy:            httpsProxy,
+		ActiveDeadlineSeconds: timeout,
 	}
 
 	// if labels are passed and are different from the existing overwrite
