@@ -158,7 +158,6 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 		testSourceMap := make(map[string]testsourcev1.TestSource, len(list.Items))
 		for _, item := range list.Items {
 			testSourceMap[item.Name] = item
-
 		}
 
 		var result testkube.TestSourceBatchResult
