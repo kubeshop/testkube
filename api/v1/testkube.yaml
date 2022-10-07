@@ -2616,9 +2616,7 @@ components:
         copyFiles:
           type: object
           additionalProperties:
-            type: array
-            items:
-              type: byte
+            type: string
           description: map of files with target location as key and contents as value
 
 
@@ -2972,9 +2970,7 @@ components:
         copyFiles:
           type: object
           additionalProperties:
-            type: array
-            items:
-              type: byte
+            type: string
           description: map of files with target location as key and contents as value
 
     TestSuiteExecutionRequest:

@@ -22,7 +22,7 @@ func Test_readCopyFiles(t *testing.T) {
 		assert.NoError(t, err)
 
 		for _, f := range gotFiles {
-			assert.Contains(t, string(f), "config file #")
+			assert.Contains(t, f, "config file #")
 		}
 
 		err = cleanup(files)

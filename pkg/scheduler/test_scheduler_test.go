@@ -112,8 +112,8 @@ func TestGetExecuteOptions(t *testing.T) {
 		Sync:       false,
 		HttpProxy:  "",
 		HttpsProxy: "",
-		CopyFiles: map[string][]byte{
-			"": {},
+		CopyFiles: map[string]string{
+			"": "",
 		},
 		ActiveDeadlineSeconds: 10,
 	}

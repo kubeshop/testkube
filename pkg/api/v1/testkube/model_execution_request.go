@@ -49,5 +49,5 @@ type ExecutionRequest struct {
 	// duration in seconds the test may be active, until its stopped
 	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
 	// map of files with target location as key and contents as value
-	CopyFiles map[string][]byte `json:"copyFiles,omitempty"`
+	CopyFiles map[string]string `json:"copyFiles,omitempty"`
 }
