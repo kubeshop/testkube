@@ -84,6 +84,7 @@ type JobOptions struct {
 	JobTemplate           string
 	InitImage             string
 	SecretEnvs            map[string]string
+	Envs                  map[string]string
 	HTTPProxy             string
 	HTTPSProxy            string
 	UsernameSecret        *testkube.SecretRef

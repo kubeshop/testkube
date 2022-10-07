@@ -219,6 +219,18 @@ func AbortJob(c kubernetes.Interface, namespace string, jobName string) *testkub
 	}
 }
 
+func PrepareEnvs(envs map[string]string) []corev1.EnvVar {
+	var env []corev1.EnvVar
+	for k, v := range envs {
+		env = append(env, corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
+	}
+
+	return env
+}
+
 // PrepareSecretEnvs prepares all the secrets for templating
 func PrepareSecretEnvs(secretEnvs map[string]string, variables map[string]testkube.Variable,
 	usernameSecret, tokenSecret *testkube.SecretRef) []corev1.EnvVar {
