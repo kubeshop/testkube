@@ -76,6 +76,7 @@ func TestNewJobSpecWithArgs(t *testing.T) {
 		Command:               []string{"/bin/curl"},
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
+		Envs:                  map[string]string{"key": "value"},
 	}
 	spec, err := NewJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
