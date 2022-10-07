@@ -9,8 +9,8 @@ import (
 
 func TestPlaceFiles(t *testing.T) {
 	t.Run("Run with one file", func(t *testing.T) {
-		files := map[string][]byte{
-			"/tmp/TestPlaceFiles_file1": []byte("file1"),
+		files := map[string]string{
+			"/tmp/TestPlaceFiles_file1": "file1",
 		}
 
 		err := PlaceFiles(files)
@@ -24,7 +24,7 @@ func TestPlaceFiles(t *testing.T) {
 	})
 
 	t.Run("Run with no file", func(t *testing.T) {
-		files := map[string][]byte{}
+		files := map[string]string{}
 		err := PlaceFiles(files)
 		assert.NoError(t, err)
 		defer cleanup(t, files)
@@ -36,10 +36,10 @@ func TestPlaceFiles(t *testing.T) {
 	})
 
 	t.Run("Run with multiple files", func(t *testing.T) {
-		files := map[string][]byte{
-			"/tmp/TestPlaceFiles_file2": []byte("file2"),
-			"/tmp/TestPlaceFiles_file3": []byte("file3"),
-			"/tmp/TestPlaceFiles_file4": []byte("file4"),
+		files := map[string]string{
+			"/tmp/TestPlaceFiles_file2": "file2",
+			"/tmp/TestPlaceFiles_file3": "file3",
+			"/tmp/TestPlaceFiles_file4": "file4",
 		}
 
 		err := PlaceFiles(files)
@@ -53,7 +53,7 @@ func TestPlaceFiles(t *testing.T) {
 	})
 }
 
-func cleanup(t *testing.T, files map[string][]byte) {
+func cleanup(t *testing.T, files map[string]string) {
 	for file := range files {
 		err := os.Remove(file)
 		assert.NoError(t, err)

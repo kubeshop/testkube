@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-func PlaceFiles(files map[string][]byte) error {
+func PlaceFiles(files map[string]string) error {
 	for location, content := range files {
-		err := os.WriteFile(location, content, 0644)
+		err := os.WriteFile(location, []byte(content), 0644)
 		if err != nil {
 			return fmt.Errorf("could not write file: %w", err)
 		}
