@@ -1,8 +1,8 @@
 # Secret Variables
-Testkube now offers many ways to pass secrets to the test and to the executors, there are following types:
+Testkube now offers many ways to pass secrets to the test and to the executors, here are following types:
 
 ### Secret Variables
-Are variables passed during the test/testsuite create or run in a simple form that can be accessed in the test as an environment variable
+Secret Variables are variables passed during the test/test suite creation or run in a simple form that can be accessed in the test as an environment variable.
 
 ```shell
 --secret-variable <secret-name>=<secret-value>
@@ -20,13 +20,13 @@ test_api_key = pm.environment.get("api-key")
 ```
 
 ### Secret References
-If there are secrets that are already in the cluster's Secrets, Testkube offers possibility to use them as well providing secret name and the key from that secret that we want to use in the tests
+If there are secrets that are already in the cluster's Secrets, Testkube allows you to use them and provides the secret name and the key from that secret that will be used in the tests.
 
 ```shell
 --secret-variable-reference <secret-name>=<k8s-secret-name>=<secret-key>
 ```
 
-Let's say that there is this secret already in the cluster
+Let's say that there is this secret already in the cluster:
 
 ```yaml
 apiVersion: v1
@@ -48,13 +48,13 @@ metadata:
 type: Opaque
 ```
 
-it can be used in the run or create operation as follows:
+This secret can be used in the run or create operation as follows:
 
 ```shell
 testkube run test my-test --secret-variable-reference my-sec1=my-secret=sec1
 ```
 
-and in the test it can be accessed as well as an environment variable, Postman example:
+And, in the test, it can be accessed as an environment variable. Here is a Postman example:
 
 ```js
 test_api_key = pm.environment.get("my-sec1")
@@ -62,9 +62,10 @@ test_api_key = pm.environment.get("my-sec1")
 
 ### Secret Environment Variables
 
-This one is for passing environment variables for the executor itself same as the `--env` but this cannot be used because it contains sensitive information, instead a k8s secret can be created and pass it with `--secret-env <k8s-secret-name>=<secret-key>`
+Secret Environment Variables pass environment variables for the executor itself like `--env` when `--env` cannot be used because it contains sensitive information. Instead a k8s secret can be created and passed with `--secret-env <k8s-secret-name>=<secret-key>`.
 
-For example if the executor needs `env-secret` from the secret
+For example, if the executor needs `env-secret` from the secret, 
+it can be passed using `--secret-env my-env-secret=env-secret` and executor will receive it as `env-secret`:
 
 ```yaml
 apiVersion: v1
@@ -76,5 +77,3 @@ metadata:
   namespace: testkube
 type: Opaque
 ```
-
-it can be passed using `--secret-env my-env-secret=env-secret` and executor will receive it as `env-secret`
