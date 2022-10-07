@@ -135,14 +135,14 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 
 func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request []testkube.TestSourceUpsertRequest
+		var request testkube.TestSourceBatchRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		testSourceBatch := make(map[string]testkube.TestSourceUpsertRequest, len(request))
-		for _, item := range request {
+		testSourceBatch := make(map[string]testkube.TestSourceUpsertRequest, len(request.Batch))
+		for _, item := range request.Batch {
 			if _, ok := testSourceBatch[item.Name]; ok {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test source with duplicated id/name %s", item.Name))
 			}

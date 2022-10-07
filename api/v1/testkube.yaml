@@ -1882,9 +1882,7 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/TestSourceUpsertRequest"
+              $ref: "#/components/schemas/TestSourceBatchRequest"
       responses:
         200:
           description: "successful operation"
@@ -3480,6 +3478,17 @@ components:
               type: string
           description: mapping between resources and supported events
           example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
+
+    TestSourceBatchRequest:
+      description: Test source batch request
+      type: object
+      required:
+        - batch
+      properties:
+        batch:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSourceUpsertRequest"
 
     TestSourceBatchResult:
       description: Test source batch result
