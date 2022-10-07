@@ -143,8 +143,8 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 
 		testSourceBatch := make(map[string]testkube.TestSourceUpsertRequest, len(request))
 		for _, item := range request {
-			if _, ok := testSourceBatch[item.Name]; !ok {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test source with duplicted id/name %s", item.Name))
+			if _, ok := testSourceBatch[item.Name]; ok {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test source with duplicated id/name %s", item.Name))
 			}
 
 			testSourceBatch[item.Name] = item
