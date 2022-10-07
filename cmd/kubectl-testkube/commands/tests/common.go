@@ -357,8 +357,8 @@ func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
 }
 
 // readCopyFiles reads files
-func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
-	files := map[string][]byte{}
+func readCopyFiles(copyFiles []string) (map[string]string, error) {
+	files := map[string]string{}
 	for _, f := range copyFiles {
 		paths := strings.Split(f, ":")
 		if len(paths) != 2 {
@@ -368,7 +368,7 @@ func readCopyFiles(copyFiles []string) (map[string][]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not read executor copy file: %w", err)
 		}
-		files[paths[1]] = contents
+		files[paths[1]] = string(contents)
 	}
 	return files, nil
 }
