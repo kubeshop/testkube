@@ -1,9 +1,11 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -128,6 +130,73 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 
 		c.Status(http.StatusNoContent)
 		return nil
+	}
+}
+
+func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request testkube.TestSourceBatchRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		testSourceBatch := make(map[string]testkube.TestSourceUpsertRequest, len(request.Batch))
+		for _, item := range request.Batch {
+			if _, ok := testSourceBatch[item.Name]; ok {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test source with duplicated id/name %s", item.Name))
+			}
+
+			testSourceBatch[item.Name] = item
+		}
+
+		list, err := s.TestSourcesClient.List("")
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		testSourceMap := make(map[string]testsourcev1.TestSource, len(list.Items))
+		for _, item := range list.Items {
+			testSourceMap[item.Name] = item
+		}
+
+		var result testkube.TestSourceBatchResult
+		for name, item := range testSourceBatch {
+			testSource := testsourcesmapper.MapAPIToCRD(item)
+			if existed, ok := testSourceMap[name]; !ok {
+				testSource.Namespace = s.Namespace
+
+				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				if err != nil {
+					return s.Error(c, http.StatusBadRequest, err)
+				}
+
+				result.Created = append(result.Created, created.Name)
+			} else {
+				existed.Spec = testSource.Spec
+				existed.Labels = item.Labels
+
+				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				if err != nil {
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+
+				result.Updated = append(result.Updated, updated.Name)
+			}
+		}
+
+		for name := range testSourceMap {
+			if _, ok := testSourceBatch[name]; !ok {
+				err := s.TestSourcesClient.Delete(name)
+				if err != nil {
+					return s.Error(c, http.StatusBadRequest, err)
+				}
+
+				result.Deleted = append(result.Deleted, name)
+			}
+		}
+
+		return c.JSON(result)
 	}
 }
 
