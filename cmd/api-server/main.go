@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"net"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"golang.org/x/sync/errgroup"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -261,6 +262,7 @@ func main() {
 		testsClientV3,
 		resultsRepository,
 		testResultsRepository,
+		triggers.NewMongoLeaseBackend(db),
 		log.DefaultLogger,
 	)
 	log.DefaultLogger.Info("starting trigger service")

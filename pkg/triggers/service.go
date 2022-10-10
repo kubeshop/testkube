@@ -3,9 +3,10 @@ package triggers
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/utils"
 	"os"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"

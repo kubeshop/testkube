@@ -2,6 +2,9 @@ package triggers
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
@@ -23,8 +26,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"testing"
-	"time"
 
 	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/stretchr/testify/assert"

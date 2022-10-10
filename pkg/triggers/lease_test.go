@@ -2,12 +2,13 @@ package triggers
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestService_runLeaseChecker(t *testing.T) {

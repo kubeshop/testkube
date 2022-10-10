@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"

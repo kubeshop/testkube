@@ -1,8 +1,9 @@
 package triggers
 
 import (
-	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"testing"
+
+	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 
 	"github.com/stretchr/testify/assert"
 )
