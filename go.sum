@@ -177,9 +177,8 @@ github.com/go-openapi/swag v0.22.3/go.mod h1:UzaqsxGiab7freDnrUUra0MwWfN/q7tE4j+
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/go-test/deep v1.0.4 h1:u2CU3YKy9I2pmu9pX0eq50wCgjfGIt539SqR7FbHiho=
 github.com/go-test/deep v1.0.4/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
-github.com/gofiber/adaptor/v2 v2.1.26 h1:L/vcmySP12LlOS/ifZ3olgRct/92/2LHu+69rHVIneA=
-github.com/gofiber/adaptor/v2 v2.1.26/go.mod h1:ufH3ik6czF6EATRXkS3cETFXYuBTBQCFyzJlM/ZYvB8=
-github.com/gofiber/fiber/v2 v2.37.0/go.mod h1:xm3pDGlfE1xqVKb77iH8weLU0FFoTeWeK3nbiYM2Nh0=
+github.com/gofiber/adaptor/v2 v2.1.28 h1:00NWXBGd1VFnZtvIwNllLW/O5APmc2t/krdezVDSp4A=
+github.com/gofiber/adaptor/v2 v2.1.28/go.mod h1:VZ2RXVPhye633LUOoxkvHiMqj7GRcc62W062l/ghHn0=
 github.com/gofiber/fiber/v2 v2.38.1 h1:GEQ/Yt3Wsf2a30iTqtLXlBYJZso0JXPovt/tmj5H9jU=
 github.com/gofiber/fiber/v2 v2.38.1/go.mod h1:t0NlbaXzuGH7I+7M4paE848fNWInZ7mfxI/Er1fTth8=
 github.com/gofiber/websocket/v2 v2.1.0 h1:EqxeH9wT1vz1H+sPmQJ3g+gUfB24pakJAB2I9MPHcHA=
@@ -487,7 +486,6 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.33.0/go.mod h1:KJRK/MXx0J+yd0c5hlR+s1tIHD72sniU8ZJjl97LIw4=
-github.com/valyala/fasthttp v1.39.0/go.mod h1:t/G+3rLek+CyY9bnIE+YlMRddxVAAGjhxndDB4i4C0I=
 github.com/valyala/fasthttp v1.40.0 h1:CRq/00MfruPGFLTQKY8b+8SfdK60TxNztjRMnH0t1Yc=
 github.com/valyala/fasthttp v1.40.0/go.mod h1:t/G+3rLek+CyY9bnIE+YlMRddxVAAGjhxndDB4i4C0I=
 github.com/valyala/tcplisten v1.0.0 h1:rBHj/Xf+E1tRGZyWIWwJDiRY0zc1Js+CV5DqwacVSA8=
