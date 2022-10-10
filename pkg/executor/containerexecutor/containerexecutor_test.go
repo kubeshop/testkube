@@ -77,10 +77,22 @@ func TestNewJobSpecWithArgs(t *testing.T) {
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
 		Envs:                  map[string]string{"key": "value"},
+		Variables:             map[string]testkube.Variable{"aa": testkube.Variable{Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
+
+	wantEnvs := []corev1.EnvVar{
+		{Name: "DEBUG", Value: ""}, {Name: "RUNNER_ENDPOINT", Value: ""},
+		{Name: "RUNNER_ACCESSKEYID", Value: ""}, {Name: "RUNNER_SECRETACCESSKEY", Value: ""},
+		{Name: "RUNNER_LOCATION", Value: ""}, {Name: "RUNNER_TOKEN", Value: ""},
+		{Name: "RUNNER_SSL", Value: ""}, {Name: "RUNNER_SCRAPPERENABLED", Value: ""},
+		{Name: "RUNNER_DATADIR", Value: "/data"}, {Name: "NAME", Value: "value"},
+		{Name: "key", Value: "value"},
+	}
+
+	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
 func TestNewJobSpecWithoutInitImage(t *testing.T) {

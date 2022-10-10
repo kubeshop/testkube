@@ -57,7 +57,11 @@ func NewJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, erro
 	if options.HTTPSProxy != "" {
 		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
-
+	for _, variable := range options.Variables {
+		if variable.Type_ != nil && *variable.Type_ == testkube.BASIC_VariableType {
+			env = append(env, corev1.EnvVar{Name: strings.ToUpper(variable.Name), Value: variable.Value})
+		}
+	}
 	env = append(env, executor.PrepareEnvs(options.Envs)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
