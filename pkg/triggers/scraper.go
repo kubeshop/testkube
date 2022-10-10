@@ -14,6 +14,7 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			s.logger.Infof("trigger service: stopping scraper component")
 			return
 		case <-ticker.C:
 			s.logger.Debugf("trigger service: execution scraper component: starting new ticker iteration")

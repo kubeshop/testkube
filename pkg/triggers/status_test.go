@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 func TestTriggerStatus(t *testing.T) {
 	t.Parallel()
 
-	status := newTriggerStatus()
+	status := newTriggerStatus(&v1.TestTrigger{})
 
 	status.testSuiteExecutionIDs = []string{"test-suite-execution-1"}
 	status.start()

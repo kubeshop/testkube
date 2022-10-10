@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -84,6 +87,22 @@ func runMigrations() (err error) {
 }
 
 func main() {
+	// Run services within an errgroup to propagate errors between services.
+	g, ctx := errgroup.WithContext(context.Background())
+
+	// Cancel the errgroup context on SIGINT and SIGTERM,
+	// which shuts everything down gracefully.
+	stopSignal := make(chan os.Signal, 1)
+	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return nil
+		case sig := <-stopSignal:
+			// Returning an error cancels the errgroup.
+			return errors.Errorf("received signal: %v", sig)
+		}
+	})
 
 	port := os.Getenv("APISERVER_PORT")
 	namespace := "testkube"
@@ -125,7 +144,6 @@ func main() {
 	configMapConfig, err := configmap.NewConfigMapConfig(configName, namespace)
 	ui.ExitOnError("Getting config map config", err)
 
-	ctx := context.Background()
 	// try to load from mongo based config first
 	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
 	if err != nil {
@@ -246,14 +264,11 @@ func main() {
 		log.DefaultLogger,
 	)
 	log.DefaultLogger.Info("starting trigger service")
-	err = triggerService.Run(ctx)
-	if err != nil {
-		ui.ExitOnError("Running trigger service", err)
-	}
+	triggerService.Run(ctx)
 
 	// telemetry based functions
-	api.SendTelemetryStartEvent()
-	api.StartTelemetryHeartbeats()
+	api.SendTelemetryStartEvent(ctx)
+	api.StartTelemetryHeartbeats(ctx)
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
@@ -263,8 +278,13 @@ func main() {
 		"version", apiVersion,
 	)
 
-	err = api.Run()
-	ui.ExitOnError("Running API Server", err)
+	g.Go(func() error {
+		return api.Run(ctx)
+	})
+
+	if err := g.Wait(); err != nil {
+		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
+	}
 }
 
 func newContainerExecutor(

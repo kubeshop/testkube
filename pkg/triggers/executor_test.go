@@ -91,7 +91,7 @@ func TestExecute(t *testing.T) {
 	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockExecutionResult, nil)
 	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), mockExecutionResult).Return(nil)
 
-	rnr := scheduler.NewScheduler(
+	sched := scheduler.NewScheduler(
 		metrics,
 		mockExecutor,
 		mockExecutor,
@@ -107,7 +107,7 @@ func TestExecute(t *testing.T) {
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
-		scheduler:        rnr,
+		scheduler:        sched,
 		testsClient:      mockTestsClient,
 		testSuitesClient: mockTestSuitesClient,
 		logger:           log.DefaultLogger,
@@ -127,10 +127,8 @@ func TestExecute(t *testing.T) {
 
 	s.addTrigger(&testTrigger)
 
-	assert.Len(t, s.triggers, 1)
 	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
-	_, ok := s.triggerStatus[key]
-	assert.True(t, ok)
+	assert.Contains(t, s.triggerStatus, key)
 
 	err := s.execute(ctx, &testTrigger)
 	assert.NoError(t, err)

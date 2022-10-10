@@ -11,7 +11,8 @@ import (
 )
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
-	for _, t := range s.triggers {
+	for _, status := range s.triggerStatus {
+		t := status.testTrigger
 		if t.Spec.Resource != string(e.resource) {
 			continue
 		}
