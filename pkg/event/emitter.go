@@ -53,12 +53,27 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
+	oldMap := make(map[string]common.Listener, len(e.Listeners))
+	newMap := make(map[string]common.Listener, len(listeners))
+
 	for _, l := range e.Listeners {
-		e.stopListener(l.Name())
+		oldMap[l.Name()] = l
 	}
 
 	for _, l := range listeners {
-		e.startListener(l)
+		newMap[l.Name()] = l
+	}
+
+	for name, l := range oldMap {
+		if _, ok := newMap[name]; !ok {
+			e.stopListener(l.Name())
+		}
+	}
+
+	for name, l := range newMap {
+		if _, ok := oldMap[name]; !ok {
+			e.startListener(l)
+		}
 	}
 
 	e.Listeners = listeners
