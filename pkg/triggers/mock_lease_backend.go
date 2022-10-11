@@ -34,17 +34,17 @@ func (m *MockLeaseBackend) EXPECT() *MockLeaseBackendMockRecorder {
 	return m.recorder
 }
 
-// CheckAndSet mocks base method.
-func (m *MockLeaseBackend) CheckAndSet(arg0 context.Context, arg1 string) (*Lease, error) {
+// TryAcquire mocks base method.
+func (m *MockLeaseBackend) TryAcquire(arg0 context.Context, arg1, arg2 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckAndSet", arg0, arg1)
-	ret0, _ := ret[0].(*Lease)
+	ret := m.ctrl.Call(m, "TryAcquire", arg0, arg1, arg2)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CheckAndSet indicates an expected call of CheckAndSet.
-func (mr *MockLeaseBackendMockRecorder) CheckAndSet(arg0, arg1 interface{}) *gomock.Call {
+// TryAcquire indicates an expected call of TryAcquire.
+func (mr *MockLeaseBackendMockRecorder) TryAcquire(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAndSet", reflect.TypeOf((*MockLeaseBackend)(nil).CheckAndSet), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryAcquire", reflect.TypeOf((*MockLeaseBackend)(nil).TryAcquire), arg0, arg1, arg2)
 }

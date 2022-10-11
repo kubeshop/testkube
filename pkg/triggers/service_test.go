@@ -121,15 +121,9 @@ func TestService_Run(t *testing.T) {
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
-	now := time.Now()
+	testClusterID := "testkube-api"
 	testIdentifier := "test-host-1"
-	testLease := Lease{
-		Identifier: testIdentifier,
-		ClusterID:  "testkube",
-		AcquiredAt: now.Add(-6 * time.Minute),
-		RenewedAt:  now.Add(-6 * time.Minute),
-	}
-	mockLeaseBackend.EXPECT().CheckAndSet(gomock.Any(), testIdentifier).Return(&testLease, nil).AnyTimes()
+	mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil).AnyTimes()
 
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
@@ -143,6 +137,7 @@ func TestService_Run(t *testing.T) {
 		mockTestResultRepository,
 		mockLeaseBackend,
 		testLogger,
+		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
 		WithLeaseCheckerInterval(50*time.Millisecond),

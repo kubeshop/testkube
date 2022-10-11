@@ -20,23 +20,19 @@ func TestService_runLeaseChecker(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1300*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
 		mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
+		testClusterID := "testkube-api"
 		testIdentifier := "test-host-1"
-		testLease := Lease{
-			Identifier: testIdentifier,
-			ClusterID:  "testkube",
-			AcquiredAt: time.Now(),
-			RenewedAt:  time.Now(),
-		}
-		mockLeaseBackend.EXPECT().CheckAndSet(gomock.Any(), testIdentifier).Return(&testLease, nil)
+		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil)
 
 		s := &Service{
 			identifier:         testIdentifier,
+			clusterID:          testClusterID,
 			leaseBackend:       mockLeaseBackend,
-			leaseCheckInterval: 1 * time.Second,
+			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
 		}
 
@@ -57,22 +53,17 @@ func TestService_runLeaseChecker(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1300*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
 		mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
-		testLease := Lease{
-			Identifier: "test-host-2",
-			ClusterID:  "testkube",
-			AcquiredAt: time.Now(),
-			RenewedAt:  time.Now(),
-		}
-		mockLeaseBackend.EXPECT().CheckAndSet(gomock.Any(), "test-host-1").Return(&testLease, nil)
+		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(false, nil)
 
 		s := &Service{
 			identifier:         "test-host-1",
+			clusterID:          "testkube-api",
 			leaseBackend:       mockLeaseBackend,
-			leaseCheckInterval: 1 * time.Second,
+			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
 		}
 
@@ -97,24 +88,19 @@ func TestService_runLeaseChecker_multipleInstances(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1300*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
 		mockLeaseBackend1 := NewMockLeaseBackend(mockCtrl)
+		mockLeaseBackend1.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(true, nil)
 		mockLeaseBackend2 := NewMockLeaseBackend(mockCtrl)
-		testLease := Lease{
-			Identifier: "test-host-1",
-			ClusterID:  "testkube",
-			AcquiredAt: time.Now(),
-			RenewedAt:  time.Now(),
-		}
-		mockLeaseBackend1.EXPECT().CheckAndSet(gomock.Any(), "test-host-1").Return(&testLease, nil)
-		mockLeaseBackend2.EXPECT().CheckAndSet(gomock.Any(), "test-host-2").Return(&testLease, nil)
+		mockLeaseBackend2.EXPECT().TryAcquire(gomock.Any(), "test-host-2", "testkube-api").Return(false, nil)
 
 		s1 := &Service{
 			identifier:         "test-host-1",
+			clusterID:          "testkube-api",
 			leaseBackend:       mockLeaseBackend1,
-			leaseCheckInterval: 1 * time.Second,
+			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
 		}
 
@@ -123,8 +109,9 @@ func TestService_runLeaseChecker_multipleInstances(t *testing.T) {
 
 		s2 := &Service{
 			identifier:         "test-host-2",
+			clusterID:          "testkube-api",
 			leaseBackend:       mockLeaseBackend2,
-			leaseCheckInterval: 1 * time.Second,
+			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
 		}
 

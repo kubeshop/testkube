@@ -73,14 +73,14 @@ func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
 		case leased := <-leaseChan:
 			if !leased {
 				if running {
-					s.logger.Infof("trigger service: host %s in cluster %s lost lease", s.identifier, s.clusterID)
+					s.logger.Infof("trigger service: instance %s in cluster %s lost lease", s.identifier, s.clusterID)
 					close(stopChan)
 					s.informers = nil
 					running = false
 				}
 			} else {
 				if !running {
-					s.logger.Infof("trigger service: host %s in cluster %s acquired lease", s.identifier, s.clusterID)
+					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
 					s.informers = newK8sInformers(s.clientset, s.testKubeClientset)
 					stopChan = make(chan struct{})
 					s.runInformers(ctx, stopChan)

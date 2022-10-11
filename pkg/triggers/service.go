@@ -23,7 +23,9 @@ import (
 var (
 	defaultScraperInterval    = 5 * time.Second
 	defaultLeaseCheckInterval = 5 * time.Second
-	defaultMaxLeaseDuration   = 5 * time.Minute
+	defaultMaxLeaseDuration   = 1 * time.Minute
+	defaultClusterID          = "testkube-api"
+	defaultIdentifierFormat   = "testkube-api-%s"
 )
 
 type Service struct {
@@ -61,12 +63,11 @@ func NewService(
 	logger *zap.SugaredLogger,
 	opts ...Option,
 ) *Service {
-	identifier := fmt.Sprintf("testkube-api-%s", utils.RandAlphanum(10))
-	clusterID := "testkube"
+	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
 		informers:            newK8sInformers(clientset, testKubeClientset),
 		identifier:           identifier,
-		clusterID:            clusterID,
+		clusterID:            defaultClusterID,
 		scraperInterval:      defaultScraperInterval,
 		leaseCheckInterval:   defaultLeaseCheckInterval,
 		maxLeaseDuration:     defaultMaxLeaseDuration,
@@ -102,7 +103,7 @@ func WithIdentifier(id string) Option {
 func WithHostnameIdentifier() Option {
 	return func(s *Service) {
 		identifier, err := os.Hostname()
-		if err != nil {
+		if err == nil {
 			s.identifier = identifier
 		}
 	}
