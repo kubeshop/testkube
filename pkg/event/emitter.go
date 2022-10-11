@@ -50,24 +50,18 @@ func (e *Emitter) Register(listener common.Listener) {
 
 // UpdateListeners updates listeners list
 func (e *Emitter) UpdateListeners(listeners common.Listeners) {
-
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	for i, new := range listeners {
-		found := false
-		for j, old := range e.Listeners {
-			if new.Name() == old.Name() {
-				e.Listeners[j] = listeners[i]
-				found = true
-			}
-		}
-		// if listener is not registered yet we need to subscribe
-		if !found {
-			e.Listeners = append(e.Listeners, listeners[i])
-			e.startListener(listeners[i])
-		}
+	for _, l := range e.Listeners {
+		e.stopListener(l.Name())
 	}
+
+	for _, l := range listeners {
+		e.startListener(l)
+	}
+
+	e.Listeners = listeners
 }
 
 // Notify notifies emitter with webhook
@@ -103,6 +97,14 @@ func (e *Emitter) startListener(l common.Listener) {
 	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error subscribing to event", "error", err)
+	}
+}
+
+func (e *Emitter) stopListener(name string) {
+	e.Log.Infow("stoping listener", name)
+	err := e.Bus.Unsubscribe(name)
+	if err != nil {
+		e.Log.Errorw("error unsubscribing from event", "error", err)
 	}
 }
 
