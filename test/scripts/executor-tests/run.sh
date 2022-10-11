@@ -35,6 +35,24 @@ artillery_create() {
   cat test/suites/executor-artillery-smoke-tests.json | kubectl testkube create testsuite --name executor-artillery-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
 }
 
+container_executor_create() {
+  print_title "Container executor - create"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/executors/container-executor-curl.yaml --ignore-not-found=true
+    kubectl delete -f test/container-executor/crd/curl.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-container-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+  
+  # Executors (not created by default)
+  kubectl apply -f test/executors/container-executor-curl.yaml
+
+  # Tests
+  kubectl apply -f test/container-executor/crd/curl.yaml
+
+  # TestsSuites
+  cat test/suites/executor-container-smoke-tests.json | kubectl testkube create testsuite --name executor-container-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+}
+
 cypress_create() {
   print_title "Cypress - create"
   if [ "$delete" = true ] ; then
@@ -135,13 +153,19 @@ run() {
   case $executor_type in
     all)
       artillery_create
+      container_executor_create
       cypress_create
       gradle_create
       k6_create
+      kubepug
       maven_create
+      soapui
       ;;
     artillery)
       artillery_create
+      ;;
+    container)
+      container_executor_create
       ;;
     cypress)
       cypress_create
