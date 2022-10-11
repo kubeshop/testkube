@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-curl-smoke
+  namespace: testkube
+spec:
+  type: container-executor-curl/test
+  executionRequest:
+    args:
+    - $(URL)
+    envs:
+      URL: https://testkube.kubeshop.io/
