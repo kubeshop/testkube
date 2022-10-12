@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package cloud;
+option go_package = "pkg/cloud";
+
+service TestKubeCloudAPI {
+    rpc Execute(stream ExecuteResponse) returns (stream ExecuteRequest);
+}
+
+message ExecuteRequest {
+    string method = 1;
+    string url = 2;
+    map<string, HeaderValue> headers = 3;
+    bytes body = 4;
+}
+
+message HeaderValue {
+   repeated string header = 1;
+}
+
+message ExecuteResponse {
+    int64 status = 1;
+    map<string, HeaderValue> headers = 2;
+    bytes body = 3;
+}

@@ -16,6 +16,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
@@ -254,6 +255,28 @@ func main() {
 		jobTemplates,
 		scheduler,
 	)
+
+	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
+	if apiKey != "" {
+		log.DefaultLogger.Info("starting agent service")
+		cloudURL := os.Getenv("TESTKUBE_CLOUD_URL")
+		inSecure := os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE")
+
+		//TODO make insecure false
+		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cloudURL, apiKey, inSecure == "true")
+		if err != nil {
+			ui.ExitOnError("Starting agent", err)
+		}
+		g.Go(func() error {
+			err = agent.Run(ctx)
+			if err != nil {
+				ui.ExitOnError("Running agent", err)
+			}
+
+			agent.Close()
+			return nil
+		})
+	}
 
 	triggerService := triggers.NewService(
 		scheduler,
