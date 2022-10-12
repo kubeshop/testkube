@@ -45,5 +45,8 @@ func (l *DummyListener) Kind() string {
 }
 
 func (l *DummyListener) Metadata() map[string]string {
-	return map[string]string{"uri": "http://localhost:8080"}
+	return map[string]string{
+		"id":       l.Name(),
+		"selector": l.Selector(),
+	}
 }

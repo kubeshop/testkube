@@ -50,24 +50,74 @@ func (e *Emitter) Register(listener common.Listener) {
 
 // UpdateListeners updates listeners list
 func (e *Emitter) UpdateListeners(listeners common.Listeners) {
-
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	for i, new := range listeners {
-		found := false
-		for j, old := range e.Listeners {
-			if new.Name() == old.Name() {
-				e.Listeners[j] = listeners[i]
-				found = true
+	oldMap := make(map[string]map[string]common.Listener, 0)
+	newMap := make(map[string]map[string]common.Listener, 0)
+	result := make([]common.Listener, 0)
+
+	for _, l := range e.Listeners {
+		if _, ok := oldMap[l.Kind()]; !ok {
+			oldMap[l.Kind()] = make(map[string]common.Listener, 0)
+		}
+
+		oldMap[l.Kind()][l.Name()] = l
+	}
+
+	for _, l := range listeners {
+		if _, ok := newMap[l.Kind()]; !ok {
+			newMap[l.Kind()] = make(map[string]common.Listener, 0)
+		}
+
+		newMap[l.Kind()][l.Name()] = l
+	}
+
+	// check for missing listeners
+	for kind, lMap := range oldMap {
+		// skip not changed kinds
+		if _, ok := newMap[kind]; !ok {
+			for _, l := range lMap {
+				result = append(result, l)
+			}
+
+			continue
+		}
+
+		// stop missing listeners
+		for name, l := range lMap {
+			if _, ok := newMap[kind][name]; !ok {
+				e.stopListener(l.Name())
 			}
 		}
-		// if listener is not registered yet we need to subscribe
-		if !found {
-			e.Listeners = append(e.Listeners, listeners[i])
-			e.startListener(listeners[i])
+	}
+
+	// check for new listeners
+	for kind, lMap := range newMap {
+		// start all listeners for new kind
+		if _, ok := oldMap[kind]; !ok {
+			for _, l := range lMap {
+				e.startListener(l)
+				result = append(result, l)
+			}
+		} else {
+			// start new listeners and restart updated ones
+			for name, l := range lMap {
+				if current, ok := oldMap[kind][name]; !ok {
+					e.startListener(l)
+				} else {
+					if !common.CompareListeners(current, l) {
+						e.stopListener(current.Name())
+						e.startListener(l)
+					}
+				}
+
+				result = append(result, l)
+			}
 		}
 	}
+
+	e.Listeners = result
 }
 
 // Notify notifies emitter with webhook
@@ -103,6 +153,14 @@ func (e *Emitter) startListener(l common.Listener) {
 	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error subscribing to event", "error", err)
+	}
+}
+
+func (e *Emitter) stopListener(name string) {
+	e.Log.Infow("stoping listener", name)
+	err := e.Bus.Unsubscribe(name)
+	if err != nil {
+		e.Log.Errorw("error unsubscribing from event", "error", err)
 	}
 }
 

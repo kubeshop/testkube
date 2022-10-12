@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -50,6 +51,7 @@ func (l *WebsocketListener) Metadata() map[string]string {
 		"name":     l.Name(),
 		"selector": l.Selector(),
 		"clients":  ids,
+		"events":   fmt.Sprintf("%v", l.events),
 	}
 }
 
