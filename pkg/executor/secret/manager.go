@@ -9,6 +9,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	// SecretEnvVarPrefix is a prefix for secret env vars
+	SecretEnvVarPrefix = "RUNNER_SECRET_ENV"
+	// SecretVarPrefix is a prefix for secret vars
+	SecretVarPrefix = "RUNNER_SECRET_VAR_"
+)
+
 // Manager is responsible for exchanging secrets with executor pod
 type Manager interface {
 	// Prepare prepares secret env vars based on secret envs and variables
@@ -42,8 +49,10 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 	// preparet secret envs
 	i := 1
 	for secretName, secretVar := range secretEnvs {
+		// TODO: these are duplicated because Postman executor is expecting it as json string
+		// and gets unmarshalled and the name and the value are taken from there, for other executors it will be like a normal env var.
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-			Name: fmt.Sprintf("RUNNER_SECRET_ENV%d", i),
+			Name: secretVar,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -53,7 +62,17 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 				},
 			},
 		})
-
+		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+			Name: fmt.Sprintf("%s%d", SecretEnvVarPrefix, i),
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: secretName,
+					},
+					Key: secretVar,
+				},
+			},
+		})
 		i++
 	}
 
@@ -64,7 +83,7 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 		}
 
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-			Name: fmt.Sprintf("RUNNER_SECRET_VAR_%s", name),
+			Name: fmt.Sprintf("%s%s", SecretVarPrefix, name),
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -83,7 +102,7 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 func (m EnvManager) GetEnvs() (secretEnvs []string) {
 	i := 1
 	for {
-		secretEnv, ok := os.LookupEnv(fmt.Sprintf("RUNNER_SECRET_ENV%d", i))
+		secretEnv, ok := os.LookupEnv(fmt.Sprintf("%s%d", SecretEnvVarPrefix, i))
 		if !ok {
 			break
 		}
@@ -102,7 +121,7 @@ func (m EnvManager) GetVars(variables map[string]testkube.Variable) {
 			continue
 		}
 
-		value, ok := os.LookupEnv(fmt.Sprintf("RUNNER_SECRET_VAR_%s", name))
+		value, ok := os.LookupEnv(fmt.Sprintf("%s%s", SecretVarPrefix, name))
 		if !ok {
 			continue
 		}
