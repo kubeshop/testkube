@@ -53,30 +53,71 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	oldMap := make(map[string]common.Listener, len(e.Listeners))
-	newMap := make(map[string]common.Listener, len(listeners))
+	oldMap := make(map[string]map[string]common.Listener, 0)
+	newMap := make(map[string]map[string]common.Listener, 0)
+	result := make([]common.Listener, 0)
 
 	for _, l := range e.Listeners {
-		oldMap[l.Name()] = l
+		if _, ok := oldMap[l.Kind()]; !ok {
+			oldMap[l.Kind()] = make(map[string]common.Listener, 0)
+		}
+
+		oldMap[l.Kind()][l.Name()] = l
 	}
 
 	for _, l := range listeners {
-		newMap[l.Name()] = l
+		if _, ok := newMap[l.Kind()]; !ok {
+			newMap[l.Kind()] = make(map[string]common.Listener, 0)
+		}
+
+		newMap[l.Kind()][l.Name()] = l
 	}
 
-	for name, l := range oldMap {
-		if _, ok := newMap[name]; !ok {
-			e.stopListener(l.Name())
+	// check for missing listeners
+	for kind, lMap := range oldMap {
+		// skip not changed kinds
+		if _, ok := newMap[kind]; !ok {
+			for _, l := range lMap {
+				result = append(result, l)
+			}
+
+			continue
+		}
+
+		// stop missing listeners
+		for name, l := range lMap {
+			if _, ok := newMap[kind][name]; !ok {
+				e.stopListener(l.Name())
+			}
 		}
 	}
 
-	for name, l := range newMap {
-		if _, ok := oldMap[name]; !ok {
-			e.startListener(l)
+	// check for new listeners
+	for kind, lMap := range newMap {
+		// start all listeners for new kind
+		if _, ok := oldMap[kind]; !ok {
+			for _, l := range lMap {
+				e.startListener(l)
+				result = append(result, l)
+			}
+		} else {
+			// start new listeners and restart updated ones
+			for name, l := range lMap {
+				if current, ok := oldMap[kind][name]; !ok {
+					e.startListener(l)
+				} else {
+					if !common.CompareListeners(current, l) {
+						e.stopListener(current.Name())
+						e.startListener(l)
+					}
+				}
+
+				result = append(result, l)
+			}
 		}
 	}
 
-	e.Listeners = listeners
+	e.Listeners = result
 }
 
 // Notify notifies emitter with webhook

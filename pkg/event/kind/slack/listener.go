@@ -41,8 +41,9 @@ func (l *SlackListener) Events() []testkube.EventType {
 }
 func (l *SlackListener) Metadata() map[string]string {
 	return map[string]string{
-		"name":   l.Name(),
-		"events": fmt.Sprintf("%v", l.Events()),
+		"name":     l.Name(),
+		"events":   fmt.Sprintf("%v", l.Events()),
+		"selector": l.Selector(),
 	}
 }
 

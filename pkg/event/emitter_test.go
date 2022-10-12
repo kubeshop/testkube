@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 	"github.com/stretchr/testify/assert"
 )
@@ -153,4 +154,90 @@ func newExampleTestEvent2() testkube.Event {
 		Type_:         testkube.EventStartTest,
 		TestExecution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
 	}
+}
+
+func TestEmitter_UpdateListeners(t *testing.T) {
+	t.Run("add, update and delete new listeners", func(t *testing.T) {
+		// given
+		emitter := NewEmitter(eventBus)
+		// given listener with matching selector
+		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
+		// and listener with second matching selector
+		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
+		// and listener with third matching selector
+		listener3 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener3"}
+		// and listener with different kind
+		listener4 := &FakeListener{name: "l4"}
+		// and listener with different kind
+		listener5 := &FakeListener{name: "l5"}
+
+		// when listeners are added
+		emitter.UpdateListeners(common.Listeners{listener1, listener2})
+
+		// then should have 2 listeners
+		assert.Len(t, emitter.Listeners, 2)
+
+		// when listeners are deleted
+		emitter.UpdateListeners(common.Listeners{listener1})
+		assert.Equal(t, "type=listener1", emitter.Listeners[0].Selector())
+
+		// then should have 1 listener
+		assert.Len(t, emitter.Listeners, 1)
+
+		// when listeners are updated
+		emitter.UpdateListeners(common.Listeners{listener3})
+
+		// then should have 1 listener
+		assert.Len(t, emitter.Listeners, 1)
+		assert.Equal(t, "type=listener3", emitter.Listeners[0].Selector())
+
+		// when listeners are added
+		emitter.UpdateListeners(common.Listeners{listener3, listener2})
+
+		// then should have 2 listeners
+		assert.Len(t, emitter.Listeners, 2)
+
+		// when listeners are added
+		emitter.UpdateListeners(common.Listeners{listener4})
+
+		// then should have 3 listeners
+		assert.Len(t, emitter.Listeners, 3)
+
+		// when listeners are added
+		emitter.UpdateListeners(common.Listeners{listener4, listener5})
+
+		// then should have 4 listeners
+		assert.Len(t, emitter.Listeners, 4)
+	})
+
+}
+
+var _ common.Listener = &FakeListener{}
+
+type FakeListener struct {
+	name string
+}
+
+func (l *FakeListener) Notify(event testkube.Event) testkube.EventResult {
+	return testkube.EventResult{Id: event.Id}
+}
+
+func (l *FakeListener) Name() string {
+	return l.name
+}
+
+func (l *FakeListener) Events() []testkube.EventType {
+	return nil
+}
+
+func (l FakeListener) Selector() string {
+	return ""
+}
+
+func (l *FakeListener) Kind() string {
+	return "fake"
+}
+
+func (l *FakeListener) Metadata() map[string]string {
+	return map[string]string{}
 }

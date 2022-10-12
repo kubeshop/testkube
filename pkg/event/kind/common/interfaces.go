@@ -1,6 +1,8 @@
 package common
 
-import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+import (
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+)
 
 const (
 	ListenerKindWebsocket string = "websocket"
@@ -42,4 +44,24 @@ func (l Listeners) Log() []any {
 		})
 	}
 	return []any{"listeners", result}
+}
+
+// CompareListeners compares listeners by metadata
+func CompareListeners(a, b Listener) bool {
+	mapA := a.Metadata()
+	mapB := b.Metadata()
+
+	for key, value := range mapA {
+		if v, ok := mapB[key]; !ok || value != v {
+			return false
+		}
+	}
+
+	for key, value := range mapB {
+		if v, ok := mapA[key]; !ok || value != v {
+			return false
+		}
+	}
+
+	return true
 }
