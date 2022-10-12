@@ -13,8 +13,6 @@ import (
 type Manager interface {
 	// Prepare prepares secret env vars based on secret envs and variables
 	Prepare(secretEnvs map[string]string, variables map[string]testkube.Variable) (secretEnvVars []corev1.EnvVar)
-	// GetEnvs get secret envs
-	GetEnvs() (secretEnvs []string)
 	// GetVars gets secret vars
 	GetVars(variables map[string]testkube.Variable)
 	// Obfuscate obfuscates secret values
@@ -40,10 +38,9 @@ type EnvManager struct {
 // Prepare prepares secret env vars based on secret envs and variables
 func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]testkube.Variable) (secretEnvVars []corev1.EnvVar) {
 	// preparet secret envs
-	i := 1
 	for secretName, secretVar := range secretEnvs {
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-			Name: fmt.Sprintf("RUNNER_SECRET_ENV%d", i),
+			Name: secretVar,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -53,8 +50,6 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 				},
 			},
 		})
-
-		i++
 	}
 
 	// prepare secret vars
@@ -77,22 +72,6 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 	}
 
 	return secretEnvVars
-}
-
-// GetEnvs gets secret envs
-func (m EnvManager) GetEnvs() (secretEnvs []string) {
-	i := 1
-	for {
-		secretEnv, ok := os.LookupEnv(fmt.Sprintf("RUNNER_SECRET_ENV%d", i))
-		if !ok {
-			break
-		}
-
-		secretEnvs = append(secretEnvs, secretEnv)
-		i++
-	}
-
-	return secretEnvs
 }
 
 // GetVars gets secret vars
