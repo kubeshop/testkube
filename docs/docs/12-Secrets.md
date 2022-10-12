@@ -77,3 +77,21 @@ metadata:
   namespace: testkube
 type: Opaque
 ```
+Note: Postman is expecting to have the JSON object in the secret with the postman env file data json format:
+
+```js
+{
+	"id": "72a6e5d0-933d-4b64-84df-6de2f441be08",
+	"name": "env name",
+	"values": [
+		{
+			"key": "VAR_NAME",
+			"value": "https://example.com",
+			"enabled": true
+		}
+  ],
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2022-06-06T13:35:46.820Z",
+	"_postman_exported_using": "Postman/9.21.1"
+}
+```
