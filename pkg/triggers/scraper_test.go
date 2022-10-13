@@ -23,7 +23,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 310*time.Millisecond)
 		defer cancel()
 
 		mockResultRepository := result.NewMockRepository(mockCtrl)
@@ -46,7 +46,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 			triggerStatus:        triggerStatusMap,
 			resultRepository:     mockResultRepository,
 			testResultRepository: mockTestResultRepository,
-			scraperInterval:      1 * time.Second,
+			scraperInterval:      100 * time.Millisecond,
 			logger:               log.DefaultLogger,
 		}
 
@@ -63,7 +63,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 310*time.Millisecond)
 		defer cancel()
 
 		mockResultRepository := result.NewMockRepository(mockCtrl)
@@ -82,7 +82,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 			triggerStatus:        triggerStatusMap,
 			resultRepository:     mockResultRepository,
 			testResultRepository: mockTestResultRepository,
-			scraperInterval:      1 * time.Second,
+			scraperInterval:      100 * time.Millisecond,
 			logger:               log.DefaultLogger,
 		}
 

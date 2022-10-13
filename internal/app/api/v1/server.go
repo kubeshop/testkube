@@ -64,7 +64,7 @@ func NewTestkubeAPI(
 
 	var httpConfig server.Config
 	err := envconfig.Process("APISERVER", &httpConfig)
-	// Do we want to panic here or just ignore the err
+	// Do we want to panic here or just ignore the error
 	if err != nil {
 		panic(err)
 	}
@@ -149,8 +149,8 @@ type oauthParams struct {
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
-func (s TestkubeAPI) SendTelemetryStartEvent() {
-	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
+func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
+	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
 	if err != nil {
 		s.Log.Errorw("error getting config map", "error", err)
 	}
@@ -316,12 +316,12 @@ func (s *TestkubeAPI) InitRoutes() {
 
 }
 
-func (s TestkubeAPI) StartTelemetryHeartbeats() {
+func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 
 	go func() {
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
-			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(context.Background())
+			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
 			if err != nil {
 				s.Log.Errorw("error getting config map", "error", err)
 			}

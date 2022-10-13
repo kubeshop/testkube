@@ -35,14 +35,13 @@ func TestService_match(t *testing.T) {
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{}
+	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
 		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
 		},
-		triggers:      []*testtriggersv1.TestTrigger{testTrigger1},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 	}
@@ -76,14 +75,13 @@ func TestService_noMatch(t *testing.T) {
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{}
+	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	testExecutorF := func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 		assert.Fail(t, "should not match event")
 		return nil
 	}
 	s := &Service{
 		executor:      testExecutorF,
-		triggers:      []*testtriggersv1.TestTrigger{testTrigger1},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 	}

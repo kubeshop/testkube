@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bufio"
+	"crypto/rand"
+	"math/big"
 	"time"
 )
 
@@ -54,4 +56,17 @@ func ReadLongLine(r *bufio.Reader) (line []byte, err error) {
 	}
 
 	return line, err
+}
+
+func RandAlphanum(n int) string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	b := make([]rune, n)
+	for i := range b {
+		nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			panic(err)
+		}
+		b[i] = letters[nBig.Int64()]
+	}
+	return string(b)
 }

@@ -14,14 +14,15 @@ func newStatusKey(namespace, name string) statusKey {
 }
 
 type triggerStatus struct {
+	testTrigger           *testtriggersv1.TestTrigger
 	lastExecutionStarted  *time.Time
 	lastExecutionFinished *time.Time
 	testExecutionIDs      []string
 	testSuiteExecutionIDs []string
 }
 
-func newTriggerStatus() *triggerStatus {
-	return &triggerStatus{}
+func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
+	return &triggerStatus{testTrigger: testTrigger}
 }
 
 func (s *triggerStatus) hasActiveTests() bool {

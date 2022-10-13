@@ -3,6 +3,13 @@ package triggers
 import (
 	"context"
 
+	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
+	coreinformerv1 "k8s.io/client-go/informers/core/v1"
+	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
+	"k8s.io/client-go/kubernetes"
+
 	networkingv1 "k8s.io/api/networking/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -15,8 +22,19 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func (s *Service) runWatcher(ctx context.Context) {
-	f := informers.NewSharedInformerFactory(s.clientset, 0)
+type k8sInformers struct {
+	podInformer          coreinformerv1.PodInformer
+	deploymentInformer   appsinformerv1.DeploymentInformer
+	daemonsetInformer    appsinformerv1.DaemonSetInformer
+	statefulsetInformer  appsinformerv1.StatefulSetInformer
+	serviceInformer      coreinformerv1.ServiceInformer
+	ingressInformer      networkinginformerv1.IngressInformer
+	clusterEventInformer coreinformerv1.EventInformer
+	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
+}
+
+func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
+	f := informers.NewSharedInformerFactory(clientset, 0)
 	podInformer := f.Core().V1().Pods()
 	deploymentInformer := f.Apps().V1().Deployments()
 	daemonsetInformer := f.Apps().V1().DaemonSets()
@@ -25,34 +43,84 @@ func (s *Service) runWatcher(ctx context.Context) {
 	ingressInformer := f.Networking().V1().Ingresses()
 	clusterEventInformer := f.Core().V1().Events()
 
-	testkubeInformerFactory := externalversions.NewSharedInformerFactory(s.testKubeClientset, 0)
+	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
 
-	podInformer.Informer().AddEventHandler(s.podEventHandler(ctx))
-	deploymentInformer.Informer().AddEventHandler(s.deploymentEventHandler(ctx))
-	daemonsetInformer.Informer().AddEventHandler(s.daemonSetEventHandler(ctx))
-	statefulsetInformer.Informer().AddEventHandler(s.statefulSetEventHandler(ctx))
-	serviceInformer.Informer().AddEventHandler(s.serviceEventHandler(ctx))
-	ingressInformer.Informer().AddEventHandler(s.ingressEventHandler(ctx))
-	clusterEventInformer.Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
-	testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	return &k8sInformers{
+		podInformer:          podInformer,
+		deploymentInformer:   deploymentInformer,
+		daemonsetInformer:    daemonsetInformer,
+		statefulsetInformer:  statefulsetInformer,
+		serviceInformer:      serviceInformer,
+		ingressInformer:      ingressInformer,
+		clusterEventInformer: clusterEventInformer,
+		testTriggerInformer:  testTriggerInformer,
+	}
+}
+
+func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
+	running := false
+	var stopChan chan struct{}
+
+	for {
+		select {
+		case <-ctx.Done():
+			s.logger.Infof("trigger service: stopping watcher component: context finished")
+			if _, ok := <-stopChan; ok {
+				close(stopChan)
+			}
+			return
+		case leased := <-leaseChan:
+			if !leased {
+				if running {
+					s.logger.Infof("trigger service: instance %s in cluster %s lost lease", s.identifier, s.clusterID)
+					close(stopChan)
+					s.informers = nil
+					running = false
+				}
+			} else {
+				if !running {
+					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
+					s.informers = newK8sInformers(s.clientset, s.testKubeClientset)
+					stopChan = make(chan struct{})
+					s.runInformers(ctx, stopChan)
+					running = true
+				}
+			}
+		}
+	}
+}
+
+func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
+	if s.informers == nil {
+		s.logger.Errorf("trigger service: error running k8s informers: informers are nil")
+		return
+	}
+	s.informers.podInformer.Informer().AddEventHandler(s.podEventHandler(ctx))
+	s.informers.deploymentInformer.Informer().AddEventHandler(s.deploymentEventHandler(ctx))
+	s.informers.daemonsetInformer.Informer().AddEventHandler(s.daemonSetEventHandler(ctx))
+	s.informers.statefulsetInformer.Informer().AddEventHandler(s.statefulSetEventHandler(ctx))
+	s.informers.serviceInformer.Informer().AddEventHandler(s.serviceEventHandler(ctx))
+	s.informers.ingressInformer.Informer().AddEventHandler(s.ingressEventHandler(ctx))
+	s.informers.clusterEventInformer.Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
+	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informer")
-	go podInformer.Informer().Run(ctx.Done())
+	go s.informers.podInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting deployment informer")
-	go deploymentInformer.Informer().Run(ctx.Done())
+	go s.informers.deploymentInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting daemonset informer")
-	go daemonsetInformer.Informer().Run(ctx.Done())
+	go s.informers.daemonsetInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting statefulset informer")
-	go statefulsetInformer.Informer().Run(ctx.Done())
+	go s.informers.statefulsetInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting service informer")
-	go serviceInformer.Informer().Run(ctx.Done())
+	go s.informers.serviceInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting ingress informer")
-	go ingressInformer.Informer().Run(ctx.Done())
+	go s.informers.ingressInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting cluster event informer")
-	go clusterEventInformer.Informer().Run(ctx.Done())
+	go s.informers.clusterEventInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test trigger informer")
-	go testTriggerInformer.Informer().Run(ctx.Done())
+	go s.informers.testTriggerInformer.Informer().Run(stop)
 
 }
 
@@ -64,7 +132,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				s.logger.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(pod.CreationTimestamp.Time, s.started) {
+			if inPast(pod.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: pod %s/%s was created in the past",
 					pod.Namespace, pod.Name,
@@ -100,7 +168,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				s.logger.Errorf("failed to process create deployment event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(deployment.CreationTimestamp.Time, s.started) {
+			if inPast(deployment.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: deployment %s/%s was created in the past",
 					deployment.Namespace, deployment.Name,
@@ -167,7 +235,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				s.logger.Errorf("failed to process create statefulset event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(statefulset.CreationTimestamp.Time, s.started) {
+			if inPast(statefulset.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: statefulset %s/%s was created in the past",
 					statefulset.Namespace, statefulset.Name,
@@ -233,7 +301,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				s.logger.Errorf("failed to process create daemonset event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(daemonset.CreationTimestamp.Time, s.started) {
+			if inPast(daemonset.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: daemonset %s/%s was created in the past",
 					daemonset.Namespace, daemonset.Name,
@@ -299,7 +367,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				s.logger.Errorf("failed to process create service event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(service.CreationTimestamp.Time, s.started) {
+			if inPast(service.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: service %s/%s was created in the past",
 					service.Namespace, service.Name,
@@ -365,7 +433,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				s.logger.Errorf("failed to process create ingress event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(ingress.CreationTimestamp.Time, s.started) {
+			if inPast(ingress.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: ingress %s/%s was created in the past",
 					ingress.Namespace, ingress.Name,
@@ -431,7 +499,7 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 				s.logger.Errorf("failed to process create cluster event event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(clusterEvent.CreationTimestamp.Time, s.started) {
+			if inPast(clusterEvent.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
 					"trigger service: watcher component: no-op create trigger: cluster event %s/%s was created in the past",
 					clusterEvent.Namespace, clusterEvent.Name,
