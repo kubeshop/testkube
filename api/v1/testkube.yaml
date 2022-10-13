@@ -3843,10 +3843,7 @@ components:
       description: "Copy files request body data"
       required: true
       content:
-        multipart/form-data:
+        application/octet-stream:
            schema:
-            type: object
-            properties:
-              file:
-                type: string
-                format: binary
+            type: string
+            format: binary
