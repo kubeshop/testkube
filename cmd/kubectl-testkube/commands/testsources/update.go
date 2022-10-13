@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewUpdateTestSourceCmd() *cobra.Command {
+func UpdateTestSourceCmd() *cobra.Command {
 	var (
 		name, uri         string
 		sourceType        string
@@ -26,7 +26,7 @@ func NewUpdateTestSourceCmd() *cobra.Command {
 		Use:     "testsource",
 		Aliases: []string{"testsources", "tsc"},
 		Short:   "Update TestSource",
-		Long:    `Update new TestSource Custom Resource`,
+		Long:    `Update TestSource Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
@@ -42,7 +42,7 @@ func NewUpdateTestSourceCmd() *cobra.Command {
 			ui.ExitOnError("validating passed flags", err)
 
 			options, err := NewUpsertTestSourceOptionsFromFlags(cmd, testSource.Labels)
-			ui.ExitOnError("getting test options", err)
+			ui.ExitOnError("getting test source options", err)
 
 			_, err = client.UpdateTestSource(options)
 			ui.ExitOnError("updating test source "+name+" in namespace "+namespace, err)

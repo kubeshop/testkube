@@ -9,8 +9,8 @@
  */
 package testkube
 
-// executor create request body
-type ExecutorCreateRequest struct {
+// executor create or update request body
+type ExecutorUpsertRequest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace"`
 	// object name

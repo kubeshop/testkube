@@ -111,7 +111,6 @@ func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command, testLabels map[stri
 	ui.ExitOnError("creating source from passed parameters", err)
 
 	name := cmd.Flag("name").Value.String()
-	namespace := cmd.Flag("namespace").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
 	if err != nil {
 		return options, err
@@ -119,7 +118,6 @@ func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command, testLabels map[stri
 
 	options = apiclientv1.UpsertTestSourceOptions{
 		Name:       name,
-		Namespace:  namespace,
 		Type_:      source.Type_,
 		Data:       source.Data,
 		Repository: source.Repository,

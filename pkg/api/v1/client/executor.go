@@ -36,9 +36,9 @@ func (c ExecutorClient) ListExecutors(selector string) (executors testkube.Execu
 }
 
 // CreateExecutor creates new Executor Custom Resource
-func (c ExecutorClient) CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
+func (c ExecutorClient) CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error) {
 	uri := c.executorTransport.GetURI("/executors")
-	request := testkube.ExecutorCreateRequest(options)
+	request := testkube.ExecutorUpsertRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -46,6 +46,19 @@ func (c ExecutorClient) CreateExecutor(options CreateExecutorOptions) (executor 
 	}
 
 	return c.executorTransport.Execute(http.MethodPost, uri, body, nil)
+}
+
+// UpdateExecutor updates Executor Custom Resource
+func (c ExecutorClient) UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error) {
+	uri := c.executorTransport.GetURI("/executors/%s", options.Name)
+	request := testkube.ExecutorUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executor, err
+	}
+
+	return c.executorTransport.Execute(http.MethodPatch, uri, body, nil)
 }
 
 // DeleteExecutors deletes all executors
