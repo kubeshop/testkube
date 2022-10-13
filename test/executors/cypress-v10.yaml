@@ -7,3 +7,5 @@ spec:
   image: kubeshop/testkube-cypress-executor:1.1-cypress10
   types:
   - cypress:v10/test
+  features:
+  - artifacts
