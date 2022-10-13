@@ -66,7 +66,7 @@ type TestSuiteExecutionAPI interface {
 // ExecutorAPI describes executor api methods
 type ExecutorAPI interface {
 	CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)	
+	UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
 	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
