@@ -64,7 +64,7 @@ func TestGenerateYAML(t *testing.T) {
 	t.Run("generate executor CRD yaml", func(t *testing.T) {
 		// given
 		expected := "apiVersion: executor.testkube.io/v1\nkind: Executor\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  types:\n  - custom-curl-container/test\n  executor_type: container\n  image: docker.io/curlimages/curl:latest\n  args:\n  - -v\n  - test\n  command:\n  - curl\n  imagePullSecrets:\n  - name: secret-name\n"
-		executors := []testkube.ExecutorCreateRequest{
+		executors := []testkube.ExecutorUpsertRequest{
 			{
 				Namespace:    "namespace1",
 				Name:         "name1",
@@ -84,7 +84,7 @@ func TestGenerateYAML(t *testing.T) {
 		}
 
 		// when
-		result, err := GenerateYAML[testkube.ExecutorCreateRequest](TemplateExecutor, executors)
+		result, err := GenerateYAML[testkube.ExecutorUpsertRequest](TemplateExecutor, executors)
 
 		// then
 		assert.NoError(t, err)

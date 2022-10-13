@@ -21,7 +21,7 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 	}
 }
 
-// MapAPIToCRD maps OpenAPI spec ExecutorCreateRequest to CRD Executor
+// MapAPIToCRD maps OpenAPI spec ExecutorUpsertRequest to CRD Executor
 func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 	return executorv1.Executor{
 		ObjectMeta: metav1.ObjectMeta{
