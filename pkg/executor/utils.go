@@ -91,6 +91,26 @@ func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 	}
 }
 
+// IsPodLoggable defines if pod is ready to get logs from it
+func IsPodLoggable(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodRunning {
+			return true, nil
+		}
+
+		if err = isPodFailed(pod); err != nil {
+			return true, err
+		}
+
+		return false, nil
+	}
+}
+
 // isWaitStateFailed defines possible failed wait state
 // those states are defined and throwed as errors in Kubernetes runtime
 // https://github.com/kubernetes/kubernetes/blob/127f33f63d118d8d61bebaba2a240c60f71c824a/pkg/kubelet/kuberuntime/kuberuntime_container.go#L59
