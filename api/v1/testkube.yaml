@@ -2100,6 +2100,83 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
+  /executions/:id/copy-files/:filename:
+    post:
+      tags:
+        - api
+        - executions
+      summary: "Upload file"
+      description: "Upload file to be copied into executions"
+      operationId: uploadExecutionCopyFile
+      requestBody:
+        $ref: "#/components/requestBodies/CopyFileBody"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        500:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /tests/:id/copy-files/:filename:
+    post:
+      tags:
+        - api
+        - tests
+      summary: "Upload file"
+      description: "Upload file to be copied into test executions"
+      operationId: uploadTestCopyFile
+      requestBody:
+        $ref: "#/components/requestBodies/CopyFileBody"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        500:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-suites/:id/copy-files/:filename:
+    post:
+      tags:
+        - api
+        - test-suites
+      summary: "Upload file"
+      description: "Upload file to be copied into test suite executions"
+      operationId: uploadTestSuiteCopyFile
+      requestBody:
+        $ref: "#/components/requestBodies/CopyFileBody"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        500:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     ExecutionsMetrics:
@@ -3761,3 +3838,15 @@ components:
       schema:
         type: string
         description: Name of the object
+  requestBodies:
+    CopyFileBody:
+      description: "Copy files request body data"
+      required: true
+      content:
+        multipart/form-data:
+           schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary

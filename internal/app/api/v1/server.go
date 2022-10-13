@@ -222,6 +222,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
+	executions.Post("/:id/copyFiles/:filename", s.UploadCopyFiles())
 
 	tests := s.Routes.Group("/tests")
 
@@ -236,6 +237,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	tests.Get("/:id/metrics", s.TestMetricsHandler())
 
 	tests.Post("/:id/executions", s.ExecuteTestsHandler())
+	tests.Post("/:id/copyFiles/:filename", s.UploadCopyFiles())
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
@@ -257,6 +259,8 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+
+	testsuites.Post("/:id/copyFiles/:filename", s.UploadCopyFiles())
 
 	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
 
