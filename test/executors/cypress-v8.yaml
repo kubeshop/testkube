@@ -7,3 +7,5 @@ spec:
   image: kubeshop/testkube-cypress-executor:1.1-cypress8
   types:
   - cypress:v8/test
+  features:
+  - artifacts
