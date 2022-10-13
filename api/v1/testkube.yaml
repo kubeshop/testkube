@@ -129,6 +129,48 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+    patch:
+      tags:
+        - test-triggers
+        - api
+      summary: "Bulk update test triggers"
+      description: "Updates test triggers provided as an array in the request body"
+      operationId: bulkUpdateTestTriggers
+      requestBody:
+        description: array of test trigger upsert requests
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/TestTriggerUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestTrigger"
+        400:
+          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                items:
+                  $ref: "#/components/schemas/Problem"
+
     delete:
       tags:
         - test-triggers
@@ -192,7 +234,7 @@ paths:
       description: "Update test trigger"
       operationId: updateTestTrigger
       requestBody:
-        description: test trigger details body
+        description: test trigger upsert request
         required: true
         content:
           application/json:
@@ -1905,7 +1947,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem"                 
+                  $ref: "#/components/schemas/Problem"
     delete:
       tags:
         - test-sources
@@ -3500,7 +3542,7 @@ components:
           type: array
           items:
             type: string
-          description: updated test sources            
+          description: updated test sources
           example: ["name4", "name5", "name6"]
         deleted:
           type: array

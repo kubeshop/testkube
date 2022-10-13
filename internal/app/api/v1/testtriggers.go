@@ -63,7 +63,10 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		namespace := c.Query("namespace", s.Namespace)
+		namespace := s.Namespace
+		if request.Namespace != "" {
+			namespace = request.Namespace
+		}
 
 		// we need to get resource first and load its metadata.ResourceVersion
 		testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), request.Name, v1.GetOptions{})
@@ -93,6 +96,51 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 
 		return c.JSON(apiTestTrigger)
+	}
+}
+
+// BulkUpdateTestTriggersHandler is a handler for buklk updates an existing TestTrigger CRDs based on array of TestTrigger content
+func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request []testkube.TestTriggerUpsertRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		namespace := s.Namespace
+
+		var response []testkube.TestTrigger
+
+		for _, upsertRequest := range request {
+			if upsertRequest.Namespace != "" {
+				namespace = upsertRequest.Namespace
+			}
+			// we need to get resource first and load its metadata.ResourceVersion
+			testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), upsertRequest.Name, v1.GetOptions{})
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+
+			// map TestSuite but load spec only to not override metadata.ResourceVersion
+			testTriggerSpec := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
+			testTrigger.Spec = testTriggerSpec.Spec
+			testTrigger.Labels = upsertRequest.Labels
+			updated, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
+
+			s.Metrics.IncUpdateTestTrigger(err)
+
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, err)
+			}
+
+			apiTestTrigger := testtriggersmapper.MapCRDToAPI(updated)
+			response = append(response, apiTestTrigger)
+		}
+
+		c.Status(http.StatusOK)
+
+		return c.JSON(response)
 	}
 }
 

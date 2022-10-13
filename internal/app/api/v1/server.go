@@ -268,6 +268,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testTriggers := s.Routes.Group("/triggers")
 	testTriggers.Get("/", s.ListTestTriggersHandler())
 	testTriggers.Post("/", s.CreateTestTriggerHandler())
+	testTriggers.Patch("/", s.BulkUpdateTestTriggersHandler())
 	testTriggers.Delete("/", s.DeleteTestTriggersHandler())
 	testTriggers.Get("/:id", s.GetTestTriggerHandler())
 	testTriggers.Patch("/:id", s.UpdateTestTriggerHandler())
