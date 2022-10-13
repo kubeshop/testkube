@@ -19,7 +19,7 @@ require (
 	github.com/kubeshop/testkube-operator v1.6.2
 	github.com/minio/minio-go/v7 v7.0.40
 	github.com/moogar0880/problems v0.1.1
-	github.com/nats-io/nats.go v1.17.0
+	github.com/nats-io/nats.go v1.18.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_golang v1.13.0
 	github.com/segmentio/analytics-go/v3 v3.2.1
