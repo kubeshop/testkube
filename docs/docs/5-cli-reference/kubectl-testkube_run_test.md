@@ -15,6 +15,7 @@ kubectl-testkube run test <testName> [flags]
 ```
       --args stringArray                           executor binary additional arguments
       --concurrency int                            concurrency level for multiple test execution (default 10)
+      --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically
       --download-dir string                        download dir (default "artifacts")
       --env stringToString                         envs in a form of name1=val1 passed to executor (default [])

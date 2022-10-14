@@ -9,17 +9,17 @@ kubectl-testkube delete <resourceName> [flags]
 ### Options
 
 ```
-  -h, --help   help for delete
+  -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -h, --help               help for delete
+      --namespace string   kubernetes namespace (default "testkube")
+      --verbose            should I show additional debug messages
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
-  -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
-      --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
-      --verbose            show additional debug messages
+  -a, --api-uri string   api uri, default value read from config if set (default "http://localhost:8088")
+      --oauth-enabled    enable oauth
 ```
 
 ### SEE ALSO
