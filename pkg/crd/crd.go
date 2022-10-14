@@ -37,7 +37,7 @@ type Gettable interface {
 		testkube.Webhook |
 		testkube.TestUpsertRequest |
 		testkube.TestSuiteUpsertRequest |
-		testkube.ExecutorCreateRequest |
+		testkube.ExecutorUpsertRequest |
 		testkube.WebhookCreateRequest |
 		testkube.TestTrigger |
 		testkube.TestTriggerUpsertRequest |

@@ -25,6 +25,7 @@ kubectl-testkube update <resourceName> [flags]
 ### SEE ALSO
 
 * [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [kubectl-testkube update executor](kubectl-testkube_update_executor.md)	 - Update Executor
 * [kubectl-testkube update test](kubectl-testkube_update_test.md)	 - Update test
 * [kubectl-testkube update testsource](kubectl-testkube_update_testsource.md)	 - Update TestSource
 * [kubectl-testkube update testsuite](kubectl-testkube_update_testsuite.md)	 - Update Test Suite

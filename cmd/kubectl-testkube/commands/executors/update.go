@@ -1,17 +1,12 @@
 package executors
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
-func NewCreateExecutorCmd() *cobra.Command {
+func UpdateExecutorCmd() *cobra.Command {
 	var (
 		types, command, executorArgs, imagePullSecretNames []string
 		name, executorType, image, uri, jobTemplate        string
@@ -20,45 +15,32 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "executor",
-		Aliases: []string{"exec", "ex"},
-		Short:   "Create new Executor",
-		Long:    `Create new Executor Custom Resource`,
+		Aliases: []string{"executors", "ex"},
+		Short:   "Update Executor",
+		Long:    `Update Executor Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
-			ui.ExitOnError("parsing flag value", err)
-
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			namespace := cmd.Flag("namespace").Value.String()
-			var client apiClient.Client
-			if !crdOnly {
-				client, namespace = common.GetClient(cmd)
-
-				executor, _ := client.GetExecutor(name)
-				if name == executor.Name {
-					ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
-				}
+			client, namespace := common.GetClient(cmd)
+			executor, _ := client.GetExecutor(name)
+			if name != executor.Name {
+				ui.Failf("Executor with name '%s' not exists in namespace %s", name, namespace)
 			}
 
-			options, err := NewUpsertExecutorOptionsFromFlags(cmd, nil)
+			var labels map[string]string
+			if executor.Executor != nil {
+				labels = executor.Executor.Labels
+			}
+
+			options, err := NewUpsertExecutorOptionsFromFlags(cmd, labels)
 			ui.ExitOnError("getting executor options", err)
-			if !crdOnly {
-				_, err = client.CreateExecutor(options)
-				ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)
 
-				ui.Success("Executor created", name)
-			} else {
-				if options.JobTemplate != "" {
-					options.JobTemplate = fmt.Sprintf("%q", options.JobTemplate)
-				}
+			_, err = client.UpdateExecutor(options)
+			ui.ExitOnError("updating executor "+name+" in namespace "+namespace, err)
 
-				data, err := crd.ExecuteTemplate(crd.TemplateExecutor, options)
-				ui.ExitOnError("executing crd template", err)
-
-				ui.Info(data)
-			}
+			ui.Success("Executor updated", name)
 		},
 	}
 

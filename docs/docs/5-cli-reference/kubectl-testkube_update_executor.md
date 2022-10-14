@@ -1,13 +1,13 @@
-## kubectl-testkube create executor
+## kubectl-testkube update executor
 
-Create new Executor
+Update Executor
 
 ### Synopsis
 
-Create new Executor Custom Resource
+Update Executor Custom Resource
 
 ```
-kubectl-testkube create executor [flags]
+kubectl-testkube update executor [flags]
 ```
 
 ### Options
@@ -31,7 +31,6 @@ kubectl-testkube create executor [flags]
 ```
   -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
-      --crd-only           generate only crd
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            show additional debug messages
@@ -39,5 +38,5 @@ kubectl-testkube create executor [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
+* [kubectl-testkube update](kubectl-testkube_update.md)	 - Update resource
 

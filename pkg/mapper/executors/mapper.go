@@ -8,8 +8,8 @@ import (
 )
 
 // MapCRDToAPI maps Executor CRD to OpenAPI spec Webhook
-func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorCreateRequest {
-	return testkube.ExecutorCreateRequest{
+func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
+	return testkube.ExecutorUpsertRequest{
 		Name:         item.Name,
 		Namespace:    item.Namespace,
 		Labels:       item.Labels,
@@ -21,8 +21,8 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorCreateRequest {
 	}
 }
 
-// MapAPIToCRD maps OpenAPI spec ExecutorCreateRequest to CRD Executor
-func MapAPIToCRD(request testkube.ExecutorCreateRequest) executorv1.Executor {
+// MapAPIToCRD maps OpenAPI spec ExecutorUpsertRequest to CRD Executor
+func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 	return executorv1.Executor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,

@@ -1387,7 +1387,6 @@ paths:
       description: "List executors available in cluster"
       operationId: listExecutors
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
       responses:
         200:
@@ -1422,7 +1421,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExecutorCreateRequest"
+              $ref: "#/components/schemas/ExecutorUpsertRequest"
       responses:
         200:
           description: "successful operation"
@@ -1476,7 +1475,6 @@ paths:
   /executors/{id}:
     delete:
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/ID"
       tags:
         - api
@@ -1498,7 +1496,6 @@ paths:
 
     get:
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/ID"
       tags:
         - api
@@ -1526,6 +1523,46 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting executor data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - executor
+        - api
+      summary: "Update executor"
+      description: "Update new executor based on variables passed in request"
+      operationId: updateExecutor
+      requestBody:
+        description: executor request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutorUpsertRequest"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutorDetails"
+        400:
+          description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1576,7 +1613,6 @@ paths:
       description: "List webhooks available in cluster"
       operationId: listWebhooks
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
       responses:
         200:
@@ -1666,7 +1702,6 @@ paths:
     delete:
       parameters:
         - $ref: "#/components/parameters/ID"
-        - $ref: "#/components/parameters/Namespace"
       tags:
         - api
         - webhook
@@ -1688,7 +1723,6 @@ paths:
     get:
       parameters:
         - $ref: "#/components/parameters/ID"
-        - $ref: "#/components/parameters/Namespace"
       tags:
         - api
         - webhook
@@ -1804,7 +1838,6 @@ paths:
       description: "List test sources available in cluster"
       operationId: listTestSources
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
       responses:
         200:
@@ -1969,7 +2002,6 @@ paths:
                   $ref: "#/components/schemas/Problem"
     delete:
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/ID"
       tags:
         - api
@@ -1990,7 +2022,6 @@ paths:
                   $ref: "#/components/schemas/Problem"
     get:
       parameters:
-        - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/ID"
       tags:
         - api
@@ -3093,8 +3124,8 @@ components:
         - $ref: "#/components/schemas/TestTrigger"
         - $ref: "#/components/schemas/ObjectRef"
 
-    ExecutorCreateRequest:
-      description: executor create request body
+    ExecutorUpsertRequest:
+      description: executor create or update request body
       type: object
       required:
         - name

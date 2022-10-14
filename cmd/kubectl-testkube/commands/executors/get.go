@@ -65,8 +65,8 @@ func NewGetExecutorCmd() *cobra.Command {
 	return cmd
 }
 
-func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testkube.ExecutorDetails) *apiClient.CreateExecutorOptions {
-	options := &apiClient.CreateExecutorOptions{
+func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testkube.ExecutorDetails) *apiClient.UpsertExecutorOptions {
+	options := &apiClient.UpsertExecutorOptions{
 		Name:      executor.Name,
 		Namespace: namespace,
 	}

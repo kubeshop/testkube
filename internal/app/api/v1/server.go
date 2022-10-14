@@ -196,6 +196,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executors.Post("/", s.CreateExecutorHandler())
 	executors.Get("/", s.ListExecutorsHandler())
 	executors.Get("/:name", s.GetExecutorHandler())
+	executors.Patch("/:name", s.UpdateExecutorHandler())
 	executors.Delete("/:name", s.DeleteExecutorHandler())
 	executors.Delete("/", s.DeleteExecutorsHandler())
 
