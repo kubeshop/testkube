@@ -154,12 +154,15 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestTrigger"
+            text/yaml:
+              schema:
+                type: string
         400:
           description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
-                type: array
+                type: object
                 items:
                   $ref: "#/components/schemas/Problem"
         502:

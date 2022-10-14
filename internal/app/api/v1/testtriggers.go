@@ -1,6 +1,7 @@
 package v1
 
 import (
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -78,7 +79,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		testTriggerSpec := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
 		testTrigger.Spec = testTriggerSpec.Spec
 		testTrigger.Labels = request.Labels
-		updated, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
+		testTrigger, err = s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
 
 		s.Metrics.IncUpdateTestTrigger(err)
 
@@ -86,9 +87,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		c.Status(http.StatusOK)
-
-		apiTestTrigger := testtriggersmapper.MapCRDToAPI(updated)
+		apiTestTrigger := testtriggersmapper.MapCRDToAPI(testTrigger)
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
@@ -99,7 +98,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// BulkUpdateTestTriggersHandler is a handler for buklk updates an existing TestTrigger CRDs based on array of TestTrigger content
+// BulkUpdateTestTriggersHandler is a handler for bukl updates an existing TestTrigger CRDs based on array of TestTrigger content
 func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request []testkube.TestTriggerUpsertRequest
@@ -108,39 +107,64 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		if request == nil || len(request) == 0 {
+			return s.Error(c, http.StatusBadRequest, errors.New("invalid request body: expected array of test trigger upsert requests"))
+		}
+
 		namespace := s.Namespace
 
-		var response []testkube.TestTrigger
+		testTriggers := make([]testkube.TestTrigger, 0)
 
 		for _, upsertRequest := range request {
 			if upsertRequest.Namespace != "" {
 				namespace = upsertRequest.Namespace
 			}
+			var testTrigger *testtriggersv1.TestTrigger
+			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// we need to get resource first and load its metadata.ResourceVersion
-			testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), upsertRequest.Name, v1.GetOptions{})
-			if err != nil {
+			testTrigger, err := s.TestKubeClientset.
+				TestsV1().
+				TestTriggers(namespace).
+				Get(c.UserContext(), upsertRequest.Name, v1.GetOptions{})
+			if k8serrors.IsNotFound(err) {
+				testTrigger, err = s.TestKubeClientset.
+					TestsV1().
+					TestTriggers(namespace).
+					Create(c.UserContext(), &crdTestTrigger, v1.CreateOptions{})
+
+				s.Metrics.IncCreateTestTrigger(err)
+
+				if err != nil {
+					err := errors.Wrapf(err, "error creating new test trigger %s/%s", testTrigger.Namespace, testTrigger.Name)
+					return s.Error(c, http.StatusBadGateway, err)
+				}
+			} else if err != nil {
 				return s.Error(c, http.StatusBadGateway, err)
+			} else {
+				// map TestSuite but load spec only to not override metadata.ResourceVersion
+				testTrigger.Spec = crdTestTrigger.Spec
+				testTrigger.Labels = upsertRequest.Labels
+				testTrigger, err = s.TestKubeClientset.
+					TestsV1().
+					TestTriggers(namespace).
+					Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
+
+				s.Metrics.IncUpdateTestTrigger(err)
+
+				if err != nil {
+					err := errors.Wrapf(err, "error updating test trigger %s/%s", testTrigger.Namespace, testTrigger.Name)
+					return s.Error(c, http.StatusBadGateway, err)
+				}
 			}
-
-			// map TestSuite but load spec only to not override metadata.ResourceVersion
-			testTriggerSpec := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
-			testTrigger.Spec = testTriggerSpec.Spec
-			testTrigger.Labels = upsertRequest.Labels
-			updated, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
-
-			s.Metrics.IncUpdateTestTrigger(err)
-
-			if err != nil {
-				return s.Error(c, http.StatusBadGateway, err)
-			}
-
-			apiTestTrigger := testtriggersmapper.MapCRDToAPI(updated)
-			response = append(response, apiTestTrigger)
+			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(testTrigger))
 		}
 
-		c.Status(http.StatusOK)
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testTriggers)
+			return s.getCRDs(c, data, err)
+		}
 
-		return c.JSON(response)
+		return c.JSON(testTriggers)
 	}
 }
 
