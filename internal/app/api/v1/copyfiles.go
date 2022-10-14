@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -18,7 +19,7 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("invalid content length: %d", fileSize))
 		}
 
-		err := s.Storage.SaveCopyFile(bucketName, fileName, c.Context().RequestBodyStream(), int64(fileSize))
+		err := s.Storage.SaveCopyFile(bucketName, fileName, bytes.NewReader(c.Body()), int64(fileSize))
 		if err != nil {
 			return s.Error(c, fiber.StatusInternalServerError, fmt.Errorf("could not save copy file: %w", err))
 		}

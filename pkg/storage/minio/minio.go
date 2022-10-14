@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -78,7 +79,7 @@ func (c *Client) CreateBucket(bucket string) error {
 
 // DeleteBucket deletes bucket by name
 func (c *Client) DeleteBucket(bucket string, force bool) error {
-	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.BucketOptions{ForceDelete: force})
+	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.RemoveBucketOptions{ForceDelete: force})
 }
 
 // ListBuckets lists available buckets
@@ -212,5 +213,29 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 			return fmt.Errorf("minio walk error: %w", err)
 		}
 	}
+	return nil
+}
+
+// SaveCopyFile saves a file to be copied into a running execution
+func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	if err != nil {
+		return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
+	}
+
+	if !exists {
+		c.Log.Debugw("creating minio bucket for copy files", "bucket", bucket)
+		err := c.CreateBucket(bucket)
+		if err != nil {
+			return fmt.Errorf("could not create bucket: %w", err)
+		}
+	}
+
+	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
+	_, err = c.minioclient.PutObject(context.Background(), bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
+		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
+	}
+
 	return nil
 }

@@ -82,13 +82,14 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 				assert.Equal(t, tt.expectedBucketName, bucket)
 				assert.Equal(t, tt.filePath, filePath)
 				assert.Equal(t, tt.expectedObjectSize, objectSize)
-				// TODO fix
-				// assert.NotEmpty(t, reader)
-				// file := make([]byte, tt.expectedObjectSize)
-				// n, err := io.ReadFull(reader, file)
-				// assert.NoError(t, err)
-				// assert.Equal(t, tt.expectedObjectSize, n)
-				// assert.Equal(t, tt.fileContent, file)
+
+				assert.NotEmpty(t, reader)
+				file := make([]byte, tt.expectedObjectSize)
+				n, err := io.ReadFull(reader, file)
+				assert.NoError(t, err)
+				assert.Positive(t, n)
+				assert.Equal(t, tt.expectedObjectSize, int64(n))
+				assert.Equal(t, tt.fileContent, file)
 
 				return nil
 			}
