@@ -1,8 +1,9 @@
 package v1
 
 import (
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"net/http"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
