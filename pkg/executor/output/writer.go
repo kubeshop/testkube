@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/kubeshop/testkube/pkg/executor/secret"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // NewJSONWrapWriter returns new NewJSONWrapWriter instance
@@ -26,5 +27,6 @@ func (w *JSONWrapWriter) Write(p []byte) (int, error) {
 	if w.envManager != nil {
 		p = w.envManager.Obfuscate(p)
 	}
+	log.DefaultLogger.Infow("JsonWrapper writing log line: %s", string(p))
 	return len(p), w.encoder.Encode(NewOutputLine(p))
 }
