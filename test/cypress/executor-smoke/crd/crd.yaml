@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: cypress-legacy-executor-smoke-electron
+  name: cypress-default-executor-smoke-electron
   namespace: testkube
 spec:
   type: cypress/project
@@ -10,7 +10,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     variables:
@@ -33,7 +33,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     variables:
@@ -56,7 +56,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
@@ -83,7 +83,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
     args:
@@ -98,21 +98,20 @@ spec:
     args:
       - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
-# Disabled - known bug: https://github.com/kubeshop/testkube/issues/2286
-# apiVersion: tests.testkube.io/v3
-# kind: Test
-# metadata:
-#   name: cypress-9-executor-smoke-electron
-#   namespace: testkube
-# spec:
-#   type: cypress:v9/test
-#   content:
-#     type: git-dir
-#     repository:
-#       type: git
-#       uri: https://github.com/kubeshop/testkube
-#       branch: executor-tests-run
-#       path: test/cypress/executor-smoke/cypress-9
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-9-executor-smoke-electron
+  namespace: testkube
+spec:
+  type: cypress:v9/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-smoke/cypress-9
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -126,7 +125,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -145,7 +144,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-9
   executionRequest:
     args:
@@ -164,7 +163,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
 ---
 apiVersion: tests.testkube.io/v3
@@ -179,7 +178,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
@@ -198,7 +197,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: executor-tests-run
+      branch: main
       path: test/cypress/executor-smoke/cypress-8
   executionRequest:
     args:
