@@ -9,7 +9,7 @@ schedule='false'
 executor_type='all'
 help='false'
 
-while getopts 'hdcre:' flag; do
+while getopts 'hdcrse:' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
@@ -27,11 +27,20 @@ print_title() {
 
 create_update_testsuite() { # testsuite_name testsuite_path
   exit_code=0
+  type=""
   kubectl testkube get testsuite $1 > /dev/null 2>&1 || exit_code=$?
+
   if [ $exit_code == 0 ] ; then # testsuite already created
-    cat $2 | kubectl testkube update testsuite --name $1 --label app=testkube
+    type="update"
   else
-    cat $2 | kubectl testkube create testsuite --name $1 --label app=testkube
+    type="create"
+  fi
+
+  if [ "$schedule" = true ] ; then # workaround for appending schedule
+    random_minute="$(($RANDOM % 59))"
+    cat $2 | kubectl testkube $type testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
+  else
+    cat $2 | kubectl testkube $type testsuite --name $1 --label app=testkube 
   fi
 }
 
