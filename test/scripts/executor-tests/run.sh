@@ -2,12 +2,12 @@
 set -e
 
 # params
+help='false'
 delete='false'
 create='false'
 run='false'
 schedule='false'
 executor_type='all'
-help='false'
 
 while getopts 'hdcrse:' flag; do
   case "${flag}" in
@@ -15,7 +15,7 @@ while getopts 'hdcrse:' flag; do
     d) delete='true' ;;
     c) create='true' ;;
     r) run='true' ;;
-    s) schedule='true' ;; # TODO: add schedule option
+    s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
   esac
 done
