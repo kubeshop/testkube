@@ -3,16 +3,20 @@ set -e
 
 # params
 delete='false'
+create='false'
 run='false'
+schedule='false'
 executor_type='all'
 help='false'
 
-while getopts 'hdre:' flag; do
+while getopts 'hdcre:' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
+    c) create='true' ;;
     r) run='true' ;;
-    e) executor_type="${OPTARG}" ;; # TODO: executor selection
+    s) schedule='true' ;; # TODO: add schedule option
+    e) executor_type="${OPTARG}" ;;
   esac
 done
 
@@ -21,110 +25,157 @@ print_title() {
   printf "$border\n  $1\n$border\n"
 }
 
-artillery_create() {
-  print_title "Artillery - create"
+create_update_testsuite() { # testsuite_name testsuite_path
+  exit_code=0
+  kubectl testkube get testsuite $1 > /dev/null 2>&1 || exit_code=$?
+  if [ $exit_code == 0 ] ; then # testsuite already created
+    cat $2 | kubectl testkube update testsuite --name $1 --label app=testkube
+  else
+    cat $2 | kubectl testkube create testsuite --name $1 --label app=testkube
+  fi
+}
+
+artillery() {
+  print_title "Artillery"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/artillery/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-artillery-smoke-tests -ntestkube --ignore-not-found=true
   fi
 
-  # Tests
-  kubectl apply -f test/artillery/executor-smoke/crd/crd.yaml
+  if [ "$create" = true ] ; then
+    # Tests
+    kubectl apply -f test/artillery/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-artillery-smoke-tests.json | kubectl testkube create testsuite --name executor-artillery-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-artillery-smoke-tests" "test/suites/executor-artillery-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-artillery-smoke-tests
+  fi
 }
 
-container_executor_create() {
-  print_title "Container executor - create"
+container() {
+  print_title "Container executor"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/executors/container-executor-curl.yaml --ignore-not-found=true
     kubectl delete -f test/container-executor/crd/curl.yaml --ignore-not-found=true
     kubectl delete testsuite executor-container-smoke-tests -ntestkube --ignore-not-found=true
   fi
   
-  # Executors (not created by default)
-  kubectl apply -f test/executors/container-executor-curl.yaml
+  if [ "$create" = true ] ; then
+    # Executors (not created by default)
+    kubectl apply -f test/executors/container-executor-curl.yaml
 
-  # Tests
-  kubectl apply -f test/container-executor/crd/curl.yaml
+    # Tests
+    kubectl apply -f test/container-executor/crd/curl.yaml
 
-  # TestsSuites
-  cat test/suites/executor-container-smoke-tests.json | kubectl testkube create testsuite --name executor-container-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-container-smoke-tests" "test/suites/executor-container-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-container-smoke-tests
+  fi
 }
 
-cypress_create() {
-  print_title "Cypress - create"
+cypress() {
+  print_title "Cypress"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/executors/cypress-v10.yaml -f test/executors/cypress-v9.yaml -f test/executors/cypress-v8.yaml --ignore-not-found=true
     kubectl delete -f test/cypress/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-cypress-smoke-tests -ntestkube --ignore-not-found=true
   fi
   
-  # Executors (not created by default)
-  kubectl apply -f test/executors/cypress-v10.yaml -f test/executors/cypress-v9.yaml -f test/executors/cypress-v8.yaml
+  if [ "$create" = true ] ; then
+    # Executors (not created by default)
+    kubectl apply -f test/executors/cypress-v10.yaml -f test/executors/cypress-v9.yaml -f test/executors/cypress-v8.yaml
 
-  # Tests
-  kubectl apply -f test/cypress/executor-smoke/crd/crd.yaml
+    # Tests
+    kubectl apply -f test/cypress/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-cypress-smoke-tests.json | kubectl testkube create testsuite --name executor-cypress-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-cypress-smoke-tests" "test/suites/executor-cypress-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-cypress-smoke-tests
+  fi
 }
 
-gradle_create() {
-  print_title "Gradle - create"
+gradle() {
+  print_title "Gradle"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml --ignore-not-found=true
     kubectl delete -f test/gradle/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-gradle-smoke-tests -ntestkube --ignore-not-found=true
   fi
   
-  # Executors (not created by default)
-  kubectl apply -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml
+  if [ "$create" = true ] ; then
+    # Executors (not created by default)
+    kubectl apply -f test/executors/gradle-jdk-18.yaml -f test/executors/gradle-jdk-17.yaml -f test/executors/gradle-jdk-11.yaml -f test/executors/gradle-jdk-8.yaml
 
-  # Tests
-  kubectl apply -f test/gradle/executor-smoke/crd/crd.yaml
+    # Tests
+    kubectl apply -f test/gradle/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-gradle-smoke-tests.json | kubectl testkube create testsuite --name executor-gradle-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-gradle-smoke-tests" "test/suites/executor-gradle-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-gradle-smoke-tests
+  fi
 }
 
-k6_create() {
-  print_title "k6 - create"
+k6() {
+  print_title "k6"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/k6/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-k6-smoke-tests -ntestkube --ignore-not-found=true
   fi
 
-  # Tests
-  kubectl apply -f test/k6/executor-smoke/crd/crd.yaml
+  if [ "$create" = true ] ; then
+    # Tests
+    kubectl apply -f test/k6/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-k6-smoke-tests.json | kubectl testkube create testsuite --name executor-k6-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-k6-smoke-tests" "test/suites/executor-k6-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-k6-smoke-tests
+  fi
 }
 
-kubepug_create() {
-  print_title "kubepug - create"
+kubepug() {
+  print_title "kubepug"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/kubepug/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-kubepug-smoke-tests -ntestkube --ignore-not-found=true
   fi
 
-  # Tests
-  kubectl apply -f test/kubepug/executor-smoke/crd/crd.yaml
+  if [ "$create" = true ] ; then
+    # Tests
+    kubectl apply -f test/kubepug/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-kubepug-smoke-tests.json | kubectl testkube create testsuite --name executor-kubepug-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-kubepug-smoke-tests" "test/suites/executor-kubepug-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-kubepug-smoke-tests
+  fi
 }
 
-maven_create() {
-  print_title "Maven - create"
+maven() {
+  print_title "Maven"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/executors/maven-jdk-18.yaml -f test/executors/maven-jdk-11.yaml -f test/executors/maven-jdk-8.yaml --ignore-not-found=true
     kubectl delete -f test/maven/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-maven-smoke-tests -ntestkube --ignore-not-found=true
   fi
   
+  if [ "$create" = true ] ; then
   # Executors (not created by default)
   kubectl apply -f test/executors/maven-jdk-18.yaml -f test/executors/maven-jdk-11.yaml -f test/executors/maven-jdk-8.yaml
 
@@ -132,58 +183,49 @@ maven_create() {
   kubectl apply -f test/maven/executor-smoke/crd/crd.yaml
 
   # TestsSuites
-  cat test/suites/executor-maven-smoke-tests.json | kubectl testkube create testsuite --name executor-maven-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+  create_update_testsuite "executor-maven-smoke-tests" "test/suites/executor-maven-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-maven-smoke-tests
+  fi
 }
 
-soapui_create() {
-  print_title "soapui - create"
+soapui() {
+  print_title "soapui"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/soapui/executor-smoke/crd/crd.yaml --ignore-not-found=true
     kubectl delete testsuite executor-soapui-smoke-tests -ntestkube --ignore-not-found=true
   fi
 
-  # Tests
-  kubectl apply -f test/soapui/executor-smoke/crd/crd.yaml
+  if [ "$create" = true ] ; then
+    # Tests
+    kubectl apply -f test/soapui/executor-smoke/crd/crd.yaml
 
-  # TestsSuites
-  cat test/suites/executor-soapui-smoke-tests.json | kubectl testkube create testsuite --name executor-soapui-smoke-tests --label app=testkube # TODO: will fail if Testsuite is already created (and not removed)
+    # TestsSuites
+    create_update_testsuite "executor-soapui-smoke-tests" "test/suites/executor-soapui-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    testkube run testsuite executor-soapui-smoke-tests
+  fi
 }
 
-run() {
+
+main() {
   case $executor_type in
     all)
-      artillery_create
-      container_executor_create
-      cypress_create
-      gradle_create
-      k6_create
+      artillery
+      container
+      cypress
+      gradle
+      k6
       kubepug
-      maven_create
+      maven
       soapui
       ;;
-    artillery)
-      artillery_create
-      ;;
-    container)
-      container_executor_create
-      ;;
-    cypress)
-      cypress_create
-      ;;
-    gradle)
-      gradle_create
-      ;;
-    k6)
-      k6_create
-      ;;
-    kubepug)
-      kubepug_create
-      ;;
-    maven)
-      maven_create
-      ;;
-    soapui)
-      soapui_create
+    artillery | container | cypress | gradle | k6 | kubepug | maven | soapui)
+        $executor_type
       ;;
     *)
       echo "Error: Incorrect executor name \"$executor_type\""; exit 1
@@ -191,4 +233,4 @@ run() {
   esac
 }
 
-run
+main
