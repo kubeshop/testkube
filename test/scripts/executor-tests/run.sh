@@ -6,15 +6,17 @@ help='false'
 delete='false'
 create='false'
 run='false'
+follow='false'
 schedule='false'
 executor_type='all'
 
-while getopts 'hdcrse:' flag; do
+while getopts 'hdcrfse:' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
     c) create='true' ;;
     r) run='true' ;;
+    f) follow='true' ;;
     s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
   esac
@@ -44,6 +46,15 @@ create_update_testsuite() { # testsuite_name testsuite_path
   fi
 }
 
+run_follow_testsuite() { # testsuite_name
+  follow_param=''
+  if [ "$follow" = true ] ; then
+    follow_param=' -f'
+  fi
+
+  testkube run testsuite $1 $follow_param
+}
+
 artillery() {
   print_title "Artillery"
   if [ "$delete" = true ] ; then
@@ -60,7 +71,7 @@ artillery() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-artillery-smoke-tests
+    run_follow_testsuite executor-artillery-smoke-tests
   fi
 }
 
@@ -84,7 +95,7 @@ container() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-container-smoke-tests
+    run_follow_testsuite executor-container-smoke-tests
   fi
 }
 
@@ -108,7 +119,7 @@ cypress() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-cypress-smoke-tests
+    run_follow_testsuite executor-cypress-smoke-tests
   fi
 }
 
@@ -132,7 +143,7 @@ gradle() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-gradle-smoke-tests
+    run_follow_testsuite executor-gradle-smoke-tests
   fi
 }
 
@@ -152,7 +163,7 @@ k6() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-k6-smoke-tests
+    run_follow_testsuite executor-k6-smoke-tests
   fi
 }
 
@@ -172,7 +183,7 @@ kubepug() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-kubepug-smoke-tests
+    run_follow_testsuite executor-kubepug-smoke-tests
   fi
 }
 
@@ -196,7 +207,27 @@ maven() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-maven-smoke-tests
+    run_follow_testsuite executor-maven-smoke-tests
+  fi
+}
+
+postman() {
+  print_title "postman"
+  if [ "$delete" = true ] ; then
+    kubectl delete -f test/postman/executor-smoke/crd/crd.yaml --ignore-not-found=true
+    kubectl delete testsuite executor-postman-smoke-tests -ntestkube --ignore-not-found=true
+  fi
+
+  if [ "$create" = true ] ; then
+    # Tests
+    kubectl apply -f test/postman/executor-smoke/crd/crd.yaml
+
+    # TestsSuites
+    create_update_testsuite "executor-postman-smoke-tests" "test/suites/executor-postman-smoke-tests.json"
+  fi
+
+  if [ "$run" = true ] ; then
+    run_follow_testsuite executor-postman-smoke-tests
   fi
 }
 
@@ -216,7 +247,7 @@ soapui() {
   fi
 
   if [ "$run" = true ] ; then
-    testkube run testsuite executor-soapui-smoke-tests
+    run_follow_testsuite executor-soapui-smoke-tests
   fi
 }
 
