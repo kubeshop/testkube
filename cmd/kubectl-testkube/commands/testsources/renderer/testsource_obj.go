@@ -38,7 +38,7 @@ func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
 				testSource.Repository.TokenSecret.Key))
 		}
 
-		ur.Warn("  Working dir: ", testSource.Repository.WorkingDir)
+		ui.Warn("  Working dir: ", testSource.Repository.WorkingDir)
 	}
 
 	if testSource.Data != "" {
