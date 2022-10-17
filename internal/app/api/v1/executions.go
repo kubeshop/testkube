@@ -316,7 +316,7 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
-		defer file.Close()
+		// defer file.Close()
 
 		return c.SendStream(file)
 	}
