@@ -35,6 +35,7 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 		return source, err
 	}
 
+	gitWorkingDir := cmd.Flag("git-workin-dir").Value.String()
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
@@ -72,13 +73,14 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 		}
 
 		repository = &testkube.Repository{
-			Type_:    "git",
-			Uri:      gitUri,
-			Branch:   gitBranch,
-			Commit:   gitCommit,
-			Path:     gitPath,
-			Username: gitUsername,
-			Token:    gitToken,
+			Type_:      "git",
+			Uri:        gitUri,
+			Branch:     gitBranch,
+			Commit:     gitCommit,
+			Path:       gitPath,
+			Username:   gitUsername,
+			Token:      gitToken,
+			WorkingDir: gitWorkingDir,
 		}
 
 		for key, val := range gitUsernameSecret {

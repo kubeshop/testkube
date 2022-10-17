@@ -17,6 +17,7 @@ func UpdateTestSourceCmd() *cobra.Command {
 		gitPath           string
 		gitUsername       string
 		gitToken          string
+		gitWorkingDir     string
 		labels            map[string]string
 		gitUsernameSecret map[string]string
 		gitTokenSecret    map[string]string
@@ -64,6 +65,7 @@ func UpdateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (likemonorepo) and one starting directory we can set working directory parameter")
 
 	return cmd
 }

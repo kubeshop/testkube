@@ -48,6 +48,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		command                  []string
 		imagePullSecretNames     []string
 		timeout                  int64
+		gitWorkingDir            string
 	)
 
 	cmd := &cobra.Command{
@@ -149,6 +150,8 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
+	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (likemonorepo) and one starting directory we can set working directory parameter")
+
 	return cmd
 }
 
@@ -169,12 +172,13 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return err
 	}
 
+	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	sourceName := cmd.Flag("source").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
 
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")

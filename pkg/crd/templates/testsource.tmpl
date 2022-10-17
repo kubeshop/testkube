@@ -48,6 +48,9 @@ spec:
       key: {{ .Repository.TokenSecret.Key }}
       {{- end }}
     {{- end }}
+    {{- if .Repository.WorkingDir }}
+    workingDir: {{ .Repository.WorkingDir }}
+    {{- end }}
   {{- end }}
   {{- if .Data }}
   data: {{ .Data }}
