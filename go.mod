@@ -9,7 +9,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fasthttp/websocket v1.5.0
-	github.com/fluxcd/pkg/runtime v0.21.0
+	github.com/fluxcd/pkg/runtime v0.22.0
 	github.com/gofiber/adaptor/v2 v2.1.28
 	github.com/gofiber/fiber/v2 v2.38.1
 	github.com/gofiber/websocket/v2 v2.1.0
