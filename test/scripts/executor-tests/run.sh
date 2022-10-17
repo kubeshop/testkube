@@ -262,9 +262,10 @@ main() {
       k6
       kubepug
       maven
+      postman
       soapui
       ;;
-    artillery | container | cypress | gradle | k6 | kubepug | maven | soapui)
+    artillery | container | cypress | gradle | k6 | kubepug | maven | postman | soapui)
         $executor_type
       ;;
     *)
