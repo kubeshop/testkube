@@ -242,6 +242,7 @@ func main() {
 		testsuitesClient,
 		secretClient,
 		webhooksClient,
+		clientset,
 		testkubeClientset,
 		testsourcesClient,
 		configMapConfig,

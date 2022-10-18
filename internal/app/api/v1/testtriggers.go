@@ -117,18 +117,24 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		err = s.TestKubeClientset.
-			TestsV1().
-			TestTriggers("").
-			DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
-
-		s.Metrics.IncBulkDeleteTestTrigger(err)
-
+		namespaces, err := s.Clientset.CoreV1().Namespaces().List(c.UserContext(), v1.ListOptions{})
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+			return errors.Wrap(err, "error fetching list of all namespaces")
+		}
+		for _, ns := range namespaces.Items {
+			err = s.TestKubeClientset.
+				TestsV1().
+				TestTriggers(ns.Name).
+				DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
+
+			if err != nil && !k8serrors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+			}
 		}
 
-		testTriggers := make([]testkube.TestTrigger, 0)
+		s.Metrics.IncBulkDeleteTestTrigger(nil)
+
+		testTriggers := make([]testkube.TestTrigger, 0, len(request))
 
 		namespace := s.Namespace
 		for _, upsertRequest := range request {
@@ -147,6 +153,11 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 				Create(c.UserContext(), &crdTestTrigger, v1.CreateOptions{})
 
 			s.Metrics.IncCreateTestTrigger(err)
+
+			if err != nil {
+				return errors.Wrap(err, "error reapplying triggers after clean")
+			}
+
 			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(testTrigger))
 		}
 

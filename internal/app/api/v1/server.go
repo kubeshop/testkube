@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
@@ -50,6 +52,7 @@ func NewTestkubeAPI(
 	testsuitesClient *testsuitesclientv2.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
+	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
 	configMap *config.ConfigMapConfig,
@@ -78,6 +81,7 @@ func NewTestkubeAPI(
 		TestsClient:          testsClient,
 		ExecutorsClient:      executorsClient,
 		SecretClient:         secretClient,
+		Clientset:            clientset,
 		TestsSuitesClient:    testsuitesClient,
 		TestKubeClientset:    testkubeClientset,
 		Metrics:              metrics,
@@ -130,6 +134,7 @@ type TestkubeAPI struct {
 	ConfigMap            *config.ConfigMapConfig
 	jobTemplates         *JobTemplates
 	scheduler            *scheduler.Scheduler
+	Clientset            kubernetes.Interface
 }
 
 type storageParams struct {
