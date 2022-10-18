@@ -16,4 +16,5 @@ spec:
       path: test/postman/executor-smoke/postman-executor-smoke.postman_collection.json
   executionRequest:
     args:
-      - run --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
