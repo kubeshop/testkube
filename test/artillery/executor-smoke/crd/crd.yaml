@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: artillery-executor-smoke
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: artillery/test
   content:

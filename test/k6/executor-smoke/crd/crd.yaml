@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: k6-executor-smoke
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: k6/script
   content:
