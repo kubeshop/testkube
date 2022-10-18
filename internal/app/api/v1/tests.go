@@ -348,6 +348,13 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
+			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+		}
+
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			if request.Content != nil && request.Content.Data != "" {
 				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
@@ -386,6 +393,13 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
+			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
 		}
 
 		s.Log.Infow("updating test", "request", request)

@@ -1,8 +1,6 @@
 package tests
 
 import (
-	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -230,7 +228,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		return options, err
 	}
 
-	executorArgs, err := prepareExecutorArgs(binaryArgs)
+	executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 	if err != nil {
 		return options, err
 	}
@@ -331,29 +329,6 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	return options, nil
 
-}
-
-func prepareExecutorArgs(binaryArgs []string) ([]string, error) {
-	executorArgs := make([]string, 0)
-	for _, arg := range binaryArgs {
-		r := csv.NewReader(strings.NewReader(arg))
-		r.Comma = ' '
-		r.LazyQuotes = true
-		r.TrimLeadingSpace = true
-
-		records, err := r.ReadAll()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(records) != 1 {
-			return nil, errors.New("single string expected")
-		}
-
-		executorArgs = append(executorArgs, records[0]...)
-	}
-
-	return executorArgs, nil
 }
 
 // readCopyFiles reads files
