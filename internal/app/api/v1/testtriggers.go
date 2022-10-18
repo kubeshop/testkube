@@ -23,6 +23,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/crd"
 )
 
+const testTriggerMaxNameLength = 57
+
 // CreateTestTriggerHandler is a handler for creating test trigger objects
 func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -39,7 +41,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		}
 		// default trigger name if not defined in upsert request
 		if testTrigger.Name == "" {
-			testTrigger.Name = generateName(&testTrigger)
+			testTrigger.Name = generateTestTriggerName(&testTrigger)
 		}
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
@@ -145,7 +147,7 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// default trigger name if not defined in upsert request
 			if crdTestTrigger.Name == "" {
-				crdTestTrigger.Name = generateName(&crdTestTrigger)
+				crdTestTrigger.Name = generateTestTriggerName(&crdTestTrigger)
 			}
 			testTrigger, err = s.TestKubeClientset.
 				TestsV1().
@@ -285,16 +287,14 @@ func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	}
 }
 
-// generateName function generates a trigger name from the TestTrigger spec
+// generateTestTriggerName function generates a trigger name from the TestTrigger spec
 // function also takes care of name collisions, not exceeding k8s max object name (63 characters) and not ending with a hyphen '-'
-func generateName(t *testtriggersv1.TestTrigger) string {
+func generateTestTriggerName(t *testtriggersv1.TestTrigger) string {
 	name := fmt.Sprintf("trigger-%s-%s-%s-%s", t.Spec.Resource, t.Spec.Event, t.Spec.Action, t.Spec.Execution)
-	if len(name) > 57 {
-		name = name[:56]
+	if len(name) > testTriggerMaxNameLength {
+		name = name[:testTriggerMaxNameLength-1]
 	}
-	if !strings.HasSuffix(name, "-") {
-		name += "-"
-	}
-	name = fmt.Sprintf("%s%s", name, utils.RandAlphanum(5))
+	name = strings.TrimSuffix(name, "-")
+	name = fmt.Sprintf("%s-%s", name, utils.RandAlphanum(5))
 	return name
 }
