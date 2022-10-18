@@ -24,6 +24,42 @@ spec:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
+# cypress-default-executor-smoke-electron-testsource-git-dir - TestSource
+apiVersion: tests.testkube.io/v1
+kind: TestSource
+metadata:
+  name: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
+  namespace: testkube
+spec:
+  type: git-dir
+  repository:
+    type: git
+    uri: https://github.com/kubeshop/testkube.git
+    branch: main
+    path: test/cypress/executor-smoke/cypress-10 # TODO move path to Test after validation issue will be fixed: https://github.com/kubeshop/testkube/issues/2560
+---
+# cypress-default-executor-smoke-electron-testsource-git-dir - Test
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-default-executor-smoke-electron-testsource-git-dir
+  namespace: testkube
+spec:
+  type: cypress/project
+  # content:
+  #   repository:
+  #     path: test/cypress/executor-smoke/cypress-10
+  source: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:

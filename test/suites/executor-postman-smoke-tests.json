@@ -2,6 +2,7 @@
 	"name": "executor-postman-smoke-tests",
 	"description": "postman executor smoke tests",
 	"steps": [
-		{"execute": {"name": "postman-executor-smoke"}}
+		{"execute": {"name": "postman-executor-smoke"}},
+		{"execute": {"name": "postman-executor-smoke-testsource-git-file"}}
 	]
 }

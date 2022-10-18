@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+# set -o xtrace
 
 # params
 help='false'
@@ -9,8 +10,9 @@ run='false'
 follow='false'
 schedule='false'
 executor_type='all'
+custom_testsuite=''
 
-while getopts 'hdcrfse:' flag; do
+while getopts 'hdcrfse:t:' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
@@ -19,6 +21,7 @@ while getopts 'hdcrfse:' flag; do
     f) follow='true' ;;
     s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
+    t) custom_testsuite="${OPTARG}" ;;
   esac
 done
 
@@ -28,6 +31,9 @@ print_title() {
 }
 
 create_update_testsuite() { # testsuite_name testsuite_path
+  printf "create_update_testsuite=================="
+  printf "testsuite_name: '$1'"
+  printf "testsuite_path: '$2'"
   exit_code=0
   type=""
   kubectl testkube get testsuite $1 > /dev/null 2>&1 || exit_code=$?
@@ -42,7 +48,7 @@ create_update_testsuite() { # testsuite_name testsuite_path
     random_minute="$(($RANDOM % 59))"
     cat $2 | kubectl testkube $type testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
   else
-    cat $2 | kubectl testkube $type testsuite --name $1 --label app=testkube 
+    cat $2 | kubectl testkube $type testsuite --name $1 --label app=testkube
   fi
 }
 
@@ -70,7 +76,7 @@ artillery() {
     create_update_testsuite "executor-artillery-smoke-tests" "test/suites/executor-artillery-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-artillery-smoke-tests
   fi
 }
@@ -79,7 +85,7 @@ container() {
   print_title "Container executor"
   if [ "$delete" = true ] ; then
     kubectl delete -f test/executors/container-executor-curl.yaml --ignore-not-found=true
-    kubectl delete -f test/container-executor/crd/curl.yaml --ignore-not-found=true
+    kubectl delete -f test/container-executor/executor-smoke/crd/curl.yaml --ignore-not-found=true
     kubectl delete testsuite executor-container-smoke-tests -ntestkube --ignore-not-found=true
   fi
   
@@ -88,13 +94,13 @@ container() {
     kubectl apply -f test/executors/container-executor-curl.yaml
 
     # Tests
-    kubectl apply -f test/container-executor/crd/curl.yaml
+    kubectl apply -f test/container-executor/executor-smoke/crd/curl.yaml
 
     # TestsSuites
     create_update_testsuite "executor-container-smoke-tests" "test/suites/executor-container-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-container-smoke-tests
   fi
 }
@@ -118,7 +124,7 @@ cypress() {
     create_update_testsuite "executor-cypress-smoke-tests" "test/suites/executor-cypress-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-cypress-smoke-tests
   fi
 }
@@ -142,7 +148,7 @@ gradle() {
     create_update_testsuite "executor-gradle-smoke-tests" "test/suites/executor-gradle-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-gradle-smoke-tests
   fi
 }
@@ -162,7 +168,7 @@ k6() {
     create_update_testsuite "executor-k6-smoke-tests" "test/suites/executor-k6-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-k6-smoke-tests
   fi
 }
@@ -182,7 +188,7 @@ kubepug() {
     create_update_testsuite "executor-kubepug-smoke-tests" "test/suites/executor-kubepug-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-kubepug-smoke-tests
   fi
 }
@@ -206,7 +212,7 @@ maven() {
   create_update_testsuite "executor-maven-smoke-tests" "test/suites/executor-maven-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-maven-smoke-tests
   fi
 }
@@ -226,7 +232,7 @@ postman() {
     create_update_testsuite "executor-postman-smoke-tests" "test/suites/executor-postman-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-postman-smoke-tests
   fi
 }
@@ -246,7 +252,7 @@ soapui() {
     create_update_testsuite "executor-soapui-smoke-tests" "test/suites/executor-soapui-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] ; then
+  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
     run_follow_testsuite executor-soapui-smoke-tests
   fi
 }
@@ -272,6 +278,14 @@ main() {
       echo "Error: Incorrect executor name \"$executor_type\""; exit 1
       ;;
   esac
+
+  if [ "$custom_testsuite" != '' ] ; then
+    filename=$(basename $custom_testsuite)
+    testsuite_name="${filename%%.*}"
+
+    create_update_testsuite "$testsuite_name" "$custom_testsuite"
+    run_follow_testsuite "$testsuite_name"
+  fi
 }
 
 main
