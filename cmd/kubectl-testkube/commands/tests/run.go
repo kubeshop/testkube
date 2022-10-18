@@ -57,7 +57,7 @@ func NewRunTestCmd() *cobra.Command {
 			variables, err := common.CreateVariables(cmd)
 			ui.WarnOnError("getting variables", err)
 
-			executorArgs, err := prepareExecutorArgs(binaryArgs)
+			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
 			var executions []testkube.Execution

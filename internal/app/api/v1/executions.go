@@ -44,6 +44,13 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test request body invalid: %w", err))
 		}
 
+		if request.Args != nil {
+			request.Args, err = testkube.PrepareExecutorArgs(request.Args)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+		}
+
 		id := c.Params("id")
 
 		var tests []testsv3.Test
@@ -316,8 +323,8 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
-		// defer file.Close()
 
+		// SendStream promises to close file using io.Close() method
 		return c.SendStream(file)
 	}
 }
