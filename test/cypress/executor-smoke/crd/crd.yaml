@@ -69,7 +69,7 @@ spec:
     args:
       - --browser
       - chrome
-      --env
+      - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 
 ---
