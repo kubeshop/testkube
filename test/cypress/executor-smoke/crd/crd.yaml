@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress/project
   content:
@@ -27,6 +29,8 @@ kind: Test
 metadata:
   name: cypress-10-executor-smoke-electron
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v10/test
   content:
@@ -51,6 +55,8 @@ kind: Test
 metadata:
   name: cypress-10-executor-smoke-chrome
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v10/test
   content:
@@ -78,6 +84,8 @@ kind: Test
 metadata:
   name: cypress-10-executor-smoke-firefox
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v10/test
   content:
@@ -104,6 +112,8 @@ kind: Test
 metadata:
   name: cypress-9-executor-smoke-electron
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v9/test
   content:
@@ -119,6 +129,8 @@ kind: Test
 metadata:
   name: cypress-9-executor-smoke-chrome
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v9/test
   content:
@@ -138,6 +150,8 @@ kind: Test
 metadata:
   name: cypress-9-executor-smoke-firefox
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v9/test
   content:
@@ -157,6 +171,8 @@ kind: Test
 metadata:
   name: cypress-8-executor-smoke-electron
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v8/test
   content:
@@ -172,6 +188,8 @@ kind: Test
 metadata:
   name: cypress-8-executor-smoke-chrome
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v8/test
   content:
@@ -191,6 +209,8 @@ kind: Test
 metadata:
   name: cypress-8-executor-smoke-firefox
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: cypress:v8/test
   content:

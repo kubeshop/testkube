@@ -5,6 +5,8 @@ kind: Test
 metadata:
   name: gradle-executor-smoke-jdk18
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: gradle:jdk18/test
   content:
@@ -26,6 +28,8 @@ kind: Test
 metadata:
   name: gradle-executor-smoke-jdk17
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: gradle:jdk17/test
   content:
@@ -47,6 +51,8 @@ kind: Test
 metadata:
   name: gradle-executor-smoke-jdk11
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: gradle:jdk11/test
   content:
@@ -68,6 +74,8 @@ kind: Test
 metadata:
   name: gradle-executor-smoke-jdk8
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: gradle:jdk8/test
   content:
