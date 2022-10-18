@@ -19,7 +19,8 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -42,7 +43,8 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -59,17 +61,17 @@ spec:
       branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
-    args:
-      - --browser
-      - chrome
-  executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --browser
+      - chrome
+      --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -86,17 +88,16 @@ spec:
       branch: main
       path: test/cypress/executor-smoke/cypress-10
   executionRequest:
-    args:
-      - --browser
-      - firefox
-  executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
     args:
-      - run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --browser
+      - firefox
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
