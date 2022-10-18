@@ -362,7 +362,7 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 		}
 
 		if testSource.Repository.WorkingDir != "" {
-			testContent.Repository.WorkingDir = testSource.Repository.WorkingDir
+			test.Content.Repository.WorkingDir = testSource.Repository.WorkingDir
 		}
 	}
 
