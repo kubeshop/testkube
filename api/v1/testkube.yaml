@@ -3126,8 +3126,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - name
-        - namespace
         - resource
         - resourceSelector
         - event

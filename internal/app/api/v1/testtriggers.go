@@ -1,7 +1,11 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
+
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 
@@ -29,8 +33,13 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		}
 
 		testTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
+		// default namespace if not defined in upsert request
 		if testTrigger.Namespace == "" {
 			testTrigger.Namespace = s.Namespace
+		}
+		// default trigger name if not defined in upsert request
+		if testTrigger.Name == "" {
+			testTrigger.Name = generateName(&testTrigger)
 		}
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
@@ -77,8 +86,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testTriggerSpec := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
-		testTrigger.Spec = testTriggerSpec.Spec
+		crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
+		testTrigger.Spec = crdTestTrigger.Spec
 		testTrigger.Labels = request.Labels
 		testTrigger, err = s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
 
@@ -99,7 +108,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	}
 }
 
-// BulkUpdateTestTriggersHandler is a handler for bukl updates an existing TestTrigger CRDs based on array of TestTrigger content
+// BulkUpdateTestTriggersHandler is a handler for bulk updates an existing TestTrigger CRDs based on array of TestTrigger content
 func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request []testkube.TestTriggerUpsertRequest
@@ -108,57 +117,40 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if request == nil || len(request) == 0 {
-			return s.Error(c, http.StatusBadRequest, errors.New("invalid request body: expected array of test trigger upsert requests"))
-		}
+		err = s.TestKubeClientset.
+			TestsV1().
+			TestTriggers("").
+			DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
 
-		namespace := s.Namespace
+		s.Metrics.IncBulkDeleteTestTrigger(err)
+
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+		}
 
 		testTriggers := make([]testkube.TestTrigger, 0)
 
+		namespace := s.Namespace
 		for _, upsertRequest := range request {
 			if upsertRequest.Namespace != "" {
 				namespace = upsertRequest.Namespace
 			}
 			var testTrigger *testtriggersv1.TestTrigger
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
-			// we need to get resource first and load its metadata.ResourceVersion
-			testTrigger, err := s.TestKubeClientset.
+			// default trigger name if not defined in upsert request
+			if crdTestTrigger.Name == "" {
+				crdTestTrigger.Name = generateName(&crdTestTrigger)
+			}
+			testTrigger, err = s.TestKubeClientset.
 				TestsV1().
 				TestTriggers(namespace).
-				Get(c.UserContext(), upsertRequest.Name, v1.GetOptions{})
-			if k8serrors.IsNotFound(err) {
-				testTrigger, err = s.TestKubeClientset.
-					TestsV1().
-					TestTriggers(namespace).
-					Create(c.UserContext(), &crdTestTrigger, v1.CreateOptions{})
+				Create(c.UserContext(), &crdTestTrigger, v1.CreateOptions{})
 
-				s.Metrics.IncCreateTestTrigger(err)
-
-				if err != nil {
-					err := errors.Wrapf(err, "error creating new test trigger %s/%s", testTrigger.Namespace, testTrigger.Name)
-					return s.Error(c, http.StatusBadGateway, err)
-				}
-			} else if err != nil {
-				return s.Error(c, http.StatusBadGateway, err)
-			} else {
-				// map TestSuite but load spec only to not override metadata.ResourceVersion
-				testTrigger.Spec = crdTestTrigger.Spec
-				testTrigger.Labels = upsertRequest.Labels
-				testTrigger, err = s.TestKubeClientset.
-					TestsV1().
-					TestTriggers(namespace).
-					Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
-
-				s.Metrics.IncUpdateTestTrigger(err)
-
-				if err != nil {
-					err := errors.Wrapf(err, "error updating test trigger %s/%s", testTrigger.Namespace, testTrigger.Name)
-					return s.Error(c, http.StatusBadGateway, err)
-				}
-			}
+			s.Metrics.IncCreateTestTrigger(err)
 			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(testTrigger))
 		}
+
+		s.Metrics.IncBulkUpdateTestTrigger(nil)
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testTriggers)
@@ -202,6 +194,9 @@ func (s *TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 		namespace := c.Query("namespace", s.Namespace)
 		name := c.Params("id")
 		err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Delete(c.UserContext(), name, v1.DeleteOptions{})
+
+		s.Metrics.IncDeleteTestTrigger(err)
+
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
@@ -226,7 +221,11 @@ func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 			}
 		}
 		listOpts := v1.ListOptions{LabelSelector: selector}
-		if err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).DeleteCollection(c.UserContext(), v1.DeleteOptions{}, listOpts); err != nil {
+		err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).DeleteCollection(c.UserContext(), v1.DeleteOptions{}, listOpts)
+
+		s.Metrics.IncBulkDeleteTestTrigger(err)
+
+		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, err)
 			}
@@ -273,4 +272,18 @@ func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
 	}
+}
+
+// generateName function generates a trigger name from the TestTrigger spec
+// function also takes care of name collisions, not exceeding k8s max object name (63 characters) and not ending with a hyphen '-'
+func generateName(t *testtriggersv1.TestTrigger) string {
+	name := fmt.Sprintf("trigger-%s-%s-%s-%s", t.Spec.Resource, t.Spec.Event, t.Spec.Action, t.Spec.Execution)
+	if len(name) > 57 {
+		name = name[:56]
+	}
+	if !strings.HasSuffix(name, "-") {
+		name += "-"
+	}
+	name = fmt.Sprintf("%s%s", name, utils.RandAlphanum(5))
+	return name
 }
