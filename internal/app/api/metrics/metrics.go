@@ -46,6 +46,21 @@ var testTriggerUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test trigger updated events",
 }, []string{"result"})
 
+var testTriggerDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtriggers_deletes_count",
+	Help: "The total number of test trigger deleted events",
+}, []string{"result"})
+
+var testTriggerBulkUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtriggers_bulk_updates_count",
+	Help: "The total number of test trigger bulk update events",
+}, []string{"result"})
+
+var testTriggerBulkDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtriggers_bulk_deletes_count",
+	Help: "The total number of test trigger bulk delete events",
+}, []string{"result"})
+
 var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_aborts_count",
 	Help: "The total number of tests aborted by type events",
@@ -53,28 +68,34 @@ var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutions:       testExecutionCount,
-		TestSuiteExecutions:  testSuiteExecutionCount,
-		TestCreations:        testCreationCount,
-		TestSuiteCreations:   testSuiteCreationCount,
-		TestUpdates:          testUpdatesCount,
-		TestSuiteUpdates:     testSuiteUpdatesCount,
-		TestTriggerCreations: testTriggerCreationCount,
-		TestTriggerUpdates:   testTriggerUpdatesCount,
-		TestAbort:            testAbortCount,
+		TestExecutions:         testExecutionCount,
+		TestSuiteExecutions:    testSuiteExecutionCount,
+		TestCreations:          testCreationCount,
+		TestSuiteCreations:     testSuiteCreationCount,
+		TestUpdates:            testUpdatesCount,
+		TestSuiteUpdates:       testSuiteUpdatesCount,
+		TestTriggerCreations:   testTriggerCreationCount,
+		TestTriggerUpdates:     testTriggerUpdatesCount,
+		TestTriggerDeletes:     testTriggerDeletesCount,
+		TestTriggerBulkUpdates: testTriggerBulkUpdatesCount,
+		TestTriggerBulkDeletes: testTriggerBulkDeletesCount,
+		TestAbort:              testAbortCount,
 	}
 }
 
 type Metrics struct {
-	TestExecutions       *prometheus.CounterVec
-	TestSuiteExecutions  *prometheus.CounterVec
-	TestCreations        *prometheus.CounterVec
-	TestSuiteCreations   *prometheus.CounterVec
-	TestUpdates          *prometheus.CounterVec
-	TestSuiteUpdates     *prometheus.CounterVec
-	TestTriggerCreations *prometheus.CounterVec
-	TestTriggerUpdates   *prometheus.CounterVec
-	TestAbort            *prometheus.CounterVec
+	TestExecutions         *prometheus.CounterVec
+	TestSuiteExecutions    *prometheus.CounterVec
+	TestCreations          *prometheus.CounterVec
+	TestSuiteCreations     *prometheus.CounterVec
+	TestUpdates            *prometheus.CounterVec
+	TestSuiteUpdates       *prometheus.CounterVec
+	TestTriggerCreations   *prometheus.CounterVec
+	TestTriggerUpdates     *prometheus.CounterVec
+	TestTriggerDeletes     *prometheus.CounterVec
+	TestTriggerBulkUpdates *prometheus.CounterVec
+	TestTriggerBulkDeletes *prometheus.CounterVec
+	TestAbort              *prometheus.CounterVec
 }
 
 func (m Metrics) IncExecuteTest(execution testkube.Execution) {
@@ -170,7 +191,40 @@ func (m Metrics) IncUpdateTestTrigger(err error) {
 		result = "error"
 	}
 
-	m.TestSuiteUpdates.With(map[string]string{
+	m.TestTriggerUpdates.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncDeleteTestTrigger(err error) {
+	result := "deleted"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestTriggerDeletes.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncBulkUpdateTestTrigger(err error) {
+	result := "bulk_update"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestTriggerBulkUpdates.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncBulkDeleteTestTrigger(err error) {
+	result := "bulk_delete"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestTriggerBulkDeletes.With(map[string]string{
 		"result": result,
 	}).Inc()
 }
