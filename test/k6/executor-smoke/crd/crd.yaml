@@ -19,4 +19,5 @@ spec:
         value: K6_SYSTEM_ENV_value
         type: basic
     args:
-      - -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value

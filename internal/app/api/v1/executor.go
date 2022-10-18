@@ -13,14 +13,14 @@ import (
 
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.ExecutorCreateRequest
+		var request testkube.ExecutorUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{request})
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
 
@@ -40,6 +40,33 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request testkube.ExecutorUpsertRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		// we need to get resource first and load its metadata.ResourceVersion
+		executor, err := s.ExecutorsClient.Get(request.Name)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		executorSpec := executorsmapper.MapAPIToCRD(request)
+		executor.Spec = executorSpec.Spec
+		executor.Labels = request.Labels
+
+		executor, err = s.ExecutorsClient.Update(executor)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		return c.JSON(executor)
+	}
+}
+
 func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		list, err := s.ExecutorsClient.List(c.Query("selector"))
@@ -48,7 +75,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			results := []testkube.ExecutorCreateRequest{}
+			results := []testkube.ExecutorUpsertRequest{}
 			for _, item := range list.Items {
 				if item.Spec.JobTemplate != "" {
 					item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
@@ -83,7 +110,7 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 				item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
 			}
 
-			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorCreateRequest{executorsmapper.MapCRDToAPI(*item)})
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{executorsmapper.MapCRDToAPI(*item)})
 			return s.getCRDs(c, data, err)
 		}
 

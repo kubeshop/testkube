@@ -4,7 +4,7 @@ Update TestSource
 
 ### Synopsis
 
-Update new TestSource Custom Resource
+Update TestSource Custom Resource
 
 ```
 kubectl-testkube update testsource [flags]

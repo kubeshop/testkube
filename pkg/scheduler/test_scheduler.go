@@ -218,7 +218,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if err != nil {
 			return options, errors.Errorf("cannot get test source custom resource: %v", err)
 		}
-		testCR.Spec.Content = mergeContents(testCR.Spec.Content, testSourceCR.Spec)
+		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
 	}
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
@@ -313,52 +313,56 @@ func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]stri
 	return envs
 }
 
-func mergeContents(testContent *testsv3.TestContent, testSource testsourcev1.TestSourceSpec) *testsv3.TestContent {
-	testContent.Type_ = testSource.Type_
+func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec) testsv3.TestSpec {
+	if test.Content == nil {
+		test.Content = &testsv3.TestContent{}
+	}
+
+	test.Content.Type_ = testSource.Type_
 	if testSource.Data != "" {
-		testContent.Data = testSource.Data
+		test.Content.Data = testSource.Data
 	}
 
 	if testSource.Uri != "" {
-		testContent.Uri = testSource.Uri
+		test.Content.Uri = testSource.Uri
 	}
 
 	if testSource.Repository != nil {
-		if testContent.Repository == nil {
-			testContent.Repository = &testsv3.Repository{}
+		if test.Content.Repository == nil {
+			test.Content.Repository = &testsv3.Repository{}
 		}
 
-		testContent.Repository.Type_ = testSource.Repository.Type_
-		testContent.Repository.Uri = testSource.Repository.Uri
+		test.Content.Repository.Type_ = testSource.Repository.Type_
+		test.Content.Repository.Uri = testSource.Repository.Uri
 
 		if testSource.Repository.Branch != "" {
-			testContent.Repository.Branch = testSource.Repository.Branch
+			test.Content.Repository.Branch = testSource.Repository.Branch
 		}
 
 		if testSource.Repository.Commit != "" {
-			testContent.Repository.Commit = testSource.Repository.Commit
+			test.Content.Repository.Commit = testSource.Repository.Commit
 		}
 
 		if testSource.Repository.Path != "" {
-			testContent.Repository.Path = testSource.Repository.Path
+			test.Content.Repository.Path = testSource.Repository.Path
 		}
 
 		if testSource.Repository.UsernameSecret != nil {
-			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
+			test.Content.Repository.UsernameSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.UsernameSecret.Name,
 				Key:  testSource.Repository.UsernameSecret.Key,
 			}
 		}
 
 		if testSource.Repository.TokenSecret != nil {
-			testContent.Repository.TokenSecret = &testsv3.SecretRef{
+			test.Content.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.TokenSecret.Name,
 				Key:  testSource.Repository.TokenSecret.Key,
 			}
 		}
 	}
 
-	return testContent
+	return test
 }
 
 // TODO: generics

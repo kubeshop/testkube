@@ -65,7 +65,8 @@ type TestSuiteExecutionAPI interface {
 
 // ExecutorAPI describes executor api methods
 type ExecutorAPI interface {
-	CreateExecutor(options CreateExecutorOptions) (executor testkube.ExecutorDetails, err error)
+	CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
+	UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
 	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
@@ -112,8 +113,8 @@ type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 // if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
-// CreateExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
-type CreateExecutorOptions testkube.ExecutorCreateRequest
+// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating/changing executor request
+type UpsertExecutorOptions testkube.ExecutorUpsertRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest

@@ -1,3 +1,4 @@
 {
-    "baseUrl": "https://testkube.kubeshop.io/"
+    "baseUrl": "https://testkube.kubeshop.io/",
+    "video": false
 }

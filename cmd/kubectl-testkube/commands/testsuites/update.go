@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewUpdateTestSuitesCmd() *cobra.Command {
+func UpdateTestSuitesCmd() *cobra.Command {
 
 	var (
 		file                     string
