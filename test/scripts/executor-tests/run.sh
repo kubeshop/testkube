@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-# set -o xtrace
 
 # params
 help='false'
@@ -12,7 +11,7 @@ schedule='false'
 executor_type='all'
 custom_testsuite=''
 
-while getopts 'hdcrfse:t:' flag; do
+while getopts 'hdcrfse:t:v' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
@@ -22,6 +21,7 @@ while getopts 'hdcrfse:t:' flag; do
     s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
     t) custom_testsuite="${OPTARG}" ;;
+    v) set -x ;;
   esac
 done
 
@@ -31,9 +31,6 @@ print_title() {
 }
 
 create_update_testsuite() { # testsuite_name testsuite_path
-  printf "create_update_testsuite=================="
-  printf "testsuite_name: '$1'"
-  printf "testsuite_path: '$2'"
   exit_code=0
   type=""
   kubectl testkube get testsuite $1 > /dev/null 2>&1 || exit_code=$?
