@@ -27,7 +27,7 @@ done
 
 print_title() {
   border="=================="
-  printf "$border\n  $1\n$border\n"
+  printf "\n$border\n===  $1\n$border\n"
 }
 
 create_update_testsuite() { # testsuite_name testsuite_path
@@ -98,7 +98,7 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
   fi
 }
 
-artillery() {
+artillery-smoke() {
   name="artillery"
   test_crd_file="test/artillery/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-artillery-smoke-tests"
@@ -107,7 +107,7 @@ artillery() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-container() {
+container-smoke() {
   name="Container executor"
   test_crd_file="test/container-executor/executor-smoke/crd/curl.yaml"
   testsuite_name="executor-container-smoke-tests"
@@ -118,7 +118,7 @@ container() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
-cypress() {
+cypress-smoke() {
   name="Cypress"
   test_crd_file="test/cypress/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-cypress-smoke-tests"
@@ -129,7 +129,7 @@ cypress() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
-gradle() {
+gradle-smoke() {
   name="Gradle"
   test_crd_file="test/gradle/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-gradle-smoke-tests"
@@ -140,16 +140,25 @@ gradle() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
-k6() {
+k6-smoke() {
   name="k6"
-  test_crd_file="test/k6/executor-tests/crd/crd.yaml"
+  test_crd_file="test/k6/executor-tests/crd/smoke.yaml"
   testsuite_name="executor-k6-smoke-tests"
   testsuite_file="test/suites/executor-k6-smoke-tests.json"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-kubepug() {
+k6-other() {
+  name="k6"
+  test_crd_file="test/k6/executor-tests/crd/other.yaml"
+  testsuite_name="executor-k6-other-tests"
+  testsuite_file="test/suites/executor-k6-other-tests.json"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
+kubepug-smoke() {
   name="kubepug"
   test_crd_file="test/kubepug/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-kubepug-smoke-tests"
@@ -158,7 +167,7 @@ kubepug() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-maven() {
+maven-smoke() {
   name="Maven"
   test_crd_file="test/maven/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-maven-smoke-tests"
@@ -169,7 +178,7 @@ maven() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
-postman() {
+postman-smoke() {
   name="postman"
   test_crd_file="test/postman/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-postman-smoke-tests"
@@ -178,7 +187,7 @@ postman() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-soapui() {
+soapui-smoke() {
   name="SoapUI"
   test_crd_file="test/soapui/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-soapui-smoke-tests"
@@ -187,29 +196,37 @@ soapui() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-
 main() {
   case $executor_type in
     all)
-      artillery
-      container
-      cypress
-      gradle
-      k6
-      kubepug
-      maven
-      postman
-      soapui
+      artillery-smoke
+      container-smoke
+      cypress-smoke
+      gradle-smoke
+      k6-smoke
+      k6-other
+      kubepug-smoke
+      maven-smoke
+      postman-smoke
+      soapui-smoke
       ;;
-    artillery | container | cypress | gradle | k6 | kubepug | maven | postman | soapui)
-        $executor_type
+    smoke)
+      artillery-smoke
+      container-smoke
+      cypress-smoke
+      gradle-smoke
+      k6-smoke
+      kubepug-smoke
+      maven-smoke
+      postman-smoke
+      soapui-smoke
       ;;
     *)
-      echo "Error: Incorrect executor name \"$executor_type\""; exit 1
+      $executor_type
       ;;
   esac
 
-  if [ "$custom_testsuite" != '' ] ; then
+  if [ "$custom_testsuite" != '' ] ; then # create/delete/schedule all resources, but execute only ones from Custom Testsuite
     filename=$(basename $custom_testsuite)
     testsuite_name="${filename%%.*}"
 
