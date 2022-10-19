@@ -73,7 +73,7 @@ artillery() {
     create_update_testsuite "executor-artillery-smoke-tests" "test/suites/executor-artillery-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-artillery-smoke-tests
   fi
 }
@@ -97,7 +97,7 @@ container() {
     create_update_testsuite "executor-container-smoke-tests" "test/suites/executor-container-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-container-smoke-tests
   fi
 }
@@ -121,7 +121,7 @@ cypress() {
     create_update_testsuite "executor-cypress-smoke-tests" "test/suites/executor-cypress-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-cypress-smoke-tests
   fi
 }
@@ -145,7 +145,7 @@ gradle() {
     create_update_testsuite "executor-gradle-smoke-tests" "test/suites/executor-gradle-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-gradle-smoke-tests
   fi
 }
@@ -165,7 +165,7 @@ k6() {
     create_update_testsuite "executor-k6-smoke-tests" "test/suites/executor-k6-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-k6-smoke-tests
   fi
 }
@@ -185,7 +185,7 @@ kubepug() {
     create_update_testsuite "executor-kubepug-smoke-tests" "test/suites/executor-kubepug-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-kubepug-smoke-tests
   fi
 }
@@ -209,7 +209,7 @@ maven() {
   create_update_testsuite "executor-maven-smoke-tests" "test/suites/executor-maven-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-maven-smoke-tests
   fi
 }
@@ -229,7 +229,7 @@ postman() {
     create_update_testsuite "executor-postman-smoke-tests" "test/suites/executor-postman-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-postman-smoke-tests
   fi
 }
@@ -249,7 +249,7 @@ soapui() {
     create_update_testsuite "executor-soapui-smoke-tests" "test/suites/executor-soapui-smoke-tests.json"
   fi
 
-  if [ "$run" = true ] && [ "$custom_testsuite" != '' ]; then
+  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
     run_follow_testsuite executor-soapui-smoke-tests
   fi
 }
