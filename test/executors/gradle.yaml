@@ -1,0 +1,47 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1-jdk18
+  types:
+  - gradle:jdk18/project
+  - gradle:jdk18/test
+  - gradle:jdk18/integrationTest 
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk17-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1-jdk17
+  types:
+  - gradle:jdk17/project
+  - gradle:jdk17/test
+  - gradle:jdk17/integrationTest 
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk11-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1-jdk11
+  types:
+  - gradle:jdk11/project
+  - gradle:jdk11/test
+  - gradle:jdk11/integrationTest 
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-jdk8-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-gradle-executor:0.1-jdk8
+  types:
+  - gradle:jdk8/project
+  - gradle:jdk8/test
+  - gradle:jdk8/integrationTest 

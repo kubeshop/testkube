@@ -1,0 +1,35 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-jdk18-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1-jdk18
+  types:
+  - maven:jdk18/project
+  - maven:jdk18/test
+  - maven:jdk18/integration-test 
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-jdk11-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1-jdk11
+  types:
+  - maven:jdk11/project
+  - maven:jdk11/test
+  - maven:jdk11/integration-test 
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: maven-jdk8-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-maven-executor:0.1-jdk8
+  types:
+  - maven:jdk8/project
+  - maven:jdk8/test
+  - maven:jdk8/integration-test
