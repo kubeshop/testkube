@@ -36,7 +36,7 @@ spec:
     type: git
     uri: https://github.com/kubeshop/testkube.git
     branch: main
-    path: test/cypress/executor-smoke/cypress-10 # TODO move path to Test after validation issue will be fixed: https://github.com/kubeshop/testkube/issues/2560
+    path: test/cypress/executor-smoke/cypress-10
 ---
 # cypress-default-executor-smoke-electron-testsource-git-dir - Test
 apiVersion: tests.testkube.io/v3
@@ -46,9 +46,9 @@ metadata:
   namespace: testkube
 spec:
   type: cypress/project
-  # content:
-  #   repository:
-  #     path: test/cypress/executor-smoke/cypress-10
+  content:
+    repository:
+      path: test/cypress/executor-smoke/cypress-10
   source: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
   executionRequest:
     variables:
