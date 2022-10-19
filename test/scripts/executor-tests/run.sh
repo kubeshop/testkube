@@ -72,7 +72,6 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
 
   if [ "$delete" = true ] ; then
     if [ ! -z "$custom_executor_crd_file" ] ; then
-      printf "custom executor avaliable" # TODO: remove
       kubectl delete -f $custom_executor_crd_file --ignore-not-found=true
     fi
     kubectl delete -f $test_crd_file --ignore-not-found=true
@@ -82,7 +81,6 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
   if [ "$create" = true ] ; then
     if [ ! -z "$custom_executor_crd_file" ] ; then
       # Executors (not created by default)
-      printf "custom executor avaliable" # TODO: remove
       kubectl apply -f $custom_executor_crd_file
     fi
     
