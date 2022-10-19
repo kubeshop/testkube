@@ -319,11 +319,11 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 	}
 
 	test.Content.Type_ = testSource.Type_
-	if testSource.Data != "" {
+	if test.Content.Data == "" {
 		test.Content.Data = testSource.Data
 	}
 
-	if testSource.Uri != "" {
+	if test.Content.Uri == "" {
 		test.Content.Uri = testSource.Uri
 	}
 
@@ -332,29 +332,34 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository = &testsv3.Repository{}
 		}
 
-		test.Content.Repository.Type_ = testSource.Repository.Type_
-		test.Content.Repository.Uri = testSource.Repository.Uri
+		if test.Content.Repository.Type_ == "" {
+			test.Content.Repository.Type_ = testSource.Repository.Type_
+		}
 
-		if testSource.Repository.Branch != "" {
+		if test.Content.Repository.Uri == "" {
+			test.Content.Repository.Uri = testSource.Repository.Uri
+		}
+
+		if test.Content.Repository.Branch == "" {
 			test.Content.Repository.Branch = testSource.Repository.Branch
 		}
 
-		if testSource.Repository.Commit != "" {
+		if test.Content.Repository.Commit == "" {
 			test.Content.Repository.Commit = testSource.Repository.Commit
 		}
 
-		if testSource.Repository.Path != "" {
+		if test.Content.Repository.Path == "" {
 			test.Content.Repository.Path = testSource.Repository.Path
 		}
 
-		if testSource.Repository.UsernameSecret != nil {
+		if test.Content.Repository.UsernameSecret == nil && testSource.Repository.UsernameSecret != nil {
 			test.Content.Repository.UsernameSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.UsernameSecret.Name,
 				Key:  testSource.Repository.UsernameSecret.Key,
 			}
 		}
 
-		if testSource.Repository.TokenSecret != nil {
+		if test.Content.Repository.TokenSecret == nil && testSource.Repository.TokenSecret != nil {
 			test.Content.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.TokenSecret.Name,
 				Key:  testSource.Repository.TokenSecret.Key,
