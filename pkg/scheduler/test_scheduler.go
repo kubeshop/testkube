@@ -318,7 +318,10 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 		test.Content = &testsv3.TestContent{}
 	}
 
-	test.Content.Type_ = testSource.Type_
+	if test.Content.Type_ == "" {
+		test.Content.Type_ = testSource.Type_
+	}
+
 	if test.Content.Data == "" {
 		test.Content.Data = testSource.Data
 	}
