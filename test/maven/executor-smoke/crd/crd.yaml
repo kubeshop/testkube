@@ -5,6 +5,8 @@ kind: Test
 metadata:
   name: maven-executor-smoke-jdk18
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: maven:jdk18/test
   content:
@@ -26,6 +28,8 @@ kind: Test
 metadata:
   name: maven-executor-smoke-jdk11
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: maven:jdk11/test
   content:
@@ -47,6 +51,8 @@ kind: Test
 metadata:
   name: maven-executor-smoke-jdk8
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: maven:jdk8/test
   content:
