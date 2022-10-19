@@ -58,200 +58,133 @@ run_follow_testsuite() { # testsuite_name
   testkube run testsuite $1 $follow_param
 }
 
-artillery() {
-  print_title "Artillery"
+common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
+  name=$1
+  test_crd_file=$2
+  testsuite_name=$3
+  testsuite_file=$4
+  custom_executor_crd_file=$5
+
+  printf "common_run \n"
+  printf "$1 $2 $3 $4 $5"
+
+  print_title "$name"
+
   if [ "$delete" = true ] ; then
-    kubectl delete -f test/artillery/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-artillery-smoke-tests -ntestkube --ignore-not-found=true
+    if [ ! -z "$custom_executor_crd_file" ] ; then
+      printf "custom executor avaliable" # TODO: remove
+      kubectl delete -f $custom_executor_crd_file --ignore-not-found=true
+    fi
+    kubectl delete -f $test_crd_file --ignore-not-found=true
+    kubectl delete testsuite $testsuite_name -ntestkube --ignore-not-found=true
   fi
 
   if [ "$create" = true ] ; then
+    if [ ! -z "$custom_executor_crd_file" ] ; then
+      # Executors (not created by default)
+      printf "custom executor avaliable" # TODO: remove
+      kubectl apply -f $custom_executor_crd_file
+    fi
+    
     # Tests
-    kubectl apply -f test/artillery/executor-smoke/crd/crd.yaml
+    kubectl apply -f $test_crd_file
 
     # TestsSuites
-    create_update_testsuite "executor-artillery-smoke-tests" "test/suites/executor-artillery-smoke-tests.json"
+    create_update_testsuite "$testsuite_name" "$testsuite_file"
   fi
 
   if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-artillery-smoke-tests
+    run_follow_testsuite $testsuite_name
   fi
+}
+
+artillery() {
+  name="artillery"
+  test_crd_file="test/artillery/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-artillery-smoke-tests"
+  testsuite_file="test/suites/executor-artillery-smoke-tests.json"
+  
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 container() {
-  print_title "Container executor"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/executors/container-executor-curl.yaml --ignore-not-found=true
-    kubectl delete -f test/container-executor/executor-smoke/crd/curl.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-container-smoke-tests -ntestkube --ignore-not-found=true
-  fi
-  
-  if [ "$create" = true ] ; then
-    # Executors (not created by default)
-    kubectl apply -f test/executors/container-executor-curl.yaml
+  name="Container executor"
+  test_crd_file="test/container-executor/executor-smoke/crd/curl.yaml"
+  testsuite_name="executor-container-smoke-tests"
+  testsuite_file="test/suites/executor-container-smoke-tests.json"
 
-    # Tests
-    kubectl apply -f test/container-executor/executor-smoke/crd/curl.yaml
+  custom_executor_crd_file="test/executors/container-executor-curl.yaml"
 
-    # TestsSuites
-    create_update_testsuite "executor-container-smoke-tests" "test/suites/executor-container-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-container-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
 cypress() {
-  print_title "Cypress"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/executors/cypress.yaml --ignore-not-found=true
-    kubectl delete -f test/cypress/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-cypress-smoke-tests -ntestkube --ignore-not-found=true
-  fi
-  
-  if [ "$create" = true ] ; then
-    # Executors (not created by default)
-    kubectl apply -f test/executors/cypress.yaml
+  name="Cypress"
+  test_crd_file="test/cypress/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-cypress-smoke-tests"
+  testsuite_file="test/suites/executor-cypress-smoke-tests.json"
 
-    # Tests
-    kubectl apply -f test/cypress/executor-smoke/crd/crd.yaml
+  custom_executor_crd_file="test/executors/cypress.yaml"
 
-    # TestsSuites
-    create_update_testsuite "executor-cypress-smoke-tests" "test/suites/executor-cypress-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-cypress-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
 gradle() {
-  print_title "Gradle"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/executors/gradle.yaml --ignore-not-found=true
-    kubectl delete -f test/gradle/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-gradle-smoke-tests -ntestkube --ignore-not-found=true
-  fi
-  
-  if [ "$create" = true ] ; then
-    # Executors (not created by default)
-    kubectl apply -f test/executors/gradle.yaml
+  name="Gradle"
+  test_crd_file="test/gradle/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-gradle-smoke-tests"
+  testsuite_file="test/suites/executor-gradle-smoke-tests.json"
 
-    # Tests
-    kubectl apply -f test/gradle/executor-smoke/crd/crd.yaml
+  custom_executor_crd_file="test/executors/gradle.yaml"
 
-    # TestsSuites
-    create_update_testsuite "executor-gradle-smoke-tests" "test/suites/executor-gradle-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-gradle-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
 k6() {
-  print_title "k6"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/k6/executor-tests/crd/smoke.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-k6-smoke-tests -ntestkube --ignore-not-found=true
-  fi
+  name="k6"
+  test_crd_file="test/k6/executor-tests/crd/crd.yaml"
+  testsuite_name="executor-k6-smoke-tests"
+  testsuite_file="test/suites/executor-k6-smoke-tests.json"
 
-  if [ "$create" = true ] ; then
-    # Tests
-    kubectl apply -f test/k6/executor-tests/crd/smoke.yaml
-
-    # TestsSuites
-    create_update_testsuite "executor-k6-smoke-tests" "test/suites/executor-k6-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-k6-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 kubepug() {
-  print_title "kubepug"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/kubepug/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-kubepug-smoke-tests -ntestkube --ignore-not-found=true
-  fi
+  name="kubepug"
+  test_crd_file="test/kubepug/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-kubepug-smoke-tests"
+  testsuite_file="test/suites/executor-kubepug-smoke-tests.json"
 
-  if [ "$create" = true ] ; then
-    # Tests
-    kubectl apply -f test/kubepug/executor-smoke/crd/crd.yaml
-
-    # TestsSuites
-    create_update_testsuite "executor-kubepug-smoke-tests" "test/suites/executor-kubepug-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-kubepug-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 maven() {
-  print_title "Maven"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/executors/maven.yaml --ignore-not-found=true
-    kubectl delete -f test/maven/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-maven-smoke-tests -ntestkube --ignore-not-found=true
-  fi
-  
-  if [ "$create" = true ] ; then
-  # Executors (not created by default)
-  kubectl apply -f test/executors/maven.yaml
+  name="Maven"
+  test_crd_file="test/maven/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-maven-smoke-tests"
+  testsuite_file="test/suites/executor-maven-smoke-tests.json"
 
-  # Tests
-  kubectl apply -f test/maven/executor-smoke/crd/crd.yaml
+  custom_executor_crd_file="test/executors/maven.yaml"
 
-  # TestsSuites
-  create_update_testsuite "executor-maven-smoke-tests" "test/suites/executor-maven-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-maven-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
 postman() {
-  print_title "postman"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/postman/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-postman-smoke-tests -ntestkube --ignore-not-found=true
-  fi
+  name="postman"
+  test_crd_file="test/postman/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-postman-smoke-tests"
+  testsuite_file="test/suites/executor-postman-smoke-tests.json"
 
-  if [ "$create" = true ] ; then
-    # Tests
-    kubectl apply -f test/postman/executor-smoke/crd/crd.yaml
-
-    # TestsSuites
-    create_update_testsuite "executor-postman-smoke-tests" "test/suites/executor-postman-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-postman-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 soapui() {
-  print_title "soapui"
-  if [ "$delete" = true ] ; then
-    kubectl delete -f test/soapui/executor-smoke/crd/crd.yaml --ignore-not-found=true
-    kubectl delete testsuite executor-soapui-smoke-tests -ntestkube --ignore-not-found=true
-  fi
+  name="SoapUI"
+  test_crd_file="test/soapui/executor-smoke/crd/crd.yaml"
+  testsuite_name="executor-soapui-smoke-tests"
+  testsuite_file="test/suites/executor-soapui-smoke-tests.json"
 
-  if [ "$create" = true ] ; then
-    # Tests
-    kubectl apply -f test/soapui/executor-smoke/crd/crd.yaml
-
-    # TestsSuites
-    create_update_testsuite "executor-soapui-smoke-tests" "test/suites/executor-soapui-smoke-tests.json"
-  fi
-
-  if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
-    run_follow_testsuite executor-soapui-smoke-tests
-  fi
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 
