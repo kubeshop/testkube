@@ -46,3 +46,9 @@ spec:
   - name: {{ $secret.Name -}}
   {{- end}}
   {{- end}}
+  {{- if gt (len .Features) 0 }}
+  features:
+  {{- range $feature := .Features}}
+  - {{ $feature -}}
+  {{- end}}
+  {{- end}}
