@@ -12,7 +12,7 @@ package testkube
 // test trigger create or update request body
 type TestTriggerUpsertRequest struct {
 	// object kubernetes namespace
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 	// object name
 	Name string `json:"name"`
 	// test trigger labels

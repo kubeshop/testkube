@@ -1,0 +1,7 @@
+{
+	"name": "executor-k6-other-tests",
+	"description": "k6 executor - other tests and edge-cases",
+	"steps": [
+		{"execute": {"name": "k6-executor-smoke-git-dir"}}
+	]
+}

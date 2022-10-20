@@ -3,6 +3,7 @@
 	"description": "postman executor smoke tests",
 	"steps": [
 		{"execute": {"name": "postman-executor-smoke"}},
-		{"execute": {"name": "postman-executor-smoke-testsource-git-file"}}
+		{"execute": {"name": "postman-executor-smoke-testsource-git-file"}},
+		{"execute": {"name": "postman-executor-smoke-testsource-overwrite"}}
 	]
 }
