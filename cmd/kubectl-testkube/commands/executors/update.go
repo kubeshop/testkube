@@ -8,9 +8,9 @@ import (
 
 func UpdateExecutorCmd() *cobra.Command {
 	var (
-		types, command, executorArgs, imagePullSecretNames []string
-		name, executorType, image, uri, jobTemplate        string
-		labels                                             map[string]string
+		types, command, executorArgs, imagePullSecretNames, features []string
+		name, executorType, image, uri, jobTemplate                  string
+		labels                                                       map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -49,12 +49,13 @@ func UpdateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVar(&executorType, "executor-type", "job", "executor type, container or job (defaults to job)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
-	cmd.Flags().StringVar(&image, "image", "", "image used for container executor")
-	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringVar(&image, "image", "", "image used for executor")
+	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in container executor")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringArrayVar(&features, "feature", []string{}, "feature provided by executor")
 
 	return cmd
 }
