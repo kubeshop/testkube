@@ -35,7 +35,7 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 		return source, err
 	}
 
-	gitWorkingDir := cmd.Flag("git-workin-dir").Value.String()
+	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
