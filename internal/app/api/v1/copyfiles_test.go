@@ -3,7 +3,10 @@ package v1
 import (
 	"bytes"
 	"io"
+	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,55 +27,57 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		},
 		Storage: &storage,
 	}
+	route := "/copy-files"
 
-	app.Post("/executions/:id/copyFiles/:filename", s.UploadCopyFiles())
-	app.Post("/tests/:id/copyFiles/:filename", s.UploadCopyFiles())
-	app.Post("/test-suites/:id/copyFiles/:filename", s.UploadCopyFiles())
+	app.Post(route, s.UploadCopyFiles())
 
 	tests := []struct {
-		name               string
-		route              string
-		expectedCode       int
-		expectedBucketName string
-		expectedObjectSize int64
-		ownerID            string // ID of the execution / test / test suite the file belongs to
-		filePath           string
-		fileContent        []byte
+		name                string
+		parentID            string
+		parentType          string
+		filePath            string
+		fileContent         []byte
+		expectedCode        int
+		expectedBucketName  string
+		expectedFileContent []byte
+		expectedObjectSize  int64
 	}{
 		{
 			name:         "no file",
-			route:        "/executions/1/copyFiles/noFile",
 			expectedCode: fiber.StatusBadRequest,
 		},
 		{
-			name:               "file specified on execution",
-			route:              "/executions/1/copyFiles/file1",
-			expectedCode:       fiber.StatusOK,
-			expectedBucketName: "execution-1",
-			expectedObjectSize: 10,
-			ownerID:            "1",
-			fileContent:        []byte("first file"),
-			filePath:           "file1",
+			name:                "file specified on execution",
+			parentID:            "1",
+			parentType:          "execution",
+			filePath:            "/data/file1",
+			fileContent:         []byte("first file"),
+			expectedCode:        fiber.StatusOK,
+			expectedBucketName:  "execution-1",
+			expectedFileContent: []byte("first file"),
+			expectedObjectSize:  int64(10),
 		},
 		{
-			name:               "file specified on test",
-			route:              "/tests/2/copyFiles/file2",
-			expectedCode:       fiber.StatusOK,
-			expectedBucketName: "test-2",
-			expectedObjectSize: 11,
-			ownerID:            "2",
-			fileContent:        []byte("second file"),
-			filePath:           "file2",
+			name:                "file specified on test",
+			parentID:            "2",
+			parentType:          "test",
+			filePath:            "/data/file2",
+			fileContent:         []byte("second file"),
+			expectedCode:        fiber.StatusOK,
+			expectedBucketName:  "test-2",
+			expectedFileContent: []byte("second file"),
+			expectedObjectSize:  int64(11),
 		},
 		{
-			name:               "file specified on test suite",
-			route:              "/test-suites/3/copyFiles/file3",
-			expectedCode:       fiber.StatusOK,
-			expectedBucketName: "test-suite-3",
-			expectedObjectSize: 10,
-			ownerID:            "3",
-			fileContent:        []byte("third file"),
-			filePath:           "file3",
+			name:                "file specified on test suite",
+			parentID:            "3",
+			parentType:          "test-suite",
+			filePath:            "/data/file3",
+			fileContent:         []byte("third file"),
+			expectedCode:        fiber.StatusOK,
+			expectedBucketName:  "test-suite-3",
+			expectedFileContent: []byte("third file"),
+			expectedObjectSize:  int64(10),
 		},
 	}
 
@@ -94,8 +99,35 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 				return nil
 			}
 
-			req := httptest.NewRequest("POST", tt.route, bytes.NewReader(tt.fileContent))
-			req.Header.Set("Content-Type", "application/octet-stream")
+			body := &bytes.Buffer{}
+			writer := multipart.NewWriter(body)
+			part, err := writer.CreateFormFile("attachment", filepath.Base(tt.filePath))
+			if err != nil {
+				t.Error(err)
+			}
+
+			if _, err := io.Copy(part, bytes.NewBuffer(tt.fileContent)); err != nil {
+				t.Error(err)
+			}
+			err = writer.WriteField("parentID", tt.parentID)
+			if err != nil {
+				t.Error(err)
+			}
+			err = writer.WriteField("parentType", tt.parentType)
+			if err != nil {
+				t.Error(err)
+			}
+			err = writer.WriteField("filePath", tt.filePath)
+			if err != nil {
+				t.Error(err)
+			}
+			err = writer.Close()
+			if err != nil {
+				t.Error(err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, route, body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
 
 			resp, err := app.Test(req, -1)
 			assert.NoError(t, err)

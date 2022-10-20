@@ -3808,4 +3808,7 @@ components:
                    - execution
                 filePath:
                   type: string
+                  example: /data/file.txt
+                fileName:
+                  type: string
                   format: binary
