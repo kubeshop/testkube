@@ -53,11 +53,6 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string
 		return options, err
 	}
 
-	features, err := cmd.Flags().GetStringArray("feature")
-	if err != nil {
-		return options, err
-	}
-
 	options = apiClient.UpsertExecutorOptions{
 		Name:             name,
 		Types:            types,
@@ -68,7 +63,6 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string
 		Args:             executorArgs,
 		Uri:              uri,
 		JobTemplate:      jobTemplateContent,
-		Features:         features,
 	}
 
 	// if labels are passed and are different from the existing overwrite

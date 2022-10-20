@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
@@ -89,7 +90,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 
 		results := []testkube.ExecutorDetails{}
 		for _, item := range list.Items {
-			results = append(results, executorsmapper.MapExecutorCRDToExecutorDetails(item))
+			results = append(results, mapExecutorCRDToExecutorDetails(item))
 
 		}
 		return c.JSON(results)
@@ -113,7 +114,7 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		result := executorsmapper.MapExecutorCRDToExecutorDetails(*item)
+		result := mapExecutorCRDToExecutorDetails(*item)
 		return c.JSON(result)
 	}
 }
@@ -142,4 +143,28 @@ func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 		c.Status(http.StatusNoContent)
 		return nil
 	}
+}
+
+func mapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.ExecutorDetails {
+	return testkube.ExecutorDetails{
+		Name: item.Name,
+		Executor: &testkube.Executor{
+			ExecutorType: item.Spec.ExecutorType,
+			Image:        item.Spec.Image,
+			Types:        item.Spec.Types,
+			Uri:          item.Spec.URI,
+			JobTemplate:  item.Spec.JobTemplate,
+			Labels:       item.Labels,
+			Features:     mapFeatures(item.Spec.Features),
+		},
+	}
+}
+
+func mapFeatures(features []executorv1.Feature) (out []string) {
+
+	for _, feature := range features {
+		out = append(out, string(feature))
+	}
+
+	return
 }
