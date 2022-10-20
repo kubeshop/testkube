@@ -224,7 +224,7 @@ func (e MockExecutor) ExecuteSync(execution *testkube.Execution, options client.
 	panic("not implemented")
 }
 
-func (e MockExecutor) Abort(id string) *testkube.ExecutionResult {
+func (e MockExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
 	panic("not implemented")
 }
 
