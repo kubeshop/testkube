@@ -222,7 +222,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	var err error
 
 	// save stop time and final state
-	defer c.stopExecution(ctx, l, execution, &result)
+	defer c.stopExecution(ctx, l, execution, &result, err)
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
@@ -236,10 +236,6 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	logs, err = executor.GetPodLogs(c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-		if err != nil {
-			l.Infow("Update result", "error", err)
-		}
 		return result, err
 	}
 
@@ -247,32 +243,41 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	result, _, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse ouput error", "error", err)
-		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-		if err != nil {
-			l.Errorw("Update execution result error", "error", err)
-		}
 		return result, err
 	}
-
-	l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
-	err = c.Repository.UpdateResult(ctx, execution.Id, result)
-	if err != nil {
-		l.Errorw("Update execution result error", "error", err)
-	}
+	// saving result in the defer function
 	return result, nil
 
 }
 
-func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult) {
-	l.Debug("stopping execution")
+func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, passedErr error) {
+	savedExecution, err := c.Repository.Get(ctx, execution.Id)
+	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "passedError", passedErr, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
+	if err != nil {
+		l.Errorw("get execution error", "error", err)
+	}
+
+	if savedExecution.IsCanceled() {
+		return
+	}
+
 	execution.Stop()
-	err := c.Repository.EndExecution(ctx, *execution)
+	err = c.Repository.EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
 	}
 
+	if passedErr != nil {
+		*result = result.Err(passedErr)
+	}
 	// metrics increase
 	execution.ExecutionResult = result
+	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
+	err = c.Repository.UpdateResult(ctx, execution.Id, *result)
+	if err != nil {
+		l.Errorw("Update execution result error", "error", err)
+	}
+
 	c.metrics.IncExecuteTest(*execution)
 
 	c.Emitter.Notify(testkube.NewEventEndTestSuccess(execution))
@@ -418,8 +423,13 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 }
 
 // AbortK8sJob aborts K8S by job name
-func (c *JobExecutor) Abort(jobName string) *testkube.ExecutionResult {
-	return executor.AbortJob(c.ClientSet, c.Namespace, jobName)
+func (c *JobExecutor) Abort(execution *testkube.Execution) (result *testkube.ExecutionResult) {
+	l := c.Log.With("execution", execution.Id)
+	ctx := context.Background()
+	result = executor.AbortJob(c.ClientSet, c.Namespace, execution.Id)
+	c.Log.Debugw("job aborted", "execution", execution.Id, "result", result)
+	c.stopExecution(ctx, l, execution, result, nil)
+	return
 }
 
 // NewJobSpec is a method to create new job spec

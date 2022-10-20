@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -126,7 +127,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				uiPrintStatus(execution)
+				render.RenderExecutionResult(&execution)
 
 				if execution.Id != "" {
 					if downloadArtifactsEnabled {
@@ -166,38 +167,6 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 
 	return cmd
-}
-
-func uiPrintStatus(execution testkube.Execution) {
-	result := execution.ExecutionResult
-
-	if result == nil {
-		return
-	}
-
-	ui.NL()
-
-	switch true {
-	case result.IsQueued():
-		ui.Warn("Test queued for execution")
-
-	case result.IsRunning():
-		ui.Warn("Test execution started")
-
-	case result.IsPassed():
-		ui.Info(result.Output)
-		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with success in " + duration.String())
-
-	case result.IsFailed():
-		ui.UseStderr()
-		ui.Warn("Test test execution failed:\n")
-		ui.Errf(result.ErrorMessage)
-		ui.Info(result.Output)
-		os.Exit(1)
-	}
-
-	ui.NL()
 }
 
 func uiShellGetExecution(id string) {
