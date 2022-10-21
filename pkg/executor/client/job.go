@@ -270,6 +270,11 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	if passedErr != nil {
 		*result = result.Err(passedErr)
 	}
+
+	if result.IsCanceled() {
+		result.Output = result.Output + "\nTest run was aborted manually"
+	}
+
 	// metrics increase
 	execution.ExecutionResult = result
 	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
