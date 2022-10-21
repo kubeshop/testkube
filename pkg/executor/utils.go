@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
+	"github.com/kubeshop/testkube/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -229,11 +230,13 @@ func AbortJob(c kubernetes.Interface, namespace string, jobName string) *testkub
 		PropagationPolicy:  &bg,
 	})
 	if err != nil {
+		log.DefaultLogger.Errorf("Error while aborting job %s: %s", jobName, err.Error())
 		return &testkube.ExecutionResult{
 			Status: testkube.ExecutionStatusFailed,
 			Output: err.Error(),
 		}
 	}
+	log.DefaultLogger.Infof("Job %s aborted", jobName)
 	return &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusCancelled,
 	}

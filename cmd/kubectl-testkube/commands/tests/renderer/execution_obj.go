@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -36,7 +37,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Args:    ", execution.Args...)
 	}
 
-	renderer.RenderExecutionResult(execution.ExecutionResult)
+	render.RenderExecutionResult(&execution)
 
 	ui.NL()
 

@@ -56,6 +56,10 @@ func (e *ExecutionResult) IsFailed() bool {
 	return *e.Status == FAILED_ExecutionStatus
 }
 
+func (e *ExecutionResult) IsCanceled() bool {
+	return *e.Status == CANCELLED_ExecutionStatus
+}
+
 func (e *ExecutionResult) Err(err error) ExecutionResult {
 	e.Status = ExecutionStatusFailed
 	e.ErrorMessage = err.Error()

@@ -284,6 +284,8 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
+
+		s.Log.Infow("aborting execution", "executionID", executionID)
 		execution, err := s.ExecutionResults.Get(ctx, executionID)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
@@ -293,7 +295,7 @@ func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		result := s.Executor.Abort(executionID)
+		result := s.Executor.Abort(&execution)
 		s.Metrics.IncAbortTest(execution.TestType, result.IsFailed())
 
 		return err

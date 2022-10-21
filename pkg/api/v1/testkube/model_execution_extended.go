@@ -163,3 +163,11 @@ func (e Execution) IsQueued() bool {
 
 	return *e.ExecutionResult.Status == QUEUED_ExecutionStatus
 }
+
+func (e Execution) IsCanceled() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == CANCELLED_ExecutionStatus
+}
