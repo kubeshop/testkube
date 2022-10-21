@@ -24,19 +24,21 @@ func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
 
 	if testSource.Repository != nil {
 		ui.Warn("Repository: ")
-		ui.Warn("  Uri:      ", testSource.Repository.Uri)
-		ui.Warn("  Branch:   ", testSource.Repository.Branch)
-		ui.Warn("  Commit:   ", testSource.Repository.Commit)
-		ui.Warn("  Path:     ", testSource.Repository.Path)
+		ui.Warn("  Uri:         ", testSource.Repository.Uri)
+		ui.Warn("  Branch:      ", testSource.Repository.Branch)
+		ui.Warn("  Commit:      ", testSource.Repository.Commit)
+		ui.Warn("  Path:        ", testSource.Repository.Path)
 		if testSource.Repository.UsernameSecret != nil {
-			ui.Warn("  Username: ", fmt.Sprintf("[secret:%s key:%s]", testSource.Repository.UsernameSecret.Name,
+			ui.Warn("  Username:    ", fmt.Sprintf("[secret:%s key:%s]", testSource.Repository.UsernameSecret.Name,
 				testSource.Repository.UsernameSecret.Key))
 		}
 
 		if testSource.Repository.TokenSecret != nil {
-			ui.Warn("  Token:    ", fmt.Sprintf("[secret:%s key:%s]", testSource.Repository.TokenSecret.Name,
+			ui.Warn("  Token:       ", fmt.Sprintf("[secret:%s key:%s]", testSource.Repository.TokenSecret.Name,
 				testSource.Repository.TokenSecret.Key))
 		}
+
+		ui.Warn("  Working dir: ", testSource.Repository.WorkingDir)
 	}
 
 	if testSource.Data != "" {

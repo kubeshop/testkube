@@ -22,6 +22,7 @@ kubectl-testkube create testsource [flags]
       --git-uri string                       Git repository uri
       --git-username string                  if git repository is private we can use username as an auth parameter
       --git-username-secret stringToString   git username secret in a form of secret_name1=secret_key1 for private repository (default [])
+      --git-working-dir string               if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter
   -h, --help                                 help for testsource
   -l, --label stringToString                 label key value pair: --label key1=value1 (default [])
   -n, --name string                          unique test source name - mandatory

@@ -130,6 +130,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	sourceName := cmd.Flag("source").Value.String()
+	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
@@ -149,7 +150,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
 
 	if hasGitParams && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeGitDir)
@@ -170,13 +171,14 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		}
 
 		repository = &testkube.Repository{
-			Type_:    "git",
-			Uri:      gitUri,
-			Branch:   gitBranch,
-			Commit:   gitCommit,
-			Path:     gitPath,
-			Username: gitUsername,
-			Token:    gitToken,
+			Type_:      "git",
+			Uri:        gitUri,
+			Branch:     gitBranch,
+			Commit:     gitCommit,
+			Path:       gitPath,
+			Username:   gitUsername,
+			Token:      gitToken,
+			WorkingDir: gitWorkingDir,
 		}
 
 		for key, val := range gitUsernameSecret {

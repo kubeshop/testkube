@@ -368,6 +368,10 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 				Key:  testSource.Repository.TokenSecret.Key,
 			}
 		}
+
+		if test.Content.Repository.WorkingDir == "" {
+			test.Content.Repository.WorkingDir = testSource.Repository.WorkingDir
+		}
 	}
 
 	return test
