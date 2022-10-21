@@ -75,11 +75,16 @@ func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testk
 		options.Types = executor.Executor.Types
 		options.ExecutorType = executor.Executor.ExecutorType
 		options.Image = executor.Executor.Image
+		options.ImagePullSecrets = executor.Executor.ImagePullSecrets
+		options.Command = executor.Executor.Command
+		options.Args = executor.Executor.Args
 		options.Uri = executor.Executor.Uri
 		options.Labels = executor.Executor.Labels
 		if executor.Executor.JobTemplate != "" {
 			options.JobTemplate = fmt.Sprintf("%q", executor.Executor.JobTemplate)
 		}
+
+		options.Features = executor.Executor.Features
 	}
 
 	return options
