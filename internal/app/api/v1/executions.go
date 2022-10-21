@@ -10,6 +10,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/kubeshop/testkube/internal/app/api/config"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
@@ -25,8 +27,6 @@ import (
 )
 
 const (
-	// DefaultConcurrencyLevel is a default concurrency level for worker pool
-	DefaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
 	latestExecutions = 5
 
@@ -72,7 +72,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		var results []testkube.Execution
 		if len(tests) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", config.DefaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}

@@ -1,13 +1,10 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
-
-	"github.com/kubeshop/testkube/pkg/utils"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	triggerspkg "github.com/kubeshop/testkube/pkg/triggers"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -22,8 +19,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 )
-
-const testTriggerMaxNameLength = 57
 
 // CreateTestTriggerHandler is a handler for creating test trigger objects
 func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
@@ -41,7 +36,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		}
 		// default trigger name if not defined in upsert request
 		if testTrigger.Name == "" {
-			testTrigger.Name = generateTestTriggerName(&testTrigger)
+			testTrigger.Name = triggerspkg.GenerateTestTriggerName(&testTrigger)
 		}
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
@@ -147,7 +142,7 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// default trigger name if not defined in upsert request
 			if crdTestTrigger.Name == "" {
-				crdTestTrigger.Name = generateTestTriggerName(&crdTestTrigger)
+				crdTestTrigger.Name = triggerspkg.GenerateTestTriggerName(&crdTestTrigger)
 			}
 			testTrigger, err = s.TestKubeClientset.
 				TestsV1().
@@ -285,16 +280,4 @@ func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
 	}
-}
-
-// generateTestTriggerName function generates a trigger name from the TestTrigger spec
-// function also takes care of name collisions, not exceeding k8s max object name (63 characters) and not ending with a hyphen '-'
-func generateTestTriggerName(t *testtriggersv1.TestTrigger) string {
-	name := fmt.Sprintf("trigger-%s-%s-%s-%s", t.Spec.Resource, t.Spec.Event, t.Spec.Action, t.Spec.Execution)
-	if len(name) > testTriggerMaxNameLength {
-		name = name[:testTriggerMaxNameLength-1]
-	}
-	name = strings.TrimSuffix(name, "-")
-	name = fmt.Sprintf("%s-%s", name, utils.RandAlphanum(5))
-	return name
 }

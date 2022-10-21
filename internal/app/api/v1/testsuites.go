@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kubeshop/testkube/internal/app/api/config"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -510,7 +512,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var results []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", config.DefaultConcurrencyLevel))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}
