@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+import TestDataHandler from '../support/data-handlers/test-data-handlers';
+const testDataHandler=new TestDataHandler();
 import ApiHelpers from '../support/api/api-helpers';
 const apiHelpers=new ApiHelpers();
 import MainPage from '../support/pages/MainPage';
@@ -14,11 +16,15 @@ describe('Create test with Dashboard', () => {
   
   it('Create K6 test from git-file', () => {
     let testName = "k6-git-file"
+    let test = testDataHandler.getTest(testName)
 
-    apiHelpers.assureTestNotCreated(testName)//.then(() => {
-      // mainPage.visitMainPage()
-      // mainPage.openCreateTestDialog()
-      // createTestPage.fillInTestDetails("k6-git-file")
-    //})
+    
+    cy.wrap(null).then(() => apiHelpers.assureTestNotCreated(test.name)); //workaround for async code
+
+
+
+    mainPage.visitMainPage()
+    mainPage.openCreateTestDialog()
+    createTestPage.fillInTestDetails("k6-git-file")
   })
 })

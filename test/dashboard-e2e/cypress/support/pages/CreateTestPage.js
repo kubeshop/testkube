@@ -47,10 +47,3 @@ class CreateTestPage {
     }
 }
 export default CreateTestPage
-
-
-
-//test-suite-creation
-//test-suite-creation_name
-
-//TODO: label, testSource data-test
