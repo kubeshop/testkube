@@ -16,34 +16,3 @@ class CommonHelpers {
     }
 }
 export default CommonHelpers
-
-// {
-//     "k6-git-file": {
-//         "name": "internal-dashboard-e2e-k6-git-file",
-//         "label": "TODO",
-//         "type": "k6/script",
-//         "testSource": {
-//             "type": "git-file",
-//             "uri": "https://github.com/kubeshop/testkube.git",
-//             "branch": "cypress-e2e",
-//             "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
-//         }
-//     }
-// }
-
-
-// {
-//     "name": "internal-dashboard-e2e-k6-git-file",
-//     "namespace": "testkube",
-//     "type": "k6/script",
-//     "content": {
-//         "type": "git-file",
-//         "repository": {
-//             "type": "git-file",
-//             "uri": "https://github.com/kubeshop/testkube.git",
-//             "branch": "cypress-e2e",
-//             "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
-//         }
-//     },
-//     "created": "2022-10-24T11:16:18Z"
-// }
