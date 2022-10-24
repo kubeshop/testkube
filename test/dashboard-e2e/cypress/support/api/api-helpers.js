@@ -31,7 +31,12 @@ class ApiHelpers {
         }
 
         return true
+    }
 
+    async getTestData(testName) {
+        const response = await superagent.get(`http://localhost:8088/v1/tests/${testName}`) //200
+
+        return response.body
     }
 }
 export default ApiHelpers
