@@ -204,39 +204,46 @@ func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteO
 }
 
 func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
+	ticker := time.NewTicker(pollJobStatus)
+	l := c.Log.With("jobName", jobName)
 	for {
-		time.Sleep(pollJobStatus)
-		jobs, err := c.ClientSet.BatchV1().Jobs(c.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
-		if err != nil {
-			c.Log.Errorw("could not get jobs", "error", err)
+		select {
+		case <-ctx.Done():
+			l.Infow("context done, stopping job timeout monitor")
 			return
-		}
-		if jobs == nil || len(jobs.Items) == 0 {
-			return
-		}
+		case <-ticker.C:
+			jobs, err := c.ClientSet.BatchV1().Jobs(c.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+			if err != nil {
+				l.Errorw("could not get jobs", "error", err)
+				return
+			}
+			if jobs == nil || len(jobs.Items) == 0 {
+				return
+			}
 
-		job := jobs.Items[0]
+			job := jobs.Items[0]
 
-		if job.Status.Succeeded > 0 {
-			c.Log.Debugw("job succeeded", "jobName", jobName, "status")
-			return
-		}
+			if job.Status.Succeeded > 0 {
+				l.Debugw("job succeeded", "status")
+				return
+			}
 
-		if job.Status.Failed > 0 {
-			c.Log.Debugw("job failed", "jobName", jobName)
-			if len(job.Status.Conditions) > 0 {
-				for _, condition := range job.Status.Conditions {
-					c.Log.Infow("job timeout", "jobName", jobName, "condition.reason", condition.Reason)
-					if condition.Reason == timeoutIndicator {
-						c.Timeout(jobName)
+			if job.Status.Failed > 0 {
+				l.Debugw("job failed")
+				if len(job.Status.Conditions) > 0 {
+					for _, condition := range job.Status.Conditions {
+						l.Infow("job timeout", "condition.reason", condition.Reason)
+						if condition.Reason == timeoutIndicator {
+							c.Timeout(jobName)
+						}
 					}
 				}
+				return
 			}
-			return
-		}
 
-		if job.Status.Active > 0 {
-			continue
+			if job.Status.Active > 0 {
+				continue
+			}
 		}
 	}
 }
