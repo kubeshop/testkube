@@ -21,6 +21,8 @@ var (
 	EventStartTest           = EventTypePtr(START_TEST_EventType)
 	EventEndTestSuccess      = EventTypePtr(END_TEST_SUCCESS_EventType)
 	EventEndTestFailed       = EventTypePtr(END_TEST_FAILED_EventType)
+	EventEndTestAborted      = EventTypePtr(END_TEST_ABORTED_EventType)
+	EventEndTestTimeout      = EventTypePtr(END_TEST_TIMEOUT_EventType)
 	EventStartTestSuite      = EventTypePtr(START_TESTSUITE_EventType)
 	EventEndTestSuiteSuccess = EventTypePtr(END_TESTSUITE_SUCCESS_EventType)
 	EventEndTestSuiteFailed  = EventTypePtr(END_TESTSUITE_FAILED_EventType)

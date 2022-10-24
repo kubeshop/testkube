@@ -16,6 +16,8 @@ const (
 	START_TEST_EventType            EventType = "start-test"
 	END_TEST_SUCCESS_EventType      EventType = "end-test-success"
 	END_TEST_FAILED_EventType       EventType = "end-test-failed"
+	END_TEST_ABORTED_EventType      EventType = "end-test-aborted"
+	END_TEST_TIMEOUT_EventType      EventType = "end-test-timeout"
 	START_TESTSUITE_EventType       EventType = "start-testsuite"
 	END_TESTSUITE_SUCCESS_EventType EventType = "end-testsuite-success"
 	END_TESTSUITE_FAILED_EventType  EventType = "end-testsuite-failed"

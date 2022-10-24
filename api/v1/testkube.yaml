@@ -2828,7 +2828,8 @@ components:
         - running
         - passed
         - failed
-        - cancelled
+        - aborted
+        - timeout
 
     ExecutionResult:
       description: execution result returned from executor
@@ -3340,6 +3341,8 @@ components:
         - start-test
         - end-test-success
         - end-test-failed
+        - end-test-aborted
+        - end-test-timeout
         - start-testsuite
         - end-testsuite-success
         - end-testsuite-failed

@@ -9,11 +9,14 @@ func StatusPtr(status ExecutionStatus) *ExecutionStatus {
 	return &status
 }
 
-var ExecutionStatusFailed = StatusPtr(FAILED_ExecutionStatus)
-var ExecutionStatusPassed = StatusPtr(PASSED_ExecutionStatus)
-var ExecutionStatusQueued = StatusPtr(QUEUED_ExecutionStatus)
-var ExecutionStatusRunning = StatusPtr(RUNNING_ExecutionStatus)
-var ExecutionStatusCancelled = StatusPtr(CANCELLED_ExecutionStatus)
+var (
+	ExecutionStatusFailed  = StatusPtr(FAILED_ExecutionStatus)
+	ExecutionStatusPassed  = StatusPtr(PASSED_ExecutionStatus)
+	ExecutionStatusQueued  = StatusPtr(QUEUED_ExecutionStatus)
+	ExecutionStatusRunning = StatusPtr(RUNNING_ExecutionStatus)
+	ExecutionStatusAborted = StatusPtr(ABORTED_ExecutionStatus)
+	ExecutionStatusTimeout = StatusPtr(TIMEOUT_ExecutionStatus)
+)
 
 // ExecutionStatuses is an array of ExecutionStatus
 type ExecutionStatuses []ExecutionStatus

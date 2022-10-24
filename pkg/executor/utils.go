@@ -238,7 +238,7 @@ func AbortJob(c kubernetes.Interface, namespace string, jobName string) *testkub
 	}
 	log.DefaultLogger.Infof("Job %s aborted", jobName)
 	return &testkube.ExecutionResult{
-		Status: testkube.ExecutionStatusCancelled,
+		Status: testkube.ExecutionStatusAborted,
 	}
 }
 

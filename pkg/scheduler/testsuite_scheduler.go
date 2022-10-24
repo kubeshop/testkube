@@ -81,7 +81,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		cancelSteps := false
 		for i := range testsuiteExecution.StepResults {
 			if cancelSteps {
-				testsuiteExecution.StepResults[i].Execution.ExecutionResult.Cancel()
+				testsuiteExecution.StepResults[i].Execution.ExecutionResult.Abort()
 				continue
 			}
 
