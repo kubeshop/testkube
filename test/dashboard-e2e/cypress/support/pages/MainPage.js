@@ -1,8 +1,17 @@
 class MainPage {
-    visitMainPage() {
-        cy.visit('http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1')
-        this.handleApiEndpointDialog()
-        this.handleCookiesDialog()
+    visitMainPage(manualInitialDalogHandling) {
+        if(manualInitialDalogHandling) {
+            cy.visit('http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1') //TODO: move to variables
+            this.handleApiEndpointDialog()
+            this.handleCookiesDialog()
+        } else {
+            cy.visit('http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1', {
+                onBeforeLoad: function (window) {
+                    window.localStorage.setItem('isGADisabled', '1');
+                    window.localStorage.setItem('apiEndpoint', 'http://localhost:8088/v1') //TODO: move to variables
+                }
+            })
+        }
     }
 
     handleApiEndpointDialog(customUri) {
