@@ -44,6 +44,8 @@ const (
 	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
 	pollJobStatus = 1 * time.Second
+	// timeoutIndicator is string that is added to job logs when timeout occurs
+	timeoutIndicator = "DeadlineExceeded"
 )
 
 // NewJobExecutor creates new job executor
@@ -225,7 +227,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 			if len(job.Status.Conditions) > 0 {
 				for _, condition := range job.Status.Conditions {
 					c.Log.Infow("job timeout", "jobName", jobName, "condition.reason", condition.Reason)
-					if condition.Reason == "DeadlineExceeded" {
+					if condition.Reason == timeoutIndicator {
 						c.Timeout(jobName)
 					}
 				}
