@@ -42,6 +42,8 @@ const (
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
 	volumeDir    = "/data"
+	// pollJobStatus is interval for checking if job timeout occurred
+	pollJobStatus = 1 * time.Second
 )
 
 // NewJobExecutor creates new job executor
@@ -201,7 +203,7 @@ func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteO
 
 func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(pollJobStatus)
 		jobs, err := c.ClientSet.BatchV1().Jobs(c.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 		if err != nil {
 			c.Log.Errorw("could not get jobs", "error", err)
