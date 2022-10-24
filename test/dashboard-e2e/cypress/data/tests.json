@@ -1,0 +1,13 @@
+{
+    "k6-git-file": {
+        "name": "internal-dashboard-e2e-k6-git-file",
+        "label": "TODO",
+        "testType": "k6/script",
+        "testSource": {
+            "type": "Git file",
+            "uri": "https://github.com/kubeshop/testkube.git",
+            "branch": "cypress-e2e",
+            "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+        }
+    }
+}

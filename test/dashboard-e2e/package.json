@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "cypress": "^10.10.0",
+    "superagent": "8.0.0"
+  }
+}

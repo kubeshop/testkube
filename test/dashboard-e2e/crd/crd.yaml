@@ -1,0 +1,25 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: dashboard-e2e-tests
+  namespace: testkube
+  labels:
+    core-tests: dashboard-e2e
+spec:
+  type: cypress/project
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/dashboard-e2e
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - DASHBOARD_URL=asdf # TODO
