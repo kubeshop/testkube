@@ -11,42 +11,25 @@ import CardWrapper from "@site/src/components/CardWrapper";
 
 <p class="intro--index">
   <small>
-    The Kubernetes-native testing framework for Testers and Developers.
+    Testkube is a Kubernetes-native testing framework for Testers and Developers that allows you to automate the executions 
+    of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD/GitOps pipelines.
   </small>
 </p>
 
-<CardWrapper>
-  <Card color="#34D399" title="Installation" hotkey="I" link="/installing">
-    Installation steps and prerequisites.
-  </Card>
-  <Card color="#FACC15" title="Getting started" hotkey="S" link="/getting-started">
-    Quick Start guides around setting up testkube for your needs.
-  </Card>
-  <Card color="#38BDF8" title="Guides" hotkey="G" link="/category/using-testkube">
-    Comprehensive guides how to use Testkube and how to get the most out of it.
-  </Card>
-  <Card color="#F472B6" title="Test Types" hotkey="E" link="/category/test-types">
-    Discover the executors we support and learn how to use and extend them.
-  </Card>
-  <Card color="#F87171" title="CLI Reference" hotkey="C" link="/category/cli-reference">
-    A reference of all commands, args and flags available through the CLI.
-  </Card>
-  <Card color="#818CF8" title="Control Plane" hotkey="D" link="/using-testkube/UI">
-    Learn how to use the Testkube UI to evaluate and observe your tests.
-  </Card>
-</CardWrapper>
-
-## How does Testkube work?
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-intro.gif" />
-</p>
-
-Testkube decouples test artifacts and execution from CI/CD tooling. Tests are meant to be part of a cluster's state and can be executed as needed:
+Tests are meant to be part of a cluster's state and can be executed as needed:
 
 - Manually via kubectl CLI.
 - Externally triggered via API (CI, external tooling, etc).
 - Automatically on deployment of annotated/labeled services/pods/etc (WIP).
+
+### Testkube helps you:
+
+- Avoid vendor lock-in for test orchestration and execution in CI/CD pipelines.
+- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc.,
+  in your clusters, without having to wrap them in docker-images or provide network access.
+- Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
+- Centralize all test results in a consistent format for actionable QA analytics.
+- Provide a modular architecture for adding new types of test scripts and executors.
 
 ### The main Testkube components are:
 
@@ -56,15 +39,6 @@ Testkube decouples test artifacts and execution from CI/CD tooling. Tests are me
 - Executors - Run tests defined for specific runner, currently available for [Postman](4-test-types/executor-postman.md), [Cypress](4-test-types/executor-cypress.md), [K6](4-test-types/executor-k6.md) and [Curl](4-test-types/executor-curl.md).
 - Results DB - For centralized test results management.
 - A simple browser-based [User Interface](3-using-testkube/UI.md) for monitoring test results.
-
-### Testkube attempts to:
-
-- Avoid vendor lock-in for test orchestration and execution in CI/CD pipelines.
-- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc.,
-  in your clusters, without having to wrap them in docker-images or provide network access.
-- Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
-- Centralize all test results in a consistent format for actionable QA analytics.
-- Provide a modular architecture for adding new types of test scripts and executors.
 
 ## Blog Posts
 
