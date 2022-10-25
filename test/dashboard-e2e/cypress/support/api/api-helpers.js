@@ -6,6 +6,10 @@ class ApiHelpers {
 
         return response.body
     }
+
+    async createTest(testData) {
+        //TODO
+    }
     
     async removeTest(testName) {
         await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204
@@ -29,6 +33,14 @@ class ApiHelpers {
         }
 
         return true
+    }
+
+    async assureTestCreated(testName) {
+        const alreadyCreated = await this.isTestCreated(testName)
+
+        if(!alreadyCreated) {
+            await this.createTest(testName)
+        }
     }
 
     async getTestData(testName) {

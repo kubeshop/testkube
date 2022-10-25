@@ -11,71 +11,38 @@ const mainPage=new MainPage();
 import CreateTestPage from '../support/pages/CreateTestPage';
 const createTestPage=new CreateTestPage();
 
+function createTestFlow(testName) {
+  const testData = testDataHandler.getTest(testName)
+
+  //prerequisites
+  const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
+  cy.wrap(assureTestNotCreated)
+  .then(() => {
+    //actions
+    mainPage.visitMainPage()
+    mainPage.openCreateTestDialog()
+    createTestPage.createTest(testName)
+    cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
+  })
+  .then(() => {
+    //validation
+    const getTestData = apiHelpers.getTestData(testData.name)
+    cy.wrap(getTestData).then((createdTestData) => {
+      commonHelpers.validateTest(testData, createdTestData)
+    })
+  })
+}
+
 describe('Create test with Dashboard', () => {
   it('Create Cypress test from git-dir', () => {
-    const testName = "cypress-git-dir"
-    const testData = testDataHandler.getTest(testName)
-
-    //prerequisites
-    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
-    cy.wrap(assureTestNotCreated)
-    .then(() => {
-      //actions
-      mainPage.visitMainPage()
-      mainPage.openCreateTestDialog()
-      createTestPage.createTest(testName)
-      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
-    })
-    .then(() => {
-      //validation
-      const getTestData = apiHelpers.getTestData(testData.name)
-      cy.wrap(getTestData).then((createdTestData) => {
-        commonHelpers.validateTest(testData, createdTestData)
-      })
-    })
+    createTestFlow('cypress-git-dir')
   })
+
   it('Create K6 test from git-file', () => {
-    const testName = "k6-git-file"
-    const testData = testDataHandler.getTest(testName)
-
-    //prerequisites
-    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
-    cy.wrap(assureTestNotCreated)
-    .then(() => {
-      //actions
-      mainPage.visitMainPage()
-      mainPage.openCreateTestDialog()
-      createTestPage.createTest(testName)
-      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
-    })
-    .then(() => {
-      //validation
-      const getTestData = apiHelpers.getTestData(testData.name)
-      cy.wrap(getTestData).then((createdTestData) => {
-        commonHelpers.validateTest(testData, createdTestData)
-      })
-    })
+    createTestFlow('k6-git-file')
   })
-  it('Create Postman test from git-file', () => {
-    const testName = "postman-git-file"
-    const testData = testDataHandler.getTest(testName)
 
-    //prerequisites
-    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
-    cy.wrap(assureTestNotCreated)
-    .then(() => {
-      //actions
-      mainPage.visitMainPage()
-      mainPage.openCreateTestDialog()
-      createTestPage.createTest(testName)
-      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
-    })
-    .then(() => {
-      //validation
-      const getTestData = apiHelpers.getTestData(testData.name)
-      cy.wrap(getTestData).then((createdTestData) => {
-        commonHelpers.validateTest(testData, createdTestData)
-      })
-    })
+  it('Create Postman test from git-file', () => {
+    createTestFlow('postman-git-file')
   })
 })

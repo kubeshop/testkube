@@ -1,35 +1,66 @@
 {
     "cypress-git-dir": {
         "name": "internal-dashboard-e2e-cypress-git-dir",
-        "label": "TODO",
         "type": "cypress/project",
-        "testSource": {
+        "content": {
             "type": "git-dir",
-            "uri": "https://github.com/kubeshop/testkube.git",
-            "branch": "cypress-e2e-create-run-tests",
-            "path": "test/cypress/executor-tests/cypress-without-envs"
+            "repository": {
+              "type": "git-dir",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "cypress-e2e-create-run-tests",
+              "path": "test/cypress/executor-tests/cypress-without-envs"
+            }
+        },
+        "labels": {
+            "core-tests": "dashboard-e2e-internal"
+        }
+    },
+    "cypress-git-dir-created": {
+        "name": "internal-dashboard-e2e-cypress-git-dir-created",
+        "type": "cypress/project",
+        "content": {
+            "type": "git-dir",
+            "repository": {
+              "type": "git-dir",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "cypress-e2e-create-run-tests",
+              "path": "test/cypress/executor-tests/cypress-without-envs"
+            }
+        },
+        "labels": {
+            "core-tests": "dashboard-e2e-internal"
         }
     },
     "k6-git-file": {
         "name": "internal-dashboard-e2e-k6-git-file",
-        "label": "TODO",
         "type": "k6/script",
-        "testSource": {
+        "content": {
             "type": "git-file",
-            "uri": "https://github.com/kubeshop/testkube.git",
-            "branch": "cypress-e2e-create-run-tests",
-            "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "cypress-e2e-create-run-tests",
+              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+            }
+        },
+        "labels": {
+            "core-tests": "dashboard-e2e-internal"
         }
     },
     "postman-git-file": {
         "name": "internal-dashboard-e2e-postman-git-file",
-        "label": "TODO",
         "type": "postman/collection",
-        "testSource": {
+        "content": {
             "type": "git-file",
-            "uri": "https://github.com/kubeshop/testkube.git",
-            "branch": "cypress-e2e-create-run-tests",
-            "path": "postman-executor-smoke.postman_collection-without-envs.json"
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "cypress-e2e-create-run-tests",
+              "path": "postman-executor-smoke.postman_collection-without-envs.json"
+            }
+        },
+        "labels": {
+            "core-tests": "dashboard-e2e-internal"
         }
     }
 }

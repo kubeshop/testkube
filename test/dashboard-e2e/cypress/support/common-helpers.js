@@ -3,12 +3,13 @@ class CommonHelpers {
         cy.expect(testData.name).to.equal(createdTestData.name)
         //TODO: label
         cy.expect(testData.type).to.equal(createdTestData.type)
-        cy.expect(testData.testSource.type).to.equal(createdTestData.content.type)
+        cy.expect(testData.content.type).to.equal(createdTestData.content.type)
 
         //testSources
-        if (testData.testSource.type == "git-file" || testData.testSource.type == "gir-dir") {
-            for (let key in testData.testSource) {
-                cy.expect(testData.testSource[key]).to.equal(createdTestData.content.repository[key])
+        const contentType = testData.content.type
+        if (contentType == "git-file" || contentType == "gir-dir") {
+            for (let key in testData.content.repository) {
+                cy.expect(testData.content.repository[key]).to.equal(createdTestData.content.repository[key])
             }
         }
     }
