@@ -8,7 +8,11 @@ class ApiHelpers {
     }
 
     async createTest(testData) {
-        //TODO
+        const response = await superagent.post(`${Cypress.env('API_URL')}/tests`) //201
+        .set('Content-Type', 'application/json')
+        .send(testData)
+
+        return response.body
     }
     
     async removeTest(testName) {
@@ -35,11 +39,11 @@ class ApiHelpers {
         return true
     }
 
-    async assureTestCreated(testName) {
-        const alreadyCreated = await this.isTestCreated(testName)
+    async assureTestCreated(testData) {
+        const alreadyCreated = await this.isTestCreated(testData.name)
 
         if(!alreadyCreated) {
-            await this.createTest(testName)
+            await this.createTest(testData)
         }
     }
 
