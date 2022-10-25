@@ -65,9 +65,6 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
   testsuite_file=$4
   custom_executor_crd_file=$5
 
-  printf "common_run \n"
-  printf "$1 $2 $3 $4 $5"
-
   print_title "$name"
 
   if [ "$delete" = true ] ; then

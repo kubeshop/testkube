@@ -1,0 +1,22 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: dashboard-e2e-tests
+  namespace: testkube
+  labels:
+    core-tests: dashboard-e2e
+spec:
+  type: cypress/project
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/dashboard-e2e
+  executionRequest:
+    args:
+      - --baseUrl
+      - http://localhost:8080
+      - --env
+      - API_URL=http://localhost:8088/v1
