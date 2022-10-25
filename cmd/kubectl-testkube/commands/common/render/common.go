@@ -84,8 +84,11 @@ func RenderExecutionResult(execution *testkube.Execution) {
 		duration := execution.EndTime.Sub(execution.StartTime)
 		ui.Success("Test execution completed with success in " + duration.String())
 
-	case result.IsCanceled():
-		ui.Warn("Test execution canceled")
+	case result.IsAborted():
+		ui.Warn("Test execution aborted")
+
+	case result.IsTimeout():
+		ui.Warn("Test execution timeout")
 
 	case result.IsFailed():
 		ui.UseStderr()

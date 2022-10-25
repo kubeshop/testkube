@@ -169,5 +169,13 @@ func (e Execution) IsCanceled() bool {
 		return true
 	}
 
-	return *e.ExecutionResult.Status == CANCELLED_ExecutionStatus
+	return *e.ExecutionResult.Status == ABORTED_ExecutionStatus
+}
+
+func (e Execution) IsTimeout() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == TIMEOUT_ExecutionStatus
 }
