@@ -154,7 +154,7 @@ jobs:
         with:
           fileName: "kubeshop_msft.p12"
           fileDir: "./temp/"
-          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
+          encodedString: ${{ secrets.NEW_CERT_MSFT_KUBESHOP_P12_B64 }}
 
       - name: Create and Sign MSI
         run: |
@@ -167,7 +167,7 @@ jobs:
           & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
         env:
           P12_CERT: ${{ steps.write_file.outputs.filePath }}
-          P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
+          P12_PASSWORD: ${{ secrets.NEW_CERT_MSFT_KUBESHOP_P12_PASSWORD }}
 
       - name: Get tag
         id: tag
