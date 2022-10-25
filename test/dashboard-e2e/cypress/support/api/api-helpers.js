@@ -1,19 +1,14 @@
 import superagent from 'superagent'
 
 class ApiHelpers {
-    // TODO: update URLs
-    getApiUrl() {
-        return Cypress.env('API_URL')
-    }
-
     async getTests() {
-        const response = await superagent.get(`${this.getApiUrl()}/tests`) //200
+        const response = await superagent.get(`${Cypress.env('API_URL')}/tests`) //200
 
         return response.body
     }
     
     async removeTest(testName) {
-        await superagent.delete(`${this.getApiUrl()}/tests/${testName}`) //204
+        await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204
     }
 
     async isTestCreated(testName) {
@@ -23,7 +18,6 @@ class ApiHelpers {
         if(test != undefined) {
             return true
         }
-
 
         return false
     }
@@ -38,7 +32,7 @@ class ApiHelpers {
     }
 
     async getTestData(testName) {
-        const response = await superagent.get(`${this.getApiUrl()}/tests/${testName}`) //200
+        const response = await superagent.get(`${Cypress.env('API_URL')}/tests/${testName}`) //200
 
         return response.body
     }

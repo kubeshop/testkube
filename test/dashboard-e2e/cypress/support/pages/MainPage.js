@@ -1,14 +1,14 @@
 class MainPage {
     visitMainPage(manualInitialDalogHandling) {
         if(manualInitialDalogHandling) {
-            cy.visit('http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1') //TODO: move to variables
+            cy.visit(`/apiEndpoint?apiEndpoint=${Cypress.env('API_URL')}`) //TODO: move to variables
             this.handleApiEndpointDialog()
             this.handleCookiesDialog()
         } else {
-            cy.visit('http://localhost:8080/apiEndpoint?apiEndpoint=localhost:8088/v1', {
+            cy.visit('/', {
                 onBeforeLoad: function (window) {
                     window.localStorage.setItem('isGADisabled', '1');
-                    window.localStorage.setItem('apiEndpoint', 'http://localhost:8088/v1') //TODO: move to variables
+                    window.localStorage.setItem('apiEndpoint', Cypress.env('API_URL')) //TODO: move to variables
                 }
             })
         }
