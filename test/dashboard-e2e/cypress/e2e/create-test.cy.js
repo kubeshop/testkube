@@ -12,6 +12,28 @@ import CreateTestPage from '../support/pages/CreateTestPage';
 const createTestPage=new CreateTestPage();
 
 describe('Create test with Dashboard', () => {
+  it('Create Cypress test from git-dir', () => {
+    const testName = "cypress-git-dir"
+    const testData = testDataHandler.getTest(testName)
+
+    //prerequisites
+    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
+    cy.wrap(assureTestNotCreated)
+    .then(() => {
+      //actions
+      mainPage.visitMainPage()
+      mainPage.openCreateTestDialog()
+      createTestPage.createTest(testName)
+      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
+    })
+    .then(() => {
+      //validation
+      const getTestData = apiHelpers.getTestData(testData.name)
+      cy.wrap(getTestData).then((createdTestData) => {
+        commonHelpers.validateTest(testData, createdTestData)
+      })
+    })
+  })
   it('Create K6 test from git-file', () => {
     const testName = "k6-git-file"
     const testData = testDataHandler.getTest(testName)
@@ -23,7 +45,29 @@ describe('Create test with Dashboard', () => {
       //actions
       mainPage.visitMainPage()
       mainPage.openCreateTestDialog()
-      createTestPage.createTest("k6-git-file")
+      createTestPage.createTest(testName)
+      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
+    })
+    .then(() => {
+      //validation
+      const getTestData = apiHelpers.getTestData(testData.name)
+      cy.wrap(getTestData).then((createdTestData) => {
+        commonHelpers.validateTest(testData, createdTestData)
+      })
+    })
+  })
+  it('Create Postman test from git-file', () => {
+    const testName = "postman-git-file"
+    const testData = testDataHandler.getTest(testName)
+
+    //prerequisites
+    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
+    cy.wrap(assureTestNotCreated)
+    .then(() => {
+      //actions
+      mainPage.visitMainPage()
+      mainPage.openCreateTestDialog()
+      createTestPage.createTest(testName)
       cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
     })
     .then(() => {

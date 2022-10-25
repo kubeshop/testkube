@@ -13,7 +13,7 @@ class CreateTestPage {
 
     selectTestSource(testSource) {
         let type = testSource.type
-        const gui_type = {"git-file": "Git file", "git-dir": "Git dir"}
+        const gui_type = {"git-file": "Git file", "git-dir": "Git directory"}
 
         if(testSource.type == "git-file" || testSource.type == "git-dir") {
             type = gui_type[testSource.type]
