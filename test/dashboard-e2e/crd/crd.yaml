@@ -15,11 +15,8 @@ spec:
       branch: main
       path: test/dashboard-e2e
   executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
     args:
+      - --baseUrl
+      - http://localhost:8080
       - --env
-      - DASHBOARD_URL=asdf # TODO
+      - API_URL=http://localhost:8088/v1

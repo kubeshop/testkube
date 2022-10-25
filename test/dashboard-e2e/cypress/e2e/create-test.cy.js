@@ -12,23 +12,19 @@ import CreateTestPage from '../support/pages/CreateTestPage';
 const createTestPage=new CreateTestPage();
 
 describe('Create test with Dashboard', () => {
-  // beforeEach(() => {
-
-  // })
-  
   it('Create K6 test from git-file', () => {
     const testName = "k6-git-file"
     const testData = testDataHandler.getTest(testName)
 
     //prerequisites
-    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name)
+    const assureTestNotCreated = apiHelpers.assureTestNotCreated(testData.name) //API helpers using async/await must be wrapped
     cy.wrap(assureTestNotCreated)
     .then(() => {
       //actions
       mainPage.visitMainPage()
       mainPage.openCreateTestDialog()
       createTestPage.createTest("k6-git-file")
-      cy.url().should('eq', `http://localhost:8080/tests/executions/${testData.name}`) //TODO baseurl
+      cy.url().should('eq', `${Cypress.config('baseUrl')}/tests/executions/${testData.name}`)
     })
     .then(() => {
       //validation

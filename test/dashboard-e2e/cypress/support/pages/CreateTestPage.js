@@ -33,13 +33,13 @@ class CreateTestPage {
     }
 
     setBasicInput(value, inputName) {
-        cy.get(`input[id="test-suite-creation_${inputName}"]`).type(value) //TODO: move selectors
+        cy.get(`input[id="test-suite-creation_${inputName}"]`).type(value)
     }
 
     setSelectionSearch(value, inputName) {
         let firstWord = value.split(' ')[0] //workaround - otherwise search won't find it
         cy.get(`input[id="test-suite-creation_${inputName}"]`).type(firstWord)
-        cy.get(`div[class*="list-holder"] div[title="${value}"]`).click()
+        cy.get(`div[class*="list-holder"] div[title="${value}"]`).click()//TODO: data-test attribute needed - replace when it will be available
     }
 
     _fillInTestDetails(testName) {
@@ -50,7 +50,7 @@ class CreateTestPage {
     }
 
     _clickCreateTestButton() {
-        cy.get('form[id="test-suite-creation"] button[type="submit"]').click()
+        cy.get('form[id="test-suite-creation"] button[type="submit"]').click()//TODO: data-test attribute needed - replace when it will be available
     }
 }
 export default CreateTestPage
