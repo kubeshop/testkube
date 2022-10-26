@@ -1,4 +1,5 @@
 /// <reference types="cypress" />
+/// <reference types="@cypress/xpath" />
 
 import TestDataHandler from '../support/data-handlers/test-data-handlers';
 const testDataHandler=new TestDataHandler();
