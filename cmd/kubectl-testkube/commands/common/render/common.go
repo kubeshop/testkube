@@ -3,8 +3,10 @@ package render
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"text/template"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"gopkg.in/yaml.v2"
 )
@@ -58,4 +60,49 @@ func RenderPrettyList(obj ui.TableData, w io.Writer) error {
 	ui.Table(obj, w)
 	ui.NL()
 	return nil
+}
+
+func RenderExecutionResult(execution *testkube.Execution) {
+
+	result := execution.ExecutionResult
+	if result == nil {
+		ui.Errf("got execution without `Result`")
+		return
+	}
+
+	ui.NL()
+	ui.Info("Execution status: ", string(*result.Status))
+	switch true {
+	case result.IsQueued():
+		ui.Warn("Test queued for execution")
+
+	case result.IsRunning():
+		ui.Warn("Test execution started")
+
+	case result.IsPassed():
+		ui.Info(result.Output)
+		duration := execution.EndTime.Sub(execution.StartTime)
+		ui.Success("Test execution completed with success in " + duration.String())
+
+	case result.IsAborted():
+		ui.Warn("Test execution aborted")
+
+	case result.IsTimeout():
+		ui.Warn("Test execution timeout")
+
+	case result.IsFailed():
+		ui.UseStderr()
+		ui.Warn("Test execution failed:\n")
+		ui.Errf(result.ErrorMessage)
+		ui.Info(result.Output)
+		os.Exit(1)
+
+	default:
+		ui.UseStderr()
+		ui.Warn("Test execution status unknown:\n")
+		ui.Errf(result.ErrorMessage)
+		ui.Info(result.Output)
+		os.Exit(1)
+	}
+
 }

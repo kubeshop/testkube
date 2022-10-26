@@ -27,6 +27,7 @@ kubectl-testkube update test [flags]
       --git-uri string                             Git repository uri
       --git-username string                        if git repository is private we can use username as an auth parameter
       --git-username-secret stringToString         git username secret in a form of secret_name1=secret_key1 for private repository (default [])
+      --git-working-dir string                     if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter
   -h, --help                                       help for test
       --http-proxy string                          http proxy for executor containers
       --https-proxy string                         https proxy for executor containers

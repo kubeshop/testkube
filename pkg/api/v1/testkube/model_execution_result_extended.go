@@ -20,8 +20,12 @@ func NewErrorExecutionResult(err error) ExecutionResult {
 	}
 }
 
-func (e *ExecutionResult) Cancel() {
-	e.Status = StatusPtr(CANCELLED_ExecutionStatus)
+func (e *ExecutionResult) Abort() {
+	e.Status = StatusPtr(ABORTED_ExecutionStatus)
+}
+
+func (e *ExecutionResult) Timeout() {
+	e.Status = StatusPtr(TIMEOUT_ExecutionStatus)
 }
 
 func (e *ExecutionResult) InProgress() {
@@ -54,6 +58,13 @@ func (e *ExecutionResult) IsPassed() bool {
 
 func (e *ExecutionResult) IsFailed() bool {
 	return *e.Status == FAILED_ExecutionStatus
+}
+
+func (e *ExecutionResult) IsAborted() bool {
+	return *e.Status == ABORTED_ExecutionStatus
+}
+func (e *ExecutionResult) IsTimeout() bool {
+	return *e.Status == TIMEOUT_ExecutionStatus
 }
 
 func (e *ExecutionResult) Err(err error) ExecutionResult {

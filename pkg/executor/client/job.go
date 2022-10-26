@@ -42,6 +42,10 @@ const (
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
 	volumeDir    = "/data"
+	// pollJobStatus is interval for checking if job timeout occurred
+	pollJobStatus = 1 * time.Second
+	// timeoutIndicator is string that is added to job logs when timeout occurs
+	timeoutIndicator = "DeadlineExceeded"
 )
 
 // NewJobExecutor creates new job executor
@@ -138,6 +142,7 @@ func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptio
 	if err != nil {
 		return result.Err(err), err
 	}
+	go c.MonitorJobForTimeout(ctx, execution.Id)
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	pods, err := executor.GetJobPods(podsClient, execution.Id, 1, 10)
@@ -198,6 +203,51 @@ func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteO
 
 }
 
+func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
+	ticker := time.NewTicker(pollJobStatus)
+	l := c.Log.With("jobName", jobName)
+	for {
+		select {
+		case <-ctx.Done():
+			l.Infow("context done, stopping job timeout monitor")
+			return
+		case <-ticker.C:
+			jobs, err := c.ClientSet.BatchV1().Jobs(c.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+			if err != nil {
+				l.Errorw("could not get jobs", "error", err)
+				return
+			}
+			if jobs == nil || len(jobs.Items) == 0 {
+				return
+			}
+
+			job := jobs.Items[0]
+
+			if job.Status.Succeeded > 0 {
+				l.Debugw("job succeeded", "status")
+				return
+			}
+
+			if job.Status.Failed > 0 {
+				l.Debugw("job failed")
+				if len(job.Status.Conditions) > 0 {
+					for _, condition := range job.Status.Conditions {
+						l.Infow("job timeout", "condition.reason", condition.Reason)
+						if condition.Reason == timeoutIndicator {
+							c.Timeout(jobName)
+						}
+					}
+				}
+				return
+			}
+
+			if job.Status.Active > 0 {
+				continue
+			}
+		}
+	}
+}
+
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
@@ -222,7 +272,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	var err error
 
 	// save stop time and final state
-	defer c.stopExecution(ctx, l, execution, &result)
+	defer c.stopExecution(ctx, l, execution, &result, err)
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
@@ -236,10 +286,6 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	logs, err = executor.GetPodLogs(c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-		if err != nil {
-			l.Infow("Update result", "error", err)
-		}
 		return result, err
 	}
 
@@ -247,35 +293,53 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	result, _, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse ouput error", "error", err)
-		err = c.Repository.UpdateResult(ctx, execution.Id, result.Err(err))
-		if err != nil {
-			l.Errorw("Update execution result error", "error", err)
-		}
 		return result, err
 	}
-
-	l.Infow("execution completed saving result", "executionId", execution.Id, "status", result.Status)
-	err = c.Repository.UpdateResult(ctx, execution.Id, result)
-	if err != nil {
-		l.Errorw("Update execution result error", "error", err)
-	}
+	// saving result in the defer function
 	return result, nil
 
 }
 
-func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult) {
-	l.Debug("stopping execution")
+func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, passedErr error) {
+	savedExecution, err := c.Repository.Get(ctx, execution.Id)
+	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "passedError", passedErr, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
+	if err != nil {
+		l.Errorw("get execution error", "error", err)
+	}
+
+	if savedExecution.IsCanceled() || savedExecution.IsTimeout() {
+		return
+	}
+
 	execution.Stop()
-	err := c.Repository.EndExecution(ctx, *execution)
+	err = c.Repository.EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
 	}
 
+	if passedErr != nil {
+		*result = result.Err(passedErr)
+	}
+
+	eventToSend := testkube.NewEventEndTestSuccess(execution)
+	if result.IsAborted() {
+		result.Output = result.Output + "\nTest run was aborted manually."
+		eventToSend = testkube.NewEventEndTestAborted(execution)
+	} else if result.IsTimeout() {
+		result.Output = result.Output + "\nTest run was aborted due to timeout."
+		eventToSend = testkube.NewEventEndTestTimeout(execution)
+	}
+
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(*execution)
+	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
+	err = c.Repository.UpdateResult(ctx, execution.Id, *result)
+	if err != nil {
+		l.Errorw("Update execution result error", "error", err)
+	}
 
-	c.Emitter.Notify(testkube.NewEventEndTestSuccess(execution))
+	c.metrics.IncExecuteTest(*execution)
+	c.Emitter.Notify(eventToSend)
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
@@ -418,8 +482,30 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 }
 
 // AbortK8sJob aborts K8S by job name
-func (c *JobExecutor) Abort(jobName string) *testkube.ExecutionResult {
-	return executor.AbortJob(c.ClientSet, c.Namespace, jobName)
+func (c *JobExecutor) Abort(execution *testkube.Execution) (result *testkube.ExecutionResult) {
+	l := c.Log.With("execution", execution.Id)
+	ctx := context.Background()
+	result = executor.AbortJob(c.ClientSet, c.Namespace, execution.Id)
+	c.Log.Debugw("job aborted", "execution", execution.Id, "result", result)
+	c.stopExecution(ctx, l, execution, result, nil)
+	return
+}
+
+func (c *JobExecutor) Timeout(jobName string) (result *testkube.ExecutionResult) {
+	l := c.Log.With("jobName", jobName)
+	l.Infow("job timeout")
+	ctx := context.Background()
+	execution, err := c.Repository.Get(ctx, jobName)
+	if err != nil {
+		l.Errorw("error getting execution", "error", err)
+		return
+	}
+	result = &testkube.ExecutionResult{
+		Status: testkube.ExecutionStatusTimeout,
+	}
+	c.stopExecution(ctx, l, &execution, result, nil)
+
+	return
 }
 
 // NewJobSpec is a method to create new job spec

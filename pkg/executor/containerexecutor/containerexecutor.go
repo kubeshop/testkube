@@ -329,6 +329,6 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 }
 
 // AbortK8sJob aborts K8S by job name
-func (c *ContainerExecutor) Abort(jobName string) *testkube.ExecutionResult {
-	return executor.AbortJob(c.clientSet, c.namespace, jobName)
+func (c *ContainerExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
+	return executor.AbortJob(c.clientSet, c.namespace, execution.Id)
 }

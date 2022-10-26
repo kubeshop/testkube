@@ -36,9 +36,9 @@ func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 }
 
 // Abort mocks base method.
-func (m *MockExecutor) Abort(arg0 string) *testkube.ExecutionResult {
+func (m *MockExecutor) Abort(arg0 *testkube.Execution) *testkube.ExecutionResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Abort", arg0)
+	ret := m.ctrl.Call(m, "Abort", arg0.Id)
 	ret0, _ := ret[0].(*testkube.ExecutionResult)
 	return ret0
 }

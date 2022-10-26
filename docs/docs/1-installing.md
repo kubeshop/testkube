@@ -4,67 +4,33 @@ sidebar_label: Installation
 ---
 # Installation Steps
 
-To get Testkube up and running you need to:
+In this section you will:
 
-1. Install the Testkube CLI.
-2. Use HELM or the Testkube CLI to to install Testkube Server components in your cluster.
-3. (optional) Configure Testkube's Dashboard UI Ingress for your ingress-controller, if needed.
+1. Install the Testkube CLI,
+2. Use HELM or the Testkube CLI to install Testkube Server components in your cluster,
+3. (Optional) Configure Testkube's Dashboard UI Ingress for your ingress-controller, if needed.
 
 Watch the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys).
 
-## **Installing the Testkube CLI**
-Package dependencies:
-- [Kubectl](https://kubernetes.io/docs/tasks/tools/)
+## **1. Installing the Testkube CLI**
+To install Testkube you'll need the following tools:
+
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
 - [Helm](https://helm.sh/)
 
 Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
 
-### **From Scripts**
-To install on Linux or MacOs, run
-```bash
-bash < <(curl -sSLf https://kubeshop.github.io/testkube/install.sh )
-```
-### **Through Package Managers**
-#### **Homebrew (MacOS)**
-
-You can install Testkube from [Homebrew](https://brew.sh/):
+### **MacOS**
 ```bash
 brew install testkube
 ```
-Or directly from our tap. The Homebrew mantainers take a few days or a week to approve each one of our releases so you can use our tap to make sure you always have the most recent release.
+### **Windows**
 ```bash
-brew tap kubeshop/homebrew-testkube
-brew install kubeshop/testkube/testkube
+choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey  choco install testkube
 ```
-
-
-#### **Chocolatey (Windows)**
-
-**Using [Chocolatey](https://chocolatey.org/install):**
-
+### **Linux**
 ```bash
-choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey
-choco install testkube
-```
-
-#### **APT (Debian/Ubuntu)**
-
-1. Download our public GPG key, and add it to the trusted keys:
-```bash
-wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-```
-2. Add our repository to your apt sources:
-```bash
-echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-```
-3. Make sure to get the updates:
-```bash
-sudo apt-get update
-```
-
-4. Install Testkube:
-```bash
-sudo apt-get install -y testkube
+wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
 ```
 
 ### **Manual Download**
@@ -80,7 +46,7 @@ For Windows, you will need to unpack the binary and add it to the `%PATH%` as we
 If you use a package manager that we don't support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
 
 
-### **Testkube Server Components**
+## **2. Installing Testkube Server Components**
 To deploy Testkube to your K8s cluster you will need the following packages installed:
 - [Kubectl docs](https://kubernetes.io/docs/tasks/tools/) 
 - [Helm docs](https://helm.sh/docs/intro/install/#through-package-managers)
@@ -108,45 +74,6 @@ Confirm that Testkube is running:
 
 ```bash
 kubectl get all -n testkube
-```
-
-Output:
-
-```bash
-NAME                                           READY   STATUS    RESTARTS   AGE
-pod/cert-manager-847544bbd-fw2h8               1/1     Running   0          4m51s
-pod/cert-manager-cainjector-5c747645bf-qgftx   1/1     Running   0          4m51s
-pod/cert-manager-webhook-77b946cb6d-dl6gb      1/1     Running   0          4m51s
-pod/testkube-dashboard-748cbcbb66-q8zzp        1/1     Running   0          4m51s
-pod/testkube-api-server-546777c9f7-7g4kg       1/1     Running   0          4m51s
-pod/testkube-mongodb-5d95f44fdd-cxqz6          1/1     Running   0          4m51s
-pod/testkube-minio-testkube-64cd475b94-562hz   1/1     Running   0          4m51s
-
-NAME                                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                                        AGE
-service/cert-manager                      ClusterIP   10.106.81.214   <none>        9402/TCP                                       2d20h
-service/cert-manager-webhook              ClusterIP   10.104.228.254  <none>        443/TCP                                        2d20h
-service/testkube-minio-service-testkube   NodePort    10.43.121.107   <none>        9000:31222/TCP,9090:32002/TCP,9443:32586/TCP   4m51s
-service/testkube-api-server               NodePort    10.43.66.13     <none>        8088:32203/TCP                                 4m51s
-service/testkube-mongodb                  ClusterIP   10.43.126.230   <none>        27017/TCP                                      4m51s
-service/testkube-dashboard                NodePort    10.43.136.34    <none>        80:31991/TCP                                   4m51s
-
-NAME                                      READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/cert-manager              1/1     1            1           4m51s
-deployment.apps/cert-manager-cainjector   1/1     1            1           4m51s
-deployment.apps/cert-manager-webhook      1/1     1            1           4m51s
-deployment.apps/testkube-dashboard        1/1     1            1           4m51s
-deployment.apps/testkube-api-server       1/1     1            1           4m51s
-deployment.apps/testkube-mongodb          1/1     1            1           4m51s
-deployment.apps/testkube-minio-testkube   1/1     1            1           4m51s
-
-NAME                                                 DESIRED   CURRENT   READY   AGE
-replicaset.apps/cert-manager-847544bbd               1         1         1       4m51s
-replicaset.apps/cert-manager-cainjector-5c747645bf   1         1         1       4m51s
-replicaset.apps/cert-manager-webhook-77b946cb6d      1         1         1       4m51s
-replicaset.apps/testkube-dashboard-748cbcbb66        1         1         1       4m51s
-replicaset.apps/testkube-api-server-546777c9f7       1         1         1       4m51s
-replicaset.apps/testkube-mongodb-5d95f44fdd          1         1         1       4m51s
-replicaset.apps/testkube-minio-testkube-64cd475b94   1         1         1       4m51s
 ```
 
 By default Testkube is installed in the `testkube` namespace.
@@ -234,11 +161,11 @@ testkube purge
 
 ## Installation on OpenShift 
 
-Because of upgrade issues from Mongo 11 to 13 Testkube can't work on root-less OpenShift environment by default. Fortunately we was able to install it manually. 
+Because of upgrade issues from Mongo 11 to 13, Testkube can't work on root-less OpenShift environment by default. Fortunately, you'll be able to install it manually. 
 
-To do it we'll need empty OpenShift cluster and follow steps below: 
+To do it you need an empty OpenShift cluster and follow the steps below: 
 
-1. Save mongo chart values (let's name it `values.yaml`)
+1. Save mongo chart values (named `values.yaml`)
 
 ```yaml 
 securityContext:
@@ -273,6 +200,4 @@ helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values valu
 helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
 ```
 
-Please notice that we've just installed MongoDB with `testkube-mongodb` helm release name it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with different name / namespace please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
-
-That's all your Testkube instance should be able to run on Openshift now. 
+Please notice that since we've just installed MongoDB with `testkube-mongodb` helm release name, it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.

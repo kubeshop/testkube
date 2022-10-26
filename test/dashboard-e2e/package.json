@@ -1,7 +1,10 @@
 {
   "devDependencies": {
     "cypress": "^10.10.0",
+<<<<<<< HEAD
     "cypress-xpath": "^2.0.1",
+=======
+>>>>>>> origin/main
     "superagent": "8.0.0"
   }
 }

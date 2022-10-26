@@ -11,6 +11,11 @@ kubectl testkube --help
 kubectl testkube get --help 
 ```
 
+## **Launching Testkube UI**
+```bash
+kubectl testkube dashboard
+```
+
 ## **Defining Tests**
 
 After installing, you will need to add Tests to your cluster, which are created as a Custom Resource in Kubernetes

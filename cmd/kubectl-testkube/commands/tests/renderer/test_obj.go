@@ -35,20 +35,22 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.Content.Repository != nil {
-			ui.Warn("Repository: ")
-			ui.Warn("  Uri:      ", test.Content.Repository.Uri)
-			ui.Warn("  Branch:   ", test.Content.Repository.Branch)
-			ui.Warn("  Commit:   ", test.Content.Repository.Commit)
-			ui.Warn("  Path:     ", test.Content.Repository.Path)
+			ui.Warn("Repository:    ")
+			ui.Warn("  Uri:         ", test.Content.Repository.Uri)
+			ui.Warn("  Branch:      ", test.Content.Repository.Branch)
+			ui.Warn("  Commit:      ", test.Content.Repository.Commit)
+			ui.Warn("  Path:        ", test.Content.Repository.Path)
 			if test.Content.Repository.UsernameSecret != nil {
-				ui.Warn("  Username: ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.UsernameSecret.Name,
+				ui.Warn("  Username:    ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.UsernameSecret.Name,
 					test.Content.Repository.UsernameSecret.Key))
 			}
 
 			if test.Content.Repository.TokenSecret != nil {
-				ui.Warn("  Token:    ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.TokenSecret.Name,
+				ui.Warn("  Token:       ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.TokenSecret.Name,
 					test.Content.Repository.TokenSecret.Key))
 			}
+
+			ui.Warn("  Working dir: ", test.Content.Repository.WorkingDir)
 		}
 
 		if test.Content.Data != "" {
