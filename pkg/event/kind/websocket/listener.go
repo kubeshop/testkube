@@ -59,7 +59,7 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 	var success, failed []string
 
 	for _, w := range l.Websockets {
-		l.Log.Infow("notifying websocket", "id", w.Id, "event", event.Type)
+		l.Log.Infow("notifying websocket", "id", w.Id, "event", event.Type())
 		err := w.Conn.WriteJSON(event)
 		if err != nil {
 			failed = append(failed, w.Id)
