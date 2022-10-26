@@ -11,7 +11,6 @@ class MainPage {
                 onBeforeLoad: function (window) {
                     window.localStorage.setItem('isGADisabled', '1');
                     window.localStorage.setItem('apiEndpoint', Cypress.env('API_URL'))
-
                 }
             })
         }
