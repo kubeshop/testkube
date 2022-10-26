@@ -1,4 +1,4 @@
-const testsData = require('../../data/tests.json')
+const testsData = require('../../fixtures/tests.json')
 
 class TestDataHandler {
     getTest(testName) {

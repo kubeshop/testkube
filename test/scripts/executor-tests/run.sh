@@ -115,7 +115,7 @@ container-smoke() {
 
 cypress-smoke() {
   name="Cypress"
-  test_crd_file="test/cypress/executor-smoke/crd/crd.yaml"
+  test_crd_file="test/cypress/executor-tests/crd/crd.yaml"
   testsuite_name="executor-cypress-smoke-tests"
   testsuite_file="test/suites/executor-cypress-smoke-tests.json"
 
@@ -175,7 +175,7 @@ maven-smoke() {
 
 postman-smoke() {
   name="postman"
-  test_crd_file="test/postman/executor-smoke/crd/crd.yaml"
+  test_crd_file="test/postman/executor-tests/crd/crd.yaml"
   testsuite_name="executor-postman-smoke-tests"
   testsuite_file="test/suites/executor-postman-smoke-tests.json"
 

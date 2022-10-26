@@ -11,25 +11,32 @@ class CreateTestPage {
         this.setSelectionSearch(testType, "testType")
     }
 
-    selectTestSource(testSource) {
-        let type = testSource.type
-        const gui_type = {"git-file": "Git file", "git-dir": "Git dir"}
+    selectTestSource(contentData) {
+        let type = contentData.type
+        const gui_type = {"git-file": "Git file", "git-dir": "Git directory"}
 
-        if(testSource.type == "git-file" || testSource.type == "git-dir") {
-            type = gui_type[testSource.type]
-        }
+        if(contentData.type == "git-file" || contentData.type == "git-dir") {
+            type = gui_type[contentData.type]
 
-        this.setSelectionSearch(type, "testSource")
-        for (let key in testSource) {
-            var value = testSource[key];
-            cy.log(`${key}: ${value}`)
+            let repositoryData = contentData.repository
 
-            if(key == 'type') {
-                continue
+            this.setSelectionSearch(type, "testSource")
+            for (let key in repositoryData) {
+                var value = repositoryData[key];
+                cy.log(`${key}: ${value}`)
+    
+                if(key == 'type') {
+                    continue
+                }
+    
+                this.setBasicInput(value, key)
             }
 
-            this.setBasicInput(value, key)
+        }else {
+            throw 'Type not supported by selectTestSource - extend CreateTestPage'
         }
+
+
     }
 
     setBasicInput(value, inputName) {
@@ -46,11 +53,11 @@ class CreateTestPage {
         const testData = testDataHandler.getTest(testName)
         this.setBasicInput(testData.name, 'name')
         this.selectTestType(testData.type)
-        this.selectTestSource(testData.testSource)
+        this.selectTestSource(testData.content)
     }
 
     _clickCreateTestButton() {
-        cy.get('form[id="test-suite-creation"] button[type="submit"]').click()//TODO: data-test attribute needed - replace when it will be available
+        cy.get('button[data-test="add-a-new-test-create-button"]').click()
     }
 }
 export default CreateTestPage
