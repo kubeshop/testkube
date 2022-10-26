@@ -73,11 +73,10 @@ class ApiHelpers {
         const totalsResults = response.body.totals.results
 
         if(totalsResults == 0) {
-            window.alert('totalResults == 0')
             return totalsResults
         } else {
             const lastExecutionResults = response.body.results[0]
-            
+
             return lastExecutionResults.number
         }
     }
