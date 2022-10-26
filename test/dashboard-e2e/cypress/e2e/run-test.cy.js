@@ -29,11 +29,5 @@ describe('Run test with Dashboard', () => {
     .then(() => {
       //validation
     })
-
-
-
-    
-
-    
   })
 })

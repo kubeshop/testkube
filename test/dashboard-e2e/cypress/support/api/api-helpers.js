@@ -19,6 +19,10 @@ class ApiHelpers {
         await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204
     }
 
+    // async updateTest(testData) { //TODO
+
+    // }
+
     async isTestCreated(testName) {
         const currentTests = await this.getTests()
         const test = currentTests.find(singleTest => singleTest.name == testName)
@@ -39,12 +43,20 @@ class ApiHelpers {
         return true
     }
 
-    async assureTestCreated(testData) {
+    async assureTestCreated(testData, fullCleanup=true) {
         const alreadyCreated = await this.isTestCreated(testData.name)
 
-        if(!alreadyCreated) {
-            await this.createTest(testData)
-        }
+        // if(alreadyCreated) {
+        //     if(fullCleanup) {
+        //         await removeTest(testData.name)
+        //         await createTest(testData)
+        //     }// else { //TODO
+        //         //update
+        //         // await updateTest(testData)
+        //    // }
+        // } else {
+        //     await createTest(testData)
+        // }
     }
 
     async getTestData(testName) {
