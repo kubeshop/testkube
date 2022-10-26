@@ -6,7 +6,6 @@ class ApiHelpers {
 
         return response.body
     }
-<<<<<<< HEAD
 
     async createTest(testData) {
         const response = await superagent.post(`${Cypress.env('API_URL')}/tests`) //201
@@ -15,20 +14,15 @@ class ApiHelpers {
 
         return response.body
     }
-=======
->>>>>>> origin/main
     
     async removeTest(testName) {
         await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204
     }
 
-<<<<<<< HEAD
     // async updateTest(testData) { //TODO
 
     // }
 
-=======
->>>>>>> origin/main
     async isTestCreated(testName) {
         const currentTests = await this.getTests()
         const test = currentTests.find(singleTest => singleTest.name == testName)
@@ -49,7 +43,6 @@ class ApiHelpers {
         return true
     }
 
-<<<<<<< HEAD
     async assureTestCreated(testData, fullCleanup=true) {
         const alreadyCreated = await this.isTestCreated(testData.name)
 
@@ -66,8 +59,6 @@ class ApiHelpers {
         // }
     }
 
-=======
->>>>>>> origin/main
     async getTestData(testName) {
         const response = await superagent.get(`${Cypress.env('API_URL')}/tests/${testName}`) //200
 
