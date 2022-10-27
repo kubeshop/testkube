@@ -30,6 +30,7 @@ require (
 	github.com/valyala/fasthttp v1.40.0
 	go.mongodb.org/mongo-driver v1.10.3
 	go.uber.org/zap v1.23.0
+	google.golang.org/grpc v1.48.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3
@@ -92,6 +93,7 @@ require (
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect
 	github.com/yuin/goldmark v1.5.2 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
+	google.golang.org/genproto v0.0.0-20220915135415-7fd63a7952de // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 )
 
