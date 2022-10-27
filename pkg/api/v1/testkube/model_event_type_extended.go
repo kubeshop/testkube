@@ -2,10 +2,12 @@ package testkube
 
 var AllEventTypes = []EventType{
 	START_TEST_EventType,
-	START_TESTSUITE_EventType,
 	END_TEST_SUCCESS_EventType,
-	END_TESTSUITE_SUCCESS_EventType,
 	END_TEST_FAILED_EventType,
+	END_TEST_ABORTED_EventType,
+	END_TEST_TIMEOUT_EventType,
+	START_TESTSUITE_EventType,
+	END_TESTSUITE_SUCCESS_EventType,
 	END_TESTSUITE_FAILED_EventType,
 }
 

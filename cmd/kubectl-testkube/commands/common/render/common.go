@@ -71,7 +71,6 @@ func RenderExecutionResult(execution *testkube.Execution) {
 	}
 
 	ui.NL()
-	ui.Info("Execution status: ", string(*result.Status))
 	switch true {
 	case result.IsQueued():
 		ui.Warn("Test queued for execution")
