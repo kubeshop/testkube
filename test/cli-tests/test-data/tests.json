@@ -1,0 +1,98 @@
+{
+    "cypress-git-dir": {
+        "name": "internal-cli-cypress-git-dir",
+        "type": "cypress/project",
+        "content": {
+            "type": "git-dir",
+            "repository": {
+              "type": "git-dir",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/cypress/executor-tests/cypress-without-envs"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "cypress-git-dir-created": {
+        "name": "internal-cli-cypress-git-dir-created",
+        "type": "cypress/project",
+        "content": {
+            "type": "git-dir",
+            "repository": {
+              "type": "git-dir",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/cypress/executor-tests/cypress-without-envs"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "k6-git-file": {
+        "name": "internal-cli-k6-git-file",
+        "type": "k6/script",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "k6-git-file-created": {
+        "name": "internal-cli-k6-git-file-created",
+        "type": "k6/script",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "postman-git-file": {
+        "name": "internal-cli-postman-git-file",
+        "type": "postman/collection",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "postman-git-file-created": {
+        "name": "internal-cli-postman-git-file-created",
+        "type": "postman/collection",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    }
+}
