@@ -35,7 +35,6 @@ class OutputValidators {
         const normalizedOutput = this.normalizeSpaces(output)
 
         const executionIdRegex = /Execution ID:\s(?<id>\w+)/gm;
-        // const executionId = normalizedOutput.match(executionIdRegex);
         const executionId = executionIdRegex.exec(normalizedOutput).groups.id
 
         return executionId

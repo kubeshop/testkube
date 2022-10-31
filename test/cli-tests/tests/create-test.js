@@ -29,19 +29,19 @@ async function createTestFlow(testName) {
 }
 
 describe('Create test with CLI', function () {
-    // it('Create Cypress test with git-dir', async function () {
-    //     const testName = 'cypress-git-dir'
+    it('Create Cypress test with git-dir', async function () {
+        const testName = 'cypress-git-dir'
         
-    //     await createTestFlow(testName)
-    // });
-    // it('Create K6 test with git-file', async function () {
-    //     const testName = 'k6-git-file'
+        await createTestFlow(testName)
+    });
+    it('Create K6 test with git-file', async function () {
+        const testName = 'k6-git-file'
         
-    //     await createTestFlow(testName)
-    // });
-    // it('Create Postman test with git-file', async function () {
-    //     const testName = 'postman-git-file'
+        await createTestFlow(testName)
+    });
+    it('Create Postman test with git-file', async function () {
+        const testName = 'postman-git-file'
         
-    //     await createTestFlow(testName)
-    // });
+        await createTestFlow(testName)
+    });
 });
