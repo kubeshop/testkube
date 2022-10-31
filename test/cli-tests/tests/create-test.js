@@ -9,26 +9,19 @@ import OutputValidators from '../helpers/output-validators';
 const outputValidators=new OutputValidators();
 
 async function createTestFlow(testName) {
- 
     const testData = testDataHandler.getTest(testName)
 
     //prerequisites
-    console.log('assureTestNotCreated')
     await apiHelpers.assureTestNotCreated(testData.name)
 
     //command
-    console.log('execSync')
-    let rawOutput = execSync(`testkube create test --name ${testData.name} --type ${testData.type} --test-content-type ${testData.content.type} --git-uri ${testData.content.repository.uri} --git-branch ${testData.content.repository.branch} --git-path ${testData.content.repository.path} --label core-tests=${testData.labels['core-tests']}`); //TODO: command builder
-    let output = rawOutput.toString()
-
-    console.log('output: ')
-    console.log(output)
+    const rawOutput = execSync(`testkube create test --name ${testData.name} --type ${testData.type} --test-content-type ${testData.content.type} --git-uri ${testData.content.repository.uri} --git-branch ${testData.content.repository.branch} --git-path ${testData.content.repository.path} --label core-tests=${testData.labels['core-tests']}`); //TODO: command builder
+    const output = rawOutput.toString()
 
     //validate command output
     outputValidators.validateTestCreated(testData.name, output)
 
     //validate result
-    console.log('isTestCreated')
     const isTestCreated = await apiHelpers.isTestCreated(testData.name)
 
     expect(isTestCreated).to.be.true;
