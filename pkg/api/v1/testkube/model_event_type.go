@@ -21,4 +21,6 @@ const (
 	START_TESTSUITE_EventType       EventType = "start-testsuite"
 	END_TESTSUITE_SUCCESS_EventType EventType = "end-testsuite-success"
 	END_TESTSUITE_FAILED_EventType  EventType = "end-testsuite-failed"
+	END_TESTSUITE_ABORTED_EventType EventType = "end-testsuite-aborted"
+	END_TESTSUITE_TIMEOUT_EventType EventType = "end-testsuite-timeout"
 )

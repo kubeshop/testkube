@@ -11,6 +11,7 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
@@ -66,67 +67,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func(testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
-		defer func(testExecution *testkube.TestSuiteExecution) {
-			testExecution.Stop()
-			err = s.testExecutionResults.EndExecution(ctx, *testExecution)
-			if err != nil {
-				s.logger.Errorw("error setting end time", "error", err.Error())
-			}
-
-			wg.Done()
-		}(testsuiteExecution)
-
-		hasFailedSteps := false
-		cancelSteps := false
-		for i := range testsuiteExecution.StepResults {
-			if cancelSteps {
-				testsuiteExecution.StepResults[i].Execution.ExecutionResult.Abort()
-				continue
-			}
-
-			// start execution of given step
-			testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
-			err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
-			if err != nil {
-				s.logger.Infow("Updating test execution", "error", err)
-			}
-
-			s.executeTestStep(ctx, *testsuiteExecution, request, &testsuiteExecution.StepResults[i])
-
-			err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
-			if err != nil {
-				hasFailedSteps = true
-
-				s.logger.Errorw("saving test suite execution results error", "error", err)
-				continue
-			}
-
-			if testsuiteExecution.StepResults[i].IsFailed() {
-				hasFailedSteps = true
-				if testsuiteExecution.StepResults[i].Step.StopTestOnFailure {
-					cancelSteps = true
-					continue
-				}
-			}
-		}
-
-		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
-		if hasFailedSteps {
-			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
-			s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
-		} else {
-			s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
-		}
-
-		s.metrics.IncExecuteTestSuite(*testsuiteExecution)
-
-		err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
-		if err != nil {
-			s.logger.Errorw("saving final test suite execution result error", "error", err)
-		}
-
-	}(&testsuiteExecution, request)
+	go s.runSteps(ctx, &wg, &testsuiteExecution, request)
 
 	// wait for sync test suite execution
 	if request.Sync {
@@ -134,6 +75,91 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 	}
 
 	return testsuiteExecution, nil
+}
+
+func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
+	defer func(testExecution *testkube.TestSuiteExecution) {
+		testExecution.Stop()
+		err := s.testExecutionResults.EndExecution(ctx, *testExecution)
+		if err != nil {
+			s.logger.Errorw("error setting end time", "error", err.Error())
+		}
+
+		wg.Done()
+	}(testsuiteExecution)
+
+	hasFailedSteps := false
+	cancelSteps := false
+	wasAborted := false
+	for i := range testsuiteExecution.StepResults {
+		wasAborted = s.wasTestSuiteAborted(ctx, testsuiteExecution.Id)
+		if wasAborted {
+			s.logger.Infow("Test suite execution was aborted", "id", testsuiteExecution.Id)
+			break
+		}
+
+		if cancelSteps {
+			testsuiteExecution.StepResults[i].Execution.ExecutionResult.Abort()
+			continue
+		}
+
+		// start execution of given step
+		testsuiteExecution.StepResults[i].Execution.ExecutionResult.InProgress()
+		err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
+		if err != nil {
+			s.logger.Infow("Updating test execution", "error", err)
+		}
+
+		s.executeTestStep(ctx, *testsuiteExecution, request, &testsuiteExecution.StepResults[i])
+
+		err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
+		if err != nil {
+			hasFailedSteps = true
+
+			s.logger.Errorw("saving test suite execution results error", "error", err)
+			continue
+		}
+
+		if testsuiteExecution.StepResults[i].IsFailed() {
+			hasFailedSteps = true
+			if testsuiteExecution.StepResults[i].Step.StopTestOnFailure {
+				cancelSteps = true
+				continue
+			}
+		}
+	}
+
+	testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
+	if wasAborted {
+		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
+		s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
+	} else if hasFailedSteps {
+		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
+		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
+	} else {
+		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
+	}
+
+	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
+
+	err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
+	if err != nil {
+		s.logger.Errorw("saving final test suite execution result error", "error", err)
+	}
+
+}
+
+func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
+	execution, err := s.testExecutionResults.Get(ctx, id)
+	if err == mongo.ErrNoDocuments {
+		execution, err = s.testExecutionResults.GetByName(ctx, id)
+	}
+	if err != nil {
+		s.logger.Errorw("getting test execution", "error", err)
+		return false
+	}
+
+	return *execution.Status == testkube.ABORTED_TestSuiteExecutionStatus
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,

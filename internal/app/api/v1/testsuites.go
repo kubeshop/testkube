@@ -604,6 +604,32 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := context.Background()
+		id := c.Params("executionID")
+		execution, err := s.TestExecutionResults.Get(ctx, id)
+		if err == mongo.ErrNoDocuments {
+			execution, err = s.TestExecutionResults.GetByName(ctx, id)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+			}
+		}
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		execution.Status = testkube.TestSuiteExecutionStatusAborted
+		err = s.TestExecutionResults.Update(ctx, execution)
+
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.Status(http.StatusNoContent).SendString("")
+	}
+}
+
 // ListTestSuiteTestsHandler for getting list of all available Tests for TestSuites
 func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
