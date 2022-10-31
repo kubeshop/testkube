@@ -83,5 +83,12 @@ class ApiHelpers {
             return lastExecutionResults.number
         }
     }
+
+    async getExecutionStatus(executionId) {
+        const response = await superagent.get(`${this.API_URL}/executions/${executionId}`) //200
+        const executionStatus = response.body.executionResult.status
+
+        return executionStatus
+    }
 }
 export default ApiHelpers

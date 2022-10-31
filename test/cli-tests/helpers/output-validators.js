@@ -7,11 +7,38 @@ class OutputValidators {
         return output
     }
 
+    normalizeSpaces(output) {
+        return output.replace(/\s+/g, ' ').trim()
+    }
+
     validateTestCreated(testName, output) {
         const testCreatedText = `Test created testkube / ${testName}`
-        const cleanOutput = this.removeAnsiCodes(output)
 
-        expect(cleanOutput).to.include(testCreatedText)
+        expect(output).to.include(testCreatedText)
+    }
+
+    validateTestRunStarted(testData, output) {
+        const normalizedOutput = this.normalizeSpaces(output)
+
+        const typeText = `Type: ${testData.type}`
+        const nameText = `Name: ${testData.name}`
+        const statusText = `Status: running`
+        const testExecutionStartedText = 'Test execution started'
+        
+        expect(normalizedOutput).to.include(typeText)
+        expect(normalizedOutput).to.include(nameText)
+        expect(normalizedOutput).to.include(statusText)
+        expect(normalizedOutput).to.include(testExecutionStartedText)
+    }
+
+    getExecutionId(output) {
+        const normalizedOutput = this.normalizeSpaces(output)
+
+        const executionIdRegex = /Execution ID:\s(?<id>\w+)/gm;
+        // const executionId = normalizedOutput.match(executionIdRegex);
+        const executionId = executionIdRegex.exec(normalizedOutput).groups.id
+
+        return executionId
     }
 }
 export default OutputValidators
