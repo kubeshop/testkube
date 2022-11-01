@@ -16,6 +16,7 @@ type Client interface {
 	ServiceAPI
 	ConfigAPI
 	TestSourceAPI
+	CopyFileAPI
 }
 
 // TestAPI describes test api methods
@@ -102,6 +103,11 @@ type TestSourceAPI interface {
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
 	DeleteTestSources(selector string) (err error)
+}
+
+// CopyFileAPI describes methods to handle files in the object storage
+type CopyFileAPI interface {
+	UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error
 }
 
 // TODO consider replacing below types by testkube.*

@@ -88,14 +88,20 @@ func NewRunTestCmd() *cobra.Command {
 					os.Exit(1)
 				}
 
-				if len(test.CopyFiles) != 0 || len(copyFiles) != 0 {
-					copyFileList, err := mergeCopyFiles(test.CopyFiles, copyFiles)
-					ui.ExitOnError("could not merge files", err)
-
-					ui.Warn("Testkube will use the following file mappings:", copyFileList...)
-					options.CopyFiles, err = readCopyFiles(copyFileList)
-					ui.ExitOnError("could not read config files", err)
+				// FOR EXECUTION
+				if len(copyFiles) > 0 {
+					err := uploadCopyFiles(client, name, "execution", copyFiles)
+					ui.ExitOnError("could not upload files", err)
 				}
+
+				// if len(test.CopyFiles) != 0 || len(copyFiles) != 0 {
+				// 	copyFileList, err := mergeCopyFiles(test.CopyFiles, copyFiles)
+				// 	ui.ExitOnError("could not merge files", err)
+
+				// 	ui.Warn("Testkube will use the following file mappings:", copyFileList...)
+				// 	options.CopyFiles, err = readCopyFiles(copyFileList)
+				// 	ui.ExitOnError("could not read config files", err)
+				// }
 
 				for i := 0; i < iterations; i++ {
 					execution, err := client.ExecuteTest(testName, name, options)
