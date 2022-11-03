@@ -17,7 +17,7 @@ require (
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.6.4
-	github.com/minio/minio-go/v7 v7.0.41
+	github.com/minio/minio-go/v7 v7.0.43
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.18.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -159,7 +159,7 @@ require (
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
