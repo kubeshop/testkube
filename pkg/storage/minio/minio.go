@@ -218,6 +218,10 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 
 // SaveCopyFile saves a file to be copied into a running execution
 func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+	if err := c.Connect(); err != nil {
+		return fmt.Errorf("minio SaveCopyFile connection error: %w", err)
+	}
+
 	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
 	if err != nil {
 		return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)

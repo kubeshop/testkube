@@ -83,7 +83,9 @@ func (c CopyFileProxyClient) UploadFile(parentID string, parentType string, file
 		Resource("services").
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
-		SubResource("proxy").Suffix(uri).Body(body)
+		SubResource("proxy").
+		Suffix(uri).
+		Body(body)
 
 	resp := req.Do(context.Background())
 

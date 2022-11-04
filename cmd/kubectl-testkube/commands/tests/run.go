@@ -80,13 +80,13 @@ func NewRunTestCmd() *cobra.Command {
 				testName := args[0]
 				namespacedName := fmt.Sprintf("%s/%s", namespace, testName)
 
-				test, err := client.GetTest(testName)
-				if err != nil {
-					ui.UseStderr()
-					ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
-					ui.Debug(err.Error())
-					os.Exit(1)
-				}
+				// test, err := client.GetTest(testName)
+				// if err != nil {
+				// 	ui.UseStderr()
+				// 	ui.Errf("Can't get test with name '%s'. Test does not exist in namespace '%s'", testName, namespace)
+				// 	ui.Debug(err.Error())
+				// 	os.Exit(1)
+				// }
 
 				// FOR EXECUTION
 				if len(copyFiles) > 0 {
