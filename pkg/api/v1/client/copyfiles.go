@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const uri string = "/copy-files"
+const uri string = Version + "/copy-files"
 
 type CopyFileClient interface {
 	UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error
