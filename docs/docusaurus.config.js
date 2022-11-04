@@ -166,6 +166,10 @@ const config = {
             to: "/test-types/executor-k6",
           },
           {
+            from: "/executor-jmeter",
+            to: "/test-types/executor-jmeter",
+          },
+          {
             from: "/executor-kubepug",
             to: "/test-types/executor-kubepug",
           },
