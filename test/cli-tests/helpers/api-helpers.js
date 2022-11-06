@@ -42,6 +42,12 @@ class ApiHelpers {
         return executionName
     }
 
+    async abortTest(testName, executionId) {
+        const response = await superagent.delete(`${this.API_URL}/tests/${testName}/executions/${executionId}`) //200
+
+        return response
+    }
+
     async isTestCreated(testName) {
         const currentTests = await this.getTests()
         const test = currentTests.find(singleTest => singleTest.name == testName)
