@@ -34,6 +34,7 @@ describe('Run test with CLI', function () {
         const testName = 'cypress-git-dir-created'
         
         await runTestFlow(testName)
+        //TODO: abort the test not to waste resources
     });
     it('Run K6 test with git-file', async function () {
         const testName = 'k6-git-file-created'
