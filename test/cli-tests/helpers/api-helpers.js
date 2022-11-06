@@ -13,8 +13,6 @@ class ApiHelpers {
     }
 
     async createTest(testData) {
-        console.log('createTest')
-
         const response = await superagent.post(`${this.API_URL}/tests`) //201
         .set('Content-Type', 'application/json')
         .send(testData)
@@ -35,8 +33,6 @@ class ApiHelpers {
     }
 
     async runTest(testName) {
-        console.log('runTest')
-
         const response = await superagent.post(`${this.API_URL}/tests/${testName}/executions`) //201
         .set('Content-Type', 'application/json')
         .send({"namespace":"testkube"})
@@ -67,11 +63,9 @@ class ApiHelpers {
     }
 
     async assureTestCreated(testData, fullCleanup=false) {
-        console.log('assureTestCreated')
         const alreadyCreated = await this.isTestCreated(testData.name)
 
         if(alreadyCreated) {
-            console.log('assureTestCreated alreadyCreated')
             if(fullCleanup) {
                 await this.removeTest(testData.name)
                 await this.createTest(testData)
@@ -117,13 +111,9 @@ class ApiHelpers {
     }
 
     async waitForExecutionFinished(executionName, timeout) {
-        console.log('waitForExecutionFinished')
-
         const startTime = Date.now();
         while (Date.now() - startTime < timeout) {
             let status = await this.getExecutionStatus(executionName)
-            console.log('waitForExecutionFinished loop - status: ')
-            console.log(status)
 
             if(status == 'passed' || status == 'failed') {
                 return status
@@ -134,9 +124,5 @@ class ApiHelpers {
 
         throw Error(`waitForExecutionFinished timed out for "${executionName}" execution`)
     }
-
-    // async sleep(sleepTime) {
-    //     await new Promise(resolve => setTimeout(resolve, sleepTime));
-    // }
 }
 export default ApiHelpers
