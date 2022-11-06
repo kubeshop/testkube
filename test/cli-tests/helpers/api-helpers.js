@@ -1,6 +1,8 @@
 //TODO: common module for both cli-tests and Dashboard E2E tests?
 
 import superagent from 'superagent'
+import {setTimeout} from "timers/promises";
+
 
 class ApiHelpers {
     API_URL = process.env.API_URL //TODO: constructor
@@ -28,6 +30,16 @@ class ApiHelpers {
         .send(testData)
 
         return response.body
+    }
+
+    async runTest(testName) {
+        const response = await superagent.post(`${this.API_URL}/tests/${testName}/executions`) //201
+        .set('Content-Type', 'application/json')
+        .send({"namespace":"testkube"})
+
+        const executionName = response.body.name
+
+        return executionName
     }
 
     async isTestCreated(testName) {
@@ -84,11 +96,33 @@ class ApiHelpers {
         }
     }
 
-    async getExecutionStatus(executionId) {
-        const response = await superagent.get(`${this.API_URL}/executions/${executionId}`) //200
+    async getExecution(executionName) {
+        const response = await superagent.get(`${this.API_URL}/executions/${executionName}`) //200
         const executionStatus = response.body.executionResult.status
 
+        return response.body
+    }
+
+    async getExecutionStatus(executionName) {
+        const execution = await this.getExecution(executionName)
+        const executionStatus = execution.executionResult.status
+
         return executionStatus
+    }
+
+    async waitForExecutionFinished(executionName, timeout) {
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeout) {
+            let status = await this.getExecutionStatus(executionName)
+
+            if(status == 'passed' || status == 'failed') {
+                return status
+            }
+
+            await setTimeout(1000);
+        }
+
+        throw Error(`waitForExecutionFinished timed out for "${executionName}" execution`)
     }
 }
 export default ApiHelpers

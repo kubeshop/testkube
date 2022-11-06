@@ -31,6 +31,20 @@ class OutputValidators {
         expect(normalizedOutput).to.include(testExecutionStartedText)
     }
 
+    validateTestExecutionSummary(executionData, output) {
+        const normalizedOutput = this.normalizeSpaces(output)
+
+        for (let key in executionData) {
+            var value = executionData[key];
+
+            if(key == 'Name') { //special case because of this bug: https://github.com/kubeshop/testkube/issues/2655
+                expect(normalizedOutput).to.include(`${key} ${value}`)
+            } else {
+                expect(normalizedOutput).to.include(`${key}: ${value}`)
+            }
+        }
+    }
+
     getExecutionId(output) {
         const normalizedOutput = this.normalizeSpaces(output)
 
