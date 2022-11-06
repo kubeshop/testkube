@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: dashboard-e2e-crd-fix-video-disabled
       path: test/dashboard-e2e
   executionRequest:
     args:
