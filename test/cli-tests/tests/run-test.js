@@ -27,6 +27,9 @@ async function runTestFlow(testName) {
     const executionStatus = await apiHelpers.getExecutionStatus(executionId)
 
     expect(executionStatus).to.be.equal('running')
+
+    //cleanup
+    await apiHelpers.abortTestRun(testName, executionId)
 }
 
 describe('Run test with CLI', function () {
@@ -34,7 +37,6 @@ describe('Run test with CLI', function () {
         const testName = 'cypress-git-dir-created'
         
         await runTestFlow(testName)
-        //TODO: abort the test not to waste resources
     });
     it('Run K6 test with git-file', async function () {
         const testName = 'k6-git-file-created'
