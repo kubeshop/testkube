@@ -98,7 +98,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			break
 		}
 
-		stepResult := testsuiteExecution.StepResults[i]
+		stepResult := &testsuiteExecution.StepResults[i]
 		if cancelSteps {
 			stepResult.Execution.ExecutionResult.Abort()
 			continue
@@ -111,7 +111,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Infow("Updating test execution", "error", err)
 		}
 
-		s.executeTestStep(ctx, *testsuiteExecution, request, &stepResult)
+		s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
 
 		err = s.updateWithCheckForAbort(ctx, testsuiteExecution, stepResult.Execution)
 		if err != nil {
@@ -175,7 +175,7 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 		return false
 	}
 
-	s.logger.Infow("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
+	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
 
 	return *execution.Status == testkube.ABORTED_TestSuiteExecutionStatus
 }
