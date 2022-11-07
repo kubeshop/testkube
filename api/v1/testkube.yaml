@@ -3112,8 +3112,8 @@ components:
           additionalProperties:
             type: string
           example:
-            secret_name1: "kubernetes-secret-name"
-            secret_key1: "secret-key-name"
+            secret_key_name1: "secret-name"
+            secret_Key_name2: "secret-name"
         sync:
           type: boolean
           description: whether to start execution sync or async

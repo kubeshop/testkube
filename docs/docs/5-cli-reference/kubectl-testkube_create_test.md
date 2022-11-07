@@ -36,7 +36,7 @@ kubectl-testkube create test [flags]
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])
   -n, --name string                                unique test name - mandatory
       --schedule string                            test schedule in a cronjob form: * * * * *
-      --secret-env stringToString                  secret envs in a form of secret_name1=secret_key1 passed to executor (default [])
+      --secret-env stringToString                  secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --source string                              source name - will be used together with content parameters

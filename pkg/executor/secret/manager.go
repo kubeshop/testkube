@@ -48,7 +48,7 @@ type EnvManager struct {
 func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]testkube.Variable) (secretEnvVars []corev1.EnvVar) {
 	// preparet secret envs
 	i := 1
-	for secretName, secretVar := range secretEnvs {
+	for secretVar, secretName := range secretEnvs {
 		// TODO: these are duplicated because Postman executor is expecting it as json string
 		// and gets unmarshalled and the name and the value are taken from there, for other executors it will be like a normal env var.
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{

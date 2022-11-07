@@ -62,10 +62,10 @@ test_api_key = pm.environment.get("my-sec1")
 
 ### Secret Environment Variables
 
-Secret Environment Variables pass environment variables for the executor itself like `--env` when `--env` cannot be used because it contains sensitive information. Instead a k8s secret can be created and passed with `--secret-env <k8s-secret-name>=<secret-key>`.
+Secret Environment Variables pass environment variables for the executor itself like `--env` when `--env` cannot be used because it contains sensitive information. Instead a k8s secret can be created and passed with `--secret-env <secret-key>=<k8s-secret-name>`.
 
 For example, if the executor needs `env-secret` from the secret, 
-it can be passed using `--secret-env my-env-secret=env-secret` and executor will receive it as `env-secret`:
+it can be passed using `--secret-env env-secret=my-env-secret` and executor will receive it as `env-secret`:
 
 ```yaml
 apiVersion: v1
