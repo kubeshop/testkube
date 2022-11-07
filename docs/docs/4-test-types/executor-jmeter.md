@@ -102,7 +102,7 @@ Let's save our JMeter test in file e.g. `test.jmx`.
 
 ```
 
-Testkube JMeter executor accept a test file as an input.
+The Testkube JMeter executor accepts a test file as an input.
 
 ```bash
 kubectl testkube create test --file test.jmx --name jmeter-test --type jmeter/test
