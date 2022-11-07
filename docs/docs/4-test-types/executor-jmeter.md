@@ -127,7 +127,7 @@ Testkube will clone the repository and create a Testkube Test Custom Resource in
 
 ### **Using Additional JMeter Arguments in Your Tests**
 
-You can also pass additional arguments to `jmeter` binary thanks to `--args` flag:
+You can also pass additional arguments to the `jmeter` binary thanks to the `--args` flag:
 
 ```bash
 $ kubectl testkube run test -f jmeter-test --args '-LsutHost=https://staging.kubeshop.com -LsomeParam=someValue'
