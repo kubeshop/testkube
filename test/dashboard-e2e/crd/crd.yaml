@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: dashboard-e2e-video-enabled
+      branch: main
       path: test/dashboard-e2e
   executionRequest:
     args:
