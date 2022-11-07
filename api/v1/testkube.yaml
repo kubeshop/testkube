@@ -704,7 +704,28 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - testssuite
+        - executions
+      summary: "Aborts testsuite execution"
+      description: "Aborts testsuite execution with given executionID"
+      operationId: abortTestSuiteExecution
+      responses:
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        204:
+          description: "no content"
   /test-suite-executions:
     post:
       parameters:
@@ -817,7 +838,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - testssuite
+        - executions
+      summary: "Aborts testsuite execution"
+      description: "Aborts testsuite execution with given executionID"
+      operationId: abortTestSuiteExecution
+      responses:
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        204:
+          description: "no content"
   /executions:
     post:
       parameters:
@@ -1413,15 +1454,19 @@ paths:
         - tests
         - executions
       summary: "Aborts execution"
-      description: "Aborts execution and returns execution details"
+      description: "Aborts execution with given executionID"
       operationId: abortExecution
       responses:
-        501:
-          description: not implemented yet
+        502:
+          description: "problem with read information from kubernetes cluster"
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: "#/components/schemas/ExecutionResult"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        204:
+          description: "no content"
 
   /executors:
     get:
