@@ -116,7 +116,7 @@ To run the test, pass the previously created test name:
 kubectl testkube run test -f jmeter-test
 ```
 
-You can also create a Test based on Git repository:
+You can also create a Test based on a Git repository:
 
 ```bash
 # create test from this Git repository
