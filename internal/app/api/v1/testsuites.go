@@ -606,6 +606,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
 		ctx := context.Background()
 		id := c.Params("executionID")
 		execution, err := s.TestExecutionResults.Get(ctx, id)
