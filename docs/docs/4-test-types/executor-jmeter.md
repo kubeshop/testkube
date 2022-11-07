@@ -8,7 +8,7 @@ The Apache JMeter™ application is open source software, a 100% pure Java appli
 
 ## What can I do with it?
 
-Apache JMeter may be used to test performance both on static and dynamic resources, Web dynamic applications.
+Apache JMeter may be used to test performance both on static and dynamic resources and Web dynamic applications.
 It can be used to simulate a heavy load on a server, group of servers, network or object to test its strength or to analyze overall performance under different load types.
 
 [JMeter](https://jmeter.apache.org/) 
