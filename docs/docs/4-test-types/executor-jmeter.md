@@ -110,7 +110,7 @@ kubectl testkube create test --file test.jmx --name jmeter-test --type jmeter/te
 You don't need to pass a type here, Testkube will autodetect it. 
 
 
-To run the test, pass previously created test name: 
+To run the test, pass the previously created test name: 
 
 ```bash 
 kubectl testkube run test -f jmeter-test
