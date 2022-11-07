@@ -62,7 +62,9 @@ func (e TestSuiteExecution) FailedStepsCount() (count int) {
 }
 
 func (e TestSuiteExecution) IsCompleted() bool {
-	return *e.Status == *TestSuiteExecutionStatusFailed || *e.Status == *TestSuiteExecutionStatusPassed
+	return *e.Status == *TestSuiteExecutionStatusFailed ||
+		*e.Status == *TestSuiteExecutionStatusPassed ||
+		*e.Status == *TestSuiteExecutionStatusAborted
 }
 
 func (e *TestSuiteExecution) Stop() {

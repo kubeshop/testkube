@@ -60,7 +60,7 @@ func TestExecute(t *testing.T) {
 			},
 		},
 	}
-	mockTestsClient.EXPECT().Get("some-test").Return(&mockTest, nil).Times(2)
+	mockTestsClient.EXPECT().Get("some-test").Return(&mockTest, nil).AnyTimes()
 	var mockNextExecutionNumber int32 = 1
 	mockResultRepository.EXPECT().GetNextExecutionNumber(gomock.Any(), "some-test").Return(mockNextExecutionNumber, nil)
 	mockExecution := testkube.Execution{Name: "test-execution-1"}
@@ -84,7 +84,7 @@ func TestExecute(t *testing.T) {
 			JobTemplate:      "",
 		},
 	}
-	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil)
+	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
 	mockResultRepository.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultRepository.EXPECT().StartExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}

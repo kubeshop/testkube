@@ -2415,7 +2415,8 @@ components:
         - running
         - passed
         - failed
-        - cancelled
+        - aborted
+        - timeout
 
     TestSuiteStepExecutionResult:
       description: execution result returned from executor
@@ -3346,6 +3347,8 @@ components:
         - start-testsuite
         - end-testsuite-success
         - end-testsuite-failed
+        - end-testsuite-aborted
+        - end-testsuite-timeout
 
     EventResult:
       description: Listener result after sending particular event

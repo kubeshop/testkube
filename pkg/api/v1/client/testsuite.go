@@ -114,6 +114,12 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 	return c.testSuiteExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
+// AbortTestSuiteExecution aborts a test suite execution
+func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions/%s", executionID)
+	return c.testSuiteExecutionTransport.Delete(uri, "", false)
+}
+
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {

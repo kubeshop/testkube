@@ -92,20 +92,8 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	var result testkube.ExecutionResult
-	var executor client.Executor
-	switch options.ExecutorSpec.ExecutorType {
-	case containerType:
-		executor = s.containerExecutor
-	default:
-		executor = s.executor
-	}
-
 	// sync/async test execution
-	if options.Sync {
-		result, err = executor.ExecuteSync(&execution, options)
-	} else {
-		result, err = executor.Execute(&execution, options)
-	}
+	result, err = s.startTestExecution(options, result, err, &execution)
 
 	// set execution result to one created
 	execution.ExecutionResult = &result
@@ -129,6 +117,41 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	return execution, nil
+}
+
+func (s *Scheduler) startTestExecution(options client.ExecuteOptions, result testkube.ExecutionResult, err error, execution *testkube.Execution) (testkube.ExecutionResult, error) {
+	executor := s.getExecutor(options.TestName)
+	if options.Sync {
+		result, err = executor.ExecuteSync(execution, options)
+	} else {
+		result, err = executor.Execute(execution, options)
+	}
+	return result, err
+}
+
+func (s *Scheduler) getExecutor(testName string) client.Executor {
+	testCR, err := s.testsClient.Get(testName)
+	if err != nil {
+		s.logger.Errorw("can't get test", "test", testName, "error", err)
+		return s.executor
+	}
+	executorCR, err := s.executorsClient.GetByType(testCR.Spec.Type_)
+	if err != nil {
+		s.logger.Errorw("can't get executor", "test", testName, "error", err)
+		return s.executor
+	}
+	switch executorCR.Spec.ExecutorType {
+	case containerType:
+		return s.containerExecutor
+	default:
+		return s.executor
+	}
+}
+
+func (s *Scheduler) abortTestExecution(execution *testkube.Execution) *testkube.ExecutionResult {
+	s.logger.Infow("aborting execution", "executionId", execution.Id)
+	executor := s.getExecutor(execution.TestName)
+	return executor.Abort(execution)
 }
 
 func (s *Scheduler) getNextExecutionNumber(testName string) int32 {

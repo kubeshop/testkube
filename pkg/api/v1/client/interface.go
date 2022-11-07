@@ -59,8 +59,9 @@ type TestSuiteAPI interface {
 // TestSuiteExecutionAPI describes test suite execution api methods
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestSuiteExecutions(test string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
+	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
+	AbortTestSuiteExecution(executionID string) error
 }
 
 // ExecutorAPI describes executor api methods
