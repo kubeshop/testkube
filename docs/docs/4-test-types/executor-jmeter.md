@@ -136,7 +136,7 @@ $ kubectl testkube run test -f jmeter-test --args '-LsutHost=https://staging.kub
 ### **JMeter Test Results**
 
 A JMeter test will be successful in Testkube when all checks and thresholds are successful. In the case of an error, the test will have `failed` status,
-JMeter executor is configured to store `report.jtl` file after test run, you can get it from "Artifacts" tab in execution results in Testkube UI, 
+JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in Testkube UI, 
 or download it with `testkube get artifacts EXECUTION_ID` command.
 
 
