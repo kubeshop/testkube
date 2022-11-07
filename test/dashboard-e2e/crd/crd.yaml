@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: dashboard-e2e-video-enabled
       path: test/dashboard-e2e
   executionRequest:
     args:
@@ -20,3 +20,4 @@ spec:
       - baseUrl=http://testkube-dashboard.testkube.svc.cluster.local:8080
       - --env
       - API_URL=http://testkube-api-server.testkube.svc.cluster.local:8088/v1
+  schedule: "15 */4 * * *"
