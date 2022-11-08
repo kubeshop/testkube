@@ -50,10 +50,6 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			if name == "" {
-				ui.Failf("pass valid test suite name (in '--name' flag)")
-			}
-
 			var options testkube.TestSuiteUpsertRequest
 
 			err = json.Unmarshal(content, &options)
@@ -61,6 +57,10 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 
 			if name != "" {
 				options.Name = name
+			}
+
+			if options.Name == "" {
+				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
 			namespace := cmd.Flag("namespace").Value.String()

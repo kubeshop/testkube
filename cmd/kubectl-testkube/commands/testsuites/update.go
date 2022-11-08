@@ -45,9 +45,6 @@ func UpdateTestSuitesCmd() *cobra.Command {
 				ui.ExitOnError("reading stdin", err)
 			}
 
-			if name == "" {
-				ui.Failf("pass valid test suite name (in '--name' flag)")
-			}
 			var options testkubeapiv1.UpsertTestSuiteOptions
 
 			err = json.Unmarshal(content, &options)
@@ -55,6 +52,10 @@ func UpdateTestSuitesCmd() *cobra.Command {
 
 			if name != "" {
 				options.Name = name
+			}
+
+			if options.Name == "" {
+				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
 			client, namespace := common.GetClient(cmd)
