@@ -24,3 +24,11 @@ func (r *TestSuiteStepExecutionResult) IsFailed() bool {
 
 	return true
 }
+
+func (r *TestSuiteStepExecutionResult) IsAborted() bool {
+	if r.Execution != nil {
+		return r.Execution.IsAborted()
+	}
+
+	return false
+}
