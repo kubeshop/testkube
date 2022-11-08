@@ -28,7 +28,7 @@ require (
 	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.8.0
 	github.com/valyala/fasthttp v1.40.0
-	go.mongodb.org/mongo-driver v1.10.3
+	go.mongodb.org/mongo-driver v1.11.0
 	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.49.0
 	gopkg.in/yaml.v2 v2.4.0
