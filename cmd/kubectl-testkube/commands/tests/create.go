@@ -89,6 +89,11 @@ func NewCreateTestsCmd() *cobra.Command {
 
 				err = validateExecutorType(options.Type_, executors)
 				ui.ExitOnError("validating executor type", err)
+
+				if len(copyFiles) > 0 {
+					err := uploadCopyFiles(client, testName, "test", copyFiles)
+					ui.ExitOnError("could not upload files", err)
+				}
 			}
 
 			err = validateSchedule(options.Schedule)

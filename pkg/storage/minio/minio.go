@@ -243,3 +243,21 @@ func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, 
 
 	return nil
 }
+
+// PlaceCopyFiles saves the content of the buckets to the filesystem
+func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
+	for _, b := range buckets {
+		files, err := c.ListFiles(b)
+		if err != nil {
+			return fmt.Errorf("could not list files in bucket %s", b)
+		}
+
+		for _, f := range files {
+			err = c.minioclient.FGetObject(context.Background(), b, f.Name, prefix+f.Name, minio.GetObjectOptions{})
+			if err != nil {
+				return fmt.Errorf("could not persist file %s from bucket %s: %w", f.Name, b, err)
+			}
+		}
+	}
+	return nil
+}

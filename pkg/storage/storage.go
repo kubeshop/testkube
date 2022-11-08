@@ -16,4 +16,5 @@ type Client interface {
 	SaveFile(bucket, filePath string) error
 	DownloadFile(bucket, file string) (*minio.Object, error)
 	SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceCopyFiles(buckets []string, prefix string) error
 }

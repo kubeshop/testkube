@@ -137,7 +137,8 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 }
 
 type MockStorage struct {
-	SaveCopyFileFn func(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	SaveCopyFileFn   func(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceCopyFilesFn func(buckets []string, prefix string) error
 }
 
 func (m MockStorage) CreateBucket(bucket string) error {
@@ -164,4 +165,11 @@ func (m MockStorage) SaveCopyFile(bucket string, filePath string, reader io.Read
 		panic("not implemented")
 	}
 	return m.SaveCopyFileFn(bucket, filePath, reader, objectSize)
+}
+
+func (m MockStorage) PlaceCopyFiles(buckets []string, prefix string) error {
+	if m.PlaceCopyFilesFn == nil {
+		panic("not implemented")
+	}
+	return m.PlaceCopyFilesFn(buckets, prefix)
 }
