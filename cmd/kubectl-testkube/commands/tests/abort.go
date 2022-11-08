@@ -21,6 +21,7 @@ func NewAbortExecutionCmd() *cobra.Command {
 
 			err := client.AbortExecution("test", executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting execution %s", executionID), err)
+			ui.SuccessAndExit("Succesfully aborted test", executionID)
 		},
 	}
 }
