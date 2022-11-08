@@ -246,7 +246,19 @@ func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, 
 
 // PlaceCopyFiles saves the content of the buckets to the filesystem
 func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
+	if err := c.Connect(); err != nil {
+		return fmt.Errorf("minio PlaceCopyFiles connection error: %w", err)
+	}
+
 	for _, b := range buckets {
+		exists, err := c.minioclient.BucketExists(context.TODO(), b)
+		if err != nil {
+			return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
+		}
+		if !exists {
+			continue
+		}
+
 		files, err := c.ListFiles(b)
 		if err != nil {
 			return fmt.Errorf("could not list files in bucket %s", b)
