@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	v3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/stretchr/testify/assert"
@@ -106,6 +107,92 @@ func TestNewJobSpecWithoutInitImage(t *testing.T) {
 	spec, err := NewJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
+}
+
+func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
+	jobOptions, _ := NewJobOptions(
+		"kubeshop/testkube-executor-init:0.7.10",
+		"",
+		testkube.Execution{
+			Id:            "name",
+			TestName:      "name-test-1",
+			TestNamespace: "namespace",
+		},
+		client.ExecuteOptions{
+			TestSpec: v3.TestSpec{
+				ExecutionRequest: &v3.ExecutionRequest{
+					Image: "ubuntu",
+				},
+				Content: &v3.TestContent{
+					Repository: &v3.Repository{
+						WorkingDir: "relative/path",
+					},
+				},
+			},
+		},
+	)
+	spec, err := NewJobSpec(logger(), jobOptions)
+	assert.NoError(t, err)
+	assert.NotNil(t, spec)
+
+	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
+}
+
+func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
+	jobOptions, _ := NewJobOptions(
+		"kubeshop/testkube-executor-init:0.7.10",
+		"",
+		testkube.Execution{
+			Id:            "name",
+			TestName:      "name-test-1",
+			TestNamespace: "namespace",
+		},
+		client.ExecuteOptions{
+			TestSpec: v3.TestSpec{
+				ExecutionRequest: &v3.ExecutionRequest{
+					Image: "ubuntu",
+				},
+				Content: &v3.TestContent{
+					Repository: &v3.Repository{
+						WorkingDir: "/absolute/path",
+					},
+				},
+			},
+		},
+	)
+	spec, err := NewJobSpec(logger(), jobOptions)
+	assert.NoError(t, err)
+	assert.NotNil(t, spec)
+
+	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
+}
+
+func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
+	jobOptions, _ := NewJobOptions(
+		"kubeshop/testkube-executor-init:0.7.10",
+		"",
+		testkube.Execution{
+			Id:            "name",
+			TestName:      "name-test-1",
+			TestNamespace: "namespace",
+		},
+		client.ExecuteOptions{
+			Namespace: "namespace",
+			TestSpec: v3.TestSpec{
+				ExecutionRequest: &v3.ExecutionRequest{
+					Image: "ubuntu",
+				},
+				Content: &v3.TestContent{
+					Repository: &v3.Repository{},
+				},
+			},
+		},
+	)
+	spec, err := NewJobSpec(logger(), jobOptions)
+	assert.NoError(t, err)
+	assert.NotNil(t, spec)
+
+	assert.Empty(t, spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
 func logger() *zap.SugaredLogger {
