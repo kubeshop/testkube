@@ -40,7 +40,7 @@ By default, Testkube returns string output of a particular executor. It can also
 
 ### **JSON output**
 
-Sometimes you need to parse test results programatically. To simplify this task, test execution results can be in JSON format.
+Sometimes you need to parse test results programmatically. To simplify this task, test execution results can be in JSON format.
 
 ```bash
 
@@ -54,7 +54,7 @@ It is quite easy to parse data from test executions with tools like `jq` or in o
 
 ### **Need Non-standard Output? Go-Template for the Rescue**
 
-If you need non-standard test execution output, you can easily use ouput `-o go` with the passed `--go-template` template content.
+If you need non-standard test execution output, you can easily use output `-o go` with the passed `--go-template` template content.
 
 ```bash
 kubectl testkube get execution 615d7e1ab046f8fbd3d955d6 -ogo --go-template='{{.Name}} {{.Id}} {{.ExecutionResult.Status}}'
@@ -116,7 +116,7 @@ kubectl testkube get executions -ojson
 
 #### **Go-Template**
 
-To get a list of test excution IDs with their corresponding statuses with go-template:
+To get a list of test execution IDs with their corresponding statuses with go-template:
 
 ```bash
 kubectl testkube get executions -ogo --go-template '{{.Id}}:{{.Status}} '

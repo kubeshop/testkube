@@ -10,7 +10,7 @@ Testkube uses your K8S context and access settings in order to interact with the
 
 In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHub Actions and GKE K8S.
 
-## **Teskube github action**
+## **Testkube github action**
 
 The testkube github action is available here <https://github.com/marketplace/actions/testkube-cli> and it makes possible running the Testkube cli commands in a github workflow. 
 Following example shows how to create a test using the github action, a more complex example can be found [here](https://github.com/kubeshop/helm-charts/blob/59054b87f83f890f4f62cf966ac63fd7e46de336/.github/workflows/testkube-docker-action.yaml).
