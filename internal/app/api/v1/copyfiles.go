@@ -32,6 +32,8 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 		if err != nil {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("cannot read file: %d", err))
 		}
+		defer f.Close()
+
 		err = s.Storage.SaveCopyFile(bucketName, filePath, f, file.Size)
 		if err != nil {
 			return s.Error(c, fiber.StatusInternalServerError, fmt.Errorf("could not save copy file: %w", err))
