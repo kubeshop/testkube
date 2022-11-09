@@ -4,7 +4,7 @@ sidebar_label: Creating New Test Types
 ---
 # What is a Testkube Executor?
 
-To use a testing framework that is not on the currently supported framework list for Teskube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contributed to our repo. We are very happy to receive executor contributions from our community.
+To use a testing framework that is not on the currently supported framework list for Testkube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contributed to our repo. We are very happy to receive executor contributions from our community.
 
 An Executor is a wrapper around a testing framework in the form of a Docker container and run as a Kubernetes job. Usually, an executor runs a particular test framework binary inside a container. Additionally, it is registered as an Executor Custom Resource in your Kubernetes cluster with a type handler defined (e.g. `postman/collection`).
 
@@ -12,7 +12,7 @@ The Testkube API is responsible for running executions and will pass test data t
 
 To create a new script, a user needs to pass `--type`. The API uses it to pair the test type with the executor (executors have a handled `types` array defined in CRD), and the API will choose which executor to run based on the handled types.
 
-The API will pass a `testube.Execution` OpenAPI based document as the first argument to the binary in the executor's Docker container.
+The API will pass a `testkube.Execution` OpenAPI based document as the first argument to the binary in the executor's Docker container.
 
 The API assumes that the Executor will output JSON data to `STDOUT` and each line is wrapped in `testkube.ExecutorOutput` (as in structured logging).
 

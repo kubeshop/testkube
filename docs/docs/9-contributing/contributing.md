@@ -11,7 +11,7 @@ Checkout the [development document](development/developments.md) for more detail
 
 ## **General Guidance for Contributing to a Testkube Project**
 
-Anyone is welcome and ecouraged to help in Testkube development; much opportunity for enhancement exists.
+Anyone is welcome and encouraged to help in Testkube development; much opportunity for enhancement exists.
 
 We would like to limit technical debt from the beginning, so we have defined simple rules when adding code into Testkube repo.
 

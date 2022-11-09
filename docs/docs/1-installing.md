@@ -53,7 +53,7 @@ To deploy Testkube to your K8s cluster you will need the following packages inst
 
 
 ### **Using Testkube's CLI to Deploy the Server Components**
-The Testkube CLI provides a command to easly deploy the Testkube server components to your cluster.
+The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
 Run:
 ```bash
 testkube init
@@ -67,7 +67,7 @@ The above command will install the following components in your Kubernetes clust
 3. CRDs for Tests, TestSuites, Executors
 4. MongoDB
 5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
-6. Dashboard - default (can be disabled with `--no-dasboard` flag)
+6. Dashboard - default (can be disabled with `--no-dashboard` flag)
 
 
 Confirm that Testkube is running:
@@ -94,7 +94,7 @@ testkube` to see the charts.
 helm install --create-namespace my-testkube testkube/testkube
 ```
 
-Please note that, by default, the namespace for the intstallation will be `testkube`. If the `testkube` namespace does not exist, it will be created for you.
+Please note that, by default, the namespace for the installation will be `testkube`. If the `testkube` namespace does not exist, it will be created for you.
 
 If you wish to install into a different namespace, please use following command:
 
