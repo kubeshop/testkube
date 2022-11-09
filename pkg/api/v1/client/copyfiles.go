@@ -18,7 +18,7 @@ import (
 const uri string = Version + "/copy-files"
 
 type CopyFileClient interface {
-	UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error
+	UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error
 }
 
 type CopyFileDirectClient struct {
@@ -46,7 +46,7 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileDirectClient) UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error {
+func (c CopyFileDirectClient) UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error {
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentID, parentType)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (c CopyFileDirectClient) UploadFile(parentID string, parentType string, fil
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileProxyClient) UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error {
+func (c CopyFileProxyClient) UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error {
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentID, parentType)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (c CopyFileProxyClient) UploadFile(parentID string, parentType string, file
 	return nil
 }
 
-func createUploadFileBody(filePath string, fileContent []byte, parentID string, parentType string) (*bytes.Buffer, *multipart.Writer, error) {
+func createUploadFileBody(filePath string, fileContent []byte, parentID string, parentType TestingType) (*bytes.Buffer, *multipart.Writer, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("attachment", filepath.Base(filePath))
@@ -111,7 +111,7 @@ func createUploadFileBody(filePath string, fileContent []byte, parentID string, 
 	if err != nil {
 		return body, writer, fmt.Errorf("could not add parentID: %w", err)
 	}
-	err = writer.WriteField("parentType", parentType)
+	err = writer.WriteField("parentType", string(parentType))
 	if err != nil {
 		return body, writer, fmt.Errorf("could not add parentType: %w", err)
 	}

@@ -107,7 +107,7 @@ type TestSourceAPI interface {
 
 // CopyFileAPI describes methods to handle files in the object storage
 type CopyFileAPI interface {
-	UploadFile(parentID string, parentType string, filePath string, fileContent []byte) error
+	UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error
 }
 
 // TODO consider replacing below types by testkube.*
