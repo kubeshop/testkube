@@ -246,7 +246,7 @@ func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, 
 
 // PlaceCopyFiles saves the content of the buckets to the filesystem
 func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
-	c.Log.Debugw("Getting the contents of buckets %s", buckets)
+	c.Log.Debugf("Getting the contents of buckets %s", buckets)
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("minio PlaceCopyFiles connection error: %w", err)
 	}
@@ -257,7 +257,7 @@ func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
 			return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
 		}
 		if !exists {
-			c.Log.Debugw("Bucket %s does not exist", b)
+			c.Log.Debugf("Bucket %s does not exist", b)
 			continue
 		}
 
@@ -267,7 +267,7 @@ func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
 		}
 
 		for _, f := range files {
-			c.Log.Debugw("Getting file %s", f)
+			c.Log.Debugf("Getting file %s", f)
 			err = c.minioclient.FGetObject(context.Background(), b, f.Name, prefix+f.Name, minio.GetObjectOptions{})
 			if err != nil {
 				return fmt.Errorf("could not persist file %s from bucket %s: %w", f.Name, b, err)
