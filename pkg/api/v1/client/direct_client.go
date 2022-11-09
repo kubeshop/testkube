@@ -136,7 +136,11 @@ func (t DirectClient[A]) ExecuteMultiple(method, uri string, body []byte, params
 
 // Delete is a method to make delete api call
 func (t DirectClient[A]) Delete(uri, selector string, isContentExpected bool) error {
-	resp, err := t.baseExec(http.MethodDelete, uri, uri, nil, map[string]string{"selector": selector})
+	return t.ExecuteMethod(http.MethodDelete, uri, selector, isContentExpected)
+}
+
+func (t DirectClient[A]) ExecuteMethod(method, uri string, selector string, isContentExpected bool) error {
+	resp, err := t.baseExec(method, uri, uri, nil, map[string]string{"selector": selector})
 	if err != nil {
 		return err
 	}

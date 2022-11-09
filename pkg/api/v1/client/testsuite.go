@@ -117,7 +117,7 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 // AbortTestSuiteExecution aborts a test suite execution
 func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions/%s", executionID)
-	return c.testSuiteExecutionTransport.Delete(uri, "", false)
+	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
