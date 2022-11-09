@@ -180,7 +180,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 // AbortExecution aborts execution by testId and id
 func (c TestClient) AbortExecution(testID, id string) error {
 	uri := c.executionTransport.GetURI("/tests/%s/executions/%s", testID, id)
-	return c.executionTransport.Delete(uri, "", false)
+	return c.executionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
 // ListExecutions list all executions for given test name

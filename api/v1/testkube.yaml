@@ -2460,6 +2460,7 @@ components:
         - running
         - passed
         - failed
+        - aborting
         - aborted
         - timeout
 

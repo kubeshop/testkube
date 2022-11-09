@@ -90,54 +90,57 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
 	hasFailedSteps := false
 	cancelSteps := false
-	wasAborted := false
-	abortedStep := 0
+	var stepResult *testkube.TestSuiteStepExecutionResult
+	abortChan := make(chan bool)
+
+	go s.abortionCheck(ctx, testsuiteExecution, abortChan)
 	for i := range testsuiteExecution.StepResults {
-		wasAborted = s.wasTestSuiteAborted(ctx, testsuiteExecution.Id)
-		if wasAborted {
-			abortedStep = i
-			s.logger.Infow("Test suite execution was aborted", "id", testsuiteExecution.Id)
-			break
-		}
-
-		stepResult := &testsuiteExecution.StepResults[i]
-		if cancelSteps {
+		stepResult = &testsuiteExecution.StepResults[i]
+		select {
+		case <-abortChan:
+			s.logger.Infow("Aborting test suite execution", "execution", testsuiteExecution.Id, "i", i)
+			cancelSteps = true
 			stepResult.Execution.ExecutionResult.Abort()
-			continue
-		}
-
-		// start execution of given step
-		stepResult.Execution.ExecutionResult.InProgress()
-		err := s.updateWithCheckForAbort(ctx, testsuiteExecution, stepResult.Execution)
-		if err != nil {
-			s.logger.Infow("Updating test execution", "error", err)
-		}
-
-		s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
-
-		err = s.updateWithCheckForAbort(ctx, testsuiteExecution, stepResult.Execution)
-		if err != nil {
-			hasFailedSteps = true
-
-			s.logger.Errorw("saving test suite execution results error", "error", err)
-			continue
-		}
-
-		if stepResult.IsFailed() {
-			hasFailedSteps = true
-			if stepResult.Step.StopTestOnFailure {
-				cancelSteps = true
+			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborting
+		default:
+			s.logger.Debugw("Running step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+			if cancelSteps {
+				stepResult.Execution.ExecutionResult.Abort()
+				s.logger.Debugw("Aborting step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
 				continue
+			}
+
+			// start execution of given step
+			stepResult.Execution.ExecutionResult.InProgress()
+			err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
+			if err != nil {
+				s.logger.Infow("Updating test execution", "error", err)
+			}
+
+			s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
+
+			s.logger.Debugw("Step execution result", "step", testsuiteExecution.StepResults[i].Step, "result", stepResult.Execution.ExecutionResult)
+			err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
+			if err != nil {
+				hasFailedSteps = true
+
+				s.logger.Errorw("saving test suite execution results error", "error", err)
+				continue
+			}
+
+			if stepResult.IsFailed() {
+				hasFailedSteps = true
+				if stepResult.Step.StopTestOnFailure {
+					cancelSteps = true
+					continue
+				}
 			}
 		}
 	}
 
-	s.logger.Infow("Finished running steps", "test", testsuiteExecution.Name, "wasAborted", wasAborted)
-	testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
-	if wasAborted {
-		s.abortSteps(testsuiteExecution, abortedStep)
-		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
+	if *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
+		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
 	} else if hasFailedSteps {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
@@ -147,24 +150,27 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
 
-	err := s.updateWithCheckForAbort(ctx, testsuiteExecution, nil)
+	err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
 	if err != nil {
 		s.logger.Errorw("saving final test suite execution result error", "error", err)
 	}
 
 }
 
-func (s *Scheduler) updateWithCheckForAbort(ctx context.Context, testSuiteExecution *testkube.TestSuiteExecution, stepExecution *testkube.Execution) error {
-	if s.wasTestSuiteAborted(ctx, testSuiteExecution.Id) {
-		s.logger.Infow("Test suite execution was aborted", "id", testSuiteExecution.Id)
-		testSuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
-		if stepExecution != nil {
-			s.logger.Infow("Aborting step execution", "id", stepExecution.Id, "status", stepExecution.ExecutionResult.Status)
-			s.abortTestExecution(stepExecution)
-			stepExecution.ExecutionResult.Abort()
+// abortionCheck is polling database to see if the user aborted the test suite execution
+func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, abortChan chan bool) {
+	const abortionPollingInterval = 100 * time.Millisecond
+	s.logger.Debugw("Abortion check started", "test", testsuiteExecution.Name)
+	ticker := time.NewTicker(abortionPollingInterval)
+	for testsuiteExecution.Status == testkube.TestSuiteExecutionStatusRunning {
+		<-ticker.C
+		if s.wasTestSuiteAborted(ctx, testsuiteExecution.Id) {
+			s.logger.Debugw("Aborting test suite execution", "execution", testsuiteExecution.Id)
+			abortChan <- true
+			break
 		}
 	}
-	return s.testExecutionResults.Update(ctx, *testSuiteExecution)
+	s.logger.Debugw("Abortion check finished", "test", testsuiteExecution.Name)
 }
 
 func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
@@ -177,9 +183,8 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 		return false
 	}
 
-	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
-
-	return *execution.Status == testkube.ABORTED_TestSuiteExecutionStatus
+	s.logger.Infow("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
+	return *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
@@ -245,12 +250,5 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 				return
 			}
 		}
-	}
-}
-
-func (s *Scheduler) abortSteps(testSuiteExecution *testkube.TestSuiteExecution, abortedStep int) {
-	s.logger.Infow("Aborting steps", "testSuiteId", testSuiteExecution.Id)
-	for i := abortedStep; i < len(testSuiteExecution.StepResults); i++ {
-		testSuiteExecution.StepResults[i].Execution.ExecutionResult.Abort()
 	}
 }

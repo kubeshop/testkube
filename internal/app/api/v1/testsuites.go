@@ -620,7 +620,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		execution.Status = testkube.TestSuiteExecutionStatusAborted
+		execution.Status = testkube.TestSuiteExecutionStatusAborting
 		err = s.TestExecutionResults.Update(ctx, execution)
 
 		if err != nil {

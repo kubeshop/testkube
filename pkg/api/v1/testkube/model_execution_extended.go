@@ -148,6 +148,14 @@ func (e Execution) IsFailed() bool {
 	return *e.ExecutionResult.Status == FAILED_ExecutionStatus
 }
 
+func (e Execution) IsAborted() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == ABORTED_ExecutionStatus
+}
+
 func (e Execution) IsRunning() bool {
 	if e.ExecutionResult == nil {
 		return true
