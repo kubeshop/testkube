@@ -38,6 +38,9 @@ spec:
         - {{ $arg -}}
 		{{- end}}
 		{{- end}}
+    {{- if .WorkingDir }}
+        workingDir: {{ .WorkingDir }}
+    {{- end}}
         volumeMounts:
         - name: data-volume
           mountPath: /data

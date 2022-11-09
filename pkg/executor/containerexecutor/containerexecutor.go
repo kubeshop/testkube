@@ -2,6 +2,7 @@ package containerexecutor
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ import (
 const (
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
+	repoPath     = "/data/repo"
 )
 
 type ResultRepository interface {
@@ -78,6 +80,7 @@ type JobOptions struct {
 	ImagePullSecrets      []string
 	Command               []string
 	Args                  []string
+	WorkingDir            string
 	ImageOverride         string
 	Jsn                   string
 	TestName              string
@@ -312,11 +315,22 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		image = options.ExecutorSpec.Image
 	}
 
+	var workingDir string
+	if options.TestSpec.Content != nil &&
+		options.TestSpec.Content.Repository != nil &&
+		options.TestSpec.Content.Repository.WorkingDir != "" {
+		workingDir = options.TestSpec.Content.Repository.WorkingDir
+		if !filepath.IsAbs(workingDir) {
+			workingDir = filepath.Join(repoPath, workingDir)
+		}
+	}
+
 	return &JobOptions{
 		Image:                 image,
 		ImagePullSecrets:      options.ImagePullSecretNames,
 		Args:                  args,
 		Command:               command,
+		WorkingDir:            workingDir,
 		TestName:              options.TestName,
 		Namespace:             options.Namespace,
 		SecretEnvs:            options.Request.SecretEnvs,
