@@ -204,7 +204,7 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, namespace)
+	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, namespace, clusterId)
 	if err != nil {
 		ui.ExitOnError("Creating executor client")
 	}
@@ -214,7 +214,7 @@ func main() {
 		ui.ExitOnError("Creating job templates")
 	}
 
-	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, namespace)
+	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, namespace, clusterId)
 	if err != nil {
 		ui.ExitOnError("Creating container executor")
 	}
@@ -232,6 +232,7 @@ func main() {
 		secretClient,
 		eventsEmitter,
 		log.DefaultLogger,
+		clusterId,
 	)
 
 	api := apiv1.NewTestkubeAPI(
@@ -319,6 +320,7 @@ func newContainerExecutor(
 	eventsEmitter *event.Emitter,
 	metrics metrics.Metrics,
 	namespace string,
+	clusterID string,
 ) (executor client.Executor, err error) {
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -343,7 +345,7 @@ func newContainerExecutor(
 		jobTemplate = jobTemplates.Job
 	}
 
-	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, metrics, eventsEmitter)
+	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, clusterID, metrics, eventsEmitter)
 }
 
 func newExecutorClient(
@@ -352,6 +354,7 @@ func newExecutorClient(
 	eventsEmitter *event.Emitter,
 	metrics metrics.Metrics,
 	namespace string,
+	clusterID string,
 ) (executor client.Executor, err error) {
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -372,7 +375,7 @@ func newExecutorClient(
 		return nil, errors.WithMessage(err, "error creating job templates from envvars")
 	}
 
-	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, metrics, eventsEmitter)
+	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, clusterID, metrics, eventsEmitter)
 }
 
 // loadDefaultExecutors loads default executors

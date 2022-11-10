@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -26,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -49,7 +52,7 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string, metrics ExecutionCounter, emiter *event.Emitter) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate, clusterID string, metrics ExecutionCounter, emiter *event.Emitter) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -62,6 +65,7 @@ func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate st
 		Namespace:   namespace,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
+		clusterID:   clusterID,
 		metrics:     metrics,
 		Emitter:     emiter,
 	}, nil
@@ -80,6 +84,7 @@ type JobExecutor struct {
 	Cmd         string
 	initImage   string
 	jobTemplate string
+	clusterID   string
 	metrics     ExecutionCounter
 	Emitter     *event.Emitter
 }
@@ -340,6 +345,31 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 
 	c.metrics.IncExecuteTest(*execution)
 	c.Emitter.Notify(eventToSend)
+
+	host, err := os.Hostname()
+	if err != nil {
+		l.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	var dataSource string
+	if execution.Content != nil {
+		dataSource = execution.Content.Type_
+	}
+
+	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
+		AppVersion: api.Version,
+		DataSource: dataSource,
+		Host:       host,
+		ClusterID:  c.clusterID,
+		TestType:   execution.TestType,
+		DurationMs: execution.DurationMs,
+		Status:     string(*execution.ExecutionResult.Status),
+	})
+	if err != nil {
+		l.Debugw("sending run test telemetry event error", "error", err)
+	} else {
+		l.Debugw("sending run test telemetry event", "output", out)
+	}
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions

@@ -3,12 +3,15 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -85,8 +88,32 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Errorw("error setting end time", "error", err.Error())
 		}
 
+		host, err := os.Hostname()
+		if err != nil {
+			s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+		}
+
+		status := ""
+		if testExecution.Status != nil {
+			status = string(*testExecution.Status)
+		}
+
+		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
+			AppVersion: api.Version,
+			Host:       host,
+			ClusterID:  s.clusterID,
+			DurationMs: testExecution.DurationMs,
+			Status:     status,
+		})
+		if err != nil {
+			s.logger.Debugw("sending run test suite telemetry event error", "error", err)
+		} else {
+			s.logger.Debugw("sending run test suite telemetry event", "output", out)
+		}
+
 		wg.Done()
 	}(testsuiteExecution)
+
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
 	hasFailedSteps := false
 	cancelSteps := false

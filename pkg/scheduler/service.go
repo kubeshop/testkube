@@ -27,6 +27,7 @@ type Scheduler struct {
 	secretClient         secret.Interface
 	events               *event.Emitter
 	logger               *zap.SugaredLogger
+	clusterID            string
 }
 
 func NewScheduler(
@@ -42,6 +43,7 @@ func NewScheduler(
 	secretClient secret.Interface,
 	events *event.Emitter,
 	logger *zap.SugaredLogger,
+	clusterID string,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:              metrics,
@@ -56,5 +58,6 @@ func NewScheduler(
 		testSourcesClient:    testSourcesClient,
 		events:               events,
 		logger:               logger,
+		clusterID:            clusterID,
 	}
 }
