@@ -388,7 +388,7 @@ func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, erro
 	return result, nil
 }
 
-func uploadCopyFiles(client client.Client, parentID string, parentType client.TestingType, files []string) error {
+func uploadFiles(client client.Client, parentID string, parentType client.TestingType, files []string) error {
 	for _, f := range files {
 		paths := strings.Split(f, ":")
 		if len(paths) != 2 {

@@ -92,7 +92,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.ExitOnError("validating executor type", err)
 
 				if len(copyFiles) > 0 {
-					err := uploadCopyFiles(client, testName, apiv1.Test, copyFiles)
+					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
 					ui.ExitOnError("could not upload files", err)
 				}
 			}

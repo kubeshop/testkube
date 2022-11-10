@@ -89,7 +89,7 @@ func NewRunTestCmd() *cobra.Command {
 				}
 
 				if len(copyFiles) > 0 {
-					err := uploadCopyFiles(client, name, apiv1.Execution, copyFiles)
+					err := uploadFiles(client, name, apiv1.Execution, copyFiles)
 					ui.ExitOnError("could not upload files", err)
 				}
 
