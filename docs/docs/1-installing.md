@@ -26,7 +26,7 @@ brew install testkube
 ```
 ### **Windows**
 ```bash
-choco source add --name=testkube_repo --source=http://chocolatey.testkube.io/chocolatey  choco install testkube
+choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/chocolatey  choco install testkube -y
 ```
 ### **Linux**
 ```bash

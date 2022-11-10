@@ -6,7 +6,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  TESTKUBE_CHOCO_REPO: https://chocolatey.testkube.io/
+  TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
 
 jobs:
   pre_build:
@@ -229,7 +229,7 @@ jobs:
       - name: Bump versions and push package to chocolatey repo
         working-directory: ./choco
         run: |
-          ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.CHOCO_API_KEY }} ${{ env.TESTKUBE_CHOCO_REPO }}
+          ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.COMMOM_CHOCO_API_KEY }} ${{ env.TESTKUBE_CHOCO_REPO }}
 
   build-and-publish-linux-installer:
     needs: release
