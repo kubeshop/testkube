@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -78,7 +79,7 @@ func (c *Client) CreateBucket(bucket string) error {
 
 // DeleteBucket deletes bucket by name
 func (c *Client) DeleteBucket(bucket string, force bool) error {
-	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.BucketOptions{ForceDelete: force})
+	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.RemoveBucketOptions{ForceDelete: force})
 }
 
 // ListBuckets lists available buckets
@@ -210,6 +211,67 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 
 		if err != nil {
 			return fmt.Errorf("minio walk error: %w", err)
+		}
+	}
+	return nil
+}
+
+// SaveCopyFile saves a file to be copied into a running execution
+func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+	if err := c.Connect(); err != nil {
+		return fmt.Errorf("minio SaveCopyFile connection error: %w", err)
+	}
+
+	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	if err != nil {
+		return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
+	}
+
+	if !exists {
+		c.Log.Debugw("creating minio bucket for copy files", "bucket", bucket)
+		err := c.CreateBucket(bucket)
+		if err != nil {
+			return fmt.Errorf("could not create bucket: %w", err)
+		}
+	}
+
+	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
+	_, err = c.minioclient.PutObject(context.Background(), bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
+		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
+	}
+
+	return nil
+}
+
+// PlaceCopyFiles saves the content of the buckets to the filesystem
+func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
+	c.Log.Debugf("Getting the contents of buckets %s", buckets)
+	if err := c.Connect(); err != nil {
+		return fmt.Errorf("minio PlaceCopyFiles connection error: %w", err)
+	}
+
+	for _, b := range buckets {
+		exists, err := c.minioclient.BucketExists(context.TODO(), b)
+		if err != nil {
+			return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
+		}
+		if !exists {
+			c.Log.Debugf("Bucket %s does not exist", b)
+			continue
+		}
+
+		files, err := c.ListFiles(b)
+		if err != nil {
+			return fmt.Errorf("could not list files in bucket %s", b)
+		}
+
+		for _, f := range files {
+			c.Log.Debugf("Getting file %s", f)
+			err = c.minioclient.FGetObject(context.Background(), b, f.Name, prefix+f.Name, minio.GetObjectOptions{})
+			if err != nil {
+				return fmt.Errorf("could not persist file %s from bucket %s: %w", f.Name, b, err)
+			}
 		}
 	}
 	return nil

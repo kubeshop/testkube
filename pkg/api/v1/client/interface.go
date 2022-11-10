@@ -16,6 +16,7 @@ type Client interface {
 	ServiceAPI
 	ConfigAPI
 	TestSourceAPI
+	CopyFileAPI
 }
 
 // TestAPI describes test api methods
@@ -105,6 +106,11 @@ type TestSourceAPI interface {
 	DeleteTestSources(selector string) (err error)
 }
 
+// CopyFileAPI describes methods to handle files in the object storage
+type CopyFileAPI interface {
+	UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error
+}
+
 // TODO consider replacing below types by testkube.*
 
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
@@ -136,7 +142,7 @@ type ExecuteTestOptions struct {
 	HTTPProxy                     string
 	HTTPSProxy                    string
 	Image                         string
-	CopyFiles                     map[string]string
+	Uploads                       []string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

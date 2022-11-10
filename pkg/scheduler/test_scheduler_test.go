@@ -109,12 +109,10 @@ func TestGetExecuteOptions(t *testing.T) {
 		SecretEnvs: map[string]string{
 			"secretEnv": "secretVar",
 		},
-		Sync:       false,
-		HttpProxy:  "",
-		HttpsProxy: "",
-		CopyFiles: map[string]string{
-			"": "",
-		},
+		Sync:                  false,
+		HttpProxy:             "",
+		HttpsProxy:            "",
+		Uploads:               []string{},
 		ActiveDeadlineSeconds: 10,
 	}
 

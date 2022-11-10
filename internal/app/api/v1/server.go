@@ -311,6 +311,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	debug := s.Routes.Group("/debug")
 	debug.Get("/listeners", s.GetDebugListenersHandler())
 
+	files := s.Routes.Group("/copy-files")
+	files.Post("/", s.UploadCopyFiles())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)

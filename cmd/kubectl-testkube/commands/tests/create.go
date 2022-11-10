@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -89,6 +90,11 @@ func NewCreateTestsCmd() *cobra.Command {
 
 				err = validateExecutorType(options.Type_, executors)
 				ui.ExitOnError("validating executor type", err)
+
+				if len(copyFiles) > 0 {
+					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
+					ui.ExitOnError("could not upload files", err)
+				}
 			}
 
 			err = validateSchedule(options.Schedule)
