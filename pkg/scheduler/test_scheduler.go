@@ -201,7 +201,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.Envs = options.Request.Envs
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
-	execution.CopyFiles = options.Request.CopyFiles
+	execution.Uploads = options.Request.Uploads
 
 	return execution
 }

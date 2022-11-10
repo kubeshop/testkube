@@ -2100,30 +2100,29 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-  /copy-files:
+  /uploads:
     post:
       tags:
         - api
         - tests
         - executions
-        - test-suites
       summary: "Upload file"
-      description: "Upload file to be copied into test suite executions"
-      operationId: uploadTestSuiteCopyFile
+      description: "Upload file to be used in executions and tests"
+      operationId: uploads
       requestBody:
-        $ref: "#/components/requestBodies/CopyFileBody"
+        $ref: "#/components/requestBodies/UploadsBody"
       responses:
         200:
           description: "successful operation"
           content:
             application/json:
               schema:
-                type: array
+                type: string
             text/yaml:
               schema:
                 type: string
         500:
-          description: "problem with communicating with kubernetes cluster"
+          description: "could not upload file"
           content:
             application/problem+json:
               schema:
@@ -2594,13 +2593,13 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
-        copyFiles:
+        uploads:
           type: array
           items:
             type: string
-          description: list of files that need to be copied into the test of form source:destination
+          description: list of file paths that need to be copied into the test from uploads
           example:
-            - /user/home/settings/runnerconfig.txt:/tmp/settings/config.txt
+            - settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/ExecutionRequest"
 
@@ -2756,11 +2755,13 @@ components:
           example:
             env: "prod"
             app: "backend"
-        copyFiles:
-          type: object
-          additionalProperties:
+        uploads:
+          type: array
+          items:
             type: string
-          description: map of files with target location as key and contents as value
+          description: list of file paths that need to be copied into the test from uploads
+          example:
+            - settings/config.txt
 
 
     Artifact:
@@ -3115,11 +3116,13 @@ components:
           format: int64
           description: duration in seconds the test may be active, until its stopped
           example: 1
-        copyFiles:
-          type: object
-          additionalProperties:
+        uploads:
+          type: array
+          items:
             type: string
-          description: map of files with target location as key and contents as value
+          description: list of file paths that need to be copied into the test from uploads
+          example:
+            - settings/config.txt
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -3793,8 +3796,8 @@ components:
         type: string
         description: Name of the object
   requestBodies:
-    CopyFileBody:
-      description: "Copy files request body data"
+    UploadsBody:
+      description: "Upload files request body data"
       required: true
       content:
         multipart/form-data:
@@ -3807,11 +3810,7 @@ components:
                 parentType:
                   enum:
                    - test
-                   - test-suite
                    - execution
                 filePath:
                   type: string
-                  example: /data/file.txt
-                fileName:
-                  type: string
-                  format: binary
+                  example: folder/file.txt

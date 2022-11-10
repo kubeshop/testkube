@@ -249,7 +249,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		Source:    sourceName,
 		Namespace: namespace,
 		Schedule:  schedule,
-		CopyFiles: copyFiles,
+		Uploads:   copyFiles,
 	}
 
 	executionName := cmd.Flag("execution-name").Value.String()

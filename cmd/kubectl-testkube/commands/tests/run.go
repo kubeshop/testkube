@@ -93,8 +93,8 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("could not upload files", err)
 				}
 
-				if len(test.CopyFiles) != 0 || len(copyFiles) != 0 {
-					copyFileList, err := mergeCopyFiles(test.CopyFiles, copyFiles)
+				if len(test.Uploads) != 0 || len(copyFiles) != 0 {
+					copyFileList, err := mergeCopyFiles(test.Uploads, copyFiles)
 					ui.ExitOnError("could not merge files", err)
 
 					ui.Warn("Testkube will use the following file mappings:", copyFileList...)

@@ -141,7 +141,7 @@ type ExecuteTestOptions struct {
 	HTTPProxy                     string
 	HTTPSProxy                    string
 	Image                         string
-	CopyFiles                     map[string]string
+	Uploads                       []string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
