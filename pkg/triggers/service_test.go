@@ -118,6 +118,7 @@ func TestService_Run(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		testLogger,
+		"",
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

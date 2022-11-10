@@ -104,6 +104,7 @@ func TestExecute(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		log.DefaultLogger,
+		"",
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
