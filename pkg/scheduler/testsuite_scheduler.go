@@ -94,11 +94,11 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		if err != nil {
 			s.logger.Debugw("getting telemetry enabled error", "error", err)
 		}
-	
+
 		if !telemetryEnabled {
 			return
 		}
-	
+
 		clusterID, err := s.configMap.GetUniqueClusterId(ctx)
 		if err != nil {
 			s.logger.Debugw("getting cluster id error", "error", err)
