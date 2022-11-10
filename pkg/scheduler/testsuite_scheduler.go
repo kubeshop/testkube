@@ -145,6 +145,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
 	} else {
+		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 	}
 
