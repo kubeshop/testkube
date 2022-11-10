@@ -35,6 +35,7 @@ type Payload struct {
 	Events   []Event `json:"events,omitempty"`
 }
 
+// CreateParams contains Test or Test suite creation parameters
 type CreateParams struct {
 	AppVersion string
 	DataSource string
@@ -43,6 +44,7 @@ type CreateParams struct {
 	TestType   string
 }
 
+// RunParams contains Test or Test suite run parameters
 type RunParams struct {
 	AppVersion string
 	DataSource string
@@ -96,6 +98,7 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 	}
 }
 
+// NewCreatePayload prepares payload for Test or Test suite creation
 func NewCreatePayload(name string, params CreateParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
@@ -120,6 +123,7 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 	}
 }
 
+// NewRunPayload prepares payload for Test or Test suite execution
 func NewRunPayload(name string, params RunParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,

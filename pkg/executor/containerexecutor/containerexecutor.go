@@ -287,6 +287,11 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		dataSource = execution.Content.Type_
 	}
 
+	status := ""
+	if execution.ExecutionResult != nil {
+		status = string(*execution.ExecutionResult.Status)
+	}
+
 	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
 		AppVersion: api.Version,
 		DataSource: dataSource,
@@ -294,7 +299,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		ClusterID:  c.clusterID,
 		TestType:   execution.TestType,
 		DurationMs: execution.DurationMs,
-		Status:     string(*execution.ExecutionResult.Status),
+		Status:     status,
 	})
 	if err != nil {
 		c.log.Debugw("sending run test telemetry event error", "error", err)
