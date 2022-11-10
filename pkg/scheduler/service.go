@@ -8,6 +8,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -27,7 +28,7 @@ type Scheduler struct {
 	secretClient         secret.Interface
 	events               *event.Emitter
 	logger               *zap.SugaredLogger
-	clusterID            string
+	configMap            config.Repository
 }
 
 func NewScheduler(
@@ -43,7 +44,7 @@ func NewScheduler(
 	secretClient secret.Interface,
 	events *event.Emitter,
 	logger *zap.SugaredLogger,
-	clusterID string,
+	configMap config.Repository,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:              metrics,
@@ -58,6 +59,6 @@ func NewScheduler(
 		testSourcesClient:    testSourcesClient,
 		events:               events,
 		logger:               logger,
-		clusterID:            clusterID,
+		configMap:            configMap,
 	}
 }

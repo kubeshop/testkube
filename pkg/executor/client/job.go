@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -52,7 +53,8 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate, clusterID string, metrics ExecutionCounter, emiter *event.Emitter) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string,
+	metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -65,9 +67,9 @@ func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate, c
 		Namespace:   namespace,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
-		clusterID:   clusterID,
 		metrics:     metrics,
 		Emitter:     emiter,
+		configMap:   configMap,
 	}, nil
 }
 
@@ -84,9 +86,9 @@ type JobExecutor struct {
 	Cmd         string
 	initImage   string
 	jobTemplate string
-	clusterID   string
 	metrics     ExecutionCounter
 	Emitter     *event.Emitter
+	configMap   config.Repository
 }
 
 type JobOptions struct {
@@ -346,6 +348,20 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	c.metrics.IncExecuteTest(*execution)
 	c.Emitter.Notify(eventToSend)
 
+	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		l.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := c.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		l.Debugw("getting cluster id error", "error", err)
+	}
+
 	host, err := os.Hostname()
 	if err != nil {
 		l.Debugw("getting hostname error", "hostname", host, "error", err)
@@ -365,7 +381,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 		AppVersion: api.Version,
 		DataSource: dataSource,
 		Host:       host,
-		ClusterID:  c.clusterID,
+		ClusterID:  clusterID,
 		TestType:   execution.TestType,
 		DurationMs: execution.DurationMs,
 		Status:     status,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -42,7 +43,8 @@ type EventEmitter interface {
 }
 
 // NewContainerExecutor creates new job executor
-func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTemplate, clusterID string, metrics ExecutionCounter, emiter EventEmitter) (client *ContainerExecutor, err error) {
+func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTemplate string,
+	metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -55,7 +57,7 @@ func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTempla
 		namespace:   namespace,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
-		clusterID:   clusterID,
+		configMap:   configMap,
 		metrics:     metrics,
 		emitter:     emiter,
 	}, nil
@@ -73,9 +75,9 @@ type ContainerExecutor struct {
 	namespace   string
 	initImage   string
 	jobTemplate string
-	clusterID   string
 	metrics     ExecutionCounter
 	emitter     EventEmitter
+	configMap   config.Repository
 }
 
 type JobOptions struct {
@@ -277,6 +279,20 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 	c.emitter.Notify(testkube.NewEventEndTestSuccess(execution))
 
+	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		c.log.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := c.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		c.log.Debugw("getting cluster id error", "error", err)
+	}
+
 	host, err := os.Hostname()
 	if err != nil {
 		c.log.Debugw("getting hostname error", "hostname", host, "error", err)
@@ -296,7 +312,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		AppVersion: api.Version,
 		DataSource: dataSource,
 		Host:       host,
-		ClusterID:  c.clusterID,
+		ClusterID:  clusterID,
 		TestType:   execution.TestType,
 		DurationMs: execution.DurationMs,
 		Status:     status,

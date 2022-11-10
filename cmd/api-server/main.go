@@ -44,11 +44,11 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	configmap "github.com/kubeshop/testkube/internal/pkg/api/config"
 	configmongo "github.com/kubeshop/testkube/internal/pkg/api/repository/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	configmap "github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
@@ -204,7 +204,7 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, namespace, clusterId)
+	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, configMapConfig, namespace)
 	if err != nil {
 		ui.ExitOnError("Creating executor client")
 	}
@@ -214,7 +214,7 @@ func main() {
 		ui.ExitOnError("Creating job templates")
 	}
 
-	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, namespace, clusterId)
+	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, configMapConfig, namespace)
 	if err != nil {
 		ui.ExitOnError("Creating container executor")
 	}
@@ -232,7 +232,7 @@ func main() {
 		secretClient,
 		eventsEmitter,
 		log.DefaultLogger,
-		clusterId,
+		configMapConfig,
 	)
 
 	api := apiv1.NewTestkubeAPI(
@@ -319,8 +319,8 @@ func newContainerExecutor(
 	executorsClient executorsclientv1.Interface,
 	eventsEmitter *event.Emitter,
 	metrics metrics.Metrics,
+	configMap configmap.Repository,
 	namespace string,
-	clusterID string,
 ) (executor client.Executor, err error) {
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -345,7 +345,7 @@ func newContainerExecutor(
 		jobTemplate = jobTemplates.Job
 	}
 
-	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, clusterID, metrics, eventsEmitter)
+	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, metrics, eventsEmitter, configMap)
 }
 
 func newExecutorClient(
@@ -353,8 +353,8 @@ func newExecutorClient(
 	executorsClient executorsclientv1.Interface,
 	eventsEmitter *event.Emitter,
 	metrics metrics.Metrics,
+	configMap configmap.Repository,
 	namespace string,
-	clusterID string,
 ) (executor client.Executor, err error) {
 	readOnlyExecutors := false
 	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
@@ -375,7 +375,7 @@ func newExecutorClient(
 		return nil, errors.WithMessage(err, "error creating job templates from envvars")
 	}
 
-	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, clusterID, metrics, eventsEmitter)
+	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, metrics, eventsEmitter, configMap)
 }
 
 // loadDefaultExecutors loads default executors

@@ -88,6 +88,22 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Errorw("error setting end time", "error", err.Error())
 		}
 
+		wg.Done()
+
+		telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+		if err != nil {
+			s.logger.Debugw("getting telemetry enabled error", "error", err)
+		}
+	
+		if !telemetryEnabled {
+			return
+		}
+	
+		clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+		if err != nil {
+			s.logger.Debugw("getting cluster id error", "error", err)
+		}
+
 		host, err := os.Hostname()
 		if err != nil {
 			s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
@@ -101,7 +117,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
 			AppVersion: api.Version,
 			Host:       host,
-			ClusterID:  s.clusterID,
+			ClusterID:  clusterID,
 			DurationMs: testExecution.DurationMs,
 			Status:     status,
 		})
@@ -110,8 +126,6 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		} else {
 			s.logger.Debugw("sending run test suite telemetry event", "output", out)
 		}
-
-		wg.Done()
 	}(testsuiteExecution)
 
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
