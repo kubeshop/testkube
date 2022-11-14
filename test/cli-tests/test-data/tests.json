@@ -190,5 +190,5 @@
         "labels": {
             "core-tests": "cli-internal"
         }
-    },
+    }
 }

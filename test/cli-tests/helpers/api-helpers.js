@@ -104,7 +104,7 @@ class ApiHelpers {
 
     async getExecution(executionName) {
         const response = await superagent.get(`${this.API_URL}/executions/${executionName}`) //200
-
+        
         return response.body
     }
 

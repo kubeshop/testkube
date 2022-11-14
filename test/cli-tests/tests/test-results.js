@@ -14,7 +14,8 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
     //prerequisites
     await apiHelpers.assureTestCreated(testData)
     const executionName = await apiHelpers.runTest(testData.name)
-    const executionId = await apiHelpers.getExecution(executionName).id
+    const execution = await apiHelpers.getExecution(executionName)
+    const executionId = execution.id
 
     await apiHelpers.waitForExecutionFinished(executionName, waitForExecutionTimeout)
 
@@ -43,8 +44,20 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
     return executionData
 }
 
+function assertArtifactExists(executionArtifacts, artifactFileName, notEmpty) {
+    try {
+        if(notEmpty) {
+            expect(executionArtifacts.filter(obj => obj.name === artifactFileName)[0]).to.exist.and.to.contain.keys('name').and.to.contain.keys('size')
+        } else {
+            expect(executionArtifacts.filter(obj => obj.name === artifactFileName)[0]).to.exist
+        }
+    } catch(e) {
+        throw Error(`Missing artifact "${artifactFileName}"`)
+    }
+}
+
 describe('Get test results with CLI', function () { //Execution times are unpredictable - these tests require high timeouts!
-    it.skip('Get cypress test results', async function () {
+    it('Get cypress test results', async function () {
         const testName = 'cypress-results-ran'
         this.timeout(120000);
         const waitForExecutionTimeout = 100000
@@ -52,7 +65,7 @@ describe('Get test results with CLI', function () { //Execution times are unpred
         const customRunSummary = 'Passing: 1'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
     });
-    it.skip('Get K6 test results', async function () {
+    it('Get K6 test results', async function () {
         const testName = 'k6-results-ran'
         this.timeout(60000);
         const waitForExecutionTimeout = 50000
@@ -60,7 +73,7 @@ describe('Get test results with CLI', function () { //Execution times are unpred
         const customRunSummary = '1 complete and 0 interrupted iterations'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
     });
-    it.skip('Get Postman test results', async function () {
+    it('Get Postman test results', async function () {
         const testName = 'postman-results-ran'
         this.timeout(60000);
         const waitForExecutionTimeout = 50000
@@ -75,14 +88,15 @@ describe('Get test results with CLI', function () { //Execution times are unpred
 
         const customRunSummary = 'Project [soapui-smoke-test] finished with status [FINISHED]'
         const executionData = await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
-
-        const executionArtifacts = await apiHelpers.getExecutionArtifacts(executionData.id)
-        console.log('executionArtifacts')
-        console.log(executionArtifacts)
+        const executionArtifacts = await apiHelpers.getExecutionArtifacts(executionData.executionId)
+        
+        assertArtifactExists(executionArtifacts, 'global-groovy.log')
+        assertArtifactExists(executionArtifacts, 'soapui-errors.log')
+        assertArtifactExists(executionArtifacts, 'soapui.log', true)
     });
 });
 
-describe.skip('Get test results with CLI - Negative cases', function () { //Execution times are unpredictable - these tests require high timeouts!
+describe('Get test results with CLI - Negative cases', function () { //Execution times are unpredictable - these tests require high timeouts!
     it('Get test results - test failure', async function () {
         const testName = 'postman-results-ran-negative-test'
         this.timeout(60000);
