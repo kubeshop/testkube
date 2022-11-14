@@ -113,6 +113,15 @@ container-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+curl-smoke() {
+  name="curl"
+  test_crd_file="test/curl/executor-tests/crd/smoke.yaml"
+  testsuite_name="executor-curl-smoke-tests"
+  testsuite_file="test/suites/executor-curl-smoke-tests.json"
+  
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 cypress-smoke() {
   name="Cypress"
   test_crd_file="test/cypress/executor-tests/crd/crd.yaml"
@@ -205,6 +214,7 @@ main() {
     all)
       artillery-smoke
       container-smoke
+      curl-smoke
       cypress-smoke
       gradle-smoke
       jmeter-smoke
@@ -218,6 +228,7 @@ main() {
     smoke)
       artillery-smoke
       container-smoke
+      curl-smoke
       cypress-smoke
       gradle-smoke
       jmeter-smoke
