@@ -14,6 +14,7 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
     //prerequisites
     await apiHelpers.assureTestCreated(testData)
     const executionName = await apiHelpers.runTest(testData.name)
+    const executionId = await apiHelpers.getExecution(executionName).id
 
     await apiHelpers.waitForExecutionFinished(executionName, waitForExecutionTimeout)
 
@@ -33,10 +34,17 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
 
     const normalizedOutput = outputValidators.normalizeSpaces(cleanOutput)
     expect(normalizedOutput).to.include(customRunSummary)
+
+    const executionData = {
+        "executionName": executionName,
+        "executionId": executionId
+    }
+
+    return executionData
 }
 
 describe('Get test results with CLI', function () { //Execution times are unpredictable - these tests require high timeouts!
-    it('Get cypress test results', async function () {
+    it.skip('Get cypress test results', async function () {
         const testName = 'cypress-results-ran'
         this.timeout(120000);
         const waitForExecutionTimeout = 100000
@@ -44,7 +52,7 @@ describe('Get test results with CLI', function () { //Execution times are unpred
         const customRunSummary = 'Passing: 1'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
     });
-    it('Get K6 test results', async function () {
+    it.skip('Get K6 test results', async function () {
         const testName = 'k6-results-ran'
         this.timeout(60000);
         const waitForExecutionTimeout = 50000
@@ -52,7 +60,7 @@ describe('Get test results with CLI', function () { //Execution times are unpred
         const customRunSummary = '1 complete and 0 interrupted iterations'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
     });
-    it('Get Postman test results', async function () {
+    it.skip('Get Postman test results', async function () {
         const testName = 'postman-results-ran'
         this.timeout(60000);
         const waitForExecutionTimeout = 50000
@@ -60,9 +68,21 @@ describe('Get test results with CLI', function () { //Execution times are unpred
         const customRunSummary = 'GET https://testkube.kubeshop.io/ [200 OK'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
     });
+    it('Get SoapUI test results (including artifacts)', async function () {
+        const testName = 'soapui-results-ran'
+        this.timeout(60000);
+        const waitForExecutionTimeout = 50000
+
+        const customRunSummary = 'Project [soapui-smoke-test] finished with status [FINISHED]'
+        const executionData = await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
+
+        const executionArtifacts = await apiHelpers.getExecutionArtifacts(executionData.id)
+        console.log('executionArtifacts')
+        console.log(executionArtifacts)
+    });
 });
 
-describe('Get test results with CLI - Negative cases', function () { //Execution times are unpredictable - these tests require high timeouts!
+describe.skip('Get test results with CLI - Negative cases', function () { //Execution times are unpredictable - these tests require high timeouts!
     it('Get test results - test failure', async function () {
         const testName = 'postman-results-ran-negative-test'
         this.timeout(60000);

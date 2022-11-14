@@ -104,7 +104,6 @@ class ApiHelpers {
 
     async getExecution(executionName) {
         const response = await superagent.get(`${this.API_URL}/executions/${executionName}`) //200
-        const executionStatus = response.body.executionResult.status
 
         return response.body
     }
@@ -114,6 +113,12 @@ class ApiHelpers {
         const executionStatus = execution.executionResult.status
 
         return executionStatus
+    }
+
+    async getExecutionArtifacts(executionId) {
+        const response = await superagent.get(`${this.API_URL}/executions/${executionId}/artifacts`) //200
+
+        return response.body
     }
 
     async waitForExecutionFinished(executionName, timeout) {

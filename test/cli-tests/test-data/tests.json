@@ -174,5 +174,21 @@
         "labels": {
             "core-tests": "cli-internal"
         }
-    }
+    },
+    "soapui-results-ran": {
+        "name": "internal-cli-soapui-git-file-ran",
+        "type": "soapui/xml",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/soapui/executor-smoke/soapui-smoke-test.xml"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
 }
