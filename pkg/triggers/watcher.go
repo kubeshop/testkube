@@ -5,6 +5,8 @@ import (
 
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
+	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
@@ -13,7 +15,9 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 
 	"github.com/google/go-cmp/cmp"
-	testtriggers_v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,6 +35,8 @@ type k8sInformers struct {
 	ingressInformer      networkinginformerv1.IngressInformer
 	clusterEventInformer coreinformerv1.EventInformer
 	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
+	testSuiteInformer    testkubeinformerv2.TestSuiteInformer
+	testInformer         testkubeinformerv3.TestInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
@@ -45,6 +51,8 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
+	testSuiteInformer := testkubeInformerFactory.Tests().V2().TestSuites()
+	testInformer := testkubeInformerFactory.Tests().V3().Tests()
 
 	return &k8sInformers{
 		podInformer:          podInformer,
@@ -55,6 +63,8 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		ingressInformer:      ingressInformer,
 		clusterEventInformer: clusterEventInformer,
 		testTriggerInformer:  testTriggerInformer,
+		testSuiteInformer:    testSuiteInformer,
+		testInformer:         testInformer,
 	}
 }
 
@@ -104,6 +114,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.ingressInformer.Informer().AddEventHandler(s.ingressEventHandler(ctx))
 	s.informers.clusterEventInformer.Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
+	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informer")
 	go s.informers.podInformer.Informer().Run(stop)
@@ -121,7 +133,10 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.clusterEventInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test trigger informer")
 	go s.informers.testTriggerInformer.Informer().Run(stop)
-
+	s.logger.Debugf("trigger service: starting test suite informer")
+	go s.informers.testSuiteInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting test informer")
+	go s.informers.testInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -518,7 +533,7 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			t, ok := obj.(*testtriggers_v1.TestTrigger)
+			t, ok := obj.(*testtriggersv1.TestTrigger)
 			if !ok {
 				s.logger.Errorf("failed to process create testtrigger event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -530,7 +545,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			s.addTrigger(t)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			t, ok := newObj.(*testtriggers_v1.TestTrigger)
+			t, ok := newObj.(*testtriggersv1.TestTrigger)
 			if !ok {
 				s.logger.Errorf(
 					"failed to process update testtrigger event for new testtrigger due to it being an unexpected type, received type %+v",
@@ -545,7 +560,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			s.updateTrigger(t)
 		},
 		DeleteFunc: func(obj interface{}) {
-			t, ok := obj.(*testtriggers_v1.TestTrigger)
+			t, ok := obj.(*testtriggersv1.TestTrigger)
 			if !ok {
 				s.logger.Errorf("failed to process delete testtrigger event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -555,6 +570,40 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.removeTrigger(t)
+		},
+	}
+}
+
+func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			testSuite, ok := obj.(*testsuitev2.TestSuite)
+			if !ok {
+				s.logger.Errorf("failed to process create testsuite event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: adding testsuite %s/%s",
+				testSuite.Namespace, testSuite.Name,
+			)
+			s.addTestSuite(testSuite)
+		},
+	}
+}
+
+func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			test, ok := obj.(*testsv3.Test)
+			if !ok {
+				s.logger.Errorf("failed to process create test event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: adding test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.addTest(test)
 		},
 	}
 }

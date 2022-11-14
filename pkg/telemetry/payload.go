@@ -110,7 +110,7 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					EventCount:      1,
 					EventCategory:   "api",
 					AppVersion:      params.AppVersion,
-					AppName:         "testkube-operator",
+					AppName:         "testkube-api-server",
 					DataSource:      params.DataSource,
 					Host:            AnonymizeHost(params.Host),
 					OperatingSystem: runtime.GOOS,

@@ -288,6 +288,7 @@ func main() {
 		testResultsRepository,
 		triggers.NewMongoLeaseBackend(db),
 		log.DefaultLogger,
+		configMapConfig,
 		triggers.WithHostnameIdentifier(),
 	)
 	log.DefaultLogger.Info("starting trigger service")

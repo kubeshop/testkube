@@ -6,16 +6,21 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/utils"
-
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/utils"
 
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -47,6 +52,7 @@ type Service struct {
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
 	logger               *zap.SugaredLogger
+	configMap            config.Repository
 }
 
 type Option func(*Service)
@@ -61,6 +67,7 @@ func NewService(
 	testResultRepository testresult.Repository,
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
+	configMap config.Repository,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -80,6 +87,7 @@ func NewService(
 		testResultRepository: testResultRepository,
 		leaseBackend:         leaseBackend,
 		logger:               logger,
+		configMap:            configMap,
 		watchFromDate:        time.Now(),
 		triggerStatus:        make(map[statusKey]*triggerStatus),
 	}
@@ -166,4 +174,77 @@ func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 	key := newStatusKey(target.Namespace, target.Name)
 	delete(s.triggerStatus, key)
+}
+
+func (s *Service) addTest(test *testsv3.Test) {
+	ctx := context.Background()
+	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		s.logger.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		s.logger.Debugw("getting cluster id error", "error", err)
+	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	var dataSource string
+	if test.Spec.Content != nil {
+		dataSource = test.Spec.Content.Type_
+	}
+
+	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{
+		AppVersion: api.Version,
+		DataSource: dataSource,
+		Host:       host,
+		ClusterID:  clusterID,
+		TestType:   test.Spec.Type_,
+	})
+	if err != nil {
+		s.logger.Debugw("sending create test telemetry event error", "error", err)
+	} else {
+		s.logger.Debugw("sending create test telemetry event", "output", out)
+	}
+}
+
+func (s *Service) addTestSuite(testSuite *testsuitev2.TestSuite) {
+	ctx := context.Background()
+	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		s.logger.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		s.logger.Debugw("getting cluster id error", "error", err)
+	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	out, err := telemetry.SendCreateEvent("testkube_api_create_test_suite", telemetry.CreateParams{
+		AppVersion: api.Version,
+		Host:       host,
+		ClusterID:  clusterID,
+	})
+	if err != nil {
+		s.logger.Debugw("sending create test suite telemetry event error", "error", err)
+	} else {
+		s.logger.Debugw("sending create test suite telemetry event", "output", out)
+	}
 }

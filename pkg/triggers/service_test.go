@@ -140,6 +140,7 @@ func TestService_Run(t *testing.T) {
 		mockTestResultRepository,
 		mockLeaseBackend,
 		testLogger,
+		configMap,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
