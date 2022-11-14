@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: curl-smoke-test
+  name: curl-executor-smoke
   namespace: testkube
 spec:
   type: curl/test
@@ -11,4 +11,4 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: executor-tests-curl
-      path: test/curl/executor-tests/curl-smoke-test-negative.json
+      path: test/curl/executor-tests/curl-smoke-test.json
