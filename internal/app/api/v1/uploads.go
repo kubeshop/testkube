@@ -7,12 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// UploadCopyFiles uploads files into the object store and uses them during execution
-func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
+// UploadFiles uploads files into the object store and uses them during execution
+func (s TestkubeAPI) UploadFiles() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		parentID := c.FormValue("parentID")
+		parentID := c.FormValue("parentName")
 		if parentID == "" {
-			return s.Error(c, fiber.StatusBadRequest, errors.New("parentID cannot be empty"))
+			return s.Error(c, fiber.StatusBadRequest, errors.New("parentName cannot be empty"))
 		}
 		parentType := c.FormValue("parentType")
 		if parentType == "" {
@@ -34,7 +34,7 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 		}
 		defer f.Close()
 
-		err = s.Storage.SaveCopyFile(bucketName, filePath, f, file.Size)
+		err = s.Storage.UploadFile(bucketName, filePath, f, file.Size)
 		if err != nil {
 			return s.Error(c, fiber.StatusInternalServerError, fmt.Errorf("could not save copy file: %w", err))
 		}

@@ -27,13 +27,13 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		},
 		Storage: &storage,
 	}
-	route := "/copy-files"
+	route := "/uploads"
 
-	app.Post(route, s.UploadCopyFiles())
+	app.Post(route, s.UploadFiles())
 
 	tests := []struct {
 		name                string
-		parentID            string
+		parentName          string
 		parentType          string
 		filePath            string
 		fileContent         []byte
@@ -48,7 +48,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		},
 		{
 			name:                "file specified on execution",
-			parentID:            "1",
+			parentName:          "1",
 			parentType:          "execution",
 			filePath:            "/data/file1",
 			fileContent:         []byte("first file"),
@@ -59,7 +59,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		},
 		{
 			name:                "file specified on test",
-			parentID:            "2",
+			parentName:          "2",
 			parentType:          "test",
 			filePath:            "/data/file2",
 			fileContent:         []byte("second file"),
@@ -70,7 +70,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		},
 		{
 			name:                "file specified on test suite",
-			parentID:            "3",
+			parentName:          "3",
 			parentType:          "test-suite",
 			filePath:            "/data/file3",
 			fileContent:         []byte("third file"),
@@ -83,7 +83,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage.SaveCopyFileFn = func(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+			storage.UploadFileFn = func(bucket string, filePath string, reader io.Reader, objectSize int64) error {
 				assert.Equal(t, tt.expectedBucketName, bucket)
 				assert.Equal(t, tt.filePath, filePath)
 				assert.Equal(t, tt.expectedObjectSize, objectSize)
@@ -109,7 +109,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			if _, err := io.Copy(part, bytes.NewBuffer(tt.fileContent)); err != nil {
 				t.Error(err)
 			}
-			err = writer.WriteField("parentID", tt.parentID)
+			err = writer.WriteField("parentName", tt.parentName)
 			if err != nil {
 				t.Error(err)
 			}
@@ -137,8 +137,8 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 }
 
 type MockStorage struct {
-	SaveCopyFileFn   func(bucket string, filePath string, reader io.Reader, objectSize int64) error
-	PlaceCopyFilesFn func(buckets []string, prefix string) error
+	UploadFileFn func(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceFilesFn func(buckets []string, prefix string) error
 }
 
 func (m MockStorage) CreateBucket(bucket string) error {
@@ -160,16 +160,16 @@ func (m MockStorage) SaveFile(bucket, filePath string) error {
 func (m MockStorage) DownloadFile(bucket, file string) (*minio.Object, error) {
 	panic("not implemented")
 }
-func (m MockStorage) SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
-	if m.SaveCopyFileFn == nil {
+func (m MockStorage) UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+	if m.UploadFileFn == nil {
 		panic("not implemented")
 	}
-	return m.SaveCopyFileFn(bucket, filePath, reader, objectSize)
+	return m.UploadFileFn(bucket, filePath, reader, objectSize)
 }
 
-func (m MockStorage) PlaceCopyFiles(buckets []string, prefix string) error {
-	if m.PlaceCopyFilesFn == nil {
+func (m MockStorage) PlaceFiles(buckets []string, prefix string) error {
+	if m.PlaceFilesFn == nil {
 		panic("not implemented")
 	}
-	return m.PlaceCopyFilesFn(buckets, prefix)
+	return m.PlaceFilesFn(buckets, prefix)
 }
