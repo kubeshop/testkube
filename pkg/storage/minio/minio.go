@@ -216,10 +216,10 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 	return nil
 }
 
-// SaveCopyFile saves a file to be copied into a running execution
-func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+// UploadFile saves a file to be copied into a running execution
+func (c *Client) UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
 	if err := c.Connect(); err != nil {
-		return fmt.Errorf("minio SaveCopyFile connection error: %w", err)
+		return fmt.Errorf("minio UploadFile connection error: %w", err)
 	}
 
 	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
@@ -244,17 +244,17 @@ func (c *Client) SaveCopyFile(bucket string, filePath string, reader io.Reader, 
 	return nil
 }
 
-// PlaceCopyFiles saves the content of the buckets to the filesystem
-func (c *Client) PlaceCopyFiles(buckets []string, prefix string) error {
+// PlaceFiles saves the content of the buckets to the filesystem
+func (c *Client) PlaceFiles(buckets []string, prefix string) error {
 	c.Log.Debugf("Getting the contents of buckets %s", buckets)
 	if err := c.Connect(); err != nil {
-		return fmt.Errorf("minio PlaceCopyFiles connection error: %w", err)
+		return fmt.Errorf("minio PlaceFiles connection error: %w", err)
 	}
 
 	for _, b := range buckets {
 		exists, err := c.minioclient.BucketExists(context.TODO(), b)
 		if err != nil {
-			return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
+			return fmt.Errorf("could not check if bucket already exists for files: %w", err)
 		}
 		if !exists {
 			c.Log.Debugf("Bucket %s does not exist", b)
