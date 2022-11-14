@@ -10,5 +10,5 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-curl
+      branch: main
       path: test/curl/executor-tests/curl-smoke-test.json
