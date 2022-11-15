@@ -17,5 +17,5 @@ type Repository interface {
 	Get(ctx context.Context) (testkube.Config, error)
 
 	// Upserts inserts record if not exists, updates otherwise
-	Upsert(ctx context.Context, config testkube.Config) (testkube.Config, error)
+	Upsert(ctx context.Context, config testkube.Config) error
 }

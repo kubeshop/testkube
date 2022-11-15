@@ -23,10 +23,10 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/config"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
@@ -55,7 +55,7 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
-	configMap *config.ConfigMapConfig,
+	configMap config.Repository,
 	clusterId string,
 	eventsEmitter *event.Emitter,
 	executor client.Executor,
@@ -131,7 +131,7 @@ type TestkubeAPI struct {
 	oauthParams          oauthParams
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
-	ConfigMap            *config.ConfigMapConfig
+	ConfigMap            config.Repository
 	jobTemplates         *JobTemplates
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
@@ -311,8 +311,8 @@ func (s *TestkubeAPI) InitRoutes() {
 	debug := s.Routes.Group("/debug")
 	debug.Get("/listeners", s.GetDebugListenersHandler())
 
-	files := s.Routes.Group("/copy-files")
-	files.Post("/", s.UploadCopyFiles())
+	files := s.Routes.Group("/uploads")
+	files.Post("/", s.UploadFiles())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

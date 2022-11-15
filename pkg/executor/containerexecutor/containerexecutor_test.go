@@ -24,6 +24,7 @@ func TestExecuteAsync(t *testing.T) {
 		metrics:    FakeMetricCounter{},
 		emitter:    FakeEmitter{},
 		namespace:  "default",
+		configMap:  FakeConfigRepository{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -45,6 +46,7 @@ func TestExecuteSync(t *testing.T) {
 		metrics:    FakeMetricCounter{},
 		emitter:    FakeEmitter{},
 		namespace:  "default",
+		configMap:  FakeConfigRepository{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -252,5 +254,24 @@ func (FakeResultRepository) StartExecution(ctx context.Context, id string, start
 	return nil
 }
 func (FakeResultRepository) EndExecution(ctx context.Context, execution testkube.Execution) error {
+	return nil
+}
+
+type FakeConfigRepository struct {
+}
+
+func (FakeConfigRepository) GetUniqueClusterId(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+func (FakeConfigRepository) GetTelemetryEnabled(ctx context.Context) (ok bool, err error) {
+	return false, nil
+}
+
+func (FakeConfigRepository) Get(ctx context.Context) (testkube.Config, error) {
+	return testkube.Config{}, nil
+}
+
+func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) error {
 	return nil
 }

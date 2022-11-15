@@ -15,10 +15,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const uri string = Version + "/copy-files"
+const uri string = "/uploads"
 
 type CopyFileClient interface {
-	UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
 }
 
 type CopyFileDirectClient struct {
@@ -46,13 +46,13 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileDirectClient) UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error {
-	body, writer, err := createUploadFileBody(filePath, fileContent, parentID, parentType)
+func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "/copy-files", body)
+	req, err := http.NewRequest(http.MethodPost, uri, body)
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,8 @@ func (c CopyFileDirectClient) UploadFile(parentID string, parentType TestingType
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileProxyClient) UploadFile(parentID string, parentType TestingType, filePath string, fileContent []byte) error {
-	body, writer, err := createUploadFileBody(filePath, fileContent, parentID, parentType)
+func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (c CopyFileProxyClient) UploadFile(parentID string, parentType TestingType,
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy").
-		Suffix(uri).
+		Suffix(Version + uri).
 		Body(body)
 
 	resp := req.Do(context.Background())
@@ -96,7 +96,7 @@ func (c CopyFileProxyClient) UploadFile(parentID string, parentType TestingType,
 	return nil
 }
 
-func createUploadFileBody(filePath string, fileContent []byte, parentID string, parentType TestingType) (*bytes.Buffer, *multipart.Writer, error) {
+func createUploadFileBody(filePath string, fileContent []byte, parentName string, parentType TestingType) (*bytes.Buffer, *multipart.Writer, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("attachment", filepath.Base(filePath))
@@ -107,9 +107,9 @@ func createUploadFileBody(filePath string, fileContent []byte, parentID string, 
 	if _, err := io.Copy(part, bytes.NewBuffer(fileContent)); err != nil {
 		return body, writer, fmt.Errorf("could not write file: %w", err)
 	}
-	err = writer.WriteField("parentID", parentID)
+	err = writer.WriteField("parentName", parentName)
 	if err != nil {
-		return body, writer, fmt.Errorf("could not add parentID: %w", err)
+		return body, writer, fmt.Errorf("could not add parentName: %w", err)
 	}
 	err = writer.WriteField("parentType", string(parentType))
 	if err != nil {
