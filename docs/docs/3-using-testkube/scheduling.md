@@ -31,7 +31,7 @@ Detected test type postman/collection
 Test created  / scheduled-test 🥇
 ```
 
-We successfuly created a scheduled test and can check a list of the available tests:
+We successfully created a scheduled test and can check a list of the available tests:
 
 ```bash
 kubectl testkube get tests
@@ -129,7 +129,7 @@ Output:
   6256c87e418062706814e1f0 | scheduled-test      | postman/collection | passed  | 
 ```
 
-The test is successfully regulary executed.
+The test is successfully regularly executed.
 
 ## **Create a Test Suite with a Schedule**
 
@@ -145,7 +145,7 @@ Output:
 TestSuite created scheduled-testsuite 🥇
 ```
 
-We successfuly created a scheduled Test Suite and can view a list of the available Test Suites:
+We successfully created a scheduled Test Suite and can view a list of the available Test Suites:
 
 ```bash
 kubectl testkube get testsuites

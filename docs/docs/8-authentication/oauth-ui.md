@@ -5,7 +5,7 @@ sidebar_label: OAuth for UI
 # Testkube UI Authentication
 
 Testkube doesn't provide a separate user/role management system to protect access to its UI.
-Users can configure and OAuth based authenication module using Testkube Helm chart parameters.
+Users can configure and OAuth based authentication module using Testkube Helm chart parameters.
 Testkube can automatically create an OAuth2-Proxy service and deployment integrated 
 with GitHub, as well as properly configure Kubernetes Nginx Ingress Controller and create required 
 ingresses.

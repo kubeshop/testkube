@@ -2145,6 +2145,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /uploads:
+    post:
+      tags:
+        - api
+        - tests
+        - executions
+      summary: "Upload file"
+      description: "Upload file to be used in executions and tests"
+      operationId: uploads
+      requestBody:
+        $ref: "#/components/requestBodies/UploadsBody"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: string
+            text/yaml:
+              schema:
+                type: string
+        500:
+          description: "could not upload file"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     ExecutionsMetrics:
@@ -2460,6 +2490,7 @@ components:
         - running
         - passed
         - failed
+        - aborting
         - aborted
         - timeout
 
@@ -2609,13 +2640,13 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
-        copyFiles:
+        uploads:
           type: array
           items:
             type: string
-          description: list of files that need to be copied into the test of form source:destination
+          description: list of file paths that need to be copied into the test from uploads
           example:
-            - /user/home/settings/runnerconfig.txt:/tmp/settings/config.txt
+            - settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/ExecutionRequest"
 
@@ -2771,11 +2802,13 @@ components:
           example:
             env: "prod"
             app: "backend"
-        copyFiles:
-          type: object
-          additionalProperties:
+        uploads:
+          type: array
+          items:
             type: string
-          description: map of files with target location as key and contents as value
+          description: list of file paths that need to be copied into the test from uploads
+          example:
+            - settings/config.txt
 
 
     Artifact:
@@ -3130,11 +3163,13 @@ components:
           format: int64
           description: duration in seconds the test may be active, until its stopped
           example: 1
-        copyFiles:
-          type: object
-          additionalProperties:
+        uploads:
+          type: array
+          items:
             type: string
-          description: map of files with target location as key and contents as value
+          description: list of file paths that need to be copied into the test from uploads
+          example:
+            - settings/config.txt
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -3809,3 +3844,22 @@ components:
       schema:
         type: string
         description: Name of the object
+  requestBodies:
+    UploadsBody:
+      description: "Upload files request body data"
+      required: true
+      content:
+        multipart/form-data:
+           schema:
+              type: object
+              properties:
+                parentID:
+                  type: string
+                  example: "test-1"
+                parentType:
+                  enum:
+                   - test
+                   - execution
+                filePath:
+                  type: string
+                  example: folder/file.txt

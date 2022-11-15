@@ -148,12 +148,6 @@ func (s *Scheduler) getExecutor(testName string) client.Executor {
 	}
 }
 
-func (s *Scheduler) abortTestExecution(execution *testkube.Execution) *testkube.ExecutionResult {
-	s.logger.Infow("aborting execution", "executionId", execution.Id)
-	executor := s.getExecutor(execution.TestName)
-	return executor.Abort(execution)
-}
-
 func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
 	number, err := s.executionResults.GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
@@ -224,7 +218,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.Envs = options.Request.Envs
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
-	execution.CopyFiles = options.Request.CopyFiles
+	execution.Uploads = options.Request.Uploads
 
 	return execution
 }

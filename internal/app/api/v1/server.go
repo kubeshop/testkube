@@ -239,7 +239,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	tests.Get("/:id/executions", s.ListExecutionsHandler())
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
-	tests.Delete("/:id/executions/:executionID", s.AbortExecutionHandler())
+	tests.Patch("/:id/executions/:executionID", s.AbortExecutionHandler())
 
 	testWithExecutions := s.Routes.Group("/test-with-executions")
 	testWithExecutions.Get("/", s.ListTestWithExecutionsHandler())
@@ -257,7 +257,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
-	testsuites.Delete("/:id/executions/:executionID", s.AbortTestSuiteExecutionHandler())
+	testsuites.Patch("/:id/executions/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
 
@@ -267,7 +267,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
 	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
 	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
-	testExecutions.Delete("/:executionID", s.AbortTestSuiteExecutionHandler())
+	testExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
@@ -310,6 +310,9 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	debug := s.Routes.Group("/debug")
 	debug.Get("/listeners", s.GetDebugListenersHandler())
+
+	files := s.Routes.Group("/copy-files")
+	files.Post("/", s.UploadCopyFiles())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

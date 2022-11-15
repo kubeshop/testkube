@@ -43,7 +43,7 @@ Remember the generated Client ID and Client Secret.
 Run the command below to configure oauth parameters (we support github OAuth provider):
 
 ```bash
-kubectl testkube config oauth httsp://demo.testkube.io/api --client-id XXXXXXXXXX --client-secret XXXXXXXXXX
+kubectl testkube config oauth https://demo.testkube.io/api --client-id XXXXXXXXXX --client-secret XXXXXXXXXX
 ```
 
 Output:
@@ -55,7 +55,7 @@ Authentication will be cancelled in 60 seconds
 ```
 
 Authorization for the Github application will be requested and access will need to be confirmed. 
-![Confirm App aithorization](../img/github_app_authorize_cli.png)
+![Confirm App authorization](../img/github_app_authorize_cli.png)
 
 If authorization is successful, you will see the success page.
 ![Success Page](../img/github_app_success_cli.png)

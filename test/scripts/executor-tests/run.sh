@@ -113,6 +113,15 @@ container-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+curl-smoke() {
+  name="curl"
+  test_crd_file="test/curl/executor-tests/crd/smoke.yaml"
+  testsuite_name="executor-curl-smoke-tests"
+  testsuite_file="test/suites/executor-curl-smoke-tests.json"
+  
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 cypress-smoke() {
   name="Cypress"
   test_crd_file="test/cypress/executor-tests/crd/crd.yaml"
@@ -135,8 +144,17 @@ gradle-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+jmeter-smoke() {
+  name="JMeter"
+  test_crd_file="test/jmeter/executor-tests/crd/smoke.yaml"
+  testsuite_name="executor-jmeter-smoke-tests"
+  testsuite_file="test/suites/executor-jmeter-smoke-tests.json"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 k6-smoke() {
-  name="k6"
+  name="k6 smoke"
   test_crd_file="test/k6/executor-tests/crd/smoke.yaml"
   testsuite_name="executor-k6-smoke-tests"
   testsuite_file="test/suites/executor-k6-smoke-tests.json"
@@ -145,7 +163,7 @@ k6-smoke() {
 }
 
 k6-other() {
-  name="k6"
+  name="k6 other"
   test_crd_file="test/k6/executor-tests/crd/other.yaml"
   testsuite_name="executor-k6-other-tests"
   testsuite_file="test/suites/executor-k6-other-tests.json"
@@ -196,8 +214,10 @@ main() {
     all)
       artillery-smoke
       container-smoke
+      curl-smoke
       cypress-smoke
       gradle-smoke
+      jmeter-smoke
       k6-smoke
       k6-other
       kubepug-smoke
@@ -208,8 +228,10 @@ main() {
     smoke)
       artillery-smoke
       container-smoke
+      curl-smoke
       cypress-smoke
       gradle-smoke
+      jmeter-smoke
       k6-smoke
       kubepug-smoke
       maven-smoke
