@@ -18,8 +18,8 @@ func NewCopyFilesPlacer(endpoint, accessKeyID, secretAccessKey, location, token 
 	}
 }
 
-// PlaceFiles downloads the files from minio and places them into the /data/copy-files directory
+// PlaceFiles downloads the files from minio and places them into the /data/uploads directory
 func (p CopyFilesPlacer) PlaceFiles(buckets []string) error {
-	prefix := "/data/copy-files/"
-	return p.client.PlaceCopyFiles(buckets, prefix)
+	prefix := "/data/uploads/"
+	return p.client.PlaceFiles(buckets, prefix)
 }
