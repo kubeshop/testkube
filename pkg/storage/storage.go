@@ -17,4 +17,5 @@ type Client interface {
 	DownloadFile(bucket, file string) (*minio.Object, error)
 	UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error
 	PlaceFiles(buckets []string, prefix string) error
+	GetValidBucketName(parentType string, parentName string) string
 }

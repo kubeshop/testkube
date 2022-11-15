@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -20,6 +21,9 @@ import (
 func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 	app := fiber.New()
 	storage := MockStorage{}
+	storage.GetValidBucketNameFn = func(parentType string, parentName string) string {
+		return fmt.Sprintf("%s-%s", parentType, parentName)
+	}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
@@ -137,8 +141,9 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 }
 
 type MockStorage struct {
-	UploadFileFn func(bucket string, filePath string, reader io.Reader, objectSize int64) error
-	PlaceFilesFn func(buckets []string, prefix string) error
+	UploadFileFn         func(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceFilesFn         func(buckets []string, prefix string) error
+	GetValidBucketNameFn func(parentType string, parentName string) string
 }
 
 func (m MockStorage) CreateBucket(bucket string) error {
@@ -172,4 +177,11 @@ func (m MockStorage) PlaceFiles(buckets []string, prefix string) error {
 		panic("not implemented")
 	}
 	return m.PlaceFilesFn(buckets, prefix)
+}
+
+func (m MockStorage) GetValidBucketName(parentType string, parentName string) string {
+	if m.GetValidBucketNameFn == nil {
+		panic("not implemented")
+	}
+	return m.GetValidBucketNameFn(parentType, parentName)
 }

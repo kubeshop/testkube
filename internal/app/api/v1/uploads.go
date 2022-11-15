@@ -3,6 +3,7 @@ package v1
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -23,7 +24,7 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 			return s.Error(c, fiber.StatusBadRequest, errors.New("filePath cannot be empty"))
 		}
 
-		bucketName := getBucketName(parentType, parentName)
+		bucketName := s.Storage.GetValidBucketName(parentType, parentName)
 		file, err := c.FormFile("attachment")
 		if err != nil {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("unable to upload file: %w", err))
@@ -43,6 +44,14 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 	}
 }
 
-func getBucketName(parentType string, parentName string) string {
-	return fmt.Sprintf("%s-%s", parentType, parentName)
+func GetValidBucketName(parentType string, parentName string) string {
+	bucketName := fmt.Sprintf("%s-%s", parentType, parentName)
+	if len(bucketName) <= 63 {
+		return bucketName
+	}
+
+	h := fnv.New32a()
+	h.Write([]byte(bucketName))
+
+	return fmt.Sprintf("%s-%d", bucketName[:52], h.Sum32())
 }
