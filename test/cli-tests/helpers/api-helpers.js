@@ -1,6 +1,6 @@
 //TODO: common module for both cli-tests and Dashboard E2E tests?
 
-import superagent, { jar } from 'superagent'
+import superagent from 'superagent'
 import {setTimeout} from "timers/promises";
 
 
