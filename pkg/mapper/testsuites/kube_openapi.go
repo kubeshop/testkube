@@ -141,5 +141,6 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExe
 		Sync:            specExecutionRequest.Sync,
 		HttpProxy:       specExecutionRequest.HttpProxy,
 		HttpsProxy:      specExecutionRequest.HttpsProxy,
+		Timeout:         specExecutionRequest.Timeout,
 	}
 }

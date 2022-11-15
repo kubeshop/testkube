@@ -3221,6 +3221,11 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        timeout:
+          type: integer
+          format: int32
+          description: duration in milliseconds the test suite may be active, until its stopped
+          example: 1
 
     TestUpsertRequest:
       description: test create request body
