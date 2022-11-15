@@ -271,15 +271,16 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:                fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
-			TestSuiteName:       testSuiteName,
-			Namespace:           executeTestStep.Namespace,
-			Variables:           testsuiteExecution.Variables,
-			TestSuiteSecretUUID: request.SecretUUID,
-			Sync:                true,
-			HttpProxy:           request.HttpProxy,
-			HttpsProxy:          request.HttpsProxy,
-			ExecutionLabels:     request.ExecutionLabels,
+			Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
+			TestSuiteName:         testSuiteName,
+			Namespace:             executeTestStep.Namespace,
+			Variables:             testsuiteExecution.Variables,
+			TestSuiteSecretUUID:   request.SecretUUID,
+			Sync:                  true,
+			HttpProxy:             request.HttpProxy,
+			HttpsProxy:            request.HttpsProxy,
+			ExecutionLabels:       request.ExecutionLabels,
+			ActiveDeadlineSeconds: int64(request.Timeout),
 		}
 
 		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
