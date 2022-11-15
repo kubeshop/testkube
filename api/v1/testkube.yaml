@@ -2644,7 +2644,7 @@ components:
           type: array
           items:
             type: string
-          description: list of file paths that need to be copied into the test from uploads
+          description: list of file paths that will be needed from uploads
           example:
             - settings/config.txt
         executionRequest:
@@ -3853,7 +3853,7 @@ components:
            schema:
               type: object
               properties:
-                parentID:
+                parentName:
                   type: string
                   example: "test-1"
                 parentType:

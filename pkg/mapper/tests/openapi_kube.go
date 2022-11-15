@@ -23,7 +23,7 @@ func MapToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
 			Source:           request.Source,
 			Schedule:         request.Schedule,
 			ExecutionRequest: MapExecutionRequestToSpecExecutionRequest(request.ExecutionRequest),
-			//			Uploads:          request.Uploads,
+			Uploads:          request.Uploads,
 		},
 	}
 

@@ -15,6 +15,6 @@ type Client interface {
 	ListFiles(bucket string) ([]testkube.Artifact, error)
 	SaveFile(bucket, filePath string) error
 	DownloadFile(bucket, file string) (*minio.Object, error)
-	SaveCopyFile(bucket string, filePath string, reader io.Reader, objectSize int64) error
-	PlaceCopyFiles(buckets []string, prefix string) error
+	UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceFiles(buckets []string, prefix string) error
 }

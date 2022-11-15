@@ -7,12 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// UploadCopyFiles uploads files into the object store and uses them during execution
-func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
+// UploadFiles uploads files into the object store and uses them during execution
+func (s TestkubeAPI) UploadFiles() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		parentID := c.FormValue("parentID")
-		if parentID == "" {
-			return s.Error(c, fiber.StatusBadRequest, errors.New("parentID cannot be empty"))
+		parentName := c.FormValue("parentName")
+		if parentName == "" {
+			return s.Error(c, fiber.StatusBadRequest, errors.New("parentName cannot be empty"))
 		}
 		parentType := c.FormValue("parentType")
 		if parentType == "" {
@@ -23,7 +23,7 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 			return s.Error(c, fiber.StatusBadRequest, errors.New("filePath cannot be empty"))
 		}
 
-		bucketName := getBucketName(parentType, parentID)
+		bucketName := getBucketName(parentType, parentName)
 		file, err := c.FormFile("attachment")
 		if err != nil {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("unable to upload file: %w", err))
@@ -34,7 +34,7 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 		}
 		defer f.Close()
 
-		err = s.Storage.SaveCopyFile(bucketName, filePath, f, file.Size)
+		err = s.Storage.UploadFile(bucketName, filePath, f, file.Size)
 		if err != nil {
 			return s.Error(c, fiber.StatusInternalServerError, fmt.Errorf("could not save copy file: %w", err))
 		}
@@ -43,6 +43,6 @@ func (s TestkubeAPI) UploadCopyFiles() fiber.Handler {
 	}
 }
 
-func getBucketName(parentType string, parentID string) string {
-	return fmt.Sprintf("%s-%s", parentType, parentID)
+func getBucketName(parentType string, parentName string) string {
+	return fmt.Sprintf("%s-%s", parentType, parentName)
 }
