@@ -42,7 +42,8 @@ class ApiHelpers {
         return executionName
     }
 
-    async abortTest(testName, executionId) {
+    async abortTest(testName, executionId) { // https://github.com/kubeshop/testkube/issues/2715
+        console.log('abortTest')
         const response = await superagent.delete(`${this.API_URL}/tests/${testName}/executions/${executionId}`) //200
 
         return response

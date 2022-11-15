@@ -29,7 +29,7 @@ async function runTestFlow(testName) {
     expect(executionStatus).to.be.equal('running')
 
     //cleanup
-    await apiHelpers.abortTest(testName, executionId) //Abort test run not to waste compute resources (separate results validation in test-results.js)
+    // await apiHelpers.abortTest(testName, executionId) //Abort test run not to waste compute resources (separate results validation in test-results.js) //TODO: temporary disabled because of: https://github.com/kubeshop/testkube/issues/2715
 }
 
 describe('Run test with CLI', function () {
