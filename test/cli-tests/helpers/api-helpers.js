@@ -43,7 +43,6 @@ class ApiHelpers {
     }
 
     async abortTest(testName, executionId) {
-        console.log('abort test')
         const response = await superagent.patch(`${this.API_URL}/tests/${testName}/executions/${executionId}`) //200
 
         return response
