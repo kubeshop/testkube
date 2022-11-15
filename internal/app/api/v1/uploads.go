@@ -10,8 +10,8 @@ import (
 // UploadFiles uploads files into the object store and uses them during execution
 func (s TestkubeAPI) UploadFiles() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		parentID := c.FormValue("parentName")
-		if parentID == "" {
+		parentName := c.FormValue("parentName")
+		if parentName == "" {
 			return s.Error(c, fiber.StatusBadRequest, errors.New("parentName cannot be empty"))
 		}
 		parentType := c.FormValue("parentType")
@@ -23,7 +23,7 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 			return s.Error(c, fiber.StatusBadRequest, errors.New("filePath cannot be empty"))
 		}
 
-		bucketName := getBucketName(parentType, parentID)
+		bucketName := getBucketName(parentType, parentName)
 		file, err := c.FormFile("attachment")
 		if err != nil {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("unable to upload file: %w", err))
@@ -43,6 +43,6 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 	}
 }
 
-func getBucketName(parentType string, parentID string) string {
-	return fmt.Sprintf("%s-%s", parentType, parentID)
+func getBucketName(parentType string, parentName string) string {
+	return fmt.Sprintf("%s-%s", parentType, parentName)
 }
