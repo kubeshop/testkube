@@ -22,16 +22,18 @@ const (
 	CollectionSequences = "sequences"
 )
 
-func NewMongoRespository(db *mongo.Database) *MongoRepository {
+func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
 	return &MongoRepository{
-		Coll:      db.Collection(CollectionName),
-		Sequences: db.Collection(CollectionSequences),
+		Coll:         db.Collection(CollectionName),
+		Sequences:    db.Collection(CollectionSequences),
+		allowDiskUse: allowDiskUse,
 	}
 }
 
 type MongoRepository struct {
-	Coll      *mongo.Collection
-	Sequences *mongo.Collection
+	Coll         *mongo.Collection
+	Sequences    *mongo.Collection
+	allowDiskUse bool
 }
 
 type executionNumber struct {
@@ -80,7 +82,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	pipeline = append(pipeline, bson.D{
 		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testname"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, options.Aggregate().SetAllowDiskUse(r.allowDiskUse))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +100,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		conditions = append(conditions, bson.M{"id": result.LatestID})
 	}
 
-	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions})
+	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions}, options.Find().SetAllowDiskUse(r.allowDiskUse))
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +118,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	resultLimit := int64(limit)
 	opts := &options.FindOptions{Limit: &resultLimit}
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts.SetAllowDiskUse(r.allowDiskUse)
 	cursor, err := r.Coll.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		return result, err
@@ -127,6 +130,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
 	result = make([]testkube.Execution, 0)
 	query, opts := composeQueryAndOpts(filter)
+	opts.SetAllowDiskUse(r.allowDiskUse)
 
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
@@ -159,7 +163,7 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 
 	pipeline = append(pipeline, bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$executionresult.status"},
 		{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}}}}})
-	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, options.Aggregate().SetAllowDiskUse(r.allowDiskUse))
 	if err != nil {
 		return totals, err
 	}
@@ -193,7 +197,7 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 		Labels bson.M `bson:"labels"`
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{})
+	cursor, err := r.Coll.Find(ctx, bson.M{}, options.Find().SetAllowDiskUse(r.allowDiskUse))
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +462,7 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 		},
 	})
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, options.Aggregate().SetAllowDiskUse(r.allowDiskUse))
 	if err != nil {
 		return metrics, err
 	}
