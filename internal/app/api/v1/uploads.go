@@ -3,7 +3,6 @@ package v1
 import (
 	"errors"
 	"fmt"
-	"hash/fnv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -42,16 +41,4 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 
 		return c.JSON(fiber.StatusOK)
 	}
-}
-
-func GetValidBucketName(parentType string, parentName string) string {
-	bucketName := fmt.Sprintf("%s-%s", parentType, parentName)
-	if len(bucketName) <= 63 {
-		return bucketName
-	}
-
-	h := fnv.New32a()
-	h.Write([]byte(bucketName))
-
-	return fmt.Sprintf("%s-%d", bucketName[:52], h.Sum32())
 }
