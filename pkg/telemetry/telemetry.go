@@ -53,6 +53,18 @@ func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	return sendData(senders, payload)
 }
 
+// SendCreateEvent will send API create event for Test or Test suite to GA
+func SendCreateEvent(event string, params CreateParams) (string, error) {
+	payload := NewCreatePayload(event, params)
+	return sendData(senders, payload)
+}
+
+// SendCreateEvent will send API run event for Test or Test suite to GA
+func SendRunEvent(event string, params RunParams) (string, error) {
+	payload := NewRunPayload(event, params)
+	return sendData(senders, payload)
+}
+
 // sendData sends data to all telemetry storages  in parallel and syncs sending
 func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
 	var wg sync.WaitGroup

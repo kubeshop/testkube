@@ -19,15 +19,40 @@ type Params struct {
 	ClusterID        string `json:"cluster_id,omitempty"`
 	OperatingSystem  string `json:"operating_system,omitempty"`
 	Architecture     string `json:"architecture,omitempty"`
+	TestType         string `json:"test_type,omitempty"`
+	DurationMs       int32  `json:"duration_ms,omitempty"`
+	Status           string `json:"status,omitempty"`
 }
+
 type Event struct {
 	Name   string `json:"name"`
 	Params Params `json:"params,omitempty"`
 }
+
 type Payload struct {
 	UserID   string  `json:"user_id,omitempty"`
 	ClientID string  `json:"client_id,omitempty"`
 	Events   []Event `json:"events,omitempty"`
+}
+
+// CreateParams contains Test or Test suite creation parameters
+type CreateParams struct {
+	AppVersion string
+	DataSource string
+	Host       string
+	ClusterID  string
+	TestType   string
+}
+
+// RunParams contains Test or Test suite run parameters
+type RunParams struct {
+	AppVersion string
+	DataSource string
+	Host       string
+	ClusterID  string
+	TestType   string
+	DurationMs int32
+	Status     string
 }
 
 func NewCLIPayload(id, name, version, category string) Payload {
@@ -68,6 +93,58 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
+				},
+			}},
+	}
+}
+
+// NewCreatePayload prepares payload for Test or Test suite creation
+func NewCreatePayload(name string, params CreateParams) Payload {
+	return Payload{
+		ClientID: params.ClusterID,
+		UserID:   params.ClusterID,
+		Events: []Event{
+			{
+				Name: text.GAEventName(name),
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "api",
+					AppVersion:      params.AppVersion,
+					AppName:         "testkube-api-server",
+					DataSource:      params.DataSource,
+					Host:            AnonymizeHost(params.Host),
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					MachineID:       GetMachineID(),
+					ClusterID:       params.ClusterID,
+					TestType:        params.TestType,
+				},
+			}},
+	}
+}
+
+// NewRunPayload prepares payload for Test or Test suite execution
+func NewRunPayload(name string, params RunParams) Payload {
+	return Payload{
+		ClientID: params.ClusterID,
+		UserID:   params.ClusterID,
+		Events: []Event{
+			{
+				Name: text.GAEventName(name),
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "api",
+					AppVersion:      params.AppVersion,
+					AppName:         "testkube-api-server",
+					DataSource:      params.DataSource,
+					Host:            AnonymizeHost(params.Host),
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					MachineID:       GetMachineID(),
+					ClusterID:       params.ClusterID,
+					TestType:        params.TestType,
+					DurationMs:      params.DurationMs,
+					Status:          params.Status,
 				},
 			}},
 	}

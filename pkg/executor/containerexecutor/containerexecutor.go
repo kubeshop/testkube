@@ -2,6 +2,7 @@ package containerexecutor
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -11,12 +12,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
 const (
@@ -39,7 +43,8 @@ type EventEmitter interface {
 }
 
 // NewContainerExecutor creates new job executor
-func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTemplate string, metrics ExecutionCounter, emiter EventEmitter) (client *ContainerExecutor, err error) {
+func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTemplate string,
+	metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -52,6 +57,7 @@ func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTempla
 		namespace:   namespace,
 		initImage:   initImage,
 		jobTemplate: jobTemplate,
+		configMap:   configMap,
 		metrics:     metrics,
 		emitter:     emiter,
 	}, nil
@@ -71,6 +77,7 @@ type ContainerExecutor struct {
 	jobTemplate string
 	metrics     ExecutionCounter
 	emitter     EventEmitter
+	configMap   config.Repository
 }
 
 type JobOptions struct {
@@ -271,6 +278,51 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 	c.metrics.IncExecuteTest(*execution)
 
 	c.emitter.Notify(testkube.NewEventEndTestSuccess(execution))
+
+	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		c.log.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := c.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		c.log.Debugw("getting cluster id error", "error", err)
+	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		c.log.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	var dataSource string
+	if execution.Content != nil {
+		dataSource = execution.Content.Type_
+	}
+
+	status := ""
+	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
+		status = string(*execution.ExecutionResult.Status)
+	}
+
+	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
+		AppVersion: api.Version,
+		DataSource: dataSource,
+		Host:       host,
+		ClusterID:  clusterID,
+		TestType:   execution.TestType,
+		DurationMs: execution.DurationMs,
+		Status:     status,
+	})
+	if err != nil {
+		c.log.Debugw("sending run test telemetry event error", "error", err)
+	} else {
+		c.log.Debugw("sending run test telemetry event", "output", out)
+	}
+
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
