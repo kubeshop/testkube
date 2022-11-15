@@ -304,7 +304,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 	}
 
 	status := ""
-	if execution.ExecutionResult != nil {
+	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		status = string(*execution.ExecutionResult.Status)
 	}
 

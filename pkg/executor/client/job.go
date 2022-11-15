@@ -373,7 +373,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	}
 
 	status := ""
-	if execution.ExecutionResult != nil {
+	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		status = string(*execution.ExecutionResult.Status)
 	}
 
