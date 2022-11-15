@@ -3224,7 +3224,7 @@ components:
         timeout:
           type: integer
           format: int32
-          description: duration in milliseconds the test suite may be active, until its stopped
+          description: duration in seconds the test suite may be active, until its stopped
           example: 1
 
     TestUpsertRequest:

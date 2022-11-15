@@ -217,7 +217,7 @@ func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testk
 	const abortionPollingInterval = 100 * time.Millisecond
 	s.logger.Infow("Abortion check started", "test", testsuiteExecution.Name, "timeout", timeout)
 	ticker := time.NewTicker(abortionPollingInterval)
-	timer := time.NewTimer(time.Duration(timeout) * time.Millisecond)
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timer.Stop()
 	defer ticker.Stop()
 	for testsuiteExecution.Status == testkube.TestSuiteExecutionStatusRunning {
@@ -305,6 +305,7 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 	const abortionPollingInterval = 100 * time.Millisecond
 	ticker := time.NewTicker(abortionPollingInterval)
 	defer timer.Stop()
+	defer ticker.Stop()
 	for {
 		select {
 		case <-timer.C:

@@ -30,6 +30,6 @@ type TestSuiteExecutionRequest struct {
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
 	HttpsProxy string `json:"httpsProxy,omitempty"`
-	// duration in milliseconds the test suite may be active, until its stopped
+	// duration in seconds the test suite may be active, until its stopped
 	Timeout int32 `json:"timeout,omitempty"`
 }
