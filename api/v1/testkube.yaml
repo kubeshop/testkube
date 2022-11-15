@@ -704,7 +704,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-    delete:
+    patch:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
@@ -838,7 +838,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-    delete:
+    patch:
       parameters:
         - $ref: "#/components/parameters/executionID"
       tags:
@@ -1445,7 +1445,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-    delete:
+    patch:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
