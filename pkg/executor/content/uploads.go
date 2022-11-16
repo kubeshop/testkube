@@ -27,7 +27,7 @@ func (p CopyFilesPlacer) PlaceFiles(testName, executionBucket string) error {
 		buckets = append(buckets, p.client.GetValidBucketName("test", testName))
 	}
 	if executionBucket != "" {
-		buckets = append(buckets, executionBucket)
+		buckets = append(buckets, p.client.GetValidBucketName("execution", executionBucket))
 	}
 
 	return p.client.PlaceFiles(buckets, prefix)
