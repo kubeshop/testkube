@@ -1,7 +1,9 @@
 import superagent from 'superagent'
 
 class ApiHelpers {
-    API_URL = Cypress.env('API_URL')
+    constructor(apiUrl) {
+        this.API_URL = apiUrl;
+    }
 
     async getTests() {
         const request = `${this.API_URL}/tests`
