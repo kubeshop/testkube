@@ -3170,6 +3170,10 @@ components:
           description: list of file paths that need to be copied into the test from uploads
           example:
             - settings/config.txt
+        bucketName:
+          type: string
+          description: minio bucket name to get uploads from
+          example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
