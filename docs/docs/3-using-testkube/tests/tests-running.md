@@ -209,14 +209,6 @@ $ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 Test execution completed in 1m45.405939s
 ```
 
-### **Mapping local files**
-
-Local files can be set on the execution of a Testkube Test. Pass the file in the format `source_path:destination_path` using the flag `--copy-files`.
-
-```bash
-kubectl testkube run test maven-example-file-test --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml" --args "--settings" --args "/tmp/settings.xml" -v "TESTKUBE_MAVEN=true"
-```
-
 ## **Summary**
 
 As we can see, running tests in Kubernetes cluster is really easy with use of the Testkube kubectl plugin!

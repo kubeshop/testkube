@@ -327,16 +327,22 @@ As we can see, this test has `spec.repository` with git repository data. This da
 
 ### **Mapping local files**
 
-Local files can be added into a Testkube Test. This can be set on both Test and Execution level passing the file in the format `source_path:destination_path` using the flag `--copy-files`. The file will be copied upon execution from the machine running `kubectl`.
+Local files can be added into a Testkube Test. This can be set on Test level passing the file in the format `source_path:destination_path` using the flag `--copy-files`. The file will be copied upon execution from the machine running `kubectl`. The files will be then available in the `/data/uploads` folder inside the test container.
 
 ```bash
-kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-settings --type maven/test --name maven-example-file-test --git-branch main --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml"
+kubectl testkube create test --name maven-example-file-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-settings --type maven/test  --git-branch main --copy-files "/Users/local_user/local_maven_settings.xml:settings.xml"
 ```
 
 Output:
 
 ```bash
 Test created maven-example-file-test 🥇
+```
+
+To run this test, refer to `settings.xml` from the `/data/uploads` folder:
+
+```bash
+testkube run test maven-example-file-test --args "--settings" --args "/data/uploads/settings.xml" -v "TESTKUBE_MAVEN=true" --args "-e" --args "-X" --env "DEBUG=\"true\""
 ```
 
 ## **Summary**
