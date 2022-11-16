@@ -2,7 +2,7 @@ import {execSync} from 'node:child_process'
 import { expect } from 'chai';
 
 import ApiHelpers from '../helpers/api-helpers';
-const apiHelpers=new ApiHelpers();
+const apiHelpers=new ApiHelpers(process.env.API_URL);
 import TestDataHandler from '../helpers/test-data-handlers';
 const testDataHandler=new TestDataHandler();
 import OutputValidators from '../helpers/output-validators';
@@ -88,11 +88,19 @@ describe('Get test results with CLI', function () { //Execution times are unpred
 
         const customRunSummary = 'Project [soapui-smoke-test] finished with status [FINISHED]'
         const executionData = await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
+
+        // Artifacts
         const executionArtifacts = await apiHelpers.getExecutionArtifacts(executionData.executionId)
-        
+
         assertArtifactExists(executionArtifacts, 'global-groovy.log')
         assertArtifactExists(executionArtifacts, 'soapui-errors.log')
         assertArtifactExists(executionArtifacts, 'soapui.log', true)
+
+        const soapUiLogContents = await apiHelpers.downloadArtifact(executionData.executionId, 'soapui.log')
+        const soapUiErrorLogContents = await apiHelpers.downloadArtifact(executionData.executionId, 'soapui-errors.log')
+
+        expect(soapUiLogContents).to.include(customRunSummary)
+        expect(soapUiErrorLogContents).to.be.empty
     });
 });
 
