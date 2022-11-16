@@ -143,6 +143,7 @@ type ExecuteTestOptions struct {
 	HTTPSProxy                    string
 	Image                         string
 	Uploads                       []string
+	BucketName                    string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
