@@ -14,6 +14,12 @@ class ApiHelpers {
 
         return response.body
     }
+
+    async abortTest(testName, executionId) {
+        const response = await superagent.patch(`${this.API_URL}/tests/${testName}/executions/${executionId}`) //200
+
+        return response
+    }
     
     async removeTest(testName) {
         await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204

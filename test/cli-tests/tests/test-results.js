@@ -14,6 +14,8 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
     //prerequisites
     await apiHelpers.assureTestCreated(testData)
     const executionName = await apiHelpers.runTest(testData.name)
+    const execution = await apiHelpers.getExecution(executionName)
+    const executionId = execution.id
 
     await apiHelpers.waitForExecutionFinished(executionName, waitForExecutionTimeout)
 
@@ -33,6 +35,25 @@ async function getResultsPositiveFlow(testName, customRunSummary, waitForExecuti
 
     const normalizedOutput = outputValidators.normalizeSpaces(cleanOutput)
     expect(normalizedOutput).to.include(customRunSummary)
+
+    const executionData = {
+        "executionName": executionName,
+        "executionId": executionId
+    }
+
+    return executionData
+}
+
+function assertArtifactExists(executionArtifacts, artifactFileName, notEmpty) {
+    try {
+        if(notEmpty) {
+            expect(executionArtifacts.filter(obj => obj.name === artifactFileName)[0]).to.exist.and.to.contain.keys('name').and.to.contain.keys('size')
+        } else {
+            expect(executionArtifacts.filter(obj => obj.name === artifactFileName)[0]).to.exist
+        }
+    } catch(e) {
+        throw Error(`Missing artifact "${artifactFileName}"`)
+    }
 }
 
 describe('Get test results with CLI', function () { //Execution times are unpredictable - these tests require high timeouts!
@@ -59,6 +80,19 @@ describe('Get test results with CLI', function () { //Execution times are unpred
 
         const customRunSummary = 'GET https://testkube.kubeshop.io/ [200 OK'
         await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
+    });
+    it('Get SoapUI test results (including artifacts)', async function () {
+        const testName = 'soapui-results-ran'
+        this.timeout(60000);
+        const waitForExecutionTimeout = 50000
+
+        const customRunSummary = 'Project [soapui-smoke-test] finished with status [FINISHED]'
+        const executionData = await getResultsPositiveFlow(testName, customRunSummary, waitForExecutionTimeout)
+        const executionArtifacts = await apiHelpers.getExecutionArtifacts(executionData.executionId)
+        
+        assertArtifactExists(executionArtifacts, 'global-groovy.log')
+        assertArtifactExists(executionArtifacts, 'soapui-errors.log')
+        assertArtifactExists(executionArtifacts, 'soapui.log', true)
     });
 });
 
