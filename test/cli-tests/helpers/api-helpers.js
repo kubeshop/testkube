@@ -5,7 +5,10 @@ import {setTimeout} from "timers/promises";
 
 
 class ApiHelpers {
-    API_URL = process.env.API_URL //TODO: constructor
+    constructor(apiUrl) {
+        this.API_URL = apiUrl;
+    }
+
     async getTests() {
         const request = `${this.API_URL}/tests`
 
@@ -194,6 +197,19 @@ class ApiHelpers {
             return response.body
         } catch (e) {
             throw Error(`getExecutionArtifacts failed for "${request}" with: "${e}"`)
+        }
+    }
+
+    async downloadArtifact(executionId, artifactFileName) {
+        const request = `${this.API_URL}/executions/${executionId}/artifacts/${artifactFileName}`
+
+        try {
+            const response = await superagent.get(request)
+            const artifactContents = response.text
+        
+            return artifactContents
+        } catch(e) {
+            throw Error(`downloadArtifact failed on "${request}" with: "${e}"`)
         }
     }
 
