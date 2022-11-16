@@ -4,7 +4,7 @@
 import TestDataHandler from '../support/data-handlers/test-data-handlers';
 const testDataHandler=new TestDataHandler();
 import ApiHelpers from '../support/api/api-helpers';
-const apiHelpers=new ApiHelpers();
+const apiHelpers=new ApiHelpers(Cypress.env('API_URL'));
 import CommonHelpers from '../support/common-helpers';
 const commonHelpers=new CommonHelpers();
 import MainPage from '../support/pages/MainPage';
