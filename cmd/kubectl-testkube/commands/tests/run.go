@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -89,7 +90,8 @@ func NewRunTestCmd() *cobra.Command {
 				}
 
 				if len(copyFiles) > 0 {
-					err := uploadFiles(client, name, apiv1.Execution, copyFiles)
+					options.BucketName = uuid.New().String()
+					err = uploadFiles(client, options.BucketName, apiv1.Execution, copyFiles)
 					ui.ExitOnError("could not upload files", err)
 				}
 

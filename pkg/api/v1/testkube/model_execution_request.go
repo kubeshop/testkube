@@ -50,4 +50,6 @@ type ExecutionRequest struct {
 	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
 	// list of file paths that need to be copied into the test from uploads
 	Uploads []string `json:"uploads,omitempty"`
+	// minio bucket name to get uploads from
+	BucketName string `json:"bucketName,omitempty"`
 }

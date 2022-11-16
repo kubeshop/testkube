@@ -219,6 +219,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
 	execution.Uploads = options.Request.Uploads
+	execution.BucketName = options.Request.BucketName
 
 	return execution
 }
