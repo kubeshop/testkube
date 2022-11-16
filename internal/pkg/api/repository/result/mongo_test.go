@@ -360,7 +360,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDataBase(mongoDns, mongoDbName)
-	repository := NewMongoRespository(db)
+	repository := NewMongoRespository(db, true)
 	return repository, err
 }
 

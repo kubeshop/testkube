@@ -135,8 +135,8 @@ func main() {
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
 
-	resultsRepository := result.NewMongoRespository(db)
-	testResultsRepository := testresult.NewMongoRespository(db)
+	resultsRepository := result.NewMongoRespository(db, true)
+	testResultsRepository := testresult.NewMongoRespository(db, true)
 	configRepository := configmongo.NewMongoRespository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", namespace)
 	if os.Getenv("APISERVER_CONFIG") != "" {
