@@ -204,14 +204,14 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, configMapConfig, namespace)
-	if err != nil {
-		ui.ExitOnError("Creating executor client")
-	}
-
 	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_TEMPLATE")
 	if err != nil {
 		ui.ExitOnError("Creating job templates")
+	}
+
+	executor, err := newExecutorClient(resultsRepository, executorsClient, eventsEmitter, metrics, configMapConfig, jobTemplates, namespace)
+	if err != nil {
+		ui.ExitOnError("Creating executor client")
 	}
 
 	containerExecutor, err := newContainerExecutor(resultsRepository, executorsClient, eventsEmitter, metrics, configMapConfig, namespace)
@@ -340,9 +340,7 @@ func newContainerExecutor(
 
 	var jobTemplate string
 	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_CONTAINER_TEMPLATE")
-	if err != nil {
-		jobTemplate = ""
-	} else {
+	if err == nil {
 		jobTemplate = jobTemplates.Job
 	}
 
@@ -355,6 +353,7 @@ func newExecutorClient(
 	eventsEmitter *event.Emitter,
 	metrics metrics.Metrics,
 	configMap configmap.Repository,
+	jobTemplates *apiv1.JobTemplates,
 	namespace string,
 ) (executor client.Executor, err error) {
 	readOnlyExecutors := false
@@ -369,11 +368,6 @@ func newExecutorClient(
 	initImage, err := loadDefaultExecutors(executorsClient, namespace, defaultExecutors, readOnlyExecutors)
 	if err != nil {
 		return nil, errors.WithMessage(err, "error loading default executors")
-	}
-
-	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_TEMPLATE")
-	if err != nil {
-		return nil, errors.WithMessage(err, "error creating job templates from envvars")
 	}
 
 	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, metrics, eventsEmitter, configMap)
