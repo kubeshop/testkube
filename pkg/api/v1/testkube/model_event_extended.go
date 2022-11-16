@@ -79,6 +79,14 @@ func NewEventEndTestSuiteAborted(execution *TestSuiteExecution) Event {
 	}
 }
 
+func NewEventEndTestSuiteTimeout(execution *TestSuiteExecution) Event {
+	return Event{
+		Id:                 uuid.NewString(),
+		Type_:              EventEndTestSuiteTimeout,
+		TestSuiteExecution: execution,
+	}
+}
+
 func (e Event) Type() EventType {
 	if e.Type_ != nil {
 		return *e.Type_

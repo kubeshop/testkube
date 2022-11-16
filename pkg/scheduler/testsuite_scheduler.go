@@ -53,7 +53,13 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
 			request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
 		}
+
+		if request.Timeout == 0 && testSuite.ExecutionRequest.Timeout != 0 {
+			request.Timeout = testSuite.ExecutionRequest.Timeout
+		}
 	}
+
+	s.logger.Infow("Executing testsuite", "test", testSuite.Name, "request", request, "ExecutionRequest", testSuite.ExecutionRequest)
 
 	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
 	if request.Name == "" {
@@ -132,13 +138,15 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	hasFailedSteps := false
 	cancelSteps := false
 	var stepResult *testkube.TestSuiteStepExecutionResult
-	abortChan := make(chan bool)
 
-	go s.abortionCheck(ctx, testsuiteExecution, abortChan)
+	var abortionStatus *testkube.TestSuiteExecutionStatus
+	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
+	go s.abortionCheck(ctx, testsuiteExecution, request.Timeout, abortChan)
+
 	for i := range testsuiteExecution.StepResults {
 		stepResult = &testsuiteExecution.StepResults[i]
 		select {
-		case <-abortChan:
+		case abortionStatus = <-abortChan:
 			s.logger.Infow("Aborting test suite execution", "execution", testsuiteExecution.Id, "i", i)
 			cancelSteps = true
 			stepResult.Execution.ExecutionResult.Abort()
@@ -180,8 +188,13 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	}
 
 	if *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
-		s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
-		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
+		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
+			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
+			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusTimeout
+		} else {
+			s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
+			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
+		}
 	} else if hasFailedSteps {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
 		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
@@ -200,19 +213,31 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 }
 
 // abortionCheck is polling database to see if the user aborted the test suite execution
-func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, abortChan chan bool) {
+func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, timeout int32, abortChan chan *testkube.TestSuiteExecutionStatus) {
 	const abortionPollingInterval = 100 * time.Millisecond
-	s.logger.Debugw("Abortion check started", "test", testsuiteExecution.Name)
+	s.logger.Infow("Abortion check started", "test", testsuiteExecution.Name, "timeout", timeout)
 	ticker := time.NewTicker(abortionPollingInterval)
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timer.Stop()
+	defer ticker.Stop()
 	for testsuiteExecution.Status == testkube.TestSuiteExecutionStatusRunning {
-		<-ticker.C
-		if s.wasTestSuiteAborted(ctx, testsuiteExecution.Id) {
-			s.logger.Debugw("Aborting test suite execution", "execution", testsuiteExecution.Id)
-			abortChan <- true
-			break
+		select {
+		case <-timer.C:
+			s.logger.Debugw("Abortion check timeout", "test", testsuiteExecution.Name)
+			if timeout > 0 {
+				s.logger.Debugw("Aborting test suite execution due to timeout", "execution", testsuiteExecution.Id)
+				abortChan <- testkube.TestSuiteExecutionStatusTimeout
+				return
+			}
+		case <-ticker.C:
+			if s.wasTestSuiteAborted(ctx, testsuiteExecution.Id) {
+				s.logger.Debugw("Aborting test suite execution", "execution", testsuiteExecution.Id)
+				abortChan <- testkube.TestSuiteExecutionStatusAborted
+				return
+			}
 		}
 	}
-	s.logger.Debugw("Abortion check finished", "test", testsuiteExecution.Name)
+	s.logger.Debugw("Abortion check, finished checking", "test", testsuiteExecution.Name)
 }
 
 func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
@@ -225,7 +250,7 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 		return false
 	}
 
-	s.logger.Infow("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
+	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
 	return *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
 }
 
@@ -246,15 +271,16 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
-			Name:                fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
-			TestSuiteName:       testSuiteName,
-			Namespace:           executeTestStep.Namespace,
-			Variables:           testsuiteExecution.Variables,
-			TestSuiteSecretUUID: request.SecretUUID,
-			Sync:                true,
-			HttpProxy:           request.HttpProxy,
-			HttpsProxy:          request.HttpsProxy,
-			ExecutionLabels:     request.ExecutionLabels,
+			Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
+			TestSuiteName:         testSuiteName,
+			Namespace:             executeTestStep.Namespace,
+			Variables:             testsuiteExecution.Variables,
+			TestSuiteSecretUUID:   request.SecretUUID,
+			Sync:                  true,
+			HttpProxy:             request.HttpProxy,
+			HttpsProxy:            request.HttpsProxy,
+			ExecutionLabels:       request.ExecutionLabels,
+			ActiveDeadlineSeconds: int64(request.Timeout),
 		}
 
 		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
@@ -279,6 +305,7 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 	const abortionPollingInterval = 100 * time.Millisecond
 	ticker := time.NewTicker(abortionPollingInterval)
 	defer timer.Stop()
+	defer ticker.Stop()
 	for {
 		select {
 		case <-timer.C:

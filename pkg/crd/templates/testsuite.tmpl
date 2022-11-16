@@ -83,7 +83,7 @@ spec:
   repeats: {{ .Repeats }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -116,6 +116,9 @@ spec:
     {{- end }}
     {{- if .ExecutionRequest.HttpsProxy }}
     httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+    {{- end}}
+    {{- if ne .ExecutionRequest.Timeout 0 }}
+    timeout: {{ .ExecutionRequest.Timeout }}
     {{- end}}
   {{- end }}
   {{- end }}

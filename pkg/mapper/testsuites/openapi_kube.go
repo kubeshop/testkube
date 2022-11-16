@@ -128,5 +128,6 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 		Sync:            executionRequest.Sync,
 		HttpProxy:       executionRequest.HttpProxy,
 		HttpsProxy:      executionRequest.HttpsProxy,
+		Timeout:         executionRequest.Timeout,
 	}
 }
