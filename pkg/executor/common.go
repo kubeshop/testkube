@@ -319,7 +319,7 @@ func NewTemplatesFromEnv(env string) (t Templates, err error) {
 	if err != nil {
 		return t, err
 	}
-	templates := []*string{&t.Job, &t.PVC}
+	templates := []*string{&t.Job, &t.PVC, &t.Scraper}
 	for i := range templates {
 		if *templates[i] != "" {
 			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
