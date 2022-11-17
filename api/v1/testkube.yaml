@@ -3170,6 +3170,18 @@ components:
           description: list of file paths that need to be copied into the test from uploads
           example:
             - settings/config.txt
+        artifactVolumeName:
+          type: string
+          description: artifact volume name for container executors with test artifacts
+          example: artifact-volume-local
+        artifactVolumeMounthPath:
+          type: string
+          description: artifact volume mount path for container executors with test artifacts
+          example: /artifacts
+        artifactDir:
+          type: string
+          description: artifact directory for container executors with test artifacts
+          example: tests/reports
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -3226,18 +3238,6 @@ components:
           format: int32
           description: duration in seconds the test suite may be active, until its stopped
           example: 1
-        artifactVolumeName:
-          type: string
-          description: artifact volume name for container executors with test artifacts
-          example: artifact-volume-local
-        artifactVolumeMounthPath:
-          type: string
-          description: artifact volume mount path for container executors with test artifacts
-          example: /artifacts
-        artifactDir:
-          type: string
-          description: artifact directory for container executors with test artifacts
-          example: tests/reports
 
     TestUpsertRequest:
       description: test create request body
