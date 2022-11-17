@@ -226,10 +226,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
-				if err == mongo.ErrNoDocuments {
-					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
-				}
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
