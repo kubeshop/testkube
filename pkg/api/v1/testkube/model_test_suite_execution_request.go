@@ -32,4 +32,10 @@ type TestSuiteExecutionRequest struct {
 	HttpsProxy string `json:"httpsProxy,omitempty"`
 	// duration in seconds the test suite may be active, until its stopped
 	Timeout int32 `json:"timeout,omitempty"`
+	// artifact volume name for container executors with test artifacts
+	ArtifactVolumeName string `json:"artifactVolumeName,omitempty"`
+	// artifact volume mount path for container executors with test artifacts
+	ArtifactVolumeMounthPath string `json:"artifactVolumeMounthPath,omitempty"`
+	// artifact directory for container executors with test artifacts
+	ArtifactDir string `json:"artifactDir,omitempty"`
 }
