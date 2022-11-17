@@ -117,6 +117,9 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 }
 
 func leaseStatus(lease *Lease, id, clusterID string) (acquired bool, renewable bool) {
+	if lease == nil {
+		return false, false
+	}
 	maxLeaseDurationStaleness := time.Now().Add(-defaultMaxLeaseDuration)
 	isLeaseExpired := lease.RenewedAt.Before(maxLeaseDurationStaleness)
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
