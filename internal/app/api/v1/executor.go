@@ -25,7 +25,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 		executor := executorsmapper.MapAPIToCRD(request)
 		if executor.Spec.ExecutorType != "container" && executor.Spec.JobTemplate == "" {
-			executor.Spec.JobTemplate = s.jobTemplates.Job
+			executor.Spec.JobTemplate = s.templates.Job
 		}
 		executor.Namespace = s.Namespace
 

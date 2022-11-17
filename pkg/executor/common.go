@@ -3,6 +3,8 @@ package executor
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,10 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/log"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -70,6 +76,19 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "RUNNER_DATADIR",
 		Value: "/data",
 	},
+}
+
+// Templates contains templates for executor
+type Templates struct {
+	Job     string
+	PVC     string
+	Scraper string
+}
+
+// Images contains images for executor
+type Images struct {
+	Init   string
+	Scaper string
 }
 
 // IsPodReady defines if pod is ready or failed for logs scrapping
@@ -292,4 +311,99 @@ func PrepareSecretEnvs(secretEnvs map[string]string, variables map[string]testku
 	}
 
 	return secretEnvVars
+}
+
+// NewTemplatesFromEnv returns base64 encoded templates from nev
+func NewTemplatesFromEnv(env string) (t Templates, err error) {
+	err = envconfig.Process(env, &t)
+	if err != nil {
+		return t, err
+	}
+	templates := []*string{&t.Job, &t.PVC}
+	for i := range templates {
+		if *templates[i] != "" {
+			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
+			if err != nil {
+				return t, err
+			}
+
+			*templates[i] = string(dataDecoded)
+		}
+	}
+
+	return t, nil
+}
+
+// SyncDefaultExecutors creates or updates default executors
+func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace, data string, readOnlyExecutors bool) (
+	images Images, err error) {
+	var executors []testkube.ExecutorDetails
+
+	if data == "" {
+		return images, nil
+	}
+
+	dataDecoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return images, err
+	}
+
+	if err := json.Unmarshal(dataDecoded, &executors); err != nil {
+		return images, err
+	}
+
+	for _, executor := range executors {
+		if executor.Executor == nil {
+			continue
+		}
+
+		if executor.Name == "executor-init" {
+			images.Init = executor.Executor.Image
+			continue
+		}
+
+		if executor.Name == "executor-scraper" {
+			images.Scaper = executor.Executor.Image
+			continue
+		}
+
+		if readOnlyExecutors {
+			continue
+		}
+
+		var features []executorv1.Feature
+		for _, f := range executor.Executor.Features {
+			features = append(features, executorv1.Feature(f))
+		}
+
+		obj := &executorv1.Executor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      executor.Name,
+				Namespace: namespace,
+			},
+			Spec: executorv1.ExecutorSpec{
+				Types:        executor.Executor.Types,
+				ExecutorType: executor.Executor.ExecutorType,
+				Image:        executor.Executor.Image,
+				Features:     features,
+			},
+		}
+
+		result, err := executorsClient.Get(executor.Name)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return images, err
+		}
+		if err != nil {
+			if _, err = executorsClient.Create(obj); err != nil {
+				return images, err
+			}
+		} else {
+			result.Spec = obj.Spec
+			if _, err = executorsClient.Update(result); err != nil {
+				return images, err
+			}
+		}
+	}
+
+	return images, nil
 }

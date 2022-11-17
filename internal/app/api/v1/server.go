@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -61,7 +62,7 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	jobTemplates *JobTemplates,
+	templates kubeexecutor.Templates,
 	scheduler *scheduler.Scheduler,
 ) TestkubeAPI {
 
@@ -92,7 +93,7 @@ func NewTestkubeAPI(
 		ConfigMap:            configMap,
 		Executor:             executor,
 		ContainerExecutor:    containerExecutor,
-		jobTemplates:         jobTemplates,
+		templates:            templates,
 		scheduler:            scheduler,
 	}
 
@@ -132,7 +133,7 @@ type TestkubeAPI struct {
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
 	ConfigMap            config.Repository
-	jobTemplates         *JobTemplates
+	templates            kubeexecutor.Templates
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
 }

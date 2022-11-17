@@ -53,7 +53,7 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate string,
+func NewJobExecutor(repo result.Repository, namespace string, images executor.Images, templates executor.Templates,
 	metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -61,15 +61,15 @@ func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate st
 	}
 
 	return &JobExecutor{
-		ClientSet:   clientSet,
-		Repository:  repo,
-		Log:         log.DefaultLogger,
-		Namespace:   namespace,
-		initImage:   initImage,
-		jobTemplate: jobTemplate,
-		metrics:     metrics,
-		Emitter:     emiter,
-		configMap:   configMap,
+		ClientSet:  clientSet,
+		Repository: repo,
+		Log:        log.DefaultLogger,
+		Namespace:  namespace,
+		images:     images,
+		templates:  templates,
+		metrics:    metrics,
+		Emitter:    emiter,
+		configMap:  configMap,
 	}, nil
 }
 
@@ -79,16 +79,16 @@ type ExecutionCounter interface {
 
 // JobExecutor is container for managing job executor dependencies
 type JobExecutor struct {
-	Repository  result.Repository
-	Log         *zap.SugaredLogger
-	ClientSet   *kubernetes.Clientset
-	Namespace   string
-	Cmd         string
-	initImage   string
-	jobTemplate string
-	metrics     ExecutionCounter
-	Emitter     *event.Emitter
-	configMap   config.Repository
+	Repository result.Repository
+	Log        *zap.SugaredLogger
+	ClientSet  *kubernetes.Clientset
+	Namespace  string
+	Cmd        string
+	images     executor.Images
+	templates  executor.Templates
+	metrics    ExecutionCounter
+	Emitter    *event.Emitter
+	configMap  config.Repository
 }
 
 type JobOptions struct {
@@ -259,7 +259,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 
-	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, execution, options)
 	if err != nil {
 		return err
 	}
