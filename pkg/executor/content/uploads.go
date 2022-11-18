@@ -19,15 +19,15 @@ func NewCopyFilesPlacer(endpoint, accessKeyID, secretAccessKey, location, token 
 }
 
 // PlaceFiles downloads the files from minio and places them into the /data/uploads directory
-func (p CopyFilesPlacer) PlaceFiles(testName, executionName string) error {
+func (p CopyFilesPlacer) PlaceFiles(testName, executionBucket string) error {
 	prefix := "/data/uploads/"
 
 	buckets := []string{}
 	if testName != "" {
 		buckets = append(buckets, p.client.GetValidBucketName("test", testName))
 	}
-	if executionName != "" {
-		buckets = append(buckets, p.client.GetValidBucketName("execution", executionName))
+	if executionBucket != "" {
+		buckets = append(buckets, p.client.GetValidBucketName("execution", executionBucket))
 	}
 
 	return p.client.PlaceFiles(buckets, prefix)

@@ -139,6 +139,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		ExecutionLabels: options.ExecutionLabels,
 		Image:           options.Image,
 		Uploads:         options.Uploads,
+		BucketName:      options.BucketName,
 	}
 
 	body, err := json.Marshal(request)
@@ -162,6 +163,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		HttpProxy:     options.HTTPProxy,
 		HttpsProxy:    options.HTTPSProxy,
 		Uploads:       options.Uploads,
+		BucketName:    options.BucketName,
 	}
 
 	body, err := json.Marshal(request)

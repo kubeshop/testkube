@@ -1,89 +1,147 @@
 import superagent from 'superagent'
 
 class ApiHelpers {
-    async getTests() {
-        const response = await superagent.get(`${Cypress.env('API_URL')}/tests`) //200
+    constructor(apiUrl) {
+        this.API_URL = apiUrl;
+    }
 
-        return response.body
+    async getTests() {
+        const request = `${this.API_URL}/tests`
+
+        try {
+            const response = await superagent.get(request)
+
+            return response.body
+        } catch (e) {
+            throw Error(`getTests failed on "${request}" with: "${e}"`)
+        }
     }
 
     async createTest(testData) {
-        const response = await superagent.post(`${Cypress.env('API_URL')}/tests`) //201
-        .set('Content-Type', 'application/json')
-        .send(testData)
-
-        return response.body
+        const request = `${this.API_URL}/tests`
+        
+        try {
+            const response = await superagent.post(request)
+            .set('Content-Type', 'application/json')
+            .send(testData)
+    
+            return response.body
+        } catch (e) {
+            throw Error(`createTest failed on "${request}" with: "${e}"`)
+        }
     }
 
     async abortTest(testName, executionId) {
-        const response = await superagent.patch(`${this.API_URL}/tests/${testName}/executions/${executionId}`) //200
+        const request = `${this.API_URL}/tests/${testName}/executions/${executionId}`
 
-        return response
+        try {
+            const response = await superagent.patch(request)
+
+            return response
+        } catch (e) {
+            throw Error(`abortTest failed on "${request}" with: "${e}"`)
+        }
     }
     
     async removeTest(testName) {
-        await superagent.delete(`${Cypress.env('API_URL')}/tests/${testName}`) //204
+        const request = `${this.API_URL}/tests/${testName}`
+
+        try {
+            await superagent.delete(request)
+        } catch (e) {
+            throw Error(`removeTest failed on "${request}" with: "${e}"`)
+        }
     }
 
     async updateTest(testData) {
-        const response = await superagent.patch(`${Cypress.env('API_URL')}/tests/${testData.name}`) //200
-        .set('Content-Type', 'application/json')
-        .send(testData)
-
-        return response.body
+        const request = `${this.API_URL}/tests/${testData.name}`
+        
+        try {
+            const response = await superagent.patch(request)
+            .set('Content-Type', 'application/json')
+            .send(testData)
+    
+            return response.body
+        } catch (e) {
+            throw Error(`updateTest failed on "${request}" with: "${e}"`)
+        }
     }
 
     async isTestCreated(testName) {
-        const currentTests = await this.getTests()
-        const test = currentTests.find(singleTest => singleTest.name == testName)
-
-        if(test != undefined) {
-            return true
+        try {
+            const currentTests = await this.getTests()
+            const test = currentTests.find(singleTest => singleTest.name == testName)
+    
+            if(test != undefined) {
+                return true
+            }
+    
+            return false
+        } catch (e) {
+            throw Error(`isTestCreated failed for "${testName}" with: "${e}"`)
         }
-
-        return false
     }
 
     async assureTestNotCreated(testName) {
-        const alreadyCreated = await this.isTestCreated(testName)
-        if(alreadyCreated) {
-            await this.removeTest(testName)
+        try {
+            const alreadyCreated = await this.isTestCreated(testName)
+            if(alreadyCreated) {
+                await this.removeTest(testName)
+            }
+    
+            return true
+        } catch (e) {
+            throw Error(`assureTestNotCreated failed for "${testName}" with: "${e}"`)
         }
-
-        return true
     }
 
     async assureTestCreated(testData, fullCleanup=false) {
-        const alreadyCreated = await this.isTestCreated(testData.name)
+        try {
+            const alreadyCreated = await this.isTestCreated(testData.name)
 
-        if(alreadyCreated) {
-            if(fullCleanup) {
-                await this.removeTest(testData.name)
-                await this.createTest(testData)
+            if(alreadyCreated) {
+                if(fullCleanup) {
+                    await this.removeTest(testData.name)
+                    await this.createTest(testData)
+                } else {
+                    await this.updateTest(testData)
+               }
             } else {
-                await this.updateTest(testData)
-           }
-        } else {
-            await this.createTest(testData)
+                await this.createTest(testData)
+            }
+        } catch (e) {
+            throw Error(`assureTestCreated failed for "${testData.name}" with: "${e}"`)
         }
     }
 
     async getTestData(testName) {
-        const response = await superagent.get(`${Cypress.env('API_URL')}/tests/${testName}`) //200
+        const request = `${this.API_URL}/tests/${testName}`
 
-        return response.body
+        try {
+            const response = await superagent.get(request)
+
+            return response.body
+        } catch (e) {
+            throw Error(`getTestData failed on "${request}" with: "${e}"`)
+        }
     }
 
     async getLastExecutionNumber(testName) {
-        const response = await superagent.get(`${Cypress.env('API_URL')}/tests/${testName}/executions`) //200
-        const totalsResults = response.body.totals.results
+        const request = `${this.API_URL}/tests/${testName}/executions`
 
-        if(totalsResults == 0) {
-            return totalsResults
-        } else {
-            const lastExecutionResults = response.body.results[0]
-
-            return lastExecutionResults.number
+        try {
+            const response = await superagent.get(request)
+            const totalsResults = response.body.totals.results
+    
+            if(totalsResults == 0) {
+                return totalsResults
+            } else {
+                const lastExecutionResults = response.body.results[0]
+    
+                return lastExecutionResults.number
+            }
+        } catch (e) {
+            throw Error(`getLastExecutionNumber failed on "${request}" with: "${e}"`)
         }
     }
 }
