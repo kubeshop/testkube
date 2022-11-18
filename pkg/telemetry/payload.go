@@ -104,55 +104,81 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 
 // NewCreatePayload prepares payload for Test or Test suite creation
 func NewCreatePayload(name string, params CreateParams) Payload {
+	event := Event{
+		Name: text.GAEventName(name),
+		Params: Params{
+			EventCount:      1,
+			EventCategory:   "api",
+			AppVersion:      params.AppVersion,
+			AppName:         "testkube-api-server",
+			Host:            AnonymizeHost(params.Host),
+			OperatingSystem: runtime.GOOS,
+			Architecture:    runtime.GOARCH,
+			MachineID:       GetMachineID(),
+			ClusterID:       params.ClusterID,
+		},
+	}
+
+	if params.DataSource != "" {
+		event.Params.DataSource = params.DataSource
+	}
+
+	if params.TestType != "" {
+		event.Params.TestType = params.TestType
+	}
+
+	if params.TestSource != "" {
+		event.Params.TestSource = params.TestSource
+	}
+
+	if params.TestSuiteSteps != 0 {
+		event.Params.TestSuiteSteps = params.TestSuiteSteps
+	}
+
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
-		Events: []Event{
-			{
-				Name: text.GAEventName(name),
-				Params: Params{
-					EventCount:      1,
-					EventCategory:   "api",
-					AppVersion:      params.AppVersion,
-					AppName:         "testkube-api-server",
-					DataSource:      params.DataSource,
-					Host:            AnonymizeHost(params.Host),
-					OperatingSystem: runtime.GOOS,
-					Architecture:    runtime.GOARCH,
-					MachineID:       GetMachineID(),
-					ClusterID:       params.ClusterID,
-					TestType:        params.TestType,
-					TestSource:      params.TestSource,
-					TestSuiteSteps:  params.TestSuiteSteps,
-				},
-			}},
+		Events:   []Event{event},
 	}
 }
 
 // NewRunPayload prepares payload for Test or Test suite execution
 func NewRunPayload(name string, params RunParams) Payload {
+	event := Event{
+		Name: text.GAEventName(name),
+		Params: Params{
+			EventCount:      1,
+			EventCategory:   "api",
+			AppVersion:      params.AppVersion,
+			AppName:         "testkube-api-server",
+			Host:            AnonymizeHost(params.Host),
+			OperatingSystem: runtime.GOOS,
+			Architecture:    runtime.GOARCH,
+			MachineID:       GetMachineID(),
+			ClusterID:       params.ClusterID,
+		},
+	}
+
+	if params.DataSource != "" {
+		event.Params.DataSource = params.DataSource
+	}
+
+	if params.TestType != "" {
+		event.Params.TestType = params.TestType
+	}
+
+	if params.DurationMs != 0 {
+		event.Params.DurationMs = params.DurationMs
+	}
+
+	if params.Status != "" {
+		event.Params.Status = params.Status
+	}
+
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
-		Events: []Event{
-			{
-				Name: text.GAEventName(name),
-				Params: Params{
-					EventCount:      1,
-					EventCategory:   "api",
-					AppVersion:      params.AppVersion,
-					AppName:         "testkube-api-server",
-					DataSource:      params.DataSource,
-					Host:            AnonymizeHost(params.Host),
-					OperatingSystem: runtime.GOOS,
-					Architecture:    runtime.GOARCH,
-					MachineID:       GetMachineID(),
-					ClusterID:       params.ClusterID,
-					TestType:        params.TestType,
-					DurationMs:      params.DurationMs,
-					Status:          params.Status,
-				},
-			}},
+		Events:   []Event{event},
 	}
 }
 
