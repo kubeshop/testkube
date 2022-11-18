@@ -25,7 +25,7 @@ func NewExecution(testNamespace, testName, testSuiteName, executionName, testTyp
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
 	return Execution{
-		Id:                  primitive.NewObjectID().Hex(),
+		Id:                  executionName,
 		TestName:            testName,
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
