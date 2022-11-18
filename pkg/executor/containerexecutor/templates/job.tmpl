@@ -44,18 +44,9 @@ spec:
         volumeMounts:
         - name: data-volume
           mountPath: /data
-    {{- if .ArtifactRequest }}
-        - name: artifact-volume
-          mountPath: {{ .ArtifactRequest.VolumeMountPath }}
-    {{- end}}
       volumes:
       - name: data-volume
         emptyDir: {}
-    {{- if .ArtifactRequest }}
-      - name: artifact-volume
-        persistentVolumeClaim:
-          claimName: {{ .Name }}-pvc
-    {{- end}}
       restartPolicy: Never
       {{- if gt (len .ImagePullSecrets) 0 }}
       imagePullSecrets:
