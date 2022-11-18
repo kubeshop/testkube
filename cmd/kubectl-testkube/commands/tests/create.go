@@ -50,6 +50,9 @@ func NewCreateTestsCmd() *cobra.Command {
 		imagePullSecretNames     []string
 		timeout                  int64
 		gitWorkingDir            string
+		artifactVolumeName       string
+		artifactVolumeMountPath  string
+		artifactDir              string
 	)
 
 	cmd := &cobra.Command{
@@ -157,6 +160,9 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVar(&artifactVolumeName, "artifact-volume-name", "", "artifact volume name for container executor")
+	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringVar(&artifactDir, "artifact-dir", "", "artifact dir for container executor")
 
 	return cmd
 }

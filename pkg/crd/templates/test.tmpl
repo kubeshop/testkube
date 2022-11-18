@@ -144,6 +144,17 @@ spec:
     {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
     activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}
     {{- end}}
-
+    {{- if .ExecutionRequest.ArtifactRequest }}
+    ArtifactRequest:
+      {{- if .ExecutionRequest.ArtifactRequest.VolumeName }}
+      VolumeName: {{ .ExecutionRequest.ArtifactRequest.VolumeName }}
+      {{- end}}
+      {{- if .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
+      VolumeMountPath: {{ .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
+      {{- end}}
+      {{- if .ExecutionRequest.ArtifactRequest.Dir }}
+      VolumeMountPath: {{ .ExecutionRequest.ArtifactRequest.Dir }}
+      {{- end}}       
+    {{- end }}
   {{- end }}
   {{- end }}
