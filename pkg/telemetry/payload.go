@@ -22,7 +22,7 @@ type Params struct {
 	TestType         string `json:"test_type,omitempty"`
 	DurationMs       int32  `json:"duration_ms,omitempty"`
 	Status           string `json:"status,omitempty"`
-	TestSource       string `json:"test_source,omitempty"`	
+	TestSource       string `json:"test_source,omitempty"`
 	TestSuiteSteps   int32  `json:"test_suite_steps,omitempty"`
 }
 
@@ -39,13 +39,14 @@ type Payload struct {
 
 // CreateParams contains Test or Test suite creation parameters
 type CreateParams struct {
-	AppVersion string
-	DataSource string
-	Host       string
-	ClusterID  string
-	TestType   string
-	TestSource string
+	AppVersion     string
+	DataSource     string
+	Host           string
+	ClusterID      string
+	TestType       string
+	TestSource     string
 	TestSuiteSteps int32
+}
 
 // RunParams contains Test or Test suite run parameters
 type RunParams struct {
