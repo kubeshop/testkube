@@ -84,6 +84,9 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = validateCreateOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
+			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDir)
+			ui.ExitOnError("validating artifact flags", err)
+
 			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
 			ui.ExitOnError("getting test options", err)
 
@@ -255,6 +258,16 @@ func validateSchedule(schedule string) error {
 	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	if _, err := specParser.Parse(schedule); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDir string) error {
+	if artifactVolumeName != "" || artifactVolumeMountPath != "" || artifactDir != "" {
+		if artifactVolumeName == "" || artifactVolumeMountPath == "" {
+			return fmt.Errorf("both artifact volume name and mount path should be provided")
+		}
 	}
 
 	return nil

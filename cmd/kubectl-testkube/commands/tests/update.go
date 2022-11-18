@@ -63,6 +63,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
 
+			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDir)
+			ui.ExitOnError("validating artifact flags", err)
+
 			options, err := NewUpsertTestOptionsFromFlags(cmd, test.Labels)
 			ui.ExitOnError("getting test options", err)
 

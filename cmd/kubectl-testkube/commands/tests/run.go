@@ -65,6 +65,9 @@ func NewRunTestCmd() *cobra.Command {
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
+			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDir)
+			ui.ExitOnError("validating artifact flags", err)
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
