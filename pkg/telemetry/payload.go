@@ -22,6 +22,8 @@ type Params struct {
 	TestType         string `json:"test_type,omitempty"`
 	DurationMs       int32  `json:"duration_ms,omitempty"`
 	Status           string `json:"status,omitempty"`
+	TestSource       string `json:"test_source,omitempty"`	
+	TestSuiteSteps   int32  `json:"test_suite_steps,omitempty"`
 }
 
 type Event struct {
@@ -42,7 +44,8 @@ type CreateParams struct {
 	Host       string
 	ClusterID  string
 	TestType   string
-}
+	TestSource string
+	TestSuiteSteps int32
 
 // RunParams contains Test or Test suite run parameters
 type RunParams struct {
@@ -118,6 +121,8 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					MachineID:       GetMachineID(),
 					ClusterID:       params.ClusterID,
 					TestType:        params.TestType,
+					TestSource:      params.TestSource,
+					TestSuiteSteps:  params.TestSuiteSteps,
 				},
 			}},
 	}

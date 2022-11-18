@@ -208,6 +208,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 		Host:       host,
 		ClusterID:  clusterID,
 		TestType:   test.Spec.Type_,
+		TestSource: test.Spec.Source,
 	})
 	if err != nil {
 		s.logger.Debugw("sending create test telemetry event error", "error", err)
@@ -238,9 +239,10 @@ func (s *Service) addTestSuite(testSuite *testsuitev2.TestSuite) {
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test_suite", telemetry.CreateParams{
-		AppVersion: api.Version,
-		Host:       host,
-		ClusterID:  clusterID,
+		AppVersion:     api.Version,
+		Host:           host,
+		ClusterID:      clusterID,
+		TestSuiteSteps: int32(len(testSuite.Spec.Before) + len(testSuite.Spec.Steps) + len(testSuite.Spec.After)),
 	})
 	if err != nil {
 		s.logger.Debugw("sending create test suite telemetry event error", "error", err)
