@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
@@ -241,6 +242,9 @@ func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testk
 
 func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 	execution, err := s.testExecutionResults.Get(ctx, id)
+	if err == mongo.ErrNoDocuments {
+		execution, err = s.testExecutionResults.GetByName(ctx, id)
+	}
 	if err != nil {
 		s.logger.Errorw("getting test execution", "error", err)
 		return false

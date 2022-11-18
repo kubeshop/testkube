@@ -15,6 +15,7 @@ func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) 
 
 	if execution.Id != "" {
 		ui.Warn("Execution ID  :", execution.Id)
+		ui.Warn("Execution name:", execution.Name)
 	}
 
 	if execution.Status != nil {

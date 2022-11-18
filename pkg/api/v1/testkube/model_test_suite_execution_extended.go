@@ -3,6 +3,8 @@ package testkube
 import (
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -20,7 +22,7 @@ func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 
 	testExecution := TestSuiteExecution{
-		Id:         request.Name,
+		Id:         primitive.NewObjectID().Hex(),
 		StartTime:  time.Now(),
 		Name:       request.Name,
 		Status:     TestSuiteExecutionStatusRunning,
