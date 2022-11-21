@@ -13,7 +13,10 @@ func TestMapToSummary(t *testing.T) {
 	executions := getExecutions()
 
 	// when
-	result := MapToSummary(executions)
+	var result []*testkube.ExecutionSummary
+	for i := range executions {
+		result = append(result, MapToSummary(&executions[i]))
+	}
 
 	// then - test mappings
 	for i := 0; i < len(executions); i++ {
