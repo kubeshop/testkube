@@ -1,0 +1,14 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: ginkgo-executor-smoke
+  namespace: testkube
+spec:
+  type: ginkgo/test
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: ginkgo-executor-tests
+      path: test/ginkgo/executor-tests/ginkgo-smoke.go
