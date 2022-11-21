@@ -5,5 +5,16 @@ class TestExecutionsPage {
     openExecutionDetails(executionName) {
         cy.xpath(`//tr[.//span[text()="${executionName}"]]`).click()
     }
+
+    validateLogOutputContents(expectedText, customTimeout=null) {
+        cy.log(`validateLogOutputContents: ${expectedText}`)
+        const logOutpusContainerSelector = 'code span' //TODO: data-test
+
+        if (customTimeout) {
+            cy.contains(logOutpusContainerSelector, expectedText, { timeout: customTimeout })
+        } else {
+            cy.contains(logOutpusContainerSelector, expectedText)
+        }
+    }
 }
 export default TestExecutionsPage
