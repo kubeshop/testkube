@@ -52,6 +52,8 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, s
 // Connect connects to MinIO server
 func (c *Client) Connect() error {
 	creds := credentials.NewIAM("")
+	credsValue, err := creds.Get()
+	c.Log.Infow("minio credentials", "creds", credsValue, "err", err)
 	c.Log.Infow("connecting to minio", "endpoint", c.Endpoint, "accessKeyID", c.accessKeyID, "secretAccessKey", c.secretAccessKey, "location", c.location, "token", c.token, "ssl", c.ssl)
 	if c.accessKeyID != "" && c.secretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
