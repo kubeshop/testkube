@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -405,7 +406,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
+		results := make([]testkube.TestSuiteWithExecutionSummary, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
 			testSuiteNames[i] = testSuites[i].Name
@@ -418,12 +419,12 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 		for i := range testSuites {
 			if execution, ok := executionMap[testSuites[i].Name]; ok {
-				results = append(results, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecutionSummary{
 					TestSuite:       &testSuites[i],
-					LatestExecution: &execution,
+					LatestExecution: testsuiteexecutionsmapper.MapToSummary(&execution),
 				})
 			} else {
-				results = append(results, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecutionSummary{
 					TestSuite: &testSuites[i],
 				})
 			}
