@@ -50,7 +50,7 @@ type TestSuiteAPI interface {
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	ListTestSuiteWithExecutionSummaries(selector string) (testSuitesWithExecutionSummaries testkube.TestSuiteWithExecutionSummaries, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
 	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
@@ -158,7 +158,8 @@ type ExecuteTestSuiteOptions struct {
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
-		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo | testkube.TestSource
+		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
+		testkube.TestSource
 }
 
 // Executable is an interface of executable objects
