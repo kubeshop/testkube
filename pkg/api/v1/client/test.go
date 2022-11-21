@@ -16,34 +16,34 @@ func NewTestClient(
 	testTransport Transport[testkube.Test],
 	executionTransport Transport[testkube.Execution],
 	testWithExecutionTransport Transport[testkube.TestWithExecution],
-	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary],	
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary],
 	executionsResultTransport Transport[testkube.ExecutionsResult],
 	artifactTransport Transport[testkube.Artifact],
 	serverInfoTransport Transport[testkube.ServerInfo],
 	debugInfoTransport Transport[testkube.DebugInfo],
 ) TestClient {
 	return TestClient{
-		testTransport:              testTransport,
-		executionTransport:         executionTransport,
-		testWithExecutionTransport: testWithExecutionTransport,
-		testWithExecutionSummaryTransport:  testWithExecutionSummaryTransport,
-		executionsResultTransport:  executionsResultTransport,
-		artifactTransport:          artifactTransport,
-		serverInfoTransport:        serverInfoTransport,
-		debugInfoTransport:         debugInfoTransport,
+		testTransport:                     testTransport,
+		executionTransport:                executionTransport,
+		testWithExecutionTransport:        testWithExecutionTransport,
+		testWithExecutionSummaryTransport: testWithExecutionSummaryTransport,
+		executionsResultTransport:         executionsResultTransport,
+		artifactTransport:                 artifactTransport,
+		serverInfoTransport:               serverInfoTransport,
+		debugInfoTransport:                debugInfoTransport,
 	}
 }
 
 // TestClient is a client for tests
 type TestClient struct {
-	testTransport              Transport[testkube.Test]
-	executionTransport         Transport[testkube.Execution]
-	testWithExecutionTransport Transport[testkube.TestWithExecution]
-	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary]	
-	executionsResultTransport  Transport[testkube.ExecutionsResult]
-	artifactTransport          Transport[testkube.Artifact]
-	serverInfoTransport        Transport[testkube.ServerInfo]
-	debugInfoTransport         Transport[testkube.DebugInfo]
+	testTransport                     Transport[testkube.Test]
+	executionTransport                Transport[testkube.Execution]
+	testWithExecutionTransport        Transport[testkube.TestWithExecution]
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary]
+	executionsResultTransport         Transport[testkube.ExecutionsResult]
+	artifactTransport                 Transport[testkube.Artifact]
+	serverInfoTransport               Transport[testkube.ServerInfo]
+	debugInfoTransport                Transport[testkube.DebugInfo]
 }
 
 // GetTest returns single test by id
