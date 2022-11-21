@@ -24,12 +24,14 @@ func MapToSummary(execution *testkube.TestSuiteExecution) *testkube.TestSuiteExe
 			}
 		}
 
-		if step.Step.Execute != nil {
-			tp = testkube.TestSuiteStepTypeExecuteTest
-		}
+		if step.Step != nil {
+			if step.Step.Execute != nil {
+				tp = testkube.TestSuiteStepTypeExecuteTest
+			}
 
-		if step.Step.Delay != nil {
-			tp = testkube.TestSuiteStepTypeDelay
+			if step.Step.Delay != nil {
+				tp = testkube.TestSuiteStepTypeDelay
+			}
 		}
 
 		summary = append(summary, testkube.TestSuiteStepExecutionSummary{
