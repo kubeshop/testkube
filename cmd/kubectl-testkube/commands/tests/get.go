@@ -88,8 +88,8 @@ func NewGetTestsCmd() *cobra.Command {
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				} else {
-					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
-					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					tests, err := client.ListTestWithExecutionSummaries(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all test with execution summaries in namespace "+namespace, err)
 					if crdOnly {
 						for _, test := range tests {
 							if test.Test != nil {

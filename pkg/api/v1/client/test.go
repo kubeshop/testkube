@@ -16,6 +16,7 @@ func NewTestClient(
 	testTransport Transport[testkube.Test],
 	executionTransport Transport[testkube.Execution],
 	testWithExecutionTransport Transport[testkube.TestWithExecution],
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary],	
 	executionsResultTransport Transport[testkube.ExecutionsResult],
 	artifactTransport Transport[testkube.Artifact],
 	serverInfoTransport Transport[testkube.ServerInfo],
@@ -25,6 +26,7 @@ func NewTestClient(
 		testTransport:              testTransport,
 		executionTransport:         executionTransport,
 		testWithExecutionTransport: testWithExecutionTransport,
+		testWithExecutionSummaryTransport:  testWithExecutionSummaryTransport,
 		executionsResultTransport:  executionsResultTransport,
 		artifactTransport:          artifactTransport,
 		serverInfoTransport:        serverInfoTransport,
@@ -37,6 +39,7 @@ type TestClient struct {
 	testTransport              Transport[testkube.Test]
 	executionTransport         Transport[testkube.Execution]
 	testWithExecutionTransport Transport[testkube.TestWithExecution]
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary]	
 	executionsResultTransport  Transport[testkube.ExecutionsResult]
 	artifactTransport          Transport[testkube.Artifact]
 	serverInfoTransport        Transport[testkube.ServerInfo]
@@ -65,14 +68,14 @@ func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error)
 	return c.testTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
-// ListTestWithExecutions list all test with executions
-func (c TestClient) ListTestWithExecutions(selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
-	uri := c.testWithExecutionTransport.GetURI("/test-with-executions")
+// ListTestWithExecutionSummaries list all test with execution summaries
+func (c TestClient) ListTestWithExecutionSummaries(selector string) (testWithExecutionSummaries testkube.TestWithExecutionSummaries, err error) {
+	uri := c.testWithExecutionSummaryTransport.GetURI("/test-with-executions")
 	params := map[string]string{
 		"selector": selector,
 	}
 
-	return c.testWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+	return c.testWithExecutionSummaryTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // CreateTest creates new Test Custom Resource
