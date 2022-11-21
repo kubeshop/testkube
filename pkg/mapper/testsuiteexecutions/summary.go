@@ -2,7 +2,7 @@ package testsuiteexecutions
 
 import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
-// MapToSummary maps testkube.Execution to testkube.ExecutionSummary for lists without so many details
+// MapToSummary maps testkube.TestSuiteExecution to testkube.TestSuiteExecutionSummary for lists without so many details
 func MapToSummary(execution *testkube.TestSuiteExecution) *testkube.TestSuiteExecutionSummary {
 	var testSuiteName string
 	if execution.TestSuite != nil {
