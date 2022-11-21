@@ -75,8 +75,8 @@ func NewGetTestSuiteCmd() *cobra.Command {
 					err = render.List(cmd, testSuites, os.Stdout)
 					ui.ExitOnError("rendering list", err)
 				} else {
-					testSuites, err := client.ListTestSuiteWithExecutions(strings.Join(selectors, ","))
-					ui.ExitOnError("getting test suite with executions", err)
+					testSuites, err := client.ListTestSuiteWithExecutionSummaries(strings.Join(selectors, ","))
+					ui.ExitOnError("getting test suite with execution summaries", err)
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
