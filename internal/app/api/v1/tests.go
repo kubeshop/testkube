@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -337,6 +338,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
+			pageSize = result.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test page filter invalid: %w", err))
@@ -351,14 +353,16 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			}
 		}
 
-		startPos := page * pageSize
-		endPos := (page + 1) * pageSize
-		if startPos < len(results) {
-			if endPos > len(results) {
-				endPos = len(results)
-			}
+		if pageParam != "" || pageSizeParam != "" {
+			startPos := page * pageSize
+			endPos := (page + 1) * pageSize
+			if startPos < len(results) {
+				if endPos > len(results) {
+					endPos = len(results)
+				}
 
-			results = results[startPos:endPos]
+				results = results[startPos:endPos]
+			}
 		}
 
 		return c.JSON(results)
