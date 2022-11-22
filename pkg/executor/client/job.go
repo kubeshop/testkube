@@ -108,6 +108,7 @@ type JobOptions struct {
 	TokenSecret           *testkube.SecretRef
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
+	ServiceAccountName    string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -624,5 +625,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	}
 	jobOptions.Variables = execution.Variables
 	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
+	jobOptions.ServiceAccountName = os.Getenv("JOB_SERVICE_ACCOUNT")
 	return
 }
