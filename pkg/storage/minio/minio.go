@@ -51,11 +51,17 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token string, s
 
 // Connect connects to MinIO server
 func (c *Client) Connect() error {
+	creds := credentials.NewIAM("")
+	c.Log.Infow("connecting to minio", "endpoint", c.Endpoint, "accessKeyID", c.accessKeyID, "location", c.location, "token", c.token, "ssl", c.ssl)
+	if c.accessKeyID != "" && c.secretAccessKey != "" {
+		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
+	}
 	mclient, err := minio.New(c.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token),
+		Creds:  creds,
 		Secure: c.ssl,
 	})
 	if err != nil {
+		c.Log.Errorw("error connecting to minio", "error", err)
 		return err
 	}
 	c.minioclient = mclient
@@ -67,6 +73,7 @@ func (c *Client) CreateBucket(bucket string) error {
 	ctx := context.Background()
 	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.location})
 	if err != nil {
+		c.Log.Errorw("error creating bucket", "error", err)
 		// Check to see if we already own this bucket (which happens if you run this twice)
 		exists, errBucketExists := c.minioclient.BucketExists(ctx, bucket)
 		if errBucketExists == nil && exists {
