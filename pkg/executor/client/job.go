@@ -54,22 +54,23 @@ const (
 
 // NewJobExecutor creates new job executor
 func NewJobExecutor(repo result.Repository, namespace string, images executor.Images, templates executor.Templates,
-	metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
+	serviceAccountName string, metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
 	}
 
 	return &JobExecutor{
-		ClientSet:  clientSet,
-		Repository: repo,
-		Log:        log.DefaultLogger,
-		Namespace:  namespace,
-		images:     images,
-		templates:  templates,
-		metrics:    metrics,
-		Emitter:    emiter,
-		configMap:  configMap,
+		ClientSet:          clientSet,
+		Repository:         repo,
+		Log:                log.DefaultLogger,
+		Namespace:          namespace,
+		images:             images,
+		templates:          templates,
+		serviceAccountName: serviceAccountName,
+		metrics:            metrics,
+		Emitter:            emiter,
+		configMap:          configMap,
 	}, nil
 }
 
@@ -79,16 +80,17 @@ type ExecutionCounter interface {
 
 // JobExecutor is container for managing job executor dependencies
 type JobExecutor struct {
-	Repository result.Repository
-	Log        *zap.SugaredLogger
-	ClientSet  *kubernetes.Clientset
-	Namespace  string
-	Cmd        string
-	images     executor.Images
-	templates  executor.Templates
-	metrics    ExecutionCounter
-	Emitter    *event.Emitter
-	configMap  config.Repository
+	Repository         result.Repository
+	Log                *zap.SugaredLogger
+	ClientSet          *kubernetes.Clientset
+	Namespace          string
+	Cmd                string
+	images             executor.Images
+	templates          executor.Templates
+	serviceAccountName string
+	metrics            ExecutionCounter
+	Emitter            *event.Emitter
+	configMap          config.Repository
 }
 
 type JobOptions struct {
@@ -108,6 +110,7 @@ type JobOptions struct {
 	TokenSecret           *testkube.SecretRef
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
+	ServiceAccountName    string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -258,8 +261,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-
-	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}
@@ -607,7 +609,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -624,5 +626,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	}
 	jobOptions.Variables = execution.Variables
 	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
+	jobOptions.ServiceAccountName = serviceAccountName
 	return
 }
