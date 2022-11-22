@@ -348,7 +348,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("limit should limit executions", func(t *testing.T) {
 		metrics, err := repository.GetTestMetrics(context.Background(), testName, 1, 100)
 		assert.NoError(err)
-		assert.Equal(int32(1), len(metrics.Executions))
+		assert.Equal(1, len(metrics.Executions))
 	})
 
 	t.Run("filter last n days should limit executions", func(t *testing.T) {
