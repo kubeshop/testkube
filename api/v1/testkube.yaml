@@ -544,6 +544,8 @@ paths:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/TestExecutionsStatusFilter"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
       responses:
         200:
           description: successful operation
@@ -1286,6 +1288,8 @@ paths:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
       responses:
         200:
           description: "successful operation"

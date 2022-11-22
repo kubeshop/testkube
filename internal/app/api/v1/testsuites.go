@@ -470,6 +470,36 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			}
 		}
 
+		var page, pageSize int
+		pageParam := c.Query("page", "")
+		if pageParam != "" {
+			pageSize = testresult.PageDefaultLimit
+			page, err = strconv.Atoi(pageParam)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page filter invalid: %w", err))
+			}
+		}
+
+		pageSizeParam := c.Query("pageSize", "")
+		if pageSizeParam != "" {
+			pageSize, err = strconv.Atoi(pageSizeParam)
+			if err != nil {
+				s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page size filter invalid: %w", err))
+			}
+		}
+
+		if pageParam != "" || pageSizeParam != "" {
+			startPos := page * pageSize
+			endPos := (page + 1) * pageSize
+			if startPos < len(results) {
+				if endPos > len(results) {
+					endPos = len(results)
+				}
+
+				results = results[startPos:endPos]
+			}
+		}
+
 		return c.JSON(results)
 	}
 }
