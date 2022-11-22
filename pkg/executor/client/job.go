@@ -262,7 +262,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 
-	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, execution, options)
+	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}
