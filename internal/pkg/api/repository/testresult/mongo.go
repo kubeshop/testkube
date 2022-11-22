@@ -307,11 +307,6 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 
 	pipeline = append(pipeline, bson.D{{Key: "$match", Value: query}})
 	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
-
-	if limit > 0 {
-		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
-	}
-
 	pipeline = append(pipeline, bson.D{
 		{
 			Key: "$project", Value: bson.D{
@@ -335,5 +330,10 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 		return metrics, err
 	}
 
-	return common.CalculateMetrics(executions), nil
+	metrics = common.CalculateMetrics(executions)
+	if limit > 0 && limit < len(metrics.Executions) {
+		metrics.Executions = metrics.Executions[:limit]
+	}
+
+	return metrics, nil
 }
