@@ -1,6 +1,23 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: cypress-10-executor-smoke-electron-without-envs
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v10/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-10-without-envs
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: cypress-default-executor-smoke-electron
   namespace: testkube
   labels:
