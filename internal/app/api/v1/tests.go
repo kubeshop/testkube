@@ -11,9 +11,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
+	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	executionsmapper "github.com/kubeshop/testkube/pkg/mapper/executions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -269,7 +271,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		results := make([]testkube.TestWithExecution, 0, len(tests))
+		results := make([]testkube.TestWithExecutionSummary, 0, len(tests))
 		testNames := make([]string, len(tests))
 		for i := range tests {
 			testNames[i] = tests[i].Name
@@ -282,12 +284,12 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 
 		for i := range tests {
 			if execution, ok := executionMap[tests[i].Name]; ok {
-				results = append(results, testkube.TestWithExecution{
+				results = append(results, testkube.TestWithExecutionSummary{
 					Test:            &tests[i],
-					LatestExecution: &execution,
+					LatestExecution: executionsmapper.MapToSummary(&execution),
 				})
 			} else {
-				results = append(results, testkube.TestWithExecution{
+				results = append(results, testkube.TestWithExecutionSummary{
 					Test: &tests[i],
 				})
 			}
@@ -323,14 +325,43 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			statusMap := statusList.ToMap()
 			// filter items array
 			for i := len(results) - 1; i >= 0; i-- {
-				if results[i].LatestExecution != nil && results[i].LatestExecution.ExecutionResult != nil &&
-					results[i].LatestExecution.ExecutionResult.Status != nil {
-					if _, ok := statusMap[*results[i].LatestExecution.ExecutionResult.Status]; ok {
+				if results[i].LatestExecution != nil && results[i].LatestExecution.Status != nil {
+					if _, ok := statusMap[*results[i].LatestExecution.Status]; ok {
 						continue
 					}
 				}
 
 				results = append(results[:i], results[i+1:]...)
+			}
+		}
+
+		var page, pageSize int
+		pageParam := c.Query("page", "")
+		if pageParam != "" {
+			pageSize = result.PageDefaultLimit
+			page, err = strconv.Atoi(pageParam)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test page filter invalid: %w", err))
+			}
+		}
+
+		pageSizeParam := c.Query("pageSize", "")
+		if pageSizeParam != "" {
+			pageSize, err = strconv.Atoi(pageSizeParam)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test page size filter invalid: %w", err))
+			}
+		}
+
+		if pageParam != "" || pageSizeParam != "" {
+			startPos := page * pageSize
+			endPos := (page + 1) * pageSize
+			if startPos < len(results) {
+				if endPos > len(results) {
+					endPos = len(results)
+				}
+
+				results = results[startPos:endPos]
 			}
 		}
 

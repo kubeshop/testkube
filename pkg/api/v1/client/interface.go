@@ -28,7 +28,7 @@ type TestAPI interface {
 	DeleteTest(name string) error
 	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
-	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
+	ListTestWithExecutionSummaries(selector string) (tests testkube.TestWithExecutionSummaries, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
 	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
@@ -50,7 +50,7 @@ type TestSuiteAPI interface {
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	ListTestSuiteWithExecutionSummaries(selector string) (testSuitesWithExecutionSummaries testkube.TestSuiteWithExecutionSummaries, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
 	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
@@ -158,8 +158,9 @@ type ExecuteTestSuiteOptions struct {
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
-		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo | testkube.TestSource
+		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
+		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
+		testkube.TestSource
 }
 
 // Executable is an interface of executable objects

@@ -544,6 +544,8 @@ paths:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/TestExecutionsStatusFilter"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
       responses:
         200:
           description: successful operation
@@ -552,7 +554,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TestSuiteWithExecution"
+                  $ref: "#/components/schemas/TestSuiteWithExecutionSummary"
             text/yaml:
               schema:
                 type: string
@@ -1286,6 +1288,8 @@ paths:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/TextSearch"
         - $ref: "#/components/parameters/ExecutionsStatusFilter"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageIndex"
       responses:
         200:
           description: "successful operation"
@@ -1294,7 +1298,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TestWithExecution"
+                  $ref: "#/components/schemas/TestWithExecutionSummary"
             text/yaml:
               schema:
                 type: string
@@ -3494,6 +3498,17 @@ components:
         latestExecution:
           $ref: "#/components/schemas/Execution"
 
+    TestWithExecutionSummary:
+      description: Test with latest Execution result summary
+      type: object
+      required:
+        - test
+      properties:
+        test:
+          $ref: "#/components/schemas/Test"
+        latestExecution:
+          $ref: "#/components/schemas/ExecutionSummary"          
+
     TestSuiteWithExecution:
       description: Test suite with latest execution result
       type: object
@@ -3504,6 +3519,17 @@ components:
           $ref: "#/components/schemas/TestSuite"
         latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+  
+    TestSuiteWithExecutionSummary:
+      description: Test suite with latest execution result
+      type: object
+      required:
+        - testSuite
+      properties:
+        testSuite:
+          $ref: "#/components/schemas/TestSuite"
+        latestExecution:
+          $ref: "#/components/schemas/TestSuiteExecutionSummary"          
 
     Config:
       description: Testkube API config data structure

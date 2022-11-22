@@ -1,8 +1,8 @@
 package testkube
 
-type TestWithExecutions []TestWithExecution
+type TestWithExecutionSummaries []TestWithExecutionSummary
 
-func (t TestWithExecutions) Table() (header []string, output [][]string) {
+func (t TestWithExecutionSummaries) Table() (header []string, output [][]string) {
 	header = []string{"Name", "Type", "Created", "Labels", "Schedule", "Status", "Execution id"}
 	for _, e := range t {
 		if e.Test == nil {
@@ -13,8 +13,8 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 		executionID := ""
 		if e.LatestExecution != nil {
 			executionID = e.LatestExecution.Id
-			if e.LatestExecution.ExecutionResult != nil && e.LatestExecution.ExecutionResult.Status != nil {
-				status = string(*e.LatestExecution.ExecutionResult.Status)
+			if e.LatestExecution.Status != nil {
+				status = string(*e.LatestExecution.Status)
 			}
 		}
 		output = append(output, []string{
@@ -31,7 +31,7 @@ func (t TestWithExecutions) Table() (header []string, output [][]string) {
 	return
 }
 
-func (t TestWithExecution) GetObjectRef() *ObjectRef {
+func (t TestWithExecutionSummary) GetObjectRef() *ObjectRef {
 	name := ""
 	if t.Test != nil {
 		name = t.Test.Name

@@ -16,31 +16,34 @@ func NewTestClient(
 	testTransport Transport[testkube.Test],
 	executionTransport Transport[testkube.Execution],
 	testWithExecutionTransport Transport[testkube.TestWithExecution],
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary],
 	executionsResultTransport Transport[testkube.ExecutionsResult],
 	artifactTransport Transport[testkube.Artifact],
 	serverInfoTransport Transport[testkube.ServerInfo],
 	debugInfoTransport Transport[testkube.DebugInfo],
 ) TestClient {
 	return TestClient{
-		testTransport:              testTransport,
-		executionTransport:         executionTransport,
-		testWithExecutionTransport: testWithExecutionTransport,
-		executionsResultTransport:  executionsResultTransport,
-		artifactTransport:          artifactTransport,
-		serverInfoTransport:        serverInfoTransport,
-		debugInfoTransport:         debugInfoTransport,
+		testTransport:                     testTransport,
+		executionTransport:                executionTransport,
+		testWithExecutionTransport:        testWithExecutionTransport,
+		testWithExecutionSummaryTransport: testWithExecutionSummaryTransport,
+		executionsResultTransport:         executionsResultTransport,
+		artifactTransport:                 artifactTransport,
+		serverInfoTransport:               serverInfoTransport,
+		debugInfoTransport:                debugInfoTransport,
 	}
 }
 
 // TestClient is a client for tests
 type TestClient struct {
-	testTransport              Transport[testkube.Test]
-	executionTransport         Transport[testkube.Execution]
-	testWithExecutionTransport Transport[testkube.TestWithExecution]
-	executionsResultTransport  Transport[testkube.ExecutionsResult]
-	artifactTransport          Transport[testkube.Artifact]
-	serverInfoTransport        Transport[testkube.ServerInfo]
-	debugInfoTransport         Transport[testkube.DebugInfo]
+	testTransport                     Transport[testkube.Test]
+	executionTransport                Transport[testkube.Execution]
+	testWithExecutionTransport        Transport[testkube.TestWithExecution]
+	testWithExecutionSummaryTransport Transport[testkube.TestWithExecutionSummary]
+	executionsResultTransport         Transport[testkube.ExecutionsResult]
+	artifactTransport                 Transport[testkube.Artifact]
+	serverInfoTransport               Transport[testkube.ServerInfo]
+	debugInfoTransport                Transport[testkube.DebugInfo]
 }
 
 // GetTest returns single test by id
@@ -65,14 +68,14 @@ func (c TestClient) ListTests(selector string) (tests testkube.Tests, err error)
 	return c.testTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
-// ListTestWithExecutions list all test with executions
-func (c TestClient) ListTestWithExecutions(selector string) (testWithExecutions testkube.TestWithExecutions, err error) {
-	uri := c.testWithExecutionTransport.GetURI("/test-with-executions")
+// ListTestWithExecutionSummaries list all test with execution summaries
+func (c TestClient) ListTestWithExecutionSummaries(selector string) (testWithExecutionSummaries testkube.TestWithExecutionSummaries, err error) {
+	uri := c.testWithExecutionSummaryTransport.GetURI("/test-with-executions")
 	params := map[string]string{
 		"selector": selector,
 	}
 
-	return c.testWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+	return c.testWithExecutionSummaryTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // CreateTest creates new Test Custom Resource

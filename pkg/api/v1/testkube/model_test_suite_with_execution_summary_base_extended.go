@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-type TestSuiteWithExecutions []TestSuiteWithExecution
+type TestSuiteWithExecutionSummaries []TestSuiteWithExecutionSummary
 
-func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]string) {
+func (testSutes TestSuiteWithExecutionSummaries) Table() (header []string, output [][]string) {
 	header = []string{"Name", "Description", "Steps", "Labels", "Schedule", "Status", "Execution id"}
 	for _, e := range testSutes {
 		if e.TestSuite == nil {
@@ -36,7 +36,7 @@ func (testSutes TestSuiteWithExecutions) Table() (header []string, output [][]st
 	return
 }
 
-func (t TestSuiteWithExecution) GetObjectRef() *ObjectRef {
+func (t TestSuiteWithExecutionSummary) GetObjectRef() *ObjectRef {
 	name := ""
 	namespace := ""
 	if t.TestSuite != nil {
