@@ -1,4 +1,4 @@
-describe.skip('Testkube website', () => { //TODO: disabled for now - reenable after: https://github.com/kubeshop/testkube/issues/2540
+describe('Testkube website', () => { //TODO: disabled for now - reenable after: https://github.com/kubeshop/testkube/issues/2540
   it('Open Testkube website', () => {
     cy.visit('/')
   })
