@@ -263,6 +263,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
 			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
 		}
+
+		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest , test.ExecutionRequest.ArtifactRequest)
 	}
 
 	// get executor from kubernetes CRs
@@ -410,4 +412,30 @@ func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
 		res = append(res, secret.Name)
 	}
 	return res
+}
+
+func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *testkube.ArtifactRequest) *testkube.ArtifactRequest {
+	if artifactBase == nil  && artifactAdjust == nil {
+		return nil
+	}
+
+	if artifactBase == nil  && artifactAdjust != nil {
+		return artifactAdjust
+	}	
+
+	if artifactBase != nil  && artifactAdjust == nil {
+		return artifactBase
+	}	
+
+	if artifactBase.VolumeName == "" && artifactAdjust.VolumeName != "" {
+		artifactBase.VolumeName = artifactAdjust.VolumeName
+	}
+
+	if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
+		artifactBase.VolumeMountPath = artifactAdjust.VolumeMountPath
+	}
+
+	artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
+
+	return artifactBase
 }
