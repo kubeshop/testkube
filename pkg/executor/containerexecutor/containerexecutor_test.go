@@ -115,6 +115,7 @@ func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		"kubeshop/testkube-executor-init:0.7.10",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -144,6 +145,7 @@ func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		"kubeshop/testkube-executor-init:0.7.10",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -172,6 +174,7 @@ func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
 func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		"kubeshop/testkube-executor-init:0.7.10",
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",

@@ -44,22 +44,23 @@ type EventEmitter interface {
 
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images, templates executor.Templates,
-	metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
+	serviceAccountName string, metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
 	}
 
 	return &ContainerExecutor{
-		clientSet:  clientSet,
-		repository: repo,
-		log:        log.DefaultLogger,
-		namespace:  namespace,
-		images:     images,
-		templates:  templates,
-		configMap:  configMap,
-		metrics:    metrics,
-		emitter:    emiter,
+		clientSet:          clientSet,
+		repository:         repo,
+		log:                log.DefaultLogger,
+		namespace:          namespace,
+		images:             images,
+		templates:          templates,
+		configMap:          configMap,
+		serviceAccountName: serviceAccountName,
+		metrics:            metrics,
+		emitter:            emiter,
 	}, nil
 }
 
@@ -69,15 +70,16 @@ type ExecutionCounter interface {
 
 // ContainerExecutor is container for managing job executor dependencies
 type ContainerExecutor struct {
-	repository ResultRepository
-	log        *zap.SugaredLogger
-	clientSet  kubernetes.Interface
-	namespace  string
-	images     executor.Images
-	templates  executor.Templates
-	metrics    ExecutionCounter
-	emitter    EventEmitter
-	configMap  config.Repository
+	repository         ResultRepository
+	log                *zap.SugaredLogger
+	clientSet          kubernetes.Interface
+	namespace          string
+	images             executor.Images
+	templates          executor.Templates
+	metrics            ExecutionCounter
+	emitter            EventEmitter
+	configMap          config.Repository
+	serviceAccountName string
 }
 
 type JobOptions struct {
@@ -102,6 +104,8 @@ type JobOptions struct {
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ArtifactRequest       *testkube.ArtifactRequest
+	ServiceAccountName    string
+	DelaySeconds          int
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -202,7 +206,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) error {
 	jobs := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}

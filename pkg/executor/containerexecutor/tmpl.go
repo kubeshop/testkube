@@ -79,7 +79,7 @@ func NewJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, erro
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(initImage, jobTemplate, serviceAccountName string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return nil, err
@@ -98,5 +98,6 @@ func NewJobOptions(initImage, jobTemplate string, execution testkube.Execution, 
 	jobOptions.Variables = execution.Variables
 	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	jobOptions.Envs = options.Request.Envs
+	jobOptions.ServiceAccountName = serviceAccountName
 	return jobOptions, nil
 }
