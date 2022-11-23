@@ -2817,7 +2817,9 @@ components:
           type: string
           description: minio bucket name to get uploads from
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
-
+        artifactRequest:
+          $ref: "#/components/schemas/ArtifactRequest"
+          description: configuration parameters for storing container executor test artifacts
 
     Artifact:
       type: object
