@@ -231,7 +231,7 @@ func main() {
 	}
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(resultsRepository, namespace, images, containerTemplates,
-		metrics, eventsEmitter, configMapConfig)
+		serviceAccountName, metrics, eventsEmitter, configMapConfig)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
 	}
