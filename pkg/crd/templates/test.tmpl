@@ -133,28 +133,31 @@ spec:
     command:
     {{- range $cmd := .ExecutionRequest.Command}}
     - {{ $cmd -}}
-    {{- end}}
+    {{- end }}
     {{- end -}}
     {{- if gt (len .ExecutionRequest.ImagePullSecrets) 0 }}
     imagePullSecrets:
     {{- range $secret := .ExecutionRequest.ImagePullSecrets}}
     - name: {{ $secret.Name -}}
-    {{- end}}
-    {{- end}}
+    {{- end }}
+    {{- end }}
     {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
     activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}
-    {{- end}}
+    {{- end }}
     {{- if .ExecutionRequest.ArtifactRequest }}
-    ArtifactRequest:
+    artifactRequest:
       {{- if .ExecutionRequest.ArtifactRequest.VolumeName }}
-      VolumeName: {{ .ExecutionRequest.ArtifactRequest.VolumeName }}
-      {{- end}}
+      volumeName: {{ .ExecutionRequest.ArtifactRequest.VolumeName }}
+      {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
-      VolumeMountPath: {{ .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
-      {{- end}}
-      {{- if .ExecutionRequest.ArtifactRequest.Dir }}
-      VolumeMountPath: {{ .ExecutionRequest.ArtifactRequest.Dir }}
-      {{- end}}       
+      volumeMountPath: {{ .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
+      {{- end }}
+      {{- if gt (len .ExecutionRequest.ArtifactRequest.Dirs) 0 }}
+      dirs:
+      {{- range .ExecutionRequest.ArtifactRequest.Dirs }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

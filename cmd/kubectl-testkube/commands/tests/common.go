@@ -297,7 +297,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	artifactVolumeName := cmd.Flag("artifact-volume-name").Value.String()
 	artifactVolumeMountPath := cmd.Flag("artifact-volume-mount-path").Value.String()
-	artifactDir := cmd.Flag("artifact-dir").Value.String()
+	dirs, err := cmd.Flags().GetStringArray("artifact-dir")
+	if err != nil {
+		return options, err
+	}
 
 	options.ExecutionRequest = &testkube.ExecutionRequest{
 		Name:                  executionName,
@@ -316,9 +319,9 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 
 	if artifactVolumeName != "" && artifactVolumeMountPath != "" {
 		options.ExecutionRequest.ArtifactRequest = &testkube.ArtifactRequest{
-			VolumeName:       artifactVolumeName,
-			VolumeMounthPath: artifactVolumeMountPath,
-			Dir:              artifactDir,
+			VolumeName:      artifactVolumeName,
+			VolumeMountPath: artifactVolumeMountPath,
+			Dirs:            dirs,
 		}
 	}
 

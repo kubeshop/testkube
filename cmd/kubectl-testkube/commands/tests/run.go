@@ -40,7 +40,7 @@ func NewRunTestCmd() *cobra.Command {
 		copyFiles                []string
 		artifactVolumeName       string
 		artifactVolumeMountPath  string
-		artifactDir              string
+		artifactDirs             []string
 	)
 
 	cmd := &cobra.Command{
@@ -65,7 +65,7 @@ func NewRunTestCmd() *cobra.Command {
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
-			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDir)
+			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
 			var executions []testkube.Execution
@@ -84,9 +84,9 @@ func NewRunTestCmd() *cobra.Command {
 
 			if artifactVolumeName != "" && artifactVolumeMountPath != "" {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
-					VolumeName:       artifactVolumeName,
-					VolumeMounthPath: artifactVolumeMountPath,
-					Dir:              artifactDir,
+					VolumeName:      artifactVolumeName,
+					VolumeMountPath: artifactVolumeMountPath,
+					Dirs:            artifactDirs,
 				}
 			}
 
@@ -186,7 +186,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&artifactVolumeName, "artifact-volume-name", "", "artifact volume name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringVar(&artifactDir, "artifact-dir", "", "artifact dir for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
 
 	return cmd
 }

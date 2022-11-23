@@ -113,6 +113,15 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		return nil
 	}
 
+	var artifactRequest *testsv3.ArtifactRequest
+	if executionRequest.ArtifactRequest != nil {
+		artifactRequest = &testsv3.ArtifactRequest{
+			VolumeName:       executionRequest.ArtifactRequest.VolumeName,
+			VolumeMounthPath: executionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:             executionRequest.ArtifactRequest.Dirs,
+		}
+	}
+
 	return &testsv3.ExecutionRequest{
 		Name:                  executionRequest.Name,
 		TestSuiteName:         executionRequest.TestSuiteName,
@@ -133,6 +142,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
 		ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
 		Command:               executionRequest.Command,
+		ArtifactRequest:       artifactRequest,
 	}
 }
 

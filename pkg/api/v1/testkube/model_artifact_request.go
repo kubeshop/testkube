@@ -14,7 +14,7 @@ type ArtifactRequest struct {
 	// artifact volume name
 	VolumeName string `json:"volumeName"`
 	// artifact volume mount path
-	VolumeMounthPath string `json:"volumeMounthPath"`
-	// artifact directory
-	Dir string `json:"dir,omitempty"`
+	VolumeMountPath string `json:"volumeMountPath"`
+	// artifact directories
+	Dirs []string `json:"dirs,omitempty"`
 }

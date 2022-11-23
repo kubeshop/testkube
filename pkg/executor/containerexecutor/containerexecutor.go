@@ -101,6 +101,7 @@ type JobOptions struct {
 	TokenSecret           *testkube.SecretRef
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
+	ArtifactRequest       *testkube.ArtifactRequest
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -391,6 +392,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
+		ArtifactRequest:       options.Request.ArtifactRequest,
 	}
 }
 

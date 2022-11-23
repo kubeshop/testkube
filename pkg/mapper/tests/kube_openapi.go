@@ -107,6 +107,15 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		return nil
 	}
 
+	var artifactRequest *testkube.ArtifactRequest
+	if specExecutionRequest.ArtifactRequest != nil {
+		artifactRequest = &testkube.ArtifactRequest{
+			VolumeName:      specExecutionRequest.ArtifactRequest.VolumeName,
+			VolumeMountPath: specExecutionRequest.ArtifactRequest.VolumeMounthPath,
+			Dirs:            specExecutionRequest.ArtifactRequest.Dirs,
+		}
+	}
+
 	return &testkube.ExecutionRequest{
 		Name:                  specExecutionRequest.Name,
 		TestSuiteName:         specExecutionRequest.TestSuiteName,
@@ -127,6 +136,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		HttpProxy:             specExecutionRequest.HttpProxy,
 		HttpsProxy:            specExecutionRequest.HttpsProxy,
 		ActiveDeadlineSeconds: specExecutionRequest.ActiveDeadlineSeconds,
+		ArtifactRequest:       artifactRequest,
 	}
 }
 

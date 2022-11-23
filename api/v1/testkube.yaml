@@ -3077,20 +3077,20 @@ components:
       type: object
       required:
         - volumeName
-        - volumeMounthPath
+        - volumeMountPath
       properties:
         volumeName:
           type: string
           description: artifact volume name
           example: artifact-volume-local
-        volumeMounthPath:
+        volumeMountPath:
           type: string
           description: artifact volume mount path
-          example: /artifacts
-        dir:
-          type: string
-          description: artifact directory
-          example: tests/reports
+        dirs:
+          type: array
+          items:
+            type: string
+          description: artifact directories
 
     ExecutionRequest:
       description: test execution request body

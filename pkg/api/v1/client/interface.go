@@ -144,7 +144,7 @@ type ExecuteTestOptions struct {
 	Image                         string
 	Uploads                       []string
 	BucketName                    string
-	ArtifactRequest              *testkube.ArtifactRequest
+	ArtifactRequest               *testkube.ArtifactRequest
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
