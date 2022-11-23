@@ -104,7 +104,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Artifact request:    ")
 			ui.Warn("    Volume name:       ", test.ExecutionRequest.ArtifactRequest.VolumeName)
 			ui.Warn("    Volume mount path: ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
-			ui.Warn("    Dirs:               ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
+			ui.Warn("    Dirs:              ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
 		}
 	}
 
