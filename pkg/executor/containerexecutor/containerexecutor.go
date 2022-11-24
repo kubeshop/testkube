@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
@@ -24,9 +25,11 @@ import (
 )
 
 const (
-	pollTimeout  = 24 * time.Hour
-	pollInterval = 200 * time.Millisecond
-	repoPath     = "/data/repo"
+	pollTimeout             = 24 * time.Hour
+	pollInterval            = 200 * time.Millisecond
+	jobDefaultDelaySeconds  = 180
+	jobArtifactDelaySeconds = 30
+	repoPath                = "/data/repo"
 )
 
 type ResultRepository interface {
@@ -93,8 +96,11 @@ type JobOptions struct {
 	ImageOverride         string
 	Jsn                   string
 	TestName              string
-	JobTemplate           string
 	InitImage             string
+	ScaperImage           string
+	JobTemplate           string
+	ScraperTemplate       string
+	PVCTemplate           string
 	SecretEnvs            map[string]string
 	Envs                  map[string]string
 	HTTPProxy             string
@@ -206,13 +212,13 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) error {
 	jobs := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}
 
 	c.log.Debug("creating job with options", "options", jobOptions)
-	jobSpec, err := NewJobSpec(c.log, jobOptions)
+	jobSpec, err := NewExecutorJobSpec(c.log, jobOptions)
 	if err != nil {
 		return err
 	}
@@ -382,6 +388,21 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		}
 	}
 
+	supportArtifacts := false
+	for _, feature := range options.ExecutorSpec.Features {
+		if feature == executorv1.FeatureArtifacts {
+			supportArtifacts = true
+			break
+		}
+	}
+
+	var artifactRequest *testkube.ArtifactRequest
+	jobDelaySeconds := jobDefaultDelaySeconds
+	if supportArtifacts {
+		artifactRequest = options.Request.ArtifactRequest
+		jobDelaySeconds = jobArtifactDelaySeconds
+	}
+
 	return &JobOptions{
 		Image:                 image,
 		ImagePullSecrets:      options.ImagePullSecretNames,
@@ -396,7 +417,8 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
-		ArtifactRequest:       options.Request.ArtifactRequest,
+		ArtifactRequest:       artifactRequest,
+		DelaySeconds:          jobDelaySeconds,
 	}
 }
 

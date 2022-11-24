@@ -87,8 +87,8 @@ type Templates struct {
 
 // Images contains images for executor
 type Images struct {
-	Init   string
-	Scaper string
+	Init    string
+	Scraper string
 }
 
 // IsPodReady defines if pod is ready or failed for logs scrapping
@@ -363,7 +363,7 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 		}
 
 		if executor.Name == "executor-scraper" {
-			images.Scaper = executor.Executor.Image
+			images.Scraper = executor.Executor.Image
 			continue
 		}
 
