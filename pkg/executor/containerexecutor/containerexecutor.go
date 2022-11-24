@@ -213,7 +213,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 
 // createJob creates new Kubernetes job based on execution and execute options
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
-	jobs := c.clientSet.BatchV1().Jobs(c.namespace)
+	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
 	if err != nil {
@@ -222,13 +222,13 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 
 	if jobOptions.ArtifactRequest != nil {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
-		pvcs := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = pvcs.Create(ctx, pvcSpec, metav1.CreateOptions{})
+		_, err = pvcsClient.Create(ctx, pvcSpec, metav1.CreateOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +240,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		return nil, err
 	}
 
-	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
+	_, err = jobsClient.Create(ctx, jobSpec, metav1.CreateOptions{})
 	return jobOptions, err
 }
 
@@ -262,7 +262,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 
 	// we need to retrieve the Pod to get it's latest status
 	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
-	latestPod, err := podsClient.Get(context.Background(), pod.Name, metav1.GetOptions{})
+	executorPod, err := podsClient.Get(context.Background(), pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return result, err
 	}
@@ -270,21 +270,21 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 	var scraperLogs []byte
 	if jobOptions.ArtifactRequest != nil {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
-		jobs := c.clientSet.BatchV1().Jobs(c.namespace)
+		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
 		if err != nil {
 			return result, err
 		}
 
-		_, err = jobs.Create(ctx, scraperSpec, metav1.CreateOptions{})
+		_, err = jobsClient.Create(ctx, scraperSpec, metav1.CreateOptions{})
 		if err != nil {
-			return result.WithErrors(err), err
+			return result, err
 		}
 
 		podName := execution.Id + "-scraper"
 		pods, err := executor.GetJobPods(podsClient, podName, 1, 10)
 		if err != nil {
-			return result.WithErrors(err), err
+			return result, err
 		}
 
 		// get job pod and
@@ -297,25 +297,25 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 				}
 				l.Debug("poll scraper immediate end")
 
-				recentPod, err := podsClient.Get(context.Background(), podName, metav1.GetOptions{})
+				scraperPod, err := podsClient.Get(context.Background(), podName, metav1.GetOptions{})
 				if err != nil {
 					return result, err
 				}
 
-				pvcs := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
-				err = pvcs.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
+				pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+				err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
 				if err != nil {
 					return result, err
 				}
 
-				switch recentPod.Status.Phase {
+				switch scraperPod.Status.Phase {
 				case corev1.PodSucceeded:
 					result.Success()
 				case corev1.PodFailed:
 					result.Error()
 				}
 
-				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *recentPod)
+				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *scraperPod)
 				if err != nil {
 					l.Errorw("get pod scraper logs error", "error", err)
 					return result, err
@@ -327,7 +327,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 	}
 
 	if !result.IsFailed() {
-		switch latestPod.Status.Phase {
+		switch executorPod.Status.Phase {
 		case corev1.PodSucceeded:
 			result.Success()
 		case corev1.PodFailed:
@@ -502,7 +502,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 }
 
-// AbortK8sJob aborts K8S by job name
+// Abort K8sJob aborts K8S by job name
 func (c *ContainerExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
 	return executor.AbortJob(c.clientSet, c.namespace, execution.Id)
 }
