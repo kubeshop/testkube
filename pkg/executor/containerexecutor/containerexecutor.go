@@ -117,7 +117,6 @@ type JobOptions struct {
 // Logs returns job logs stream channel using kubernetes api
 func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
-	logs := make(chan []byte)
 
 	go func() {
 		defer func() {
@@ -125,14 +124,18 @@ func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) 
 			close(out)
 		}()
 
-		if err := TailJobLogs(c.log, c.clientSet, c.namespace, id, logs); err != nil {
-			out <- output.NewOutputError(err)
-			return
-		}
+		logs := make(chan []byte)
 
-		for l := range logs {
-			entry := output.NewOutputLine(l)
-			out <- entry
+		for _, podName := range []string{id, id + "-scraper"} {
+			if err := TailJobLogs(c.log, c.clientSet, c.namespace, podName, logs); err != nil {
+				out <- output.NewOutputError(err)
+				return
+			}
+
+			for l := range logs {
+				entry := output.NewOutputLine(l)
+				out <- entry
+			}
 		}
 	}()
 
