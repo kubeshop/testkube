@@ -264,6 +264,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 		return result, err
 	}
 
+	var scraperLogs []byte
 	if jobOptions.ArtifactRequest != nil {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobs := c.clientSet.BatchV1().Jobs(c.namespace)
@@ -310,6 +311,13 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 				case corev1.PodFailed:
 					result.Error()
 				}
+
+				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *recentPod)
+				if err != nil {
+					l.Errorw("get pod scraper logs error", "error", err)
+					return result, err
+				}
+
 				break
 			}
 		}
@@ -324,10 +332,9 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 		}
 	}
 
-	var logs []byte
-	logs, err = executor.GetPodLogs(c.clientSet, c.namespace, pod)
+	executorLogs, err := executor.GetPodLogs(c.clientSet, c.namespace, pod)
 	if err != nil {
-		l.Errorw("get pod logs error", "error", err)
+		l.Errorw("get executor pod logs error", "error", err)
 		err = c.repository.UpdateResult(ctx, execution.Id, result.Err(err))
 		if err != nil {
 			l.Infow("Update result", "error", err)
@@ -335,7 +342,8 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 		return result, err
 	}
 
-	result.Output = string(logs)
+	executorLogs = append(executorLogs, scraperLogs...)
+	result.Output = string(executorLogs)
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", result.Status)
 	err = c.repository.UpdateResult(ctx, execution.Id, result)
