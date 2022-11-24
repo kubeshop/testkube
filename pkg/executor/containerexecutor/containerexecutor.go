@@ -124,9 +124,9 @@ func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) 
 			close(out)
 		}()
 
-		logs := make(chan []byte)
-
 		for _, podName := range []string{id, id + "-scraper"} {
+			logs := make(chan []byte)
+
 			if err := TailJobLogs(c.log, c.clientSet, c.namespace, podName, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
