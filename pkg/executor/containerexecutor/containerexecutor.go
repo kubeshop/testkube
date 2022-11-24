@@ -145,7 +145,7 @@ func (c *ContainerExecutor) Execute(execution *testkube.Execution, options clien
 	result := testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err := c.createJob(ctx, *execution, options)
+	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -162,7 +162,7 @@ func (c *ContainerExecutor) Execute(execution *testkube.Execution, options clien
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution, result)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, result)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -183,7 +183,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 	result := testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err := c.createJob(ctx, *execution, options)
+	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -199,7 +199,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, result)
+			return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, result)
 		}
 	}
 
@@ -209,50 +209,119 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 }
 
 // createJob creates new Kubernetes job based on execution and execute options
-func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) error {
+func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobs := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	c.log.Debug("creating job with options", "options", jobOptions)
+	if jobOptions.ArtifactRequest != nil {
+		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
+		pvcs := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = pvcs.Create(ctx, pvcSpec, metav1.CreateOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	c.log.Debug("creating executor job with options", "options", jobOptions)
 	jobSpec, err := NewExecutorJobSpec(c.log, jobOptions)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
-	return err
+	return jobOptions, err
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger,
+	execution *testkube.Execution, jobOptions *JobOptions, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, &result)
 
 	// wait for complete
-	l.Debug("poll immediate waiting for pod to succeed")
+	l.Debug("poll immediate waiting for executor pod to succeed")
 	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, pod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
-		l.Errorw("waiting for pod complete error", "error", err)
+		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
-	l.Debug("poll immediate end")
+	l.Debug("poll executor immediate end")
 
 	// we need to retrieve the Pod to get it's latest status
-	latestPod, err := c.clientSet.CoreV1().Pods(c.namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
+	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
+	latestPod, err := podsClient.Get(context.Background(), pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return result, err
 	}
 
-	switch latestPod.Status.Phase {
-	case corev1.PodSucceeded:
-		result.Success()
-	case corev1.PodFailed:
-		result.Error()
+	if jobOptions.ArtifactRequest != nil {
+		c.log.Debug("creating scraper job with options", "options", jobOptions)
+		jobs := c.clientSet.BatchV1().Jobs(c.namespace)
+		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
+		if err != nil {
+			return result, err
+		}
+
+		_, err = jobs.Create(ctx, scraperSpec, metav1.CreateOptions{})
+		if err != nil {
+			return result.WithErrors(err), err
+		}
+
+		podName := execution.Id + "-scraper"
+		pods, err := executor.GetJobPods(podsClient, podName, 1, 10)
+		if err != nil {
+			return result.WithErrors(err), err
+		}
+
+		// get job pod and
+		for _, pod := range pods.Items {
+			if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == podName {
+				l.Debug("poll immediate waiting for scraper pod to succeed")
+				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, podName, c.namespace)); err != nil {
+					// continue on poll err and try to get logs later
+					l.Errorw("waiting for scraper pod complete error", "error", err)
+				}
+				l.Debug("poll scraper immediate end")
+
+				recentPod, err := podsClient.Get(context.Background(), podName, metav1.GetOptions{})
+				if err != nil {
+					return result, err
+				}
+
+				pvcs := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+				err = pvcs.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
+				if err != nil {
+					return result, err
+				}
+
+				switch recentPod.Status.Phase {
+				case corev1.PodSucceeded:
+					result.Success()
+				case corev1.PodFailed:
+					result.Error()
+				}
+				break
+			}
+		}
+	}
+
+	if !result.IsFailed() {
+		switch latestPod.Status.Phase {
+		case corev1.PodSucceeded:
+			result.Success()
+		case corev1.PodFailed:
+			result.Error()
+		}
 	}
 
 	var logs []byte
