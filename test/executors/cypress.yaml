@@ -1,6 +1,18 @@
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
+  name: cypress-v11-executor
+  namespace: testkube
+spec:
+  image: kubeshop/testkube-cypress-executor:cypress11
+  types:
+  - cypress:v11/test
+  features:
+  - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
   name: cypress-v10-executor
   namespace: testkube
 spec:

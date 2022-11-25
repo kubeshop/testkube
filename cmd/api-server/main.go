@@ -218,7 +218,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT")
+	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT_NAME")
 	executor, err := client.NewJobExecutor(resultsRepository, namespace, images, templates,
 		serviceAccountName, metrics, eventsEmitter, configMapConfig)
 	if err != nil {
