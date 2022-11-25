@@ -814,10 +814,10 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /test-suite-executions/{id}:
+  /test-suite-executions/{executionID}:
     get:
       parameters:
-        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
         - $ref: "#/components/parameters/LastNDays"
       tags:
         - executions
@@ -849,7 +849,7 @@ paths:
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
-      operationId: abortTestSuiteExecution
+      operationId: abortTestSuiteExecutionByID
       responses:
         502:
           description: "problem with read information from kubernetes cluster"
