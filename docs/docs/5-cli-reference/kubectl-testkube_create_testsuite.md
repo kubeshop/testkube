@@ -23,6 +23,7 @@ kubectl-testkube create testsuite [flags]
       --schedule string                            test suite schedule in a cronjob form: * * * * *
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --timeout int32                              duration in seconds for test suite to timeout. 0 disables timeout.
   -v, --variable stringToString                    param key value pair: --variable key1=value1 (default [])
 ```
 
