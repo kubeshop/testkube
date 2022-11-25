@@ -7,6 +7,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TestKubeCloudAPIClient interface {
 	Execute(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_ExecuteClient, error)
+	Send(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_SendClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -60,11 +62,46 @@ func (x *testKubeCloudAPIExecuteClient) Recv() (*ExecuteRequest, error) {
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) Send(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_SendClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[1], "/cloud.TestKubeCloudAPI/Send", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPISendClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_SendClient interface {
+	Send(*WebsocketData) error
+	CloseAndRecv() (*emptypb.Empty, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPISendClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPISendClient) Send(m *WebsocketData) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPISendClient) CloseAndRecv() (*emptypb.Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(emptypb.Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
 type TestKubeCloudAPIServer interface {
 	Execute(TestKubeCloudAPI_ExecuteServer) error
+	Send(TestKubeCloudAPI_SendServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -74,6 +111,9 @@ type UnimplementedTestKubeCloudAPIServer struct {
 
 func (UnimplementedTestKubeCloudAPIServer) Execute(TestKubeCloudAPI_ExecuteServer) error {
 	return status.Errorf(codes.Unimplemented, "method Execute not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) Send(TestKubeCloudAPI_SendServer) error {
+	return status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -114,6 +154,32 @@ func (x *testKubeCloudAPIExecuteServer) Recv() (*ExecuteResponse, error) {
 	return m, nil
 }
 
+func _TestKubeCloudAPI_Send_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).Send(&testKubeCloudAPISendServer{stream})
+}
+
+type TestKubeCloudAPI_SendServer interface {
+	SendAndClose(*emptypb.Empty) error
+	Recv() (*WebsocketData, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPISendServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPISendServer) SendAndClose(m *emptypb.Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPISendServer) Recv() (*WebsocketData, error) {
+	m := new(WebsocketData)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -126,6 +192,11 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "Execute",
 			Handler:       _TestKubeCloudAPI_Execute_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Send",
+			Handler:       _TestKubeCloudAPI_Send_Handler,
 			ClientStreams: true,
 		},
 	},

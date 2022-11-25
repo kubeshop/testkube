@@ -107,7 +107,6 @@ func NewTestkubeAPI(
 	s.InitEnvs()
 	s.InitStorage()
 	s.InitRoutes()
-	s.InitEvents()
 
 	return s
 }
