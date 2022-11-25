@@ -35,7 +35,7 @@ func TestRun(t *testing.T) {
 	}
 
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, url, "api-key", true)
+	agent, err := agent.NewAgent(logger.Sugar(), m, url, "api-key", true, "8080")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
 
 	return nil
 }
-func newServer() *CloudServer {
 
+func newServer() *CloudServer {
 	return &CloudServer{}
 }
