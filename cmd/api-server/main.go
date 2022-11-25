@@ -375,7 +375,7 @@ func newExecutorClient(
 	if err != nil {
 		return nil, errors.WithMessage(err, "error creating job templates from envvars")
 	}
-	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT")
+	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT_NAME")
 	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, serviceAccountName, metrics, eventsEmitter, configMap)
 }
 
