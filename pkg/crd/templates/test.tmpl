@@ -71,7 +71,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (ne (len .ExecutionRequest.Uploads) 0) (.ExecutionRequest.BucketName) (.ExecutionRequest.ArtifactRequest) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -131,19 +131,28 @@ spec:
     {{- end }}
     {{- if gt (len .ExecutionRequest.Command) 0 }}
     command:
-    {{- range $cmd := .ExecutionRequest.Command}}
+    {{- range $cmd := .ExecutionRequest.Command }}
     - {{ $cmd -}}
     {{- end }}
     {{- end -}}
     {{- if gt (len .ExecutionRequest.ImagePullSecrets) 0 }}
     imagePullSecrets:
-    {{- range $secret := .ExecutionRequest.ImagePullSecrets}}
+    {{- range $secret := .ExecutionRequest.ImagePullSecrets }}
     - name: {{ $secret.Name -}}
     {{- end }}
     {{- end }}
     {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
     activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}
     {{- end }}
+    {{- if gt (len .ExecutionRequest.Uploads) 0 }}
+    uploads:
+    {{- range .ExecutionRequest.Uploads }}
+    - {{ . }}
+    {{- end }}
+    {{- end }}
+    {{- if .ExecutionRequest.BucketName }}
+    bucketName: {{ .ExecutionRequest.BucketName }}
+    {{- end }}    
     {{- if .ExecutionRequest.ArtifactRequest }}
     artifactRequest:
       {{- if .ExecutionRequest.ArtifactRequest.VolumeName }}
