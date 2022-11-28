@@ -204,11 +204,11 @@ helm install --create-namespace --namespace testkube testkube testkube/testkube 
 
 Please notice that since we've just installed MongoDB with `testkube-mongodb` helm release name, it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
 
-## Installation with S3 storage and IAM authentication
+## Installation with S3 Storage and IAM Authentication
 
-In order to use S3 as a storage the steps are as follow:
+To use S3 as storage, the steps are as follows:
 
-1. Create a ServiceAccount with the ARN specified 
+1. Create a ServiceAccount with the ARN specified.
 e.g.
 
 ```yaml
@@ -221,6 +221,6 @@ metadata:
   namespace: testkube
 ```
 
-2. In the helm values.yaml files link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser` and `minio.minioRootPassword` empty
+2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser` and `minio.minioRootPassword` empty.
 
-3. Install using helm and values file with the above modifications
+3. Install using Helm and the values file with the above modifications.
