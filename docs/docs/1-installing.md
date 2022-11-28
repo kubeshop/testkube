@@ -202,7 +202,7 @@ helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values valu
 helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
 ```
 
-Please notice that since we've just installed MongoDB with `testkube-mongodb` helm release name, it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
+Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
 
 ## Installation with S3 Storage and IAM Authentication
 
