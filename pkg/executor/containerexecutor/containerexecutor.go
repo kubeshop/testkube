@@ -28,7 +28,7 @@ const (
 	pollTimeout             = 24 * time.Hour
 	pollInterval            = 200 * time.Millisecond
 	jobDefaultDelaySeconds  = 180
-	jobArtifactDelaySeconds = 30
+	jobArtifactDelaySeconds = 90
 	repoPath                = "/data/repo"
 )
 
