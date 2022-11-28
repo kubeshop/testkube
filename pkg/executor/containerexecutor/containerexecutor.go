@@ -97,7 +97,7 @@ type JobOptions struct {
 	Jsn                   string
 	TestName              string
 	InitImage             string
-	ScaperImage           string
+	ScraperImage          string
 	JobTemplate           string
 	ScraperTemplate       string
 	PVCTemplate           string
