@@ -416,27 +416,24 @@ func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
 }
 
 func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *testkube.ArtifactRequest) *testkube.ArtifactRequest {
-	if artifactBase == nil && artifactAdjust == nil {
+	switch {
+	case artifactBase == nil && artifactAdjust == nil:
 		return nil
-	}
-
-	if artifactBase == nil && artifactAdjust != nil {
+	case artifactBase == nil && artifactAdjust != nil:
 		return artifactAdjust
-	}
-
-	if artifactBase != nil && artifactAdjust == nil {
+	case artifactBase != nil && artifactAdjust == nil:
 		return artifactBase
-	}
+	default:
+		if artifactBase.VolumeName == "" && artifactAdjust.VolumeName != "" {
+			artifactBase.VolumeName = artifactAdjust.VolumeName
+		}
 
-	if artifactBase.VolumeName == "" && artifactAdjust.VolumeName != "" {
-		artifactBase.VolumeName = artifactAdjust.VolumeName
-	}
+		if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
+			artifactBase.VolumeMountPath = artifactAdjust.VolumeMountPath
+		}
 
-	if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
-		artifactBase.VolumeMountPath = artifactAdjust.VolumeMountPath
+		artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
 	}
-
-	artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
 
 	return artifactBase
 }
