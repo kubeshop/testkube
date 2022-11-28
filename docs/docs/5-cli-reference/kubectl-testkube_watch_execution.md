@@ -7,7 +7,7 @@ Watch logs output from executor pod
 Gets test execution details, until it's in success/error state, blocks until gets complete state
 
 ```
-kubectl-testkube watch execution <executionID> [flags]
+kubectl-testkube watch execution <executionName> [flags]
 ```
 
 ### Options

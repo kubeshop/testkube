@@ -3,7 +3,7 @@
 download artifacts
 
 ```
-kubectl-testkube download artifacts <executionID> [flags]
+kubectl-testkube download artifacts <executionName> [flags]
 ```
 
 ### Options

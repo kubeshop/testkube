@@ -3,7 +3,7 @@
 Aborts execution of the test
 
 ```
-kubectl-testkube abort execution <executionID> [flags]
+kubectl-testkube abort execution <executionName> [flags]
 ```
 
 ### Options

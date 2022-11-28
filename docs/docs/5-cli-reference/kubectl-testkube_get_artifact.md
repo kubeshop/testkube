@@ -3,7 +3,7 @@
 List artifacts of the given execution ID
 
 ```
-kubectl-testkube get artifact <executionID> [flags]
+kubectl-testkube get artifact <executionName> [flags]
 ```
 
 ### Options

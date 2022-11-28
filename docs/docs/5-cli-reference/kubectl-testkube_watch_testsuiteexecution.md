@@ -7,7 +7,7 @@ Watch test suite
 Watch test suite by execution ID, returns results to console
 
 ```
-kubectl-testkube watch testsuiteexecution <executionID> [flags]
+kubectl-testkube watch testsuiteexecution <executionName> [flags]
 ```
 
 ### Options
