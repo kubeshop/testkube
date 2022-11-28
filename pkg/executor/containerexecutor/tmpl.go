@@ -150,7 +150,7 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.TestName = execution.TestName
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
-	jobOptions.ScaperImage = images.Scraper
+	jobOptions.ScraperImage = images.Scraper
 	jobOptions.JobTemplate = templates.Job
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = defaultJobTemplate
