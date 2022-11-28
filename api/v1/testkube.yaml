@@ -3078,12 +3078,12 @@ components:
       description: artifact request body for container executors with test artifacts
       type: object
       required:
-        - volumeName
+        - storageClassName
         - volumeMountPath
       properties:
-        volumeName:
+        storageClassName:
           type: string
-          description: artifact volume name
+          description: artifact storage class name
           example: artifact-volume-local
         volumeMountPath:
           type: string

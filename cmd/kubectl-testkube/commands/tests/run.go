@@ -38,7 +38,7 @@ func NewRunTestCmd() *cobra.Command {
 		executionLabels          map[string]string
 		secretVariableReferences map[string]string
 		copyFiles                []string
-		artifactVolumeName       string
+		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
 	)
@@ -65,7 +65,7 @@ func NewRunTestCmd() *cobra.Command {
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
-			err = validateArtifactRequest(artifactVolumeName, artifactVolumeMountPath, artifactDirs)
+			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
 			var executions []testkube.Execution
@@ -82,11 +82,11 @@ func NewRunTestCmd() *cobra.Command {
 				Image:                         image,
 			}
 
-			if artifactVolumeName != "" && artifactVolumeMountPath != "" {
+			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
-					VolumeName:      artifactVolumeName,
-					VolumeMountPath: artifactVolumeMountPath,
-					Dirs:            artifactDirs,
+					StorageClassName: artifactStorageClassName,
+					VolumeMountPath:  artifactVolumeMountPath,
+					Dirs:             artifactDirs,
 				}
 			}
 
@@ -184,7 +184,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&artifactVolumeName, "artifact-volume-name", "", "artifact volume name for container executor")
+	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
 

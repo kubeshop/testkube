@@ -11,8 +11,8 @@ package testkube
 
 // artifact request body for container executors with test artifacts
 type ArtifactRequest struct {
-	// artifact volume name
-	VolumeName string `json:"volumeName"`
+	// artifact storage class name
+	StorageClassName string `json:"storageClassName"`
 	// artifact volume mount path
 	VolumeMountPath string `json:"volumeMountPath"`
 	// artifact directories

@@ -146,8 +146,8 @@ spec:
     {{- end }}
     {{- if .ExecutionRequest.ArtifactRequest }}
     artifactRequest:
-      {{- if .ExecutionRequest.ArtifactRequest.VolumeName }}
-      volumeName: {{ .ExecutionRequest.ArtifactRequest.VolumeName }}
+      {{- if .ExecutionRequest.ArtifactRequest.StorageClassName }}
+      storageClassName: {{ .ExecutionRequest.ArtifactRequest.StorageClassName }}
       {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
       volumeMountPath: {{ .ExecutionRequest.ArtifactRequest.VolumeMountPath }}

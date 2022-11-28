@@ -295,7 +295,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
 	}
 
-	artifactVolumeName := cmd.Flag("artifact-volume-name").Value.String()
+	artifactStorageClassName := cmd.Flag("artifact-storage-class-name").Value.String()
 	artifactVolumeMountPath := cmd.Flag("artifact-volume-mount-path").Value.String()
 	dirs, err := cmd.Flags().GetStringArray("artifact-dir")
 	if err != nil {
@@ -317,11 +317,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		ActiveDeadlineSeconds: timeout,
 	}
 
-	if artifactVolumeName != "" && artifactVolumeMountPath != "" {
+	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
 		options.ExecutionRequest.ArtifactRequest = &testkube.ArtifactRequest{
-			VolumeName:      artifactVolumeName,
-			VolumeMountPath: artifactVolumeMountPath,
-			Dirs:            dirs,
+			StorageClassName: artifactStorageClassName,
+			VolumeMountPath:  artifactVolumeMountPath,
+			Dirs:             dirs,
 		}
 	}
 

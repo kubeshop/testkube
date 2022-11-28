@@ -110,9 +110,9 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	var artifactRequest *testkube.ArtifactRequest
 	if specExecutionRequest.ArtifactRequest != nil {
 		artifactRequest = &testkube.ArtifactRequest{
-			VolumeName:      specExecutionRequest.ArtifactRequest.VolumeName,
-			VolumeMountPath: specExecutionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:            specExecutionRequest.ArtifactRequest.Dirs,
+			StorageClassName: specExecutionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:  specExecutionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:             specExecutionRequest.ArtifactRequest.Dirs,
 		}
 	}
 

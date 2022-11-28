@@ -424,8 +424,8 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 	case artifactBase != nil && artifactAdjust == nil:
 		return artifactBase
 	default:
-		if artifactBase.VolumeName == "" && artifactAdjust.VolumeName != "" {
-			artifactBase.VolumeName = artifactAdjust.VolumeName
+		if artifactBase.StorageClassName == "" && artifactAdjust.StorageClassName != "" {
+			artifactBase.StorageClassName = artifactAdjust.StorageClassName
 		}
 
 		if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
