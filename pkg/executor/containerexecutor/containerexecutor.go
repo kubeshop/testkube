@@ -245,7 +245,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger,
+func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, executorPod corev1.Pod, l *zap.SugaredLogger,
 	execution *testkube.Execution, jobOptions *JobOptions, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
 	var err error
 
@@ -254,7 +254,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 
 	// wait for complete
 	l.Debug("poll immediate waiting for executor pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, pod.Name, c.namespace)); err != nil {
+	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
@@ -262,7 +262,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 
 	// we need to retrieve the Pod to get it's latest status
 	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
-	executorPod, err := podsClient.Get(context.Background(), pod.Name, metav1.GetOptions{})
+	latestExecutorPod, err := podsClient.Get(context.Background(), executorPod.Name, metav1.GetOptions{})
 	if err != nil {
 		return result, err
 	}
@@ -281,23 +281,23 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 			return result, err
 		}
 
-		podName := execution.Id + "-scraper"
-		pods, err := executor.GetJobPods(podsClient, podName, 1, 10)
+		scraperPodName := execution.Id + "-scraper"
+		scraperPods, err := executor.GetJobPods(podsClient, scraperPodName, 1, 10)
 		if err != nil {
 			return result, err
 		}
 
-		// get job pod and
-		for _, pod := range pods.Items {
-			if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == podName {
+		// get scraper job pod and
+		for _, scraperPod := range scraperPods.Items {
+			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
 				l.Debug("poll immediate waiting for scraper pod to succeed")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, podName, c.namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
 				l.Debug("poll scraper immediate end")
 
-				scraperPod, err := podsClient.Get(context.Background(), podName, metav1.GetOptions{})
+				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
 				if err != nil {
 					return result, err
 				}
@@ -308,16 +308,16 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 					return result, err
 				}
 
-				switch scraperPod.Status.Phase {
+				switch latestScraperPod.Status.Phase {
 				case corev1.PodSucceeded:
 					result.Success()
 				case corev1.PodFailed:
 					result.Error()
 				}
 
-				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *scraperPod)
+				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *latestScraperPod)
 				if err != nil {
-					l.Errorw("get pod scraper logs error", "error", err)
+					l.Errorw("get scraper pod logs error", "error", err)
 					return result, err
 				}
 
@@ -327,7 +327,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 	}
 
 	if !result.IsFailed() {
-		switch executorPod.Status.Phase {
+		switch latestExecutorPod.Status.Phase {
 		case corev1.PodSucceeded:
 			result.Success()
 		case corev1.PodFailed:
@@ -335,7 +335,7 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 		}
 	}
 
-	executorLogs, err := executor.GetPodLogs(c.clientSet, c.namespace, pod)
+	executorLogs, err := executor.GetPodLogs(c.clientSet, c.namespace, *latestExecutorPod)
 	if err != nil {
 		l.Errorw("get executor pod logs error", "error", err)
 		err = c.repository.UpdateResult(ctx, execution.Id, result.Err(err))
