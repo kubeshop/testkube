@@ -7,6 +7,7 @@ import (
 
 	v3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -56,25 +57,27 @@ func TestExecuteSync(t *testing.T) {
 	assert.Equal(t, testkube.PASSED_ExecutionStatus, *res.Status)
 }
 
-func TestNewJobSpecEmptyArgs(t *testing.T) {
+func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 	jobOptions := &JobOptions{
-		Name:      "name",
-		Namespace: "namespace",
-		InitImage: "kubeshop/testkube-executor-init:0.7.10",
-		Image:     "ubuntu",
-		Args:      []string{},
+		Name:        "name",
+		Namespace:   "namespace",
+		InitImage:   "kubeshop/testkube-executor-init:0.7.10",
+		Image:       "ubuntu",
+		JobTemplate: defaultJobTemplate,
+		Args:        []string{},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
 
-func TestNewJobSpecWithArgs(t *testing.T) {
+func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	jobOptions := &JobOptions{
 		Name:                  "name",
 		Namespace:             "namespace",
 		InitImage:             "kubeshop/testkube-executor-init:0.7.10",
 		Image:                 "curl",
+		JobTemplate:           defaultJobTemplate,
 		ImagePullSecrets:      []string{"secret-name"},
 		Command:               []string{"/bin/curl"},
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
@@ -82,7 +85,7 @@ func TestNewJobSpecWithArgs(t *testing.T) {
 		Envs:                  map[string]string{"key": "value"},
 		Variables:             map[string]testkube.Variable{"aa": testkube.Variable{Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -98,22 +101,24 @@ func TestNewJobSpecWithArgs(t *testing.T) {
 	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
-func TestNewJobSpecWithoutInitImage(t *testing.T) {
+func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 	jobOptions := &JobOptions{
-		Name:      "name",
-		Namespace: "namespace",
-		InitImage: "",
-		Image:     "ubuntu",
-		Args:      []string{},
+		Name:        "name",
+		Namespace:   "namespace",
+		InitImage:   "",
+		Image:       "ubuntu",
+		JobTemplate: defaultJobTemplate,
+		Args:        []string{},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
 
-func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
+func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -133,16 +138,17 @@ func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
 	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
-func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
+func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -162,16 +168,17 @@ func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
 	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
-func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
+func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -190,7 +197,7 @@ func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 

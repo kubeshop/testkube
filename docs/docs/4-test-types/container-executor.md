@@ -109,3 +109,29 @@ Downloads into `/data/repo` directory
 $ ls /data/repO
 CODE_OF_CONDUCT.md  CONTRIBUTING.md  LICENSE  Makefile  README.md  build  cmd  go.mod  go.sum  pkg
 ```
+## Collecting test artifacts
+For container executors that produce files during test execution we support collecting (scraping) these artifacts and storing them in our S3 compatible file storage. You need to save test related files into specified directories on the dynamically created volume, they will be uploaded from there to Testkube file storage and available later for downloading using standard CLI or UI commands. For example:
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: custom-container
+  namespace: testkube
+spec:
+  content:
+    repository:
+      branch: main
+      type: git-dir
+      uri: https://github.com/kubeshop/testkube-executor-init
+    type: git-dir
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+      - test/video
+      - test/reports
+```
+
+You have to define the storage class name, volume mount path and directories in this volume with test artifacts.

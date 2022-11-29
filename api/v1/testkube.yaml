@@ -814,10 +814,10 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /test-suite-executions/{id}:
+  /test-suite-executions/{executionID}:
     get:
       parameters:
-        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
         - $ref: "#/components/parameters/LastNDays"
       tags:
         - executions
@@ -849,7 +849,7 @@ paths:
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
-      operationId: abortTestSuiteExecution
+      operationId: abortTestSuiteExecutionByID
       responses:
         502:
           description: "problem with read information from kubernetes cluster"
@@ -2817,7 +2817,9 @@ components:
           type: string
           description: minio bucket name to get uploads from
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
-
+        artifactRequest:
+          $ref: "#/components/schemas/ArtifactRequest"
+          description: configuration parameters for storing container executor test artifacts
 
     Artifact:
       type: object
@@ -3072,6 +3074,26 @@ components:
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
 
+    ArtifactRequest:
+      description: artifact request body for container executors with test artifacts
+      type: object
+      required:
+        - storageClassName
+        - volumeMountPath
+      properties:
+        storageClassName:
+          type: string
+          description: artifact storage class name
+          example: artifact-volume-local
+        volumeMountPath:
+          type: string
+          description: artifact volume mount path
+        dirs:
+          type: array
+          items:
+            type: string
+          description: artifact directories
+
     ExecutionRequest:
       description: test execution request body
       type: object
@@ -3182,6 +3204,9 @@ components:
           type: string
           description: minio bucket name to get uploads from
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
+        artifactRequest:
+          $ref: "#/components/schemas/ArtifactRequest"
+          description: configuration parameters for storing container executor test artifacts
 
     TestSuiteExecutionRequest:
       description: test suite execution request body

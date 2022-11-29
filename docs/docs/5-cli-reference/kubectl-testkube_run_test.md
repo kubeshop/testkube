@@ -14,6 +14,9 @@ kubectl-testkube run test <testName> [flags]
 
 ```
       --args stringArray                           executor binary additional arguments
+      --artifact-dir stringArray                   artifact dirs for container executor
+      --artifact-volume-mount-path string          artifact volume mount path for container executor
+      --artifact-storage-class-name string         artifact storage class name for container executor
       --concurrency int                            concurrency level for multiple test execution (default 10)
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically

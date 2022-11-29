@@ -13,6 +13,9 @@ kubectl-testkube update test [flags]
 ### Options
 
 ```
+      --artifact-dir stringArray                   artifact dirs for container executor
+      --artifact-volume-mount-path string          artifact volume mount path for container executor
+      --artifact-storage-class-name string         artifact storage class name for container executor
       --command stringArray                        command passed to image in container executor
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
       --env stringToString                         envs in a form of name1=val1 passed to executor (default [])

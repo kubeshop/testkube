@@ -71,7 +71,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -131,19 +131,39 @@ spec:
     {{- end }}
     {{- if gt (len .ExecutionRequest.Command) 0 }}
     command:
-    {{- range $cmd := .ExecutionRequest.Command}}
+    {{- range $cmd := .ExecutionRequest.Command }}
     - {{ $cmd -}}
-    {{- end}}
+    {{- end }}
     {{- end -}}
     {{- if gt (len .ExecutionRequest.ImagePullSecrets) 0 }}
     imagePullSecrets:
-    {{- range $secret := .ExecutionRequest.ImagePullSecrets}}
+    {{- range $secret := .ExecutionRequest.ImagePullSecrets }}
     - name: {{ $secret.Name -}}
-    {{- end}}
-    {{- end}}
+    {{- end }}
+    {{- end }}
     {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
     activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}
-    {{- end}}
-
+    {{- end }}
+    {{- if .ExecutionRequest.ArtifactRequest }}
+    artifactRequest:
+      {{- if .ExecutionRequest.ArtifactRequest.StorageClassName }}
+      storageClassName: {{ .ExecutionRequest.ArtifactRequest.StorageClassName }}
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
+      volumeMountPath: {{ .ExecutionRequest.ArtifactRequest.VolumeMountPath }}
+      {{- end }}
+      {{- if gt (len .ExecutionRequest.ArtifactRequest.Dirs) 0 }}
+      dirs:
+      {{- range .ExecutionRequest.ArtifactRequest.Dirs }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if gt (len .Uploads) 0 }}
+  uploads:
+  {{- range .Uploads }}
+  - {{ . }}
   {{- end }}
   {{- end }}

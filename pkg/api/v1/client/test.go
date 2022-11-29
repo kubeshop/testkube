@@ -143,6 +143,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		Image:           options.Image,
 		Uploads:         options.Uploads,
 		BucketName:      options.BucketName,
+		ArtifactRequest: options.ArtifactRequest,
 	}
 
 	body, err := json.Marshal(request)
@@ -158,15 +159,16 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.executionTransport.GetURI("/executions")
 	request := testkube.ExecutionRequest{
-		VariablesFile: options.ExecutionVariablesFileContent,
-		Variables:     options.ExecutionVariables,
-		Envs:          options.Envs,
-		Args:          options.Args,
-		SecretEnvs:    options.SecretEnvs,
-		HttpProxy:     options.HTTPProxy,
-		HttpsProxy:    options.HTTPSProxy,
-		Uploads:       options.Uploads,
-		BucketName:    options.BucketName,
+		VariablesFile:   options.ExecutionVariablesFileContent,
+		Variables:       options.ExecutionVariables,
+		Envs:            options.Envs,
+		Args:            options.Args,
+		SecretEnvs:      options.SecretEnvs,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		Uploads:         options.Uploads,
+		BucketName:      options.BucketName,
+		ArtifactRequest: options.ArtifactRequest,
 	}
 
 	body, err := json.Marshal(request)

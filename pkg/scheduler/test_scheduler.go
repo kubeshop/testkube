@@ -220,6 +220,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.VariablesFile = options.Request.VariablesFile
 	execution.Uploads = options.Request.Uploads
 	execution.BucketName = options.Request.BucketName
+	execution.ArtifactRequest = options.Request.ArtifactRequest
 
 	return execution
 }
@@ -263,6 +264,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
 			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
 		}
+
+		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
 	}
 
 	// get executor from kubernetes CRs
@@ -410,4 +413,27 @@ func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
 		res = append(res, secret.Name)
 	}
 	return res
+}
+
+func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *testkube.ArtifactRequest) *testkube.ArtifactRequest {
+	switch {
+	case artifactBase == nil && artifactAdjust == nil:
+		return nil
+	case artifactBase == nil && artifactAdjust != nil:
+		return artifactAdjust
+	case artifactBase != nil && artifactAdjust == nil:
+		return artifactBase
+	default:
+		if artifactBase.StorageClassName == "" && artifactAdjust.StorageClassName != "" {
+			artifactBase.StorageClassName = artifactAdjust.StorageClassName
+		}
+
+		if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
+			artifactBase.VolumeMountPath = artifactAdjust.VolumeMountPath
+		}
+
+		artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
+	}
+
+	return artifactBase
 }

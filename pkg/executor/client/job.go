@@ -53,8 +53,8 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate, serviceAccountName string,
-	metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace string, images executor.Images, templates executor.Templates,
+	serviceAccountName string, metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -65,8 +65,8 @@ func NewJobExecutor(repo result.Repository, namespace, initImage, jobTemplate, s
 		Repository:         repo,
 		Log:                log.DefaultLogger,
 		Namespace:          namespace,
-		initImage:          initImage,
-		jobTemplate:        jobTemplate,
+		images:             images,
+		templates:          templates,
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		Emitter:            emiter,
@@ -85,8 +85,8 @@ type JobExecutor struct {
 	ClientSet          *kubernetes.Clientset
 	Namespace          string
 	Cmd                string
-	initImage          string
-	jobTemplate        string
+	images             executor.Images
+	templates          executor.Templates
 	serviceAccountName string
 	metrics            ExecutionCounter
 	Emitter            *event.Emitter
@@ -261,8 +261,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-
-	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}

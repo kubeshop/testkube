@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
@@ -24,9 +25,11 @@ import (
 )
 
 const (
-	pollTimeout  = 24 * time.Hour
-	pollInterval = 200 * time.Millisecond
-	repoPath     = "/data/repo"
+	pollTimeout             = 24 * time.Hour
+	pollInterval            = 200 * time.Millisecond
+	jobDefaultDelaySeconds  = 180
+	jobArtifactDelaySeconds = 90
+	repoPath                = "/data/repo"
 )
 
 type ResultRepository interface {
@@ -43,23 +46,24 @@ type EventEmitter interface {
 }
 
 // NewContainerExecutor creates new job executor
-func NewContainerExecutor(repo ResultRepository, namespace, initImage, jobTemplate string,
-	metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
+func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images, templates executor.Templates,
+	serviceAccountName string, metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
 	}
 
 	return &ContainerExecutor{
-		clientSet:   clientSet,
-		repository:  repo,
-		log:         log.DefaultLogger,
-		namespace:   namespace,
-		initImage:   initImage,
-		jobTemplate: jobTemplate,
-		configMap:   configMap,
-		metrics:     metrics,
-		emitter:     emiter,
+		clientSet:          clientSet,
+		repository:         repo,
+		log:                log.DefaultLogger,
+		namespace:          namespace,
+		images:             images,
+		templates:          templates,
+		configMap:          configMap,
+		serviceAccountName: serviceAccountName,
+		metrics:            metrics,
+		emitter:            emiter,
 	}, nil
 }
 
@@ -69,15 +73,16 @@ type ExecutionCounter interface {
 
 // ContainerExecutor is container for managing job executor dependencies
 type ContainerExecutor struct {
-	repository  ResultRepository
-	log         *zap.SugaredLogger
-	clientSet   kubernetes.Interface
-	namespace   string
-	initImage   string
-	jobTemplate string
-	metrics     ExecutionCounter
-	emitter     EventEmitter
-	configMap   config.Repository
+	repository         ResultRepository
+	log                *zap.SugaredLogger
+	clientSet          kubernetes.Interface
+	namespace          string
+	images             executor.Images
+	templates          executor.Templates
+	metrics            ExecutionCounter
+	emitter            EventEmitter
+	configMap          config.Repository
+	serviceAccountName string
 }
 
 type JobOptions struct {
@@ -91,8 +96,11 @@ type JobOptions struct {
 	ImageOverride         string
 	Jsn                   string
 	TestName              string
-	JobTemplate           string
 	InitImage             string
+	ScraperImage          string
+	JobTemplate           string
+	ScraperTemplate       string
+	PVCTemplate           string
 	SecretEnvs            map[string]string
 	Envs                  map[string]string
 	HTTPProxy             string
@@ -101,12 +109,14 @@ type JobOptions struct {
 	TokenSecret           *testkube.SecretRef
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
+	ArtifactRequest       *testkube.ArtifactRequest
+	ServiceAccountName    string
+	DelaySeconds          int
 }
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
-	logs := make(chan []byte)
 
 	go func() {
 		defer func() {
@@ -114,14 +124,18 @@ func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) 
 			close(out)
 		}()
 
-		if err := TailJobLogs(c.log, c.clientSet, c.namespace, id, logs); err != nil {
-			out <- output.NewOutputError(err)
-			return
-		}
+		for _, podName := range []string{id, id + "-scraper"} {
+			logs := make(chan []byte)
 
-		for l := range logs {
-			entry := output.NewOutputLine(l)
-			out <- entry
+			if err := TailJobLogs(c.log, c.clientSet, c.namespace, podName, logs); err != nil {
+				out <- output.NewOutputError(err)
+				return
+			}
+
+			for l := range logs {
+				entry := output.NewOutputLine(l)
+				out <- entry
+			}
 		}
 	}()
 
@@ -134,7 +148,7 @@ func (c *ContainerExecutor) Execute(execution *testkube.Execution, options clien
 	result := testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err := c.createJob(ctx, *execution, options)
+	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -151,7 +165,7 @@ func (c *ContainerExecutor) Execute(execution *testkube.Execution, options clien
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution, result)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, result)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -172,7 +186,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 	result := testkube.NewRunningExecutionResult()
 
 	ctx := context.Background()
-	err := c.createJob(ctx, *execution, options)
+	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -188,7 +202,7 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, result)
+			return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, result)
 		}
 	}
 
@@ -198,56 +212,132 @@ func (c *ContainerExecutor) ExecuteSync(execution *testkube.Execution, options c
 }
 
 // createJob creates new Kubernetes job based on execution and execute options
-func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) error {
-	jobs := c.clientSet.BatchV1().Jobs(c.namespace)
+func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.initImage, c.jobTemplate, execution, options)
+	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	c.log.Debug("creating job with options", "options", jobOptions)
-	jobSpec, err := NewJobSpec(c.log, jobOptions)
-	if err != nil {
-		return err
+	if jobOptions.ArtifactRequest != nil {
+		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
+		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = pvcsClient.Create(ctx, pvcSpec, metav1.CreateOptions{})
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	_, err = jobs.Create(ctx, jobSpec, metav1.CreateOptions{})
-	return err
+	c.log.Debug("creating executor job with options", "options", jobOptions)
+	jobSpec, err := NewExecutorJobSpec(c.log, jobOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = jobsClient.Create(ctx, jobSpec, metav1.CreateOptions{})
+	return jobOptions, err
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, executorPod corev1.Pod, l *zap.SugaredLogger,
+	execution *testkube.Execution, jobOptions *JobOptions, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, &result)
 
 	// wait for complete
-	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, pod.Name, c.namespace)); err != nil {
+	l.Debug("poll immediate waiting for executor pod to succeed")
+	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
-		l.Errorw("waiting for pod complete error", "error", err)
+		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
-	l.Debug("poll immediate end")
+	l.Debug("poll executor immediate end")
 
 	// we need to retrieve the Pod to get it's latest status
-	latestPod, err := c.clientSet.CoreV1().Pods(c.namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
+	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
+	latestExecutorPod, err := podsClient.Get(context.Background(), executorPod.Name, metav1.GetOptions{})
 	if err != nil {
 		return result, err
 	}
 
-	switch latestPod.Status.Phase {
-	case corev1.PodSucceeded:
-		result.Success()
-	case corev1.PodFailed:
-		result.Error()
+	var scraperLogs []byte
+	if jobOptions.ArtifactRequest != nil {
+		c.log.Debug("creating scraper job with options", "options", jobOptions)
+		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
+		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
+		if err != nil {
+			return result, err
+		}
+
+		_, err = jobsClient.Create(ctx, scraperSpec, metav1.CreateOptions{})
+		if err != nil {
+			return result, err
+		}
+
+		scraperPodName := execution.Id + "-scraper"
+		scraperPods, err := executor.GetJobPods(podsClient, scraperPodName, 1, 10)
+		if err != nil {
+			return result, err
+		}
+
+		// get scraper job pod and
+		for _, scraperPod := range scraperPods.Items {
+			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
+				l.Debug("poll immediate waiting for scraper pod to succeed")
+				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+					// continue on poll err and try to get logs later
+					l.Errorw("waiting for scraper pod complete error", "error", err)
+				}
+				l.Debug("poll scraper immediate end")
+
+				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
+				if err != nil {
+					return result, err
+				}
+
+				pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
+				err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
+				if err != nil {
+					return result, err
+				}
+
+				switch latestScraperPod.Status.Phase {
+				case corev1.PodSucceeded:
+					result.Success()
+				case corev1.PodFailed:
+					result.Error()
+				}
+
+				scraperLogs, err = executor.GetPodLogs(c.clientSet, c.namespace, *latestScraperPod)
+				if err != nil {
+					l.Errorw("get scraper pod logs error", "error", err)
+					return result, err
+				}
+
+				break
+			}
+		}
 	}
 
-	var logs []byte
-	logs, err = executor.GetPodLogs(c.clientSet, c.namespace, pod)
+	if !result.IsFailed() {
+		switch latestExecutorPod.Status.Phase {
+		case corev1.PodSucceeded:
+			result.Success()
+		case corev1.PodFailed:
+			result.Error()
+		}
+	}
+
+	executorLogs, err := executor.GetPodLogs(c.clientSet, c.namespace, *latestExecutorPod)
 	if err != nil {
-		l.Errorw("get pod logs error", "error", err)
+		l.Errorw("get executor pod logs error", "error", err)
 		err = c.repository.UpdateResult(ctx, execution.Id, result.Err(err))
 		if err != nil {
 			l.Infow("Update result", "error", err)
@@ -255,7 +345,8 @@ func (c *ContainerExecutor) updateResultsFromPod(ctx context.Context, pod corev1
 		return result, err
 	}
 
-	result.Output = string(logs)
+	executorLogs = append(executorLogs, scraperLogs...)
+	result.Output = string(executorLogs)
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", result.Status)
 	err = c.repository.UpdateResult(ctx, execution.Id, result)
@@ -377,6 +468,21 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		}
 	}
 
+	supportArtifacts := false
+	for _, feature := range options.ExecutorSpec.Features {
+		if feature == executorv1.FeatureArtifacts {
+			supportArtifacts = true
+			break
+		}
+	}
+
+	var artifactRequest *testkube.ArtifactRequest
+	jobDelaySeconds := jobDefaultDelaySeconds
+	if supportArtifacts {
+		artifactRequest = options.Request.ArtifactRequest
+		jobDelaySeconds = jobArtifactDelaySeconds
+	}
+
 	return &JobOptions{
 		Image:                 image,
 		ImagePullSecrets:      options.ImagePullSecretNames,
@@ -391,10 +497,12 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
+		ArtifactRequest:       artifactRequest,
+		DelaySeconds:          jobDelaySeconds,
 	}
 }
 
-// AbortK8sJob aborts K8S by job name
+// Abort K8sJob aborts K8S by job name
 func (c *ContainerExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
 	return executor.AbortJob(c.clientSet, c.namespace, execution.Id)
 }

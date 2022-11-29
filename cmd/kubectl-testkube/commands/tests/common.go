@@ -295,6 +295,13 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
 	}
 
+	artifactStorageClassName := cmd.Flag("artifact-storage-class-name").Value.String()
+	artifactVolumeMountPath := cmd.Flag("artifact-volume-mount-path").Value.String()
+	dirs, err := cmd.Flags().GetStringArray("artifact-dir")
+	if err != nil {
+		return options, err
+	}
+
 	options.ExecutionRequest = &testkube.ExecutionRequest{
 		Name:                  executionName,
 		VariablesFile:         paramsFileContent,
@@ -308,6 +315,14 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		HttpProxy:             httpProxy,
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
+	}
+
+	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+		options.ExecutionRequest.ArtifactRequest = &testkube.ArtifactRequest{
+			StorageClassName: artifactStorageClassName,
+			VolumeMountPath:  artifactVolumeMountPath,
+			Dirs:             dirs,
+		}
 	}
 
 	// if labels are passed and are different from the existing overwrite

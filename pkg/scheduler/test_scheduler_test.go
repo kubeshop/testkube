@@ -114,6 +114,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		HttpsProxy:            "",
 		Uploads:               []string{},
 		ActiveDeadlineSeconds: 10,
+		ArtifactRequest:       &testkube.ArtifactRequest{},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

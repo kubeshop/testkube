@@ -26,5 +26,5 @@ kubectl-testkube watch <resourceName> [flags]
 
 * [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [kubectl-testkube watch execution](kubectl-testkube_watch_execution.md)	 - Watch logs output from executor pod
-* [kubectl-testkube watch testsuiteexecution](kubectl-testkube_watch_testsuiteexecution.md)	 - Watch test
+* [kubectl-testkube watch testsuiteexecution](kubectl-testkube_watch_testsuiteexecution.md)	 - Watch test suite
 

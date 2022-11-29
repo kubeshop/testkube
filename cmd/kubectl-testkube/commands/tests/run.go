@@ -38,6 +38,9 @@ func NewRunTestCmd() *cobra.Command {
 		executionLabels          map[string]string
 		secretVariableReferences map[string]string
 		copyFiles                []string
+		artifactStorageClassName string
+		artifactVolumeMountPath  string
+		artifactDirs             []string
 	)
 
 	cmd := &cobra.Command{
@@ -62,6 +65,9 @@ func NewRunTestCmd() *cobra.Command {
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
+			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
+			ui.ExitOnError("validating artifact flags", err)
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
@@ -74,6 +80,14 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                    httpsProxy,
 				Envs:                          envs,
 				Image:                         image,
+			}
+
+			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+				options.ArtifactRequest = &testkube.ArtifactRequest{
+					StorageClassName: artifactStorageClassName,
+					VolumeMountPath:  artifactVolumeMountPath,
+					Dirs:             artifactDirs,
+				}
 			}
 
 			switch {
@@ -170,6 +184,9 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
 
 	return cmd
 }

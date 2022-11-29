@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -97,6 +98,13 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.HttpsProxy != "" {
 			ui.Warn("  Https proxy:    ", test.ExecutionRequest.HttpsProxy)
+		}
+
+		if test.ExecutionRequest.ArtifactRequest != nil {
+			ui.Warn("  Artifact request:     ")
+			ui.Warn("    Storage class name: ", test.ExecutionRequest.ArtifactRequest.StorageClassName)
+			ui.Warn("    Volume mount path:  ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
+			ui.Warn("    Dirs:               ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
 		}
 	}
 
