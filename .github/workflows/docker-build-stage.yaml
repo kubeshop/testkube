@@ -73,7 +73,7 @@ jobs:
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           push: true
 
-      #Trigger Helm repo workflow to deploy API to Stage cluster
+      #Trigger Helm repo workflow to deploy API to GKE Stage cluster
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
