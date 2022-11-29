@@ -135,3 +135,4 @@ spec:
 ```
 
 You have to define the storage class name, volume mount path and directories in this volume with test artifacts.
+Make sure your container executor definition has `artifacts` feature.
