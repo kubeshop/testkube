@@ -20,6 +20,10 @@ spec:
         volumeMounts:
         - name: data-volume
           mountPath: /data
+        {{- if .ArtifactRequest }}
+        - name: artifact-volume
+          mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+        {{- end }}
       {{- end }}
       containers:
       - name: {{ .Name }}
