@@ -67,7 +67,7 @@ The above command will install the following components in your Kubernetes clust
 2. `testkube` namespace
 3. CRDs for Tests, TestSuites, Executors
 4. MongoDB
-5. Minio - default (can be disabled with `--no-minio` flag if you want to use S3 buckets)
+5. Minio - default (can be disabled with `--no-minio`)
 6. Dashboard - default (can be disabled with `--no-dashboard` flag)
 
 
@@ -142,6 +142,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
 | testkube-api.slackToken              | yes         | ""                                   |
 | testkube-api.slackChannelId          | yes         | ""                                   |
+| testkube-api.jobServiceAccountName   | yes         | ""                                   |
 
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
@@ -201,4 +202,25 @@ helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values valu
 helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
 ```
 
-Please notice that since we've just installed MongoDB with `testkube-mongodb` helm release name, it'll allow us to not reconfigure Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
+Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
+
+## Installation with S3 Storage and IAM Authentication
+
+To use S3 as storage, the steps are as follows:
+
+1. Create a ServiceAccount with the ARN specified.
+e.g.
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::265500248336:role/minio-example
+  name: s3-access
+  namespace: testkube
+```
+
+2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser` and `minio.minioRootPassword` empty.
+
+3. Install using Helm and the values file with the above modifications.
