@@ -36,7 +36,7 @@ Since we are creating a product for Testers and Developers our target audience i
 
 ## 💅 Design relevant materials
 
-We currently aim to to build a more comprehensive Design System which will also include some guideance on Component usage, Wording, and patterns. 
+We currently aim to to build a more comprehensive Design System which will also include some guidance on Component usage, Wording, and patterns. 
 
 For now – here is a list of design relevant information and materials:
 
