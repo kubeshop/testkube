@@ -52,8 +52,9 @@ import (
 )
 
 type MongoConfig struct {
-	DSN string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	DB  string `envconfig:"API_MONGO_DB" default:"testkube"`
+	DSN          string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	DB           string `envconfig:"API_MONGO_DB" default:"testkube"`
+	SSLSecretRef string `envconfig:"API_MONGO_SSL_SECRET_REF"`
 }
 
 var Config MongoConfig
@@ -112,10 +113,6 @@ func main() {
 	ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 
-	// DI
-	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
-	ui.ExitOnError("Getting mongo database", err)
-
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
@@ -130,6 +127,10 @@ func main() {
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
 
+	// DI
+	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
+	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
+	ui.ExitOnError("Getting mongo database", err)
 	resultsRepository := result.NewMongoRespository(db, true)
 	testResultsRepository := testresult.NewMongoRespository(db, true)
 	configRepository := configmongo.NewMongoRespository(db)
@@ -331,3 +332,173 @@ func main() {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
 }
+<<<<<<< HEAD
+=======
+
+func newContainerExecutor(
+	testExecutionResults result.Repository,
+	executorsClient executorsclientv1.Interface,
+	eventsEmitter *event.Emitter,
+	metrics metrics.Metrics,
+	configMap configmap.Repository,
+	namespace string,
+) (executor client.Executor, err error) {
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			return nil, errors.WithMessage(err, "error parsing as bool envvar: TESTKUBE_READONLY_EXECUTORS")
+		}
+	}
+
+	defaultExecutors := os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")
+
+	initImage, err := loadDefaultExecutors(executorsClient, namespace, defaultExecutors, readOnlyExecutors)
+	if err != nil {
+		return nil, errors.WithMessage(err, "error loading default executors")
+	}
+
+	var jobTemplate string
+	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_CONTAINER_TEMPLATE")
+	if err != nil {
+		jobTemplate = ""
+	} else {
+		jobTemplate = jobTemplates.Job
+	}
+
+	return containerexecutor.NewContainerExecutor(testExecutionResults, namespace, initImage, jobTemplate, metrics, eventsEmitter, configMap)
+}
+
+func newExecutorClient(
+	testExecutionResults result.Repository,
+	executorsClient executorsclientv1.Interface,
+	eventsEmitter *event.Emitter,
+	metrics metrics.Metrics,
+	configMap configmap.Repository,
+	namespace string,
+) (executor client.Executor, err error) {
+	readOnlyExecutors := false
+	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
+		readOnlyExecutors, err = strconv.ParseBool(value)
+		if err != nil {
+			return nil, errors.WithMessage(err, "error parsing as bool envvar: TESTKUBE_READONLY_EXECUTORS")
+		}
+	}
+
+	defaultExecutors := os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")
+	initImage, err := loadDefaultExecutors(executorsClient, namespace, defaultExecutors, readOnlyExecutors)
+	if err != nil {
+		return nil, errors.WithMessage(err, "error loading default executors")
+	}
+
+	jobTemplates, err := apiv1.NewJobTemplatesFromEnv("TESTKUBE_TEMPLATE")
+	if err != nil {
+		return nil, errors.WithMessage(err, "error creating job templates from envvars")
+	}
+	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT_NAME")
+	return client.NewJobExecutor(testExecutionResults, namespace, initImage, jobTemplates.Job, serviceAccountName, metrics, eventsEmitter, configMap)
+}
+
+// loadDefaultExecutors loads default executors
+func loadDefaultExecutors(executorsClient executorsclientv1.Interface, namespace, data string, readOnlyExecutors bool) (initImage string, err error) {
+	var executors []testkube.ExecutorDetails
+
+	if data == "" {
+		return "", nil
+	}
+
+	dataDecoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return "", err
+	}
+
+	if err := json.Unmarshal(dataDecoded, &executors); err != nil {
+		return "", err
+	}
+
+	for _, executor := range executors {
+		if executor.Executor == nil {
+			continue
+		}
+
+		if executor.Name == "executor-init" {
+			initImage = executor.Executor.Image
+			continue
+		}
+
+		if readOnlyExecutors {
+			continue
+		}
+
+		var features []executorv1.Feature
+		for _, f := range executor.Executor.Features {
+			features = append(features, executorv1.Feature(f))
+		}
+
+		obj := &executorv1.Executor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      executor.Name,
+				Namespace: namespace,
+			},
+			Spec: executorv1.ExecutorSpec{
+				Types:        executor.Executor.Types,
+				ExecutorType: executor.Executor.ExecutorType,
+				Image:        executor.Executor.Image,
+				Features:     features,
+			},
+		}
+
+		result, err := executorsClient.Get(executor.Name)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return "", err
+		}
+		if err != nil {
+			if _, err = executorsClient.Create(obj); err != nil {
+				return "", err
+			}
+		} else {
+			result.Spec = obj.Spec
+			if _, err = executorsClient.Update(result); err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return initImage, nil
+}
+
+// getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
+// and the given secret reference
+func getMongoSSLConfig(c MongoConfig, secretClient *secret.Client) *storage.MongoSSLConfig {
+	if c.SSLSecretRef == "" {
+		return nil
+	}
+
+	mongoSSLSecret, err := secretClient.Get(Config.SSLSecretRef)
+	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", c.SSLSecretRef), err)
+
+	var keyFile, caFile, pass string
+	var ok bool
+	if keyFile, ok = mongoSSLSecret["sslClientCertificateKeyFile"]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", c.SSLSecretRef)
+	}
+	if caFile, ok = mongoSSLSecret["sslCertificateAuthorityFile"]; !ok {
+		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", c.SSLSecretRef)
+	}
+	if pass, ok = mongoSSLSecret["sslClientCertificateKeyFilePassword"]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", c.SSLSecretRef)
+	}
+
+	err = os.WriteFile("mongodb.pem", []byte(keyFile), 0644)
+	ui.ExitOnError(fmt.Sprintf("Could not place mongodb certificate key file: %s", err))
+
+	err = os.WriteFile("mongodb-root-ca.pem", []byte(caFile), 0644)
+	ui.ExitOnError(fmt.Sprintf("Could not place mongodb ssl ca file: %s", err))
+
+	return &storage.MongoSSLConfig{
+		SSLClientCertificateKeyFile:         "mongodb.pem",
+		SSLClientCertificateKeyFilePassword: pass,
+		SSLCertificateAuthoritiyFile:        "mongodb-root-ca.pem",
+	}
+}
+>>>>>>> 9f038174 (feat: set mongo ssl)

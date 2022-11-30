@@ -23,6 +23,12 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
+func getTLSRepository() (*MongoRepository, error) {
+	db, err := storage.GetMongoDataBase(mongoDns, mongoDbName)
+	repository := NewMongoRespository(db)
+	return repository, err
+}
+
 func TestStorage(t *testing.T) {
 	assert := require.New(t)
 
