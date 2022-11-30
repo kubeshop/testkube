@@ -137,6 +137,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		HttpsProxy:            specExecutionRequest.HttpsProxy,
 		ActiveDeadlineSeconds: specExecutionRequest.ActiveDeadlineSeconds,
 		ArtifactRequest:       artifactRequest,
+		JobTemplate:           specExecutionRequest.JobTemplate,
 	}
 }
 

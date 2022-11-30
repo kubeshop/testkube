@@ -45,6 +45,10 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
 			}
 
+			if test.ExecutionRequest != nil && test.ExecutionRequest.JobTemplate != "" {
+				test.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", test.ExecutionRequest.JobTemplate)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
 			return s.getCRDs(c, data, err)
 		}
@@ -74,6 +78,10 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 
 			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
 				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
+			}
+
+			if test.ExecutionRequest != nil && test.ExecutionRequest.JobTemplate != "" {
+				test.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", test.ExecutionRequest.JobTemplate)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
@@ -159,6 +167,9 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
 				}
 
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.JobTemplate != "" {
+					tests[i].ExecutionRequest.JobTemplate = fmt.Sprintf("%q", tests[i].ExecutionRequest.JobTemplate)
+				}
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -264,6 +275,9 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
 				}
 
+				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.JobTemplate != "" {
+					tests[i].ExecutionRequest.JobTemplate = fmt.Sprintf("%q", tests[i].ExecutionRequest.JobTemplate)
+				}
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -393,6 +407,10 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 			if request.ExecutionRequest != nil && request.ExecutionRequest.VariablesFile != "" {
 				request.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", request.ExecutionRequest.VariablesFile)
+			}
+
+			if request.ExecutionRequest != nil && request.ExecutionRequest.JobTemplate != "" {
+				request.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", request.ExecutionRequest.JobTemplate)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})

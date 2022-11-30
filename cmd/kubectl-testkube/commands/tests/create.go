@@ -53,6 +53,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
+		jobTemplate              string
 	)
 
 	cmd := &cobra.Command{
@@ -120,6 +121,10 @@ func NewCreateTestsCmd() *cobra.Command {
 					options.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", options.ExecutionRequest.VariablesFile)
 				}
 
+				if options.ExecutionRequest != nil && options.ExecutionRequest.JobTemplate != "" {
+					options.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", options.ExecutionRequest.JobTemplate)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
 				ui.ExitOnError("executing crd template", err)
 
@@ -166,6 +171,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 
 	return cmd
 }

@@ -112,6 +112,7 @@ type JobOptions struct {
 	ArtifactRequest       *testkube.ArtifactRequest
 	ServiceAccountName    string
 	DelaySeconds          int
+	JobTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -499,6 +500,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		ArtifactRequest:       artifactRequest,
 		DelaySeconds:          jobDelaySeconds,
+		JobTemplateExtensions: options.Request.JobTemplate,
 	}
 }
 

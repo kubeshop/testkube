@@ -3207,6 +3207,9 @@ components:
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
           description: configuration parameters for storing container executor test artifacts
+        jobTemplate:
+          type: string
+          description: job template extensions    
 
     TestSuiteExecutionRequest:
       description: test suite execution request body

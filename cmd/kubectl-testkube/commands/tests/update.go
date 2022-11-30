@@ -44,6 +44,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
+		jobTemplate              string
 	)
 
 	cmd := &cobra.Command{
@@ -116,6 +117,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 
 	return cmd
 }

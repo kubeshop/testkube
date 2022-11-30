@@ -41,6 +41,7 @@ func NewRunTestCmd() *cobra.Command {
 		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
+		jobTemplate              string
 	)
 
 	cmd := &cobra.Command{
@@ -68,6 +69,13 @@ func NewRunTestCmd() *cobra.Command {
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
+			jobTemplateContent := ""
+			if jobTemplate != "" {
+				b, err := os.ReadFile(jobTemplate)
+				ui.ExitOnError("reading job template", err)
+				jobTemplateContent = string(b)
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
@@ -80,6 +88,7 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                    httpsProxy,
 				Envs:                          envs,
 				Image:                         image,
+				JobTemplate:                   jobTemplateContent,
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
@@ -187,6 +196,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 
 	return cmd
 }

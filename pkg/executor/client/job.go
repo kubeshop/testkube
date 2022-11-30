@@ -111,6 +111,7 @@ type JobOptions struct {
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
+	JobTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -409,6 +410,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
+		JobTemplateExtensions: options.Request.JobTemplate,
 	}
 }
 

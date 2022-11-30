@@ -143,6 +143,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
 		Command:               executionRequest.Command,
 		ArtifactRequest:       artifactRequest,
+		JobTemplate:           executionRequest.JobTemplate,
 	}
 }
 

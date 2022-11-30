@@ -53,4 +53,6 @@ type ExecutionRequest struct {
 	// minio bucket name to get uploads from
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
+	// job template extensions
+	JobTemplate string `json:"jobTemplate,omitempty"`
 }
