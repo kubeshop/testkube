@@ -37,6 +37,12 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
+	if options.JobTemplateExtensions != "" {
+		jobSpec, err = executor.MergeYAMLs(jobSpec, options.JobTemplateExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("merging job spec templates: %w", err)
+		}
+	}
 
 	log.Debug("Executor job specification", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
