@@ -16,6 +16,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 )
 
 //go:embed templates/job.tmpl
@@ -38,7 +40,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		jobSpec, err = executor.MergeYAMLs(jobSpec, options.JobTemplateExtensions)
+		jobSpec, err = merge2.MergeStrings(options.JobTemplateExtensions, jobSpec, false, kyaml.MergeOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("merging job spec templates: %w", err)
 		}

@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -31,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const (
@@ -582,7 +584,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		jobSpec, err = executor.MergeYAMLs(jobSpec, options.JobTemplateExtensions)
+		jobSpec, err = merge2.MergeStrings(options.JobTemplateExtensions, jobSpec, false, kyaml.MergeOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("merging job spec templates: %w", err)
 		}

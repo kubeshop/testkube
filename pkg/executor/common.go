@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -407,48 +406,4 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 	}
 
 	return images, nil
-}
-
-// MergeYAMLs merges two yamls
-func MergeYAMLs(baseYAML, adjustYAML string) (string, error) {
-	baseMap := map[string]interface{}{}
-	adjustMap := map[string]interface{}{}
-
-	if err := yaml.Unmarshal([]byte(baseYAML), &baseMap); err != nil {
-		return "", err
-	}
-
-	if err := yaml.Unmarshal([]byte(adjustYAML), &adjustMap); err != nil {
-		return "", err
-	}
-
-	resultMap := mergeMaps(baseMap, adjustMap)
-	result, err := yaml.Marshal(resultMap)
-	if err != nil {
-		return "", err
-	}
-
-	return string(result), err
-}
-
-func mergeMaps(base, adjust map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{}, len(base))
-	for k, v := range base {
-		result[k] = v
-	}
-
-	for k, v := range adjust {
-		if v, ok := v.(map[string]interface{}); ok {
-			if submap, ok := result[k]; ok {
-				if existing, ok := submap.(map[string]interface{}); ok {
-					result[k] = mergeMaps(existing, v)
-					continue
-				}
-			}
-		}
-
-		result[k] = v
-	}
-
-	return result
 }
