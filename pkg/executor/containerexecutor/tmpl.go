@@ -50,8 +50,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 			return nil, fmt.Errorf("executing job extensions spec template: %w", err)
 		}
 
-		jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{})
-		if err != nil {
+		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
 			return nil, fmt.Errorf("merging job spec templates: %w", err)
 		}
 	}
