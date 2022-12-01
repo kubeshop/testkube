@@ -52,8 +52,9 @@ import (
 )
 
 type MongoConfig struct {
-	DSN string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	DB  string `envconfig:"API_MONGO_DB" default:"testkube"`
+	DSN          string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	DB           string `envconfig:"API_MONGO_DB" default:"testkube"`
+	SSLSecretRef string `envconfig:"API_MONGO_SSL_SECRET_REF"`
 }
 
 var Config MongoConfig
@@ -112,10 +113,6 @@ func main() {
 	ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 
-	// DI
-	db, err := storage.GetMongoDataBase(Config.DSN, Config.DB)
-	ui.ExitOnError("Getting mongo database", err)
-
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
@@ -130,6 +127,10 @@ func main() {
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
 
+	// DI
+	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
+	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
+	ui.ExitOnError("Getting mongo database", err)
 	resultsRepository := result.NewMongoRespository(db, true)
 	testResultsRepository := testresult.NewMongoRespository(db, true)
 	configRepository := configmongo.NewMongoRespository(db)
@@ -329,5 +330,42 @@ func main() {
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
+	}
+}
+
+// getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
+// and the given secret reference
+func getMongoSSLConfig(c MongoConfig, secretClient *secret.Client) *storage.MongoSSLConfig {
+	if c.SSLSecretRef == "" {
+		return nil
+	}
+
+	clientCertPath := "/tmp/mongodb.pem"
+	rootCAPath := "/tmp/mongodb-root-ca.pem"
+	mongoSSLSecret, err := secretClient.Get(Config.SSLSecretRef)
+	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", c.SSLSecretRef), err)
+
+	var keyFile, caFile, pass string
+	var ok bool
+	if keyFile, ok = mongoSSLSecret["sslClientCertificateKeyFile"]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", c.SSLSecretRef)
+	}
+	if caFile, ok = mongoSSLSecret["sslCertificateAuthorityFile"]; !ok {
+		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", c.SSLSecretRef)
+	}
+	if pass, ok = mongoSSLSecret["sslClientCertificateKeyFilePassword"]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", c.SSLSecretRef)
+	}
+
+	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
+	ui.ExitOnError(fmt.Sprintf("Could not place mongodb certificate key file: %s", err))
+
+	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
+	ui.ExitOnError(fmt.Sprintf("Could not place mongodb ssl ca file: %s", err))
+
+	return &storage.MongoSSLConfig{
+		SSLClientCertificateKeyFile:         clientCertPath,
+		SSLClientCertificateKeyFilePassword: pass,
+		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
 }
