@@ -42,16 +42,16 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	if options.JobTemplateExtensions != "" {
 		tmplExt, err := template.New("jobExt").Parse(options.JobTemplateExtensions)
 		if err != nil {
-			return nil, fmt.Errorf("creating job extensions spec from template error: %w", err)
+			return nil, fmt.Errorf("creating job extensions spec from executor template error: %w", err)
 		}
 
 		var bufferExt bytes.Buffer
 		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
-			return nil, fmt.Errorf("executing job extensions spec template: %w", err)
+			return nil, fmt.Errorf("executing job extensions spec executor template: %w", err)
 		}
 
 		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
-			return nil, fmt.Errorf("merging job spec templates: %w", err)
+			return nil, fmt.Errorf("merging job spec executor templates: %w", err)
 		}
 	}
 
