@@ -79,10 +79,12 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
     if [ ! -z "$custom_executor_crd_file" ] ; then
       # Executors (not created by default)
       kubectl apply -f $custom_executor_crd_file
+      kubectl replace -f $custom_executor_crd_file
     fi
     
     # Tests
     kubectl apply -f $test_crd_file
+    kubectl replace -f $test_crd_file # `apply` doesn't guarantee the resource will match the definition (PATCH) - `replace` is needed (which won't create resource)
 
     # TestsSuites
     create_update_testsuite "$testsuite_name" "$testsuite_file"
