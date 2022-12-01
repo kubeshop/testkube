@@ -340,6 +340,8 @@ func getMongoSSLConfig(c MongoConfig, secretClient *secret.Client) *storage.Mong
 		return nil
 	}
 
+	clientCertPath := "/tmp/mongodb.pem"
+	rootCAPath := "/tmp/mongodb-root-ca.pem"
 	mongoSSLSecret, err := secretClient.Get(Config.SSLSecretRef)
 	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", c.SSLSecretRef), err)
 
@@ -355,15 +357,15 @@ func getMongoSSLConfig(c MongoConfig, secretClient *secret.Client) *storage.Mong
 		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", c.SSLSecretRef)
 	}
 
-	err = os.WriteFile("mongodb.pem", []byte(keyFile), 0644)
+	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
 	ui.ExitOnError(fmt.Sprintf("Could not place mongodb certificate key file: %s", err))
 
-	err = os.WriteFile("mongodb-root-ca.pem", []byte(caFile), 0644)
+	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
 	ui.ExitOnError(fmt.Sprintf("Could not place mongodb ssl ca file: %s", err))
 
 	return &storage.MongoSSLConfig{
-		SSLClientCertificateKeyFile:         "mongodb.pem",
+		SSLClientCertificateKeyFile:         clientCertPath,
 		SSLClientCertificateKeyFilePassword: pass,
-		SSLCertificateAuthoritiyFile:        "mongodb-root-ca.pem",
+		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
 }
