@@ -1,9 +1,9 @@
 ## kubectl-testkube get artifact
 
-List artifacts of the given execution ID
+List artifacts of the given execution name
 
 ```
-kubectl-testkube get artifact <executionID> [flags]
+kubectl-testkube get artifact <executionName> [flags]
 ```
 
 ### Options
@@ -20,7 +20,7 @@ kubectl-testkube get artifact <executionID> [flags]
   -c, --client string        client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --go-template string   go template to render (default "{{.}}")
       --namespace string     Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled        enable oauth
+      --oauth-enabled        enable oauth (default true)
   -o, --output string        output type can be one of json|yaml|pretty|go-template (default "pretty")
       --verbose              show additional debug messages
 ```

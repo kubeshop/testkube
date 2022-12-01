@@ -32,10 +32,8 @@ type Filter interface {
 //go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
 type Repository interface {
 	Sequences
-	// Get gets execution result by id
+	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.Execution, error)
-	// GetByName gets execution result by name
-	GetByName(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetLatestByTest gets latest execution result by test

@@ -24,14 +24,14 @@ kubectl-testkube get <resourceName> [flags]
   -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
+      --oauth-enabled      enable oauth (default true)
       --verbose            show additional debug messages
 ```
 
 ### SEE ALSO
 
 * [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube get artifact](kubectl-testkube_get_artifact.md)	 - List artifacts of the given execution ID
+* [kubectl-testkube get artifact](kubectl-testkube_get_artifact.md)	 - List artifacts of the given execution name
 * [kubectl-testkube get execution](kubectl-testkube_get_execution.md)	 - Lists or gets test executions
 * [kubectl-testkube get executor](kubectl-testkube_get_executor.md)	 - Gets executor details
 * [kubectl-testkube get test](kubectl-testkube_get_test.md)	 - Get all available tests

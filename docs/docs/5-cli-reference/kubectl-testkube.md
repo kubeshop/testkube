@@ -13,7 +13,7 @@ kubectl-testkube [flags]
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help               help for kubectl-testkube
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
+      --oauth-enabled      enable oauth (default true)
       --verbose            show additional debug messages
 ```
 

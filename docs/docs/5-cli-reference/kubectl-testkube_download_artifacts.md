@@ -3,7 +3,7 @@
 download artifacts
 
 ```
-kubectl-testkube download artifacts <executionID> [flags]
+kubectl-testkube download artifacts <executionName> [flags]
 ```
 
 ### Options
@@ -21,7 +21,7 @@ kubectl-testkube download artifacts <executionID> [flags]
 ```
   -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
+      --oauth-enabled      enable oauth (default true)
 ```
 
 ### SEE ALSO
