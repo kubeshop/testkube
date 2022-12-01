@@ -26,7 +26,7 @@ kubectl-testkube get testsource <testSourceName> [flags]
   -a, --api-uri string       api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string        client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --go-template string   go template to render (default "{{.}}")
-      --oauth-enabled        enable oauth
+      --oauth-enabled        enable oauth (default true)
   -o, --output string        output type can be one of json|yaml|pretty|go-template (default "pretty")
       --verbose              show additional debug messages
 ```
