@@ -302,6 +302,17 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		return options, err
 	}
 
+	jobTemplateContent := ""
+	jobTemplate := cmd.Flag("job-template").Value.String()
+	if jobTemplate != "" {
+		b, err := os.ReadFile(jobTemplate)
+		if err != nil {
+			return options, err
+		}
+
+		jobTemplateContent = string(b)
+	}
+
 	options.ExecutionRequest = &testkube.ExecutionRequest{
 		Name:                  executionName,
 		VariablesFile:         paramsFileContent,
@@ -315,6 +326,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		HttpProxy:             httpProxy,
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
+		JobTemplate:           jobTemplateContent,
 	}
 
 	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {

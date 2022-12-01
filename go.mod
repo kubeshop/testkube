@@ -16,7 +16,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.7.0
+	github.com/kubeshop/testkube-operator v1.7.1
 	github.com/minio/minio-go/v7 v7.0.43
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.18.0
@@ -35,6 +35,7 @@ require (
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.3
+	sigs.k8s.io/kustomize/kyaml v0.13.10
 )
 
 require (
@@ -54,6 +55,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
@@ -71,7 +73,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.2 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

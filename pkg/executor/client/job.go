@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
@@ -31,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const (
@@ -111,6 +113,7 @@ type JobOptions struct {
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
+	JobTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -409,6 +412,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
+		JobTemplateExtensions: options.Request.JobTemplate,
 	}
 }
 
@@ -579,6 +583,22 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
+	if options.JobTemplateExtensions != "" {
+		tmplExt, err := template.New("jobExt").Parse(options.JobTemplateExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("creating job extensions spec from template error: %w", err)
+		}
+
+		var bufferExt bytes.Buffer
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
+			return nil, fmt.Errorf("executing job extensions spec template: %w", err)
+		}
+
+		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
+			return nil, fmt.Errorf("merging job spec templates: %w", err)
+		}
+	}
+
 	log.Debug("Job specification", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {

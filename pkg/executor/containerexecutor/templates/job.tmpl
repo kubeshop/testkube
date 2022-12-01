@@ -60,9 +60,9 @@ spec:
           claimName: {{ .Name }}-pvc
       {{- end }}
       restartPolicy: Never
-      {{ if .ServiceAccountName }}
+      {{- if .ServiceAccountName }}
       serviceAccountName: {{ .ServiceAccountName }}
-      {{ end }}
+      {{- end }}
       {{- if gt (len .ImagePullSecrets) 0 }}
       imagePullSecrets:
       {{- range $secret := .ImagePullSecrets }}

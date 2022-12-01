@@ -14,8 +14,8 @@ kubectl-testkube create test [flags]
 
 ```
       --artifact-dir stringArray                   artifact dirs for container executor
-      --artifact-volume-mount-path string          artifact volume mount path for container executor
       --artifact-storage-class-name string         artifact storage class name for container executor
+      --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in container executor
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
       --env stringToString                         envs in a form of name1=val1 passed to executor (default [])
@@ -36,6 +36,7 @@ kubectl-testkube create test [flags]
       --https-proxy string                         https proxy for executor containers
       --image string                               if uri is git repository we can set additional branch parameter
       --image-pull-secrets stringArray             secret name used to pull the image in container executor
+      --job-template string                        job template file path for extensions to job template
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])
   -n, --name string                                unique test name - mandatory
       --schedule string                            test schedule in a cronjob form: * * * * *

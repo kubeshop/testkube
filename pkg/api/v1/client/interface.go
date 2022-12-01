@@ -145,6 +145,7 @@ type ExecuteTestOptions struct {
 	Uploads                       []string
 	BucketName                    string
 	ArtifactRequest               *testkube.ArtifactRequest
+	JobTemplate                   string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

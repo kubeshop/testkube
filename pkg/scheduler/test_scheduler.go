@@ -266,6 +266,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
+
+		if request.JobTemplate == "" && test.ExecutionRequest.JobTemplate != "" {
+			request.JobTemplate = test.ExecutionRequest.JobTemplate
+		}
 	}
 
 	// get executor from kubernetes CRs
