@@ -74,7 +74,7 @@ func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
 
 	return nil
 }
-func newServer() *CloudServer {
 
+func newServer() *CloudServer {
 	return &CloudServer{}
 }
