@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -54,7 +55,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			f, err := client.DownloadFile(executionID, filename, destination)
 			ui.ExitOnError("downloading file"+filename, err)
 
-			ui.Info("File %s downloaded.\n", f)
+			ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
 		},
 	}
 
