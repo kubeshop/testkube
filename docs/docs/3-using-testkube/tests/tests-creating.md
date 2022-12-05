@@ -376,7 +376,7 @@ spec:
             memory: 128Mi
 ```
 
-When you run such a test you will face a memory limit for test executor pod, when default job template doesn't have any resource constraints.
+When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
 ## **Summary**
 
