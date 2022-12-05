@@ -353,7 +353,7 @@ You can always create your own custom executor with its own job template definit
 kubectl testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
 ```
 
-Where `job.yaml` contains:
+Where `job.yaml` file contains adjusted job template parts for merging with default job template:
 
 ```yaml
 apiVersion: batch/v1
