@@ -347,7 +347,7 @@ testkube run test maven-example-file-test --args "--settings" --args "/data/uplo
 
 ### **Changing default job template used for test execution**
 
-You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust existing job template for standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
+You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
 
 ```bash
 kubectl testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
