@@ -36,8 +36,8 @@ metadata:
   namespace: testkube
 type: Opaque
 data:
-  sslClientCertificateKeyFile: <base64 encoded root-ca.pem>
-  sslCertificateAuthorityFile: <base64 encoded mongodb.pem>
+  sslCertificateAuthorityFile: <base64 encoded root-ca.pem>
+  sslClientCertificateKeyFile: <base64 encoded mongodb.pem>
   sslClientCertificateKeyFilePassword: <base64 encoded password>
 ```
 
