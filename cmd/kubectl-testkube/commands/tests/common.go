@@ -130,7 +130,6 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		return content, err
 	}
 
-	sourceName := cmd.Flag("source").Value.String()
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	// get file content
 	if file != "" {
@@ -151,8 +150,8 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	if uri != "" && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeFileURI)
 	}
-)
-	if len(fileContent > 0 && testContentType == "" {
+
+	if len(fileContent) > 0 && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeString)
 	}
 
