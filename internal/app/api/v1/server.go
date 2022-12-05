@@ -2,30 +2,30 @@ package v1
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"os"
 	"strconv"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/pkg/scheduler"
-
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-
 	"github.com/kelseyhightower/envconfig"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
@@ -34,6 +34,7 @@ import (
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -102,7 +103,7 @@ func NewTestkubeAPI(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(slack.NewSlackLoader())
+	s.Events.Loader.Register(s.getSlackLoader())
 
 	s.InitEnvs()
 	s.InitStorage()
@@ -418,4 +419,21 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
+}
+
+func (s TestkubeAPI) getSlackLoader() *slack.SlackLoader {
+	events := os.Getenv("SLACK_EVENTS")
+	var eventsList []testkube.EventType
+	err := json.Unmarshal([]byte(events), &eventsList)
+	if err != nil {
+		s.Log.Errorw("error while unmarshalling events", "error", err.Error())
+	}
+
+	messageTemplate := os.Getenv("SLACK_TEMPLATE")
+
+	templateDecoded, err := base64.StdEncoding.DecodeString(messageTemplate)
+	if err != nil {
+		s.Log.Errorw("error while decoding slack template", "error", err.Error())
+	}
+	return slack.NewSlackLoader(string(templateDecoded), eventsList)
 }

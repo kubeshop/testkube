@@ -12,20 +12,22 @@ import (
 
 var _ common.Listener = &SlackListener{}
 
-func NewSlackListener(name, selector string, events []testkube.EventType) *SlackListener {
+func NewSlackListener(name, selector string, events []testkube.EventType, notifier *slacknotifier.SlackNotifier) *SlackListener {
 	return &SlackListener{
-		name:     name,
-		Log:      log.DefaultLogger,
-		selector: selector,
-		events:   events,
+		name:          name,
+		Log:           log.DefaultLogger,
+		selector:      selector,
+		events:        events,
+		slackNotifier: notifier,
 	}
 }
 
 type SlackListener struct {
-	name     string
-	Log      *zap.SugaredLogger
-	events   []testkube.EventType
-	selector string
+	name          string
+	Log           *zap.SugaredLogger
+	events        []testkube.EventType
+	selector      string
+	slackNotifier *slacknotifier.SlackNotifier
 }
 
 func (l *SlackListener) Name() string {
@@ -48,7 +50,7 @@ func (l *SlackListener) Metadata() map[string]string {
 }
 
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	err := slacknotifier.SendEvent(event)
+	err := l.slackNotifier.SendEvent(event)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
