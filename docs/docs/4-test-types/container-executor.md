@@ -157,10 +157,15 @@ Run your test using CLI command:
 $ kubectl testkube run test cli-container
 ```
 
-And check the artifacts for test execution id
+Then get available artifacts for your test execution id:
 
 ```bash
 kubectl testkube get artifact 638a08b94ff1d2c694aeebf2
+```
+
+Output:
+
+```bash
   NAME       | SIZE (KB)  
 -------------+------------
   result.txt |        10  
