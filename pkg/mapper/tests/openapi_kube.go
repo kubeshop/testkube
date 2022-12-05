@@ -8,8 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MapToSpec maps TestUpsertRequest to Test CRD spec
-func MapToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
+// MapUpsertToSpec maps TestUpsertRequest to Test CRD spec
+func MapUpsertToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
 
 	test := &testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{
@@ -153,4 +153,213 @@ func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []v1.LocalObje
 		res = append(res, v1.LocalObjectReference{Name: secret.Name})
 	}
 	return res
+}
+
+// MapUpdateToSpec maps TestUpdateRequest to Test CRD spec
+func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *testsv3.Test {
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			request.Name,
+			&test.Name,
+		},
+		{
+			request.Namespace,
+			&test.Namespace,
+		},
+		{
+			request.Type_,
+			&test.Spec.Type_,
+		},
+		{
+			request.Source,
+			&test.Spec.Source,
+		},
+		{
+			request.Schedule,
+			&test.Spec.Schedule,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if request.Content != nil {
+		test.Spec.Content = MapUpdateContentToSpecContent(*request.Content, test.Spec.Content)
+	}
+
+	if request.ExecutionRequest != nil {
+		test.Spec.ExecutionRequest = MapExecutionUpdateRequestToSpecExecutionRequest(*request.ExecutionRequest, test.Spec.ExecutionRequest)
+	}
+
+	if request.Labels != nil {
+		test.Labels = *request.Labels
+	}
+
+	if request.Uploads != nil {
+		test.Spec.Uploads = *request.Uploads
+	}
+
+	/*
+		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
+			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+		}
+	*/
+	return test
+
+}
+
+// MapUpdateContentToSpecContent maps TestUpdateContent OpenAPI spec to TestContent CRD spec
+func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testContent *testsv3.TestContent) *testsv3.TestContent {
+	if content == nil {
+		return nil
+	}
+
+	if testContent == nil {
+		testContent = &testsv3.TestContent{}
+	}
+
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			content.Type_,
+			&testContent.Type_,
+		},
+		{
+			content.Data,
+			&testContent.Data,
+		},
+		{
+			content.Uri,
+			&testContent.Uri,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if content.Repository != nil {
+		if *content.Repository == nil {
+			testContent.Repository = nil
+			return testContent
+		}
+
+		if testContent.Repository == nil {
+			testContent.Repository = &testsv3.Repository{}
+		}
+
+		var fields = []struct {
+			source      *string
+			destination *string
+		}{
+			{
+				(*content.Repository).Type_,
+				&testContent.Repository.Type_,
+			},
+			{
+				(*content.Repository).Uri,
+				&testContent.Repository.Uri,
+			},
+			{
+				(*content.Repository).Branch,
+				&testContent.Repository.Branch,
+			},
+			{
+				(*content.Repository).Commit,
+				&testContent.Repository.Commit,
+			},
+			{
+				(*content.Repository).Path,
+				&testContent.Repository.Path,
+			},
+			{
+				(*content.Repository).WorkingDir,
+				&testContent.Repository.WorkingDir,
+			},
+		}
+
+		for _, field := range fields {
+			if field.source != nil {
+				*field.destination = *field.source
+			}
+		}
+
+		if (*content.Repository).UsernameSecret != nil {
+			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
+				Name: (*(*content.Repository).UsernameSecret).Name,
+				Key:  (*(*content.Repository).UsernameSecret).Key,
+			}
+		}
+
+		if (*content.Repository).TokenSecret != nil {
+			testContent.Repository.TokenSecret = &testsv3.SecretRef{
+				Name: (*(*content.Repository).TokenSecret).Name,
+				Key:  (*(*content.Repository).TokenSecret).Key,
+			}
+		}
+	}
+
+	return testContent
+}
+
+// MapExecutionUpdateRequestToSpecExecutionRequest maps ExecutionUpdateRequest OpenAPI spec to ExecutionRequest CRD spec
+func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.ExecutionUpdateRequest,
+	request *testsv3.ExecutionRequest) *testsv3.ExecutionRequest {
+	if executionRequest == nil {
+		return nil
+	}
+
+	if request == nil {
+		request = &testsv3.ExecutionRequest{}
+	}
+
+	/*
+		var artifactRequest *testsv3.ArtifactRequest
+		if executionRequest.ArtifactRequest != nil {
+			artifactRequest = &testsv3.ArtifactRequest{
+				StorageClassName: executionRequest.ArtifactRequest.StorageClassName,
+				VolumeMountPath:  executionRequest.ArtifactRequest.VolumeMountPath,
+				Dirs:             executionRequest.ArtifactRequest.Dirs,
+			}
+		}
+
+		return &testsv3.ExecutionRequest{
+			Name:                  executionRequest.Name,
+			TestSuiteName:         executionRequest.TestSuiteName,
+			Number:                int32(executionRequest.Number),
+			ExecutionLabels:       executionRequest.ExecutionLabels,
+			Namespace:             executionRequest.Namespace,
+			VariablesFile:         executionRequest.VariablesFile,
+			Variables:             MapCRDVariables(executionRequest.Variables),
+			TestSecretUUID:        executionRequest.TestSecretUUID,
+			TestSuiteSecretUUID:   executionRequest.TestSuiteSecretUUID,
+			Args:                  executionRequest.Args,
+			Envs:                  executionRequest.Envs,
+			SecretEnvs:            executionRequest.SecretEnvs,
+			Sync:                  executionRequest.Sync,
+			HttpProxy:             executionRequest.HttpProxy,
+			HttpsProxy:            executionRequest.HttpsProxy,
+			Image:                 executionRequest.Image,
+			ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
+			ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
+			Command:               executionRequest.Command,
+			ArtifactRequest:       artifactRequest,
+			JobTemplate:           executionRequest.JobTemplate,
+		}
+	*/
+
+	return request
 }

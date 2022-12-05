@@ -419,7 +419,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		s.Log.Infow("creating test", "request", request)
 
-		test := testsmapper.MapToSpec(request)
+		test := testsmapper.MapUpsertToSpec(request)
 		test.Namespace = s.Namespace
 		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
 
@@ -437,33 +437,33 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 // UpdateTestHandler updates an existing test CR based on test content
 func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		var request testkube.TestUpsertRequest
+		var request testkube.TestUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
-			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
-			}
+		var name string
+		if request.Name != nil {
+			name = *request.Name
 		}
 
-		s.Log.Infow("updating test", "request", request)
-
 		// we need to get resource first and load its metadata.ResourceVersion
-		test, err := s.TestsClient.Get(request.Name)
+		test, err := s.TestsClient.Get(name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		// map test but load spec only to not override metadata.ResourceVersion
-		testSpec := testsmapper.MapToSpec(request)
-		test.Spec = testSpec.Spec
-		test.Labels = request.Labels
-		updatedTest, err := s.TestsClient.Update(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
+		// map update test but load spec only to not override metadata.ResourceVersion
+		testSpec := testsmapper.MapUpdateToSpec(request, test)
+
+		s.Log.Infow("updating test", "request", request)
+
+		updatedTest, err := s.TestsClient.Update(testSpec, tests.Option{ /*Secrets: getTestSecretsData(request.Content)*/ })
 
 		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
 
