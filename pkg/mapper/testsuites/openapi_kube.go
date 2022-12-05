@@ -96,7 +96,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSu
 
 	case testkube.TestSuiteStepTypeDelay:
 		stepSpec.Delay = &testsuitesv2.TestSuiteStepDelay{
-			Duration: int32(step.Delay.Duration),
+			Duration: step.Delay.Duration,
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:

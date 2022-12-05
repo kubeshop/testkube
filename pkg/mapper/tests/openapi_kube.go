@@ -125,7 +125,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	return &testsv3.ExecutionRequest{
 		Name:                  executionRequest.Name,
 		TestSuiteName:         executionRequest.TestSuiteName,
-		Number:                int32(executionRequest.Number),
+		Number:                executionRequest.Number,
 		ExecutionLabels:       executionRequest.ExecutionLabels,
 		Namespace:             executionRequest.Namespace,
 		VariablesFile:         executionRequest.VariablesFile,
@@ -205,14 +205,6 @@ func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *te
 		test.Spec.Uploads = *request.Uploads
 	}
 
-	/*
-		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
-			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
-			}
-		}
-	*/
 	return test
 
 }
@@ -326,40 +318,120 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		request = &testsv3.ExecutionRequest{}
 	}
 
-	/*
-		var artifactRequest *testsv3.ArtifactRequest
-		if executionRequest.ArtifactRequest != nil {
-			artifactRequest = &testsv3.ArtifactRequest{
-				StorageClassName: executionRequest.ArtifactRequest.StorageClassName,
-				VolumeMountPath:  executionRequest.ArtifactRequest.VolumeMountPath,
-				Dirs:             executionRequest.ArtifactRequest.Dirs,
-			}
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			executionRequest.Name,
+			&request.Name,
+		},
+		{
+			executionRequest.TestSuiteName,
+			&request.TestSuiteName,
+		},
+		{
+			executionRequest.Namespace,
+			&request.Namespace,
+		},
+		{
+			executionRequest.VariablesFile,
+			&request.VariablesFile,
+		},
+		{
+			executionRequest.TestSecretUUID,
+			&request.TestSecretUUID,
+		},
+		{
+			executionRequest.TestSuiteSecretUUID,
+			&request.TestSuiteSecretUUID,
+		},
+		{
+			executionRequest.HttpProxy,
+			&request.HttpProxy,
+		},
+		{
+			executionRequest.HttpsProxy,
+			&request.HttpsProxy,
+		},
+		{
+			executionRequest.Image,
+			&request.Image,
+		},
+		{
+			executionRequest.JobTemplate,
+			&request.JobTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if executionRequest.Number != nil {
+		request.Number = *executionRequest.Number
+	}
+
+	if executionRequest.Sync != nil {
+		request.Sync = *executionRequest.Sync
+	}
+
+	if executionRequest.ActiveDeadlineSeconds != nil {
+		request.ActiveDeadlineSeconds = *executionRequest.ActiveDeadlineSeconds
+	}
+
+	if executionRequest.ExecutionLabels != nil {
+		request.ExecutionLabels = *executionRequest.ExecutionLabels
+	}
+
+	if executionRequest.Args != nil {
+		request.Args = *executionRequest.Args
+	}
+
+	if executionRequest.Envs != nil {
+		request.Envs = *executionRequest.Envs
+	}
+
+	if executionRequest.SecretEnvs != nil {
+		request.SecretEnvs = *executionRequest.SecretEnvs
+	}
+
+	if executionRequest.Command != nil {
+		request.Command = *executionRequest.Command
+	}
+
+	if executionRequest.Variables != nil {
+		request.Variables = MapCRDVariables(*executionRequest.Variables)
+	}
+
+	if executionRequest.ImagePullSecrets != nil {
+		request.ImagePullSecrets = mapImagePullSecrets(*executionRequest.ImagePullSecrets)
+	}
+
+	if executionRequest.ArtifactRequest != nil {
+		if *executionRequest.ArtifactRequest == nil {
+			request.ArtifactRequest = nil
+			return request
 		}
 
-		return &testsv3.ExecutionRequest{
-			Name:                  executionRequest.Name,
-			TestSuiteName:         executionRequest.TestSuiteName,
-			Number:                int32(executionRequest.Number),
-			ExecutionLabels:       executionRequest.ExecutionLabels,
-			Namespace:             executionRequest.Namespace,
-			VariablesFile:         executionRequest.VariablesFile,
-			Variables:             MapCRDVariables(executionRequest.Variables),
-			TestSecretUUID:        executionRequest.TestSecretUUID,
-			TestSuiteSecretUUID:   executionRequest.TestSuiteSecretUUID,
-			Args:                  executionRequest.Args,
-			Envs:                  executionRequest.Envs,
-			SecretEnvs:            executionRequest.SecretEnvs,
-			Sync:                  executionRequest.Sync,
-			HttpProxy:             executionRequest.HttpProxy,
-			HttpsProxy:            executionRequest.HttpsProxy,
-			Image:                 executionRequest.Image,
-			ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
-			ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
-			Command:               executionRequest.Command,
-			ArtifactRequest:       artifactRequest,
-			JobTemplate:           executionRequest.JobTemplate,
+		if request.ArtifactRequest == nil {
+			request.ArtifactRequest = &testsv3.ArtifactRequest{}
 		}
-	*/
+
+		if (*executionRequest.ArtifactRequest).StorageClassName != nil {
+			request.ArtifactRequest.StorageClassName = *(*executionRequest.ArtifactRequest).StorageClassName
+		}
+
+		if (*executionRequest.ArtifactRequest).VolumeMountPath != nil {
+			request.ArtifactRequest.VolumeMountPath = *(*executionRequest.ArtifactRequest).VolumeMountPath
+		}
+
+		if (*executionRequest.ArtifactRequest).Dirs != nil {
+			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+		}
+	}
 
 	return request
 }

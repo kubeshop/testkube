@@ -458,6 +458,13 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
+		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Args != nil {
+			*(*request.ExecutionRequest).Args, err = testkube.PrepareExecutorArgs(*(*request.ExecutionRequest).Args)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+		}
+
 		// map update test but load spec only to not override metadata.ResourceVersion
 		testSpec := testsmapper.MapUpdateToSpec(request, test)
 

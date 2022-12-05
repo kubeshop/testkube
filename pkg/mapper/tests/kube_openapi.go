@@ -119,7 +119,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	return &testkube.ExecutionRequest{
 		Name:                  specExecutionRequest.Name,
 		TestSuiteName:         specExecutionRequest.TestSuiteName,
-		Number:                int32(specExecutionRequest.Number),
+		Number:                specExecutionRequest.Number,
 		ExecutionLabels:       specExecutionRequest.ExecutionLabels,
 		Namespace:             specExecutionRequest.Namespace,
 		VariablesFile:         specExecutionRequest.VariablesFile,
