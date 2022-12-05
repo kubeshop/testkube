@@ -95,3 +95,86 @@ func mapFeaturesToAPI(features []executorv1.Feature) (out []string) {
 	}
 	return out
 }
+
+// MapUpdateToSpec maps ExecutorUpdateRequest to Executor CRD spec
+func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv1.Executor) *executorv1.Executor {
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			request.Name,
+			&executor.Name,
+		},
+		{
+			request.Namespace,
+			&executor.Namespace,
+		},
+		{
+			request.ExecutorType,
+			&executor.Spec.ExecutorType,
+		},
+		{
+			request.Image,
+			&executor.Spec.Image,
+		},
+		{
+			request.Uri,
+			&executor.Spec.URI,
+		},
+		{
+			request.JobTemplate,
+			&executor.Spec.JobTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	var slices = []struct {
+		source      *[]string
+		destination *[]string
+	}{
+		{
+			request.Command,
+			&executor.Spec.Command,
+		},
+		{
+			request.Args,
+			&executor.Spec.Args,
+		},
+		{
+			request.Types,
+			&executor.Spec.Types,
+		},
+	}
+
+	for _, slice := range slices {
+		if slice.source != nil {
+			*&slice.destination = *&slice.source
+		}
+	}
+
+	if request.Labels != nil {
+		executor.Labels = *request.Labels
+	}
+
+	if request.ImagePullSecrets != nil {
+		executor.Spec.ImagePullSecrets = []v1.LocalObjectReference{}
+		for _, secret := range *request.ImagePullSecrets {
+			executor.Spec.ImagePullSecrets = append(executor.Spec.ImagePullSecrets, v1.LocalObjectReference{Name: secret.Name})
+		}
+	}
+
+	if request.Features != nil {
+		executor.Spec.Features = []executorv1.Feature{}
+		for _, feature := range *request.Features {
+			executor.Spec.Features = append(executor.Spec.Features, executorv1.Feature(feature))
+		}
+	}
+
+	return executor
+}

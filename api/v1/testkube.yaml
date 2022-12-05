@@ -424,7 +424,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestSuiteUpsertRequest"
+              $ref: "#/components/schemas/TestSuiteUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -1639,7 +1639,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExecutorUpsertRequest"
+              $ref: "#/components/schemas/ExecutorUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -2070,7 +2070,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestSourceUpsertRequest"
+              $ref: "#/components/schemas/TestSourceUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -2404,9 +2404,23 @@ components:
         delay:
           $ref: "#/components/schemas/TestSuiteStepDelay"
 
+    TestSuiteStepUpdate:
+      description: test suite step update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteStep"
+
     TestSuiteStepExecuteTest:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteStepExecuteTestUpdate:
+      description: test suite step execute test update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteStepExecuteTest"
 
     TestSuiteStepDelay:
       type: object
@@ -2418,6 +2432,13 @@ components:
           type: integer
           default: 0
           description: delay duration in milliseconds
+
+    TestSuiteStepDelayUpdate:
+      description: test suite step delay update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteStepDelay"
 
     TestSuiteExecution:
       type: object
@@ -2703,8 +2724,29 @@ components:
             type: string
 
     TestSourceUpsertRequest:
-      description: test create request body
+      description: test source create request body
       type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+
+    TestSourceUpdateRequest:
+      description: test source update request body
+      type: object
+      nullable: true
       allOf:
         - $ref: "#/components/schemas/TestContent"
       properties:
@@ -3295,6 +3337,13 @@ components:
           description: duration in seconds the test suite may be active, until its stopped
           example: 1
 
+    TestSuiteExecutionUpdateRequest:
+      description: test suite execution update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteExecutionRequest"
+
     TestUpsertRequest:
       description: test create request body
       type: object
@@ -3309,11 +3358,19 @@ components:
         - $ref: "#/components/schemas/Test"
 
     TestSuiteUpsertRequest:
-      description: test create request body
+      description: test suite create request body
       type: object
       required:
         - name
         - namespace
+      allOf:
+        - $ref: "#/components/schemas/TestSuite"
+        - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteUpdateRequest:
+      description: test suite update body
+      type: object
+      nullable: true
       allOf:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
@@ -3333,7 +3390,7 @@ components:
         - $ref: "#/components/schemas/ObjectRef"
 
     ExecutorUpsertRequest:
-      description: executor create or update request body
+      description: executor create request body
       type: object
       required:
         - name
@@ -3343,11 +3400,13 @@ components:
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 
-    WebhookCreateRequest:
-      description: executor create request body
+    ExecutorUpdateRequest:
+      description: executor update request body
       type: object
+      nullable: true
       allOf:
-        - $ref: "#/components/schemas/Webhook"
+        - $ref: "#/components/schemas/Executor"
+        - $ref: "#/components/schemas/ObjectRef"
 
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml

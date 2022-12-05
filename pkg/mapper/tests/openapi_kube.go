@@ -206,7 +206,6 @@ func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *te
 	}
 
 	return test
-
 }
 
 // MapUpdateContentToSpecContent maps TestUpdateContent OpenAPI spec to TestContent CRD spec

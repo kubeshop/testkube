@@ -104,6 +104,10 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ int64/ \*int64/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ArtifactRequest/ \*\*ArtifactUpdateRequest/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/\[\]TestSuiteStep/\*\[\]TestSuiteStepUpdate/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*TestSuiteExecutionRequest/ \*\*TestSuiteExecutionUpdateRequest/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*TestSuiteStepExecuteTest/ \*\*TestSuiteStepExecuteTestUpdate/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/\*TestSuiteStepDelay/\*\*TestSuiteStepDelayUpdate/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 
 protobuf-generate:

@@ -41,28 +41,32 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestSourceUpsertRequest
+		var request testkube.TestSourceUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSource, err := s.TestSourcesClient.Get(request.Name)
+		testSource, err := s.TestSourcesClient.Get(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		testSourceSpec := testsourcesmapper.MapAPIToCRD(request)
-		testSource.Spec = testSourceSpec.Spec
-		testSource.Labels = request.Labels
+		// map update test source but load spec only to not override metadata.ResourceVersion
+		testSourceSpec := testsourcesmapper.MapUpdateToSpec(request, testSource)
 
-		testSource, err = s.TestSourcesClient.Update(testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
+		testSourceUpdated, err := s.TestSourcesClient.Update(testSourceSpec, testsources.Option{ /*Secrets: getTestSourceSecretsData(&request)*/ })
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(testSource)
+		return c.JSON(testSourceUpdated)
 	}
 }
 

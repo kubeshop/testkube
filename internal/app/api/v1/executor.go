@@ -41,28 +41,32 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.ExecutorUpsertRequest
+		var request testkube.ExecutorUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		executor, err := s.ExecutorsClient.Get(request.Name)
+		executor, err := s.ExecutorsClient.Get(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		executorSpec := executorsmapper.MapAPIToCRD(request)
-		executor.Spec = executorSpec.Spec
-		executor.Labels = request.Labels
+		// map update executor but load spec only to not override metadata.ResourceVersion
+		executorSpec := executorsmapper.MapUpdateToSpec(request, executor)
 
-		executor, err = s.ExecutorsClient.Update(executor)
+		updatedExecutor, err := s.ExecutorsClient.Update(executorSpec)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(executor)
+		return c.JSON(updatedExecutor)
 	}
 }
 
