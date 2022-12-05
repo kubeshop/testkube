@@ -145,30 +145,21 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		}
 	}
 
-	// content is correct when is passed from file, by uri, by git repo or by test source
-	if len(fileContent) == 0 && uri == "" && gitUri == "" && sourceName == "" {
-		return content, fmt.Errorf("empty test content, please pass some test content to create test")
-	}
-
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
 		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
-
-	if hasGitParams && testContentType == "" {
-		testContentType = string(testkube.TestContentTypeGitDir)
-	}
 
 	if uri != "" && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeFileURI)
 	}
-
-	if len(fileContent) > 0 {
+)
+	if len(fileContent > 0 && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeString)
 	}
 
 	var repository *testkube.Repository
 	if hasGitParams {
 		if testContentType == "" {
-			testContentType = "git-dir"
+			testContentType = string(testkube.TestContentTypeGitDir)
 		}
 
 		repository = &testkube.Repository{
