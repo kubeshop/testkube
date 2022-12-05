@@ -31,12 +31,7 @@ type MongoRepository struct {
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestSuiteExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"id": id}).Decode(&result)
-	return
-}
-
-func (r *MongoRepository) GetByName(ctx context.Context, name string) (result testkube.TestSuiteExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	return
 }
 

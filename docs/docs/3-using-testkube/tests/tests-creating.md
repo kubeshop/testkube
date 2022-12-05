@@ -345,6 +345,39 @@ To run this test, refer to `settings.xml` from the `/data/uploads` folder:
 testkube run test maven-example-file-test --args "--settings" --args "/data/uploads/settings.xml" -v "TESTKUBE_MAVEN=true" --args "-e" --args "-X" --env "DEBUG=\"true\""
 ```
 
+### **Changing the default job template used for test execution**
+
+You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
+
+```bash
+kubectl testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
+```
+
+Where `job.yaml` file contains adjusted job template parts for merging with default job template:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Name }}
+        image: {{ .Image }}
+        imagePullPolicy: Always
+        command:
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+        resources:
+          limits:
+            memory: 128Mi
+```
+
+When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
+
 ## **Summary**
 
 Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.

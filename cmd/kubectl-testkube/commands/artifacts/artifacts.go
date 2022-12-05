@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -19,10 +20,10 @@ var (
 
 func NewListArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "artifact <executionID>",
+		Use:     "artifact <executionName>",
 		Aliases: []string{"artifacts"},
-		Short:   "List artifacts of the given execution ID",
-		Args:    validator.ExecutionID,
+		Short:   "List artifacts of the given execution name",
+		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID = args[0]
 			cmd.SilenceUsage = true
@@ -42,7 +43,7 @@ func NewListArtifactsCmd() *cobra.Command {
 
 func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "single <executionID> <fileName> <destinationDir>",
+		Use:   "single <executionName> <fileName> <destinationDir>",
 		Short: "download artifact",
 		Args:  validator.ExecutionIDAndFileNames,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -54,7 +55,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			f, err := client.DownloadFile(executionID, filename, destination)
 			ui.ExitOnError("downloading file"+filename, err)
 
-			ui.Info("File %s downloaded.\n", f)
+			ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
 		},
 	}
 
@@ -68,9 +69,9 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 
 func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "all <executionID>",
+		Use:   "all <executionName>",
 		Short: "download artifacts",
-		Args:  validator.ExecutionID,
+		Args:  validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 			client, _ := common.GetClient(cmd)

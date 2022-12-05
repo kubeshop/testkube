@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/kubeshop/testkube/internal/pkg/api"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -26,23 +27,31 @@ type Agent struct {
 	handler fasthttp.RequestHandler
 	logger  *zap.SugaredLogger
 	apiKey  string
+
+	events chan testkube.Event
 }
 
 func NewAgent(logger *zap.SugaredLogger, handler fasthttp.RequestHandler, server, apiKey string, isInsecure bool) (*Agent, error) {
-
 	var security grpc.DialOption
 	if isInsecure {
 		security = grpc.WithTransportCredentials(insecure.NewCredentials())
 	} else {
 		security = grpc.WithTransportCredentials(credentials.NewTLS(nil))
 	}
+
 	conn, err := grpc.Dial(server, grpc.WithBlock(), grpc.WithUserAgent(api.Version+"/"+api.Commit), security)
 	if err != nil {
 		return nil, err
 	}
 
 	client := cloud.NewTestKubeCloudAPIClient(conn)
-	return &Agent{conn: conn, client: client, handler: handler, logger: logger, apiKey: apiKey}, nil
+	return &Agent{conn: conn,
+		client:  client,
+		handler: handler,
+		logger:  logger,
+		apiKey:  apiKey,
+		events:  make(chan testkube.Event),
+	}, nil
 }
 
 func (ag *Agent) Run(ctx context.Context) error {

@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 
-	"github.com/fluxcd/pkg/runtime/events"
+	events "github.com/fluxcd/pkg/apis/event/v1beta1"
 )
 
 // InitEvents is a handler to emit logs

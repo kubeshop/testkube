@@ -11,10 +11,10 @@ import (
 
 func NewAbortTestSuiteExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "testsuiteexecution <executionID>",
+		Use:     "testsuiteexecution <executionName>",
 		Aliases: []string{"tse", "testsuites-execution", "testsuite-execution"},
 		Short:   "Abort test suite execution",
-		Args:    validator.ExecutionID,
+		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 

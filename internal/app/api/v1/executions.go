@@ -226,10 +226,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
-				if err == mongo.ErrNoDocuments {
-					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
-				}
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -321,7 +318,15 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		//// quickfix end
 
-		file, err := s.Storage.DownloadFile(executionID, fileName)
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		file, err := s.Storage.DownloadFile(execution.Id, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -336,7 +341,14 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
-		files, err := s.Storage.ListFiles(executionID)
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		files, err := s.Storage.ListFiles(execution.Id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
