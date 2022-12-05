@@ -14,7 +14,7 @@ spec:
   type: {{ .Type_ }}
   {{- end }}
   {{- if .Content }}
-  {{- if or (.Content.Repository) (.Content.Data) (.Content.Uri) }}
+  {{- if or (.Content.Type_ ) (.Content.Repository) (.Content.Data) (.Content.Uri) }}
   content:
     {{- if .Content.Type_ }}
     type: {{ .Content.Type_ }}
