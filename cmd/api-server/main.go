@@ -54,7 +54,7 @@ import (
 type MongoConfig struct {
 	DSN          string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	DB           string `envconfig:"API_MONGO_DB" default:"testkube"`
-	SSLSecretRef string `envconfig:"API_MONGO_SSL_SECRET_REF"`
+	SSLSecretRef string `envconfig:"API_MONGO_SSL_CERT"`
 }
 
 var Config MongoConfig
