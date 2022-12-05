@@ -54,22 +54,18 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 		return source, fmt.Errorf("empty test source, please pass some data to create test source")
 	}
 
-	if gitUri != "" && sourceType == "" {
-		sourceType = string(testkube.TestContentTypeGitDir)
-	}
-
 	if uri != "" && sourceType == "" {
 		sourceType = string(testkube.TestContentTypeFileURI)
 	}
 
-	if len(fileContent) > 0 {
+	if len(fileContent) > 0 && sourceType == "" {
 		sourceType = string(testkube.TestContentTypeString)
 	}
 
 	var repository *testkube.Repository
 	if gitUri != "" {
 		if sourceType == "" {
-			sourceType = "git-dir"
+			sourceType = string(testkube.TestContentTypeGitDir)
 		}
 
 		repository = &testkube.Repository{
