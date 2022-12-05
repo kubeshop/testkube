@@ -116,23 +116,57 @@ For container executors that produce files during test execution we support coll
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: custom-container
+  name: cli-container
   namespace: testkube
 spec:
-  content:
-    repository:
-      branch: main
-      type: git-dir
-      uri: https://github.com/kubeshop/testkube-executor-init
-    type: git-dir
+  type: cli/container
   executionRequest:
     artifactRequest:
       storageClassName: standard
       volumeMountPath: /share
       dirs:
-      - test/video
       - test/reports
 ```
 
 You have to define the storage class name, volume mount path and directories in this volume with test artifacts.
-Make sure your container executor definition has `artifacts` feature.
+Make sure your container executor definition has `artifacts` feature. For example:
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: cli-container-executor
+  namespace: testkube
+spec:
+  types:
+  - cli/container
+  executor_type: container
+  image: soleware/nx-cli:8.5.2
+  command:
+  - /bin/bash
+  - -c
+  - pwd; echo 'Change dir to /share'; cd /share; echo 'create test/reports'; mkdir -p test/reports; echo 'test data' > test/reports/result.txt
+  features:
+  - artifacts
+
+```
+
+Run your test using CLI command:
+
+```bash
+kubectl testkube run test cli-container
+```
+
+Then get available artifacts for your test execution id:
+
+```bash
+kubectl testkube get artifact 638a08b94ff1d2c694aeebf2
+```
+
+Output:
+
+```bash
+  NAME       | SIZE (KB)  
+-------------+------------
+  result.txt |        10  
+```
