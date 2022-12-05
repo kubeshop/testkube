@@ -154,7 +154,7 @@ spec:
 Run your test using CLI command:
 
 ```bash
-$ kubectl testkube run test cli-container
+kubectl testkube run test cli-container
 ```
 
 Then get available artifacts for your test execution id:
