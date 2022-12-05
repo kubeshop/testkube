@@ -345,7 +345,7 @@ To run this test, refer to `settings.xml` from the `/data/uploads` folder:
 testkube run test maven-example-file-test --args "--settings" --args "/data/uploads/settings.xml" -v "TESTKUBE_MAVEN=true" --args "-e" --args "-X" --env "DEBUG=\"true\""
 ```
 
-### **Changing default job template used for test execution**
+### **Changing the default job template used for test execution**
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
 
