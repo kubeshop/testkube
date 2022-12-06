@@ -29,12 +29,7 @@ func UpdateExecutorCmd() *cobra.Command {
 				ui.Failf("Executor with name '%s' not exists in namespace %s", name, namespace)
 			}
 
-			var labels map[string]string
-			if executor.Executor != nil {
-				labels = executor.Executor.Labels
-			}
-
-			options, err := NewUpsertExecutorOptionsFromFlags(cmd, labels)
+			options, err := NewUpdateExecutorOptionsFromFlags(cmd)
 			ui.ExitOnError("getting executor options", err)
 
 			_, err = client.UpdateExecutor(options)

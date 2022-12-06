@@ -2,7 +2,6 @@ package executors
 
 import (
 	"os"
-	"reflect"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -10,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiClient.UpsertExecutorOptions, err error) {
+func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpsertExecutorOptions, err error) {
 	name := cmd.Flag("name").Value.String()
 	types, err := cmd.Flags().GetStringArray("types")
 	if err != nil {
@@ -69,13 +68,105 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string
 		Uri:              uri,
 		JobTemplate:      jobTemplateContent,
 		Features:         features,
+		Labels:           labels,
 	}
 
-	// if labels are passed and are different from the existing overwrite
-	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
-		options.Labels = labels
-	} else {
-		options.Labels = testLabels
+	return options, nil
+}
+
+func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpdateExecutorOptions, err error) {
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"name",
+			options.Name,
+		},
+		{
+			"executor-type",
+			options.ExecutorType,
+		},
+		{
+			"uri",
+			options.Uri,
+		},
+		{
+			"image",
+			options.Image,
+		},
+	}
+
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+		}
+	}
+
+	var slices = []struct {
+		name        string
+		destination *[]string
+	}{
+		{
+			"types",
+			options.Types,
+		},
+		{
+			"command",
+			options.Command,
+		},
+		{
+			"args",
+			options.Args,
+		},
+		{
+			"features",
+			options.Features,
+		},
+	}
+
+	for _, slice := range slices {
+		if cmd.Flag(slice.name).Changed {
+			value, err := cmd.Flags().GetStringArray(slice.name)
+			if err != nil {
+				return options, err
+			}
+
+			slice.destination = &value
+		}
+	}
+
+	if cmd.Flag("job-template").Changed {
+		jobTemplate := cmd.Flag("job-template").Value.String()
+		b, err := os.ReadFile(jobTemplate)
+		ui.ExitOnError("reading job template", err)
+
+		value := string(b)
+		options.JobTemplate = &value
+	}
+
+	if cmd.Flag("image-pull-secrets").Changed {
+		imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+		if err != nil {
+			return options, err
+		}
+
+		var imageSecrets []testkube.LocalObjectReference
+		for _, secretName := range imagePullSecretNames {
+			imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+		}
+
+		options.ImagePullSecrets = &imageSecrets
+	}
+
+	if cmd.Flag("label").Changed {
+		labels, err := cmd.Flags().GetStringToString("label")
+		if err != nil {
+			return options, err
+		}
+
+		options.Labels = &labels
 	}
 
 	return options, nil
