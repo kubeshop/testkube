@@ -421,7 +421,12 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		test := testsmapper.MapUpsertToSpec(request)
 		test.Namespace = s.Namespace
-		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
+		var secrets map[string]string
+		if request.Content != nil && request.Content.Repository != nil {
+			secrets = getTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
+		}
+
+		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: secrets})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -470,7 +475,30 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		s.Log.Infow("updating test", "request", request)
 
-		updatedTest, err := s.TestsClient.Update(testSpec, tests.Option{ /*Secrets: getTestSecretsData(request.Content)*/ })
+		var option *tests.Option
+		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil && *(*request.Content).Repository != nil {
+			username := (*(*request.Content).Repository).Username
+			token := (*(*request.Content).Repository).Token
+			if username != nil || token != nil {
+				var uValue, tValue string
+				if username != nil {
+					uValue = *username
+				}
+
+				if token != nil {
+					tValue = *token
+				}
+
+				option = &tests.Option{Secrets: getTestSecretsData(uValue, tValue)}
+			}
+		}
+
+		var updatedTest *testsv3.Test
+		if option != nil {
+			updatedTest, err = s.TestsClient.Update(testSpec, *option)
+		} else {
+			updatedTest, err = s.TestsClient.Update(testSpec, *option)
+		}
 
 		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
 
@@ -550,15 +578,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	}
 }
 
-func getTestSecretsData(content *testkube.TestContent) map[string]string {
-	// create secrets for test
-	username := ""
-	token := ""
-	if content != nil && content.Repository != nil {
-		username = content.Repository.Username
-		token = content.Repository.Token
-	}
-
+func getTestSecretsData(username, token string) map[string]string {
 	if username == "" && token == "" {
 		return nil
 	}

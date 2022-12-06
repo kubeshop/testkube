@@ -29,8 +29,12 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 
 		testSource := testsourcesmapper.MapAPIToCRD(request)
 		testSource.Namespace = s.Namespace
+		var secrets map[string]string
+		if request.Repository != nil {
+			secrets = getTestSecretsData(request.Repository.Username, request.Repository.Token)
+		}
 
-		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
+		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -66,7 +70,31 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		// map update test source but load spec only to not override metadata.ResourceVersion
 		testSourceSpec := testsourcesmapper.MapUpdateToSpec(request, testSource)
 
-		updatedTestSource, err := s.TestSourcesClient.Update(testSourceSpec, testsources.Option{ /*Secrets: getTestSourceSecretsData(&request)*/ })
+		var option *testsources.Option
+		if request.Repository != nil && (*request.Repository) != nil {
+			username := (*request.Repository).Username
+			token := (*request.Repository).Token
+			if username != nil || token != nil {
+				var uValue, tValue string
+				if username != nil {
+					uValue = *username
+				}
+
+				if token != nil {
+					tValue = *token
+				}
+
+				option = &testsources.Option{Secrets: getTestSecretsData(uValue, tValue)}
+			}
+		}
+
+		var updatedTestSource *testsourcev1.TestSource
+		if option != nil {
+			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec, *option)
+		} else {
+			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec)
+		}
+
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
@@ -209,15 +237,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	}
 }
 
-func getTestSourceSecretsData(testSource *testkube.TestSourceUpsertRequest) map[string]string {
-	// create secrets for test
-	username := ""
-	token := ""
-	if testSource.Repository != nil {
-		username = testSource.Repository.Username
-		token = testSource.Repository.Token
-	}
-
+func getTestSourceSecretsData(username, token string) map[string]string {
 	if username == "" && token == "" {
 		return nil
 	}
