@@ -1,4 +1,4 @@
-## kubectl-testkube delete testsuite
+## testkube delete testsuite
 
 Delete test suite
 
@@ -7,7 +7,7 @@ Delete test suite
 Delete test suite by name
 
 ```
-kubectl-testkube delete testsuite <testSuiteName> [flags]
+testkube delete testsuite <testSuiteName> [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube delete testsuite <testSuiteName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
+* [testkube delete](testkube_delete.md)	 - Delete resources
 

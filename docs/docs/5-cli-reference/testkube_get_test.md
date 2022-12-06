@@ -1,4 +1,4 @@
-## kubectl-testkube get test
+## testkube get test
 
 Get all available tests
 
@@ -7,7 +7,7 @@ Get all available tests
 Getting all available tests from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-kubectl-testkube get test <testName> [flags]
+testkube get test <testName> [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get test <testName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

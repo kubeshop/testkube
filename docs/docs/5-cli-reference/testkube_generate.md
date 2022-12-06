@@ -1,9 +1,9 @@
-## kubectl-testkube generate
+## testkube generate
 
 Generate resources commands
 
 ```
-kubectl-testkube generate <resourceName> [flags]
+testkube generate <resourceName> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube generate <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube generate doc](kubectl-testkube_generate_doc.md)	 - Generate docs for kubectl testkube
-* [kubectl-testkube generate tests-crds](kubectl-testkube_generate_tests-crds.md)	 - Generate tests CRD file based on directory
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube generate doc](testkube_generate_doc.md)	 - Generate docs for kubectl testkube
+* [testkube generate tests-crds](testkube_generate_tests-crds.md)	 - Generate tests CRD file based on directory
 

@@ -1,9 +1,9 @@
-## kubectl-testkube config
+## testkube config
 
 Set feature configuration value
 
 ```
-kubectl-testkube config <feature> <value> [flags]
+testkube config <feature> <value> [flags]
 ```
 
 ### Options
@@ -24,8 +24,8 @@ kubectl-testkube config <feature> <value> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube config api-uri](kubectl-testkube_config_api-uri.md)	 - Set api uri for testkube client
-* [kubectl-testkube config namespace](kubectl-testkube_config_namespace.md)	 - Set namespace for testkube client
-* [kubectl-testkube config oauth](kubectl-testkube_config_oauth.md)	 - Set oauth credentials for api uri in testkube client
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube config api-uri](testkube_config_api-uri.md)	 - Set api uri for testkube client
+* [testkube config namespace](testkube_config_namespace.md)	 - Set namespace for testkube client
+* [testkube config oauth](testkube_config_oauth.md)	 - Set oauth credentials for api uri in testkube client
 

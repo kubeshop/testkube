@@ -1,9 +1,9 @@
-## kubectl-testkube enable oauth
+## testkube enable oauth
 
 enable oauth authentication for direct api
 
 ```
-kubectl-testkube enable oauth [flags]
+testkube enable oauth [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube enable oauth [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube enable](kubectl-testkube_enable.md)	 - Enable feature
+* [testkube enable](testkube_enable.md)	 - Enable feature
 

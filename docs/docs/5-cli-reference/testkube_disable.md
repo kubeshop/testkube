@@ -1,9 +1,9 @@
-## kubectl-testkube disable
+## testkube disable
 
 Disable feature
 
 ```
-kubectl-testkube disable <feature> [flags]
+testkube disable <feature> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube disable <feature> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube disable oauth](kubectl-testkube_disable_oauth.md)	 - disable oauth authentication for direct api
-* [kubectl-testkube disable telemetry](kubectl-testkube_disable_telemetry.md)	 - disable collecting of anonymous telemetry data
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube disable oauth](testkube_disable_oauth.md)	 - disable oauth authentication for direct api
+* [testkube disable telemetry](testkube_disable_telemetry.md)	 - disable collecting of anonymous telemetry data
 

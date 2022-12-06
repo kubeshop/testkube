@@ -1,9 +1,9 @@
-## kubectl-testkube delete
+## testkube delete
 
 Delete resources
 
 ```
-kubectl-testkube delete <resourceName> [flags]
+testkube delete <resourceName> [flags]
 ```
 
 ### Options
@@ -24,10 +24,10 @@ kubectl-testkube delete <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube delete executor](kubectl-testkube_delete_executor.md)	 - Delete Executor
-* [kubectl-testkube delete test](kubectl-testkube_delete_test.md)	 - Delete Test
-* [kubectl-testkube delete testsource](kubectl-testkube_delete_testsource.md)	 - Delete test source
-* [kubectl-testkube delete testsuite](kubectl-testkube_delete_testsuite.md)	 - Delete test suite
-* [kubectl-testkube delete webhook](kubectl-testkube_delete_webhook.md)	 - Delete webhook
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube delete executor](testkube_delete_executor.md)	 - Delete Executor
+* [testkube delete test](testkube_delete_test.md)	 - Delete Test
+* [testkube delete testsource](testkube_delete_testsource.md)	 - Delete test source
+* [testkube delete testsuite](testkube_delete_testsuite.md)	 - Delete test suite
+* [testkube delete webhook](testkube_delete_webhook.md)	 - Delete webhook
 

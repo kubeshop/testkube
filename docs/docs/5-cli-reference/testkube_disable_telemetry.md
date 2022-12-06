@@ -1,9 +1,9 @@
-## kubectl-testkube disable telemetry
+## testkube disable telemetry
 
 disable collecting of anonymous telemetry data
 
 ```
-kubectl-testkube disable telemetry [flags]
+testkube disable telemetry [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube disable telemetry [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube disable](kubectl-testkube_disable.md)	 - Disable feature
+* [testkube disable](testkube_disable.md)	 - Disable feature
 

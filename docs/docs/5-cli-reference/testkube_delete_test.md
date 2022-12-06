@@ -1,9 +1,9 @@
-## kubectl-testkube delete test
+## testkube delete test
 
 Delete Test
 
 ```
-kubectl-testkube delete test [testName] [flags]
+testkube delete test [testName] [flags]
 ```
 
 ### Options
@@ -26,5 +26,5 @@ kubectl-testkube delete test [testName] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
+* [testkube delete](testkube_delete.md)	 - Delete resources
 

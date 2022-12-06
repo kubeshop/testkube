@@ -1,9 +1,9 @@
-## kubectl-testkube status
+## testkube status
 
 Show status of feature or resource
 
 ```
-kubectl-testkube status [feature|resource] [flags]
+testkube status [feature|resource] [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube status [feature|resource] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube status oauth](kubectl-testkube_status_oauth.md)	 - Get oauth status
-* [kubectl-testkube status telemetry](kubectl-testkube_status_telemetry.md)	 - Get telemetry status
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube status oauth](testkube_status_oauth.md)	 - Get oauth status
+* [testkube status telemetry](testkube_status_telemetry.md)	 - Get telemetry status
 

@@ -1,4 +1,4 @@
-## kubectl-testkube create webhook
+## testkube create webhook
 
 Create new Webhook
 
@@ -7,7 +7,7 @@ Create new Webhook
 Create new Webhook Custom Resource
 
 ```
-kubectl-testkube create webhook [flags]
+testkube create webhook [flags]
 ```
 
 ### Options
@@ -34,5 +34,5 @@ kubectl-testkube create webhook [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
+* [testkube create](testkube_create.md)	 - Create resource
 

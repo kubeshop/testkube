@@ -1,4 +1,4 @@
-## kubectl-testkube generate doc
+## testkube generate doc
 
 Generate docs for kubectl testkube
 
@@ -7,7 +7,7 @@ Generate docs for kubectl testkube
 Generate docs for kubectl testkube
 
 ```
-kubectl-testkube generate doc [flags]
+testkube generate doc [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube generate doc [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube generate](kubectl-testkube_generate.md)	 - Generate resources commands
+* [testkube generate](testkube_generate.md)	 - Generate resources commands
 

@@ -1,9 +1,9 @@
-## kubectl-testkube download
+## testkube download
 
 Artifacts management commands
 
 ```
-kubectl-testkube download <resource> [flags]
+testkube download <resource> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube download <resource> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube download artifact](kubectl-testkube_download_artifact.md)	 - download artifact
-* [kubectl-testkube download artifacts](kubectl-testkube_download_artifacts.md)	 - download artifacts
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube download artifact](testkube_download_artifact.md)	 - download artifact
+* [testkube download artifacts](testkube_download_artifacts.md)	 - download artifacts
 

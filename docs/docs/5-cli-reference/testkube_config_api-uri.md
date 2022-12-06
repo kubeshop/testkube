@@ -1,9 +1,9 @@
-## kubectl-testkube config api-uri
+## testkube config api-uri
 
 Set api uri for testkube client
 
 ```
-kubectl-testkube config api-uri <value> [flags]
+testkube config api-uri <value> [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube config api-uri <value> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
+* [testkube config](testkube_config.md)	 - Set feature configuration value
 

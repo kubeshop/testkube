@@ -1,9 +1,9 @@
-## kubectl-testkube enable telemetry
+## testkube enable telemetry
 
 Enable collecting of anonymous telemetry data
 
 ```
-kubectl-testkube enable telemetry [flags]
+testkube enable telemetry [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube enable telemetry [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube enable](kubectl-testkube_enable.md)	 - Enable feature
+* [testkube enable](testkube_enable.md)	 - Enable feature
 

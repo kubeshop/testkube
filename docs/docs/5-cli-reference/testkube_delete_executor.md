@@ -1,4 +1,4 @@
-## kubectl-testkube delete executor
+## testkube delete executor
 
 Delete Executor
 
@@ -7,7 +7,7 @@ Delete Executor
 Delete Executor Resource, pass name to delete by name
 
 ```
-kubectl-testkube delete executor [executorName] [flags]
+testkube delete executor [executorName] [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube delete executor [executorName] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
+* [testkube delete](testkube_delete.md)	 - Delete resources
 

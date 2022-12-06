@@ -1,9 +1,9 @@
-## kubectl-testkube debug
+## testkube debug
 
 Print environment information for debugging
 
 ```
-kubectl-testkube debug [flags]
+testkube debug [flags]
 ```
 
 ### Options
@@ -24,6 +24,6 @@ kubectl-testkube debug [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube debug info](kubectl-testkube_debug_info.md)	 - Show debug info
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube debug info](testkube_debug_info.md)	 - Show debug info
 

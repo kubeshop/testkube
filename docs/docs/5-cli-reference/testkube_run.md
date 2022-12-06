@@ -1,9 +1,9 @@
-## kubectl-testkube run
+## testkube run
 
 Runs tests or test suites
 
 ```
-kubectl-testkube run <resourceName> [flags]
+testkube run <resourceName> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube run <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube run test](kubectl-testkube_run_test.md)	 - Starts new test
-* [kubectl-testkube run testsuite](kubectl-testkube_run_testsuite.md)	 - Starts new test suite
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube run test](testkube_run_test.md)	 - Starts new test
+* [testkube run testsuite](testkube_run_testsuite.md)	 - Starts new test suite
 

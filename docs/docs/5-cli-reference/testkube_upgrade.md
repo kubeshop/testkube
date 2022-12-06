@@ -1,9 +1,9 @@
-## kubectl-testkube upgrade
+## testkube upgrade
 
 Upgrade Helm chart, install dependencies and run migrations
 
 ```
-kubectl-testkube upgrade [flags]
+testkube upgrade [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube upgrade [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

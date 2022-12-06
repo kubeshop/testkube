@@ -1,4 +1,4 @@
-## kubectl-testkube get webhook
+## testkube get webhook
 
 Get webhook details
 
@@ -7,7 +7,7 @@ Get webhook details
 Get webhook, you can change output format, to get single details pass name as first arg
 
 ```
-kubectl-testkube get webhook <webhookName> [flags]
+testkube get webhook <webhookName> [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get webhook <webhookName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

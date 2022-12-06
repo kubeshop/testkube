@@ -1,4 +1,4 @@
-## kubectl-testkube delete webhook
+## testkube delete webhook
 
 Delete webhook
 
@@ -7,7 +7,7 @@ Delete webhook
 Delete webhook, pass webhook name which should be deleted
 
 ```
-kubectl-testkube delete webhook <webhookName> [flags]
+testkube delete webhook <webhookName> [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube delete webhook <webhookName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
+* [testkube delete](testkube_delete.md)	 - Delete resources
 

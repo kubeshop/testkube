@@ -1,4 +1,4 @@
-## kubectl-testkube create executor
+## testkube create executor
 
 Create new Executor
 
@@ -7,7 +7,7 @@ Create new Executor
 Create new Executor Custom Resource
 
 ```
-kubectl-testkube create executor [flags]
+testkube create executor [flags]
 ```
 
 ### Options
@@ -40,5 +40,5 @@ kubectl-testkube create executor [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
+* [testkube create](testkube_create.md)	 - Create resource
 

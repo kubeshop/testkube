@@ -1,4 +1,4 @@
-## kubectl-testkube generate tests-crds
+## testkube generate tests-crds
 
 Generate tests CRD file based on directory
 
@@ -7,7 +7,7 @@ Generate tests CRD file based on directory
 Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)
 
 ```
-kubectl-testkube generate tests-crds <manifestDirectory> [flags]
+testkube generate tests-crds <manifestDirectory> [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube generate tests-crds <manifestDirectory> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube generate](kubectl-testkube_generate.md)	 - Generate resources commands
+* [testkube generate](testkube_generate.md)	 - Generate resources commands
 

@@ -1,9 +1,9 @@
-## kubectl-testkube enable
+## testkube enable
 
 Enable feature
 
 ```
-kubectl-testkube enable <feature> [flags]
+testkube enable <feature> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube enable <feature> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube enable oauth](kubectl-testkube_enable_oauth.md)	 - enable oauth authentication for direct api
-* [kubectl-testkube enable telemetry](kubectl-testkube_enable_telemetry.md)	 - Enable collecting of anonymous telemetry data
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube enable oauth](testkube_enable_oauth.md)	 - enable oauth authentication for direct api
+* [testkube enable telemetry](testkube_enable_telemetry.md)	 - Enable collecting of anonymous telemetry data
 

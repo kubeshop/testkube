@@ -1,4 +1,4 @@
-## kubectl-testkube dashboard
+## testkube dashboard
 
 Open testkube dashboard
 
@@ -7,7 +7,7 @@ Open testkube dashboard
 Open testkube dashboard
 
 ```
-kubectl-testkube dashboard [flags]
+testkube dashboard [flags]
 ```
 
 ### Options
@@ -29,5 +29,5 @@ kubectl-testkube dashboard [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

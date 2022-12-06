@@ -1,4 +1,4 @@
-## kubectl-testkube completion zsh
+## testkube completion zsh
 
 Generate the autocompletion script for zsh
 
@@ -13,23 +13,23 @@ to enable it.  You can execute the following once:
 
 To load completions in your current shell session:
 
-	source <(kubectl-testkube completion zsh); compdef _kubectl-testkube kubectl-testkube
+	source <(testkube completion zsh); compdef _testkube testkube
 
 To load completions for every new session, execute once:
 
 #### Linux:
 
-	kubectl-testkube completion zsh > "${fpath[1]}/_kubectl-testkube"
+	testkube completion zsh > "${fpath[1]}/_testkube"
 
 #### macOS:
 
-	kubectl-testkube completion zsh > $(brew --prefix)/share/zsh/site-functions/_kubectl-testkube
+	testkube completion zsh > $(brew --prefix)/share/zsh/site-functions/_testkube
 
 You will need to start a new shell for this setup to take effect.
 
 
 ```
-kubectl-testkube completion zsh [flags]
+testkube completion zsh [flags]
 ```
 
 ### Options
@@ -51,5 +51,5 @@ kubectl-testkube completion zsh [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - Generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 

@@ -1,9 +1,9 @@
-## kubectl-testkube download artifacts
+## testkube download artifacts
 
 download artifacts
 
 ```
-kubectl-testkube download artifacts <executionName> [flags]
+testkube download artifacts <executionName> [flags]
 ```
 
 ### Options
@@ -26,5 +26,5 @@ kubectl-testkube download artifacts <executionName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube download](kubectl-testkube_download.md)	 - Artifacts management commands
+* [testkube download](testkube_download.md)	 - Artifacts management commands
 

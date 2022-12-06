@@ -1,4 +1,4 @@
-## kubectl-testkube create testsource
+## testkube create testsource
 
 Create new TestSource
 
@@ -7,7 +7,7 @@ Create new TestSource
 Create new TestSource Custom Resource
 
 ```
-kubectl-testkube create testsource [flags]
+testkube create testsource [flags]
 ```
 
 ### Options
@@ -43,5 +43,5 @@ kubectl-testkube create testsource [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube create](kubectl-testkube_create.md)	 - Create resource
+* [testkube create](testkube_create.md)	 - Create resource
 
