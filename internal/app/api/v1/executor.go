@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
@@ -55,6 +56,10 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		// we need to get resource first and load its metadata.ResourceVersion
 		executor, err := s.ExecutorsClient.Get(name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 

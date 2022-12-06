@@ -21,11 +21,11 @@ type TestSuiteUpdateRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description,omitempty"`
 	// Run this step before whole suite
-	Before **[]TestSuiteStepUpdate `json:"before,omitempty"`
+	Before *[]TestSuiteStep `json:"before,omitempty"`
 	// Steps to run
-	Steps **[]TestSuiteStepUpdate `json:"steps"`
+	Steps *[]TestSuiteStep `json:"steps"`
 	// Run this step after whole suite
-	After **[]TestSuiteStepUpdate `json:"after,omitempty"`
+	After *[]TestSuiteStep `json:"after,omitempty"`
 	// test suite labels
 	Labels *map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite

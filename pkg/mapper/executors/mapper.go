@@ -163,17 +163,11 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 	}
 
 	if request.ImagePullSecrets != nil {
-		executor.Spec.ImagePullSecrets = []v1.LocalObjectReference{}
-		for _, secret := range *request.ImagePullSecrets {
-			executor.Spec.ImagePullSecrets = append(executor.Spec.ImagePullSecrets, v1.LocalObjectReference{Name: secret.Name})
-		}
+		executor.Spec.ImagePullSecrets = mapImagePullSecretsToCRD(*request.ImagePullSecrets)
 	}
 
 	if request.Features != nil {
-		executor.Spec.Features = []executorv1.Feature{}
-		for _, feature := range *request.Features {
-			executor.Spec.Features = append(executor.Spec.Features, executorv1.Feature(feature))
-		}
+		executor.Spec.Features = mapFeaturesToCRD(*request.Features)
 	}
 
 	return executor

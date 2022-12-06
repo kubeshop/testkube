@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
@@ -55,18 +56,22 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		// we need to get resource first and load its metadata.ResourceVersion
 		testSource, err := s.TestSourcesClient.Get(name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// map update test source but load spec only to not override metadata.ResourceVersion
 		testSourceSpec := testsourcesmapper.MapUpdateToSpec(request, testSource)
 
-		testSourceUpdated, err := s.TestSourcesClient.Update(testSourceSpec, testsources.Option{ /*Secrets: getTestSourceSecretsData(&request)*/ })
+		updatedTestSource, err := s.TestSourcesClient.Update(testSourceSpec, testsources.Option{ /*Secrets: getTestSourceSecretsData(&request)*/ })
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(testSourceUpdated)
+		return c.JSON(updatedTestSource)
 	}
 }
 

@@ -2404,23 +2404,9 @@ components:
         delay:
           $ref: "#/components/schemas/TestSuiteStepDelay"
 
-    TestSuiteStepUpdate:
-      description: test suite step update body
-      type: object
-      nullable: true
-      allOf:
-        - $ref: "#/components/schemas/TestSuiteStep"
-
     TestSuiteStepExecuteTest:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
-
-    TestSuiteStepExecuteTestUpdate:
-      description: test suite step execute test update body
-      type: object
-      nullable: true
-      allOf:
-        - $ref: "#/components/schemas/TestSuiteStepExecuteTest"
 
     TestSuiteStepDelay:
       type: object
@@ -2432,13 +2418,6 @@ components:
           type: integer
           default: 0
           description: delay duration in milliseconds
-
-    TestSuiteStepDelayUpdate:
-      description: test suite step delay update body
-      type: object
-      nullable: true
-      allOf:
-        - $ref: "#/components/schemas/TestSuiteStepDelay"
 
     TestSuiteExecution:
       type: object

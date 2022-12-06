@@ -147,8 +147,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	}
 }
 
-func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []v1.LocalObjectReference {
-	var res []v1.LocalObjectReference
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.LocalObjectReference) {
 	for _, secret := range secrets {
 		res = append(res, v1.LocalObjectReference{Name: secret.Name})
 	}
@@ -369,6 +368,30 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		}
 	}
 
+	var slices = []struct {
+		source      *map[string]string
+		destination *map[string]string
+	}{
+		{
+			executionRequest.ExecutionLabels,
+			&request.ExecutionLabels,
+		},
+		{
+			executionRequest.Envs,
+			&request.Envs,
+		},
+		{
+			executionRequest.SecretEnvs,
+			&request.SecretEnvs,
+		},
+	}
+
+	for _, slice := range slices {
+		if slice.source != nil {
+			*&slice.destination = *&slice.source
+		}
+	}
+
 	if executionRequest.Number != nil {
 		request.Number = *executionRequest.Number
 	}
@@ -381,20 +404,8 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		request.ActiveDeadlineSeconds = *executionRequest.ActiveDeadlineSeconds
 	}
 
-	if executionRequest.ExecutionLabels != nil {
-		request.ExecutionLabels = *executionRequest.ExecutionLabels
-	}
-
 	if executionRequest.Args != nil {
 		request.Args = *executionRequest.Args
-	}
-
-	if executionRequest.Envs != nil {
-		request.Envs = *executionRequest.Envs
-	}
-
-	if executionRequest.SecretEnvs != nil {
-		request.SecretEnvs = *executionRequest.SecretEnvs
 	}
 
 	if executionRequest.Command != nil {

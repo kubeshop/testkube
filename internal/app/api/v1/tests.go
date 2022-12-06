@@ -472,7 +472,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		updatedTest, err := s.TestsClient.Update(testSpec, tests.Option{ /*Secrets: getTestSecretsData(request.Content)*/ })
 
-		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
+		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
