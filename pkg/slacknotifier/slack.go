@@ -12,188 +12,45 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-// can be generated here https://app.slack.com/block-kit-builder
-const messageTemplate string = `{
-	"blocks": [
-		{
-			"type": "section",
-			"text": {
-				"type": "plain_text",
-				"emoji": true,
-				"text": "Execution {{ .ExecutionID }} of {{ .TestName }} status {{ .Status }}"
-			}
-		},
-		{
-			"type": "context",
-			"elements": [
-				{
-					"type": "image",
-					"image_url": "{{ if eq .Status "failed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png{{ else if eq .Status "passed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png{{ else }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png{{ end }}",
-					"alt_text": "notifications warning icon"
-				}
-				{{ if (gt .TotalSteps 0 )}}
-				,
-				{
-					"type": "mrkdwn",
-					"text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
-				}
-				{{ end }}
-			]
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Test Name*"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*Type*"
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .TestName }}",
-					"emoji": true
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .TestType }}",
-					"emoji": true
-				}
-			]
-		},
-		{{ if .Namespace}}
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Namespace*"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*Labels*"
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .Namespace }} ",
-					"emoji": true
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .Labels }} ",
-					"emoji": true
-				}
-			]
-		},
-		{{ end }}
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Start Time*"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*End Time*"
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .StartTime }}",
-					"emoji": true
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .EndTime }}",
-					"emoji": true
-				}
-			]
-		},
-		{{ if .Duration }}
-		{
-			"type": "section",
-			"fields": [
-				{
-					"type": "mrkdwn",
-					"text": "*Duration*"
-				},
-				{
-					"type": "mrkdwn",
-					"text": " "
-				},
-				{
-					"type": "plain_text",
-					"text": "{{ .Duration }}",
-					"emoji": true
-				}
-			]
-		},
-		{{ end }}
-		{
-			"type": "divider"
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "*Test Execution Results*"
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "{{ .BackTick }}kubectl testkube get execution {{ .ExecutionID }} {{ .BackTick }}\n"
-			}
-		},
-		{
-			"type": "divider"
-		}
-	]
-}`
-
 type messageArgs struct {
-	ExecutionID string
-	EventType   string
-	Namespace   string
-	Labels      string
-	TestName    string
-	TestType    string
-	Status      string
-	FailedSteps int
-	TotalSteps  int
-	StartTime   string
-	EndTime     string
-	Duration    string
-	BackTick    string
+	ExecutionName string
+	EventType     string
+	Namespace     string
+	Labels        string
+	TestName      string
+	TestType      string
+	Status        string
+	FailedSteps   int
+	TotalSteps    int
+	StartTime     string
+	EndTime       string
+	Duration      string
 }
 
-var (
-	slackClient *slack.Client
-	timestamps  map[string]string
-	Ready       bool
-)
+type SlackNotifier struct {
+	slackClient     *slack.Client
+	timestamps      map[string]string
+	Ready           bool
+	messageTemplate string
+}
 
-func init() {
-	timestamps = make(map[string]string)
+func NewSlackNotifier(template string) *SlackNotifier {
+	slackNotifier := SlackNotifier{messageTemplate: template}
+	slackNotifier.timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
 		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
-		slackClient = slack.New(token, slack.OptionDebug(true))
-		Ready = true
+		slackNotifier.slackClient = slack.New(token, slack.OptionDebug(true))
+		slackNotifier.Ready = true
 	} else {
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
+	return &slackNotifier
 }
 
 // SendMessage posts a message to the slack configured channel
-func SendMessage(channelID string, message string) error {
-	if slackClient != nil {
-		_, _, err := slackClient.PostMessage(channelID, slack.MsgOptionText(message, false))
+func (s *SlackNotifier) SendMessage(channelID string, message string) error {
+	if s.slackClient != nil {
+		_, _, err := s.slackClient.PostMessage(channelID, slack.MsgOptionText(message, false))
 		if err != nil {
 			log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
 			return err
@@ -205,7 +62,7 @@ func SendMessage(channelID string, message string) error {
 }
 
 // SendEvent composes an event message and sends it to slack
-func SendEvent(event testkube.Event) error {
+func (s *SlackNotifier) SendEvent(event testkube.Event) error {
 	var (
 		message []byte
 		err     error
@@ -213,10 +70,10 @@ func SendEvent(event testkube.Event) error {
 	)
 
 	if event.TestExecution != nil {
-		message, err = composeTestMessage(*event.TestExecution, event.Type())
+		message, err = s.composeTestMessage(*event.TestExecution, event.Type())
 		name = event.TestExecution.Name
 	} else if event.TestSuiteExecution != nil {
-		message, err = composeTestsuiteMessage(*event.TestSuiteExecution, event.Type())
+		message, err = s.composeTestsuiteMessage(*event.TestSuiteExecution, event.Type())
 		name = event.TestSuiteExecution.Name
 	} else {
 		log.DefaultLogger.Warnw("event type is not handled by Slack notifier", "event", event)
@@ -234,8 +91,8 @@ func SendEvent(event testkube.Event) error {
 		return err
 	}
 
-	if slackClient != nil {
-		channels, _, err := slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
+	if s.slackClient != nil {
+		channels, _, err := s.slackClient.GetConversationsForUser(&slack.GetConversationsForUserParameters{})
 		if err != nil {
 			log.DefaultLogger.Warnw("error while getting bot channels", "error", err.Error())
 			return err
@@ -243,13 +100,13 @@ func SendEvent(event testkube.Event) error {
 
 		if len(channels) > 0 {
 			channelID := channels[0].GroupConversation.ID
-			prevTimestamp, ok := timestamps[name]
+			prevTimestamp, ok := s.timestamps[name]
 			var timestamp string
 
 			if ok {
-				_, timestamp, _, err = slackClient.UpdateMessage(channelID, prevTimestamp, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+				_, timestamp, _, err = s.slackClient.UpdateMessage(channelID, prevTimestamp, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
 			} else {
-				_, timestamp, err = slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
+				_, timestamp, err = s.slackClient.PostMessage(channelID, slack.MsgOptionBlocks(view.Blocks.BlockSet...))
 			}
 
 			if err != nil {
@@ -258,9 +115,9 @@ func SendEvent(event testkube.Event) error {
 			}
 
 			if event.IsSuccess() {
-				delete(timestamps, name)
+				delete(s.timestamps, name)
 			} else {
-				timestamps[name] = timestamp
+				s.timestamps[name] = timestamp
 			}
 		} else {
 			log.DefaultLogger.Warnw("Testkube bot is not added to any channel")
@@ -272,26 +129,25 @@ func SendEvent(event testkube.Event) error {
 	return nil
 }
 
-func composeTestsuiteMessage(execution testkube.TestSuiteExecution, eventType testkube.EventType) ([]byte, error) {
-	t, err := template.New("message").Parse(messageTemplate)
+func (s *SlackNotifier) composeTestsuiteMessage(execution testkube.TestSuiteExecution, eventType testkube.EventType) ([]byte, error) {
+	t, err := template.New("message").Parse(s.messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
 		return nil, err
 	}
 
 	args := messageArgs{
-		ExecutionID: execution.Name,
-		EventType:   string(eventType),
-		Namespace:   execution.TestSuite.Namespace,
-		Labels:      testkube.MapToString(execution.Labels),
-		TestName:    execution.TestSuite.Name,
-		Status:      string(*execution.Status),
-		StartTime:   execution.StartTime.String(),
-		EndTime:     execution.EndTime.String(),
-		Duration:    execution.Duration,
-		TotalSteps:  len(execution.StepResults),
-		FailedSteps: execution.FailedStepsCount(),
-		BackTick:    "`",
+		ExecutionName: execution.Name,
+		EventType:     string(eventType),
+		Namespace:     execution.TestSuite.Namespace,
+		Labels:        testkube.MapToString(execution.Labels),
+		TestName:      execution.TestSuite.Name,
+		Status:        string(*execution.Status),
+		StartTime:     execution.StartTime.String(),
+		EndTime:       execution.EndTime.String(),
+		Duration:      execution.Duration,
+		TotalSteps:    len(execution.StepResults),
+		FailedSteps:   execution.FailedStepsCount(),
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.Status)
@@ -305,27 +161,26 @@ func composeTestsuiteMessage(execution testkube.TestSuiteExecution, eventType te
 	return message.Bytes(), nil
 }
 
-func composeTestMessage(execution testkube.Execution, eventType testkube.EventType) ([]byte, error) {
-	t, err := template.New("message").Parse(messageTemplate)
+func (s *SlackNotifier) composeTestMessage(execution testkube.Execution, eventType testkube.EventType) ([]byte, error) {
+	t, err := template.New("message").Parse(s.messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
 		return nil, err
 	}
 
 	args := messageArgs{
-		ExecutionID: execution.Name,
-		EventType:   string(eventType),
-		Namespace:   execution.TestNamespace,
-		Labels:      testkube.MapToString(execution.Labels),
-		TestName:    execution.TestName,
-		TestType:    execution.TestType,
-		Status:      string(*execution.ExecutionResult.Status),
-		StartTime:   execution.StartTime.String(),
-		EndTime:     execution.EndTime.String(),
-		Duration:    execution.Duration,
-		TotalSteps:  len(execution.ExecutionResult.Steps),
-		FailedSteps: execution.ExecutionResult.FailedStepsCount(),
-		BackTick:    "`",
+		ExecutionName: execution.Name,
+		EventType:     string(eventType),
+		Namespace:     execution.TestNamespace,
+		Labels:        testkube.MapToString(execution.Labels),
+		TestName:      execution.TestName,
+		TestType:      execution.TestType,
+		Status:        string(*execution.ExecutionResult.Status),
+		StartTime:     execution.StartTime.String(),
+		EndTime:       execution.EndTime.String(),
+		Duration:      execution.Duration,
+		TotalSteps:    len(execution.ExecutionResult.Steps),
+		FailedSteps:   execution.ExecutionResult.FailedStepsCount(),
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)

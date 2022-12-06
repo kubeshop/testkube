@@ -162,10 +162,10 @@ func NewRunTestCmd() *cobra.Command {
 						DownloadArtifacts(execution.Id, downloadDir, client)
 					}
 
-					uiShellWatchExecution(execution.Id)
+					uiShellWatchExecution(execution.Name)
 				}
 
-				uiShellGetExecution(execution.Id)
+				uiShellGetExecution(execution.Name)
 			}
 
 			if hasErrors {
