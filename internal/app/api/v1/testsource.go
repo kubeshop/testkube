@@ -200,10 +200,16 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 		var result testkube.TestSourceBatchResult
 		for name, item := range testSourceBatch {
 			testSource := testsourcesmapper.MapAPIToCRD(item)
+			var username, token string
+			if item.Repository != nil {
+				username = item.Repository.Username
+				token = item.Repository.Token
+			}
+
 			if existed, ok := testSourceMap[name]; !ok {
 				testSource.Namespace = s.Namespace
 
-				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadRequest, err)
 				}
@@ -213,7 +219,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 				existed.Spec = testSource.Spec
 				existed.Labels = item.Labels
 
-				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadGateway, err)
 				}
