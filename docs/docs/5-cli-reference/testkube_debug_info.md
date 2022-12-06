@@ -1,4 +1,4 @@
-## kubectl-testkube debug info
+## testkube debug info
 
 Show debug info
 
@@ -7,7 +7,7 @@ Show debug info
 Get all the necessary information to debug an issue in Testkube
 
 ```
-kubectl-testkube debug info [flags]
+testkube debug info [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube debug info [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube debug](kubectl-testkube_debug.md)	 - Print environment information for debugging
+* [testkube debug](testkube_debug.md)	 - Print environment information for debugging
 

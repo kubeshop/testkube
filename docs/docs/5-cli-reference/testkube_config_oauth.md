@@ -1,9 +1,9 @@
-## kubectl-testkube config oauth
+## testkube config oauth
 
 Set oauth credentials for api uri in testkube client
 
 ```
-kubectl-testkube config oauth <value> [flags]
+testkube config oauth <value> [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube config oauth <value> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
+* [testkube config](testkube_config.md)	 - Set feature configuration value
 

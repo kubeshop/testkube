@@ -1,4 +1,4 @@
-## kubectl-testkube create-ticket
+## testkube create-ticket
 
 Create bug ticket
 
@@ -7,7 +7,7 @@ Create bug ticket
 Create an issue of type bug in the Testkube repository
 
 ```
-kubectl-testkube create-ticket [flags]
+testkube create-ticket [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube create-ticket [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

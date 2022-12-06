@@ -1,9 +1,9 @@
-## kubectl-testkube get artifact
+## testkube get artifact
 
 List artifacts of the given execution name
 
 ```
-kubectl-testkube get artifact <executionName> [flags]
+testkube get artifact <executionName> [flags]
 ```
 
 ### Options
@@ -27,5 +27,5 @@ kubectl-testkube get artifact <executionName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

@@ -1,4 +1,4 @@
-## kubectl-testkube delete testsource
+## testkube delete testsource
 
 Delete test source
 
@@ -7,7 +7,7 @@ Delete test source
 Delete test source, pass test source name which should be deleted
 
 ```
-kubectl-testkube delete testsource <testSourceName> [flags]
+testkube delete testsource <testSourceName> [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube delete testsource <testSourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube delete](kubectl-testkube_delete.md)	 - Delete resources
+* [testkube delete](testkube_delete.md)	 - Delete resources
 

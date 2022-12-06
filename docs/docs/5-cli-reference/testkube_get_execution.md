@@ -1,4 +1,4 @@
-## kubectl-testkube get execution
+## testkube get execution
 
 Lists or gets test executions
 
@@ -7,7 +7,7 @@ Lists or gets test executions
 Getting list of execution for given test name or recent executions if there is no test name passed
 
 ```
-kubectl-testkube get execution [executionID][executionName] [flags]
+testkube get execution [executionID][executionName] [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get execution [executionID][executionName] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

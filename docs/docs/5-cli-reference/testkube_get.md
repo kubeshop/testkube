@@ -1,4 +1,4 @@
-## kubectl-testkube get
+## testkube get
 
 Get resources
 
@@ -7,7 +7,7 @@ Get resources
 Get available resources, get single item or list
 
 ```
-kubectl-testkube get <resourceName> [flags]
+testkube get <resourceName> [flags]
 ```
 
 ### Options
@@ -30,13 +30,13 @@ kubectl-testkube get <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube get artifact](kubectl-testkube_get_artifact.md)	 - List artifacts of the given execution name
-* [kubectl-testkube get execution](kubectl-testkube_get_execution.md)	 - Lists or gets test executions
-* [kubectl-testkube get executor](kubectl-testkube_get_executor.md)	 - Gets executor details
-* [kubectl-testkube get test](kubectl-testkube_get_test.md)	 - Get all available tests
-* [kubectl-testkube get testsource](kubectl-testkube_get_testsource.md)	 - Get test source details
-* [kubectl-testkube get testsuite](kubectl-testkube_get_testsuite.md)	 - Get test suite by name
-* [kubectl-testkube get testsuiteexecution](kubectl-testkube_get_testsuiteexecution.md)	 - Gets TestSuite Execution details
-* [kubectl-testkube get webhook](kubectl-testkube_get_webhook.md)	 - Get webhook details
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube get artifact](testkube_get_artifact.md)	 - List artifacts of the given execution name
+* [testkube get execution](testkube_get_execution.md)	 - Lists or gets test executions
+* [testkube get executor](testkube_get_executor.md)	 - Gets executor details
+* [testkube get test](testkube_get_test.md)	 - Get all available tests
+* [testkube get testsource](testkube_get_testsource.md)	 - Get test source details
+* [testkube get testsuite](testkube_get_testsuite.md)	 - Get test suite by name
+* [testkube get testsuiteexecution](testkube_get_testsuiteexecution.md)	 - Gets TestSuite Execution details
+* [testkube get webhook](testkube_get_webhook.md)	 - Get webhook details
 

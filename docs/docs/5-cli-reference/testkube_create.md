@@ -1,9 +1,9 @@
-## kubectl-testkube create
+## testkube create
 
 Create resource
 
 ```
-kubectl-testkube create <resourceName> [flags]
+testkube create <resourceName> [flags]
 ```
 
 ### Options
@@ -25,10 +25,10 @@ kubectl-testkube create <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube create executor](kubectl-testkube_create_executor.md)	 - Create new Executor
-* [kubectl-testkube create test](kubectl-testkube_create_test.md)	 - Create new Test
-* [kubectl-testkube create testsource](kubectl-testkube_create_testsource.md)	 - Create new TestSource
-* [kubectl-testkube create testsuite](kubectl-testkube_create_testsuite.md)	 - Create new TestSuite
-* [kubectl-testkube create webhook](kubectl-testkube_create_webhook.md)	 - Create new Webhook
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube create executor](testkube_create_executor.md)	 - Create new Executor
+* [testkube create test](testkube_create_test.md)	 - Create new Test
+* [testkube create testsource](testkube_create_testsource.md)	 - Create new TestSource
+* [testkube create testsuite](testkube_create_testsuite.md)	 - Create new TestSuite
+* [testkube create webhook](testkube_create_webhook.md)	 - Create new Webhook
 

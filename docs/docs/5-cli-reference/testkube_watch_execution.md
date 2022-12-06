@@ -1,4 +1,4 @@
-## kubectl-testkube watch execution
+## testkube watch execution
 
 Watch logs output from executor pod
 
@@ -7,7 +7,7 @@ Watch logs output from executor pod
 Gets test execution details, until it's in success/error state, blocks until gets complete state
 
 ```
-kubectl-testkube watch execution <executionName> [flags]
+testkube watch execution <executionName> [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube watch execution <executionName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube watch](kubectl-testkube_watch.md)	 - Watch tests or test suites
+* [testkube watch](testkube_watch.md)	 - Watch tests or test suites
 

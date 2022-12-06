@@ -1,9 +1,9 @@
-## kubectl-testkube status oauth
+## testkube status oauth
 
 Get oauth status
 
 ```
-kubectl-testkube status oauth [flags]
+testkube status oauth [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube status oauth [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube status](kubectl-testkube_status.md)	 - Show status of feature or resource
+* [testkube status](testkube_status.md)	 - Show status of feature or resource
 

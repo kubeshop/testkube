@@ -1,9 +1,9 @@
-## kubectl-testkube status telemetry
+## testkube status telemetry
 
 Get telemetry status
 
 ```
-kubectl-testkube status telemetry [flags]
+testkube status telemetry [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube status telemetry [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube status](kubectl-testkube_status.md)	 - Show status of feature or resource
+* [testkube status](testkube_status.md)	 - Show status of feature or resource
 

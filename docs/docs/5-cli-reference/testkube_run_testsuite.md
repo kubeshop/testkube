@@ -1,4 +1,4 @@
-## kubectl-testkube run testsuite
+## testkube run testsuite
 
 Starts new test suite
 
@@ -7,7 +7,7 @@ Starts new test suite
 Starts new test suite based on TestSuite Custom Resource name, returns results to console
 
 ```
-kubectl-testkube run testsuite <testSuiteName> [flags]
+testkube run testsuite <testSuiteName> [flags]
 ```
 
 ### Options
@@ -40,5 +40,5 @@ kubectl-testkube run testsuite <testSuiteName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube run](kubectl-testkube_run.md)	 - Runs tests or test suites
+* [testkube run](testkube_run.md)	 - Runs tests or test suites
 

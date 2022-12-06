@@ -1,9 +1,9 @@
-## kubectl-testkube watch
+## testkube watch
 
 Watch tests or test suites
 
 ```
-kubectl-testkube watch <resourceName> [flags]
+testkube watch <resourceName> [flags]
 ```
 
 ### Options
@@ -24,7 +24,7 @@ kubectl-testkube watch <resourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [kubectl-testkube watch execution](kubectl-testkube_watch_execution.md)	 - Watch logs output from executor pod
-* [kubectl-testkube watch testsuiteexecution](kubectl-testkube_watch_testsuiteexecution.md)	 - Watch test suite
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube watch execution](testkube_watch_execution.md)	 - Watch logs output from executor pod
+* [testkube watch testsuiteexecution](testkube_watch_testsuiteexecution.md)	 - Watch test suite
 

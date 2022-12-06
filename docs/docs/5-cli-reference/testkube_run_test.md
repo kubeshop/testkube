@@ -1,4 +1,4 @@
-## kubectl-testkube run test
+## testkube run test
 
 Starts new test
 
@@ -7,7 +7,7 @@ Starts new test
 Starts new test based on Test Custom Resource name, returns results to console
 
 ```
-kubectl-testkube run test <testName> [flags]
+testkube run test <testName> [flags]
 ```
 
 ### Options
@@ -51,5 +51,5 @@ kubectl-testkube run test <testName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube run](kubectl-testkube_run.md)	 - Runs tests or test suites
+* [testkube run](testkube_run.md)	 - Runs tests or test suites
 

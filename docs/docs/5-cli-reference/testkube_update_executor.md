@@ -1,4 +1,4 @@
-## kubectl-testkube update executor
+## testkube update executor
 
 Update Executor
 
@@ -7,7 +7,7 @@ Update Executor
 Update Executor Custom Resource
 
 ```
-kubectl-testkube update executor [flags]
+testkube update executor [flags]
 ```
 
 ### Options
@@ -39,5 +39,5 @@ kubectl-testkube update executor [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube update](kubectl-testkube_update.md)	 - Update resource
+* [testkube update](testkube_update.md)	 - Update resource
 

@@ -1,9 +1,9 @@
-## kubectl-testkube disable oauth
+## testkube disable oauth
 
 disable oauth authentication for direct api
 
 ```
-kubectl-testkube disable oauth [flags]
+testkube disable oauth [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube disable oauth [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube disable](kubectl-testkube_disable.md)	 - Disable feature
+* [testkube disable](testkube_disable.md)	 - Disable feature
 

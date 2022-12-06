@@ -1,9 +1,9 @@
-## kubectl-testkube abort execution
+## testkube abort execution
 
 Aborts execution of the test
 
 ```
-kubectl-testkube abort execution <executionName> [flags]
+testkube abort execution <executionName> [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube abort execution <executionName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube abort](kubectl-testkube_abort.md)	 - Abort tests or test suites
+* [testkube abort](testkube_abort.md)	 - Abort tests or test suites
 

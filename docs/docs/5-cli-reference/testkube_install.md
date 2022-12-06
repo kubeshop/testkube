@@ -1,9 +1,9 @@
-## kubectl-testkube install
+## testkube install
 
 Install Helm chart registry in current kubectl context and update dependencies
 
 ```
-kubectl-testkube install [flags]
+testkube install [flags]
 ```
 
 ### Options
@@ -31,5 +31,5 @@ kubectl-testkube install [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

@@ -1,4 +1,4 @@
-## kubectl-testkube update test
+## testkube update test
 
 Update test
 
@@ -7,7 +7,7 @@ Update test
 Update Test Custom Resource
 
 ```
-kubectl-testkube update test [flags]
+testkube update test [flags]
 ```
 
 ### Options
@@ -64,5 +64,5 @@ kubectl-testkube update test [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube update](kubectl-testkube_update.md)	 - Update resource
+* [testkube update](testkube_update.md)	 - Update resource
 

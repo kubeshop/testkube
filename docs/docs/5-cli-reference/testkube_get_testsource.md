@@ -1,4 +1,4 @@
-## kubectl-testkube get testsource
+## testkube get testsource
 
 Get test source details
 
@@ -7,7 +7,7 @@ Get test source details
 Get test source, you can change output format, to get single details pass name as first arg
 
 ```
-kubectl-testkube get testsource <testSourceName> [flags]
+testkube get testsource <testSourceName> [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get testsource <testSourceName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

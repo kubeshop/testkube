@@ -1,4 +1,4 @@
-## kubectl-testkube get testsuiteexecution
+## testkube get testsuiteexecution
 
 Gets TestSuite Execution details
 
@@ -7,7 +7,7 @@ Gets TestSuite Execution details
 Gets TestSuite Execution details by ID, or list if id is not passed
 
 ```
-kubectl-testkube get testsuiteexecution [executionID] [flags]
+testkube get testsuiteexecution [executionID] [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get testsuiteexecution [executionID] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

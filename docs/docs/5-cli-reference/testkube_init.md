@@ -1,9 +1,9 @@
-## kubectl-testkube init
+## testkube init
 
 Install Helm chart registry in current kubectl context and update dependencies
 
 ```
-kubectl-testkube init [flags]
+testkube init [flags]
 ```
 
 ### Options
@@ -30,5 +30,5 @@ kubectl-testkube init [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

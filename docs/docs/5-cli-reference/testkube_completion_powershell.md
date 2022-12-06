@@ -1,4 +1,4 @@
-## kubectl-testkube completion powershell
+## testkube completion powershell
 
 Generate the autocompletion script for powershell
 
@@ -8,14 +8,14 @@ Generate the autocompletion script for powershell.
 
 To load completions in your current shell session:
 
-	kubectl-testkube completion powershell | Out-String | Invoke-Expression
+	testkube completion powershell | Out-String | Invoke-Expression
 
 To load completions for every new session, add the output of the above command
 to your powershell profile.
 
 
 ```
-kubectl-testkube completion powershell [flags]
+testkube completion powershell [flags]
 ```
 
 ### Options
@@ -37,5 +37,5 @@ kubectl-testkube completion powershell [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube completion](kubectl-testkube_completion.md)	 - Generate the autocompletion script for the specified shell
+* [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 

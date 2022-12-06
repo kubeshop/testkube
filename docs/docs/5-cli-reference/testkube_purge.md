@@ -1,4 +1,4 @@
-## kubectl-testkube purge
+## testkube purge
 
 Uninstall Helm chart registry from current kubectl context
 
@@ -7,7 +7,7 @@ Uninstall Helm chart registry from current kubectl context
 Uninstall Helm chart registry from current kubectl context
 
 ```
-kubectl-testkube purge [flags]
+testkube purge [flags]
 ```
 
 ### Options
@@ -29,5 +29,5 @@ kubectl-testkube purge [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

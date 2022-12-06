@@ -1,9 +1,9 @@
-## kubectl-testkube config namespace
+## testkube config namespace
 
 Set namespace for testkube client
 
 ```
-kubectl-testkube config namespace <value> [flags]
+testkube config namespace <value> [flags]
 ```
 
 ### Options
@@ -24,5 +24,5 @@ kubectl-testkube config namespace <value> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube config](kubectl-testkube_config.md)	 - Set feature configuration value
+* [testkube config](testkube_config.md)	 - Set feature configuration value
 

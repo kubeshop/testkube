@@ -1,4 +1,4 @@
-## kubectl-testkube update testsuite
+## testkube update testsuite
 
 Update Test Suite
 
@@ -7,7 +7,7 @@ Update Test Suite
 Update Test Custom Resource Definitions, 
 
 ```
-kubectl-testkube update testsuite [flags]
+testkube update testsuite [flags]
 ```
 
 ### Options
@@ -39,5 +39,5 @@ kubectl-testkube update testsuite [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube update](kubectl-testkube_update.md)	 - Update resource
+* [testkube update](testkube_update.md)	 - Update resource
 

@@ -1,4 +1,4 @@
-## kubectl-testkube migrate
+## testkube migrate
 
 manual migrate command
 
@@ -7,7 +7,7 @@ manual migrate command
 migrate command will run migrations greater or equals current version
 
 ```
-kubectl-testkube migrate [flags]
+testkube migrate [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube migrate [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 

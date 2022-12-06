@@ -1,4 +1,4 @@
-## kubectl-testkube get testsuite
+## testkube get testsuite
 
 Get test suite by name
 
@@ -7,7 +7,7 @@ Get test suite by name
 Getting test suite from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-kubectl-testkube get testsuite <testSuiteName> [flags]
+testkube get testsuite <testSuiteName> [flags]
 ```
 
 ### Options
@@ -33,5 +33,5 @@ kubectl-testkube get testsuite <testSuiteName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

@@ -1,4 +1,4 @@
-## kubectl-testkube watch testsuiteexecution
+## testkube watch testsuiteexecution
 
 Watch test suite
 
@@ -7,7 +7,7 @@ Watch test suite
 Watch test suite by execution ID, returns results to console
 
 ```
-kubectl-testkube watch testsuiteexecution <executionName> [flags]
+testkube watch testsuiteexecution <executionName> [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube watch testsuiteexecution <executionName> [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube watch](kubectl-testkube_watch.md)	 - Watch tests or test suites
+* [testkube watch](testkube_watch.md)	 - Watch tests or test suites
 

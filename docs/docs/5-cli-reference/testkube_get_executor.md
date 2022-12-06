@@ -1,4 +1,4 @@
-## kubectl-testkube get executor
+## testkube get executor
 
 Gets executor details
 
@@ -7,7 +7,7 @@ Gets executor details
 Gets executor, you can change output format
 
 ```
-kubectl-testkube get executor [executorName] [flags]
+testkube get executor [executorName] [flags]
 ```
 
 ### Options
@@ -32,5 +32,5 @@ kubectl-testkube get executor [executorName] [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube get](kubectl-testkube_get.md)	 - Get resources
+* [testkube get](testkube_get.md)	 - Get resources
 

@@ -13,6 +13,7 @@ In this section you will:
 Watch the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys).
 
 ## **1. Installing the Testkube CLI**
+
 To install Testkube you'll need the following tools:
 
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
@@ -21,15 +22,20 @@ To install Testkube you'll need the following tools:
 Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
 
 ### **MacOS**
+
 ```bash
 brew install testkube
 ```
+
 ### **Windows**
+
 ```bash
 choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/chocolatey  
 choco install testkube -y
 ```
+
 ### **Linux**
+
 ```bash
 wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
 ```
@@ -46,19 +52,22 @@ For Windows, you will need to unpack the binary and add it to the `%PATH%` as we
 
 If you use a package manager that we don't support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
 
-
 ## **2. Installing Testkube Server Components**
+
 To deploy Testkube to your K8s cluster you will need the following packages installed:
-- [Kubectl docs](https://kubernetes.io/docs/tasks/tools/) 
+
+- [Kubectl docs](https://kubernetes.io/docs/tasks/tools/)
 - [Helm docs](https://helm.sh/docs/intro/install/#through-package-managers)
 
-
 ### **Using Testkube's CLI to Deploy the Server Components**
+
 The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
 Run:
+
 ```bash
 testkube init
 ```
+
 note: you must have your KUBECONFIG pointing to the desired location of the installation.
 
 The above command will install the following components in your Kubernetes cluster:
@@ -70,7 +79,6 @@ The above command will install the following components in your Kubernetes clust
 5. Minio - default (can be disabled with `--no-minio`)
 6. Dashboard - default (can be disabled with `--no-dashboard` flag)
 
-
 Confirm that Testkube is running:
 
 ```bash
@@ -80,7 +88,9 @@ kubectl get all -n testkube
 By default Testkube is installed in the `testkube` namespace.
 
 ### **Using HELM to Deploy the Server Components**
+
 1. Add the Kubeshop Helm repository as follows:
+
 ```bash
 helm repo add testkube https://kubeshop.github.io/helm-charts
 ```
@@ -150,26 +160,29 @@ The following Helm defaults are used in the `testkube` chart:
 >For more configuration parameters of `NATS` chart please visit:
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
 
-
 ## **Remove Testkube Server Components**
+
 ### **Using Helm:**
+
 ```bash
 helm delete testkube
 ```
+
 ### **Using Testkube's CLI:**
+
 ```bash
 testkube purge
 ```
 
-## Installation on OpenShift 
+## Installation on OpenShift
 
-Because of upgrade issues from Mongo 11 to 13, Testkube can't work on root-less OpenShift environment by default. Fortunately, you'll be able to install it manually. 
+Because of upgrade issues from Mongo 11 to 13, Testkube can't work on root-less OpenShift environment by default. Fortunately, you'll be able to install it manually.
 
-To do it you need an empty OpenShift cluster and follow the steps below: 
+To do it you need an empty OpenShift cluster and follow the steps below:
 
 1. Save mongo chart values (named `values.yaml`)
 
-```yaml 
+```yaml
 securityContext:
   enabled: true
   fsGroup: 1000650001
@@ -190,7 +203,7 @@ auth:
    enabled: false
 ```
 
-2. Install MongoDB 
+2. Install MongoDB
 
 ```sh
 helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values values.yaml

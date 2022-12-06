@@ -1,4 +1,4 @@
-## kubectl-testkube version
+## testkube version
 
 Shows version and build info
 
@@ -7,7 +7,7 @@ Shows version and build info
 Shows version and build info
 
 ```
-kubectl-testkube version [flags]
+testkube version [flags]
 ```
 
 ### Options
@@ -28,5 +28,5 @@ kubectl-testkube version [flags]
 
 ### SEE ALSO
 
-* [kubectl-testkube](kubectl-testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 
