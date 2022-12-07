@@ -23,8 +23,6 @@ func NewServer(config Config) HTTPServer {
 		Config: config,
 	}
 
-  s.Log.Error("hi");
-
 	s.Init()
 	return s
 }
