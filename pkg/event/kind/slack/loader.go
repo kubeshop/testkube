@@ -1,20 +1,23 @@
 package slack
 
 import (
+	"encoding/json"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/slacknotifier"
+	"github.com/kubeshop/testkube/pkg/slack"
 	"go.uber.org/zap"
 )
 
 var _ common.ListenerLoader = &SlackLoader{}
 
-func NewSlackLoader(messageTemplate string, events []testkube.EventType) *SlackLoader {
+func NewSlackLoader(messageTemplate, configString string, events []testkube.EventType) *SlackLoader {
 	return &SlackLoader{
 		Log:             log.DefaultLogger,
 		messageTemplate: messageTemplate,
 		events:          events,
+		configString:    configString,
 	}
 }
 
@@ -23,6 +26,7 @@ type SlackLoader struct {
 	Log             *zap.SugaredLogger
 	messageTemplate string
 	events          []testkube.EventType
+	configString    string
 }
 
 func (r *SlackLoader) Kind() string {
@@ -31,7 +35,11 @@ func (r *SlackLoader) Kind() string {
 
 // Load returns single listener for slack (as we don't have any sophisticated config yet)
 func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
-	slackNotifier := slacknotifier.NewSlackNotifier(r.messageTemplate)
+	var config []slack.NotificationsConfig
+	if err := json.Unmarshal([]byte(r.configString), &config); err != nil {
+		r.Log.Errorw("error unmarshalling slack config", "error", err)
+	}
+	slackNotifier := slack.NewNotifier(r.messageTemplate, config)
 	if slackNotifier.Ready {
 		return common.Listeners{NewSlackListener("slack", "", r.events, slackNotifier)}, nil
 	}
