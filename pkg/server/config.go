@@ -14,11 +14,6 @@ type Config struct {
 	Http      fiber.Config
 }
 
-type HttpConfig struct {
-	ReadBufferSize  int
-	WriteBufferSize int
-}
-
 // Addr returns port based address
 func (c Config) Addr() string {
 	return fmt.Sprintf(":%d", c.Port)
