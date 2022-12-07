@@ -92,9 +92,9 @@ func (c TestClient) CreateTest(options UpsertTestOptions) (test testkube.Test, e
 }
 
 // UpdateTest updates Test Custom Resource
-func (c TestClient) UpdateTest(options UpsertTestOptions) (test testkube.Test, err error) {
+func (c TestClient) UpdateTest(options UpdateTestOptions) (test testkube.Test, err error) {
 	uri := c.testTransport.GetURI("/tests/%s", options.Name)
-	request := testkube.TestUpsertRequest(options)
+	request := testkube.TestUpdateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

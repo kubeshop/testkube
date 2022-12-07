@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -71,11 +70,9 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			namespace := cmd.Flag("namespace").Value.String()
 			var client client.Client
-			var testLabels map[string]string
 			if !crdOnly {
 				client, namespace = common.GetClient(cmd)
 				test, _ := client.GetTest(testName)
-				testLabels = test.Labels
 
 				if testName == test.Name {
 					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
@@ -88,7 +85,7 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
+			options, err := NewUpsertTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
 			if !crdOnly {
@@ -102,12 +99,7 @@ func NewCreateTestsCmd() *cobra.Command {
 					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
 					ui.ExitOnError("could not upload files", err)
 				}
-			}
 
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
-
-			if !crdOnly {
 				_, err = client.CreateTest(options)
 				ui.ExitOnError("creating test "+testName+" in namespace "+namespace, err)
 
@@ -251,19 +243,6 @@ func validateExecutorType(executorType string, executors testkube.ExecutorsDetai
 
 	if !typeValid {
 		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
-	}
-
-	return nil
-}
-
-func validateSchedule(schedule string) error {
-	if schedule == "" {
-		return nil
-	}
-
-	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	if _, err := specParser.Parse(schedule); err != nil {
-		return err
 	}
 
 	return nil

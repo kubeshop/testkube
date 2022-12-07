@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 
+	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -108,12 +108,7 @@ func watchLogs(id string, client apiclientv1.Client) {
 	uiShellGetExecution(id)
 }
 
-func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
-	var fileContent []byte
-
-	testContentType := cmd.Flag("test-content-type").Value.String()
-	file := cmd.Flag("file").Value.String()
-	uri := cmd.Flag("uri").Value.String()
+func newRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
 	gitCommit := cmd.Flag("git-commit").Value.String()
@@ -122,30 +117,70 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	gitToken := cmd.Flag("git-token").Value.String()
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
-		return content, err
+		return nil, err
 	}
 
 	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
 	if err != nil {
-		return content, err
+		return nil, err
 	}
 
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
+
+	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
+
+	if !hasGitParams {
+		return nil, nil
+	}
+
+	repository = &testkube.Repository{
+		Type_:      "git",
+		Uri:        gitUri,
+		Branch:     gitBranch,
+		Commit:     gitCommit,
+		Path:       gitPath,
+		Username:   gitUsername,
+		Token:      gitToken,
+		WorkingDir: gitWorkingDir,
+	}
+
+	for key, val := range gitUsernameSecret {
+		repository.UsernameSecret = &testkube.SecretRef{
+			Name: key,
+			Key:  val,
+		}
+	}
+
+	for key, val := range gitTokenSecret {
+		repository.TokenSecret = &testkube.SecretRef{
+			Name: key,
+			Key:  val,
+		}
+	}
+
+	return repository, nil
+}
+
+func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
+	var fileContent []byte
+
+	testContentType := cmd.Flag("test-content-type").Value.String()
+	file := cmd.Flag("file").Value.String()
+	uri := cmd.Flag("uri").Value.String()
+
 	// get file content
 	if file != "" {
 		fileContent, err = os.ReadFile(file)
 		if err != nil {
-			return content, fmt.Errorf("reading file "+file+" error: %w", err)
+			return nil, fmt.Errorf("reading file "+file+" error: %w", err)
 		}
 	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
 		fileContent, err = io.ReadAll(os.Stdin)
 		if err != nil {
-			return content, fmt.Errorf("reading stdin error: %w", err)
+			return nil, fmt.Errorf("reading stdin error: %w", err)
 		}
 	}
-
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
 
 	if uri != "" && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeFileURI)
@@ -155,36 +190,13 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		testContentType = string(testkube.TestContentTypeString)
 	}
 
-	var repository *testkube.Repository
-	if hasGitParams {
-		if testContentType == "" {
-			testContentType = string(testkube.TestContentTypeGitDir)
-		}
+	repository, err := newRepositoryFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
 
-		repository = &testkube.Repository{
-			Type_:      "git",
-			Uri:        gitUri,
-			Branch:     gitBranch,
-			Commit:     gitCommit,
-			Path:       gitPath,
-			Username:   gitUsername,
-			Token:      gitToken,
-			WorkingDir: gitWorkingDir,
-		}
-
-		for key, val := range gitUsernameSecret {
-			repository.UsernameSecret = &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-		}
-
-		for key, val := range gitTokenSecret {
-			repository.TokenSecret = &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-		}
+	if repository != nil && testContentType == "" {
+		testContentType = string(testkube.TestContentTypeGitDir)
 	}
 
 	content = &testkube.TestContent{
@@ -197,7 +209,122 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	return content, nil
 }
 
-func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiclientv1.UpsertTestOptions, err error) {
+func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.ArtifactRequest, err error) {
+	artifactStorageClassName := cmd.Flag("artifact-storage-class-name").Value.String()
+	artifactVolumeMountPath := cmd.Flag("artifact-volume-mount-path").Value.String()
+	dirs, err := cmd.Flags().GetStringArray("artifact-dir")
+	if err != nil {
+		return nil, err
+	}
+
+	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+		request = &testkube.ArtifactRequest{
+			StorageClassName: artifactStorageClassName,
+			VolumeMountPath:  artifactVolumeMountPath,
+			Dirs:             dirs,
+		}
+	}
+
+	return request, nil
+}
+
+func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionRequest, err error) {
+	variables, err := common.CreateVariables(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
+	if err != nil {
+		return nil, err
+	}
+
+	executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	executionName := cmd.Flag("execution-name").Value.String()
+	envs, err := cmd.Flags().GetStringToString("env")
+	if err != nil {
+		return nil, err
+	}
+
+	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
+	if err != nil {
+		return nil, err
+	}
+
+	paramsFileContent := ""
+	variablesFile := cmd.Flag("variables-file").Value.String()
+	if variablesFile != "" {
+		b, err := os.ReadFile(variablesFile)
+		if err != nil {
+			return nil, err
+		}
+
+		paramsFileContent = string(b)
+	}
+
+	httpProxy := cmd.Flag("http-proxy").Value.String()
+	httpsProxy := cmd.Flag("https-proxy").Value.String()
+	image := cmd.Flag("image").Value.String()
+	command, err := cmd.Flags().GetStringArray("command")
+	if err != nil {
+		return nil, err
+	}
+
+	timeout, err := cmd.Flags().GetInt64("timeout")
+	if err != nil {
+		return nil, err
+	}
+
+	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+	if err != nil {
+		return nil, err
+	}
+
+	var imageSecrets []testkube.LocalObjectReference
+	for _, secretName := range imagePullSecretNames {
+		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+	}
+
+	jobTemplateContent := ""
+	jobTemplate := cmd.Flag("job-template").Value.String()
+	if jobTemplate != "" {
+		b, err := os.ReadFile(jobTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		jobTemplateContent = string(b)
+	}
+
+	request = &testkube.ExecutionRequest{
+		Name:                  executionName,
+		VariablesFile:         paramsFileContent,
+		Variables:             variables,
+		Image:                 image,
+		Command:               command,
+		Args:                  executorArgs,
+		ImagePullSecrets:      imageSecrets,
+		Envs:                  envs,
+		SecretEnvs:            secretEnvs,
+		HttpProxy:             httpProxy,
+		HttpsProxy:            httpsProxy,
+		ActiveDeadlineSeconds: timeout,
+		JobTemplate:           jobTemplateContent,
+	}
+
+	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	return request, nil
+}
+
+func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 
 	ui.ExitOnError("creating content from passed parameters", err)
@@ -210,19 +337,8 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		return options, err
 	}
 
-	variables, err := common.CreateVariables(cmd)
-	if err != nil {
-		return options, err
-	}
-
 	schedule := cmd.Flag("schedule").Value.String()
-	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
-	if err != nil {
-		return options, err
-	}
-
-	executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
-	if err != nil {
+	if err = validateSchedule(schedule); err != nil {
 		return options, err
 	}
 
@@ -240,98 +356,12 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command, testLabels map[string]str
 		Namespace: namespace,
 		Schedule:  schedule,
 		Uploads:   copyFiles,
+		Labels:    labels,
 	}
 
-	executionName := cmd.Flag("execution-name").Value.String()
-	envs, err := cmd.Flags().GetStringToString("env")
+	options.ExecutionRequest, err = newExecutionRequestFromFlags(cmd)
 	if err != nil {
 		return options, err
-	}
-
-	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
-	if err != nil {
-		return options, err
-	}
-
-	paramsFileContent := ""
-	variablesFile := cmd.Flag("variables-file").Value.String()
-	if variablesFile != "" {
-		b, err := os.ReadFile(variablesFile)
-		if err != nil {
-			return options, err
-		}
-
-		paramsFileContent = string(b)
-	}
-
-	httpProxy := cmd.Flag("http-proxy").Value.String()
-	httpsProxy := cmd.Flag("https-proxy").Value.String()
-	image := cmd.Flag("image").Value.String()
-	command, err := cmd.Flags().GetStringArray("command")
-	if err != nil {
-		return options, err
-	}
-	timeout, err := cmd.Flags().GetInt64("timeout")
-	if err != nil {
-		return options, err
-	}
-
-	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
-	if err != nil {
-		return options, err
-	}
-	var imageSecrets []testkube.LocalObjectReference
-	for _, secretName := range imagePullSecretNames {
-		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
-	}
-
-	artifactStorageClassName := cmd.Flag("artifact-storage-class-name").Value.String()
-	artifactVolumeMountPath := cmd.Flag("artifact-volume-mount-path").Value.String()
-	dirs, err := cmd.Flags().GetStringArray("artifact-dir")
-	if err != nil {
-		return options, err
-	}
-
-	jobTemplateContent := ""
-	jobTemplate := cmd.Flag("job-template").Value.String()
-	if jobTemplate != "" {
-		b, err := os.ReadFile(jobTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		jobTemplateContent = string(b)
-	}
-
-	options.ExecutionRequest = &testkube.ExecutionRequest{
-		Name:                  executionName,
-		VariablesFile:         paramsFileContent,
-		Variables:             variables,
-		Image:                 image,
-		Command:               command,
-		Args:                  executorArgs,
-		ImagePullSecrets:      imageSecrets,
-		Envs:                  envs,
-		SecretEnvs:            secretEnvs,
-		HttpProxy:             httpProxy,
-		HttpsProxy:            httpsProxy,
-		ActiveDeadlineSeconds: timeout,
-		JobTemplate:           jobTemplateContent,
-	}
-
-	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
-		options.ExecutionRequest.ArtifactRequest = &testkube.ArtifactRequest{
-			StorageClassName: artifactStorageClassName,
-			VolumeMountPath:  artifactVolumeMountPath,
-			Dirs:             dirs,
-		}
-	}
-
-	// if labels are passed and are different from the existing overwrite
-	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
-		options.Labels = labels
-	} else {
-		options.Labels = testLabels
 	}
 
 	// try to detect type if none passed
@@ -421,5 +451,456 @@ func uploadFiles(client client.Client, parentName string, parentType client.Test
 			return fmt.Errorf("could not upload file %s for %v with name %s: %w", paths[0], parentType, parentName, err)
 		}
 	}
+	return nil
+}
+
+func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestOptions, err error) {
+	contentUpdate, err := newContentUpdateFromFlags(cmd)
+	ui.ExitOnError("creating content from passed parameters", err)
+
+	if contentUpdate != nil {
+		options.Content = &contentUpdate
+	}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"name",
+			options.Name,
+		},
+		{
+			"type",
+			options.Type_,
+		},
+		{
+			"namespace",
+			options.Namespace,
+		},
+		{
+			"source",
+			options.Source,
+		},
+	}
+
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+		}
+	}
+
+	if cmd.Flag("schedule").Changed {
+		value := cmd.Flag("schedule").Value.String()
+		if err = validateSchedule(value); err != nil {
+			return options, err
+		}
+
+		options.Schedule = &value
+	}
+
+	if cmd.Flag("label").Changed {
+		labels, err := cmd.Flags().GetStringToString("label")
+		if err != nil {
+			return options, err
+		}
+
+		options.Labels = &labels
+	}
+
+	if cmd.Flag("copy-files").Changed {
+		copyFiles, err := cmd.Flags().GetStringArray("copy-files")
+		if err != nil {
+			return options, err
+		}
+
+		options.Uploads = &copyFiles
+	}
+
+	executionRequest, err := newExecutionUpdateRequestFromFlags(cmd)
+	if err != nil {
+		return options, err
+	}
+
+	if executionRequest != nil {
+		options.ExecutionRequest = &executionRequest
+	}
+
+	return options, nil
+}
+
+func newRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.RepositoryUpdate, err error) {
+	repository = &testkube.RepositoryUpdate{}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"git-uri",
+			repository.Uri,
+		},
+		{
+			"git-branch",
+			repository.Branch,
+		},
+		{
+			"git-commit",
+			repository.Commit,
+		},
+		{
+			"git-path",
+			repository.Path,
+		},
+		{
+			"git-username",
+			repository.Username,
+		},
+		{
+			"git-token",
+			repository.Token,
+		},
+		{
+			"git-working-dir",
+			repository.WorkingDir,
+		},
+	}
+
+	var nonEmpty bool
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("git-username-secret").Changed {
+		gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+		if err != nil {
+			return nil, err
+		}
+
+		for key, val := range gitUsernameSecret {
+			secret := &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
+
+			repository.UsernameSecret = &secret
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("git-token-secret").Changed {
+		gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+		if err != nil {
+			return nil, err
+		}
+
+		for key, val := range gitTokenSecret {
+			secret := &testkube.SecretRef{
+				Name: key,
+				Key:  val,
+			}
+
+			repository.TokenSecret = &secret
+			nonEmpty = true
+		}
+	}
+
+	if !nonEmpty {
+		return repository, nil
+	}
+
+	return nil, nil
+}
+
+func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestContentUpdate, err error) {
+	content = &testkube.TestContentUpdate{}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"test-content-type",
+			content.Type_,
+		},
+		{
+			"uri",
+			content.Uri,
+		},
+	}
+
+	var nonEmpty bool
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("file").Changed {
+		var fileContent []byte
+		// get file content
+		file := cmd.Flag("file").Value.String()
+		if file != "" {
+			fileContent, err = os.ReadFile(file)
+			if err != nil {
+				return nil, fmt.Errorf("reading file "+file+" error: %w", err)
+			}
+		} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
+			fileContent, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				return nil, fmt.Errorf("reading stdin error: %w", err)
+			}
+		}
+
+		data := string(fileContent)
+		content.Data = &data
+		nonEmpty = true
+	}
+
+	repository, err := newRepositoryUpdateFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	if repository != nil {
+		content.Repository = &repository
+		nonEmpty = true
+	}
+
+	if !nonEmpty {
+		return content, nil
+	}
+
+	return nil, nil
+}
+
+func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionUpdateRequest, err error) {
+	request = &testkube.ExecutionUpdateRequest{}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"execution-name",
+			request.Name,
+		},
+		{
+			"image",
+			request.Image,
+		},
+		{
+			"http-proxy",
+			request.HttpProxy,
+		},
+		{
+			"https-proxy",
+			request.HttpsProxy,
+		},
+	}
+
+	var nonEmpty bool
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
+		variables, err := common.CreateVariables(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		request.Variables = &variables
+		nonEmpty = true
+	}
+
+	if cmd.Flag("executor-args").Changed {
+		binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
+		if err != nil {
+			return nil, err
+		}
+
+		executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+		if err != nil {
+			return nil, err
+		}
+
+		request.Args = &executorArgs
+		nonEmpty = true
+	}
+
+	var hashes = []struct {
+		name        string
+		destination *map[string]string
+	}{
+		{
+			"env",
+			request.Envs,
+		},
+		{
+			"secret-env",
+			request.SecretEnvs,
+		},
+	}
+
+	for _, hash := range hashes {
+		if cmd.Flag(hash.name).Changed {
+			value, err := cmd.Flags().GetStringToString(hash.name)
+			if err != nil {
+				return nil, err
+			}
+
+			hash.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("variables-file").Changed {
+		paramsFileContent := ""
+		variablesFile := cmd.Flag("variables-file").Value.String()
+		if variablesFile != "" {
+			b, err := os.ReadFile(variablesFile)
+			if err != nil {
+				return nil, err
+			}
+
+			paramsFileContent = string(b)
+			request.VariablesFile = &paramsFileContent
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("command").Changed {
+		command, err := cmd.Flags().GetStringArray("command")
+		if err != nil {
+			return nil, err
+		}
+
+		request.Command = &command
+		nonEmpty = true
+	}
+
+	if cmd.Flag("timeout").Changed {
+		timeout, err := cmd.Flags().GetInt64("timeout")
+		if err != nil {
+			return nil, err
+		}
+
+		request.ActiveDeadlineSeconds = &timeout
+		nonEmpty = true
+	}
+
+	if cmd.Flag("image-pull-secrets").Changed {
+		imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+		if err != nil {
+			return nil, err
+		}
+
+		var imageSecrets []testkube.LocalObjectReference
+		for _, secretName := range imagePullSecretNames {
+			imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+		}
+
+		request.ImagePullSecrets = &imageSecrets
+		nonEmpty = true
+	}
+
+	if cmd.Flag("job-template").Changed {
+		jobTemplateContent := ""
+		jobTemplate := cmd.Flag("job-template").Value.String()
+		if jobTemplate != "" {
+			b, err := os.ReadFile(jobTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			jobTemplateContent = string(b)
+		}
+
+		request.JobTemplate = &jobTemplateContent
+		nonEmpty = true
+	}
+
+	artifactRequest, err := newArtifactUpdateRequestFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	if artifactRequest != nil {
+		request.ArtifactRequest = &artifactRequest
+		nonEmpty = true
+	}
+
+	if nonEmpty {
+		return request, nil
+	}
+
+	return nil, nil
+}
+
+func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.ArtifactUpdateRequest, err error) {
+	request = &testkube.ArtifactUpdateRequest{}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"artifact-storage-class-name",
+			request.StorageClassName,
+		},
+		{
+			"artifact-volume-mount-path",
+			request.VolumeMountPath,
+		},
+	}
+
+	var nonEmpty bool
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	if cmd.Flag("artifact-dir").Changed {
+		dirs, err := cmd.Flags().GetStringArray("artifact-dir")
+		if err != nil {
+			return nil, err
+		}
+
+		request.Dirs = &dirs
+		nonEmpty = true
+	}
+
+	if nonEmpty {
+		return request, nil
+	}
+
+	return nil, nil
+}
+
+func validateSchedule(schedule string) error {
+	if schedule == "" {
+		return nil
+	}
+
+	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := specParser.Parse(schedule); err != nil {
+		return err
+	}
+
 	return nil
 }

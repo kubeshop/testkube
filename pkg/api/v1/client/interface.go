@@ -24,7 +24,7 @@ type TestAPI interface {
 	GetTest(id string) (test testkube.Test, err error)
 	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpdateTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string) error
 	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
@@ -116,9 +116,13 @@ type CopyFileAPI interface {
 // UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertTestOptions - is mapping for now to OpenAPI schema for creating/changing test
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
 // if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
+
+// UpdateTestOptions - is mapping for now to OpenAPI schema for changing test
+// if needed can be extended to custom struct
+type UpdateTestOptions testkube.TestUpdateRequest
 
 // UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
 type UpsertExecutorOptions testkube.ExecutorUpsertRequest
@@ -129,9 +133,13 @@ type UpdateExecutorOptions testkube.ExecutorUpdateRequest
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
 
-// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating/changing test source
+// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
 type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
+
+// UpdateTestSourceOptions - is mapping for now to OpenAPI schema for changing test source
+// if needed can be extended to custom struct
+type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
