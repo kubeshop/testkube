@@ -46,7 +46,7 @@ type ExecutionAPI interface {
 // TestSuiteAPI describes test suite api methods
 type TestSuiteAPI interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
@@ -99,7 +99,7 @@ type ServiceAPI interface {
 // TestSourceAPI describes test source api methods
 type TestSourceAPI interface {
 	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
-	UpdateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
+	UpdateTestSource(options UpdataTestSourceOptions) (testSource testkube.TestSource, err error)
 	GetTestSource(name string) (testSource testkube.TestSource, err error)
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
@@ -113,8 +113,11 @@ type CopyFileAPI interface {
 
 // TODO consider replacing below types by testkube.*
 
-// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
+// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
+
+// UpdateTestSuiteOptions - mapping to OpenAPI schema for changing testsuite
+type UpdateTestSuiteOptions testkube.TestSuiteUpdateRequest
 
 // UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
 // if needed can be extended to custom struct

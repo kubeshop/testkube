@@ -2,56 +2,33 @@ package testsources
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"reflect"
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err error) {
-	var fileContent []byte
-
 	sourceType := cmd.Flag("source-type").Value.String()
-	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	gitUri := cmd.Flag("git-uri").Value.String()
-	gitBranch := cmd.Flag("git-branch").Value.String()
-	gitCommit := cmd.Flag("git-commit").Value.String()
-	gitPath := cmd.Flag("git-path").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
-	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+
+	data, err := common.NewDataFromFlags(cmd)
 	if err != nil {
-		return source, err
+		return nil, err
 	}
 
-	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-	if err != nil {
-		return source, err
-	}
-
-	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
-	// get file content
-	if file != "" {
-		fileContent, err = os.ReadFile(file)
-		if err != nil {
-			return source, fmt.Errorf("reading file "+file+" error: %w", err)
-		}
-	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-		fileContent, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return source, fmt.Errorf("reading stdin error: %w", err)
-		}
+	fileContent := ""
+	if data != nil {
+		fileContent = *data
 	}
 
 	// content is correct when is passed from file, by uri, ur by git repo
 	if len(fileContent) == 0 && uri == "" && gitUri == "" {
-		return source, fmt.Errorf("empty test source, please pass some data to create test source")
+		return nil, fmt.Errorf("empty test source, please pass some data to create test source")
 	}
 
 	if uri != "" && sourceType == "" {
@@ -62,36 +39,13 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 		sourceType = string(testkube.TestContentTypeString)
 	}
 
-	var repository *testkube.Repository
-	if gitUri != "" {
-		if sourceType == "" {
-			sourceType = string(testkube.TestContentTypeGitDir)
-		}
+	repository, err := common.NewRepositoryFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
 
-		repository = &testkube.Repository{
-			Type_:      "git",
-			Uri:        gitUri,
-			Branch:     gitBranch,
-			Commit:     gitCommit,
-			Path:       gitPath,
-			Username:   gitUsername,
-			Token:      gitToken,
-			WorkingDir: gitWorkingDir,
-		}
-
-		for key, val := range gitUsernameSecret {
-			repository.UsernameSecret = &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-		}
-
-		for key, val := range gitTokenSecret {
-			repository.TokenSecret = &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-		}
+	if repository != nil && sourceType == "" {
+		sourceType = string(testkube.TestContentTypeGitDir)
 	}
 
 	source = &testkube.TestSource{
@@ -104,7 +58,7 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 	return source, nil
 }
 
-func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiclientv1.UpsertTestSourceOptions, err error) {
+func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestSourceOptions, err error) {
 	source, err := newSourceFromFlags(cmd)
 	ui.ExitOnError("creating source from passed parameters", err)
 
@@ -120,13 +74,88 @@ func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command, testLabels map[stri
 		Data:       source.Data,
 		Repository: source.Repository,
 		Uri:        source.Uri,
+		Labels:     labels,
 	}
 
-	// if labels are passed and are different from the existing overwrite
-	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
-		options.Labels = labels
-	} else {
-		options.Labels = testLabels
+	return options, nil
+}
+
+func newSourceUpdateFromFlags(cmd *cobra.Command) (source *testkube.TestSourceUpdate, err error) {
+	source = &testkube.TestSourceUpdate{}
+
+	var fields = []struct {
+		name        string
+		destination *string
+	}{
+		{
+			"source-type",
+			source.Name,
+		},
+		{
+			"uri",
+			source.Uri,
+		},
+	}
+
+	var nonEmpty bool
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			field.destination = &value
+			nonEmpty = true
+		}
+	}
+
+	data, err := common.NewDataFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	if data != nil {
+		source.Data = data
+		nonEmpty = true
+	}
+
+	repository, err := common.NewRepositoryUpdateFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	if repository != nil {
+		source.Repository = &repository
+		nonEmpty = true
+	}
+
+	if !nonEmpty {
+		return source, nil
+	}
+
+	return nil, nil
+}
+
+func NewUpdateTestSourceOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestSourceOptions, err error) {
+	source, err := newSourceUpdateFromFlags(cmd)
+	ui.ExitOnError("creating source from passed parameters", err)
+
+	if cmd.Flag("name").Changed {
+		name := cmd.Flag("name").Value.String()
+		options.Name = &name
+	}
+
+	if cmd.Flag("label").Changed {
+		labels, err := cmd.Flags().GetStringToString("label")
+		if err != nil {
+			return options, err
+		}
+
+		options.Labels = &labels
+	}
+
+	if source != nil {
+		options.Type_ = source.Type_
+		options.Data = source.Data
+		options.Repository = source.Repository
+		options.Uri = source.Uri
 	}
 
 	return options, nil

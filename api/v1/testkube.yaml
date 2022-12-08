@@ -2702,6 +2702,27 @@ components:
           additionalProperties:
             type: string
 
+    TestSourceUpdate:
+      description: Test source resource update for shared test content
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+
     TestSourceUpsertRequest:
       description: test source create request body
       type: object

@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -108,78 +107,18 @@ func watchLogs(id string, client apiclientv1.Client) {
 	uiShellGetExecution(id)
 }
 
-func newRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
-	gitUri := cmd.Flag("git-uri").Value.String()
-	gitBranch := cmd.Flag("git-branch").Value.String()
-	gitCommit := cmd.Flag("git-commit").Value.String()
-	gitPath := cmd.Flag("git-path").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
-	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
-	if err != nil {
-		return nil, err
-	}
-
-	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-	if err != nil {
-		return nil, err
-	}
-
-	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
-
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
-
-	if !hasGitParams {
-		return nil, nil
-	}
-
-	repository = &testkube.Repository{
-		Type_:      "git",
-		Uri:        gitUri,
-		Branch:     gitBranch,
-		Commit:     gitCommit,
-		Path:       gitPath,
-		Username:   gitUsername,
-		Token:      gitToken,
-		WorkingDir: gitWorkingDir,
-	}
-
-	for key, val := range gitUsernameSecret {
-		repository.UsernameSecret = &testkube.SecretRef{
-			Name: key,
-			Key:  val,
-		}
-	}
-
-	for key, val := range gitTokenSecret {
-		repository.TokenSecret = &testkube.SecretRef{
-			Name: key,
-			Key:  val,
-		}
-	}
-
-	return repository, nil
-}
-
 func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
-	var fileContent []byte
-
 	testContentType := cmd.Flag("test-content-type").Value.String()
-	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 
-	// get file content
-	if file != "" {
-		fileContent, err = os.ReadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("reading file "+file+" error: %w", err)
-		}
-	} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-		fileContent, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return nil, fmt.Errorf("reading stdin error: %w", err)
-		}
+	data, err := common.NewDataFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	fileContent := ""
+	if data != nil {
+		fileContent = *data
 	}
 
 	if uri != "" && testContentType == "" {
@@ -190,7 +129,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		testContentType = string(testkube.TestContentTypeString)
 	}
 
-	repository, err := newRepositoryFromFlags(cmd)
+	repository, err := common.NewRepositoryFromFlags(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +140,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 
 	content = &testkube.TestContent{
 		Type_:      testContentType,
-		Data:       string(fileContent),
+		Data:       fileContent,
 		Repository: repository,
 		Uri:        uri,
 	}
@@ -530,93 +469,6 @@ func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upda
 	return options, nil
 }
 
-func newRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.RepositoryUpdate, err error) {
-	repository = &testkube.RepositoryUpdate{}
-
-	var fields = []struct {
-		name        string
-		destination *string
-	}{
-		{
-			"git-uri",
-			repository.Uri,
-		},
-		{
-			"git-branch",
-			repository.Branch,
-		},
-		{
-			"git-commit",
-			repository.Commit,
-		},
-		{
-			"git-path",
-			repository.Path,
-		},
-		{
-			"git-username",
-			repository.Username,
-		},
-		{
-			"git-token",
-			repository.Token,
-		},
-		{
-			"git-working-dir",
-			repository.WorkingDir,
-		},
-	}
-
-	var nonEmpty bool
-	for _, field := range fields {
-		if cmd.Flag(field.name).Changed {
-			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
-			nonEmpty = true
-		}
-	}
-
-	if cmd.Flag("git-username-secret").Changed {
-		gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
-		if err != nil {
-			return nil, err
-		}
-
-		for key, val := range gitUsernameSecret {
-			secret := &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-
-			repository.UsernameSecret = &secret
-			nonEmpty = true
-		}
-	}
-
-	if cmd.Flag("git-token-secret").Changed {
-		gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-		if err != nil {
-			return nil, err
-		}
-
-		for key, val := range gitTokenSecret {
-			secret := &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-
-			repository.TokenSecret = &secret
-			nonEmpty = true
-		}
-	}
-
-	if !nonEmpty {
-		return repository, nil
-	}
-
-	return nil, nil
-}
-
 func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestContentUpdate, err error) {
 	content = &testkube.TestContentUpdate{}
 
@@ -643,28 +495,17 @@ func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestConten
 		}
 	}
 
-	if cmd.Flag("file").Changed {
-		var fileContent []byte
-		// get file content
-		file := cmd.Flag("file").Value.String()
-		if file != "" {
-			fileContent, err = os.ReadFile(file)
-			if err != nil {
-				return nil, fmt.Errorf("reading file "+file+" error: %w", err)
-			}
-		} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-			fileContent, err = io.ReadAll(os.Stdin)
-			if err != nil {
-				return nil, fmt.Errorf("reading stdin error: %w", err)
-			}
-		}
+	data, err := common.NewDataFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
 
-		data := string(fileContent)
-		content.Data = &data
+	if data != nil {
+		content.Data = data
 		nonEmpty = true
 	}
 
-	repository, err := newRepositoryUpdateFromFlags(cmd)
+	repository, err := common.NewRepositoryUpdateFromFlags(cmd)
 	if err != nil {
 		return nil, err
 	}
