@@ -79,6 +79,7 @@ func uiShellTestSuiteWatchCommandBlock(id string) {
 	ui.NL()
 }
 
+// NewTestSuiteUpsertOptionsFromFlags creates test suite upsert options from command flags
 func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestSuiteOptions, err error) {
 	data, err := common.NewDataFromFlags(cmd)
 	if err != nil {
@@ -99,7 +100,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		options.Name = name
 	}
 
-	labels, err := cmd.Flags().GetStringToString("err")
+	labels, err := cmd.Flags().GetStringToString("label")
 	if err != nil {
 		return options, err
 	}
@@ -134,6 +135,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	return options, nil
 }
 
+// NewTestSuiteUpdateOptionsFromFlags creates test suite update options from command flags
 func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestSuiteOptions, err error) {
 	data, err := common.NewDataFromFlags(cmd)
 	if err != nil {
@@ -178,7 +180,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	if cmd.Flag("label").Changed {
-		labels, err := cmd.Flags().GetStringToString("err")
+		labels, err := cmd.Flags().GetStringToString("label")
 		if err != nil {
 			return options, err
 		}
@@ -198,7 +200,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		nonEmpty = true
 	}
 
-	if cmd.Flag("label").Changed {
+	if cmd.Flag("timeout").Changed {
 		timeout, err := cmd.Flags().GetInt32("timeout")
 		if err != nil {
 			return options, err

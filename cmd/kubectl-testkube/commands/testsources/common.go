@@ -8,7 +8,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err error) {
@@ -58,9 +57,12 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 	return source, nil
 }
 
+// NewUpsertTestSourceOptionsFromFlags creates test source options from command flags
 func NewUpsertTestSourceOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestSourceOptions, err error) {
 	source, err := newSourceFromFlags(cmd)
-	ui.ExitOnError("creating source from passed parameters", err)
+	if err != nil {
+		return options, fmt.Errorf("creating source from passed parameters %w", err)
+	}
 
 	name := cmd.Flag("name").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
@@ -133,9 +135,12 @@ func newSourceUpdateFromFlags(cmd *cobra.Command) (source *testkube.TestSourceUp
 	return nil, nil
 }
 
+// NewUpdateTestSourceOptionsFromFlags creates test update source options from command flags
 func NewUpdateTestSourceOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestSourceOptions, err error) {
 	source, err := newSourceUpdateFromFlags(cmd)
-	ui.ExitOnError("creating source from passed parameters", err)
+	if err != nil {
+		return options, fmt.Errorf("creating source from passed parameters %w", err)
+	}
 
 	if cmd.Flag("name").Changed {
 		name := cmd.Flag("name").Value.String()
