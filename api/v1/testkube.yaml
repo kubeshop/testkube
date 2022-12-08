@@ -3413,7 +3413,6 @@ components:
       type: object
       allOf:
         - $ref: "#/components/schemas/Webhook"
-        - $ref: "#/components/schemas/ObjectRef"
 
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
