@@ -72,7 +72,7 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 		hasMatch := false
 		if config.Selector != nil {
 			for k, v := range config.Selector {
-				if labels != nil && labels[k] != v {
+				if labels != nil && labels[k] == v {
 					hasMatch = true
 				}
 			}
