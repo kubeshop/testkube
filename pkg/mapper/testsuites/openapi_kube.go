@@ -173,6 +173,7 @@ func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest,
 	if request.After != nil {
 		testSuite.Spec.After = mapTestStepsToCRD(*request.After)
 	}
+
 	if request.Labels != nil {
 		testSuite.Labels = *request.Labels
 	}
