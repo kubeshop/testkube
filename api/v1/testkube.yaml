@@ -3408,6 +3408,13 @@ components:
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 
+    WebhookCreateRequest:
+      description: webhook create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Webhook"
+        - $ref: "#/components/schemas/ObjectRef"
+
     # Copied from CRD spec
     # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
     # TODO we need to sync those in some nice way
