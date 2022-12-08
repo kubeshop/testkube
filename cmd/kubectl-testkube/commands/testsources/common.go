@@ -87,15 +87,15 @@ func newSourceUpdateFromFlags(cmd *cobra.Command) (source *testkube.TestSourceUp
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"source-type",
-			source.Name,
+			&source.Name,
 		},
 		{
 			"uri",
-			source.Uri,
+			&source.Uri,
 		},
 	}
 
@@ -103,7 +103,7 @@ func newSourceUpdateFromFlags(cmd *cobra.Command) (source *testkube.TestSourceUp
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}

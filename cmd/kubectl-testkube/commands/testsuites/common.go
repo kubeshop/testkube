@@ -151,22 +151,22 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"name",
-			options.Name,
+			&options.Name,
 		},
 		{
 			"namespace",
-			options.Namespace,
+			&options.Namespace,
 		},
 	}
 
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 		}
 	}
 
@@ -212,26 +212,26 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 
 	var executionFields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"execution-name",
-			executionRequest.Name,
+			&executionRequest.Name,
 		},
 		{
 			"http-proxy",
-			executionRequest.HttpProxy,
+			&executionRequest.HttpProxy,
 		},
 		{
 			"https-proxy",
-			executionRequest.HttpsProxy,
+			&executionRequest.HttpsProxy,
 		},
 	}
 
 	for _, field := range executionFields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}

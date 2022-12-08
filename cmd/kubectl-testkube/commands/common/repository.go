@@ -66,35 +66,35 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"git-uri",
-			repository.Uri,
+			&repository.Uri,
 		},
 		{
 			"git-branch",
-			repository.Branch,
+			&repository.Branch,
 		},
 		{
 			"git-commit",
-			repository.Commit,
+			&repository.Commit,
 		},
 		{
 			"git-path",
-			repository.Path,
+			&repository.Path,
 		},
 		{
 			"git-username",
-			repository.Username,
+			&repository.Username,
 		},
 		{
 			"git-token",
-			repository.Token,
+			&repository.Token,
 		},
 		{
 			"git-working-dir",
-			repository.WorkingDir,
+			&repository.WorkingDir,
 		},
 	}
 
@@ -102,22 +102,22 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}
 
 	var refs = []struct {
 		name        string
-		destination **testkube.SecretRef
+		destination ***testkube.SecretRef
 	}{
 		{
 			"git-username-secret",
-			repository.UsernameSecret,
+			&repository.UsernameSecret,
 		},
 		{
 			"git-token-secret",
-			repository.TokenSecret,
+			&repository.TokenSecret,
 		},
 	}
 
@@ -134,7 +134,7 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 					Key:  val,
 				}
 
-				ref.destination = &secret
+				*ref.destination = &secret
 				nonEmpty = true
 			}
 		}

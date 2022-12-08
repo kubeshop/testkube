@@ -80,52 +80,52 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpdateExecutorOptions, err error) {
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"name",
-			options.Name,
+			&options.Name,
 		},
 		{
 			"executor-type",
-			options.ExecutorType,
+			&options.ExecutorType,
 		},
 		{
 			"uri",
-			options.Uri,
+			&options.Uri,
 		},
 		{
 			"image",
-			options.Image,
+			&options.Image,
 		},
 	}
 
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 		}
 	}
 
 	var slices = []struct {
 		name        string
-		destination *[]string
+		destination **[]string
 	}{
 		{
 			"types",
-			options.Types,
+			&options.Types,
 		},
 		{
 			"command",
-			options.Command,
+			&options.Command,
 		},
 		{
 			"args",
-			options.Args,
+			&options.Args,
 		},
 		{
 			"features",
-			options.Features,
+			&options.Features,
 		},
 	}
 
@@ -136,7 +136,7 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 				return options, err
 			}
 
-			slice.destination = &value
+			*slice.destination = &value
 		}
 	}
 

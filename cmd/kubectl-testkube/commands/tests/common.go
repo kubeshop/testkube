@@ -408,30 +408,30 @@ func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upda
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"name",
-			options.Name,
+			&options.Name,
 		},
 		{
 			"type",
-			options.Type_,
+			&options.Type_,
 		},
 		{
 			"namespace",
-			options.Namespace,
+			&options.Namespace,
 		},
 		{
 			"source",
-			options.Source,
+			&options.Source,
 		},
 	}
 
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 		}
 	}
 
@@ -479,15 +479,15 @@ func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestConten
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"test-content-type",
-			content.Type_,
+			&content.Type_,
 		},
 		{
 			"uri",
-			content.Uri,
+			&content.Uri,
 		},
 	}
 
@@ -495,7 +495,7 @@ func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestConten
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}
@@ -532,23 +532,23 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"execution-name",
-			request.Name,
+			&request.Name,
 		},
 		{
 			"image",
-			request.Image,
+			&request.Image,
 		},
 		{
 			"http-proxy",
-			request.HttpProxy,
+			&request.HttpProxy,
 		},
 		{
 			"https-proxy",
-			request.HttpsProxy,
+			&request.HttpsProxy,
 		},
 	}
 
@@ -556,7 +556,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}
@@ -588,15 +588,15 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 
 	var hashes = []struct {
 		name        string
-		destination *map[string]string
+		destination **map[string]string
 	}{
 		{
 			"env",
-			request.Envs,
+			&request.Envs,
 		},
 		{
 			"secret-env",
-			request.SecretEnvs,
+			&request.SecretEnvs,
 		},
 	}
 
@@ -607,7 +607,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 				return nil, err
 			}
 
-			hash.destination = &value
+			*hash.destination = &value
 			nonEmpty = true
 		}
 	}
@@ -700,15 +700,15 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 
 	var fields = []struct {
 		name        string
-		destination *string
+		destination **string
 	}{
 		{
 			"artifact-storage-class-name",
-			request.StorageClassName,
+			&request.StorageClassName,
 		},
 		{
 			"artifact-volume-mount-path",
-			request.VolumeMountPath,
+			&request.VolumeMountPath,
 		},
 	}
 
@@ -716,7 +716,7 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 	for _, field := range fields {
 		if cmd.Flag(field.name).Changed {
 			value := cmd.Flag(field.name).Value.String()
-			field.destination = &value
+			*field.destination = &value
 			nonEmpty = true
 		}
 	}
