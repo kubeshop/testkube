@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewRepositoryFromFlags creates repository from command flags
 func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
@@ -59,6 +60,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	return repository, nil
 }
 
+// NewRepositoryUpdateFromFlags creates repository update from command flags
 func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.RepositoryUpdate, err error) {
 	repository = &testkube.RepositoryUpdate{}
 
@@ -105,41 +107,40 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 		}
 	}
 
-	if cmd.Flag("git-username-secret").Changed {
-		gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
-		if err != nil {
-			return nil, err
-		}
+	var refs = []struct {
+		name        string
+		destination **testkube.SecretRef
+	}{
+		{
+			"git-username-secret",
+			repository.UsernameSecret,
+		},
+		{
+			"git-token-secret",
+			repository.TokenSecret,
+		},
+	}
 
-		for key, val := range gitUsernameSecret {
-			secret := &testkube.SecretRef{
-				Name: key,
-				Key:  val,
+	for _, ref := range refs {
+		if cmd.Flag(ref.name).Changed {
+			value, err := cmd.Flags().GetStringToString(ref.name)
+			if err != nil {
+				return nil, err
 			}
 
-			repository.UsernameSecret = &secret
-			nonEmpty = true
+			for key, val := range value {
+				secret := &testkube.SecretRef{
+					Name: key,
+					Key:  val,
+				}
+
+				ref.destination = &secret
+				nonEmpty = true
+			}
 		}
 	}
 
-	if cmd.Flag("git-token-secret").Changed {
-		gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-		if err != nil {
-			return nil, err
-		}
-
-		for key, val := range gitTokenSecret {
-			secret := &testkube.SecretRef{
-				Name: key,
-				Key:  val,
-			}
-
-			repository.TokenSecret = &secret
-			nonEmpty = true
-		}
-	}
-
-	if !nonEmpty {
+	if nonEmpty {
 		return repository, nil
 	}
 

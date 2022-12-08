@@ -1,6 +1,7 @@
 package executors
 
 import (
+	"fmt"
 	"os"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewUpsertExecutorOptionsFromFlags creates upsert executor options fom command flags
 func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpsertExecutorOptions, err error) {
 	name := cmd.Flag("name").Value.String()
 	types, err := cmd.Flags().GetStringArray("types")
@@ -74,6 +76,7 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	return options, nil
 }
 
+// NewUpsertExecutorOptionsFromFlags creates update executor options fom command flags
 func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpdateExecutorOptions, err error) {
 	var fields = []struct {
 		name        string
@@ -140,7 +143,9 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	if cmd.Flag("job-template").Changed {
 		jobTemplate := cmd.Flag("job-template").Value.String()
 		b, err := os.ReadFile(jobTemplate)
-		ui.ExitOnError("reading job template", err)
+		if err != nil {
+			return options, fmt.Errorf("reading job template %w", err)
+		}
 
 		value := string(b)
 		options.JobTemplate = &value

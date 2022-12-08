@@ -263,10 +263,12 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	return request, nil
 }
 
+// NewUpsertTestOptionsFromFlags creates upsert test options from command flags
 func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestOptions, err error) {
 	content, err := newContentFromFlags(cmd)
-
-	ui.ExitOnError("creating content from passed parameters", err)
+	if err != nil {
+		return options, fmt.Errorf("creating content from passed parameters %w", err)
+	}
 
 	name := cmd.Flag("name").Value.String()
 	executorType := cmd.Flag("type").Value.String()
@@ -393,9 +395,12 @@ func uploadFiles(client client.Client, parentName string, parentType client.Test
 	return nil
 }
 
+// NewUpdateTestOptionsFromFlags creates update test options from command flags
 func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestOptions, err error) {
 	contentUpdate, err := newContentUpdateFromFlags(cmd)
-	ui.ExitOnError("creating content from passed parameters", err)
+	if err != nil {
+		return options, fmt.Errorf("creating content from passed parameters %w", err)
+	}
 
 	if contentUpdate != nil {
 		options.Content = &contentUpdate
@@ -515,7 +520,7 @@ func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestConten
 		nonEmpty = true
 	}
 
-	if !nonEmpty {
+	if nonEmpty {
 		return content, nil
 	}
 

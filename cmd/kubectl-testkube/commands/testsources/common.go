@@ -126,7 +126,7 @@ func newSourceUpdateFromFlags(cmd *cobra.Command) (source *testkube.TestSourceUp
 		nonEmpty = true
 	}
 
-	if !nonEmpty {
+	if nonEmpty {
 		return source, nil
 	}
 

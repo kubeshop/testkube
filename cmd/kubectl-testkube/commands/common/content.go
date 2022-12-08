@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewDataFromFlags read input data from stdin or '--file' parameter
 func NewDataFromFlags(cmd *cobra.Command) (data *string, err error) {
 	var hasFile bool
 	if cmd.Flag("file").Changed {
@@ -31,8 +32,10 @@ func NewDataFromFlags(cmd *cobra.Command) (data *string, err error) {
 			return nil, fmt.Errorf("reading stdin error: %w", err)
 		}
 
-		content := string(stdinContent)
-		data = &content
+		if len(stdinContent) != 0 {
+			content := string(stdinContent)
+			data = &content
+		}
 	}
 
 	return data, nil
