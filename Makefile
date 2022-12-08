@@ -86,7 +86,7 @@ install-swagger-codegen-mac:
 openapi-generate-model: openapi-generate-model-testkube 
 
 openapi-generate-model-testkube:
-	java -jar swagger-codegen-cli.jar generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube
+	swagger-codegen generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube
 	mv tmp/api/testkube/model_test.go tmp/api/testkube/model_test_base.go || true
 	mv tmp/api/testkube/model_test_suite_step_execute_test.go tmp/api/testkube/model_test_suite_step_execute_test_base.go || true
 	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
