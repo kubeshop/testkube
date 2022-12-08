@@ -20,6 +20,9 @@ it's also responsible for getting insights into Testkube resources stored into c
 Testkube Agent opens networking connection into Testkube Cloud API, which stays active and it's main purpose is to start 
 listening for Testkube Cloud commands.
 
+Your existing Open Source Testkube installation can be also converted into Testkube Cloud agent, data will be passed and managed by 
+Testkube servers (Coming Soon!)
+
 ## Installing Agent
 
 Please follow [install steps](0-testkube-cloud/installing-agent.md) for getting ready to use Testkube Agent
