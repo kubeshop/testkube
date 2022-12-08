@@ -99,7 +99,7 @@ type ServiceAPI interface {
 // TestSourceAPI describes test source api methods
 type TestSourceAPI interface {
 	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
-	UpdateTestSource(options UpdataTestSourceOptions) (testSource testkube.TestSource, err error)
+	UpdateTestSource(options UpdateTestSourceOptions) (testSource testkube.TestSource, err error)
 	GetTestSource(name string) (testSource testkube.TestSource, err error)
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
