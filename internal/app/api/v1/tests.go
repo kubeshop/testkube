@@ -497,7 +497,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		if option != nil {
 			updatedTest, err = s.TestsClient.Update(testSpec, *option)
 		} else {
-			updatedTest, err = s.TestsClient.Update(testSpec, *option)
+			updatedTest, err = s.TestsClient.Update(testSpec)
 		}
 
 		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
