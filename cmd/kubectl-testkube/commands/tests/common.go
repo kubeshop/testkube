@@ -521,6 +521,20 @@ func newContentUpdateFromFlags(cmd *cobra.Command) (content *testkube.TestConten
 	}
 
 	if nonEmpty {
+		var emptyValue string
+		var emptyRepository = &testkube.RepositoryUpdate{}
+		switch {
+		case content.Data != nil:
+			content.Repository = &emptyRepository
+			content.Uri = &emptyValue
+		case content.Repository != nil:
+			content.Data = &emptyValue
+			content.Uri = &emptyValue
+		case content.Uri != nil:
+			content.Data = &emptyValue
+			content.Repository = &emptyRepository
+		}
+
 		return content, nil
 	}
 
@@ -683,9 +697,12 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		return nil, err
 	}
 
+	var emptyRequest = &testkube.ArtifactUpdateRequest{}
 	if artifactRequest != nil {
 		request.ArtifactRequest = &artifactRequest
 		nonEmpty = true
+	} else {
+		request.ArtifactRequest = &emptyRequest
 	}
 
 	if nonEmpty {
