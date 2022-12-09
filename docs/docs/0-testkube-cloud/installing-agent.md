@@ -4,7 +4,7 @@ sidebar_label: Installing Agent
 ---
 ## Istallation steps
 
-1. To add new agent please create new environment in: 
+1. To add a new agent please create a new environment in: 
 
 ![Create envirinment](https://user-images.githubusercontent.com/30776/206458556-76c3461e-ef6e-455b-91b1-596cd4b20952.png)
 
