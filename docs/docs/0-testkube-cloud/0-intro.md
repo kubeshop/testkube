@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-sidebar_label: Testkube Cloud
+sidebar_label: Intro
 ---
 # Testkube Cloud 
 
