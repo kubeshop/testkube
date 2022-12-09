@@ -136,6 +136,7 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			testSource.Spec.Repository = &testsourcev1.Repository{}
 		}
 
+		empty := true
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -169,6 +170,7 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 		for _, field := range fields {
 			if field.source != nil {
 				*field.destination = *field.source
+				empty = false
 			}
 		}
 
@@ -177,6 +179,7 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 				Name: (*(*request.Repository).UsernameSecret).Name,
 				Key:  (*(*request.Repository).UsernameSecret).Key,
 			}
+			empty = false
 		}
 
 		if (*request.Repository).TokenSecret != nil {
@@ -184,6 +187,11 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 				Name: (*(*request.Repository).TokenSecret).Name,
 				Key:  (*(*request.Repository).TokenSecret).Key,
 			}
+			empty = false
+		}
+
+		if empty {
+			testSource.Spec.Repository = nil
 		}
 	}
 

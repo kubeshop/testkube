@@ -251,6 +251,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			testContent.Repository = &testsv3.Repository{}
 		}
 
+		empty := true
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -284,6 +285,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		for _, field := range fields {
 			if field.source != nil {
 				*field.destination = *field.source
+				empty = false
 			}
 		}
 
@@ -292,6 +294,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				Name: (*(*content.Repository).UsernameSecret).Name,
 				Key:  (*(*content.Repository).UsernameSecret).Key,
 			}
+			empty = false
 		}
 
 		if (*content.Repository).TokenSecret != nil {
@@ -299,6 +302,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				Name: (*(*content.Repository).TokenSecret).Name,
 				Key:  (*(*content.Repository).TokenSecret).Key,
 			}
+			empty = false
+		}
+
+		if empty {
+			testContent.Repository = nil
 		}
 	}
 
@@ -426,20 +434,28 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			return request
 		}
 
+		empty := true
 		if request.ArtifactRequest == nil {
 			request.ArtifactRequest = &testsv3.ArtifactRequest{}
 		}
 
 		if (*executionRequest.ArtifactRequest).StorageClassName != nil {
 			request.ArtifactRequest.StorageClassName = *(*executionRequest.ArtifactRequest).StorageClassName
+			empty = false
 		}
 
 		if (*executionRequest.ArtifactRequest).VolumeMountPath != nil {
 			request.ArtifactRequest.VolumeMountPath = *(*executionRequest.ArtifactRequest).VolumeMountPath
+			empty = false
 		}
 
 		if (*executionRequest.ArtifactRequest).Dirs != nil {
 			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+			empty = false
+		}
+
+		if empty {
+			request.ArtifactRequest = nil
 		}
 	}
 

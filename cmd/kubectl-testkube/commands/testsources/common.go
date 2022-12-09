@@ -159,7 +159,7 @@ func NewUpdateTestSourceOptionsFromFlags(cmd *cobra.Command) (options apiclientv
 	if source != nil {
 		options.Type_ = source.Type_
 		var emptyValue string
-		var emptyRepository *testkube.RepositoryUpdate
+		var emptyRepository = &testkube.RepositoryUpdate{}
 		switch {
 		case source.Data != nil:
 			options.Data = source.Data
