@@ -87,6 +87,11 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 				hasMatch = true
 			}
 		}
+
+		if config.TestSuiteNames == nil && config.TestNames == nil && config.Selector == nil {
+			hasMatch = true
+		}
+
 		if config.Events != nil {
 			if config.Events.Contains(event.Type()) && hasMatch {
 				channels = append(channels, config.ChannelID)
