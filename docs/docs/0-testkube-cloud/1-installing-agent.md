@@ -21,7 +21,7 @@ sidebar_label: Installing Agent
 
 4. Run the command in your terminal
 
-
+k
 | Keep in mind that you'll need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
 | - To install `helm` just follow [install instrcutions on Helm web site](https://helm.sh/docs/intro/install/)
 | - To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/)
