@@ -155,7 +155,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&image, "image", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
