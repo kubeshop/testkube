@@ -5,7 +5,7 @@ sidebar_label: Testkube Cloud
 # Testkube Cloud 
 
 Testkube Cloud is managed version of Testkube it's main purpose is to orchestrate multiple clusters. 
-All test results and test artifacts are stored into Testkube Cloud internal data storages. Testkube cloud 
+All test results and test artifacts are stored into Testkube Cloud internal data storages. Testkube Cloud 
 will provide you with additional tests insights and is able to limit access for your users only to subset 
 of environments.
 
