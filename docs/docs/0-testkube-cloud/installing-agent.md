@@ -19,7 +19,7 @@ sidebar_label: Installing Agent
 
 ![Copy helm command](https://user-images.githubusercontent.com/30776/206459486-8c7a50a0-4c7c-43f0-ae6a-5a84941f3613.png)
 
-4. Paste command into terminal, 
+4. Run the command in your terminal
 
 
 | Keep in mind that you'll need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
