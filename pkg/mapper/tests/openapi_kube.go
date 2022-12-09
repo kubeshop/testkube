@@ -388,7 +388,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	for _, slice := range slices {
 		if slice.source != nil {
-			*&slice.destination = *&slice.source
+			*slice.destination = *slice.source
 		}
 	}
 

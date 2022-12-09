@@ -124,7 +124,7 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 			&options.Args,
 		},
 		{
-			"features",
+			"feature",
 			&options.Features,
 		},
 	}

@@ -154,7 +154,7 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 
 	for _, slice := range slices {
 		if slice.source != nil {
-			*&slice.destination = *&slice.source
+			*slice.destination = *slice.source
 		}
 	}
 
