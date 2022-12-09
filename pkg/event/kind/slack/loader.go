@@ -10,15 +10,19 @@ import (
 
 var _ common.ListenerLoader = &SlackLoader{}
 
-func NewSlackLoader() *SlackLoader {
+func NewSlackLoader(messageTemplate string, events []testkube.EventType) *SlackLoader {
 	return &SlackLoader{
-		Log: log.DefaultLogger,
+		Log:             log.DefaultLogger,
+		messageTemplate: messageTemplate,
+		events:          events,
 	}
 }
 
 // SlackLoader is a reconciler for websocket events for now it returns single listener for slack
 type SlackLoader struct {
-	Log *zap.SugaredLogger
+	Log             *zap.SugaredLogger
+	messageTemplate string
+	events          []testkube.EventType
 }
 
 func (r *SlackLoader) Kind() string {
@@ -27,9 +31,9 @@ func (r *SlackLoader) Kind() string {
 
 // Load returns single listener for slack (as we don't have any sophisticated config yet)
 func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
-	// TODO handle slack notifications based on event types, for now we just load all
-	if slacknotifier.Ready {
-		return common.Listeners{NewSlackListener("slack", "", testkube.AllEventTypes)}, nil
+	slackNotifier := slacknotifier.NewSlackNotifier(r.messageTemplate)
+	if slackNotifier.Ready {
+		return common.Listeners{NewSlackListener("slack", "", r.events, slackNotifier)}, nil
 	}
 	r.Log.Debugw("Slack notifier is not ready or not configured properly, omiting", "kind", r.Kind())
 	return common.Listeners{}, nil

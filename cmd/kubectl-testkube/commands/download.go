@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -22,7 +23,7 @@ func NewDownloadCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download <resource>",
 		Short: "Artifacts management commands",
-		Args:  validator.ExecutionID,
+		Args:  validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
@@ -41,9 +42,9 @@ func NewDownloadCmd() *cobra.Command {
 
 func NewListArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list <executionID>",
-		Short: "List artifacts of the given execution ID",
-		Args:  validator.ExecutionID,
+		Use:   "list <executionName>",
+		Short: "List artifacts of the given execution name",
+		Args:  validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID = args[0]
 			cmd.SilenceUsage = true
@@ -66,7 +67,7 @@ func NewListArtifactsCmd() *cobra.Command {
 
 func NewDownloadSingleArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "artifact <executionID> <fileName> <destinationDir>",
+		Use:   "artifact <executionName> <fileName> <destinationDir>",
 		Short: "download artifact",
 		Args:  validator.ExecutionIDAndFileNames,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -78,7 +79,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			f, err := client.DownloadFile(executionID, filename, destination)
 			ui.ExitOnError("downloading file"+filename, err)
 
-			ui.Info("File %s downloaded.\n", f)
+			ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
 		},
 	}
 
@@ -95,10 +96,10 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 
 func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "artifacts <executionID>",
+		Use:     "artifacts <executionName>",
 		Aliases: []string{"a"},
 		Short:   "download artifacts",
-		Args:    validator.ExecutionID,
+		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 			client, _ := common.GetClient(cmd)

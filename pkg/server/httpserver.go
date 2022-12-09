@@ -15,8 +15,10 @@ import (
 
 // NewServer returns new HTTP server instance, initializes logger and metrics
 func NewServer(config Config) HTTPServer {
+	config.Http.DisableStartupMessage = true
+
 	s := HTTPServer{
-		Mux:    fiber.New(fiber.Config{DisableStartupMessage: true}),
+		Mux:    fiber.New(config.Http),
 		Log:    log.DefaultLogger,
 		Config: config,
 	}

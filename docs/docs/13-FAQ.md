@@ -58,7 +58,7 @@ pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0 
 If there is a timeout error reported:
 
 ```sh
-kubectl-testkube dashboard
+testkube dashboard
 checking readiness of services (error: timed-out waiting for dashboard and api)
 ```
 
