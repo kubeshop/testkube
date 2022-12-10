@@ -96,7 +96,7 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 
 // gitUri merge creds with git uri
 func (f Fetcher) gitURI(repo *testkube.Repository) (uri string, err error) {
-	if repo.Username != "" && repo.Token != "" {
+	if repo.Username != "" || repo.Token != "" {
 		gitURI, err := url.Parse(repo.Uri)
 		if err != nil {
 			return uri, err

@@ -200,6 +200,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		request = &testsuitesv2.TestSuiteExecutionRequest{}
 	}
 
+	empty := true
 	var fields = []struct {
 		source      *string
 		destination *string
@@ -229,27 +230,37 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 	for _, field := range fields {
 		if field.source != nil {
 			*field.destination = *field.source
+			empty = false
 		}
 	}
 
 	if executionRequest.Labels != nil {
 		request.Labels = *executionRequest.Labels
+		empty = false
 	}
 
 	if executionRequest.ExecutionLabels != nil {
 		request.ExecutionLabels = *executionRequest.ExecutionLabels
+		empty = false
 	}
 
 	if executionRequest.Sync != nil {
 		request.Sync = *executionRequest.Sync
+		empty = false
 	}
 
 	if executionRequest.Timeout != nil {
 		request.Timeout = *executionRequest.Timeout
+		empty = false
 	}
 
 	if executionRequest.Variables != nil {
 		request.Variables = MapCRDVariables(*executionRequest.Variables)
+		empty = false
+	}
+
+	if empty {
+		return nil
 	}
 
 	return request

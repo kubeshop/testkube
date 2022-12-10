@@ -217,6 +217,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		testContent = &testsv3.TestContent{}
 	}
 
+	emptyContent := true
 	var fields = []struct {
 		source      *string
 		destination *string
@@ -238,6 +239,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 	for _, field := range fields {
 		if field.source != nil {
 			*field.destination = *field.source
+			emptyContent = false
 		}
 	}
 
@@ -251,7 +253,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			testContent.Repository = &testsv3.Repository{}
 		}
 
-		empty := true
+		emptyRepository := true
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -285,7 +287,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		for _, field := range fields {
 			if field.source != nil {
 				*field.destination = *field.source
-				empty = false
+				emptyRepository = false
 			}
 		}
 
@@ -294,7 +296,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				Name: (*(*content.Repository).UsernameSecret).Name,
 				Key:  (*(*content.Repository).UsernameSecret).Key,
 			}
-			empty = false
+			emptyRepository = false
 		}
 
 		if (*content.Repository).TokenSecret != nil {
@@ -302,12 +304,18 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				Name: (*(*content.Repository).TokenSecret).Name,
 				Key:  (*(*content.Repository).TokenSecret).Key,
 			}
-			empty = false
+			emptyRepository = false
 		}
 
-		if empty {
+		if emptyRepository {
 			testContent.Repository = nil
+		} else {
+			emptyContent = false
 		}
+	}
+
+	if emptyContent {
+		return nil
 	}
 
 	return testContent
@@ -324,6 +332,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		request = &testsv3.ExecutionRequest{}
 	}
 
+	emptyExecution := true
 	var fields = []struct {
 		source      *string
 		destination *string
@@ -373,6 +382,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 	for _, field := range fields {
 		if field.source != nil {
 			*field.destination = *field.source
+			emptyExecution = false
 		}
 	}
 
@@ -397,35 +407,43 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 	for _, slice := range slices {
 		if slice.source != nil {
 			*slice.destination = *slice.source
+			emptyExecution = false
 		}
 	}
 
 	if executionRequest.Number != nil {
 		request.Number = *executionRequest.Number
+		emptyExecution = false
 	}
 
 	if executionRequest.Sync != nil {
 		request.Sync = *executionRequest.Sync
+		emptyExecution = false
 	}
 
 	if executionRequest.ActiveDeadlineSeconds != nil {
 		request.ActiveDeadlineSeconds = *executionRequest.ActiveDeadlineSeconds
+		emptyExecution = false
 	}
 
 	if executionRequest.Args != nil {
 		request.Args = *executionRequest.Args
+		emptyExecution = false
 	}
 
 	if executionRequest.Command != nil {
 		request.Command = *executionRequest.Command
+		emptyExecution = false
 	}
 
 	if executionRequest.Variables != nil {
 		request.Variables = MapCRDVariables(*executionRequest.Variables)
+		emptyExecution = false
 	}
 
 	if executionRequest.ImagePullSecrets != nil {
 		request.ImagePullSecrets = mapImagePullSecrets(*executionRequest.ImagePullSecrets)
+		emptyExecution = false
 	}
 
 	if executionRequest.ArtifactRequest != nil {
@@ -434,29 +452,35 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			return request
 		}
 
-		empty := true
+		emptyArtifact := true
 		if request.ArtifactRequest == nil {
 			request.ArtifactRequest = &testsv3.ArtifactRequest{}
 		}
 
 		if (*executionRequest.ArtifactRequest).StorageClassName != nil {
 			request.ArtifactRequest.StorageClassName = *(*executionRequest.ArtifactRequest).StorageClassName
-			empty = false
+			emptyArtifact = false
 		}
 
 		if (*executionRequest.ArtifactRequest).VolumeMountPath != nil {
 			request.ArtifactRequest.VolumeMountPath = *(*executionRequest.ArtifactRequest).VolumeMountPath
-			empty = false
+			emptyArtifact = false
 		}
 
 		if (*executionRequest.ArtifactRequest).Dirs != nil {
 			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
-			empty = false
+			emptyArtifact = false
 		}
 
-		if empty {
+		if emptyArtifact {
 			request.ArtifactRequest = nil
+		} else {
+			emptyExecution = false
 		}
+	}
+
+	if emptyExecution {
+		return nil
 	}
 
 	return request
