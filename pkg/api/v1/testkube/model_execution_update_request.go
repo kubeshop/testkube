@@ -54,5 +54,6 @@ type ExecutionUpdateRequest struct {
 	BucketName      *string                 `json:"bucketName,omitempty"`
 	ArtifactRequest **ArtifactUpdateRequest `json:"artifactRequest,omitempty"`
 	// job template extensions
-	JobTemplate *string `json:"jobTemplate,omitempty"`
+	JobTemplate    *string                    `json:"jobTemplate,omitempty"`
+	ContentRequest **TestContentUpdateRequest `json:"contentRequest,omitempty"`
 }
