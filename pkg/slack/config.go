@@ -1,6 +1,8 @@
 package slack
 
-import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+import (
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+)
 
 type NotificationsConfig struct {
 	ChannelID      string               `json:"channelID,omitempty"`
@@ -69,6 +71,11 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 	}
 
 	for _, config := range c.NotificationsConfigSet {
+
+		if config.TestSuiteNames.IsEmpty() && config.TestNames.IsEmpty() && len(config.Selector) == 0 {
+			return channels, true
+		}
+
 		hasMatch := false
 		if config.Selector != nil {
 			for k, v := range config.Selector {
@@ -87,12 +94,7 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 				hasMatch = true
 			}
 		}
-
-		if config.TestSuiteNames == nil && config.TestNames == nil && config.Selector == nil {
-			hasMatch = true
-		}
-
-		if config.Events != nil {
+		if config.Events != nil && config.ChannelID != "" {
 			if config.Events.Contains(event.Type()) && hasMatch {
 				channels = append(channels, config.ChannelID)
 			}

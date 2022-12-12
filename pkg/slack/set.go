@@ -38,3 +38,7 @@ func (s *set[S]) Contains(value S) bool {
 	_, c := s.m[value]
 	return c
 }
+
+func (s *set[S]) IsEmpty() bool {
+	return len(s.m) == 0
+}
