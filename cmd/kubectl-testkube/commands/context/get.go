@@ -10,7 +10,7 @@ func NewGetContextCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "context <value>",
-		Short: "Set namespace for testkube client",
+		Short: "Set context for Testkube Cloud",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()
