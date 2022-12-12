@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -71,11 +70,9 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			namespace := cmd.Flag("namespace").Value.String()
 			var client client.Client
-			var testLabels map[string]string
 			if !crdOnly {
 				client, namespace = common.GetClient(cmd)
 				test, _ := client.GetTest(testName)
-				testLabels = test.Labels
 
 				if testName == test.Name {
 					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
@@ -88,7 +85,7 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
+			options, err := NewUpsertTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
 			if !crdOnly {
@@ -102,12 +99,7 @@ func NewCreateTestsCmd() *cobra.Command {
 					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
 					ui.ExitOnError("could not upload files", err)
 				}
-			}
 
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
-
-			if !crdOnly {
 				_, err = client.CreateTest(options)
 				ui.ExitOnError("creating test "+testName+" in namespace "+namespace, err)
 
@@ -163,7 +155,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&image, "image", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
@@ -251,19 +243,6 @@ func validateExecutorType(executorType string, executors testkube.ExecutorsDetai
 
 	if !typeValid {
 		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
-	}
-
-	return nil
-}
-
-func validateSchedule(schedule string) error {
-	if schedule == "" {
-		return nil
-	}
-
-	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	if _, err := specParser.Parse(schedule); err != nil {
-		return err
 	}
 
 	return nil

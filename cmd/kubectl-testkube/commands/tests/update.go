@@ -64,14 +64,8 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
 			}
 
-			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
-			ui.ExitOnError("validating artifact flags", err)
-
-			options, err := NewUpsertTestOptionsFromFlags(cmd, test.Labels)
+			options, err := NewUpdateTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
-
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
 
 			test, err = client.UpdateTest(options)
 			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
@@ -109,7 +103,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&image, "image", "i", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")

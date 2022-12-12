@@ -9,7 +9,7 @@
  */
 package testkube
 
-// executor create request body
+// webhook create request body
 type WebhookCreateRequest struct {
 	Name      string      `json:"name,omitempty"`
 	Namespace string      `json:"namespace,omitempty"`

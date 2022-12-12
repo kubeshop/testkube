@@ -83,9 +83,9 @@ func (c TestSuiteClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSu
 }
 
 // UpdateTestSuite updates TestSuite Custom Resource
-func (c TestSuiteClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
+func (c TestSuiteClient) UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.testSuiteTransport.GetURI("/test-suites/%s", options.Name)
-	request := testkube.TestSuiteUpsertRequest(options)
+	request := testkube.TestSuiteUpdateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

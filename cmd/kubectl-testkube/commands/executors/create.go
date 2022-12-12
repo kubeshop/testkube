@@ -42,8 +42,9 @@ func NewCreateExecutorCmd() *cobra.Command {
 				}
 			}
 
-			options, err := NewUpsertExecutorOptionsFromFlags(cmd, nil)
+			options, err := NewUpsertExecutorOptionsFromFlags(cmd)
 			ui.ExitOnError("getting executor options", err)
+
 			if !crdOnly {
 				_, err = client.CreateExecutor(options)
 				ui.ExitOnError("creating executor "+name+" in namespace "+namespace, err)

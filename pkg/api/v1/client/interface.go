@@ -24,7 +24,7 @@ type TestAPI interface {
 	GetTest(id string) (test testkube.Test, err error)
 	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpdateTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string) error
 	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
@@ -46,7 +46,7 @@ type ExecutionAPI interface {
 // TestSuiteAPI describes test suite api methods
 type TestSuiteAPI interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
@@ -68,7 +68,7 @@ type TestSuiteExecutionAPI interface {
 // ExecutorAPI describes executor api methods
 type ExecutorAPI interface {
 	CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
+	UpdateExecutor(options UpdateExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
 	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
@@ -99,7 +99,7 @@ type ServiceAPI interface {
 // TestSourceAPI describes test source api methods
 type TestSourceAPI interface {
 	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
-	UpdateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
+	UpdateTestSource(options UpdateTestSourceOptions) (testSource testkube.TestSource, err error)
 	GetTestSource(name string) (testSource testkube.TestSource, err error)
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
@@ -113,22 +113,36 @@ type CopyFileAPI interface {
 
 // TODO consider replacing below types by testkube.*
 
-// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
+// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertTestOptions - is mapping for now to OpenAPI schema for creating/changing test
+// UpdateTestSuiteOptions - mapping to OpenAPI schema for changing testsuite
+type UpdateTestSuiteOptions testkube.TestSuiteUpdateRequest
+
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
 // if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
-// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating/changing executor request
+// UpdateTestOptions - is mapping for now to OpenAPI schema for changing test
+// if needed can be extended to custom struct
+type UpdateTestOptions testkube.TestUpdateRequest
+
+// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
 type UpsertExecutorOptions testkube.ExecutorUpsertRequest
+
+// UpdateExecutorOptions - is mapping for now to OpenAPI schema for changing executor request
+type UpdateExecutorOptions testkube.ExecutorUpdateRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
 
-// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating/changing test source
+// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
 type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
+
+// UpdateTestSourceOptions - is mapping for now to OpenAPI schema for changing test source
+// if needed can be extended to custom struct
+type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options

@@ -424,7 +424,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestSuiteUpsertRequest"
+              $ref: "#/components/schemas/TestSuiteUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -1172,7 +1172,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestUpsertRequest"
+              $ref: "#/components/schemas/TestUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -1639,7 +1639,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExecutorUpsertRequest"
+              $ref: "#/components/schemas/ExecutorUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -2070,7 +2070,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestSourceUpsertRequest"
+              $ref: "#/components/schemas/TestSourceUpdateRequest"
       responses:
         200:
           description: "successful operation"
@@ -2675,6 +2675,13 @@ components:
           description: test content
           example: "https://github.com/kubeshop/testkube"
 
+    TestContentUpdate:
+      description: test content update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestContent"          
+
     TestSource:
       description: Test source resource for shared test content
       type: object
@@ -2695,9 +2702,51 @@ components:
           additionalProperties:
             type: string
 
-    TestSourceUpsertRequest:
-      description: test create request body
+    TestSourceUpdate:
+      description: Test source resource update for shared test content
       type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+
+    TestSourceUpsertRequest:
+      description: test source create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/TestContent"
+      properties:
+        name:
+          type: string
+          description: test source name
+          example: "testsource1"
+        namespace:
+          type: string
+          description: test source namespace
+          example: "testkube"
+        labels:
+          type: object
+          description: "test source labels"
+          additionalProperties:
+            type: string
+
+    TestSourceUpdateRequest:
+      description: test source update request body
+      type: object
+      nullable: true
       allOf:
         - $ref: "#/components/schemas/TestContent"
       properties:
@@ -3074,6 +3123,13 @@ components:
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
 
+    RepositoryUpdate:
+      description: repository update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Repository" 
+
     ArtifactRequest:
       description: artifact request body for container executors with test artifacts
       type: object
@@ -3093,6 +3149,13 @@ components:
           items:
             type: string
           description: artifact directories
+
+    ArtifactUpdateRequest:
+      description: artifact request update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/ArtifactRequest" 
 
     ExecutionRequest:
       description: test execution request body
@@ -3209,7 +3272,14 @@ components:
           description: configuration parameters for storing container executor test artifacts
         jobTemplate:
           type: string
-          description: job template extensions    
+          description: job template extensions
+          
+    ExecutionUpdateRequest:
+      description: test execution request update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/ExecutionRequest" 
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -3267,18 +3337,40 @@ components:
           description: duration in seconds the test suite may be active, until its stopped
           example: 1
 
+    TestSuiteExecutionUpdateRequest:
+      description: test suite execution update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteExecutionRequest"
+
     TestUpsertRequest:
       description: test create request body
       type: object
       allOf:
         - $ref: "#/components/schemas/Test"
 
+    TestUpdateRequest:
+      description: test update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Test"
+
     TestSuiteUpsertRequest:
-      description: test create request body
+      description: test suite create request body
       type: object
       required:
         - name
         - namespace
+      allOf:
+        - $ref: "#/components/schemas/TestSuite"
+        - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteUpdateRequest:
+      description: test suite update body
+      type: object
+      nullable: true
       allOf:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
@@ -3298,7 +3390,7 @@ components:
         - $ref: "#/components/schemas/ObjectRef"
 
     ExecutorUpsertRequest:
-      description: executor create or update request body
+      description: executor create request body
       type: object
       required:
         - name
@@ -3308,8 +3400,16 @@ components:
         - $ref: "#/components/schemas/Executor"
         - $ref: "#/components/schemas/ObjectRef"
 
+    ExecutorUpdateRequest:
+      description: executor update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Executor"
+        - $ref: "#/components/schemas/ObjectRef"
+
     WebhookCreateRequest:
-      description: executor create request body
+      description: webhook create request body
       type: object
       allOf:
         - $ref: "#/components/schemas/Webhook"

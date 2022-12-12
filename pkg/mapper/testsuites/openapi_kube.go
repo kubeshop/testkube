@@ -88,7 +88,7 @@ func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsuitesv2.TestS
 		out = append(out, mapTestStepToCRD(step))
 	}
 
-	return
+	return out
 }
 
 func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSuiteStepSpec) {
@@ -96,7 +96,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSu
 
 	case testkube.TestSuiteStepTypeDelay:
 		stepSpec.Delay = &testsuitesv2.TestSuiteStepDelay{
-			Duration: int32(step.Delay.Duration),
+			Duration: step.Delay.Duration,
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:
@@ -130,4 +130,138 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 		HttpsProxy:      executionRequest.HttpsProxy,
 		Timeout:         executionRequest.Timeout,
 	}
+}
+
+//MapTestSuiteUpsertRequestToTestCRD maps TestSuiteUpdateRequest OpenAPI spec to TestSuite CRD spec
+func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest, testSuite *testsuitesv2.TestSuite) *testsuitesv2.TestSuite {
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			request.Name,
+			&testSuite.Name,
+		},
+		{
+			request.Namespace,
+			&testSuite.Namespace,
+		},
+		{
+			request.Description,
+			&testSuite.Spec.Description,
+		},
+		{
+			request.Schedule,
+			&testSuite.Spec.Schedule,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if request.Before != nil {
+		testSuite.Spec.Before = mapTestStepsToCRD(*request.Before)
+	}
+
+	if request.Steps != nil {
+		testSuite.Spec.Steps = mapTestStepsToCRD(*request.Steps)
+	}
+
+	if request.After != nil {
+		testSuite.Spec.After = mapTestStepsToCRD(*request.After)
+	}
+
+	if request.Labels != nil {
+		testSuite.Labels = *request.Labels
+	}
+
+	if request.Repeats != nil {
+		testSuite.Spec.Repeats = int(*request.Repeats)
+	}
+
+	if request.ExecutionRequest != nil {
+		testSuite.Spec.ExecutionRequest = MapExecutionUpdateRequestToSpecExecutionRequest(*request.ExecutionRequest, testSuite.Spec.ExecutionRequest)
+	}
+
+	return testSuite
+}
+
+// MapExecutionUpdateRequestToSpecExecutionRequest maps ExecutionUpdateRequest OpenAPI spec to ExecutionRequest CRD spec
+func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.TestSuiteExecutionUpdateRequest,
+	request *testsuitesv2.TestSuiteExecutionRequest) *testsuitesv2.TestSuiteExecutionRequest {
+	if executionRequest == nil {
+		return nil
+	}
+
+	if request == nil {
+		request = &testsuitesv2.TestSuiteExecutionRequest{}
+	}
+
+	empty := true
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			executionRequest.Name,
+			&request.Name,
+		},
+		{
+			executionRequest.Namespace,
+			&request.Namespace,
+		},
+		{
+			executionRequest.SecretUUID,
+			&request.SecretUUID,
+		},
+		{
+			executionRequest.HttpProxy,
+			&request.HttpProxy,
+		},
+		{
+			executionRequest.HttpsProxy,
+			&request.HttpsProxy,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+			empty = false
+		}
+	}
+
+	if executionRequest.Labels != nil {
+		request.Labels = *executionRequest.Labels
+		empty = false
+	}
+
+	if executionRequest.ExecutionLabels != nil {
+		request.ExecutionLabels = *executionRequest.ExecutionLabels
+		empty = false
+	}
+
+	if executionRequest.Sync != nil {
+		request.Sync = *executionRequest.Sync
+		empty = false
+	}
+
+	if executionRequest.Timeout != nil {
+		request.Timeout = *executionRequest.Timeout
+		empty = false
+	}
+
+	if executionRequest.Variables != nil {
+		request.Variables = MapCRDVariables(*executionRequest.Variables)
+		empty = false
+	}
+
+	if empty {
+		return nil
+	}
+
+	return request
 }

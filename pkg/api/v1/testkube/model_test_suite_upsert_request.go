@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// test create request body
+// test suite create request body
 type TestSuiteUpsertRequest struct {
 	// object kubernetes namespace
 	Namespace string `json:"namespace"`

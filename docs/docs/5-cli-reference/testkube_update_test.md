@@ -34,7 +34,7 @@ testkube update test [flags]
   -h, --help                                       help for test
       --http-proxy string                          http proxy for executor containers
       --https-proxy string                         https proxy for executor containers
-  -i, --image string                               if uri is git repository we can set additional branch parameter
+  -i, --image string                               image for container executor
       --image-pull-secrets stringArray             secret name used to pull the image in container executor
       --job-template string                        job template file path for extensions to job template
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])

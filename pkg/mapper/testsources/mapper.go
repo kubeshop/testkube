@@ -87,3 +87,113 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 		},
 	}
 }
+
+// MapUpdateToSpec maps TestUpdateRequest to Test CRD spec
+func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *testsourcev1.TestSource) *testsourcev1.TestSource {
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			request.Name,
+			&testSource.Name,
+		},
+		{
+			request.Namespace,
+			&testSource.Namespace,
+		},
+		{
+			request.Type_,
+			&testSource.Spec.Type_,
+		},
+		{
+			request.Data,
+			&testSource.Spec.Data,
+		},
+		{
+			request.Uri,
+			&testSource.Spec.Uri,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if request.Labels != nil {
+		testSource.Labels = *request.Labels
+	}
+
+	if request.Repository != nil {
+		if *request.Repository == nil {
+			testSource.Spec.Repository = nil
+			return testSource
+		}
+
+		if testSource.Spec.Repository == nil {
+			testSource.Spec.Repository = &testsourcev1.Repository{}
+		}
+
+		empty := true
+		var fields = []struct {
+			source      *string
+			destination *string
+		}{
+			{
+				(*request.Repository).Type_,
+				&testSource.Spec.Repository.Type_,
+			},
+			{
+				(*request.Repository).Uri,
+				&testSource.Spec.Repository.Uri,
+			},
+			{
+				(*request.Repository).Branch,
+				&testSource.Spec.Repository.Branch,
+			},
+			{
+				(*request.Repository).Commit,
+				&testSource.Spec.Repository.Commit,
+			},
+			{
+				(*request.Repository).Path,
+				&testSource.Spec.Repository.Path,
+			},
+			{
+				(*request.Repository).WorkingDir,
+				&testSource.Spec.Repository.WorkingDir,
+			},
+		}
+
+		for _, field := range fields {
+			if field.source != nil {
+				*field.destination = *field.source
+				empty = false
+			}
+		}
+
+		if (*request.Repository).UsernameSecret != nil {
+			testSource.Spec.Repository.UsernameSecret = &testsourcev1.SecretRef{
+				Name: (*(*request.Repository).UsernameSecret).Name,
+				Key:  (*(*request.Repository).UsernameSecret).Key,
+			}
+			empty = false
+		}
+
+		if (*request.Repository).TokenSecret != nil {
+			testSource.Spec.Repository.TokenSecret = &testsourcev1.SecretRef{
+				Name: (*(*request.Repository).TokenSecret).Name,
+				Key:  (*(*request.Repository).TokenSecret).Key,
+			}
+			empty = false
+		}
+
+		if empty {
+			testSource.Spec.Repository = nil
+		}
+	}
+
+	return testSource
+}

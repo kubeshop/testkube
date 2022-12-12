@@ -419,9 +419,14 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 		s.Log.Infow("creating test", "request", request)
 
-		test := testsmapper.MapToSpec(request)
+		test := testsmapper.MapUpsertToSpec(request)
 		test.Namespace = s.Namespace
-		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
+		var secrets map[string]string
+		if request.Content != nil && request.Content.Repository != nil {
+			secrets = getTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
+		}
+
+		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: secrets})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -437,35 +442,65 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 // UpdateTestHandler updates an existing test CR based on test content
 func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		var request testkube.TestUpsertRequest
+		var request testkube.TestUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
-			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
+		// we need to get resource first and load its metadata.ResourceVersion
+		test, err := s.TestsClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Args != nil {
+			*(*request.ExecutionRequest).Args, err = testkube.PrepareExecutorArgs(*(*request.ExecutionRequest).Args)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
 			}
 		}
 
+		// map update test but load spec only to not override metadata.ResourceVersion
+		testSpec := testsmapper.MapUpdateToSpec(request, test)
+
 		s.Log.Infow("updating test", "request", request)
 
-		// we need to get resource first and load its metadata.ResourceVersion
-		test, err := s.TestsClient.Get(request.Name)
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+		var option *tests.Option
+		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil && *(*request.Content).Repository != nil {
+			username := (*(*request.Content).Repository).Username
+			token := (*(*request.Content).Repository).Token
+			if username != nil || token != nil {
+				var uValue, tValue string
+				if username != nil {
+					uValue = *username
+				}
+
+				if token != nil {
+					tValue = *token
+				}
+
+				option = &tests.Option{Secrets: getTestSecretsData(uValue, tValue)}
+			}
 		}
 
-		// map test but load spec only to not override metadata.ResourceVersion
-		testSpec := testsmapper.MapToSpec(request)
-		test.Spec = testSpec.Spec
-		test.Labels = request.Labels
-		updatedTest, err := s.TestsClient.Update(test, tests.Option{Secrets: getTestSecretsData(request.Content)})
+		var updatedTest *testsv3.Test
+		if option != nil {
+			updatedTest, err = s.TestsClient.Update(testSpec, *option)
+		} else {
+			updatedTest, err = s.TestsClient.Update(testSpec)
+		}
 
-		s.Metrics.IncUpdateTest(test.Spec.Type_, err)
+		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
@@ -543,15 +578,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	}
 }
 
-func getTestSecretsData(content *testkube.TestContent) map[string]string {
-	// create secrets for test
-	username := ""
-	token := ""
-	if content != nil && content.Repository != nil {
-		username = content.Repository.Username
-		token = content.Repository.Token
-	}
-
+func getTestSecretsData(username, token string) map[string]string {
 	if username == "" && token == "" {
 		return nil
 	}

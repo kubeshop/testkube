@@ -9,30 +9,30 @@
  */
 package testkube
 
-// executor create request body
-type ExecutorUpsertRequest struct {
+// executor update request body
+type ExecutorUpdateRequest struct {
 	// object kubernetes namespace
-	Namespace string `json:"namespace"`
+	Namespace *string `json:"namespace,omitempty"`
 	// object name
-	Name string `json:"name"`
+	Name *string `json:"name"`
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
-	ExecutorType string `json:"executorType,omitempty"`
+	ExecutorType *string `json:"executorType,omitempty"`
 	// Image for kube-job
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// container image pull secrets
-	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	ImagePullSecrets *[]LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// container executor image command
-	Command []string `json:"command,omitempty"`
+	Command *[]string `json:"command,omitempty"`
 	// additional executor binary arguments
-	Args []string `json:"args,omitempty"`
+	Args *[]string `json:"args,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
-	Types []string `json:"types"`
+	Types *[]string `json:"types,omitempty"`
 	// URI for rest based executors
-	Uri string `json:"uri,omitempty"`
+	Uri *string `json:"uri,omitempty"`
 	// Job template to launch executor
-	JobTemplate string `json:"jobTemplate,omitempty"`
+	JobTemplate *string `json:"jobTemplate,omitempty"`
 	// executor labels
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels *map[string]string `json:"labels,omitempty"`
 	// Available executor features
-	Features []string `json:"features,omitempty"`
+	Features *[]string `json:"features,omitempty"`
 }

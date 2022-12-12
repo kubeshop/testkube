@@ -55,7 +55,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 			err = validateUpsertOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
-			options, err := NewUpsertTestSourceOptionsFromFlags(cmd, nil)
+			options, err := NewUpsertTestSourceOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test source options", err)
 
 			if !crdOnly {

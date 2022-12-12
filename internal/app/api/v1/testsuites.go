@@ -63,23 +63,31 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 // UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestSuiteUpsertRequest
+		var request testkube.TestSuiteUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSuite, err := s.TestsSuitesClient.Get(request.Name)
+		testSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
-		testSuite.Spec = testSuiteSpec.Spec
-		testSuite.Labels = request.Labels
-		updated, err := s.TestsSuitesClient.Update(testSuite)
+		testSuiteSpec := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+
+		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec)
 
 		s.Metrics.IncUpdateTestSuite(err)
 
@@ -87,7 +95,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(updated)
+		return c.JSON(updatedTestSuite)
 	}
 }
 
