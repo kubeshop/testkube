@@ -5,12 +5,20 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type CloudContext struct {
+	Environment  string `json:"environment,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	ApiKey       string `json:"apiKey,omitempty"`
+}
+
 type Data struct {
 	TelemetryEnabled bool       `json:"telemetryEnabled,omitempty"`
 	Namespace        string     `json:"namespace,omitempty"`
 	Initialized      bool       `json:"initialized,omitempty"`
 	APIURI           string     `json:"apiURI,omitempty"`
 	OAuth2Data       OAuth2Data `json:"oauth2Data"`
+
+	CloudContext CloudContext `json:"cloudContext,omitempty"`
 }
 
 func (c *Data) EnableAnalytics() {
