@@ -72,11 +72,15 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 
 	for _, config := range c.NotificationsConfigSet {
 
-		if config.TestSuiteNames.IsEmpty() && config.TestNames.IsEmpty() && len(config.Selector) == 0 {
-			return channels, true
+		hasMatch := false
+		if config.Events != nil &&
+			config.Events.Contains(event.Type()) &&
+			config.TestSuiteNames.IsEmpty() &&
+			config.TestNames.IsEmpty() &&
+			len(config.Selector) == 0 {
+			hasMatch = true
 		}
 
-		hasMatch := false
 		if config.Selector != nil {
 			for k, v := range config.Selector {
 				if labels != nil && labels[k] == v {
@@ -94,10 +98,13 @@ func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 				hasMatch = true
 			}
 		}
-		if config.Events != nil && config.ChannelID != "" {
-			if config.Events.Contains(event.Type()) && hasMatch {
+		if config.Events != nil && config.Events.Contains(event.Type()) && hasMatch {
+			if config.ChannelID != "" {
 				channels = append(channels, config.ChannelID)
+			} else {
+				return channels, true
 			}
+
 		}
 	}
 	if len(channels) > 0 {
