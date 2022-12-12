@@ -38,7 +38,7 @@ func NewSlackNotifier(template string) *SlackNotifier {
 	slackNotifier := SlackNotifier{messageTemplate: template}
 	slackNotifier.timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
-		log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
+		//log.DefaultLogger.Info("initializing slack client", "SLACK_TOKEN", token)
 		slackNotifier.slackClient = slack.New(token, slack.OptionDebug(true))
 		slackNotifier.Ready = true
 	} else {
