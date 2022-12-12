@@ -247,7 +247,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	}
 
 	if request.ContentRequest != nil {
-
+		testCR.Spec = adjustContent(testCR.Spec, request.ContentRequest)
 	}
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
@@ -455,4 +455,37 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 	}
 
 	return artifactBase
+}
+
+func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) testsv3.TestSpec {
+	if test.Content == nil {
+		return test
+	}
+
+	switch testkube.TestContentType(test.Content.Type_) {
+	case testkube.TestContentTypeGitFile, testkube.TestContentTypeGitDir:
+		if test.Content.Repository == nil {
+			return test
+		}
+
+		if content.Repository != nil {
+			if content.Repository.Branch != "" {
+				test.Content.Repository.Branch = content.Repository.Branch
+			}
+
+			if content.Repository.Commit != "" {
+				test.Content.Repository.Commit = content.Repository.Commit
+			}
+
+			if content.Repository.Path != "" {
+				test.Content.Repository.Path = content.Repository.Path
+			}
+
+			if content.Repository.WorkingDir != "" {
+				test.Content.Repository.WorkingDir = content.Repository.WorkingDir
+			}
+		}
+	}
+
+	return test
 }
