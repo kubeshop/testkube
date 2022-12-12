@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-sidebar_label: Testkube Cloud
+sidebar_label: Intro
 ---
 # Testkube Cloud 
 
@@ -25,4 +25,4 @@ Testkube servers (Coming Soon!)
 
 ## Installing Agent
 
-Please follow [install steps](0-testkube-cloud/installing-agent.md) for getting ready to use Testkube Agent
+Please follow [install steps](1-installing-agent.md) for getting ready to use Testkube Agent
