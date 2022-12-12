@@ -30,6 +30,7 @@ func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.Ex
 			ExecFn:  s.executeTest,
 		}
 	}
+
 	return requests
 }
 
@@ -80,6 +81,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	s.logger.Infow("calling executor with options", "options", options.Request)
+
 	execution.Start()
 
 	s.events.Notify(testkube.NewEventStartTest(&execution))
@@ -91,9 +93,8 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
 	}
 
-	var result testkube.ExecutionResult
 	// sync/async test execution
-	result, err = s.startTestExecution(options, result, err, &execution)
+	result, err := s.startTestExecution(options, &execution)
 
 	// set execution result to one created
 	execution.ExecutionResult = &result
@@ -119,13 +120,14 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	return execution, nil
 }
 
-func (s *Scheduler) startTestExecution(options client.ExecuteOptions, result testkube.ExecutionResult, err error, execution *testkube.Execution) (testkube.ExecutionResult, error) {
+func (s *Scheduler) startTestExecution(options client.ExecuteOptions, execution *testkube.Execution) (result testkube.ExecutionResult, err error) {
 	executor := s.getExecutor(options.TestName)
 	if options.Sync {
 		result, err = executor.ExecuteSync(execution, options)
 	} else {
 		result, err = executor.Execute(execution, options)
 	}
+
 	return result, err
 }
 
@@ -135,11 +137,13 @@ func (s *Scheduler) getExecutor(testName string) client.Executor {
 		s.logger.Errorw("can't get test", "test", testName, "error", err)
 		return s.executor
 	}
+
 	executorCR, err := s.executorsClient.GetByType(testCR.Spec.Type_)
 	if err != nil {
 		s.logger.Errorw("can't get executor", "test", testName, "error", err)
 		return s.executor
 	}
+
 	switch executorCR.Spec.ExecutorType {
 	case containerType:
 		return s.containerExecutor
@@ -154,6 +158,7 @@ func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
 		s.logger.Errorw("retrieving latest execution", "error", err)
 		return number
 	}
+
 	return number
 }
 
@@ -237,7 +242,12 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if err != nil {
 			return options, errors.Errorf("cannot get test source custom resource: %v", err)
 		}
+
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
+	}
+
+	if request.ContentRequest != nil {
+
 	}
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
@@ -249,6 +259,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+
 		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
 			request.VariablesFile = test.ExecutionRequest.VariablesFile
 		}
@@ -319,6 +330,7 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	for k, v := range vars1 {
 		variables[k] = v
 	}
+
 	for k, v := range vars2 {
 		variables[k] = v
 	}
@@ -331,6 +343,7 @@ func mergeEnvs(envs1 map[string]string, envs2 map[string]string) map[string]stri
 	for k, v := range envs1 {
 		envs[k] = v
 	}
+
 	for k, v := range envs2 {
 		envs[k] = v
 	}
@@ -408,6 +421,7 @@ func mapImagePullSecrets(secrets []testkube.LocalObjectReference) []string {
 	for _, secret := range secrets {
 		res = append(res, secret.Name)
 	}
+
 	return res
 }
 
@@ -416,6 +430,7 @@ func mapK8sImagePullSecrets(secrets []v1.LocalObjectReference) []string {
 	for _, secret := range secrets {
 		res = append(res, secret.Name)
 	}
+
 	return res
 }
 
