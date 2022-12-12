@@ -37,6 +37,14 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("Args:    ", execution.Args...)
 	}
 
+	if execution.Content != nil && execution.Content.Repository != nil {
+		ui.Warn("Repository parameters:")
+		ui.Warn("  Branch:         ", execution.Content.Repository.Branch)
+		ui.Warn("  Commit:         ", execution.Content.Repository.Commit)
+		ui.Warn("  Path:           ", execution.Content.Repository.Path)
+		ui.Warn("  Working dir:    ", execution.Content.Repository.WorkingDir)
+	}
+
 	render.RenderExecutionResult(&execution)
 
 	ui.NL()
