@@ -4069,6 +4069,7 @@ components:
                   type: string
                   example: "test-1"
                 parentType:
+                  type: string
                   enum:
                    - test
                    - execution
