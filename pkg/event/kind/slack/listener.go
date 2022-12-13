@@ -6,13 +6,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/slacknotifier"
+	"github.com/kubeshop/testkube/pkg/slack"
 	"go.uber.org/zap"
 )
 
 var _ common.Listener = &SlackListener{}
 
-func NewSlackListener(name, selector string, events []testkube.EventType, notifier *slacknotifier.SlackNotifier) *SlackListener {
+func NewSlackListener(name, selector string, events []testkube.EventType, notifier *slack.Notifier) *SlackListener {
 	return &SlackListener{
 		name:          name,
 		Log:           log.DefaultLogger,
@@ -27,7 +27,7 @@ type SlackListener struct {
 	Log           *zap.SugaredLogger
 	events        []testkube.EventType
 	selector      string
-	slackNotifier *slacknotifier.SlackNotifier
+	slackNotifier *slack.Notifier
 }
 
 func (l *SlackListener) Name() string {
@@ -50,7 +50,7 @@ func (l *SlackListener) Metadata() map[string]string {
 }
 
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	err := l.slackNotifier.SendEvent(event)
+	err := l.slackNotifier.SendEvent(&event)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
