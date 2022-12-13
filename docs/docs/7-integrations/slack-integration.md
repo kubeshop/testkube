@@ -85,7 +85,24 @@ It will send notifications to channel with id `C01234567` for the test and test 
 
 ## **Configure message template**
 
-The default message is [/charts/testkube-api/slack-template.json](https://github.com/kubeshop/helm-charts/blob/311ff9f6fc38dfb5196b91a6f63ee7d3f59f7f4b/charts/testkube-api/slack-template.json) and is written using [Slack block kit builder](https://app.slack.com/block-kit-builder), it can be used to customize it depending on the needs.
+The default message is [/charts/testkube-api/slack-template.json](https://github.com/kubeshop/helm-charts/blob/311ff9f6fc38dfb5196b91a6f63ee7d3f59f7f4b/charts/testkube-api/slack-template.json) and is written using [Slack block kit builder](https://app.slack.com/block-kit-builder) and golang templates, it can be used to customize it depending on the needs and teh following structure is referenced in the template from where template is getting the data to show
+
+```go
+type MessageArgs struct {
+	ExecutionName string
+	EventType     string
+	Namespace     string
+	Labels        string
+	TestName      string
+	TestType      string
+	Status        string
+	FailedSteps   int
+	TotalSteps    int
+	StartTime     string
+	EndTime       string
+	Duration      string
+}
+```
 
 ## **Add the Testkube bot to a Channel**
 
