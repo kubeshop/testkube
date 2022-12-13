@@ -2883,6 +2883,10 @@ components:
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
           description: configuration parameters for storing container executor test artifacts
+        preRunScript:
+          type: string
+          description: script to run before test execution
+          example:  "echo -n '$SECRET_ENV' > ./secret_file"
 
     Artifact:
       type: object
@@ -3318,6 +3322,10 @@ components:
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
+        preRunScript:
+          type: string
+          description: script to run before test execution
+          example:  "echo -n '$SECRET_ENV' > ./secret_file"
   
     ExecutionUpdateRequest:
       description: test execution request update body
