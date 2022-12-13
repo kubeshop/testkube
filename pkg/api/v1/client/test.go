@@ -145,6 +145,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		BucketName:      options.BucketName,
 		ArtifactRequest: options.ArtifactRequest,
 		JobTemplate:     options.JobTemplate,
+		ContentRequest:  options.ContentRequest,
 	}
 
 	body, err := json.Marshal(request)
