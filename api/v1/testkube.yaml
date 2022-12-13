@@ -162,7 +162,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: object
+                type: array
                 items:
                   $ref: "#/components/schemas/Problem"
         502:
@@ -170,7 +170,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: object
+                type: array
                 items:
                   $ref: "#/components/schemas/Problem"
 
