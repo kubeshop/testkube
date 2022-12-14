@@ -68,7 +68,7 @@ func helpMessageByGroups(cmd *cobra.Command) string {
 	delete(groups, cmdGroupCobra)
 
 	groupNames := []string{}
-	for k, _ := range groups {
+	for k := range groups {
 		groupNames = append(groupNames, k)
 	}
 	sort.Strings(groupNames)

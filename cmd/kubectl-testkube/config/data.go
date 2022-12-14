@@ -5,10 +5,18 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type ContextType string
+
+const (
+	ContextTypeCloud      ContextType = "cloud"
+	ContextTypeKubeconfig ContextType = "kubeconfig"
+)
+
 type CloudContext struct {
 	Environment  string `json:"environment,omitempty"`
 	Organization string `json:"organization,omitempty"`
 	ApiKey       string `json:"apiKey,omitempty"`
+	ApiUri       string `json:"apiUri,omitempty"`
 }
 
 type Data struct {
@@ -18,6 +26,7 @@ type Data struct {
 	APIURI           string     `json:"apiURI,omitempty"`
 	OAuth2Data       OAuth2Data `json:"oauth2Data"`
 
+	ContextType  ContextType  `json:"contextType,omitempty"`
 	CloudContext CloudContext `json:"cloudContext,omitempty"`
 }
 

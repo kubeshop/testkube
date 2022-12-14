@@ -11,5 +11,6 @@ func uiPrintCloudContext(cloudContext config.CloudContext) {
 		"Organization ID": cloudContext.Organization,
 		"Environment ID ": cloudContext.Environment,
 		"API Key        ": text.Obfuscate(cloudContext.ApiKey),
+		"API URI        ": cloudContext.ApiUri,
 	})
 }

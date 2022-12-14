@@ -22,14 +22,16 @@ type CopyFileClient interface {
 }
 
 type CopyFileDirectClient struct {
-	client *http.Client
-	apiURI string
+	client        *http.Client
+	apiURI        string
+	apiPathPrefix string
 }
 
-func NewCopyFileDirectClient(httpClient *http.Client, apiURI string) *CopyFileDirectClient {
+func NewCopyFileDirectClient(httpClient *http.Client, apiURI, apiPathPrefix string) *CopyFileDirectClient {
 	return &CopyFileDirectClient{
-		client: httpClient,
-		apiURI: apiURI,
+		client:        httpClient,
+		apiURI:        apiURI,
+		apiPathPrefix: apiPathPrefix,
 	}
 }
 
@@ -52,7 +54,7 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, uri, body)
+	req, err := http.NewRequest(http.MethodPost, c.getUri(), body)
 	if err != nil {
 		return err
 	}
@@ -69,6 +71,10 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 	}
 
 	return nil
+}
+
+func (c CopyFileDirectClient) getUri() string {
+	return c.apiPathPrefix + uri
 }
 
 // UploadFile uploads a copy file to the API server
