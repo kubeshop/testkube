@@ -151,7 +151,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.accessKey       | yes         | minio123                             |
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
 | testkube-api.slackToken              | yes         | ""                                   |
-| testkube-api.slackChannelId          | yes         | ""                                   |
+| testkube-api.slackTemplate           | yes         | ""                                   |
+| testkube-api.slackConfig             | yes         | ""                                   |
 | testkube-api.jobServiceAccountName   | yes         | ""                                   |
 
 >For more configuration parameters of `MongoDB` chart please visit:
@@ -234,6 +235,6 @@ metadata:
   namespace: testkube
 ```
 
-2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser` and `minio.minioRootPassword` empty.
+2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser`, `minio.minioRootPassword` and `storage.port` empty and set `storage.endpoint` to `s3.amazonaws.com`.
 
 3. Install using Helm and the values file with the above modifications.
