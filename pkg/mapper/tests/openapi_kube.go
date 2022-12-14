@@ -144,6 +144,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		Command:               executionRequest.Command,
 		ArtifactRequest:       artifactRequest,
 		JobTemplate:           executionRequest.JobTemplate,
+		PreRunScript:          executionRequest.PreRunScript,
 	}
 }
 
@@ -376,6 +377,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		{
 			executionRequest.JobTemplate,
 			&request.JobTemplate,
+		},
+		{
+			executionRequest.PreRunScript,
+			&request.PreRunScript,
 		},
 	}
 

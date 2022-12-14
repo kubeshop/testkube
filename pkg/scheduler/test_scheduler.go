@@ -226,6 +226,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.Uploads = options.Request.Uploads
 	execution.BucketName = options.Request.BucketName
 	execution.ArtifactRequest = options.Request.ArtifactRequest
+	execution.PreRunScript = options.Request.PreRunScript
 
 	return execution
 }
@@ -260,16 +261,36 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
 
-		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
-			request.VariablesFile = test.ExecutionRequest.VariablesFile
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				test.ExecutionRequest.VariablesFile,
+				&request.VariablesFile,
+			},
+			{
+				test.ExecutionRequest.HttpProxy,
+				&request.HttpProxy,
+			},
+			{
+				test.ExecutionRequest.HttpsProxy,
+				&request.HttpsProxy,
+			},
+			{
+				test.ExecutionRequest.JobTemplate,
+				&request.JobTemplate,
+			},
+			{
+				test.ExecutionRequest.PreRunScript,
+				&request.PreRunScript,
+			},
 		}
 
-		if request.HttpProxy == "" && test.ExecutionRequest.HttpProxy != "" {
-			request.HttpProxy = test.ExecutionRequest.HttpProxy
-		}
-
-		if request.HttpsProxy == "" && test.ExecutionRequest.HttpsProxy != "" {
-			request.HttpsProxy = test.ExecutionRequest.HttpsProxy
+		for _, field := range fields {
+			if *field.destination == "" && field.source != "" {
+				*field.destination = field.source
+			}
 		}
 
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
@@ -277,10 +298,6 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
-
-		if request.JobTemplate == "" && test.ExecutionRequest.JobTemplate != "" {
-			request.JobTemplate = test.ExecutionRequest.JobTemplate
-		}
 	}
 
 	// get executor from kubernetes CRs

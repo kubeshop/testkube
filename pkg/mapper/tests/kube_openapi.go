@@ -138,6 +138,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		ActiveDeadlineSeconds: specExecutionRequest.ActiveDeadlineSeconds,
 		ArtifactRequest:       artifactRequest,
 		JobTemplate:           specExecutionRequest.JobTemplate,
+		PreRunScript:          specExecutionRequest.PreRunScript,
 	}
 }
 

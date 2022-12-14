@@ -116,6 +116,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		ActiveDeadlineSeconds: 10,
 		ArtifactRequest:       &testkube.ArtifactRequest{},
 		JobTemplate:           "",
+		PreRunScript:          "",
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

@@ -22,6 +22,7 @@ import (
 var (
 	executorArgs []string
 	envs         map[string]string
+	preRunScript string
 )
 
 // NewCRDTestsCmd is command to generate test CRDs
@@ -40,7 +41,10 @@ func NewCRDTestsCmd() *cobra.Command {
 			testEnvs := make(map[string]map[string]map[string]string, 0)
 			testSecretEnvs := make(map[string]map[string]map[string]string, 0)
 
-			err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			script, err := os.ReadFile(preRunScript)
+			ui.ExitOnError("getting prerun script", err)
+
+			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return nil
 				}
@@ -96,7 +100,7 @@ func NewCRDTestsCmd() *cobra.Command {
 				if _, ok := tests[testType]; !ok {
 					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
 				}
-				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs}
+				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, PreRunScript: string(script)}
 				tests[testType][testName] = *test
 				return nil
 			})
@@ -109,6 +113,7 @@ func NewCRDTestsCmd() *cobra.Command {
 
 	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	return cmd
 }
 
