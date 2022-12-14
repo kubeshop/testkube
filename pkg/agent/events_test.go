@@ -28,7 +28,10 @@ func TestRunEventLoop(t *testing.T) {
 		var opts []grpc.ServerOption
 		grpcServer := grpc.NewServer(opts...)
 		cloud.RegisterTestKubeCloudAPIServer(grpcServer, cloudSrv)
-		grpcServer.Serve(lis)
+		err = grpcServer.Serve(lis)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	logger, _ := zap.NewDevelopment()
@@ -46,10 +49,6 @@ func TestRunEventLoop(t *testing.T) {
 			res := l[0].Notify(testkube.Event{Id: fmt.Sprintf("%d", i)})
 			if res.Error_ != "" {
 				continue
-			}
-			i++
-			if i >= 10 {
-				break
 			}
 		}
 	}()

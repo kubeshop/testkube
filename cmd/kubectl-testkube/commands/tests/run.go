@@ -42,6 +42,10 @@ func NewRunTestCmd() *cobra.Command {
 		artifactVolumeMountPath  string
 		artifactDirs             []string
 		jobTemplate              string
+		gitBranch                string
+		gitCommit                string
+		gitPath                  string
+		gitWorkingDir            string
 	)
 
 	cmd := &cobra.Command{
@@ -96,6 +100,17 @@ func NewRunTestCmd() *cobra.Command {
 					StorageClassName: artifactStorageClassName,
 					VolumeMountPath:  artifactVolumeMountPath,
 					Dirs:             artifactDirs,
+				}
+			}
+
+			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
+				options.ContentRequest = &testkube.TestContentRequest{
+					Repository: &testkube.RepositoryParameters{
+						Branch:     gitBranch,
+						Commit:     gitCommit,
+						Path:       gitPath,
+						WorkingDir: gitWorkingDir,
+					},
 				}
 			}
 
@@ -197,6 +212,10 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
+	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 
 	return cmd
 }

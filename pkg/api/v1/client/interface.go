@@ -160,6 +160,7 @@ type ExecuteTestOptions struct {
 	BucketName                    string
 	ArtifactRequest               *testkube.ArtifactRequest
 	JobTemplate                   string
+	ContentRequest                *testkube.TestContentRequest
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

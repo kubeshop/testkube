@@ -162,7 +162,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: object
+                type: array
                 items:
                   $ref: "#/components/schemas/Problem"
         502:
@@ -170,7 +170,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                type: object
+                type: array
                 items:
                   $ref: "#/components/schemas/Problem"
 
@@ -2675,12 +2675,26 @@ components:
           description: test content
           example: "https://github.com/kubeshop/testkube"
 
+    TestContentRequest:
+      description: test content request body
+      type: object
+      properties:
+        repository:
+          $ref: "#/components/schemas/RepositoryParameters"
+
     TestContentUpdate:
       description: test content update body
       type: object
       nullable: true
       allOf:
-        - $ref: "#/components/schemas/TestContent"          
+        - $ref: "#/components/schemas/TestContent"
+
+    TestContentUpdateRequest:
+      description: test content update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestContentRequest"
 
     TestSource:
       description: Test source resource for shared test content
@@ -3123,12 +3137,40 @@ components:
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
 
+    RepositoryParameters:
+      description: repository parameters for tests in git repositories
+      type: object
+      properties:
+        branch:
+          type: string
+          description: branch/tag name for checkout
+          example: "main"
+        commit:
+          type: string
+          description: commit id (sha) for checkout
+          example: "b928cbb7186944ab9275937ec1ac3d3738ca2e1d"
+        path:
+          type: string
+          description: if needed we can checkout particular path (dir or file) in case of BIG/mono repositories
+          example: "test/perf"
+        workingDir:
+          type: string
+          description: if provided we checkout the whole repository and run test from this directory
+          example: "/"
+
     RepositoryUpdate:
       description: repository update body
       type: object
       nullable: true
       allOf:
-        - $ref: "#/components/schemas/Repository" 
+        - $ref: "#/components/schemas/Repository"
+
+    RepositoryUpdateParameters:
+      description: repository update parameters for tests in git repositories
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/RepositoryParameters"
 
     ArtifactRequest:
       description: artifact request body for container executors with test artifacts
@@ -3155,7 +3197,7 @@ components:
       type: object
       nullable: true
       allOf:
-        - $ref: "#/components/schemas/ArtifactRequest" 
+        - $ref: "#/components/schemas/ArtifactRequest"
 
     ExecutionRequest:
       description: test execution request body
@@ -3273,13 +3315,16 @@ components:
         jobTemplate:
           type: string
           description: job template extensions
-          
+        contentRequest:
+          $ref: "#/components/schemas/TestContentRequest"
+          description: adjusting parameters for test content
+  
     ExecutionUpdateRequest:
       description: test execution request update body
       type: object
       nullable: true
       allOf:
-        - $ref: "#/components/schemas/ExecutionRequest" 
+        - $ref: "#/components/schemas/ExecutionRequest"
 
     TestSuiteExecutionRequest:
       description: test suite execution request body
@@ -3612,7 +3657,7 @@ components:
         test:
           $ref: "#/components/schemas/Test"
         latestExecution:
-          $ref: "#/components/schemas/ExecutionSummary"          
+          $ref: "#/components/schemas/ExecutionSummary"
 
     TestSuiteWithExecution:
       description: Test suite with latest execution result
@@ -3634,7 +3679,7 @@ components:
         testSuite:
           $ref: "#/components/schemas/TestSuite"
         latestExecution:
-          $ref: "#/components/schemas/TestSuiteExecutionSummary"          
+          $ref: "#/components/schemas/TestSuiteExecutionSummary"
 
     Config:
       description: Testkube API config data structure
@@ -4024,6 +4069,7 @@ components:
                   type: string
                   example: "test-1"
                 parentType:
+                  type: string
                   enum:
                    - test
                    - execution

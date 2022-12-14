@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"os"
 	"strconv"
 	"time"
@@ -422,18 +421,18 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 }
 
 func (s TestkubeAPI) getSlackLoader() *slack.SlackLoader {
-	events := os.Getenv("SLACK_EVENTS")
-	var eventsList []testkube.EventType
-	err := json.Unmarshal([]byte(events), &eventsList)
-	if err != nil {
-		s.Log.Errorw("error while unmarshalling events", "error", err.Error())
-	}
-
 	messageTemplate := os.Getenv("SLACK_TEMPLATE")
 
 	templateDecoded, err := base64.StdEncoding.DecodeString(messageTemplate)
 	if err != nil {
 		s.Log.Errorw("error while decoding slack template", "error", err.Error())
 	}
-	return slack.NewSlackLoader(string(templateDecoded), eventsList)
+
+	configString := os.Getenv("SLACK_CONFIG")
+	configDecoded, err := base64.StdEncoding.DecodeString(configString)
+	if err != nil {
+		s.Log.Errorw("error while decoding slack config", "error", err.Error())
+	}
+
+	return slack.NewSlackLoader(string(templateDecoded), string(configDecoded), testkube.AllEventTypes)
 }
