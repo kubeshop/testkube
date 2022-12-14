@@ -61,7 +61,7 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 }
 
 func watchLogs(id string, client apiclientv1.Client) {
-	ui.Info("Getting pod logs")
+	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.Logs(id)
 	ui.ExitOnError("getting logs from executor", err)
