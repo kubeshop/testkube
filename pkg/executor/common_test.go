@@ -1,10 +1,14 @@
 package executor
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestPodHasError(t *testing.T) {
@@ -69,5 +73,59 @@ func failedInitContainer() *corev1.Pod {
 					},
 				},
 			}},
+	}
+}
+
+func TestGetPodLogs(t *testing.T) {
+	type args struct {
+		c             kubernetes.Interface
+		namespace     string
+		pod           corev1.Pod
+		logLinesCount []int64
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantLogs []byte
+		wantErr  bool
+	}{
+		{
+			name: "pod with multiple containers",
+			args: args{
+				c:         fake.NewSimpleClientset(),
+				namespace: "testkube_test",
+				pod: corev1.Pod{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{
+							{
+								Name: "init_container",
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name: "first_container",
+							},
+							{
+								Name: "second_container",
+							},
+						},
+					},
+				},
+			},
+			wantLogs: []byte("fake logsfake logsfake logs"),
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotLogs, err := GetPodLogs(tt.args.c, tt.args.namespace, tt.args.pod, tt.args.logLinesCount...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPodLogs() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotLogs, tt.wantLogs) {
+				t.Errorf("GetPodLogs() = %v, want %v", gotLogs, tt.wantLogs)
+			}
+		})
 	}
 }

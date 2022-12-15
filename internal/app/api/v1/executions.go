@@ -148,7 +148,7 @@ func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		execution, err := s.ExecutionResults.Get(context.Background(), executionID)
 		if err != nil {
-			l.Errorw("can't find execuction ", "error", err)
+			l.Errorw("can't find execution ", "error", err)
 			return
 		}
 
