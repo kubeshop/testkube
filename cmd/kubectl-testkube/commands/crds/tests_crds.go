@@ -105,7 +105,13 @@ func NewCRDTestsCmd() *cobra.Command {
 				if _, ok := tests[testType]; !ok {
 					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
 				}
-				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, PreRunScript: string(script)}
+
+				scriptBody := string(script)
+				if scriptBody != "" {
+					scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
+				}
+
+				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, PreRunScript: scriptBody}
 				tests[testType][testName] = *test
 				return nil
 			})
