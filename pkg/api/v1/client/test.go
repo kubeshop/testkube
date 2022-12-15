@@ -146,6 +146,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		ArtifactRequest: options.ArtifactRequest,
 		JobTemplate:     options.JobTemplate,
 		ContentRequest:  options.ContentRequest,
+		PreRunScript:    options.PreRunScriptContent,
 	}
 
 	body, err := json.Marshal(request)
@@ -172,6 +173,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		BucketName:      options.BucketName,
 		ArtifactRequest: options.ArtifactRequest,
 		JobTemplate:     options.JobTemplate,
+		PreRunScript:    options.PreRunScriptContent,
 	}
 
 	body, err := json.Marshal(request)

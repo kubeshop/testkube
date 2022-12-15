@@ -32,6 +32,7 @@ testkube get <resourceName> [flags]
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube get artifact](testkube_get_artifact.md)	 - List artifacts of the given execution name
+* [testkube get context](testkube_get_context.md)	 - Set context for Testkube Cloud
 * [testkube get execution](testkube_get_execution.md)	 - Lists or gets test executions
 * [testkube get executor](testkube_get_executor.md)	 - Gets executor details
 * [testkube get test](testkube_get_test.md)	 - Get all available tests

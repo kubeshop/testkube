@@ -21,7 +21,7 @@ type Manager interface {
 	// Prepare prepares secret env vars based on secret envs and variables
 	Prepare(secretEnvs map[string]string, variables map[string]testkube.Variable) (secretEnvVars []corev1.EnvVar)
 	// GetEnvs get secret envs
-	GetEnvs() (secretEnvs []string)
+	GetEnvs() (secretEnvs map[string]string)
 	// GetVars gets secret vars
 	GetVars(variables map[string]testkube.Variable)
 	// Obfuscate obfuscates secret values
@@ -99,15 +99,17 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 }
 
 // GetEnvs gets secret envs
-func (m EnvManager) GetEnvs() (secretEnvs []string) {
+func (m EnvManager) GetEnvs() (secretEnvs map[string]string) {
+	secretEnvs = make(map[string]string, 0)
 	i := 1
 	for {
-		secretEnv, ok := os.LookupEnv(fmt.Sprintf("%s%d", SecretEnvVarPrefix, i))
+		envName := fmt.Sprintf("%s%d", SecretEnvVarPrefix, i)
+		secretEnv, ok := os.LookupEnv(envName)
 		if !ok {
 			break
 		}
 
-		secretEnvs = append(secretEnvs, secretEnv)
+		secretEnvs[envName] = secretEnv
 		i++
 	}
 

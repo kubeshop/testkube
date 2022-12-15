@@ -161,6 +161,7 @@ type ExecuteTestOptions struct {
 	ArtifactRequest               *testkube.ArtifactRequest
 	JobTemplate                   string
 	ContentRequest                *testkube.TestContentRequest
+	PreRunScriptContent           string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

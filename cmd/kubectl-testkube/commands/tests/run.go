@@ -46,6 +46,7 @@ func NewRunTestCmd() *cobra.Command {
 		gitCommit                string
 		gitPath                  string
 		gitWorkingDir            string
+		preRunScript             string
 	)
 
 	cmd := &cobra.Command{
@@ -80,6 +81,13 @@ func NewRunTestCmd() *cobra.Command {
 				jobTemplateContent = string(b)
 			}
 
+			preRunScriptContent := ""
+			if preRunScript != "" {
+				b, err := os.ReadFile(preRunScript)
+				ui.ExitOnError("reading pre run script", err)
+				preRunScriptContent = string(b)
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
@@ -93,6 +101,7 @@ func NewRunTestCmd() *cobra.Command {
 				Envs:                          envs,
 				Image:                         image,
 				JobTemplate:                   jobTemplateContent,
+				PreRunScriptContent:           preRunScriptContent,
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
@@ -216,6 +225,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 
 	return cmd
 }

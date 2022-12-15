@@ -110,6 +110,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		if test.ExecutionRequest.JobTemplate != "" {
 			ui.Warn("  Job template:         ", "\n", test.ExecutionRequest.JobTemplate)
 		}
+
+		if test.ExecutionRequest.PreRunScript != "" {
+			ui.Warn("  Pre run script:       ", "\n", test.ExecutionRequest.PreRunScript)
+		}
 	}
 
 	return nil

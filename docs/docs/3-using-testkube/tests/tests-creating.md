@@ -378,6 +378,22 @@ spec:
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
+### **Executing pre run script**
+If you need to provide additional configuration for your executor environment, you can submit prerun script to be executed before test started. For example, we have such a simple shell script stored in `script.sh` file:
+
+```sh
+!/bin/sh
+
+echo "Storing ssl certificate in file from env secret env"
+echo "$SSL_CERT" > /data/ssl.crt
+```
+
+Then just provide it when you create or run the test using `--prerun-script` parameter:
+
+```bash
+kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script script.sh --secret-env SSL_CERT=your-k8s-secret
+```
+
 ## **Summary**
 
 Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
