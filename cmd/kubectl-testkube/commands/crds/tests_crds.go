@@ -41,8 +41,13 @@ func NewCRDTestsCmd() *cobra.Command {
 			testEnvs := make(map[string]map[string]map[string]string, 0)
 			testSecretEnvs := make(map[string]map[string]map[string]string, 0)
 
-			script, err := os.ReadFile(preRunScript)
-			ui.ExitOnError("getting prerun script", err)
+			var script []byte
+			var err error
+
+			if preRunScript != "" {
+				script, err = os.ReadFile(preRunScript)
+				ui.ExitOnError("getting prerun script", err)
+			}
 
 			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
