@@ -170,6 +170,7 @@ type ExecuteTestSuiteOptions struct {
 	HTTPProxy          string
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
+	ContentRequest     *testkube.TestContentRequest
 }
 
 // Gettable is an interface of gettable objects

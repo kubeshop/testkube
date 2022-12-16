@@ -17,6 +17,10 @@ testkube run testsuite <testSuiteName> [flags]
   -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
       --execution-label stringToString             execution-label adds a label to execution in form of key value pair: --execution-label key1=value1 (default [])
+      --git-branch string                          if uri is git repository we can set additional branch parameter
+      --git-commit string                          if uri is git repository we can use commit id (sha) parameter
+      --git-path string                            if repository is big we need to define additional path to directory/file to checkout partially
+      --git-working-dir string                     if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter
   -h, --help                                       help for testsuite
       --http-proxy string                          http proxy for executor containers
       --https-proxy string                         https proxy for executor containers
