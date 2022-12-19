@@ -4,7 +4,7 @@ metadata:
   name: jmeter-executor-smoke
   namespace: testkube
   labels:
-  core-tests: executors
+    core-tests: executors
 spec:
   type: jmeter/test
   content:
