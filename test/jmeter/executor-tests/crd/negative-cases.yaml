@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: jmeter-executor-smoke-negative
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: jmeter/test
   content:
