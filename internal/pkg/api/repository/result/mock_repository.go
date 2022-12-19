@@ -37,138 +37,236 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 }
 
 // DeleteAll mocks base method.
-func (m *MockRepository) DeleteAll(arg0 context.Context) error {
+func (m *MockRepository) DeleteAll(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAll", arg0)
+	ret := m.ctrl.Call(m, "DeleteAll", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAll indicates an expected call of DeleteAll.
-func (mr *MockRepositoryMockRecorder) DeleteAll(arg0 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteAll(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockRepository)(nil).DeleteAll), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockRepository)(nil).DeleteAll), ctx)
+}
+
+// DeleteAllOutput mocks base method.
+func (m *MockRepository) DeleteAllOutput(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllOutput", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllOutput indicates an expected call of DeleteAllOutput.
+func (mr *MockRepositoryMockRecorder) DeleteAllOutput(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOutput", reflect.TypeOf((*MockRepository)(nil).DeleteAllOutput), ctx)
 }
 
 // DeleteByTest mocks base method.
-func (m *MockRepository) DeleteByTest(arg0 context.Context, arg1 string) error {
+func (m *MockRepository) DeleteByTest(ctx context.Context, testName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByTest", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteByTest", ctx, testName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteByTest indicates an expected call of DeleteByTest.
-func (mr *MockRepositoryMockRecorder) DeleteByTest(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteByTest(ctx, testName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTest", reflect.TypeOf((*MockRepository)(nil).DeleteByTest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTest", reflect.TypeOf((*MockRepository)(nil).DeleteByTest), ctx, testName)
 }
 
 // DeleteByTestSuite mocks base method.
-func (m *MockRepository) DeleteByTestSuite(arg0 context.Context, arg1 string) error {
+func (m *MockRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByTestSuite", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteByTestSuite", ctx, testSuiteName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteByTestSuite indicates an expected call of DeleteByTestSuite.
-func (mr *MockRepositoryMockRecorder) DeleteByTestSuite(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteByTestSuite(ctx, testSuiteName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteByTestSuite), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteByTestSuite), ctx, testSuiteName)
 }
 
 // DeleteByTestSuites mocks base method.
-func (m *MockRepository) DeleteByTestSuites(arg0 context.Context, arg1 []string) error {
+func (m *MockRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByTestSuites", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteByTestSuites", ctx, testSuiteNames)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteByTestSuites indicates an expected call of DeleteByTestSuites.
-func (mr *MockRepositoryMockRecorder) DeleteByTestSuites(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteByTestSuites(ctx, testSuiteNames interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteByTestSuites), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteByTestSuites), ctx, testSuiteNames)
 }
 
 // DeleteByTests mocks base method.
-func (m *MockRepository) DeleteByTests(arg0 context.Context, arg1 []string) error {
+func (m *MockRepository) DeleteByTests(ctx context.Context, testNames []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByTests", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteByTests", ctx, testNames)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteByTests indicates an expected call of DeleteByTests.
-func (mr *MockRepositoryMockRecorder) DeleteByTests(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteByTests(ctx, testNames interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTests", reflect.TypeOf((*MockRepository)(nil).DeleteByTests), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTests", reflect.TypeOf((*MockRepository)(nil).DeleteByTests), ctx, testNames)
 }
 
 // DeleteForAllTestSuites mocks base method.
-func (m *MockRepository) DeleteForAllTestSuites(arg0 context.Context) error {
+func (m *MockRepository) DeleteForAllTestSuites(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteForAllTestSuites", arg0)
+	ret := m.ctrl.Call(m, "DeleteForAllTestSuites", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteForAllTestSuites indicates an expected call of DeleteForAllTestSuites.
-func (mr *MockRepositoryMockRecorder) DeleteForAllTestSuites(arg0 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteForAllTestSuites(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteForAllTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteForAllTestSuites), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteForAllTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteForAllTestSuites), ctx)
+}
+
+// DeleteOutput mocks base method.
+func (m *MockRepository) DeleteOutput(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutput", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutput indicates an expected call of DeleteOutput.
+func (mr *MockRepositoryMockRecorder) DeleteOutput(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutput", reflect.TypeOf((*MockRepository)(nil).DeleteOutput), ctx, id)
+}
+
+// DeleteOutputByTest mocks base method.
+func (m *MockRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputByTest", ctx, testName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputByTest indicates an expected call of DeleteOutputByTest.
+func (mr *MockRepositoryMockRecorder) DeleteOutputByTest(ctx, testName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputByTest", reflect.TypeOf((*MockRepository)(nil).DeleteOutputByTest), ctx, testName)
+}
+
+// DeleteOutputByTestSuite mocks base method.
+func (m *MockRepository) DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputByTestSuite", ctx, testSuiteName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputByTestSuite indicates an expected call of DeleteOutputByTestSuite.
+func (mr *MockRepositoryMockRecorder) DeleteOutputByTestSuite(ctx, testSuiteName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputByTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteOutputByTestSuite), ctx, testSuiteName)
+}
+
+// DeleteOutputForAllTestSuite mocks base method.
+func (m *MockRepository) DeleteOutputForAllTestSuite(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputForAllTestSuite", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputForAllTestSuite indicates an expected call of DeleteOutputForAllTestSuite.
+func (mr *MockRepositoryMockRecorder) DeleteOutputForAllTestSuite(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForAllTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForAllTestSuite), ctx)
+}
+
+// DeleteOutputForTestSuites mocks base method.
+func (m *MockRepository) DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputForTestSuites", ctx, testSuiteNames)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputForTestSuites indicates an expected call of DeleteOutputForTestSuites.
+func (mr *MockRepositoryMockRecorder) DeleteOutputForTestSuites(ctx, testSuiteNames interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForTestSuites), ctx, testSuiteNames)
+}
+
+// DeleteOutputForTests mocks base method.
+func (m *MockRepository) DeleteOutputForTests(ctx context.Context, testNames []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputForTests", ctx, testNames)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputForTests indicates an expected call of DeleteOutputForTests.
+func (mr *MockRepositoryMockRecorder) DeleteOutputForTests(ctx, testNames interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForTests", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForTests), ctx, testNames)
 }
 
 // EndExecution mocks base method.
-func (m *MockRepository) EndExecution(arg0 context.Context, arg1 testkube.Execution) error {
+func (m *MockRepository) EndExecution(ctx context.Context, execution testkube.Execution) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EndExecution", arg0, arg1)
+	ret := m.ctrl.Call(m, "EndExecution", ctx, execution)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EndExecution indicates an expected call of EndExecution.
-func (mr *MockRepositoryMockRecorder) EndExecution(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) EndExecution(ctx, execution interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndExecution", reflect.TypeOf((*MockRepository)(nil).EndExecution), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndExecution", reflect.TypeOf((*MockRepository)(nil).EndExecution), ctx, execution)
 }
 
 // Get mocks base method.
-func (m *MockRepository) Get(arg0 context.Context, arg1 string) (testkube.Execution, error) {
+func (m *MockRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockRepositoryMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Get(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRepository)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRepository)(nil).Get), ctx, id)
 }
 
 // GetByNameAndTest mocks base method.
-func (m *MockRepository) GetByNameAndTest(arg0 context.Context, arg1, arg2 string) (testkube.Execution, error) {
+func (m *MockRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByNameAndTest", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetByNameAndTest", ctx, name, testName)
 	ret0, _ := ret[0].(testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByNameAndTest indicates an expected call of GetByNameAndTest.
-func (mr *MockRepositoryMockRecorder) GetByNameAndTest(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetByNameAndTest(ctx, name, testName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTest", reflect.TypeOf((*MockRepository)(nil).GetByNameAndTest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTest", reflect.TypeOf((*MockRepository)(nil).GetByNameAndTest), ctx, name, testName)
 }
 
 // GetExecutionTotals mocks base method.
-func (m *MockRepository) GetExecutionTotals(arg0 context.Context, arg1 bool, arg2 ...Filter) (testkube.ExecutionsTotals, error) {
+func (m *MockRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (testkube.ExecutionsTotals, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []interface{}{ctx, paging}
+	for _, a := range filter {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetExecutionTotals", varargs...)
@@ -178,154 +276,227 @@ func (m *MockRepository) GetExecutionTotals(arg0 context.Context, arg1 bool, arg
 }
 
 // GetExecutionTotals indicates an expected call of GetExecutionTotals.
-func (mr *MockRepositoryMockRecorder) GetExecutionTotals(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetExecutionTotals(ctx, paging interface{}, filter ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	varargs := append([]interface{}{ctx, paging}, filter...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionTotals", reflect.TypeOf((*MockRepository)(nil).GetExecutionTotals), varargs...)
 }
 
 // GetExecutions mocks base method.
-func (m *MockRepository) GetExecutions(arg0 context.Context, arg1 Filter) ([]testkube.Execution, error) {
+func (m *MockRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExecutions", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetExecutions", ctx, filter)
 	ret0, _ := ret[0].([]testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetExecutions indicates an expected call of GetExecutions.
-func (mr *MockRepositoryMockRecorder) GetExecutions(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetExecutions(ctx, filter interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutions", reflect.TypeOf((*MockRepository)(nil).GetExecutions), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutions", reflect.TypeOf((*MockRepository)(nil).GetExecutions), ctx, filter)
 }
 
 // GetLabels mocks base method.
-func (m *MockRepository) GetLabels(arg0 context.Context) (map[string][]string, error) {
+func (m *MockRepository) GetLabels(ctx context.Context) (map[string][]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLabels", arg0)
+	ret := m.ctrl.Call(m, "GetLabels", ctx)
 	ret0, _ := ret[0].(map[string][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLabels indicates an expected call of GetLabels.
-func (mr *MockRepositoryMockRecorder) GetLabels(arg0 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLabels(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLabels", reflect.TypeOf((*MockRepository)(nil).GetLabels), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLabels", reflect.TypeOf((*MockRepository)(nil).GetLabels), ctx)
 }
 
 // GetLatestByTest mocks base method.
-func (m *MockRepository) GetLatestByTest(arg0 context.Context, arg1, arg2 string) (testkube.Execution, error) {
+func (m *MockRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTest", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTest", ctx, testName, sortField)
 	ret0, _ := ret[0].(testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTest indicates an expected call of GetLatestByTest.
-func (mr *MockRepositoryMockRecorder) GetLatestByTest(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTest(ctx, testName, sortField interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTest", reflect.TypeOf((*MockRepository)(nil).GetLatestByTest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTest", reflect.TypeOf((*MockRepository)(nil).GetLatestByTest), ctx, testName, sortField)
 }
 
 // GetLatestByTests mocks base method.
-func (m *MockRepository) GetLatestByTests(arg0 context.Context, arg1 []string, arg2 string) ([]testkube.Execution, error) {
+func (m *MockRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) ([]testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTests", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTests", ctx, testNames, sortField)
 	ret0, _ := ret[0].([]testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTests indicates an expected call of GetLatestByTests.
-func (mr *MockRepositoryMockRecorder) GetLatestByTests(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTests(ctx, testNames, sortField interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTests", reflect.TypeOf((*MockRepository)(nil).GetLatestByTests), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTests", reflect.TypeOf((*MockRepository)(nil).GetLatestByTests), ctx, testNames, sortField)
 }
 
 // GetNextExecutionNumber mocks base method.
-func (m *MockRepository) GetNextExecutionNumber(arg0 context.Context, arg1 string) (int32, error) {
+func (m *MockRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNextExecutionNumber", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetNextExecutionNumber", ctx, testName)
 	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetNextExecutionNumber indicates an expected call of GetNextExecutionNumber.
-func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(ctx, testName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextExecutionNumber", reflect.TypeOf((*MockRepository)(nil).GetNextExecutionNumber), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextExecutionNumber", reflect.TypeOf((*MockRepository)(nil).GetNextExecutionNumber), ctx, testName)
+}
+
+// GetOutput mocks base method.
+func (m *MockRepository) GetOutput(ctx context.Context, id string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOutput", ctx, id)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOutput indicates an expected call of GetOutput.
+func (mr *MockRepositoryMockRecorder) GetOutput(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutput", reflect.TypeOf((*MockRepository)(nil).GetOutput), ctx, id)
+}
+
+// GetOutputByTest mocks base method.
+func (m *MockRepository) GetOutputByTest(ctx context.Context, testName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOutputByTest", ctx, testName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOutputByTest indicates an expected call of GetOutputByTest.
+func (mr *MockRepositoryMockRecorder) GetOutputByTest(ctx, testName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutputByTest", reflect.TypeOf((*MockRepository)(nil).GetOutputByTest), ctx, testName)
+}
+
+// GetOutputByTestSuite mocks base method.
+func (m *MockRepository) GetOutputByTestSuite(ctx context.Context, testSuiteName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOutputByTestSuite", ctx, testSuiteName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOutputByTestSuite indicates an expected call of GetOutputByTestSuite.
+func (mr *MockRepositoryMockRecorder) GetOutputByTestSuite(ctx, testSuiteName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutputByTestSuite", reflect.TypeOf((*MockRepository)(nil).GetOutputByTestSuite), ctx, testSuiteName)
 }
 
 // GetTestMetrics mocks base method.
-func (m *MockRepository) GetTestMetrics(arg0 context.Context, arg1 string, arg2, arg3 int) (testkube.ExecutionsMetrics, error) {
+func (m *MockRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (testkube.ExecutionsMetrics, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTestMetrics", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetTestMetrics", ctx, name, limit, last)
 	ret0, _ := ret[0].(testkube.ExecutionsMetrics)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTestMetrics indicates an expected call of GetTestMetrics.
-func (mr *MockRepositoryMockRecorder) GetTestMetrics(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetTestMetrics(ctx, name, limit, last interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestMetrics", reflect.TypeOf((*MockRepository)(nil).GetTestMetrics), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestMetrics", reflect.TypeOf((*MockRepository)(nil).GetTestMetrics), ctx, name, limit, last)
 }
 
 // Insert mocks base method.
-func (m *MockRepository) Insert(arg0 context.Context, arg1 testkube.Execution) error {
+func (m *MockRepository) Insert(ctx context.Context, result testkube.Execution) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Insert", arg0, arg1)
+	ret := m.ctrl.Call(m, "Insert", ctx, result)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Insert indicates an expected call of Insert.
-func (mr *MockRepositoryMockRecorder) Insert(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Insert(ctx, result interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockRepository)(nil).Insert), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockRepository)(nil).Insert), ctx, result)
+}
+
+// InsertOutput mocks base method.
+func (m *MockRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertOutput", ctx, id, testName, testSuiteName, output)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InsertOutput indicates an expected call of InsertOutput.
+func (mr *MockRepositoryMockRecorder) InsertOutput(ctx, id, testName, testSuiteName, output interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertOutput", reflect.TypeOf((*MockRepository)(nil).InsertOutput), ctx, id, testName, testSuiteName, output)
 }
 
 // StartExecution mocks base method.
-func (m *MockRepository) StartExecution(arg0 context.Context, arg1 string, arg2 time.Time) error {
+func (m *MockRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartExecution", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "StartExecution", ctx, id, startTime)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartExecution indicates an expected call of StartExecution.
-func (mr *MockRepositoryMockRecorder) StartExecution(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) StartExecution(ctx, id, startTime interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartExecution", reflect.TypeOf((*MockRepository)(nil).StartExecution), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartExecution", reflect.TypeOf((*MockRepository)(nil).StartExecution), ctx, id, startTime)
 }
 
 // Update mocks base method.
-func (m *MockRepository) Update(arg0 context.Context, arg1 testkube.Execution) error {
+func (m *MockRepository) Update(ctx context.Context, result testkube.Execution) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret := m.ctrl.Call(m, "Update", ctx, result)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockRepositoryMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Update(ctx, result interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRepository)(nil).Update), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRepository)(nil).Update), ctx, result)
+}
+
+// UpdateOutput mocks base method.
+func (m *MockRepository) UpdateOutput(ctx context.Context, id, output string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOutput", ctx, id, output)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateOutput indicates an expected call of UpdateOutput.
+func (mr *MockRepositoryMockRecorder) UpdateOutput(ctx, id, output interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOutput", reflect.TypeOf((*MockRepository)(nil).UpdateOutput), ctx, id, output)
 }
 
 // UpdateResult mocks base method.
-func (m *MockRepository) UpdateResult(arg0 context.Context, arg1 string, arg2 testkube.ExecutionResult) error {
+func (m *MockRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateResult", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateResult", ctx, id, execution)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateResult indicates an expected call of UpdateResult.
-func (mr *MockRepositoryMockRecorder) UpdateResult(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) UpdateResult(ctx, id, execution interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockRepository)(nil).UpdateResult), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockRepository)(nil).UpdateResult), ctx, id, execution)
 }
