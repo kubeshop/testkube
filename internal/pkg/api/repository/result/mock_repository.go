@@ -263,7 +263,7 @@ func (mr *MockRepositoryMockRecorder) GetByNameAndTest(ctx, name, testName inter
 }
 
 // GetExecutionTotals mocks base method.
-func (m *MockRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (testkube.ExecutionsTotals, error) {
+func (m *MockRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (testkube.ExecutionsTotals, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, paging}
 	for _, a := range filter {
@@ -283,7 +283,7 @@ func (mr *MockRepositoryMockRecorder) GetExecutionTotals(ctx, paging interface{}
 }
 
 // GetExecutions mocks base method.
-func (m *MockRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
+func (m *MockRepository) GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExecutions", ctx, filter)
 	ret0, _ := ret[0].([]testkube.Execution)
