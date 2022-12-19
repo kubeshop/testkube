@@ -24,6 +24,7 @@ type Params struct {
 	Status           string `json:"status,omitempty"`
 	TestSource       string `json:"test_source,omitempty"`
 	TestSuiteSteps   int32  `json:"test_suite_steps,omitempty"`
+	Context          string `json:"context,omitempty"`
 }
 
 type Event struct {
@@ -59,7 +60,7 @@ type RunParams struct {
 	Status     string
 }
 
-func NewCLIPayload(id, name, version, category string) Payload {
+func NewCLIPayload(context, id, name, version, category string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
@@ -75,6 +76,7 @@ func NewCLIPayload(id, name, version, category string) Payload {
 					MachineID:       machineID,
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
+					Context:         context,
 				},
 			}},
 	}
