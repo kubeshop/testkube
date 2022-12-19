@@ -20,8 +20,10 @@ Testkube Cloud will make it easy for you, all data are stored in Testkube Cloud 
 
 ## Testkube networking
 
-To simplify networking connections Testkube Agent is able to create tunnel to Testkube Cloud clusters. The main 
-idea of it is to allow Testkube Cloud to send commands which Testkube in Agent mode will manage. 
+To simplify networking connections Testkube Agent is able to create connection to Testkube Cloud clusters, Agent is registering itself into 
+Testkube Cloud and shows as new environment. 
+The main idea of it is to allow Testkube Cloud to send commands which Testkube in Agent mode will manage. Connection is done 
+from Testkube Agent to Testkube Cloud.
 
 Testkube Agent after installing connects to Testkube Cloud, and starts listening for the commands. 
 Additionally Agent is connecting to usual Testkube Cloud REST API.
