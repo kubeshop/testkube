@@ -32,6 +32,7 @@ type Filter interface {
 //go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
 type Repository interface {
 	Sequences
+	OutputRepository
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name and test name
@@ -75,4 +76,31 @@ type Repository interface {
 type Sequences interface {
 	// GetNextExecutionNumber gets next execution number by test name
 	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
+}
+
+type OutputRepository interface {
+	// GetOutput gets execution output by id or name
+	GetOutput(ctx context.Context, id string) (output string, err error)
+	// GetOutputByTest gets execution output by test name
+	GetOutputByTest(ctx context.Context, testName string) (output string, err error)
+	// GetOutputByTestSuite gets execution output by test suite name
+	GetOutputByTestSuite(ctx context.Context, testSuiteName string) (output string, err error)
+	// InsertOutput inserts new execution output
+	InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error
+	// UpdateOutput updates execution output
+	UpdateOutput(ctx context.Context, id, output string) error
+	// DeleteOutput deletes execution output
+	DeleteOutput(ctx context.Context, id string) error
+	// DeleteOutputByTest deletes execution output by test
+	DeleteOutputByTest(ctx context.Context, testName string) error
+	// DeleteOutputForTests deletes execution output for tests
+	DeleteOutputForTests(ctx context.Context, testNames []string) error
+	// DeleteOutputByTestSuite deletes execution output by test suite
+	DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error
+	// DeleteOutputForTestSuites deletes execution output for test suites
+	DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error
+	// DeleteAllOutput deletes all execution output
+	DeleteAllOutput(ctx context.Context) error
+	// DeleteOutputForAllTestSuite deletes all execution output for test suite
+	DeleteOutputForAllTestSuite(ctx context.Context) error
 }
