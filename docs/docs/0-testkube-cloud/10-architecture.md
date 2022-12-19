@@ -6,7 +6,7 @@ sidebar_label: Testkube architecture
 ## Multiple Testkube Agents
 
 Main Testkube Cloud feature is to have insights into multiple Testkube Cloud Agents. 
-You can look at your Kubernetes clusters from single dashboard. 
+You can look at your Kubernetes clusters from single dashboard and easily switch between different Testkube clusters. 
 
 
 ![multiple clusters](https://user-images.githubusercontent.com/30776/208391158-a42d1f56-950f-48c3-bcfb-2768054b4704.jpeg)
@@ -15,7 +15,7 @@ You can look at your Kubernetes clusters from single dashboard.
 ## Storing results
 
 In Testkube standalone all results are stored in the users cluster, you need to be aware of MinIO and MongoDB. 
-Testkube Cloud will make it easy for you, all data are stored in Testkube Cloud infrastructure.
+Testkube Cloud will make it easy for you, all data are stored in Testkube Cloud infrastructure so you don't need to worry about backups, .
 
 
 ## Testkube networking
