@@ -9,6 +9,9 @@ Main Testkube Cloud feature is to have insights into multiple Testkube Cloud Age
 You can look at your Kubernetes clusters from single dashboard. 
 
 
+![multiple clusters](https://user-images.githubusercontent.com/30776/208391158-a42d1f56-950f-48c3-bcfb-2768054b4704.jpeg)
+
+
 ## Storing results
 
 In Testkube standalone all results are stored in the users cluster, you need to be aware of MinIO and MongoDB. 
@@ -23,4 +26,5 @@ idea of it is to allow Testkube Cloud to send commands which Testkube in Agent m
 Testkube Agent after installing connects to Testkube Cloud, and starts listening for the commands. 
 Additionally Agent is connecting to usual Testkube Cloud REST API.
 
+![network](https://user-images.githubusercontent.com/30776/208391192-6f04ce7a-2c8a-4892-bc01-3a3b04cd3ddc.jpeg)
 
