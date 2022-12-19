@@ -89,9 +89,6 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 	}
 	req.URL.RawQuery = q.Encode()
 
-	fmt.Printf("%+v\n", req)
-	fmt.Printf("%+v\n", t.client.Transport)
-
 	resp, err = t.client.Do(req)
 	if err != nil {
 		return resp, err
