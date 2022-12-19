@@ -58,7 +58,7 @@ func NewSetContextCmd() *cobra.Command {
 
 			ui.Success("Your config was updated with new values")
 			ui.NL()
-			uiPrintCloudContext(cfg.CloudContext)
+			uiPrintCloudContext(string(cfg.ContextType), cfg.CloudContext)
 		},
 	}
 

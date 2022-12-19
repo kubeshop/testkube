@@ -8,23 +8,23 @@ import (
 )
 
 type Params struct {
-	EventCount       int64  `json:"event_count,omitempty"`
-	EventCategory    string `json:"event_category,omitempty"`
-	AppVersion       string `json:"app_version,omitempty"`
-	AppName          string `json:"app_name,omitempty"`
-	CustomDimensions string `json:"custom_dimensions,omitempty"`
-	DataSource       string `json:"data_source,omitempty"`
-	Host             string `json:"host,omitempty"`
-	MachineID        string `json:"machine_id,omitempty"`
-	ClusterID        string `json:"cluster_id,omitempty"`
-	OperatingSystem  string `json:"operating_system,omitempty"`
-	Architecture     string `json:"architecture,omitempty"`
-	TestType         string `json:"test_type,omitempty"`
-	DurationMs       int32  `json:"duration_ms,omitempty"`
-	Status           string `json:"status,omitempty"`
-	TestSource       string `json:"test_source,omitempty"`
-	TestSuiteSteps   int32  `json:"test_suite_steps,omitempty"`
-	Context          string `json:"context,omitempty"`
+	EventCount       int64      `json:"event_count,omitempty"`
+	EventCategory    string     `json:"event_category,omitempty"`
+	AppVersion       string     `json:"app_version,omitempty"`
+	AppName          string     `json:"app_name,omitempty"`
+	CustomDimensions string     `json:"custom_dimensions,omitempty"`
+	DataSource       string     `json:"data_source,omitempty"`
+	Host             string     `json:"host,omitempty"`
+	MachineID        string     `json:"machine_id,omitempty"`
+	ClusterID        string     `json:"cluster_id,omitempty"`
+	OperatingSystem  string     `json:"operating_system,omitempty"`
+	Architecture     string     `json:"architecture,omitempty"`
+	TestType         string     `json:"test_type,omitempty"`
+	DurationMs       int32      `json:"duration_ms,omitempty"`
+	Status           string     `json:"status,omitempty"`
+	TestSource       string     `json:"test_source,omitempty"`
+	TestSuiteSteps   int32      `json:"test_suite_steps,omitempty"`
+	Context          RunContext `json:"context,omitempty"`
 }
 
 type Event struct {
@@ -60,7 +60,13 @@ type RunParams struct {
 	Status     string
 }
 
-func NewCLIPayload(context, id, name, version, category string) Payload {
+type RunContext struct {
+	Type           string
+	OrganizationId string
+	EnviuronmentId string
+}
+
+func NewCLIPayload(context RunContext, id, name, version, category string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
