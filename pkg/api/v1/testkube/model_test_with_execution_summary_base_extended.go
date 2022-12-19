@@ -31,7 +31,7 @@ func (t TestWithExecutionSummaries) Table() (header []string, output [][]string)
 	return
 }
 
-func (t TestWithExecutionSummary) GetObjectRef() *ObjectRef {
+func (t TestWithExecutionSummary) GetObjectRef(namespace string) *ObjectRef {
 	name := ""
 	if t.Test != nil {
 		name = t.Test.Name
@@ -39,6 +39,6 @@ func (t TestWithExecutionSummary) GetObjectRef() *ObjectRef {
 
 	return &ObjectRef{
 		Name:      name,
-		Namespace: "testkube",
+		Namespace: namespace,
 	}
 }

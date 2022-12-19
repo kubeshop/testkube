@@ -6,7 +6,6 @@ import (
 )
 
 func NewMigrateCmd() *cobra.Command {
-	var namespace string
 	cmd := &cobra.Command{
 		Use:   "migrate",
 		Short: "manual migrate command",
@@ -19,8 +18,6 @@ func NewMigrateCmd() *cobra.Command {
 			}
 		},
 	}
-
-	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "testkube namespace")
 
 	return cmd
 }
