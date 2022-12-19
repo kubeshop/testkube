@@ -47,7 +47,7 @@ func NewSetContextCmd() *cobra.Command {
 					cfg.CloudContext.ApiUri = apiUri
 				}
 			case config.ContextTypeKubeconfig:
-				// kubecofnig special use cases
+				// kubeconfig special use cases
 
 			default:
 				ui.Errf("Unknown context type: %s", cfg.ContextType)
@@ -62,7 +62,7 @@ func NewSetContextCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&kubeconfig, "kubeconfig", "", false, "Default kubeconfig based mode for CLI")
+	cmd.Flags().BoolVarP(&kubeconfig, "kubeconfig", "", false, "reset context mode for CLI to default kubeconfig based")
 	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud organization ID")
 	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud environment ID")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
