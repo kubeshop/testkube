@@ -298,6 +298,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			HttpsProxy:            request.HttpsProxy,
 			ExecutionLabels:       request.ExecutionLabels,
 			ActiveDeadlineSeconds: int64(request.Timeout),
+			ContentRequest:        request.ContentRequest,
 		}
 
 		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)

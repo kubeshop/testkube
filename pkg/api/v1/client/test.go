@@ -173,6 +173,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		BucketName:      options.BucketName,
 		ArtifactRequest: options.ArtifactRequest,
 		JobTemplate:     options.JobTemplate,
+		ContentRequest:  options.ContentRequest,
 		PreRunScript:    options.PreRunScriptContent,
 	}
 

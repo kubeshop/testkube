@@ -3389,6 +3389,9 @@ components:
           format: int32
           description: duration in seconds the test suite may be active, until its stopped
           example: 1
+        contentRequest:
+          $ref: "#/components/schemas/TestContentRequest"
+          description: adjusting parameters for test content
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
