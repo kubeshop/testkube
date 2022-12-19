@@ -10,7 +10,6 @@ func NewUpdateTestsCmd() *cobra.Command {
 
 	var (
 		testName                 string
-		testNamespace            string
 		testContentType          string
 		file                     string
 		executorType             string
@@ -59,19 +58,19 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, namespace := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)
 			if testName != test.Name {
-				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
+				ui.Failf("Test with name '%s' not exists in namespace %s", testName, namespace)
 			}
 
 			options, err := NewUpdateTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
 			test, err = client.UpdateTest(options)
-			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
+			ui.ExitOnError("updating test "+testName+" in namespace "+namespace, err)
 
-			ui.Success("Test updated", testNamespace, "/", testName)
+			ui.Success("Test updated", namespace, "/", testName)
 		},
 	}
 

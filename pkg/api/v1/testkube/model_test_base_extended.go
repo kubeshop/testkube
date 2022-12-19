@@ -24,10 +24,10 @@ func (t Tests) Table() (header []string, output [][]string) {
 	return
 }
 
-func (t Test) GetObjectRef() *ObjectRef {
+func (t Test) GetObjectRef(namespace string) *ObjectRef {
 	return &ObjectRef{
 		Name:      t.Name,
-		Namespace: "testkube",
+		Namespace: namespace,
 	}
 }
 

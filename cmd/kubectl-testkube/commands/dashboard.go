@@ -21,7 +21,6 @@ const maxPortNumber = 65535
 // NewDashboardCmd is a method to create new dashboard command
 func NewDashboardCmd() *cobra.Command {
 	var (
-		namespace          string
 		useGlobalDashboard bool
 	)
 
@@ -55,6 +54,7 @@ func NewDashboardCmd() *cobra.Command {
 				}
 			}()
 
+			namespace := cmd.Flag("namespace").Value.String()
 			// if not global dasboard - we'll try to port-forward current cluster API
 			if !useGlobalDashboard {
 				command, err := asyncPortForward(namespace, DashboardName, dashboardLocalPort, DashboardPort)
@@ -90,7 +90,6 @@ func NewDashboardCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "namespace where the testkube is installed")
 	cmd.Flags().BoolVar(&useGlobalDashboard, "use-global-dashboard", false, "use global dashboard for viewing testkube results")
 	return cmd
 }

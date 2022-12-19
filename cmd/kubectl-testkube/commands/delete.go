@@ -28,7 +28,6 @@ func NewDeleteCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
-	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "", "testkube", "kubernetes namespace")
 
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
 	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
