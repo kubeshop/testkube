@@ -26,5 +26,8 @@ idea of it is to allow Testkube Cloud to send commands which Testkube in Agent m
 Testkube Agent after installing connects to Testkube Cloud, and starts listening for the commands. 
 Additionally Agent is connecting to usual Testkube Cloud REST API.
 
+
 ![network](https://user-images.githubusercontent.com/30776/208391192-6f04ce7a-2c8a-4892-bc01-3a3b04cd3ddc.jpeg)
+
+Testkube Agent is connecting to `https://api.testkube.io` on port `8088` for HTTPS connection and on port `8089` for GRPC connection.  
 
