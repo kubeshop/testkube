@@ -61,7 +61,7 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 }
 
 func watchLogs(id string, client apiclientv1.Client) {
-	ui.Info("Getting pod logs")
+	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.Logs(id)
 	ui.ExitOnError("getting logs from executor", err)
@@ -239,6 +239,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		jobTemplateContent = string(b)
 	}
 
+	preRunScriptContent := ""
+	preRunScript := cmd.Flag("prerun-script").Value.String()
+	if preRunScript != "" {
+		b, err := os.ReadFile(preRunScript)
+		if err != nil {
+			return nil, err
+		}
+
+		preRunScriptContent = string(b)
+	}
+
 	request = &testkube.ExecutionRequest{
 		Name:                  executionName,
 		VariablesFile:         paramsFileContent,
@@ -253,6 +264,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
 		JobTemplate:           jobTemplateContent,
+		PreRunScript:          preRunScriptContent,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -689,6 +701,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.JobTemplate = &jobTemplateContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("prerun-script").Changed {
+		preRunScriptContent := ""
+		preRunScript := cmd.Flag("prerun-script").Value.String()
+		if preRunScript != "" {
+			b, err := os.ReadFile(preRunScript)
+			if err != nil {
+				return nil, err
+			}
+
+			preRunScriptContent = string(b)
+		}
+
+		request.PreRunScript = &preRunScriptContent
 		nonEmpty = true
 	}
 

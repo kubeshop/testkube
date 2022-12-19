@@ -83,7 +83,9 @@ func (s *Notifier) SendEvent(event *testkube.Event) error {
 
 			if ok {
 				_, timestamp, _, err = s.client.UpdateMessage(channelID, prevTimestamp, slack.MsgOptionBlocks(message.Blocks.BlockSet...))
-			} else {
+			}
+
+			if !ok || err != nil {
 				_, timestamp, err = s.client.PostMessage(channelID, slack.MsgOptionBlocks(message.Blocks.BlockSet...))
 			}
 

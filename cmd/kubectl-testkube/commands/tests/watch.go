@@ -24,7 +24,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 			if execution.ExecutionResult.IsCompleted() {
 				ui.Completed("execution is already finished")
 			} else {
-				watchLogs(executionID, client)
+				watchLogs(execution.Id, client)
 			}
 
 		},

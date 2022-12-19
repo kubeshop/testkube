@@ -57,4 +57,6 @@ type Execution struct {
 	// minio bucket name to get uploads from
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
+	// script to run before test execution
+	PreRunScript string `json:"preRunScript,omitempty"`
 }

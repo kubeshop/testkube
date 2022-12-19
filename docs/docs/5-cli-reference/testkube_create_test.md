@@ -39,6 +39,7 @@ testkube create test [flags]
       --job-template string                        job template file path for extensions to job template
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])
   -n, --name string                                unique test name - mandatory
+      --prerun-script string                       path to script to be run before test execution
       --schedule string                            test schedule in a cronjob form: * * * * *
       --secret-env stringToString                  secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])

@@ -56,4 +56,6 @@ type ExecutionUpdateRequest struct {
 	// job template extensions
 	JobTemplate    *string                    `json:"jobTemplate,omitempty"`
 	ContentRequest **TestContentUpdateRequest `json:"contentRequest,omitempty"`
+	// script to run before test execution
+	PreRunScript *string `json:"preRunScript,omitempty"`
 }

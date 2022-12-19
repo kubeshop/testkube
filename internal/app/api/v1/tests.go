@@ -37,18 +37,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if test.Content != nil && test.Content.Data != "" {
-				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
-			}
-
-			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
-				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
-			}
-
-			if test.ExecutionRequest != nil && test.ExecutionRequest.JobTemplate != "" {
-				test.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", test.ExecutionRequest.JobTemplate)
-			}
-
+			test.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
 			return s.getCRDs(c, data, err)
 		}
@@ -72,18 +61,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if test.Content != nil && test.Content.Data != "" {
-				test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
-			}
-
-			if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
-				test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
-			}
-
-			if test.ExecutionRequest != nil && test.ExecutionRequest.JobTemplate != "" {
-				test.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", test.ExecutionRequest.JobTemplate)
-			}
-
+			test.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
 			return s.getCRDs(c, data, err)
 		}
@@ -159,17 +137,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range tests {
-				if tests[i].Content != nil && tests[i].Content.Data != "" {
-					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
-				}
-
-				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
-					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
-				}
-
-				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.JobTemplate != "" {
-					tests[i].ExecutionRequest.JobTemplate = fmt.Sprintf("%q", tests[i].ExecutionRequest.JobTemplate)
-				}
+				tests[i].QuoteTestTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -267,17 +235,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range tests {
-				if tests[i].Content != nil && tests[i].Content.Data != "" {
-					tests[i].Content.Data = fmt.Sprintf("%q", tests[i].Content.Data)
-				}
-
-				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.VariablesFile != "" {
-					tests[i].ExecutionRequest.VariablesFile = fmt.Sprintf("%q", tests[i].ExecutionRequest.VariablesFile)
-				}
-
-				if tests[i].ExecutionRequest != nil && tests[i].ExecutionRequest.JobTemplate != "" {
-					tests[i].ExecutionRequest.JobTemplate = fmt.Sprintf("%q", tests[i].ExecutionRequest.JobTemplate)
-				}
+				tests[i].QuoteTestTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
@@ -401,18 +359,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if request.Content != nil && request.Content.Data != "" {
-				request.Content.Data = fmt.Sprintf("%q", request.Content.Data)
-			}
-
-			if request.ExecutionRequest != nil && request.ExecutionRequest.VariablesFile != "" {
-				request.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", request.ExecutionRequest.VariablesFile)
-			}
-
-			if request.ExecutionRequest != nil && request.ExecutionRequest.JobTemplate != "" {
-				request.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", request.ExecutionRequest.JobTemplate)
-			}
-
+			request.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
