@@ -148,7 +148,7 @@ func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		execution, err := s.ExecutionResults.Get(context.Background(), executionID)
 		if err != nil {
-			l.Errorw("can't find execuction ", "error", err)
+			l.Errorw("can't find execution ", "error", err)
 			return
 		}
 
@@ -367,6 +367,11 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 		Content: executionResult.Output,
 		Result:  executionResult,
 	}
+
+	if executionResult.ErrorMessage != "" {
+		output.Content = output.Content + "\n" + executionResult.ErrorMessage
+	}
+
 	err := enc.Encode(output)
 	if err != nil {
 		s.Log.Infow("Encode", "error", err)

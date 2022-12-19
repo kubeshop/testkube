@@ -301,7 +301,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 		return result, err
 	}
 
-	// parse job ouput log (JSON stream)
+	// parse job output log (JSON stream)
 	result, _, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse ouput error", "error", err)

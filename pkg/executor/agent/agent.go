@@ -26,7 +26,7 @@ func Run(r runner.Runner, args []string) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		test, err = io.ReadAll(os.Stdin)
 		if err != nil {
-			output.PrintError(os.Stderr, fmt.Errorf("can't read stind input: %w", err))
+			output.PrintError(os.Stderr, fmt.Errorf("can't read stdin input: %w", err))
 			os.Exit(1)
 		}
 	} else if len(args) > 1 {

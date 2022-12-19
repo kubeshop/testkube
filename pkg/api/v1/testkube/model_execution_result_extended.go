@@ -17,6 +17,7 @@ func NewErrorExecutionResult(err error) ExecutionResult {
 	return ExecutionResult{
 		Status:       StatusPtr(FAILED_ExecutionStatus),
 		ErrorMessage: err.Error(),
+		Output:       err.Error(),
 	}
 }
 
@@ -70,6 +71,7 @@ func (e *ExecutionResult) IsTimeout() bool {
 func (e *ExecutionResult) Err(err error) ExecutionResult {
 	e.Status = ExecutionStatusFailed
 	e.ErrorMessage = err.Error()
+	e.Output = e.Output + "\n" + err.Error()
 	return *e
 }
 
