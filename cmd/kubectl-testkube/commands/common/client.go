@@ -28,10 +28,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	cfg, err := config.Load()
 	ui.ExitOnError("loading config file", err)
 
-	var (
-		c client.Client
-	)
-
 	switch cfg.ContextType {
 	case config.ContextTypeKubeconfig:
 		if oauthEnabled {
@@ -60,7 +56,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		options.ApiUri = cfg.CloudContext.ApiUri
 	}
 
-	c, err = client.GetClient(client.ClientType(clientType), options)
+	c, err := client.GetClient(client.ClientType(clientType), options)
 	ui.ExitOnError("setting up client type", err)
 
 	return c, namespace
