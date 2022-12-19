@@ -367,6 +367,11 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 		Content: executionResult.Output,
 		Result:  executionResult,
 	}
+
+	if executionResult.ErrorMessage != "" {
+		output.Content = output.Content + "\n" + executionResult.ErrorMessage
+	}
+
 	err := enc.Encode(output)
 	if err != nil {
 		s.Log.Infow("Encode", "error", err)
