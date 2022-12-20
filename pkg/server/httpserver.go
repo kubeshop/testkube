@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/problem"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,6 +44,8 @@ func (s *HTTPServer) Init() {
 		s.Log.Debugw("request", "method", string(c.Request().Header.Method()), "path", c.Request().URI().String())
 		return c.Next()
 	})
+
+	s.Mux.Use(pprof.New())
 
 	// server generic endpoints
 	s.Mux.Get("/health", s.HealthEndpoint())
