@@ -3812,6 +3812,7 @@ components:
         - service
         - ingress
         - event
+        - configmap
 
     TestTriggerExecutions:
       description: supported test resources for test triggers
@@ -3839,7 +3840,7 @@ components:
           items:
             type: string
           description: list of supported values for resources
-          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event"]
+          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event", "configmap"]
         actions:
           type: array
           items:

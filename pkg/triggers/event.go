@@ -95,3 +95,14 @@ func NewClusterEventEvent(eventType testtrigger.EventType, event *corev1.Event) 
 		eventType: eventType,
 	}
 }
+
+func newConfigMapEvent(eventType testtrigger.EventType, configMap *corev1.ConfigMap) *watcherEvent {
+	return &watcherEvent{
+		resource:  testtrigger.ResourceService,
+		name:      configMap.Name,
+		namespace: configMap.Namespace,
+		labels:    configMap.Labels,
+		object:    configMap,
+		eventType: eventType,
+	}
+}
