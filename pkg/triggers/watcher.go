@@ -652,8 +652,8 @@ func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEvent
 				)
 				return
 			}
-			if cmp.Equal(oldConfigMap.Data, newConfigMap.Data) {
-				s.logger.Debugf("trigger service: watcher component: no-op update trigger: config map data are equal")
+			if cmp.Equal(oldConfigMap.Data, newConfigMap.Data) && cmp.Equal(oldConfigMap.BinaryData, newConfigMap.BinaryData) {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: config map data and binary data are equal")
 				return
 			}
 			s.logger.Debugf(
