@@ -37,6 +37,7 @@ type k8sInformers struct {
 	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
 	testSuiteInformer    testkubeinformerv2.TestSuiteInformer
 	testInformer         testkubeinformerv3.TestInformer
+	configMapInformer    coreinformerv1.ConfigMapInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
@@ -48,6 +49,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	serviceInformer := f.Core().V1().Services()
 	ingressInformer := f.Networking().V1().Ingresses()
 	clusterEventInformer := f.Core().V1().Events()
+	configMapInformer := f.Core().V1().ConfigMaps()
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
@@ -65,6 +67,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		testTriggerInformer:  testTriggerInformer,
 		testSuiteInformer:    testSuiteInformer,
 		testInformer:         testInformer,
+		configMapInformer:    configMapInformer,
 	}
 }
 
@@ -116,6 +119,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
+	s.informers.configMapInformer.Informer().AddEventHandler(s.configMapEventHandler(ctx))
 
 	s.logger.Debugf("trigger service: starting pod informer")
 	go s.informers.podInformer.Informer().Run(stop)
@@ -137,6 +141,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
 	go s.informers.testInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting config map informer")
+	go s.informers.configMapInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -604,6 +610,72 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				test.Namespace, test.Name,
 			)
 			s.addTest(test)
+		},
+	}
+}
+
+func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			configMap, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf("failed to process create config map event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			if inPast(configMap.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: config map %s/%s was created in the past",
+					configMap.Namespace, configMap.Name,
+				)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: config map %s/%s created", configMap.Namespace, configMap.Name)
+			event := newConfigMapEvent(testtrigger.EventCreated, configMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching create config map event: %v", err)
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldConfigMap, ok := oldObj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update config map event for old object due to it being an unexpected type, received type %+v",
+					oldConfigMap,
+				)
+				return
+			}
+			newConfigMap, ok := newObj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update config map event for new object due to it being an unexpected type, received type %+v",
+					newConfigMap,
+				)
+				return
+			}
+			if cmp.Equal(oldConfigMap.Data, newConfigMap.Data) && cmp.Equal(oldConfigMap.BinaryData, newConfigMap.BinaryData) {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: config map data and binary data are equal")
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emiting event: config map %s/%s updated",
+				oldConfigMap.Namespace, newConfigMap.Name,
+			)
+			event := newConfigMapEvent(testtrigger.EventModified, newConfigMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching update config map event: %v", err)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			configMap, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf("failed to process delete config map event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: config map %s/%s deleted", configMap.Namespace, configMap.Name)
+			event := newConfigMapEvent(testtrigger.EventDeleted, configMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching delete config map event: %v", err)
+			}
 		},
 	}
 }

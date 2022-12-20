@@ -58,7 +58,7 @@ selector:
 ```
 
 Supported values:
-* **resource**  - pod, deployment, statefulset, daemonset, service, ingress, event
+* **resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
 * **action**    - run
 * **event**     - created, modified, deleted
 * **execution** - test, testsuite
