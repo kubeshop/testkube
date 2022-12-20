@@ -76,7 +76,7 @@ func newServiceEvent(eventType testtrigger.EventType, service *corev1.Service) *
 
 func newIngressEvent(eventType testtrigger.EventType, ingress *networkingv1.Ingress) *watcherEvent {
 	return &watcherEvent{
-		resource:  testtrigger.ResourceService,
+		resource:  testtrigger.ResourceIngress,
 		name:      ingress.Name,
 		namespace: ingress.Namespace,
 		labels:    ingress.Labels,
@@ -98,7 +98,7 @@ func NewClusterEventEvent(eventType testtrigger.EventType, event *corev1.Event) 
 
 func newConfigMapEvent(eventType testtrigger.EventType, configMap *corev1.ConfigMap) *watcherEvent {
 	return &watcherEvent{
-		resource:  testtrigger.ResourceService,
+		resource:  testtrigger.ResourceConfigMap,
 		name:      configMap.Name,
 		namespace: configMap.Namespace,
 		labels:    configMap.Labels,
