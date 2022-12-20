@@ -38,6 +38,8 @@ func ParseExecutionStatusList(source, separator string) (statusList ExecutionSta
 		PASSED_ExecutionStatus:  {},
 		QUEUED_ExecutionStatus:  {},
 		RUNNING_ExecutionStatus: {},
+		ABORTED_ExecutionStatus: {},
+		TIMEOUT_ExecutionStatus: {},
 	}
 
 	if source == "" {
