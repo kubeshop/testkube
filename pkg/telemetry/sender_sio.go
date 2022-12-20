@@ -52,6 +52,9 @@ func mapProperties(params Params) analytics.Properties {
 		Set("clusterId", params.ClusterID).
 		Set("eventCategory", params.EventCategory).
 		Set("host", params.Host).
+		Set("contextType", params.Context.Type).
+		Set("cloudOrganizationId", params.Context.OrganizationId).
+		Set("cloudEnvironmentId", params.Context.EnviuronmentId).
 		Set("machineId", params.MachineID)
 
 	if params.DataSource != "" {

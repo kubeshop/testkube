@@ -18,7 +18,7 @@ func NewGetContextCmd() *cobra.Command {
 
 			ui.Info("Your Testkube Cloud Context")
 			ui.NL()
-			uiPrintCloudContext(cfg.CloudContext)
+			uiPrintCloudContext(string(cfg.ContextType), cfg.CloudContext)
 		},
 	}
 

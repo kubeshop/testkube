@@ -6,10 +6,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-func uiPrintCloudContext(cloudContext config.CloudContext) {
-	ui.InfoGrid(map[string]string{
-		"Organization ID": cloudContext.Organization,
-		"Environment ID ": cloudContext.Environment,
-		"API Key        ": text.Obfuscate(cloudContext.ApiKey),
-	})
+func uiPrintCloudContext(contextType string, cloudContext config.CloudContext) {
+	ui.Warn("Your current context is set to", contextType)
+	ui.NL()
+
+	if contextType == string(config.ContextTypeCloud) {
+		ui.InfoGrid(map[string]string{
+			"Organization ID": cloudContext.Organization,
+			"Environment ID ": cloudContext.Environment,
+			"API Key        ": text.Obfuscate(cloudContext.ApiKey),
+			"API URI        ": cloudContext.ApiUri,
+		})
+	}
 }

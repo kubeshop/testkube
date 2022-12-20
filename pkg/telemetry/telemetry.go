@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -37,13 +38,13 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(GetMachineID(), command, version, "cli_command_execution")
+	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution")
 	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(GetMachineID(), "init", version, "cli_command_execution")
+	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), "init", version, "cli_command_execution")
 	return sendData(senders, payload)
 }
 
@@ -84,4 +85,18 @@ func sendData(senders map[string]Sender, payload Payload) (out string, err error
 	wg.Wait()
 
 	return out, nil
+}
+
+func getCurrentContext() RunContext {
+	data, err := config.Load()
+	if err != nil {
+		return RunContext{
+			Type: "invalid-context",
+		}
+	}
+	return RunContext{
+		Type:           string(data.ContextType),
+		OrganizationId: data.CloudContext.Organization,
+		EnviuronmentId: data.CloudContext.Environment,
+	}
 }
