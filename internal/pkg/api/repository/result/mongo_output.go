@@ -9,8 +9,8 @@ import (
 type ExecutionOutput struct {
 	Id            string `json:"id"`
 	Name          string `json:"name"`
-	TestName      string `json:"testName,omitempty"`
-	TestSuiteName string `json:"testSuiteName,omitempty"`
+	TestName      string `json:"testname,omitempty"`
+	TestSuiteName string `json:"testsuitename,omitempty"`
 	Output        string `json:"output"`
 }
 
@@ -22,13 +22,13 @@ func (r *MongoRepository) GetOutput(ctx context.Context, id string) (output stri
 
 func (m *MongoRepository) GetOutputByTest(ctx context.Context, testName string) (output string, err error) {
 	var eOutput ExecutionOutput
-	err = m.Output.FindOne(ctx, bson.M{"testName": testName}).Decode(&eOutput)
+	err = m.Output.FindOne(ctx, bson.M{"testname": testName}).Decode(&eOutput)
 	return eOutput.Output, err
 }
 
 func (m *MongoRepository) GetOutputByTestSuite(ctx context.Context, testSuiteName string) (output string, err error) {
 	var eOutput ExecutionOutput
-	err = m.Output.FindOne(ctx, bson.M{"testSuiteName": testSuiteName}).Decode(&eOutput)
+	err = m.Output.FindOne(ctx, bson.M{"testsuitename": testSuiteName}).Decode(&eOutput)
 	return eOutput.Output, err
 }
 
@@ -48,27 +48,27 @@ func (m *MongoRepository) DeleteOutput(ctx context.Context, id string) error {
 }
 
 func (m *MongoRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testName": testName})
+	_, err := m.Output.DeleteMany(ctx, bson.M{"testname": testName})
 	return err
 }
 
 func (m *MongoRepository) DeleteOutputForTests(ctx context.Context, testNames []string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testName": bson.M{"$in": testNames}})
+	_, err := m.Output.DeleteMany(ctx, bson.M{"testname": bson.M{"$in": testNames}})
 	return err
 }
 
 func (m *MongoRepository) DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testSuiteName": testSuiteName})
+	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return err
 }
 
 func (m *MongoRepository) DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testSuiteName": bson.M{"$in": testSuiteNames}})
+	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$in": testSuiteNames}})
 	return err
 }
 
 func (m *MongoRepository) DeleteOutputForAllTestSuite(ctx context.Context) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testSuiteName": bson.M{"$ne": ""}})
+	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return err
 }
 
