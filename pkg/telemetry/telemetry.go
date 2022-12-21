@@ -97,6 +97,6 @@ func getCurrentContext() RunContext {
 	return RunContext{
 		Type:           string(data.ContextType),
 		OrganizationId: data.CloudContext.Organization,
-		EnviuronmentId: data.CloudContext.Environment,
+		EnvironmentId:  data.CloudContext.Environment,
 	}
 }

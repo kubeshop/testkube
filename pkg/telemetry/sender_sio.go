@@ -54,7 +54,7 @@ func mapProperties(params Params) analytics.Properties {
 		Set("host", params.Host).
 		Set("contextType", params.Context.Type).
 		Set("cloudOrganizationId", params.Context.OrganizationId).
-		Set("cloudEnvironmentId", params.Context.EnviuronmentId).
+		Set("cloudEnvironmentId", params.Context.EnvironmentId).
 		Set("machineId", params.MachineID)
 
 	if params.DataSource != "" {
