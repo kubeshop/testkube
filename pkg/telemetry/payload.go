@@ -63,7 +63,7 @@ type RunParams struct {
 type RunContext struct {
 	Type           string
 	OrganizationId string
-	EnviuronmentId string
+	EnvironmentId  string
 }
 
 func NewCLIPayload(context RunContext, id, name, version, category string) Payload {

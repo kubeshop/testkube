@@ -20,6 +20,12 @@ var DefaultConfig = Data{
 const configDirName = ".testkube"
 const configFile = "config.json"
 
+func GetStorage(dir string) (Storage, error) {
+	storage := Storage{Dir: dir}
+	err := storage.Init()
+	return storage, err
+}
+
 type Storage struct {
 	Dir string
 }
