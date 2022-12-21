@@ -2382,6 +2382,8 @@ components:
           format: date-time
         executionRequest:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
+        status:
+          $ref: "#/components/schemas/TestSuiteStatus"
 
     TestSuiteStepType:
       type: string
@@ -2606,6 +2608,37 @@ components:
         type:
           $ref: "#/components/schemas/TestSuiteStepType"
 
+    TestSuiteStatus:
+      type: object
+      description: test suite status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestSuiteExecutionCore"
+
+    TestSuiteExecutionCore:
+      type: object
+      description: test suite execution core
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+          example: "62f395e004109209b50edfc4"
+        number:
+          type: integer
+          description: "test suite execution number"
+          example: 1
+        startTime:
+          type: string
+          description: "test suite execution start time"
+          format: date-time
+        endTime:
+          type: string
+          description: "test suite execution end time"
+          format: date-time
+        status:
+          $ref: "#/components/schemas/TestSuiteExecutionStatus"
+
     Test:
       type: object
       properties:
@@ -2653,6 +2686,8 @@ components:
             - settings/config.txt
         executionRequest:
           $ref: "#/components/schemas/ExecutionRequest"
+        status:
+          $ref: "#/components/schemas/TestStatus"
 
     TestContent:
       type: object
@@ -2777,6 +2812,37 @@ components:
           description: "test source labels"
           additionalProperties:
             type: string
+
+    TestStatus:
+      type: object
+      description: test status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/ExecutionCore"
+
+    ExecutionCore:
+      type: object
+      description: test execution core
+      properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+          example: "62f395e004109209b50edfc4"
+        number:
+          type: integer
+          description: "execution number"
+          example: 1
+        startTime:
+          type: string
+          description: "test start time"
+          format: date-time
+        endTime:
+          type: string
+          description: "test end time"
+          format: date-time
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
 
     Execution:
       type: object
