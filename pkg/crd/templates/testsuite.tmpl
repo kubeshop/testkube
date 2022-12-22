@@ -122,3 +122,24 @@ spec:
     {{- end}}
   {{- end }}
   {{- end }}
+{{- if .Status }}
+status:
+  {{- if .Status.LastExecution }}
+  lastExecution:
+    {{- if .Status.LastExecution.Id }}
+    id: {{ .Status.LastExecution.Id }}
+    {{- end }}
+    {{- if .Status.LastExecution.Number }}
+    number: {{ .Status.LastExecution.Number }}
+    {{- end }}
+    {{- if not .Status.LastExecution.StartTime.IsZero }}
+    startTime: {{ .Status.LastExecution.StartTime.Format ""2006-01-02T5:04:05Z" }}
+    {{- end }}
+    {{- if not .Status.LastExecution.EndTime.IsZero }}
+    endTime: {{ .Status.LastExecution.EndTime.Format ""2006-01-02T5:04:05Z" }}
+    {{- end }}
+    {{- if .Status.LastExecution.Status }}
+    status: {{ .Status.LastExecution.Status }}
+    {{- end }}
+  {{- end }}
+{{- end }}
