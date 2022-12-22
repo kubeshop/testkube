@@ -29,6 +29,7 @@ func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Schedule = crTest.Spec.Schedule
 	test.ExecutionRequest = MapExecutionRequestFromSpec(crTest.Spec.ExecutionRequest)
 	test.Uploads = crTest.Spec.Uploads
+	test.Status = MapStatusFromSpec(crTest.Status)
 	return
 }
 
@@ -153,4 +154,21 @@ func MapImagePullSecrets(lor []v1.LocalObjectReference) []testkube.LocalObjectRe
 	}
 
 	return res
+}
+
+// MapStatusFromSpec maps CRD to OpenAPI spec TestStatus
+func MapStatusFromSpec(specStatus testsv3.TestStatus) *testkube.TestStatus {
+	if specStatus.LatestExecution == nil {
+		return nil
+	}
+
+	return &testkube.TestStatus{
+		LatestExecution: &testkube.ExecutionCore{
+			Id:        specStatus.LatestExecution.Id,
+			Number:    specStatus.LatestExecution.Number,
+			Status:    (*testkube.ExecutionStatus)(specStatus.LatestExecution.Status),
+			StartTime: specStatus.LatestExecution.StartTime.Time,
+			EndTime:   specStatus.LatestExecution.EndTime.Time,
+		},
+	}
 }

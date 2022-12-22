@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
+	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
@@ -55,8 +57,9 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace string, images executor.Images, templates executor.Templates,
-	serviceAccountName string, metrics ExecutionCounter, emiter *event.Emitter, configMap config.Repository) (client *JobExecutor, err error) {
+func NewJobExecutor(repo result.Repository, namespace string, images executor.Images,
+	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
+	emiter *event.Emitter, configMap config.Repository, testsClient testsv3.Interface) (client *JobExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -73,6 +76,7 @@ func NewJobExecutor(repo result.Repository, namespace string, images executor.Im
 		metrics:            metrics,
 		Emitter:            emiter,
 		configMap:          configMap,
+		testsClient:        testsClient,
 	}, nil
 }
 
@@ -93,6 +97,7 @@ type JobExecutor struct {
 	metrics            ExecutionCounter
 	Emitter            *event.Emitter
 	configMap          config.Repository
+	testsClient        testsv3.Interface
 }
 
 type JobOptions struct {
@@ -348,6 +353,18 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	err = c.Repository.UpdateResult(ctx, execution.Id, *result)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
+	}
+
+	test, err := c.testsClient.Get(execution.TestName)
+	if err != nil {
+		l.Errorw("getting test error", "error", err)
+	}
+
+	if test != nil {
+		test.Status = testsmapper.MapExecutionToTestStatus(execution)
+		if _, err = c.testsClient.Update(test); err != nil {
+			l.Errorw("updating test error", "error", err)
+		}
 	}
 
 	c.metrics.IncExecuteTest(*execution)
