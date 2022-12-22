@@ -18,4 +18,5 @@ type Client interface {
 	UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error
 	PlaceFiles(buckets []string, prefix string) error
 	GetValidBucketName(parentType string, parentName string) string
+	DeleteFile(bucket, file string) error
 }

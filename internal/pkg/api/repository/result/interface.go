@@ -32,7 +32,6 @@ type Filter interface {
 //go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
 type Repository interface {
 	Sequences
-	OutputRepository
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name and test name
@@ -81,10 +80,6 @@ type Sequences interface {
 type OutputRepository interface {
 	// GetOutput gets execution output by id or name
 	GetOutput(ctx context.Context, id string) (output string, err error)
-	// GetOutputByTest gets execution output by test name
-	GetOutputByTest(ctx context.Context, testName string) (output string, err error)
-	// GetOutputByTestSuite gets execution output by test suite name
-	GetOutputByTestSuite(ctx context.Context, testSuiteName string) (output string, err error)
 	// InsertOutput inserts new execution output
 	InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error
 	// UpdateOutput updates execution output
