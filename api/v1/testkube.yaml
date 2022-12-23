@@ -3097,6 +3097,10 @@ components:
           type: string
           description: build commit
           example: "aaff223ae68aab1af56e8ed8c84c2b80ed63d9b8"
+        namespace:
+          type: string
+          description: server installaton namespace
+          example: "my-testkube"         
 
     Repository:
       description: repository representation for tests in git repositories

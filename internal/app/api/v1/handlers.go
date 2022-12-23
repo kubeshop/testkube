@@ -50,8 +50,9 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 func (s TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
-			Commit:  api.Commit,
-			Version: api.Version,
+			Commit:    api.Commit,
+			Version:   api.Version,
+			Namespace: s.Namespace,
 		})
 	}
 }
