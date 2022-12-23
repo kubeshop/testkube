@@ -154,7 +154,6 @@ func MapStatusFromSpec(specStatus testsuitesv2.TestSuiteStatus) *testkube.TestSu
 	return &testkube.TestSuiteStatus{
 		LatestExecution: &testkube.TestSuiteExecutionCore{
 			Id:        specStatus.LatestExecution.Id,
-			Number:    specStatus.LatestExecution.Number,
 			Status:    (*testkube.TestSuiteExecutionStatus)(specStatus.LatestExecution.Status),
 			StartTime: specStatus.LatestExecution.StartTime.Time,
 			EndTime:   specStatus.LatestExecution.EndTime.Time,

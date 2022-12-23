@@ -17,8 +17,6 @@ import (
 type TestSuiteExecutionCore struct {
 	// execution id
 	Id string `json:"id,omitempty"`
-	// test suite execution number
-	Number int32 `json:"number,omitempty"`
 	// test suite execution start time
 	StartTime time.Time `json:"startTime,omitempty"`
 	// test suite execution end time

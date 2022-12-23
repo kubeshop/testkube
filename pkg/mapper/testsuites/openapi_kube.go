@@ -274,7 +274,6 @@ func MapStatusToSpec(testSuiteStatus *testkube.TestSuiteStatus) (specStatus test
 
 	specStatus.LatestExecution = &testsuitesv2.TestSuiteExecutionCore{
 		Id:     testSuiteStatus.LatestExecution.Id,
-		Number: testSuiteStatus.LatestExecution.Number,
 		Status: (*testsuitesv2.TestSuiteExecutionStatus)(testSuiteStatus.LatestExecution.Status),
 	}
 

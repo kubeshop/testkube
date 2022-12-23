@@ -2624,10 +2624,6 @@ components:
           description: execution id
           format: bson objectId
           example: "62f395e004109209b50edfc4"
-        number:
-          type: integer
-          description: "test suite execution number"
-          example: 1
         startTime:
           type: string
           description: "test suite execution start time"

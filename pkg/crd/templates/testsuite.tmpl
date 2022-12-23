@@ -129,9 +129,6 @@ status:
     {{- if .Status.LastExecution.Id }}
     id: {{ .Status.LastExecution.Id }}
     {{- end }}
-    {{- if .Status.LastExecution.Number }}
-    number: {{ .Status.LastExecution.Number }}
-    {{- end }}
     {{- if not .Status.LastExecution.StartTime.IsZero }}
     startTime: {{ .Status.LastExecution.StartTime.Format "2006-01-02T5:04:05Z" }}
     {{- end }}
