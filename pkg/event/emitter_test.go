@@ -200,14 +200,14 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 		// when listeners are added
 		emitter.UpdateListeners(common.Listeners{listener4})
 
-		// then should have 3 listeners
-		assert.Len(t, emitter.Listeners, 3)
+		// then should have 1 listeners
+		assert.Len(t, emitter.Listeners, 1)
 
 		// when listeners are added
 		emitter.UpdateListeners(common.Listeners{listener4, listener5})
 
 		// then should have 4 listeners
-		assert.Len(t, emitter.Listeners, 4)
+		assert.Len(t, emitter.Listeners, 2)
 	})
 
 }
