@@ -86,33 +86,34 @@ type ContainerExecutor struct {
 }
 
 type JobOptions struct {
-	Name                  string
-	Namespace             string
-	Image                 string
-	ImagePullSecrets      []string
-	Command               []string
-	Args                  []string
-	WorkingDir            string
-	ImageOverride         string
-	Jsn                   string
-	TestName              string
-	InitImage             string
-	ScraperImage          string
-	JobTemplate           string
-	ScraperTemplate       string
-	PVCTemplate           string
-	SecretEnvs            map[string]string
-	Envs                  map[string]string
-	HTTPProxy             string
-	HTTPSProxy            string
-	UsernameSecret        *testkube.SecretRef
-	TokenSecret           *testkube.SecretRef
-	Variables             map[string]testkube.Variable
-	ActiveDeadlineSeconds int64
-	ArtifactRequest       *testkube.ArtifactRequest
-	ServiceAccountName    string
-	DelaySeconds          int
-	JobTemplateExtensions string
+	Name                      string
+	Namespace                 string
+	Image                     string
+	ImagePullSecrets          []string
+	Command                   []string
+	Args                      []string
+	WorkingDir                string
+	ImageOverride             string
+	Jsn                       string
+	TestName                  string
+	InitImage                 string
+	ScraperImage              string
+	JobTemplate               string
+	ScraperTemplate           string
+	PVCTemplate               string
+	SecretEnvs                map[string]string
+	Envs                      map[string]string
+	HTTPProxy                 string
+	HTTPSProxy                string
+	UsernameSecret            *testkube.SecretRef
+	TokenSecret               *testkube.SecretRef
+	Variables                 map[string]testkube.Variable
+	ActiveDeadlineSeconds     int64
+	ArtifactRequest           *testkube.ArtifactRequest
+	ServiceAccountName        string
+	DelaySeconds              int
+	JobTemplateExtensions     string
+	ScraperTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -485,22 +486,23 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 
 	return &JobOptions{
-		Image:                 image,
-		ImagePullSecrets:      options.ImagePullSecretNames,
-		Args:                  args,
-		Command:               command,
-		WorkingDir:            workingDir,
-		TestName:              options.TestName,
-		Namespace:             options.Namespace,
-		SecretEnvs:            options.Request.SecretEnvs,
-		HTTPProxy:             options.Request.HttpProxy,
-		HTTPSProxy:            options.Request.HttpsProxy,
-		UsernameSecret:        options.UsernameSecret,
-		TokenSecret:           options.TokenSecret,
-		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
-		ArtifactRequest:       artifactRequest,
-		DelaySeconds:          jobDelaySeconds,
-		JobTemplateExtensions: options.Request.JobTemplate,
+		Image:                     image,
+		ImagePullSecrets:          options.ImagePullSecretNames,
+		Args:                      args,
+		Command:                   command,
+		WorkingDir:                workingDir,
+		TestName:                  options.TestName,
+		Namespace:                 options.Namespace,
+		SecretEnvs:                options.Request.SecretEnvs,
+		HTTPProxy:                 options.Request.HttpProxy,
+		HTTPSProxy:                options.Request.HttpsProxy,
+		UsernameSecret:            options.UsernameSecret,
+		TokenSecret:               options.TokenSecret,
+		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
+		ArtifactRequest:           artifactRequest,
+		DelaySeconds:              jobDelaySeconds,
+		JobTemplateExtensions:     options.Request.JobTemplate,
+		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 	}
 }
 

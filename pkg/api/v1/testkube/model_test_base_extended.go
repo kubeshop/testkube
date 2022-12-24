@@ -64,6 +64,7 @@ func (test *Test) QuoteTestTextFields() {
 			&test.ExecutionRequest.VariablesFile,
 			&test.ExecutionRequest.JobTemplate,
 			&test.ExecutionRequest.PreRunScript,
+			&test.ExecutionRequest.ScraperTemplate,
 		}
 
 		for _, field := range fields {

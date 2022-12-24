@@ -250,6 +250,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		preRunScriptContent = string(b)
 	}
 
+	scraperTemplateContent := ""
+	scraperTemplate := cmd.Flag("scraper-template").Value.String()
+	if scraperTemplate != "" {
+		b, err := os.ReadFile(scraperTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		scraperTemplateContent = string(b)
+	}
+
 	request = &testkube.ExecutionRequest{
 		Name:                  executionName,
 		VariablesFile:         paramsFileContent,
@@ -265,6 +276,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		ActiveDeadlineSeconds: timeout,
 		JobTemplate:           jobTemplateContent,
 		PreRunScript:          preRunScriptContent,
+		ScraperTemplate:       scraperTemplateContent,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -717,6 +729,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.PreRunScript = &preRunScriptContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("scraper-template").Changed {
+		scraperTemplateContent := ""
+		scraperTemplate := cmd.Flag("scraper-template").Value.String()
+		if scraperTemplate != "" {
+			b, err := os.ReadFile(scraperTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			scraperTemplateContent = string(b)
+		}
+
+		request.ScraperTemplate = &scraperTemplateContent
 		nonEmpty = true
 	}
 

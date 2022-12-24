@@ -47,6 +47,7 @@ func NewRunTestCmd() *cobra.Command {
 		gitPath                  string
 		gitWorkingDir            string
 		preRunScript             string
+		scraperTemplate          string
 	)
 
 	cmd := &cobra.Command{
@@ -88,6 +89,13 @@ func NewRunTestCmd() *cobra.Command {
 				preRunScriptContent = string(b)
 			}
 
+			scraperTemplateContent := ""
+			if scraperTemplate != "" {
+				b, err := os.ReadFile(scraperTemplate)
+				ui.ExitOnError("reading scraper template", err)
+				scraperTemplateContent = string(b)
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
@@ -102,6 +110,7 @@ func NewRunTestCmd() *cobra.Command {
 				Image:                         image,
 				JobTemplate:                   jobTemplateContent,
 				PreRunScriptContent:           preRunScriptContent,
+				ScraperTemplate:               scraperTemplateContent,
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
@@ -226,6 +235,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 
 	return cmd
 }
