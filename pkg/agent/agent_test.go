@@ -4,17 +4,21 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
-func TestRun(t *testing.T) {
+func TestCommandExecution(t *testing.T) {
 	url := "localhost:9999"
 	go func() {
 		lis, err := net.Listen("tcp", url)
@@ -28,10 +32,12 @@ func TestRun(t *testing.T) {
 		grpcServer.Serve(lis)
 	}()
 
+	var msgCnt int32
 	m := func(ctx *fasthttp.RequestCtx) {
 		h := &ctx.Response.Header
 		h.Add("Content-type", "application/json")
 		fmt.Fprintf(ctx, "Hi there! RequestURI is %q", ctx.RequestURI())
+		atomic.AddInt32(&msgCnt, 1)
 	}
 
 	logger, _ := zap.NewDevelopment()
@@ -40,10 +46,18 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = agent.Run(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	g, groupCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return agent.Run(groupCtx)
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	g.Wait()
+
+	assert.True(t, msgCnt > 0)
 }
 
 type CloudServer struct {
@@ -75,6 +89,19 @@ func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
 	return nil
 }
 
+func (cs *CloudServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
+	for {
+		if srv.Context().Err() != nil {
+			return srv.Context().Err()
+		}
+
+		_, err := srv.Recv()
+		if err != nil {
+			return err
+		}
+	}
+
+}
 func newServer() *CloudServer {
 	return &CloudServer{}
 }

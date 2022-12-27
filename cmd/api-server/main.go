@@ -290,16 +290,6 @@ func main() {
 			if err != nil {
 				ui.ExitOnError("Running agent", err)
 			}
-
-			agent.Close()
-			return nil
-		})
-		g.Go(func() error {
-			err = agent.RunEventLoop(ctx)
-			if err != nil {
-				ui.ExitOnError("Running websocket agent", err)
-			}
-
 			return nil
 		})
 		eventsEmitter.Register(agent)
