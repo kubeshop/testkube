@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
-func TestRunEventLoop(t *testing.T) {
+func TestEventLoop(t *testing.T) {
 	url := "localhost:8998"
 	cloudSrv := newEventServer()
 
@@ -53,13 +55,35 @@ func TestRunEventLoop(t *testing.T) {
 		}
 	}()
 
-	agent.RunEventLoop(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	g, groupCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return agent.Run(groupCtx)
+	})
 
-	assert.Equal(t, cloudSrv.Count(), 5)
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	g.Wait()
+
+	assert.True(t, cloudSrv.Count() >= 5)
 }
 
 func (cws *CloudEventServer) Count() int {
 	return cws.messageCount
+}
+
+func (cws *CloudEventServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
+	for {
+		if srv.Context().Err() != nil {
+			return srv.Context().Err()
+		}
+
+		_, err := srv.Recv()
+		if err != nil {
+			return err
+		}
+	}
 }
 func (cws *CloudEventServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
@@ -72,9 +96,16 @@ func (cws *CloudEventServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	}
 
 	for {
+		if srv.Context().Err() != nil {
+			return srv.Context().Err()
+		}
 		resp, err := srv.Recv()
 		if err != nil {
 			return err
+		}
+
+		if resp.Opcode == cloud.Opcode_HEALTH_CHECK {
+			continue
 		}
 
 		if resp.Opcode != cloud.Opcode_TEXT_FRAME {
