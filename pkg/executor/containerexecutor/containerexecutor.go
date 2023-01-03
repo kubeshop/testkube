@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
@@ -33,6 +34,8 @@ const (
 )
 
 type ResultRepository interface {
+	// Get gets execution result by id or name
+	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// UpdateExecution updates result in execution
 	UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error
 	// StartExecution updates execution start time
@@ -47,7 +50,8 @@ type EventEmitter interface {
 
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images, templates executor.Templates,
-	serviceAccountName string, metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository) (client *ContainerExecutor, err error) {
+	serviceAccountName string, metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository,
+	executorsClient *executorsclientv1.ExecutorsClient) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -64,6 +68,7 @@ func NewContainerExecutor(repo ResultRepository, namespace string, images execut
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
+		executorsClient:    executorsClient,
 	}, nil
 }
 
@@ -82,6 +87,7 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
+	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 }
 
@@ -125,7 +131,33 @@ func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) 
 			close(out)
 		}()
 
-		for _, podName := range []string{id, id + "-scraper"} {
+		ctx := context.Background()
+		execution, err := c.repository.Get(ctx, id)
+		if err != nil {
+			out <- output.NewOutputError(err)
+			return
+		}
+
+		executor, err := c.executorsClient.GetByType(execution.TestType)
+		if err != nil {
+			out <- output.NewOutputError(err)
+			return
+		}
+
+		supportArtifacts := false
+		for _, feature := range executor.Spec.Features {
+			if feature == executorv1.FeatureArtifacts {
+				supportArtifacts = true
+				break
+			}
+		}
+
+		ids := []string{id}
+		if supportArtifacts && execution.ArtifactRequest != nil {
+			ids = append(ids, id+"-scraper")
+		}
+
+		for _, podName := range ids {
 			logs := make(chan []byte)
 
 			if err := TailJobLogs(c.log, c.clientSet, c.namespace, podName, logs); err != nil {
