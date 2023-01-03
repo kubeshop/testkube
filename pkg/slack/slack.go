@@ -72,10 +72,12 @@ func (s *Notifier) SendEvent(event *testkube.Event) error {
 
 	if s.client != nil {
 
+		log.DefaultLogger.Infow("sending event to slack", "event", event)
 		channels, err := s.getChannels(event)
 		if err != nil {
 			return err
 		}
+		log.DefaultLogger.Infow("channels to send event to", "channels", channels)
 
 		for _, channelID := range channels {
 			prevTimestamp, ok := s.timestamps[name]
