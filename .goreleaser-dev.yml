@@ -13,6 +13,47 @@ builds:
     prebuilt:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
+dockers:
+  -
+    dockerfile: ./build/api-server/Dockerfile
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/kube-webhook-certgen:{{ .Tag }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
+      - "--build-arg=VERSION=${{.Version}}"
+      - "--build-arg=COMMIT=${{.Commit}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
+      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
+      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
+      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+
+  -
+    dockerfile: ./build/api-server/Dockerfile
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/kube-webhook-certgen:{{ .Tag }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
+      - "--build-arg=VERSION=${{.Version}}"
+      - "--build-arg=COMMIT=${{.Commit}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
+      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
+      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
+      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+docker_manifests:
+  - name_template: kubeshop/kube-webhook-certgen:{{ .Tag }}
+    image_templates:
+      - kubeshop/kube-webhook-certgen:{{ .Tag }}-amd64
+      - kubeshop/kube-webhook-certgen:{{ .Tag }}-arm64
 archives:
   - replacements:
       darwin: macOS
