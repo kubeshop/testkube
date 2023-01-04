@@ -1,7 +1,6 @@
 package secret
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 
@@ -145,7 +144,7 @@ func (m EnvManager) Obfuscate(p []byte) []byte {
 			continue
 		}
 
-		p = bytes.ReplaceAll(p, []byte(variable.Value), []byte("*****"))
+		//	p = bytes.ReplaceAll(p, []byte(variable.Value), []byte("*****"))
 	}
 
 	return p
