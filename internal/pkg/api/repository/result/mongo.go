@@ -27,7 +27,7 @@ func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository
 	return &MongoRepository{
 		Coll:         db.Collection(CollectionName),
 		Sequences:    db.Collection(CollectionSequences),
-		Output:       NewMongoOutputRepository(db),
+		OutputLogs:   NewMongoOutputRepository(db),
 		allowDiskUse: allowDiskUse,
 	}
 }
@@ -38,14 +38,14 @@ func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse b
 		Sequences:    db.Collection(CollectionSequences),
 		allowDiskUse: allowDiskUse,
 	}
-	repo.Output = NewMinioOutputRepository(storageClient, repo.Coll, bucket)
+	repo.OutputLogs = NewMinioOutputRepository(storageClient, repo.Coll, bucket)
 	return &repo
 }
 
 type MongoRepository struct {
 	Coll         *mongo.Collection
 	Sequences    *mongo.Collection
-	Output       OutputRepository
+	OutputLogs   OutputRepository
 	allowDiskUse bool
 }
 
@@ -55,7 +55,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.Output.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -69,7 +69,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.Output.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -85,7 +85,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.Output.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -262,7 +262,7 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.Output.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+	err = r.OutputLogs.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
@@ -273,7 +273,7 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.Output.UpdateOutput(ctx, result.Id, output)
+	err = r.OutputLogs.UpdateOutput(ctx, result.Id, output)
 	return
 }
 
@@ -284,7 +284,7 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 	if err != nil {
 		return
 	}
-	err = r.Output.UpdateOutput(ctx, id, output)
+	err = r.OutputLogs.UpdateOutput(ctx, id, output)
 	return
 }
 
@@ -385,7 +385,7 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteOutputByTest(ctx, testName)
+	err = r.OutputLogs.DeleteOutputByTest(ctx, testName)
 	return
 }
 
@@ -395,7 +395,7 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteOutputByTestSuite(ctx, testSuiteName)
+	err = r.OutputLogs.DeleteOutputByTestSuite(ctx, testSuiteName)
 	return
 }
 
@@ -405,7 +405,7 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteAllOutput(ctx)
+	err = r.OutputLogs.DeleteAllOutput(ctx)
 	return
 }
 
@@ -431,7 +431,7 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteOutputForTests(ctx, testNames)
+	err = r.OutputLogs.DeleteOutputForTests(ctx, testNames)
 	return
 }
 
@@ -457,7 +457,7 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteOutputForTestSuites(ctx, testSuiteNames)
+	err = r.OutputLogs.DeleteOutputForTestSuites(ctx, testSuiteNames)
 	return
 }
 
@@ -467,7 +467,7 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 	if err != nil {
 		return
 	}
-	err = r.Output.DeleteOutputForAllTestSuite(ctx)
+	err = r.OutputLogs.DeleteOutputForAllTestSuite(ctx)
 	return
 }
 

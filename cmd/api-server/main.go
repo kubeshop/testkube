@@ -275,6 +275,11 @@ func main() {
 		scheduler,
 	)
 
+	if api.Storage != nil {
+		bucket := os.Getenv("LOGS_BUCKET")
+		resultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, resultsRepository.Coll, bucket)
+	}
+
 	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
 	if apiKey != "" {
 		log.DefaultLogger.Info("starting agent service")

@@ -18,62 +18,62 @@ type ExecutionOutput struct {
 const CollectionOutput = "output"
 
 type MongoOutputRepository struct {
-	Output *mongo.Collection
+	OutputColl *mongo.Collection
 }
 
 func NewMongoOutputRepository(db *mongo.Database) *MongoOutputRepository {
 	return &MongoOutputRepository{
-		Output: db.Collection(CollectionOutput),
+		OutputColl: db.Collection(CollectionOutput),
 	}
 }
 
 func (r *MongoOutputRepository) GetOutput(ctx context.Context, id string) (output string, err error) {
 	var eOutput ExecutionOutput
-	err = r.Output.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&eOutput)
+	err = r.OutputColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&eOutput)
 	return eOutput.Output, err
 }
 
 func (m *MongoOutputRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
-	_, err := m.Output.InsertOne(ctx, ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output})
+	_, err := m.OutputColl.InsertOne(ctx, ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output})
 	return err
 }
 
 func (m *MongoOutputRepository) UpdateOutput(ctx context.Context, id, output string) error {
-	_, err := m.Output.UpdateOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}, bson.M{"$set": bson.M{"output": output}})
+	_, err := m.OutputColl.UpdateOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}, bson.M{"$set": bson.M{"output": output}})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutput(ctx context.Context, id string) error {
-	_, err := m.Output.DeleteOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}})
+	_, err := m.OutputColl.DeleteOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testname": testName})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{"testname": testName})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutputForTests(ctx context.Context, testNames []string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testname": bson.M{"$in": testNames}})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{"testname": bson.M{"$in": testNames}})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$in": testSuiteNames}})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$in": testSuiteNames}})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteOutputForAllTestSuite(ctx context.Context) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return err
 }
 
 func (m *MongoOutputRepository) DeleteAllOutput(ctx context.Context) error {
-	_, err := m.Output.DeleteMany(ctx, bson.M{})
+	_, err := m.OutputColl.DeleteMany(ctx, bson.M{})
 	return err
 }

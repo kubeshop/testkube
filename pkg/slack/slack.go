@@ -72,7 +72,7 @@ func (s *Notifier) SendEvent(event *testkube.Event) error {
 
 	if s.client != nil {
 
-		log.DefaultLogger.Infow("sending event to slack", "event", event)
+		log.DefaultLogger.Debugw("sending event to slack", "event", event)
 		channels, err := s.getChannels(event)
 		if err != nil {
 			return err
