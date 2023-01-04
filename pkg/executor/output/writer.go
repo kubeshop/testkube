@@ -2,6 +2,7 @@ package output
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/kubeshop/testkube/pkg/executor/secret"
@@ -23,6 +24,12 @@ type JSONWrapWriter struct {
 
 // Write io.Writer method implementation
 func (w *JSONWrapWriter) Write(p []byte) (int, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f", r)
+		}
+	}()
+
 	if w.envManager != nil {
 		p = w.envManager.Obfuscate(p)
 	}
