@@ -26,11 +26,11 @@ dockers:
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
       - "--build-arg=VERSION=${{.Version}}"
       - "--build-arg=COMMIT=${{.Commit}}"
-      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
-      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
-      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=123"
+      - "--build-arg=ANALYTICS_API_KEY=3333"
+      - "--build-arg=SLACK_BOT_CLIENT_ID=3333"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET=3333"
+      - "--build-arg=SEGMENTIO_KEY=3333"
 
   -
     dockerfile: ./build/api-server/Dockerfile
@@ -44,11 +44,11 @@ dockers:
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
       - "--build-arg=VERSION=${{.Version}}"
       - "--build-arg=COMMIT=${{.Commit}}"
-      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
-      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
-      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=123"
+      - "--build-arg=ANALYTICS_API_KEY=3333"
+      - "--build-arg=SLACK_BOT_CLIENT_ID=3333"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET=3333"
+      - "--build-arg=SEGMENTIO_KEY=3333"
 docker_manifests:
   - name_template: kubeshop/kube-webhook-certgen:{{ .Tag }}
     image_templates:
