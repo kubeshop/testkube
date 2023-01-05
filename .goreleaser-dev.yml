@@ -44,11 +44,7 @@ dockers:
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
       - "--build-arg=VERSION=${{.Version}}"
       - "--build-arg=COMMIT=${{.Commit}}"
-      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
-      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
-      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=123"
   -
     dockerfile: goreleaser.dockerfile
     use: buildx
@@ -61,11 +57,7 @@ dockers:
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
       - "--build-arg=VERSION=${{.Version}}"
       - "--build-arg=COMMIT=${{.Commit}}"
-      - "--build-arg=ANALYTICS_TRACKING_ID=${{.Env.ANALYTICS_TRACKING_ID}}"
-      - "--build-arg=ANALYTICS_API_KEY=${{.Env.ANALYTICS_API_KEY}}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID=${{.Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET=${{.Env.SLACK_BOT_CLIENT_SECRET}}"
-      - "--build-arg=SEGMENTIO_KEY=${{.Env.SEGMENTIO_KEY}}"
+      - "--build-arg=ANALYTICS_TRACKING_ID=123"
 docker_manifests:
   - name_template: kubeshop/testkube-api-server:{{ .Tag }}
     image_templates:
