@@ -1,6 +1,6 @@
 builds:
   - builder: prebuilt
-    id: testkube-binary
+    id: kubectl-testkube
     goos:
       - linux
       - windows
@@ -15,8 +15,7 @@ builds:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
 
-  - builder: go
-    id: testkube-api
+  - id: testkube-api
     main: ./cmd/api-server
     goos:
       - linux
@@ -79,6 +78,8 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+    builds:
+    - kubectl-testkube
 checksum:
   name_template: "checksums.txt"
 changelog:
