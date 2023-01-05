@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.uber.org/zap"
@@ -265,6 +267,7 @@ func (c *Client) PlaceFiles(buckets []string, prefix string) error {
 			return fmt.Errorf("could not check if bucket already exists for files: %w", err)
 		}
 		if !exists {
+			output.PrintLog(fmt.Sprintf("%s No files found for bucket %s", ui.IconFile, b))
 			c.Log.Infof("Bucket %s does not exist", b)
 			continue
 		}
@@ -275,11 +278,14 @@ func (c *Client) PlaceFiles(buckets []string, prefix string) error {
 		}
 
 		for _, f := range files {
+			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
 			err = c.minioclient.FGetObject(context.Background(), b, f.Name, prefix+f.Name, minio.GetObjectOptions{})
 			if err != nil {
+				output.PrintEvent(fmt.Sprintf("%s Could not download file %s", ui.IconCross, f.Name))
 				return fmt.Errorf("could not persist file %s from bucket %s: %w", f.Name, b, err)
 			}
+			output.PrintEvent(fmt.Sprintf("%s File %s successfully downloaded into %s", ui.IconCheckMark, f.Name, prefix))
 		}
 	}
 	return nil
