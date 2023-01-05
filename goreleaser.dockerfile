@@ -1,5 +1,5 @@
 FROM scratch
-COPY kubectl-testkube /kubectl-testkube
+COPY testkube-api /testkube-api
 USER 1001
 EXPOSE 8088
-CMD ["/kubectl-testkube"]
+CMD ["/testkube-api"]

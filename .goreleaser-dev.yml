@@ -13,6 +13,23 @@ builds:
     prebuilt:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
+
+  - builder: go
+    main: ./cmd/api-server
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - 386
+    goamd64:
+      - v1
+    binary: testkube-api
+    env:
+      - CGO_ENABLED=0
+
 dockers:
   -
     dockerfile: goreleaser.dockerfile
