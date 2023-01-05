@@ -381,31 +381,31 @@ func addSelectorConditions(selector string, tag string, conditions primitive.A) 
 
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	err = r.OutputLogs.DeleteOutputByTest(ctx, testName)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteOutputByTest(ctx, testName)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
 	return
 }
 
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
+	err = r.OutputLogs.DeleteOutputByTestSuite(ctx, testSuiteName)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteOutputByTestSuite(ctx, testSuiteName)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	err = r.OutputLogs.DeleteAllOutput(ctx)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteAllOutput(ctx)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
 
@@ -427,11 +427,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 		filter = bson.M{"testname": testNames[0]}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	err = r.OutputLogs.DeleteOutputForTests(ctx, testNames)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteOutputForTests(ctx, testNames)
+	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
 
@@ -453,21 +453,21 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		filter = bson.M{"testSuitename": testSuiteNames[0]}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	err = r.OutputLogs.DeleteOutputForTestSuites(ctx, testSuiteNames)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteOutputForTestSuites(ctx, testSuiteNames)
+	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
 
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	err = r.OutputLogs.DeleteOutputForAllTestSuite(ctx)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.DeleteOutputForAllTestSuite(ctx)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }
 
