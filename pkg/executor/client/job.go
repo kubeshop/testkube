@@ -340,6 +340,8 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	} else if result.IsTimeout() {
 		result.Output = result.Output + "\nTest run was aborted due to timeout."
 		eventToSend = testkube.NewEventEndTestTimeout(execution)
+	} else if result.IsFailed() {
+		eventToSend = testkube.NewEventEndTestFailed(execution)
 	}
 
 	// metrics increase

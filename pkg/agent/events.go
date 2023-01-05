@@ -3,12 +3,13 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -54,30 +55,71 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 	}
 }
 
-func (ag *Agent) RunEventLoop(ctx context.Context) error {
+func (ag *Agent) runEventLoop(ctx context.Context) error {
 	var opts []grpc.CallOption
 	md := metadata.Pairs(apiKey, ag.apiKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	//TODO figure out how to retry this method in case of network failure
-	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	stream, err := ag.client.Send(ctx, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to execute: %w", err)
-		return fmt.Errorf("failed to setup stream: %w", err)
+		return errors.Wrap(err, "failed to setup stream")
 	}
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		ev := <-ag.events
-		b, err := json.Marshal(ev)
-		if err != nil {
-			continue
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			msg := &cloud.WebsocketData{Opcode: cloud.Opcode_HEALTH_CHECK, Body: nil}
+
+			err = ag.sendEvent(ctx, stream, msg)
+			if err != nil {
+				ag.logger.Errorf("websocket stream send healthcheck: %w", err)
+
+				return err
+			}
+
+		case ev := <-ag.events:
+			b, err := json.Marshal(ev)
+			if err != nil {
+				continue
+			}
+
+			msg := &cloud.WebsocketData{Opcode: cloud.Opcode_TEXT_FRAME, Body: b}
+			err = ag.sendEvent(ctx, stream, msg)
+			if err != nil {
+				ag.logger.Errorf("websocket stream send: %w", err)
+				return err
+			}
+		}
+	}
+}
+
+func (ag *Agent) sendEvent(ctx context.Context, stream cloud.TestKubeCloudAPI_SendClient, event *cloud.WebsocketData) error {
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- stream.Send(event)
+		close(errChan)
+	}()
+
+	t := time.NewTimer(ag.sendTimeout)
+	select {
+	case err := <-errChan:
+		if !t.Stop() {
+			<-t.C
+		}
+		return err
+	case <-ctx.Done():
+		if !t.Stop() {
+			<-t.C
 		}
 
-		msg := &cloud.WebsocketData{Opcode: cloud.Opcode_TEXT_FRAME, Body: b}
-		err = stream.Send(msg)
-		if err != nil {
-			ag.logger.Errorf("websocket stream send: %w", err)
-			return err
-		}
+		return ctx.Err()
+	case <-t.C:
+		return errors.New("too slow")
 	}
 }
