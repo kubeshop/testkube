@@ -189,10 +189,10 @@ status:
     number: {{ .Status.LatestExecution.Number }}
     {{- end }}
     {{- if not .Status.LatestExecution.StartTime.IsZero }}
-    startTime: {{ .Status.LatestExecution.StartTime.Format "2006-01-02T5:04:05Z" }}
+    startTime: {{ .Status.LatestExecution.StartTime.Format "2006-01-02T15:04:05Z" }}
     {{- end }}
     {{- if not .Status.LatestExecution.EndTime.IsZero }}
-    endTime: {{ .Status.LatestExecution.EndTime.Format "2006-01-02T5:04:05Z" }}
+    endTime: {{ .Status.LatestExecution.EndTime.Format "2006-01-02T15:04:05Z" }}
     {{- end }}
     {{- if .Status.LatestExecution.Status }}
     status: {{ .Status.LatestExecution.Status }}
