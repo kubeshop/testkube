@@ -394,6 +394,41 @@ Then just provide it when you create or run the test using `--prerun-script` par
 kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
+### **Changing the default scraper job template used for container executor tests**
+
+When you use container executor tests generating artifacts for scraping, then we launch 2 sequential kubernetes jobs, one is for test execution and other one is for scraping test results. Sometimes you need to adjust an existing scraper job template of a standard Testkube scraper with a few parameters. In this case you can use additional parameter `--scraper-template` when you create or run the test:
+
+```bash
+kubectl testkube create test --name scraper-test --type scraper/test --artifact-storage-class-name standard --artifact-volume-mount-path /share --artifact-dir test/files --scraper-template scraper.yaml
+```
+
+Where `scraper.yaml` file contains adjusted scraper job template parts for merging with default scraper job template:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Name }}-scraper
+        image: {{ .ScraperImage }}
+        imagePullPolicy: Always
+        command:
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        {{- if .ArtifactRequest }}
+        volumeMounts:
+          - name: artifact-volume
+            mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+        {{- end }}
+        resources:
+          limits:
+            memory: 512Mi
+```
+
+When you run such a test you will face a memory limit for the scraper pod, when the default scraper job template doesn't have any resource constraints.
+
 ## **Summary**
 
 Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
