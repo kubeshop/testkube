@@ -1,5 +1,6 @@
 builds:
   - builder: prebuilt
+    id: testkube-binary
     goos:
       - linux
       - windows
@@ -15,6 +16,7 @@ builds:
     binary: kubectl-testkube
 
   - builder: go
+    id: testkube-api
     main: ./cmd/api-server
     goos:
       - linux
