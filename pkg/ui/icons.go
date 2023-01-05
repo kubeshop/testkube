@@ -35,3 +35,12 @@ const IconFile = "📂"
 
 // IconUnlocked emoji
 const IconUnlocked = "🔓"
+
+// IconMicroscope emoji
+const IconMicroscope = "🔬"
+
+// IconKey emoji
+const IconKey = "🔑"
+
+// IconCabinet emoji
+const IconCabinet = "🗄️"
