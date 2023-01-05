@@ -348,3 +348,7 @@ func (FakeTestsClient) ListByNames(names []string) ([]testsv3.Test, error) {
 func (FakeTestsClient) DeleteByLabels(selector string) error {
 	return nil
 }
+
+func (FakeTestsClient) UpdateStatus(test *testsv3.Test) error {
+	return nil
+}

@@ -414,7 +414,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 	if test != nil {
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
-		if _, err = c.testsClient.Update(test); err != nil {
+		if err = c.testsClient.UpdateStatus(test); err != nil {
 			c.log.Errorw("updating test error", "error", err)
 		}
 	}

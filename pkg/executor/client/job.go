@@ -364,7 +364,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 
 	if test != nil {
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
-		if _, err = c.testsClient.Update(test); err != nil {
+		if err = c.testsClient.UpdateStatus(test); err != nil {
 			l.Errorw("updating test error", "error", err)
 		}
 	}

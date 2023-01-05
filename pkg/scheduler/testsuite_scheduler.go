@@ -109,7 +109,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			if testSuite != nil {
 				testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
-				if _, err = s.testSuitesClient.Update(testSuite); err != nil {
+				if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
 					s.logger.Errorw("updating test suite error", "error", err)
 				}
 			}
