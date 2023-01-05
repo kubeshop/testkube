@@ -15,12 +15,12 @@ builds:
     binary: kubectl-testkube
 dockers:
   -
-    dockerfile: ./build/api-server/Dockerfile
+    dockerfile: goreleaser.dockerfile
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/kube-webhook-certgen:{{ .Tag }}-amd64"
+      - "kubeshop/testkube-api-server:{{ .Tag }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
@@ -31,14 +31,13 @@ dockers:
       - "--build-arg=SLACK_BOT_CLIENT_ID=3333"
       - "--build-arg=SLACK_BOT_CLIENT_SECRET=3333"
       - "--build-arg=SEGMENTIO_KEY=3333"
-
   -
-    dockerfile: ./build/api-server/Dockerfile
+    dockerfile: goreleaser.dockerfile
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/kube-webhook-certgen:{{ .Tag }}-arm64"
+      - "kubeshop/testkube-api-server:{{ .Tag }}-arm64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
@@ -50,10 +49,10 @@ dockers:
       - "--build-arg=SLACK_BOT_CLIENT_SECRET=3333"
       - "--build-arg=SEGMENTIO_KEY=3333"
 docker_manifests:
-  - name_template: kubeshop/kube-webhook-certgen:{{ .Tag }}
+  - name_template: kubeshop/testkube-api-server:{{ .Tag }}
     image_templates:
-      - kubeshop/kube-webhook-certgen:{{ .Tag }}-amd64
-      - kubeshop/kube-webhook-certgen:{{ .Tag }}-arm64
+      - kubeshop/testkube-api-server:{{ .Tag }}-amd64
+      - kubeshop/testkube-api-server:{{ .Tag }}-arm64
 archives:
   - replacements:
       darwin: macOS
