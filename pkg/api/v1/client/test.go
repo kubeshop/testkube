@@ -147,6 +147,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		JobTemplate:     options.JobTemplate,
 		ContentRequest:  options.ContentRequest,
 		PreRunScript:    options.PreRunScriptContent,
+		ScraperTemplate: options.ScraperTemplate,
 	}
 
 	body, err := json.Marshal(request)
@@ -175,6 +176,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		JobTemplate:     options.JobTemplate,
 		ContentRequest:  options.ContentRequest,
 		PreRunScript:    options.PreRunScriptContent,
+		ScraperTemplate: options.ScraperTemplate,
 	}
 
 	body, err := json.Marshal(request)

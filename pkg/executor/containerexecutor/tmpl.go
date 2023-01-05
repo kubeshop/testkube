@@ -107,6 +107,21 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 
 	var job batchv1.Job
 	jobSpec := buffer.String()
+	if options.ScraperTemplateExtensions != "" {
+		tmplExt, err := template.New("jobExt").Parse(options.ScraperTemplateExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("creating scraper extensions spec from executor template error: %w", err)
+		}
+
+		var bufferExt bytes.Buffer
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
+			return nil, fmt.Errorf("executing scraper extensions spec executor template: %w", err)
+		}
+
+		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
+			return nil, fmt.Errorf("merging scraper spec executor templates: %w", err)
+		}
+	}
 
 	log.Debug("Scraper job specification", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))

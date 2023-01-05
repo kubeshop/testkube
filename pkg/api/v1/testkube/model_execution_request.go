@@ -58,4 +58,6 @@ type ExecutionRequest struct {
 	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
 	// script to run before test execution
 	PreRunScript string `json:"preRunScript,omitempty"`
+	// scraper template extensions
+	ScraperTemplate string `json:"scraperTemplate,omitempty"`
 }

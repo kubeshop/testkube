@@ -9,10 +9,12 @@ testkube set context <value> [flags]
 ### Options
 
 ```
-  -k, --api-key string   API Key for Testkube Cloud
-  -e, --env string       Testkube Cloud environment ID
-  -h, --help             help for context
-  -o, --org string       Testkube Cloud organization ID
+  -k, --api-key string         API Key for Testkube Cloud
+      --cloud-api-uri string   https://api.testkube.io
+  -e, --env string             Testkube Cloud environment ID
+  -h, --help                   help for context
+      --kubeconfig             reset context mode for CLI to default kubeconfig based
+  -o, --org string             Testkube Cloud organization ID
 ```
 
 ### Options inherited from parent commands
