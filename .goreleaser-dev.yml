@@ -39,7 +39,7 @@ dockers:
     image_templates:
       - "kubeshop/testkube-api-server:{{ .Tag }}-arm64"
     build_flag_templates:
-      - "--platform=linux/amd64"
+      - "--platform=linux/arm64"
       - "--build-arg=TOKEN=${{.Env.GITHUB_TOKEN}}"
       - "--build-arg=VERSION=${{.Version}}"
       - "--build-arg=COMMIT=${{.Commit}}"
