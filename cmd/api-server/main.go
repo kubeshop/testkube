@@ -232,7 +232,7 @@ func main() {
 	}
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(resultsRepository, namespace, images, containerTemplates,
-		serviceAccountName, metrics, eventsEmitter, configMapConfig, testsClientV3)
+		serviceAccountName, metrics, eventsEmitter, configMapConfig, executorsClient, testsClientV3)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
 	}
@@ -290,16 +290,6 @@ func main() {
 			if err != nil {
 				ui.ExitOnError("Running agent", err)
 			}
-
-			agent.Close()
-			return nil
-		})
-		g.Go(func() error {
-			err = agent.RunEventLoop(ctx)
-			if err != nil {
-				ui.ExitOnError("Running websocket agent", err)
-			}
-
 			return nil
 		})
 		eventsEmitter.Register(agent)

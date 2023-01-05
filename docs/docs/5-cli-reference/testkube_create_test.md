@@ -41,6 +41,7 @@ testkube create test [flags]
   -n, --name string                                unique test name - mandatory
       --prerun-script string                       path to script to be run before test execution
       --schedule string                            test schedule in a cronjob form: * * * * *
+      --scraper-template string                    scraper template file path for extensions to scraper template
       --secret-env stringToString                  secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])

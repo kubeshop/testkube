@@ -140,6 +140,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		ArtifactRequest:       artifactRequest,
 		JobTemplate:           specExecutionRequest.JobTemplate,
 		PreRunScript:          specExecutionRequest.PreRunScript,
+		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
 	}
 }
 

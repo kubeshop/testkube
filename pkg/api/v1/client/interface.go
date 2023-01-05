@@ -162,6 +162,7 @@ type ExecuteTestOptions struct {
 	JobTemplate                   string
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
+	ScraperTemplate               string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

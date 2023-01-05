@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -35,6 +36,8 @@ const (
 )
 
 type ResultRepository interface {
+	// Get gets execution result by id or name
+	Get(ctx context.Context, id string) (testkube.Execution, error)
 	// UpdateExecution updates result in execution
 	UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error
 	// StartExecution updates execution start time
@@ -50,7 +53,8 @@ type EventEmitter interface {
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images,
 	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
-	emiter EventEmitter, configMap config.Repository, testsClient testsv3.Interface) (client *ContainerExecutor, err error) {
+	emiter EventEmitter, configMap config.Repository, executorsClient *executorsclientv1.ExecutorsClient,
+	testsClient testsv3.Interface) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -67,6 +71,7 @@ func NewContainerExecutor(repo ResultRepository, namespace string, images execut
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
+		executorsClient:    executorsClient,
 		testsClient:        testsClient,
 	}, nil
 }
@@ -86,38 +91,40 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
+	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 	testsClient        testsv3.Interface
 }
 
 type JobOptions struct {
-	Name                  string
-	Namespace             string
-	Image                 string
-	ImagePullSecrets      []string
-	Command               []string
-	Args                  []string
-	WorkingDir            string
-	ImageOverride         string
-	Jsn                   string
-	TestName              string
-	InitImage             string
-	ScraperImage          string
-	JobTemplate           string
-	ScraperTemplate       string
-	PVCTemplate           string
-	SecretEnvs            map[string]string
-	Envs                  map[string]string
-	HTTPProxy             string
-	HTTPSProxy            string
-	UsernameSecret        *testkube.SecretRef
-	TokenSecret           *testkube.SecretRef
-	Variables             map[string]testkube.Variable
-	ActiveDeadlineSeconds int64
-	ArtifactRequest       *testkube.ArtifactRequest
-	ServiceAccountName    string
-	DelaySeconds          int
-	JobTemplateExtensions string
+	Name                      string
+	Namespace                 string
+	Image                     string
+	ImagePullSecrets          []string
+	Command                   []string
+	Args                      []string
+	WorkingDir                string
+	ImageOverride             string
+	Jsn                       string
+	TestName                  string
+	InitImage                 string
+	ScraperImage              string
+	JobTemplate               string
+	ScraperTemplate           string
+	PVCTemplate               string
+	SecretEnvs                map[string]string
+	Envs                      map[string]string
+	HTTPProxy                 string
+	HTTPSProxy                string
+	UsernameSecret            *testkube.SecretRef
+	TokenSecret               *testkube.SecretRef
+	Variables                 map[string]testkube.Variable
+	ActiveDeadlineSeconds     int64
+	ArtifactRequest           *testkube.ArtifactRequest
+	ServiceAccountName        string
+	DelaySeconds              int
+	JobTemplateExtensions     string
+	ScraperTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -130,7 +137,33 @@ func (c *ContainerExecutor) Logs(id string) (out chan output.Output, err error) 
 			close(out)
 		}()
 
-		for _, podName := range []string{id, id + "-scraper"} {
+		ctx := context.Background()
+		execution, err := c.repository.Get(ctx, id)
+		if err != nil {
+			out <- output.NewOutputError(err)
+			return
+		}
+
+		executor, err := c.executorsClient.GetByType(execution.TestType)
+		if err != nil {
+			out <- output.NewOutputError(err)
+			return
+		}
+
+		supportArtifacts := false
+		for _, feature := range executor.Spec.Features {
+			if feature == executorv1.FeatureArtifacts {
+				supportArtifacts = true
+				break
+			}
+		}
+
+		ids := []string{id}
+		if supportArtifacts && execution.ArtifactRequest != nil {
+			ids = append(ids, id+"-scraper")
+		}
+
+		for _, podName := range ids {
 			logs := make(chan []byte)
 
 			if err := TailJobLogs(c.log, c.clientSet, c.namespace, podName, logs); err != nil {
@@ -502,22 +535,23 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 
 	return &JobOptions{
-		Image:                 image,
-		ImagePullSecrets:      options.ImagePullSecretNames,
-		Args:                  args,
-		Command:               command,
-		WorkingDir:            workingDir,
-		TestName:              options.TestName,
-		Namespace:             options.Namespace,
-		SecretEnvs:            options.Request.SecretEnvs,
-		HTTPProxy:             options.Request.HttpProxy,
-		HTTPSProxy:            options.Request.HttpsProxy,
-		UsernameSecret:        options.UsernameSecret,
-		TokenSecret:           options.TokenSecret,
-		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
-		ArtifactRequest:       artifactRequest,
-		DelaySeconds:          jobDelaySeconds,
-		JobTemplateExtensions: options.Request.JobTemplate,
+		Image:                     image,
+		ImagePullSecrets:          options.ImagePullSecretNames,
+		Args:                      args,
+		Command:                   command,
+		WorkingDir:                workingDir,
+		TestName:                  options.TestName,
+		Namespace:                 options.Namespace,
+		SecretEnvs:                options.Request.SecretEnvs,
+		HTTPProxy:                 options.Request.HttpProxy,
+		HTTPSProxy:                options.Request.HttpsProxy,
+		UsernameSecret:            options.UsernameSecret,
+		TokenSecret:               options.TokenSecret,
+		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
+		ArtifactRequest:           artifactRequest,
+		DelaySeconds:              jobDelaySeconds,
+		JobTemplateExtensions:     options.Request.JobTemplate,
+		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 	}
 }
 

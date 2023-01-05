@@ -15,4 +15,6 @@ type ServerInfo struct {
 	Version string `json:"version"`
 	// build commit
 	Commit string `json:"commit,omitempty"`
+	// server installaton namespace
+	Namespace string `json:"namespace,omitempty"`
 }

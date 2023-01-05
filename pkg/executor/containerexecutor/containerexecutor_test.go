@@ -257,6 +257,10 @@ func (FakeEmitter) Notify(event testkube.Event) {
 type FakeResultRepository struct {
 }
 
+func (FakeResultRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
+	return testkube.Execution{}, nil
+}
+
 func (FakeResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
 	return nil
 }

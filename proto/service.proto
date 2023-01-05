@@ -32,6 +32,7 @@ enum Opcode {
   UNSPECFIED = 0;
   TEXT_FRAME = 1;
   BINARY_FRAME = 2;
+  HEALTH_CHECK = 3;
 }
 message WebsocketData {
     Opcode opcode = 1;

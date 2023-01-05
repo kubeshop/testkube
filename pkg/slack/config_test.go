@@ -29,6 +29,27 @@ const notificationConfigString = `[
     }
   ]`
 
+const multipleConfigurationString = `[
+    {
+      "ChannelID": "ChannelID1",
+      "selector": {},
+      "testName": [],
+      "testSuiteName": [],
+      "events": [
+        "start-test"
+      ]
+    },
+    {
+      "ChannelID": "ChannelID2",
+      "selector": {},
+      "testName": [],
+      "testSuiteName": [],
+      "events": [
+        "end-test-failed"
+      ]
+    }
+  ]`
+
 func TestParamsNilAssign(t *testing.T) {
 	var notificationConfig []NotificationsConfig
 	err := json.Unmarshal([]byte(notificationConfigString), &notificationConfig)
@@ -125,5 +146,16 @@ func TestParamsNilAssign(t *testing.T) {
 		channels, needs := config.NeedsSending(&testkube.Event{Type_: testkube.EventStartTest})
 		assert.False(t, needs)
 		assert.Equal(t, 0, len(channels))
+	})
+
+	t.Run("allow notification when multiple configs, channel is specified and event is end-test-failed", func(t *testing.T) {
+		var notificationConfigMultiple []NotificationsConfig
+		err := json.Unmarshal([]byte(multipleConfigurationString), &notificationConfigMultiple)
+		assert.Nil(t, err)
+		config := NewConfig(notificationConfigMultiple)
+		channels, needs := config.NeedsSending(&testkube.Event{Type_: testkube.EventEndTestFailed})
+		assert.True(t, needs)
+		assert.Equal(t, 1, len(channels))
+		assert.Equal(t, "ChannelID2", channels[0])
 	})
 }

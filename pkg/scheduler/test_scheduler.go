@@ -285,6 +285,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				test.ExecutionRequest.PreRunScript,
 				&request.PreRunScript,
 			},
+			{
+				test.ExecutionRequest.ScraperTemplate,
+				&request.ScraperTemplate,
+			},
 		}
 
 		for _, field := range fields {

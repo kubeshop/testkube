@@ -20,12 +20,14 @@ var _ Repository = &MongoRepository{}
 const (
 	CollectionName      = "results"
 	CollectionSequences = "sequences"
+	CollectionOutput    = "output"
 )
 
 func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
 	return &MongoRepository{
 		Coll:         db.Collection(CollectionName),
 		Sequences:    db.Collection(CollectionSequences),
+		Output:       db.Collection(CollectionOutput),
 		allowDiskUse: allowDiskUse,
 	}
 }
@@ -33,21 +35,35 @@ func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository
 type MongoRepository struct {
 	Coll         *mongo.Collection
 	Sequences    *mongo.Collection
+	Output       *mongo.Collection
 	allowDiskUse bool
-}
-
-type executionNumber struct {
-	TestName string `json:"testName"`
-	Number   int    `json:"number"`
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+	if err != nil {
+		return
+	}
+	if len(result.ExecutionResult.Output) == 0 {
+		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		}
+	}
 	return
 }
 
 func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
+	if err != nil {
+		return
+	}
+	if len(result.ExecutionResult.Output) == 0 {
+		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		}
+	}
 	return
 }
 
@@ -55,6 +71,15 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
 	err = r.Coll.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	if err != nil {
+		return
+	}
+	if len(result.ExecutionResult.Output) == 0 {
+		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		}
+	}
 	return
 }
 
@@ -220,56 +245,36 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
-func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
-
-	execNmbr := executionNumber{TestName: testName}
-	retry := false
-	retryAttempts := 0
-	maxRetries := 10
-
-	opts := options.FindOneAndUpdate()
-	opts.SetUpsert(true)
-	opts.SetReturnDocument(options.After)
-
-	err = r.Sequences.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
-	if err != nil {
-		var execution testkube.Execution
-		execution, err = r.GetLatestByTest(context.Background(), testName, "number")
-		if err != nil {
-			execNmbr.Number = 1
-		} else {
-			execNmbr.Number = int(execution.Number) + 1
-		}
-		_, err = r.Sequences.InsertOne(ctx, execNmbr)
-	} else {
-		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
-	}
-
-	retry = (err != nil)
-
-	for retry {
-		retryAttempts++
-		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
-		if err == nil || retryAttempts >= maxRetries {
-			retry = false
-		}
-	}
-
-	return int32(execNmbr.Number), nil
-}
-
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
+	output := result.ExecutionResult.Output
+	result.ExecutionResult.Output = ""
 	_, err = r.Coll.InsertOne(ctx, result)
+	if err != nil {
+		return
+	}
+	err = r.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution) (err error) {
+	output := result.ExecutionResult.Output
+	result.ExecutionResult.Output = ""
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	if err != nil {
+		return
+	}
+	err = r.UpdateOutput(ctx, result.Id, output)
 	return
 }
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
+	output := result.Output
+	result.Output = ""
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
+	if err != nil {
+		return
+	}
+	err = r.UpdateOutput(ctx, id, output)
 	return
 }
 
@@ -367,18 +372,30 @@ func addSelectorConditions(selector string, tag string, conditions primitive.A) 
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	if err != nil {
+		return
+	}
+	err = r.DeleteOutputByTest(ctx, testName)
 	return
 }
 
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
+	if err != nil {
+		return
+	}
+	err = r.DeleteOutputByTestSuite(ctx, testSuiteName)
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	if err != nil {
+		return
+	}
+	err = r.DeleteAllOutput(ctx)
 	return
 }
 
@@ -401,6 +418,10 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
+	if err != nil {
+		return
+	}
+	err = r.DeleteOutputForTests(ctx, testNames)
 	return
 }
 
@@ -423,12 +444,20 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
+	if err != nil {
+		return
+	}
+	err = r.DeleteOutputForTestSuites(ctx, testSuiteNames)
 	return
 }
 
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	if err != nil {
+		return
+	}
+	err = r.DeleteOutputForAllTestSuite(ctx)
 	return
 }
 

@@ -117,6 +117,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		ArtifactRequest:       &testkube.ArtifactRequest{},
 		JobTemplate:           "",
 		PreRunScript:          "",
+		ScraperTemplate:       "",
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

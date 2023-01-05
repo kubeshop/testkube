@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
@@ -139,13 +140,13 @@ func (m EnvManager) Obfuscate(p []byte) []byte {
 	if m.Variables == nil {
 		return p
 	}
-	m.GetVars(m.Variables)
+
 	for _, variable := range m.Variables {
 		if !variable.IsSecret() {
 			continue
 		}
 
-		p = bytes.ReplaceAll(p, []byte(variable.Value), []byte("*****"))
+		p = bytes.ReplaceAll(p, []byte(variable.Value), []byte(strings.Repeat("*", len(variable.Value))))
 	}
 
 	return p
