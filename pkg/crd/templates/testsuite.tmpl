@@ -17,7 +17,7 @@ spec:
   before:
   {{- range .Before }}
     {{- if .Execute }}
-    execute:
+  - execute:
       stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
@@ -27,7 +27,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end }}
@@ -38,7 +38,7 @@ spec:
   steps:
   {{- range .Steps }}
     {{- if .Execute }}
-    execute:
+  - execute:
       stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
@@ -48,7 +48,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end}}
@@ -59,7 +59,7 @@ spec:
   after:
   {{- range .After }}
     {{- if .Execute }}
-    execute:
+  - execute:
       stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
@@ -69,7 +69,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end }}

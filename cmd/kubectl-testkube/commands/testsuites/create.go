@@ -1,7 +1,6 @@
 package testsuites
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/robfig/cron"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -56,10 +56,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 
 				ui.Success("Test suite created", options.Name)
 			} else {
-				if options.Description != "" {
-					options.Description = fmt.Sprintf("%q", options.Description)
-				}
-
+				(*testkube.TestSuiteUpsertRequest)(&options).QuoteTestSuiteTextFields()
 				data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, options)
 				ui.ExitOnError("executing crd template", err)
 

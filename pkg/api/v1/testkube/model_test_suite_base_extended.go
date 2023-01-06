@@ -46,3 +46,22 @@ func (t TestSuite) GetTestNames() []string {
 
 	return set.Of(names...).ToArray()
 }
+
+func (t *TestSuite) QuoteTestSuiteTextFields() {
+	if t.Description != "" {
+		t.Description = fmt.Sprintf("%q", t.Description)
+	}
+
+	if t.Schedule != "" {
+		t.Schedule = fmt.Sprintf("%q", t.Schedule)
+	}
+
+	if t.ExecutionRequest != nil {
+		for key, value := range t.ExecutionRequest.Variables {
+			if value.Value != "" {
+				value.Value = fmt.Sprintf("%q", value.Value)
+				t.ExecutionRequest.Variables[key] = value
+			}
+		}
+	}
+}

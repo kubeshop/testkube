@@ -111,6 +111,12 @@ func NewCRDTestsCmd() *cobra.Command {
 					scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
 				}
 
+				for key, value := range envs {
+					if value != "" {
+						envs[key] = fmt.Sprintf("%q", value)
+					}
+				}
+
 				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, PreRunScript: scriptBody}
 				tests[testType][testName] = *test
 				return nil
@@ -242,6 +248,13 @@ func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
 
 						if secretEnvTest.ExecutionRequest == nil {
 							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+						}
+
+						for key, value := range variables {
+							if value.Value != "" {
+								value.Value = fmt.Sprintf("%q", value.Value)
+								variables[key] = value
+							}
 						}
 
 						secretEnvTest.ExecutionRequest.Variables = variables

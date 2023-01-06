@@ -1,7 +1,6 @@
 package testsuites
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -36,10 +35,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 				if testSuite.TestSuite != nil {
 					if crdOnly {
-						if testSuite.TestSuite.Description != "" {
-							testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
-						}
-
+						testSuite.TestSuite.QuoteTestSuiteTextFields()
 						common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
 						return
 					}
@@ -62,10 +58,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
-							if testSuite.Description != "" {
-								testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-							}
-
+							testSuite.QuoteTestSuiteTextFields()
 							common.UIPrintCRD(crd.TemplateTestSuite, testSuite, &firstEntry)
 						}
 
@@ -81,10 +74,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 					if crdOnly {
 						for _, testSuite := range testSuites {
 							if testSuite.TestSuite != nil {
-								if testSuite.TestSuite.Description != "" {
-									testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
-								}
-
+								testSuite.TestSuite.QuoteTestSuiteTextFields()
 								common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
 							}
 						}
