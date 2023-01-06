@@ -28,16 +28,22 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 		}
 
 		for key, value := range test.ExecutionRequest.Envs {
-			test.ExecutionRequest.Envs[key] = fmt.Sprintf("%q", value)
+			if value != "" {
+				test.ExecutionRequest.Envs[key] = fmt.Sprintf("%q", value)
+			}
 		}
 
 		for key, value := range test.ExecutionRequest.SecretEnvs {
-			test.ExecutionRequest.SecretEnvs[key] = fmt.Sprintf("%q", value)
+			if value != "" {
+				test.ExecutionRequest.SecretEnvs[key] = fmt.Sprintf("%q", value)
+			}
 		}
 
 		for key, value := range test.ExecutionRequest.Variables {
-			value.Value = fmt.Sprintf("%q", value.Value)
-			test.ExecutionRequest.Variables[key] = value
+			if value.Value != "" {
+				value.Value = fmt.Sprintf("%q", value.Value)
+				test.ExecutionRequest.Variables[key] = value
+			}
 		}
 	}
 }

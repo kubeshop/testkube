@@ -58,8 +58,10 @@ func (t *TestSuite) QuoteTestSuiteTextFields() {
 
 	if t.ExecutionRequest != nil {
 		for key, value := range t.ExecutionRequest.Variables {
-			value.Value = fmt.Sprintf("%q", value.Value)
-			t.ExecutionRequest.Variables[key] = value
+			if value.Value != "" {
+				value.Value = fmt.Sprintf("%q", value.Value)
+				t.ExecutionRequest.Variables[key] = value
+			}
 		}
 	}
 }

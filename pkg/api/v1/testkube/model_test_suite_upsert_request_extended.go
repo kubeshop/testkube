@@ -15,8 +15,10 @@ func (testSuite *TestSuiteUpsertRequest) QuoteTestSuiteTextFields() {
 
 	if testSuite.ExecutionRequest != nil {
 		for key, value := range testSuite.ExecutionRequest.Variables {
-			value.Value = fmt.Sprintf("%q", value.Value)
-			testSuite.ExecutionRequest.Variables[key] = value
+			if value.Value != "" {
+				value.Value = fmt.Sprintf("%q", value.Value)
+				testSuite.ExecutionRequest.Variables[key] = value
+			}
 		}
 	}
 }
