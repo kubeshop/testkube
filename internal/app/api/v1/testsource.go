@@ -121,7 +121,9 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range results {
-				results[i].Data = fmt.Sprintf("%q", results[i].Data)
+				if results[i].Data != "" {
+					results[i].Data = fmt.Sprintf("%q", results[i].Data)
+				}
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, results)
