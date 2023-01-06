@@ -34,10 +34,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if request.Description != "" {
-				request.Description = fmt.Sprintf("%q", request.Description)
-			}
-
+			request.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
@@ -114,10 +111,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if testSuite.Description != "" {
-				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}
-
+			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
 			return s.getCRDs(c, data, err)
 		}
@@ -141,10 +135,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if testSuite.Description != "" {
-				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}
-
+			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
 			return s.getCRDs(c, data, err)
 		}
@@ -293,9 +284,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range testSuites {
-				if testSuites[i].Description != "" {
-					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
-				}
+				testSuites[i].QuoteTestSuiteTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
@@ -404,9 +393,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range testSuites {
-				if testSuites[i].Description != "" {
-					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
-				}
+				testSuites[i].QuoteTestSuiteTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)

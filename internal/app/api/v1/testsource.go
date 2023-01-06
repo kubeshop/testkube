@@ -23,6 +23,10 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if request.Data != "" {
+				request.Data = fmt.Sprintf("%q", request.Data)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
@@ -113,10 +117,13 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 		results := []testkube.TestSource{}
 		for _, item := range list.Items {
 			results = append(results, testsourcesmapper.MapCRDToAPI(item))
-
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range results {
+				results[i].Data = fmt.Sprintf("%q", results[i].Data)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, results)
 			return s.getCRDs(c, data, err)
 		}
@@ -136,6 +143,10 @@ func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 
 		result := testsourcesmapper.MapCRDToAPI(*item)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if result.Data != "" {
+				result.Data = fmt.Sprintf("%q", result.Data)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSource{result})
 			return s.getCRDs(c, data, err)
 		}

@@ -1,6 +1,7 @@
 package testsources
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -32,6 +33,10 @@ func NewGetTestSourceCmd() *cobra.Command {
 				ui.ExitOnError("getting test source: "+name, err)
 
 				if crdOnly {
+					if testSource.Data != "" {
+						testSource.Data = fmt.Sprintf("%q", testSource.Data)
+					}
+
 					common.UIPrintCRD(crd.TemplateTestSource, testSource, &firstEntry)
 					return
 				}
@@ -44,6 +49,10 @@ func NewGetTestSourceCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, testSource := range testSources {
+						if testSource.Data != "" {
+							testSource.Data = fmt.Sprintf("%q", testSource.Data)
+						}
+
 						common.UIPrintCRD(crd.TemplateTestSource, testSource, &firstEntry)
 					}
 

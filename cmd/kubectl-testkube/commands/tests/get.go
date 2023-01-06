@@ -64,7 +64,6 @@ func NewGetTestsCmd() *cobra.Command {
 					if crdOnly {
 						for _, test := range tests {
 							test.QuoteTestTextFields()
-
 							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 

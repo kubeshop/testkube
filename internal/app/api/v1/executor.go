@@ -20,6 +20,10 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if request.JobTemplate != "" {
+				request.JobTemplate = fmt.Sprintf("%q", request.JobTemplate)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
