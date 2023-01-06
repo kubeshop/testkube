@@ -101,6 +101,20 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 		wg.Done()
 
+		if testsuiteExecution.TestSuite != nil {
+			testSuite, err := s.testSuitesClient.Get(testsuiteExecution.TestSuite.Name)
+			if err != nil {
+				s.logger.Errorw("getting test suite error", "error", err)
+			}
+
+			if testSuite != nil {
+				testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
+				if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
+					s.logger.Errorw("updating test suite error", "error", err)
+				}
+			}
+		}
+
 		telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
 		if err != nil {
 			s.logger.Debugw("getting telemetry enabled error", "error", err)

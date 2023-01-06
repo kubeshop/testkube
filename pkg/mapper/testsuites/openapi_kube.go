@@ -265,3 +265,33 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	return request
 }
+
+// MapStatusToSpec maps OpenAPI spec TestSuiteStatus to CRD
+func MapStatusToSpec(testSuiteStatus *testkube.TestSuiteStatus) (specStatus testsuitesv2.TestSuiteStatus) {
+	if testSuiteStatus == nil || testSuiteStatus.LatestExecution == nil {
+		return specStatus
+	}
+
+	specStatus.LatestExecution = &testsuitesv2.TestSuiteExecutionCore{
+		Id:     testSuiteStatus.LatestExecution.Id,
+		Status: (*testsuitesv2.TestSuiteExecutionStatus)(testSuiteStatus.LatestExecution.Status),
+	}
+
+	specStatus.LatestExecution.StartTime.Time = testSuiteStatus.LatestExecution.StartTime
+	specStatus.LatestExecution.EndTime.Time = testSuiteStatus.LatestExecution.EndTime
+
+	return specStatus
+}
+
+// MapExecutionToTestSuiteStatus maps OpenAPI Execution to TestSuiteStatus CRD
+func MapExecutionToTestSuiteStatus(execution *testkube.TestSuiteExecution) (specStatus testsuitesv2.TestSuiteStatus) {
+	specStatus.LatestExecution = &testsuitesv2.TestSuiteExecutionCore{
+		Id:     execution.Id,
+		Status: (*testsuitesv2.TestSuiteExecutionStatus)(execution.Status),
+	}
+
+	specStatus.LatestExecution.StartTime.Time = execution.StartTime
+	specStatus.LatestExecution.EndTime.Time = execution.EndTime
+
+	return specStatus
+}

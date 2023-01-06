@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	v3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -19,13 +20,14 @@ import (
 
 func TestExecuteAsync(t *testing.T) {
 	ce := ContainerExecutor{
-		clientSet:  getFakeClient("1"),
-		log:        logger(),
-		repository: FakeResultRepository{},
-		metrics:    FakeMetricCounter{},
-		emitter:    FakeEmitter{},
-		namespace:  "default",
-		configMap:  FakeConfigRepository{},
+		clientSet:   getFakeClient("1"),
+		log:         logger(),
+		repository:  FakeResultRepository{},
+		metrics:     FakeMetricCounter{},
+		emitter:     FakeEmitter{},
+		namespace:   "default",
+		configMap:   FakeConfigRepository{},
+		testsClient: FakeTestsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -41,13 +43,14 @@ func TestExecuteAsync(t *testing.T) {
 
 func TestExecuteSync(t *testing.T) {
 	ce := ContainerExecutor{
-		clientSet:  getFakeClient("1"),
-		log:        logger(),
-		repository: FakeResultRepository{},
-		metrics:    FakeMetricCounter{},
-		emitter:    FakeEmitter{},
-		namespace:  "default",
-		configMap:  FakeConfigRepository{},
+		clientSet:   getFakeClient("1"),
+		log:         logger(),
+		repository:  FakeResultRepository{},
+		metrics:     FakeMetricCounter{},
+		emitter:     FakeEmitter{},
+		namespace:   "default",
+		configMap:   FakeConfigRepository{},
+		testsClient: FakeTestsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -126,12 +129,12 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 			TestNamespace: "namespace",
 		},
 		client.ExecuteOptions{
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{
 						WorkingDir: "relative/path",
 					},
 				},
@@ -156,12 +159,12 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 			TestNamespace: "namespace",
 		},
 		client.ExecuteOptions{
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{
 						WorkingDir: "/absolute/path",
 					},
 				},
@@ -187,12 +190,12 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		},
 		client.ExecuteOptions{
 			Namespace: "namespace",
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{},
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{},
 				},
 			},
 		},
@@ -284,5 +287,68 @@ func (FakeConfigRepository) Get(ctx context.Context) (testkube.Config, error) {
 }
 
 func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) error {
+	return nil
+}
+
+type FakeTestsClient struct {
+}
+
+func (FakeTestsClient) List(selector string) (*testsv3.TestList, error) {
+	return &testsv3.TestList{}, nil
+}
+
+func (FakeTestsClient) ListLabels() (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
+func (FakeTestsClient) Get(name string) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Create(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Update(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Delete(name string) error {
+	return nil
+}
+
+func (FakeTestsClient) DeleteAll() error {
+	return nil
+}
+
+func (FakeTestsClient) CreateTestSecrets(test *testsv3.Test) error {
+	return nil
+}
+
+func (FakeTestsClient) UpdateTestSecrets(test *testsv3.Test) error {
+	return nil
+}
+
+func (FakeTestsClient) LoadTestVariablesSecret(test *testsv3.Test) (*corev1.Secret, error) {
+	return &corev1.Secret{}, nil
+}
+
+func (FakeTestsClient) GetCurrentSecretUUID(testName string) (string, error) {
+	return "", nil
+}
+
+func (FakeTestsClient) GetSecretTestVars(testName, secretUUID string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
+func (FakeTestsClient) ListByNames(names []string) ([]testsv3.Test, error) {
+	return []testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) DeleteByLabels(selector string) error {
+	return nil
+}
+
+func (FakeTestsClient) UpdateStatus(test *testsv3.Test) error {
 	return nil
 }

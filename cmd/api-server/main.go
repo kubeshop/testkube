@@ -221,7 +221,7 @@ func main() {
 
 	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT_NAME")
 	executor, err := client.NewJobExecutor(resultsRepository, namespace, images, templates,
-		serviceAccountName, metrics, eventsEmitter, configMapConfig)
+		serviceAccountName, metrics, eventsEmitter, configMapConfig, testsClientV3)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
 	}
@@ -232,7 +232,7 @@ func main() {
 	}
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(resultsRepository, namespace, images, containerTemplates,
-		serviceAccountName, metrics, eventsEmitter, configMapConfig, executorsClient)
+		serviceAccountName, metrics, eventsEmitter, configMapConfig, executorsClient, testsClientV3)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
 	}

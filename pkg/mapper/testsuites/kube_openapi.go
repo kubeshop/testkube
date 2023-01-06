@@ -38,7 +38,7 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 	test.Schedule = cr.Spec.Schedule
 	test.Created = cr.CreationTimestamp.Time
 	test.ExecutionRequest = MapExecutionRequestFromSpec(cr.Spec.ExecutionRequest)
-
+	test.Status = MapStatusFromSpec(cr.Status)
 	return
 }
 
@@ -142,5 +142,21 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExe
 		HttpProxy:       specExecutionRequest.HttpProxy,
 		HttpsProxy:      specExecutionRequest.HttpsProxy,
 		Timeout:         specExecutionRequest.Timeout,
+	}
+}
+
+// MapStatusFromSpec maps CRD to OpenAPI spec TestSuiteStatus
+func MapStatusFromSpec(specStatus testsuitesv2.TestSuiteStatus) *testkube.TestSuiteStatus {
+	if specStatus.LatestExecution == nil {
+		return nil
+	}
+
+	return &testkube.TestSuiteStatus{
+		LatestExecution: &testkube.TestSuiteExecutionCore{
+			Id:        specStatus.LatestExecution.Id,
+			Status:    (*testkube.TestSuiteExecutionStatus)(specStatus.LatestExecution.Status),
+			StartTime: specStatus.LatestExecution.StartTime.Time,
+			EndTime:   specStatus.LatestExecution.EndTime.Time,
+		},
 	}
 }

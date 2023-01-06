@@ -14,6 +14,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
@@ -22,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
@@ -49,9 +51,10 @@ type EventEmitter interface {
 }
 
 // NewContainerExecutor creates new job executor
-func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images, templates executor.Templates,
-	serviceAccountName string, metrics ExecutionCounter, emiter EventEmitter, configMap config.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient) (client *ContainerExecutor, err error) {
+func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images,
+	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
+	emiter EventEmitter, configMap config.Repository, executorsClient *executorsclientv1.ExecutorsClient,
+	testsClient testsv3.Interface) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return client, err
@@ -69,6 +72,7 @@ func NewContainerExecutor(repo ResultRepository, namespace string, images execut
 		metrics:            metrics,
 		emitter:            emiter,
 		executorsClient:    executorsClient,
+		testsClient:        testsClient,
 	}, nil
 }
 
@@ -89,6 +93,7 @@ type ContainerExecutor struct {
 	configMap          config.Repository
 	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
+	testsClient        testsv3.Interface
 }
 
 type JobOptions struct {
@@ -401,6 +406,18 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 	// metrics increase
 	execution.ExecutionResult = result
 	c.metrics.IncExecuteTest(*execution)
+
+	test, err := c.testsClient.Get(execution.TestName)
+	if err != nil {
+		c.log.Errorw("getting test error", "error", err)
+	}
+
+	if test != nil {
+		test.Status = testsmapper.MapExecutionToTestStatus(execution)
+		if err = c.testsClient.UpdateStatus(test); err != nil {
+			c.log.Errorw("updating test error", "error", err)
+		}
+	}
 
 	c.emitter.Notify(testkube.NewEventEndTestSuccess(execution))
 

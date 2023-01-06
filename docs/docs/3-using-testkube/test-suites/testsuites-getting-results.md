@@ -95,3 +95,33 @@ TODO
 └────────────────────────────────────────────────────────────────┘
 
 ```
+
+### **Getting a Test Suite status of a Given Test Suite from Test Suite CRD**
+
+To get the Test Suite CRD status of a particular test suite, pass the test suite name as a parameter:
+
+```bash
+kubectl testkube get testsuites test-suite-example --crd-only
+```
+
+Output:
+
+```bash
+apiVersion: tests.testkube.io/v2
+kind: TestSuite
+metadata:
+  name: test-suite-example
+  namespace: testkube
+spec:
+  steps:
+    execute:
+      stopOnFailure: false
+      namespace: testkube
+      name: test-case
+status:
+  latestExecution:
+    id: 63b7551cb2a16c73e8cfa1bf
+    startTime: 2023-01-05T22:54:20Z
+    endTime: 2023-01-05T22:54:29Z
+    status: failed
+```
