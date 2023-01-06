@@ -141,3 +141,39 @@ Output:
   api-incluster-test | postman/collection |      | 615d6398b046f8fbd3d955d4 | success  
   api-incluster-test | postman/collection |      | 615d7e1ab046f8fbd3d955d6 | success  
 ```
+
+### **Getting a Test status of a Given Test from Test CRD**
+
+To get the Test CRD status of a particular test, pass the test name as a parameter:
+
+```bash
+kubectl testkube get tests container-test --crd-only
+```
+
+Output:
+
+```bash
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-test
+  namespace: testkube
+spec:
+  type: container/test
+  content:
+    type: string
+    data: ""
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+      - test/files
+status:
+  latestExecution:
+    id: 63b755cab2a16c73e8cfa1c4
+    number: 1
+    startTime: 2023-01-05T22:57:14Z
+    endTime: 2023-01-05T22:57:28Z
+    status: passed
+```
