@@ -34,7 +34,9 @@ func NewGetExecutorCmd() *cobra.Command {
 				ui.ExitOnError("getting executor: "+name, err)
 
 				if crdOnly {
-					common.UIPrintCRD(crd.TemplateExecutor, mapExecutorDetailsToCreateExecutorOptions(namespace, &executor), &firstEntry)
+					options := mapExecutorDetailsToCreateExecutorOptions(namespace, &executor)
+					(*testkube.ExecutorUpsertRequest)(options).QuoteExecutorTextFields()
+					common.UIPrintCRD(crd.TemplateExecutor, options, &firstEntry)
 					return
 				}
 
@@ -47,7 +49,9 @@ func NewGetExecutorCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, executor := range executors {
-						common.UIPrintCRD(crd.TemplateExecutor, mapExecutorDetailsToCreateExecutorOptions(namespace, &executor), &firstEntry)
+						options := mapExecutorDetailsToCreateExecutorOptions(namespace, &executor)
+						(*testkube.ExecutorUpsertRequest)(options).QuoteExecutorTextFields()
+						common.UIPrintCRD(crd.TemplateExecutor, options, &firstEntry)
 					}
 
 					return

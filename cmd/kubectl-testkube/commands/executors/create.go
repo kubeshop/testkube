@@ -1,11 +1,11 @@
 package executors
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
@@ -51,10 +51,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				ui.Success("Executor created", name)
 			} else {
-				if options.JobTemplate != "" {
-					options.JobTemplate = fmt.Sprintf("%q", options.JobTemplate)
-				}
-
+				(*testkube.ExecutorUpsertRequest)(&options).QuoteExecutorTextFields()
 				data, err := crd.ExecuteTemplate(crd.TemplateExecutor, options)
 				ui.ExitOnError("executing crd template", err)
 

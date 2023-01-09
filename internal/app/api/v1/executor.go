@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,10 +19,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if request.JobTemplate != "" {
-				request.JobTemplate = fmt.Sprintf("%q", request.JobTemplate)
-			}
-
+			request.QuoteExecutorTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
@@ -89,11 +85,9 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			results := []testkube.ExecutorUpsertRequest{}
 			for _, item := range list.Items {
-				if item.Spec.JobTemplate != "" {
-					item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
-				}
-
-				results = append(results, executorsmapper.MapCRDToAPI(item))
+				result := executorsmapper.MapCRDToAPI(item)
+				result.QuoteExecutorTextFields()
+				results = append(results, result)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, results)
@@ -118,11 +112,9 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if item.Spec.JobTemplate != "" {
-				item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
-			}
-
-			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{executorsmapper.MapCRDToAPI(*item)})
+			result := executorsmapper.MapCRDToAPI(*item)
+			result.QuoteExecutorTextFields()
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{result})
 			return s.getCRDs(c, data, err)
 		}
 
