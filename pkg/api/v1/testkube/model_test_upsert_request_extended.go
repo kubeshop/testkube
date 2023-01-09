@@ -45,5 +45,17 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 				test.ExecutionRequest.Variables[key] = value
 			}
 		}
+
+		for i := range test.ExecutionRequest.Args {
+			if test.ExecutionRequest.Args[i] != "" {
+				test.ExecutionRequest.Args[i] = fmt.Sprintf("%q", test.ExecutionRequest.Args[i])
+			}
+		}
+
+		for i := range test.ExecutionRequest.Command {
+			if test.ExecutionRequest.Command[i] != "" {
+				test.ExecutionRequest.Command[i] = fmt.Sprintf("%q", test.ExecutionRequest.Command[i])
+			}
+		}
 	}
 }
