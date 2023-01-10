@@ -3841,6 +3841,11 @@ components:
           type: string
           description: listen for event for selected resource
           example: modified
+        conditions:
+          type: array
+          items:
+            type: "#/components/schemas/TestTriggerCondition"
+          description: list of test trigger conditions
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         execution:
@@ -3896,6 +3901,25 @@ components:
       enum:
         - run
 
+    TestTriggerCondition:
+      description: supported condition for test triggers
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TestTriggerConditionStatuses"
+        type:
+          type: string
+          description: test trigger condition
+          example: Progressing
+
+    TestTriggerConditionStatuses:
+      description: supported kubernetes condition statuses for test triggers
+      type: string
+      enum:
+        - true
+        - false
+        - unknown
+  
     TestTriggerKeyMap:
       type: object
       required:

@@ -20,8 +20,10 @@ type TestTriggerUpsertRequest struct {
 	Resource         *TestTriggerResources `json:"resource"`
 	ResourceSelector *TestTriggerSelector  `json:"resourceSelector"`
 	// listen for event for selected resource
-	Event        string                 `json:"event"`
-	Action       *TestTriggerActions    `json:"action"`
-	Execution    *TestTriggerExecutions `json:"execution"`
-	TestSelector *TestTriggerSelector   `json:"testSelector"`
+	Event string `json:"event"`
+	// list of test trigger conditions
+	Conditions   []ComponentsschemasTestTriggerCondition `json:"conditions,omitempty"`
+	Action       *TestTriggerActions                     `json:"action"`
+	Execution    *TestTriggerExecutions                  `json:"execution"`
+	TestSelector *TestTriggerSelector                    `json:"testSelector"`
 }
