@@ -3844,7 +3844,7 @@ components:
         conditions:
           type: array
           items:
-            type: "#/components/schemas/TestTriggerCondition"
+            $ref: "#/components/schemas/TestTriggerCondition"
           description: list of test trigger conditions
         action:
           $ref: "#/components/schemas/TestTriggerActions"

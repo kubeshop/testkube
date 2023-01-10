@@ -21,8 +21,8 @@ type TestTrigger struct {
 	// listen for event for selected resource
 	Event string `json:"event"`
 	// list of test trigger conditions
-	Conditions   []ComponentsschemasTestTriggerCondition `json:"conditions,omitempty"`
-	Action       *TestTriggerActions                     `json:"action"`
-	Execution    *TestTriggerExecutions                  `json:"execution"`
-	TestSelector *TestTriggerSelector                    `json:"testSelector"`
+	Conditions   []TestTriggerCondition `json:"conditions,omitempty"`
+	Action       *TestTriggerActions    `json:"action"`
+	Execution    *TestTriggerExecutions `json:"execution"`
+	TestSelector *TestTriggerSelector   `json:"testSelector"`
 }
