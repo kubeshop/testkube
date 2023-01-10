@@ -185,3 +185,7 @@ func (m MockStorage) GetValidBucketName(parentType string, parentName string) st
 	}
 	return m.GetValidBucketNameFn(parentType, parentName)
 }
+
+func (m MockStorage) DeleteFile(bucket, filePath string) error {
+	panic("not implemented")
+}

@@ -50,20 +50,6 @@ func (mr *MockRepositoryMockRecorder) DeleteAll(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockRepository)(nil).DeleteAll), ctx)
 }
 
-// DeleteAllOutput mocks base method.
-func (m *MockRepository) DeleteAllOutput(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAllOutput", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteAllOutput indicates an expected call of DeleteAllOutput.
-func (mr *MockRepositoryMockRecorder) DeleteAllOutput(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOutput", reflect.TypeOf((*MockRepository)(nil).DeleteAllOutput), ctx)
-}
-
 // DeleteByTest mocks base method.
 func (m *MockRepository) DeleteByTest(ctx context.Context, testName string) error {
 	m.ctrl.T.Helper()
@@ -132,90 +118,6 @@ func (m *MockRepository) DeleteForAllTestSuites(ctx context.Context) error {
 func (mr *MockRepositoryMockRecorder) DeleteForAllTestSuites(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteForAllTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteForAllTestSuites), ctx)
-}
-
-// DeleteOutput mocks base method.
-func (m *MockRepository) DeleteOutput(ctx context.Context, id string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutput", ctx, id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutput indicates an expected call of DeleteOutput.
-func (mr *MockRepositoryMockRecorder) DeleteOutput(ctx, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutput", reflect.TypeOf((*MockRepository)(nil).DeleteOutput), ctx, id)
-}
-
-// DeleteOutputByTest mocks base method.
-func (m *MockRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutputByTest", ctx, testName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutputByTest indicates an expected call of DeleteOutputByTest.
-func (mr *MockRepositoryMockRecorder) DeleteOutputByTest(ctx, testName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputByTest", reflect.TypeOf((*MockRepository)(nil).DeleteOutputByTest), ctx, testName)
-}
-
-// DeleteOutputByTestSuite mocks base method.
-func (m *MockRepository) DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutputByTestSuite", ctx, testSuiteName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutputByTestSuite indicates an expected call of DeleteOutputByTestSuite.
-func (mr *MockRepositoryMockRecorder) DeleteOutputByTestSuite(ctx, testSuiteName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputByTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteOutputByTestSuite), ctx, testSuiteName)
-}
-
-// DeleteOutputForAllTestSuite mocks base method.
-func (m *MockRepository) DeleteOutputForAllTestSuite(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutputForAllTestSuite", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutputForAllTestSuite indicates an expected call of DeleteOutputForAllTestSuite.
-func (mr *MockRepositoryMockRecorder) DeleteOutputForAllTestSuite(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForAllTestSuite", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForAllTestSuite), ctx)
-}
-
-// DeleteOutputForTestSuites mocks base method.
-func (m *MockRepository) DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutputForTestSuites", ctx, testSuiteNames)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutputForTestSuites indicates an expected call of DeleteOutputForTestSuites.
-func (mr *MockRepositoryMockRecorder) DeleteOutputForTestSuites(ctx, testSuiteNames interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForTestSuites", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForTestSuites), ctx, testSuiteNames)
-}
-
-// DeleteOutputForTests mocks base method.
-func (m *MockRepository) DeleteOutputForTests(ctx context.Context, testNames []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOutputForTests", ctx, testNames)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteOutputForTests indicates an expected call of DeleteOutputForTests.
-func (mr *MockRepositoryMockRecorder) DeleteOutputForTests(ctx, testNames interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputForTests", reflect.TypeOf((*MockRepository)(nil).DeleteOutputForTests), ctx, testNames)
 }
 
 // EndExecution mocks base method.
@@ -357,51 +259,6 @@ func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(ctx, testName inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextExecutionNumber", reflect.TypeOf((*MockRepository)(nil).GetNextExecutionNumber), ctx, testName)
 }
 
-// GetOutput mocks base method.
-func (m *MockRepository) GetOutput(ctx context.Context, id string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOutput", ctx, id)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOutput indicates an expected call of GetOutput.
-func (mr *MockRepositoryMockRecorder) GetOutput(ctx, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutput", reflect.TypeOf((*MockRepository)(nil).GetOutput), ctx, id)
-}
-
-// GetOutputByTest mocks base method.
-func (m *MockRepository) GetOutputByTest(ctx context.Context, testName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOutputByTest", ctx, testName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOutputByTest indicates an expected call of GetOutputByTest.
-func (mr *MockRepositoryMockRecorder) GetOutputByTest(ctx, testName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutputByTest", reflect.TypeOf((*MockRepository)(nil).GetOutputByTest), ctx, testName)
-}
-
-// GetOutputByTestSuite mocks base method.
-func (m *MockRepository) GetOutputByTestSuite(ctx context.Context, testSuiteName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOutputByTestSuite", ctx, testSuiteName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOutputByTestSuite indicates an expected call of GetOutputByTestSuite.
-func (mr *MockRepositoryMockRecorder) GetOutputByTestSuite(ctx, testSuiteName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutputByTestSuite", reflect.TypeOf((*MockRepository)(nil).GetOutputByTestSuite), ctx, testSuiteName)
-}
-
 // GetTestMetrics mocks base method.
 func (m *MockRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (testkube.ExecutionsMetrics, error) {
 	m.ctrl.T.Helper()
@@ -431,20 +288,6 @@ func (mr *MockRepositoryMockRecorder) Insert(ctx, result interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockRepository)(nil).Insert), ctx, result)
 }
 
-// InsertOutput mocks base method.
-func (m *MockRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertOutput", ctx, id, testName, testSuiteName, output)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// InsertOutput indicates an expected call of InsertOutput.
-func (mr *MockRepositoryMockRecorder) InsertOutput(ctx, id, testName, testSuiteName, output interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertOutput", reflect.TypeOf((*MockRepository)(nil).InsertOutput), ctx, id, testName, testSuiteName, output)
-}
-
 // StartExecution mocks base method.
 func (m *MockRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {
 	m.ctrl.T.Helper()
@@ -471,20 +314,6 @@ func (m *MockRepository) Update(ctx context.Context, result testkube.Execution) 
 func (mr *MockRepositoryMockRecorder) Update(ctx, result interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRepository)(nil).Update), ctx, result)
-}
-
-// UpdateOutput mocks base method.
-func (m *MockRepository) UpdateOutput(ctx context.Context, id, output string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateOutput", ctx, id, output)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateOutput indicates an expected call of UpdateOutput.
-func (mr *MockRepositoryMockRecorder) UpdateOutput(ctx, id, output interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOutput", reflect.TypeOf((*MockRepository)(nil).UpdateOutput), ctx, id, output)
 }
 
 // UpdateResult mocks base method.
