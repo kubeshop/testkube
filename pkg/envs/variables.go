@@ -25,13 +25,13 @@ type Params struct {
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
 func LoadTestkubeVariables() (Params, error) {
 	var params Params
-	output.PrintEvent(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
+	output.PrintLog(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
 	err := envconfig.Process("runner", &params)
 	if err != nil {
-		output.PrintEvent(fmt.Sprintf("%s Failed to read environment variables: %s", ui.IconCross, err.Error()))
+		output.PrintLog(fmt.Sprintf("%s Failed to read environment variables: %s", ui.IconCross, err.Error()))
 		return params, fmt.Errorf("failed to read environment variables: %w", err)
 	}
-	output.PrintEvent(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
+	output.PrintLog(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
 	printParams(params)
 
 	return params, nil
