@@ -275,9 +275,14 @@ func main() {
 		scheduler,
 	)
 
-	if api.Storage != nil {
+	storageForLogs := os.Getenv("LOGS_STORAGE")
+	if api.Storage != nil && storageForLogs == "minio" {
 		bucket := os.Getenv("LOGS_BUCKET")
-		resultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, resultsRepository.Coll, bucket)
+		if bucket == "" {
+			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+		} else {
+			resultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, resultsRepository.Coll, bucket)
+		}
 	}
 
 	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
