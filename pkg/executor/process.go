@@ -17,7 +17,10 @@ import (
 // LoggedExecuteInDir will put wrapped JSON output to stdout AND get RAW output into out var
 // json logs can be processed later on watch of pod logs
 func Run(dir string, command string, envMngr secret.Manager, arguments ...string) (out []byte, err error) {
-	obfuscatedArgs := envMngr.Obfuscate([]byte(strings.Join(arguments, " ")))
+	obfuscatedArgs := []byte{}
+	if envMngr != nil {
+		obfuscatedArgs = envMngr.Obfuscate([]byte(strings.Join(arguments, " ")))
+	}
 	output.PrintLog(fmt.Sprintf("%s Executing in directory %s: \n $ %s %s", ui.IconMicroscope, dir, command, obfuscatedArgs))
 	out, err = process.LoggedExecuteInDir(dir, output.NewJSONWrapWriter(os.Stdout, envMngr), command, arguments...)
 	if err != nil {
