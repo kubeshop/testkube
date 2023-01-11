@@ -42,6 +42,13 @@ spec:
   {{- if .Event }}
   event: {{ .Event }}
   {{- end }}
+  {{- if ne (len .Conditions) 0 }}
+  conditions:
+  {{- range $exp := .Conditions }}
+  - type: {{ $exp.Type_ }}
+    status: {{ $exp.Status }}
+  {{- end }}
+  {{- end }}
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}

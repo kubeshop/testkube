@@ -17,6 +17,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Resource:         string(*request.Resource),
 			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
 			Event:            request.Event,
+			Conditions:       mapConditionsCRD(request.Conditions),
 			Action:           string(*request.Action),
 			Execution:        string(*request.Execution),
 			TestSelector:     mapSelectorToCRD(request.TestSelector),
@@ -51,4 +52,16 @@ func mapLabelSelectorToCRD(labelSelector *testkube.IoK8sApimachineryPkgApisMetaV
 		MatchLabels:      labelSelector.MatchLabels,
 		MatchExpressions: matchExpressions,
 	}
+}
+
+func mapConditionsCRD(conditions []testkube.TestTriggerCondition) []testsv1.TestTriggerCondition {
+	var results []testsv1.TestTriggerCondition
+	for _, condition := range conditions {
+		results = append(results, testsv1.TestTriggerCondition{
+			Type_:  condition.Type_,
+			Status: (*testsv1.TestTriggerConditionStatuses)(condition.Status),
+		})
+	}
+
+	return results
 }
