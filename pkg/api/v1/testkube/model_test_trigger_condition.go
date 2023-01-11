@@ -11,7 +11,7 @@ package testkube
 
 // supported condition for test triggers
 type TestTriggerCondition struct {
-	Status *TestTriggerConditionStatuses `json:"status,omitempty"`
+	Status *TestTriggerConditionStatuses `json:"status"`
 	// test trigger condition
-	Type_ string `json:"type,omitempty"`
+	Type_ string `json:"type"`
 }

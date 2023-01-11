@@ -3904,6 +3904,9 @@ components:
     TestTriggerCondition:
       description: supported condition for test triggers
       type: object
+      required:
+        - status
+        - type
       properties:
         status:
           $ref: "#/components/schemas/TestTriggerConditionStatuses"
@@ -3916,9 +3919,9 @@ components:
       description: supported kubernetes condition statuses for test triggers
       type: string
       enum:
-        - true
-        - false
-        - unknown
+        - "True"
+        - "False"
+        - "Unknown"
   
     TestTriggerKeyMap:
       type: object

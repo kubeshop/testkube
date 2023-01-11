@@ -14,7 +14,7 @@ type TestTriggerConditionStatuses string
 
 // List of TestTriggerConditionStatuses
 const (
-	TRUE_TestTriggerConditionStatuses    TestTriggerConditionStatuses = "true"
-	FALSE_TestTriggerConditionStatuses   TestTriggerConditionStatuses = "false"
-	UNKNOWN_TestTriggerConditionStatuses TestTriggerConditionStatuses = "unknown"
+	TRUE_TestTriggerConditionStatuses    TestTriggerConditionStatuses = "True"
+	FALSE_TestTriggerConditionStatuses   TestTriggerConditionStatuses = "False"
+	UNKNOWN_TestTriggerConditionStatuses TestTriggerConditionStatuses = "Unknown"
 )
