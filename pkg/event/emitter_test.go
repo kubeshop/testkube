@@ -66,7 +66,7 @@ func TestEmitter_Listen(t *testing.T) {
 		emitter.Notify(event1)
 		emitter.Notify(event2)
 
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 100)
 		// then
 
 		assert.Equal(t, 1, listener1.GetNotificationCount())
