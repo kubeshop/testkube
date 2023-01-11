@@ -45,26 +45,3 @@ spec:
         name: TESTKUBE_MAVEN
         value: "true"
         type: basic
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: maven-executor-smoke-jdk8
-  namespace: testkube
-  labels:
-    core-tests: executors
-spec:
-  type: maven:jdk8/test
-  content:
-    type: git-dir
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube-executor-maven.git
-      branch: main
-      path: examples/hello-maven
-  executionRequest:
-    variables:
-      TESTKUBE_MAVEN:
-        name: TESTKUBE_MAVEN
-        value: "true"
-        type: basic
