@@ -38,6 +38,7 @@ type k8sInformers struct {
 	testSuiteInformer    testkubeinformerv2.TestSuiteInformer
 	testInformer         testkubeinformerv3.TestInformer
 	configMapInformer    coreinformerv1.ConfigMapInformer
+	clientset            kubernetes.Interface
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
@@ -68,6 +69,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		testSuiteInformer:    testSuiteInformer,
 		testInformer:         testInformer,
 		configMapInformer:    configMapInformer,
+		clientset:            clientset,
 	}
 }
 
@@ -197,7 +199,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.logger.Debugf("emiting event: deployment %s/%s created", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(testtrigger.EventCreated, deployment, nil)
+			event := newDeploymentEvent(testtrigger.EventCreated, deployment, nil, s.clientset)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create deployment event: %v", err)
 			}
@@ -228,7 +230,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				newDeployment.Namespace, newDeployment.Name,
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
-			event := newDeploymentEvent(testtrigger.EventModified, newDeployment, causes)
+			event := newDeploymentEvent(testtrigger.EventModified, newDeployment, causes, s.clientset)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
@@ -240,7 +242,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: deployment %s/%s deleted", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(testtrigger.EventDeleted, deployment, nil)
+			event := newDeploymentEvent(testtrigger.EventDeleted, deployment, nil, s.clientset)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete deployment event: %v", err)
 			}

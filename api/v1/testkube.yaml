@@ -3841,11 +3841,8 @@ components:
           type: string
           description: listen for event for selected resource
           example: modified
-        conditions:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestTriggerCondition"
-          description: list of test trigger conditions
+        conditionSpec:
+          $ref: "#/components/schemas/TestTriggerConditionSpec"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         execution:
@@ -3900,6 +3897,20 @@ components:
       type: string
       enum:
         - run
+
+    TestTriggerConditionSpec:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestTriggerCondition"
+          description: list of test trigger conditions
+        timeout:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits for conditions, until its stopped
+          example: 1
 
     TestTriggerCondition:
       description: supported condition for test triggers

@@ -107,10 +107,11 @@ func TestService_runWatcher_lease(t *testing.T) {
 				Resource:         "pod",
 				ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 				Event:            "created",
-				Conditions: []testtriggersv1.TestTriggerCondition{{
-					Type_:  "Progressing",
-					Status: &status,
-				}},
+				ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
+					Conditions: []testtriggersv1.TestTriggerCondition{{
+						Type_:  "Progressing",
+						Status: &status,
+					}}},
 				Action:       "run",
 				Execution:    "test",
 				TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},

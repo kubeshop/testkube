@@ -1,21 +1,30 @@
 package triggers
 
 import (
+	"context"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/mapper/deployments"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 )
 
+type getConditions func() ([]testtriggersv1.TestTriggerCondition, error)
+
 type watcherEvent struct {
-	resource  testtrigger.ResourceType
-	name      string
-	namespace string
-	labels    map[string]string
-	object    runtime.Object
-	eventType testtrigger.EventType
-	causes    []testtrigger.Cause
+	resource        testtrigger.ResourceType
+	name            string
+	namespace       string
+	labels          map[string]string
+	object          runtime.Object
+	eventType       testtrigger.EventType
+	causes          []testtrigger.Cause
+	fnGetConditions getConditions
 }
 
 func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *watcherEvent {
@@ -29,7 +38,17 @@ func newPodEvent(eventType testtrigger.EventType, pod *corev1.Pod) *watcherEvent
 	}
 }
 
-func newDeploymentEvent(eventType testtrigger.EventType, deployment *appsv1.Deployment, causes []testtrigger.Cause) *watcherEvent {
+func getDeploymentConditions(name, namespace string, clientset kubernetes.Interface) ([]testtriggersv1.TestTriggerCondition, error) {
+	deployment, err := clientset.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return deployments.MapCRDConditionsToAPI(deployment.Status.Conditions), nil
+}
+
+func newDeploymentEvent(eventType testtrigger.EventType, deployment *appsv1.Deployment,
+	causes []testtrigger.Cause, clientset kubernetes.Interface) *watcherEvent {
 	return &watcherEvent{
 		resource:  testtrigger.ResourceDeployment,
 		name:      deployment.Name,
@@ -38,6 +57,9 @@ func newDeploymentEvent(eventType testtrigger.EventType, deployment *appsv1.Depl
 		object:    deployment,
 		eventType: eventType,
 		causes:    causes,
+		fnGetConditions: func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getDeploymentConditions(deployment.Name, deployment.Name, clientset)
+		},
 	}
 }
 

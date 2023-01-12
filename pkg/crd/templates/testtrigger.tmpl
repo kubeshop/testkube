@@ -42,12 +42,18 @@ spec:
   {{- if .Event }}
   event: {{ .Event }}
   {{- end }}
-  {{- if ne (len .Conditions) 0 }}
-  conditions:
-  {{- range $exp := .Conditions }}
-  - type: {{ $exp.Type_ }}
-    status: {{ $exp.Status }}
-  {{- end }}
+  {{- if .ConditionSpec }}
+  conditionSpec:
+    {{- if .ConditionSpec.Timeout }}
+    timeout: {{ .ConditionSpec.Timeout }}
+    {{- end }}
+    {{- if ne (len .ConditionSpec.Conditions) 0 }}
+    conditions:
+    {{- range $exp := .ConditionSpec.Conditions }}
+    - type: {{ $exp.Type_ }}
+      status: {{ $exp.Status }}
+    {{- end }}
+    {{- end }}
   {{- end }}
   {{- if .Action }}
   action: {{ .Action }}

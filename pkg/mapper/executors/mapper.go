@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MapCRDToAPI maps Executor CRD to OpenAPI spec Webhook
+// MapCRDToAPI maps Executor CRD to OpenAPI spec Executor
 func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 	return testkube.ExecutorUpsertRequest{
 		Name:             item.Name,
