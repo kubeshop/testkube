@@ -110,7 +110,7 @@ outer:
 			)
 			return false, fmt.Errorf("timed-out waiting for trigger conditions")
 		default:
-			conditions, err := e.fnGetConditions()
+			conditions, err := e.fnGetConditions(ctx)
 			if err != nil {
 				logger.Errorf("trigger service: matcher component: error getting %s %s/%s because of %v", t.Kind, t.Namespace, t.Name, err)
 				return false, err
@@ -124,7 +124,6 @@ outer:
 			matched := true
 			for _, condition := range t.Spec.ConditionSpec.Conditions {
 				status, ok := conditionMap[condition.Type_]
-
 				if !ok || status == nil || condition.Status == nil || *status != *condition.Status {
 					matched = false
 					break

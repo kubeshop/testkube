@@ -100,21 +100,15 @@ func TestService_runWatcher_lease(t *testing.T) {
 		leaseChan <- true
 		time.Sleep(50 * time.Millisecond)
 
-		status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 		testTrigger := testtriggersv1.TestTrigger{
 			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
 			Spec: testtriggersv1.TestTriggerSpec{
 				Resource:         "pod",
 				ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 				Event:            "created",
-				ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
-					Conditions: []testtriggersv1.TestTriggerCondition{{
-						Type_:  "Progressing",
-						Status: &status,
-					}}},
-				Action:       "run",
-				Execution:    "test",
-				TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+				Action:           "run",
+				Execution:        "test",
+				TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			},
 		}
 		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
