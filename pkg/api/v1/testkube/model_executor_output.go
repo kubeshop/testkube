@@ -9,6 +9,10 @@
  */
 package testkube
 
+import (
+	"time"
+)
+
 // CRD based executor data
 type ExecutorOutput struct {
 	// One of possible output types
@@ -16,4 +20,6 @@ type ExecutorOutput struct {
 	// Message/event data passed from executor (like log lines etc)
 	Content string           `json:"content,omitempty"`
 	Result  *ExecutionResult `json:"result,omitempty"`
+	// Timestamp of log
+	Time time.Time `json:"time,omitempty"`
 }
