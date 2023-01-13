@@ -49,7 +49,7 @@ type Repository interface {
 	Insert(ctx context.Context, result testkube.Execution) error
 	// Update updates execution result
 	Update(ctx context.Context, result testkube.Execution) error
-	// UpdateExecution updates result in execution
+	// UpdateResult updates result in execution
 	UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error

@@ -66,18 +66,15 @@ func (ag *Agent) Run(ctx context.Context) error {
 	}
 }
 
-func (ag *Agent) run(ctx context.Context) error {
-	var (
-		security grpc.DialOption
-		err      error
-	)
+func (ag *Agent) run(ctx context.Context) (err error) {
+	creds := credentials.NewTLS(nil)
 	if ag.isInsecure {
-		security = grpc.WithTransportCredentials(insecure.NewCredentials())
-	} else {
-		security = grpc.WithTransportCredentials(credentials.NewTLS(nil))
+		creds = insecure.NewCredentials()
 	}
 
-	ag.conn, err = grpc.Dial(ag.server, grpc.WithBlock(), grpc.WithUserAgent(api.Version+"/"+api.Commit), security)
+	userAgent := api.Version+"/"+api.Commit
+	ag.logger.Infow("initiating connection with Cloud API", "userAgent", userAgent)
+	ag.conn, err = grpc.Dial(ag.server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return err
 	}
@@ -166,6 +163,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 
 	//TODO figure out how to retry this method in case of network failure
 
+	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	stream, err := ag.client.Execute(ctx, opts...)
 	if err != nil {
