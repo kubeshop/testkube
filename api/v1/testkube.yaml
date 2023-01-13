@@ -3636,6 +3636,11 @@ components:
         result:
           $ref: "#/components/schemas/ExecutionResult"
           description: Execution result when job is finished
+        time:
+          type: string
+          format: date-time
+          description: Timestamp of log
+          example: "2018-03-20T09:12:28Z"
 
     Webhook:
       description: CRD based webhook data

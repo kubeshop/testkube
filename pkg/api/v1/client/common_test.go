@@ -39,5 +39,6 @@ func TestStreamToLogsChannelNewErrorFormat(t *testing.T) {
 
 	go StreamToLogsChannel(buf, log)
 	result := <-log
-	assert.Equal(t, output.Output{Type_: "error", Content: "some message"}, result)
+	assert.Equal(t, "error", result.Type_)
+	assert.Equal(t, "some message", result.Content)
 }
