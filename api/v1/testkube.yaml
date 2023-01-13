@@ -3202,6 +3202,8 @@ components:
           $ref: "#/components/schemas/SecretRef"
         tokenSecret:
           $ref: "#/components/schemas/SecretRef"
+        certificateSecret:
+          $ref: "#/components/schemas/SecretRef"
         workingDir:
           type: string
           description: if provided we checkout the whole repository and run test from this directory
