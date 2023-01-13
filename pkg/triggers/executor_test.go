@@ -116,15 +116,21 @@ func TestExecute(t *testing.T) {
 		logger:           log.DefaultLogger,
 	}
 
+	status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "pod",
 			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 			Event:            "created",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
+				Conditions: []testtriggersv1.TestTriggerCondition{{
+					Type_:  "Progressing",
+					Status: &status,
+				}}},
+			Action:       "run",
+			Execution:    "test",
+			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 

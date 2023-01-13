@@ -21,17 +21,42 @@ func TestService_match(t *testing.T) {
 		object:    nil,
 		eventType: "modified",
 		causes:    nil,
+		fnGetConditions: func(ctx context.Context) ([]testtriggersv1.TestTriggerCondition, error) {
+			status := testtriggersv1.TRUE_TestTriggerConditionStatuses
+			return []testtriggersv1.TestTriggerCondition{
+				{
+					Type_:  "Progressing",
+					Status: &status,
+				},
+				{
+					Type_:  "Available",
+					Status: &status,
+				},
+			}, nil
+		},
 	}
 
+	status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "pod",
 			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 			Event:            "modified",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
+				Conditions: []testtriggersv1.TestTriggerCondition{
+					{
+						Type_:  "Progressing",
+						Status: &status,
+					},
+					{
+						Type_:  "Available",
+						Status: &status,
+					},
+				}},
+			Action:       "run",
+			Execution:    "test",
+			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)

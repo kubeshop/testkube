@@ -2,6 +2,8 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,6 +11,8 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
+
+const defaultTimeout = 10 * time.Second
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
@@ -22,6 +26,17 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 			continue
 		}
+		if t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0 && e.fnGetConditions != nil {
+			matched, err := matchConditions(ctx, e, t, s.logger)
+			if err != nil {
+				return err
+			}
+
+			if !matched {
+				continue
+			}
+		}
+
 		status := s.getStatusForTrigger(t)
 		if status.hasActiveTests() {
 			s.logger.Infof(
@@ -71,4 +86,55 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 		return k8sSelector.Matches(resourceLabelSet)
 	}
 	return false
+}
+
+func matchConditions(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+	timeout := defaultTimeout
+	if t.Spec.ConditionSpec.Timeout != 0 {
+		timeout = time.Duration(t.Spec.ConditionSpec.Timeout) * time.Second
+	}
+
+	ticker := time.NewTicker(timeout)
+	defer ticker.Stop()
+
+outer:
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Infow("context done, stopping waiting for trigger conditions")
+			return false, fmt.Errorf("context done")
+		case <-ticker.C:
+			logger.Errorf(
+				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s "+
+					"because we didn't match trigger conditions", t.Namespace, t.Name, e.eventType, e.resource,
+			)
+			return false, fmt.Errorf("timed-out waiting for trigger conditions")
+		default:
+			conditions, err := e.fnGetConditions(ctx)
+			if err != nil {
+				logger.Errorf("trigger service: matcher component: error getting %s %s/%s because of %v", t.Kind, t.Namespace, t.Name, err)
+				return false, err
+			}
+
+			conditionMap := make(map[string]*testtriggersv1.TestTriggerConditionStatuses, len(conditions))
+			for _, condition := range conditions {
+				conditionMap[condition.Type_] = condition.Status
+			}
+
+			matched := true
+			for _, condition := range t.Spec.ConditionSpec.Conditions {
+				status, ok := conditionMap[condition.Type_]
+				if !ok || status == nil || condition.Status == nil || *status != *condition.Status {
+					matched = false
+					break
+				}
+			}
+
+			if matched {
+				break outer
+			}
+		}
+	}
+
+	return true, nil
 }
