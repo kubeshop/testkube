@@ -29,6 +29,7 @@ spec:
   resource: for which Resource do we monitor Event which triggers an Action
   resourceSelector: resourceSelector identifies which Kubernetes objects should be watched
   event: on which Event for a Resource should an Action be triggered
+  conditionSpec: what resource conditions should be matched
   action: action represents what needs to be executed for selected execution
   execution: execution identifies for which test execution should an action be executed
   testSelector: testSelector identifies on which Testkube Kubernetes Objects an action should be taken
@@ -57,6 +58,15 @@ selector:
     matchExpressions: "array of key: string, operator: string and values: []string objects"
 ```
 
+Specifing resource conditions:
+```yaml
+spec:
+    timeout: duration in seconds the test trigger waits for conditions, until its stopped
+    conditions:
+    - type: test trigger condition type
+      status: test trigger condition status, supported values - True, False, Unknown
+```
+
 Supported values:
 * **resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
 * **action**    - run
@@ -68,7 +78,8 @@ Supported values:
 ### Example
 
 Here is an example which creates a test trigger with the name **testtrigger-example** in the **default** namespace for **pods**
-that have the **testkube.io/tier: backend** label which gets triggered on **modified** event and **runs** a **testsuite**
+that have the **testkube.io/tier: backend** label which gets triggered on **modified** event with conditions 
+type **Progressing** / status **True** and type **Available** / status **True** and **runs** a **testsuite**
 identified by the name **sanity-test** in the **frontend** namespace:
 
 ```yaml
@@ -84,6 +95,13 @@ spec:
       matchLabels:
         testkube.io/tier: backend
   event: modified
+  conditionSpec:
+    timeout: 100
+    conditions:
+    - type: Progressing
+      status: "True"
+    - type: Available
+      status: "True"
   action: run
   execution: testsuite
   testSelector:

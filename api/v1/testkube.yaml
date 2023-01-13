@@ -3636,6 +3636,11 @@ components:
         result:
           $ref: "#/components/schemas/ExecutionResult"
           description: Execution result when job is finished
+        time:
+          type: string
+          format: date-time
+          description: Timestamp of log
+          example: "2018-03-20T09:12:28Z"
 
     Webhook:
       description: CRD based webhook data
@@ -3841,6 +3846,8 @@ components:
           type: string
           description: listen for event for selected resource
           example: modified
+        conditionSpec:
+          $ref: "#/components/schemas/TestTriggerConditionSpec"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         execution:
@@ -3896,6 +3903,42 @@ components:
       enum:
         - run
 
+    TestTriggerConditionSpec:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestTriggerCondition"
+          description: list of test trigger conditions
+        timeout:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits for conditions, until its stopped
+          example: 1
+
+    TestTriggerCondition:
+      description: supported condition for test triggers
+      type: object
+      required:
+        - status
+        - type
+      properties:
+        status:
+          $ref: "#/components/schemas/TestTriggerConditionStatuses"
+        type:
+          type: string
+          description: test trigger condition
+          example: Progressing
+
+    TestTriggerConditionStatuses:
+      description: supported kubernetes condition statuses for test triggers
+      type: string
+      enum:
+        - "True"
+        - "False"
+        - "Unknown"
+  
     TestTriggerKeyMap:
       type: object
       required:

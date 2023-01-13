@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/storage"
 )
 
 var _ Repository = &MongoRepository{}
@@ -20,22 +21,31 @@ var _ Repository = &MongoRepository{}
 const (
 	CollectionName      = "results"
 	CollectionSequences = "sequences"
-	CollectionOutput    = "output"
 )
 
 func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
 	return &MongoRepository{
 		Coll:         db.Collection(CollectionName),
 		Sequences:    db.Collection(CollectionSequences),
-		Output:       db.Collection(CollectionOutput),
+		OutputLogs:   NewMongoOutputRepository(db),
 		allowDiskUse: allowDiskUse,
 	}
+}
+
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
+	repo := MongoRepository{
+		Coll:         db.Collection(CollectionName),
+		Sequences:    db.Collection(CollectionSequences),
+		allowDiskUse: allowDiskUse,
+	}
+	repo.OutputLogs = NewMinioOutputRepository(storageClient, repo.Coll, bucket)
+	return &repo
 }
 
 type MongoRepository struct {
 	Coll         *mongo.Collection
 	Sequences    *mongo.Collection
-	Output       *mongo.Collection
+	OutputLogs   OutputRepository
 	allowDiskUse bool
 }
 
@@ -45,7 +55,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -59,7 +69,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -75,7 +85,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -252,7 +262,7 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+	err = r.OutputLogs.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
@@ -263,7 +273,7 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.UpdateOutput(ctx, result.Id, output)
+	err = r.OutputLogs.UpdateOutput(ctx, result.Id, output)
 	return
 }
 
@@ -274,7 +284,7 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 	if err != nil {
 		return
 	}
-	err = r.UpdateOutput(ctx, id, output)
+	err = r.OutputLogs.UpdateOutput(ctx, id, output)
 	return
 }
 
@@ -371,31 +381,31 @@ func addSelectorConditions(selector string, tag string, conditions primitive.A) 
 
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	err = r.OutputLogs.DeleteOutputByTest(ctx, testName)
 	if err != nil {
 		return
 	}
-	err = r.DeleteOutputByTest(ctx, testName)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
 	return
 }
 
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
+	err = r.OutputLogs.DeleteOutputByTestSuite(ctx, testSuiteName)
 	if err != nil {
 		return
 	}
-	err = r.DeleteOutputByTestSuite(ctx, testSuiteName)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	err = r.OutputLogs.DeleteAllOutput(ctx)
 	if err != nil {
 		return
 	}
-	err = r.DeleteAllOutput(ctx)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
 
@@ -417,11 +427,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 		filter = bson.M{"testname": testNames[0]}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	err = r.OutputLogs.DeleteOutputForTests(ctx, testNames)
 	if err != nil {
 		return
 	}
-	err = r.DeleteOutputForTests(ctx, testNames)
+	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
 
@@ -443,21 +453,21 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		filter = bson.M{"testSuitename": testSuiteNames[0]}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	err = r.OutputLogs.DeleteOutputForTestSuites(ctx, testSuiteNames)
 	if err != nil {
 		return
 	}
-	err = r.DeleteOutputForTestSuites(ctx, testSuiteNames)
+	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
 
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	err = r.OutputLogs.DeleteOutputForAllTestSuite(ctx)
 	if err != nil {
 		return
 	}
-	err = r.DeleteOutputForAllTestSuite(ctx)
+	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }
 

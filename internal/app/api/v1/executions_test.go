@@ -205,54 +205,6 @@ func (r MockExecutionResultsRepository) GetTestMetrics(ctx context.Context, name
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) DeleteAllOutput(ctx context.Context) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutput(ctx context.Context, id string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutputByTestSuite(ctx context.Context, testSuiteName string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutputForTests(ctx context.Context, testNames []string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutputForTestSuites(ctx context.Context, testSuiteNames []string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) DeleteOutputForAllTestSuite(ctx context.Context) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) InsertOutput(ctx context.Context, id, testName, testSuite, output string) error {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetOutput(ctx context.Context, id string) (string, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetOutputByTest(ctx context.Context, testName string) (string, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) GetOutputByTestSuite(ctx context.Context, testSuiteName string) (string, error) {
-	panic("not implemented")
-}
-
-func (r MockExecutionResultsRepository) UpdateOutput(ctx context.Context, id, output string) error {
-	panic("not implemented")
-}
-
 type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }

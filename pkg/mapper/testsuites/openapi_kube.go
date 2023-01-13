@@ -132,7 +132,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 	}
 }
 
-//MapTestSuiteUpsertRequestToTestCRD maps TestSuiteUpdateRequest OpenAPI spec to TestSuite CRD spec
+// MapTestSuiteUpsertRequestToTestCRD maps TestSuiteUpdateRequest OpenAPI spec to TestSuite CRD spec
 func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest, testSuite *testsuitesv2.TestSuite) *testsuitesv2.TestSuite {
 	var fields = []struct {
 		source      *string

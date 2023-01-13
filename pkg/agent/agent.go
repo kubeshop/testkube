@@ -72,7 +72,7 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		creds = insecure.NewCredentials()
 	}
 
-	userAgent := api.Version+"/"+api.Commit
+	userAgent := api.Version + "/" + api.Commit
 	ag.logger.Infow("initiating connection with Cloud API", "userAgent", userAgent)
 	ag.conn, err = grpc.Dial(ag.server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
 	if err != nil {

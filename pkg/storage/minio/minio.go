@@ -303,3 +303,25 @@ func (c *Client) GetValidBucketName(parentType string, parentName string) string
 
 	return fmt.Sprintf("%s-%d", bucketName[:52], h.Sum32())
 }
+
+func (c *Client) DeleteFile(bucket, file string) error {
+	if err := c.Connect(); err != nil {
+		return fmt.Errorf("minio DeleteFile connection error: %w", err)
+	}
+
+	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	if err != nil {
+		return fmt.Errorf("could not check if bucket already exists for delete file: %w", err)
+	}
+
+	if !exists {
+		return ErrArtifactsNotFound
+	}
+
+	err = c.minioclient.RemoveObject(context.Background(), bucket, file, minio.RemoveObjectOptions{ForceDelete: true})
+	if err != nil {
+		return fmt.Errorf("minio DeleteFile RemoveObject error: %w", err)
+	}
+
+	return nil
+}
