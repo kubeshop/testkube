@@ -86,6 +86,13 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 					Key:  specContent.Repository.TokenSecret.Key,
 				}
 			}
+
+			if specContent.Repository.CertificateSecret != nil {
+				content.Repository.CertificateSecret = &testkube.SecretRef{
+					Name: specContent.Repository.CertificateSecret.Name,
+					Key:  specContent.Repository.CertificateSecret.Key,
+				}
+			}
 		}
 	}
 

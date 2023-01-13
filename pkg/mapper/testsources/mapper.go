@@ -32,6 +32,13 @@ func MapCRDToAPI(item testsourcev1.TestSource) testkube.TestSource {
 				Key:  item.Spec.Repository.TokenSecret.Key,
 			}
 		}
+
+		if item.Spec.Repository.CertificateSecret != nil {
+			repository.CertificateSecret = &testkube.SecretRef{
+				Name: item.Spec.Repository.CertificateSecret.Name,
+				Key:  item.Spec.Repository.CertificateSecret.Key,
+			}
+		}
 	}
 
 	return testkube.TestSource{
@@ -69,6 +76,13 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 			repository.TokenSecret = &testsourcev1.SecretRef{
 				Name: request.Repository.TokenSecret.Name,
 				Key:  request.Repository.TokenSecret.Key,
+			}
+		}
+
+		if request.Repository.CertificateSecret != nil {
+			repository.CertificateSecret = &testsourcev1.SecretRef{
+				Name: request.Repository.CertificateSecret.Name,
+				Key:  request.Repository.CertificateSecret.Key,
 			}
 		}
 	}
@@ -186,6 +200,14 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			testSource.Spec.Repository.TokenSecret = &testsourcev1.SecretRef{
 				Name: (*(*request.Repository).TokenSecret).Name,
 				Key:  (*(*request.Repository).TokenSecret).Key,
+			}
+			empty = false
+		}
+
+		if (*request.Repository).CertificateSecret != nil {
+			testSource.Spec.Repository.CertificateSecret = &testsourcev1.SecretRef{
+				Name: (*(*request.Repository).CertificateSecret).Name,
+				Key:  (*(*request.Repository).CertificateSecret).Key,
 			}
 			empty = false
 		}

@@ -310,10 +310,11 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		return options, errors.Errorf("can't get executor spec: %v", err)
 	}
 
-	var usernameSecret, tokenSecret *testkube.SecretRef
+	var usernameSecret, tokenSecret, certificateSecret *testkube.SecretRef
 	if test.Content != nil && test.Content.Repository != nil {
 		usernameSecret = test.Content.Repository.UsernameSecret
 		tokenSecret = test.Content.Repository.TokenSecret
+		certificateSecret = test.Content.Repository.CertificateSecret
 	}
 
 	var imagePullSecrets []string
@@ -341,6 +342,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		Labels:               testCR.Labels,
 		UsernameSecret:       usernameSecret,
 		TokenSecret:          tokenSecret,
+		CertificateSecret:    certificateSecret,
 		ImageOverride:        request.Image,
 		ImagePullSecretNames: imagePullSecrets,
 	}, nil
@@ -425,6 +427,13 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.TokenSecret.Name,
 				Key:  testSource.Repository.TokenSecret.Key,
+			}
+		}
+
+		if test.Content.Repository.CertificateSecret == nil && testSource.Repository.CertificateSecret != nil {
+			test.Content.Repository.CertificateSecret = &testsv3.SecretRef{
+				Name: testSource.Repository.CertificateSecret.Name,
+				Key:  testSource.Repository.CertificateSecret.Key,
 			}
 		}
 

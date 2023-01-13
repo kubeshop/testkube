@@ -97,6 +97,13 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 				Key:  content.Repository.TokenSecret.Key,
 			}
 		}
+
+		if content.Repository.CertificateSecret != nil {
+			repository.CertificateSecret = &testsv3.SecretRef{
+				Name: content.Repository.CertificateSecret.Name,
+				Key:  content.Repository.CertificateSecret.Key,
+			}
+		}
 	}
 
 	return &testsv3.TestContent{
@@ -305,6 +312,14 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			testContent.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: (*(*content.Repository).TokenSecret).Name,
 				Key:  (*(*content.Repository).TokenSecret).Key,
+			}
+			emptyRepository = false
+		}
+
+		if (*content.Repository).CertificateSecret != nil {
+			testContent.Repository.CertificateSecret = &testsv3.SecretRef{
+				Name: (*(*content.Repository).CertificateSecret).Name,
+				Key:  (*(*content.Repository).CertificateSecret).Key,
 			}
 			emptyRepository = false
 		}

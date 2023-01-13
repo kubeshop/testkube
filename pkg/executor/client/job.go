@@ -115,6 +115,7 @@ type JobOptions struct {
 	HTTPSProxy            string
 	UsernameSecret        *testkube.SecretRef
 	TokenSecret           *testkube.SecretRef
+	CertificateSecret     *testkube.SecretRef
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
@@ -430,6 +431,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		HTTPSProxy:            options.Request.HttpsProxy,
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
+		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
 	}
@@ -588,6 +590,8 @@ func (c *JobExecutor) Timeout(jobName string) (result *testkube.ExecutionResult)
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
 	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
 		options.UsernameSecret, options.TokenSecret)
+
+	// TODO: add certificateSecret to job spec
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
