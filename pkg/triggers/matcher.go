@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"time"
 
 	"go.uber.org/zap"
@@ -26,7 +27,8 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 			continue
 		}
-		if t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0 && e.conditionsGetter != nil {
+		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
+		if hasConditions && e.conditionsGetter != nil {
 			matched, err := matchConditions(ctx, e, t, s.logger)
 			if err != nil {
 				return err
@@ -108,7 +110,7 @@ outer:
 				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s "+
 					"because we didn't match trigger conditions", t.Namespace, t.Name, e.eventType, e.resource,
 			)
-			return false, fmt.Errorf("timed-out waiting for trigger conditions")
+			return false, errors.Errorf("timed-out waiting for trigger conditions")
 		default:
 			conditions, err := e.conditionsGetter()
 			if err != nil {

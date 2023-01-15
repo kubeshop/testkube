@@ -44,10 +44,11 @@ func withConditionsGetter(conditionsGetter conditionsGetterFn) watcherOpts {
 func newWatcherEvent(
 	eventType testtrigger.EventType,
 	object metav1.Object,
+	resource testtrigger.ResourceType,
 	opts ...watcherOpts,
 ) *watcherEvent {
 	w := &watcherEvent{
-		resource:  testtrigger.ResourcePod,
+		resource:  resource,
 		name:      object.GetName(),
 		namespace: object.GetNamespace(),
 		labels:    object.GetLabels(),
