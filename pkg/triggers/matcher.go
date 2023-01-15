@@ -3,8 +3,9 @@ package triggers
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
