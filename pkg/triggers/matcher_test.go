@@ -21,7 +21,7 @@ func TestService_match(t *testing.T) {
 		object:    nil,
 		eventType: "modified",
 		causes:    nil,
-		fnGetConditions: func(ctx context.Context) ([]testtriggersv1.TestTriggerCondition, error) {
+		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
 				{

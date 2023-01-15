@@ -26,7 +26,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 			continue
 		}
-		if t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0 && e.fnGetConditions != nil {
+		if t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0 && e.conditionsGetter != nil {
 			matched, err := matchConditions(ctx, e, t, s.logger)
 			if err != nil {
 				return err
@@ -110,7 +110,7 @@ outer:
 			)
 			return false, fmt.Errorf("timed-out waiting for trigger conditions")
 		default:
-			conditions, err := e.fnGetConditions(ctx)
+			conditions, err := e.conditionsGetter()
 			if err != nil {
 				logger.Errorf("trigger service: matcher component: error getting %s %s/%s because of %v", t.Kind, t.Namespace, t.Name, err)
 				return false, err

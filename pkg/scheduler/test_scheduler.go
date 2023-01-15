@@ -67,7 +67,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return execution.Errw("can't create valid execution options: %w", err), nil
 	}
 
-	// store execution in storage, can be get from API now
+	// store execution in storage, can be fetched from API now
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
