@@ -44,3 +44,6 @@ const IconKey = "🔑"
 
 // IconCabinet emoji
 const IconCabinet = "🗄️"
+
+// IconWarning emoji
+const IconWarning = "🚨"
