@@ -26,6 +26,7 @@ spec:
   conditionSpec: which resource conditions should be matched
   action: action represents what needs to be executed for selected execution
   execution: execution identifies for which test execution should an action be executed
+  delay: "OPTIONAL: add a delay before scheduling a test or testsuite when a trigger is matched to an event"
   testSelector: testSelector identifies on which Testkube Kubernetes Objects an action should be taken
 ```
 
