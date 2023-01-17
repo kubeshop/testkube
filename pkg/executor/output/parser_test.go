@@ -55,10 +55,56 @@ func TestGetLogEntry(t *testing.T) {
 }
 
 func TestParseRunnerOutput(t *testing.T) {
+	t.Run("Valid runner output", func(t *testing.T) {
+		t.Parallel()
+		result, logs, err := ParseRunnerOutput(exampleOutput)
 
-	result, logs, err := ParseRunnerOutput(exampleOutput)
+		assert.Len(t, logs, 10)
+		assert.NoError(t, err)
+		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+	})
+	t.Run("Empty runner output", func(t *testing.T) {
+		t.Parallel()
+		result, logs, err := ParseRunnerOutput([]byte{})
 
-	assert.Len(t, logs, 10)
-	assert.NoError(t, err)
-	assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+		assert.Len(t, logs, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+	})
+	t.Run("Invalid logline in output", func(t *testing.T) {
+		t.Parallel()
+		extendedExampleOutput := append(exampleOutput, []byte(`{not a json}`)...)
+		result, logs, err := ParseRunnerOutput(extendedExampleOutput)
+
+		assert.Len(t, logs, 11)
+		assert.NoError(t, err)
+		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+	})
+	t.Run("wrong order in logs", func(t *testing.T) {
+		t.Parallel()
+		unorderedOutput := []byte(`
+{"type":"line","content":"🚚 Preparing test runner","time":"2023-01-17T15:29:17.921466388Z"}
+{"type":"line","content":"🌍 Reading environment variables...","time":"2023-01-17T15:29:17.921770638Z"}
+{"type":"line","content":"✅ Environment variables read successfully","time":"2023-01-17T15:29:17.921786721Z"}
+{"type":"line","content":"RUNNER_ENDPOINT=\"testkube-minio-service-testkube:9000\"","time":"2023-01-17T15:29:17.921788721Z"}
+{"type":"line","content":"RUNNER_ACCESSKEYID=\"********\"","time":"2023-01-17T15:29:17.921790721Z"}
+{"type":"line","content":"RUNNER_SECRETACCESSKEY=\"********\"","time":"2023-01-17T15:29:17.921792388Z"}
+{"type":"line","content":"RUNNER_LOCATION=\"\"","time":"2023-01-17T15:29:17.921793846Z"}
+{"type":"line","content":"RUNNER_TOKEN=\"\"","time":"2023-01-17T15:29:17.921795304Z"}
+{"type":"line","content":"RUNNER_SSL=false","time":"2023-01-17T15:29:17.921797054Z"}
+{"type":"line","content":"RUNNER_SCRAPPERENABLED=\"true\"","time":"2023-01-17T15:29:17.921798679Z"}
+{"type":"line","content":"RUNNER_GITUSERNAME=\"\"","time":"2023-01-17T15:29:17.921800138Z"}
+{"type":"line","content":"RUNNER_GITTOKEN=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
+{"type":"line","content":"RUNNER_DATADIR=\"/data\"","time":"2023-01-17T15:29:17.921803138Z"}
+{"type":"error","content":"❌ can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-17T15:29:17.921940304Z"}
+{"type":"error","content":"can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-17T15:29:17.921946638Z"}
+{"type":"event","content":"running test [63c6bec1790802b7e3e57048]","time":"2023-01-17T15:29:17.921920596Z"}
+{"type":"line","content":"🚚 Preparing for test run","time":"2023-01-17T15:29:17.921931471Z"}
+`)
+		result, logs, err := ParseRunnerOutput(unorderedOutput)
+
+		assert.Len(t, logs, 17)
+		assert.NoError(t, err)
+		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+	})
 }
