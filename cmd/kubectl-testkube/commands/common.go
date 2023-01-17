@@ -58,6 +58,11 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 
 	command := []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
 	command = append(command, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
+	if options.NoMinio {
+		command = append(command, "--set", "testkube-api.logs.storage=mongo")
+	} else {
+		command = append(command, "--set", "testkube-api.logs.storage=minio")
+	}
 	command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	command = append(command, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	command = append(command, options.Name, options.Chart)
