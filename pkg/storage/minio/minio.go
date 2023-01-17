@@ -256,24 +256,26 @@ func (c *Client) UploadFile(bucket string, filePath string, reader io.Reader, ob
 
 // PlaceFiles saves the content of the buckets to the filesystem
 func (c *Client) PlaceFiles(buckets []string, prefix string) error {
-	c.Log.Infof("Getting the contents of buckets %s", buckets)
+	output.PrintLog(fmt.Sprintf("%s Getting the contents of buckets %s", ui.IconFile, buckets))
 	if err := c.Connect(); err != nil {
+		output.PrintLog(fmt.Sprintf("%s Minio PlaceFiles connection error: %s", ui.IconWarning, err.Error()))
 		return fmt.Errorf("minio PlaceFiles connection error: %w", err)
 	}
 
 	for _, b := range buckets {
 		exists, err := c.minioclient.BucketExists(context.TODO(), b)
 		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s Could not check if bucket already exists for files %s", ui.IconWarning, err.Error()))
 			return fmt.Errorf("could not check if bucket already exists for files: %w", err)
 		}
 		if !exists {
-			output.PrintLog(fmt.Sprintf("%s No files found for bucket %s", ui.IconFile, b))
-			c.Log.Infof("Bucket %s does not exist", b)
+			output.PrintLog(fmt.Sprintf("%s Bucket %s does not exist", ui.IconFile, b))
 			continue
 		}
 
 		files, err := c.ListFiles(b)
 		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s Could not list files in bucket %s", ui.IconWarning, b))
 			return fmt.Errorf("could not list files in bucket %s", b)
 		}
 

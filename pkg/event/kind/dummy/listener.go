@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 var _ common.Listener = &DummyListener{}
@@ -21,6 +22,7 @@ func (l *DummyListener) GetNotificationCount() int {
 }
 
 func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
+	log.DefaultLogger.Infow("DummyListener notified", "listenerId", l.Id, "event", event)
 	atomic.AddInt32(&l.NotificationCount, 1)
 	return testkube.EventResult{Id: event.Id}
 }

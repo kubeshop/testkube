@@ -50,6 +50,8 @@ type EventEmitter interface {
 	Notify(event testkube.Event)
 }
 
+// TODO: remove duplicated code that was done when created container executor
+
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(repo ResultRepository, namespace string, images executor.Images,
 	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
@@ -419,7 +421,15 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		}
 	}
 
-	c.emitter.Notify(testkube.NewEventEndTestSuccess(execution))
+	if result.IsPassed() {
+		c.emitter.Notify(testkube.NewEventEndTestSuccess(execution))
+	} else if result.IsTimeout() {
+		c.emitter.Notify(testkube.NewEventEndTestTimeout(execution))
+	} else if result.IsAborted() {
+		c.emitter.Notify(testkube.NewEventEndTestAborted(execution))
+	} else {
+		c.emitter.Notify(testkube.NewEventEndTestFailed(execution))
+	}
 
 	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
 	if err != nil {

@@ -55,6 +55,7 @@ type MongoConfig struct {
 	DSN          string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	DB           string `envconfig:"API_MONGO_DB" default:"testkube"`
 	SSLSecretRef string `envconfig:"API_MONGO_SSL_CERT"`
+	AllowDiskUse bool   `envconfig:"API_MONGO_ALLOW_DISK_USE"`
 }
 
 var Config MongoConfig
@@ -131,8 +132,8 @@ func main() {
 	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
 	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
 	ui.ExitOnError("Getting mongo database", err)
-	resultsRepository := result.NewMongoRespository(db, true)
-	testResultsRepository := testresult.NewMongoRespository(db, true)
+	resultsRepository := result.NewMongoRespository(db, Config.AllowDiskUse)
+	testResultsRepository := testresult.NewMongoRespository(db, Config.AllowDiskUse)
 	configRepository := configmongo.NewMongoRespository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", namespace)
 	if os.Getenv("APISERVER_CONFIG") != "" {

@@ -1,3 +1,5 @@
+//go:build !integration
+
 package event
 
 import (
@@ -66,11 +68,21 @@ func TestEmitter_Listen(t *testing.T) {
 		emitter.Notify(event1)
 		emitter.Notify(event2)
 
-		time.Sleep(time.Millisecond * 50)
 		// then
+		retryCount := 100
+		notificationsCountListener1 := 0
+		notificationsCountListener2 := 0
+		for i := 0; i < retryCount; i++ {
+			notificationsCountListener1 = listener1.GetNotificationCount()
+			notificationsCountListener2 = listener2.GetNotificationCount()
+			if notificationsCountListener1 == 1 && notificationsCountListener2 == 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 
-		assert.Equal(t, 1, listener1.GetNotificationCount())
-		assert.Equal(t, 1, listener2.GetNotificationCount())
+		assert.Equal(t, 1, notificationsCountListener1)
+		assert.Equal(t, 1, notificationsCountListener2)
 	})
 
 }
