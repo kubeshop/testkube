@@ -170,6 +170,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 		Namespace:     execution.TestSuite.Namespace,
 		Labels:        testkube.MapToString(execution.Labels),
 		TestName:      execution.TestSuite.Name,
+		TestType:      "Test Suite",
 		Status:        string(*execution.Status),
 		StartTime:     execution.StartTime.String(),
 		EndTime:       execution.EndTime.String(),
