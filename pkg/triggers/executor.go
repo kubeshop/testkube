@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"strconv"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -44,8 +45,22 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.ExecutionRequest{}
 
 		wp := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
-		go wp.SendRequests(s.scheduler.PrepareTestRequests(tests, request))
-		go wp.Run(ctx)
+		go func() {
+			isDelayDefined := t.Spec.Delay != nil
+			if isDelayDefined {
+				s.logger.Infof(
+					"trigger service: executor component: trigger %s/%s has delayed test execution configured for %f seconds",
+					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+				)
+				time.Sleep(t.Spec.Delay.Duration)
+			}
+			s.logger.Infof(
+				"trigger service: executor component: scheduling test executions for trigger %s/%s",
+				t.Namespace, t.Name,
+			)
+			go wp.SendRequests(s.scheduler.PrepareTestRequests(tests, request))
+			go wp.Run(ctx)
+		}()
 
 		for r := range wp.GetResponses() {
 			status.addExecutionID(r.Result.Id)
@@ -62,8 +77,22 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.TestSuiteExecutionRequest{}
 
 		wp := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
-		go wp.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
-		go wp.Run(ctx)
+		go func() {
+			isDelayDefined := t.Spec.Delay != nil
+			if isDelayDefined {
+				s.logger.Infof(
+					"trigger service: executor component: trigger %s/%s has delayed testsuite execution configured for %f seconds",
+					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+				)
+				time.Sleep(t.Spec.Delay.Duration)
+			}
+			s.logger.Infof(
+				"trigger service: executor component: scheduling testsuite executions for trigger %s/%s",
+				t.Namespace, t.Name,
+			)
+			go wp.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
+			go wp.Run(ctx)
+		}()
 
 		for r := range wp.GetResponses() {
 			status.addTestSuiteExecutionID(r.Result.Id)
