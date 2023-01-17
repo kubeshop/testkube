@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -29,10 +30,12 @@ func GetExecutionResult(b []byte) (is bool, result testkube.ExecutionResult) {
 // {"type": "result", "result": {"id": "2323", "output": "-----"}}
 func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string, err error) {
 	reader := bufio.NewReader(bytes.NewReader(b))
+	// The latest logline will contain either the Result or the last error
+	// See: pkg/executor/agent/agent.go: func Run(r runner.Runner, args []string)
+	lastLog := Output{
+		Time: time.Time{},
+	}
 
-	// try to locate execution result should be the last one
-	// but there could be some buffers or go routines used so go through whole
-	// array too
 	result.Status = testkube.ExecutionStatusFailed
 	for {
 		b, err := utils.ReadLongLine(reader)
@@ -53,21 +56,27 @@ func ParseRunnerOutput(b []byte) (result testkube.ExecutionResult, logs []string
 			logs = append(logs, fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)))
 			continue
 		}
-
 		result.Status = testkube.ExecutionStatusPassed
-		switch log.Type_ {
-		case TypeResult:
-			if log.Result != nil {
-				result = *log.Result
-			}
-
-		case TypeError:
-			result = testkube.NewErrorExecutionResult(fmt.Errorf(log.Content))
-
-		case TypeLogEvent, TypeLogLine:
+		if log.Type_ == TypeLogEvent || log.Type_ == TypeLogLine || log.Type_ == TypeError {
 			logs = append(logs, log.Content)
 		}
+		if log.Time.After(lastLog.Time) {
+			lastLog = log
+		}
+	}
 
+	if lastLog.Time.IsZero() {
+		result.Err(fmt.Errorf("no usable logs were found, faulty logs: %v", logs))
+		return result, logs, nil
+	}
+
+	switch lastLog.Type_ {
+	case TypeResult:
+		if lastLog.Result != nil {
+			result = *lastLog.Result
+		}
+	case TypeError:
+		result = testkube.NewErrorExecutionResult(fmt.Errorf(lastLog.Content))
 	}
 
 	return result, logs, err
