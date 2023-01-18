@@ -23,7 +23,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		return nil, err
 	}
 
-	gitCertificateSecret, err := cmd.Flags().GetStringToString("git-certificate-secret")
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
 	if err != nil {
 		return nil, err
 	}
@@ -31,21 +31,22 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || len(gitCertificateSecret) > 0
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
 
 	if !hasGitParams {
 		return nil, nil
 	}
 
 	repository = &testkube.Repository{
-		Type_:      "git",
-		Uri:        gitUri,
-		Branch:     gitBranch,
-		Commit:     gitCommit,
-		Path:       gitPath,
-		Username:   gitUsername,
-		Token:      gitToken,
-		WorkingDir: gitWorkingDir,
+		Type_:             "git",
+		Uri:               gitUri,
+		Branch:            gitBranch,
+		Commit:            gitCommit,
+		Path:              gitPath,
+		Username:          gitUsername,
+		Token:             gitToken,
+		CertificateSecret: gitCertificateSecret,
+		WorkingDir:        gitWorkingDir,
 	}
 
 	for key, val := range gitUsernameSecret {
@@ -57,13 +58,6 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 
 	for key, val := range gitTokenSecret {
 		repository.TokenSecret = &testkube.SecretRef{
-			Name: key,
-			Key:  val,
-		}
-	}
-
-	for key, val := range gitCertificateSecret {
-		repository.CertificateSecret = &testkube.SecretRef{
 			Name: key,
 			Key:  val,
 		}
@@ -130,10 +124,6 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 		{
 			"git-token-secret",
 			&repository.TokenSecret,
-		},
-		{
-			"git-certificate-secret",
-			&repository.CertificateSecret,
 		},
 	}
 

@@ -65,12 +65,13 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 		content.Uri = specContent.Uri
 		if specContent.Repository != nil {
 			content.Repository = &testkube.Repository{
-				Type_:      specContent.Repository.Type_,
-				Uri:        specContent.Repository.Uri,
-				Branch:     specContent.Repository.Branch,
-				Commit:     specContent.Repository.Commit,
-				Path:       specContent.Repository.Path,
-				WorkingDir: specContent.Repository.WorkingDir,
+				Type_:             specContent.Repository.Type_,
+				Uri:               specContent.Repository.Uri,
+				Branch:            specContent.Repository.Branch,
+				Commit:            specContent.Repository.Commit,
+				Path:              specContent.Repository.Path,
+				WorkingDir:        specContent.Repository.WorkingDir,
+				CertificateSecret: specContent.Repository.CertificateSecret,
 			}
 
 			if specContent.Repository.UsernameSecret != nil {
@@ -84,13 +85,6 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 				content.Repository.TokenSecret = &testkube.SecretRef{
 					Name: specContent.Repository.TokenSecret.Name,
 					Key:  specContent.Repository.TokenSecret.Key,
-				}
-			}
-
-			if specContent.Repository.CertificateSecret != nil {
-				content.Repository.CertificateSecret = &testkube.SecretRef{
-					Name: specContent.Repository.CertificateSecret.Name,
-					Key:  specContent.Repository.CertificateSecret.Key,
 				}
 			}
 		}

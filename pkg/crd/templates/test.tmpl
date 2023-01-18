@@ -53,13 +53,8 @@ spec:
         {{- if .Content.Repository.TokenSecret.Key }}
         key: {{ .Content.Repository.TokenSecret.Key }}
         {{- end }}
-      certificateSecret:
-        {{- if .Content.Repository.CertificateSecret.Name }}
-        name: {{ .Content.Repository.CertificateSecret.Name }}
-        {{- end }}
-        {{- if .Content.Repository.CertificateSecret.Key }}
-        key: {{ .Content.Repository.CertificateSecret.Key }}
-        {{- end }}
+      {{- if .Content.Repository.CertificateSecret }}
+      certificateSecret: {{ .Content.Repository.CertificateSecret }}
       {{- end }}
       {{- if .Content.Repository.WorkingDir }}
       workingDir: {{ .Content.Repository.WorkingDir }}

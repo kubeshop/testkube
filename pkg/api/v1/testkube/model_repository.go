@@ -24,10 +24,11 @@ type Repository struct {
 	// git auth username for private repositories
 	Username string `json:"username,omitempty"`
 	// git auth token for private repositories
-	Token             string     `json:"token,omitempty"`
-	UsernameSecret    *SecretRef `json:"usernameSecret,omitempty"`
-	TokenSecret       *SecretRef `json:"tokenSecret,omitempty"`
-	CertificateSecret *SecretRef `json:"certificateSecret,omitempty"`
+	Token          string     `json:"token,omitempty"`
+	UsernameSecret *SecretRef `json:"usernameSecret,omitempty"`
+	TokenSecret    *SecretRef `json:"tokenSecret,omitempty"`
+	// secret with certificate for private repositories
+	CertificateSecret string `json:"certificateSecret,omitempty"`
 	// if provided we checkout the whole repository and run test from this directory
 	WorkingDir string `json:"workingDir,omitempty"`
 }

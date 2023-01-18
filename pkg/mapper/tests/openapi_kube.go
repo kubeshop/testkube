@@ -76,12 +76,13 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 	var repository *testsv3.Repository
 	if content.Repository != nil {
 		repository = &testsv3.Repository{
-			Type_:      content.Repository.Type_,
-			Uri:        content.Repository.Uri,
-			Branch:     content.Repository.Branch,
-			Commit:     content.Repository.Commit,
-			Path:       content.Repository.Path,
-			WorkingDir: content.Repository.WorkingDir,
+			Type_:             content.Repository.Type_,
+			Uri:               content.Repository.Uri,
+			Branch:            content.Repository.Branch,
+			Commit:            content.Repository.Commit,
+			Path:              content.Repository.Path,
+			WorkingDir:        content.Repository.WorkingDir,
+			CertificateSecret: content.Repository.CertificateSecret,
 		}
 
 		if content.Repository.UsernameSecret != nil {
@@ -95,13 +96,6 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 			repository.TokenSecret = &testsv3.SecretRef{
 				Name: content.Repository.TokenSecret.Name,
 				Key:  content.Repository.TokenSecret.Key,
-			}
-		}
-
-		if content.Repository.CertificateSecret != nil {
-			repository.CertificateSecret = &testsv3.SecretRef{
-				Name: content.Repository.CertificateSecret.Name,
-				Key:  content.Repository.CertificateSecret.Key,
 			}
 		}
 	}
@@ -291,6 +285,10 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				(*content.Repository).WorkingDir,
 				&testContent.Repository.WorkingDir,
 			},
+			{
+				(*content.Repository).CertificateSecret,
+				&testContent.Repository.CertificateSecret,
+			},
 		}
 
 		for _, field := range fields {
@@ -312,14 +310,6 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			testContent.Repository.TokenSecret = &testsv3.SecretRef{
 				Name: (*(*content.Repository).TokenSecret).Name,
 				Key:  (*(*content.Repository).TokenSecret).Key,
-			}
-			emptyRepository = false
-		}
-
-		if (*content.Repository).CertificateSecret != nil {
-			testContent.Repository.CertificateSecret = &testsv3.SecretRef{
-				Name: (*(*content.Repository).CertificateSecret).Name,
-				Key:  (*(*content.Repository).CertificateSecret).Key,
 			}
 			emptyRepository = false
 		}

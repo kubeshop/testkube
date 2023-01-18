@@ -3203,7 +3203,8 @@ components:
         tokenSecret:
           $ref: "#/components/schemas/SecretRef"
         certificateSecret:
-          $ref: "#/components/schemas/SecretRef"
+          type: string
+          description: secret with certificate for private repositories
         workingDir:
           type: string
           description: if provided we checkout the whole repository and run test from this directory

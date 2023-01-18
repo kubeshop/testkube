@@ -120,7 +120,7 @@ type JobOptions struct {
 	HTTPSProxy                string
 	UsernameSecret            *testkube.SecretRef
 	TokenSecret               *testkube.SecretRef
-	CertificateSecret         *testkube.SecretRef
+	CertificateSecret         string
 	Variables                 map[string]testkube.Variable
 	ActiveDeadlineSeconds     int64
 	ArtifactRequest           *testkube.ArtifactRequest
