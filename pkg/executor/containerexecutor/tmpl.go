@@ -28,8 +28,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
 		options.UsernameSecret, options.TokenSecret)
 
-	// TODO: add certificate secret to executor job
-
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
