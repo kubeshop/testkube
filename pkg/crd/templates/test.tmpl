@@ -54,6 +54,9 @@ spec:
         key: {{ .Content.Repository.TokenSecret.Key }}
         {{- end }}
       {{- end }}
+      {{- if .Content.Repository.CertificateSecret }}
+      certificateSecret: {{ .Content.Repository.CertificateSecret }}
+      {{- end }}
       {{- if .Content.Repository.WorkingDir }}
       workingDir: {{ .Content.Repository.WorkingDir }}
       {{- end }}

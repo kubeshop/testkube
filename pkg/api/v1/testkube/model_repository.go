@@ -27,6 +27,8 @@ type Repository struct {
 	Token          string     `json:"token,omitempty"`
 	UsernameSecret *SecretRef `json:"usernameSecret,omitempty"`
 	TokenSecret    *SecretRef `json:"tokenSecret,omitempty"`
+	// secret with certificate for private repositories
+	CertificateSecret string `json:"certificateSecret,omitempty"`
 	// if provided we checkout the whole repository and run test from this directory
 	WorkingDir string `json:"workingDir,omitempty"`
 }

@@ -23,6 +23,7 @@ testkube create test [flags]
       --executor-args stringArray                  executor binary additional arguments
   -f, --file string                                test file - will be read from stdin if not specified
       --git-branch string                          if uri is git repository we can set additional branch parameter
+      --git-certificate-secret string              if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name
       --git-commit string                          if uri is git repository we can use commit id (sha) parameter
       --git-path string                            if repository is big we need to define additional path to directory/file to checkout partially
       --git-token string                           if git repository is private we can use token as an auth parameter

@@ -311,9 +311,11 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	}
 
 	var usernameSecret, tokenSecret *testkube.SecretRef
+	var certificateSecret string
 	if test.Content != nil && test.Content.Repository != nil {
 		usernameSecret = test.Content.Repository.UsernameSecret
 		tokenSecret = test.Content.Repository.TokenSecret
+		certificateSecret = test.Content.Repository.CertificateSecret
 	}
 
 	var imagePullSecrets []string
@@ -341,6 +343,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		Labels:               testCR.Labels,
 		UsernameSecret:       usernameSecret,
 		TokenSecret:          tokenSecret,
+		CertificateSecret:    certificateSecret,
 		ImageOverride:        request.Image,
 		ImagePullSecretNames: imagePullSecrets,
 	}, nil
@@ -431,6 +434,11 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 		if test.Content.Repository.WorkingDir == "" {
 			test.Content.Repository.WorkingDir = testSource.Repository.WorkingDir
 		}
+
+		if test.Content.Repository.CertificateSecret == "" {
+			test.Content.Repository.CertificateSecret = testSource.Repository.CertificateSecret
+		}
+
 	}
 
 	return test

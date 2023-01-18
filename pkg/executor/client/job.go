@@ -115,6 +115,7 @@ type JobOptions struct {
 	HTTPSProxy            string
 	UsernameSecret        *testkube.SecretRef
 	TokenSecret           *testkube.SecretRef
+	CertificateSecret     string
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
@@ -430,6 +431,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		HTTPSProxy:            options.Request.HttpsProxy,
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
+		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
 	}

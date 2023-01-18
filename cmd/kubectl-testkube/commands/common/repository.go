@@ -23,24 +23,30 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		return nil, err
 	}
 
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
+	if err != nil {
+		return nil, err
+	}
+
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
 
 	if !hasGitParams {
 		return nil, nil
 	}
 
 	repository = &testkube.Repository{
-		Type_:      "git",
-		Uri:        gitUri,
-		Branch:     gitBranch,
-		Commit:     gitCommit,
-		Path:       gitPath,
-		Username:   gitUsername,
-		Token:      gitToken,
-		WorkingDir: gitWorkingDir,
+		Type_:             "git",
+		Uri:               gitUri,
+		Branch:            gitBranch,
+		Commit:            gitCommit,
+		Path:              gitPath,
+		Username:          gitUsername,
+		Token:             gitToken,
+		CertificateSecret: gitCertificateSecret,
+		WorkingDir:        gitWorkingDir,
 	}
 
 	for key, val := range gitUsernameSecret {
