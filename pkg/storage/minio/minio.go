@@ -72,6 +72,9 @@ func (c *Client) Connect() error {
 
 // CreateBucket creates new S3 like bucket
 func (c *Client) CreateBucket(bucket string) error {
+	if err := c.Connect(); err != nil {
+		return err
+	}
 	ctx := context.Background()
 	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.location})
 	if err != nil {
@@ -89,11 +92,17 @@ func (c *Client) CreateBucket(bucket string) error {
 
 // DeleteBucket deletes bucket by name
 func (c *Client) DeleteBucket(bucket string, force bool) error {
+	if err := c.Connect(); err != nil {
+		return err
+	}
 	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.RemoveBucketOptions{ForceDelete: force})
 }
 
 // ListBuckets lists available buckets
 func (c *Client) ListBuckets() ([]string, error) {
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
 	toReturn := []string{}
 	if buckets, err := c.minioclient.ListBuckets(context.TODO()); err != nil {
 		return nil, err

@@ -281,8 +281,11 @@ func main() {
 		bucket := os.Getenv("LOGS_BUCKET")
 		if bucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else {
+		} else if _, err := api.Storage.ListFiles(bucket); err == nil {
+			log.DefaultLogger.Info("setting minio as logs storage")
 			resultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, resultsRepository.Coll, bucket)
+		} else {
+			log.DefaultLogger.Info("minio is not available, using default logs storage")
 		}
 	}
 
