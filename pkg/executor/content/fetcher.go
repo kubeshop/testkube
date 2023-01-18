@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -78,6 +79,10 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 		return path, err
 	}
 
+	if repo.CertificateSecret != "" {
+		f.configureUseOfCertificate()
+	}
+
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
 		path, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
@@ -104,6 +109,10 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch git file: %s", ui.IconCross, err.Error()))
 		return path, err
+	}
+
+	if repo.CertificateSecret != "" {
+		f.configureUseOfCertificate()
 	}
 
 	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
@@ -148,4 +157,35 @@ func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {
 
 	output.PrintLog(fmt.Sprintf("%s Content saved to path %s", ui.IconCheckMark, tmpFile.Name()))
 	return tmpFile.Name(), err
+}
+
+func (f Fetcher) configureUseOfCertificate() error {
+	const certsPath = "/etc/certs"
+	const certExtension = ".crt"
+	var certificatePath string
+	output.PrintLog(fmt.Sprintf("%s Fetching certificate from path %s", ui.IconCheckMark, certsPath))
+	err := filepath.Walk(certsPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s Failed to walk through %s to find certificates: %s", ui.IconCross, certsPath, err.Error()))
+			return err
+		}
+		if filepath.Ext(path) == certExtension {
+			output.PrintLog(fmt.Sprintf("%s Found certificate %s", ui.IconCheckMark, path))
+			certificatePath = path
+		}
+		return nil
+	})
+	if err != nil || certificatePath == "" {
+		output.PrintLog(fmt.Sprintf("%s Failed to find certificate in %s: %s", ui.IconCross, certsPath, err.Error()))
+		return err
+	}
+	gitConfigCommand := fmt.Sprintf("git config --global http.sslCAInfo %s", certificatePath)
+	out, err := exec.Command("/bin/sh", "-c", gitConfigCommand).Output()
+	if err != nil {
+		output.PrintLog(fmt.Sprintf("%s Failed to configure git to use certificate: %s", ui.IconCross, err.Error()))
+		return err
+	}
+	output.PrintLog(fmt.Sprintf("%s Configured git to use certificate: %s", ui.IconCheckMark, out))
+
+	return nil
 }
