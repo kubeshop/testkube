@@ -1,5 +1,5 @@
 # Logging
-Testkube can be configured to use different storage for test logs output that can be specified in the helm values
+Testkube can be configured to use different storage for test logs output that can be specified in the Helm values.
 
 ```yaml
 ## Logs storage for Testkube API.
@@ -11,7 +11,7 @@ logs:
 ```
 
 ## Mongo
-When mongo is specified it will store in a separate collection so the execution handling performance is not affected
+When mongo is specified it will store in a separate collection so the execution handling performance is not affected.
 
-## Minio
-When minio is specified it will store the logs as separate files in the configured bucket of the minio instance or S3 bucket if minio is configured to work with S3
+## minIO
+When minIO is specified, it will store the logs as separate files in the configured bucket of the minIO instance or S3 bucket if minIO is configured to work with S3.

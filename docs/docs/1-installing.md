@@ -241,5 +241,5 @@ metadata:
 
 3. Install using Helm and the values file with the above modifications.
 
-## Configure logging storage
+## Configure Logging Storage
 There are two types of storage mongo and minio, more details [here](13-Logging.md)
