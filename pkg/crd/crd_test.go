@@ -114,7 +114,7 @@ func TestGenerateYAML(t *testing.T) {
 		}
 
 		// when
-		result, err := GenerateYAML[testkube.TestUpsertRequest](TemplateTest, tests)
+		result, err := GenerateYAML(TemplateTest, tests)
 
 		// then
 		assert.NoError(t, err)

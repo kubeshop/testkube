@@ -53,6 +53,7 @@ spec:
         {{- if .Content.Repository.TokenSecret.Key }}
         key: {{ .Content.Repository.TokenSecret.Key }}
         {{- end }}
+      {{- end }}
       {{- if .Content.Repository.CertificateSecret }}
       certificateSecret: {{ .Content.Repository.CertificateSecret }}
       {{- end }}
