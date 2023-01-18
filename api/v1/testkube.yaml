@@ -2334,30 +2334,30 @@ components:
         before:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
-          description: Run this step before whole suite
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps before whole suite
           example:
-            - stopTestOnFailure: true
+            - stopOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
-          description: Steps to run
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Batch steps to run
           example:
-            - stopTestOnFailure: true
+            - stopOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"
         after:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
-          description: Run this step after whole suite
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps after whole suite
           example:
-            - stopTestOnFailure: true
+            - stopOnFailure: true
               execute:
                 namespace: "testkube"
                 name: "example-test"
@@ -2391,16 +2391,23 @@ components:
         - executeTest
         - delay
 
-    TestSuiteStep:
+    TestSuiteBatchStep:
+      description: set of steps run in parallel
       type: object
       required:
-        - name
-        - type
-        - stopTestOnFailure
+        - stopOnFailure
       properties:
-        stopTestOnFailure:
+        stopOnFailure:
           type: boolean
           default: true
+        batch:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+
+    TestSuiteStep:
+      type: object
+      properties:
         execute:
           $ref: "#/components/schemas/TestSuiteStepExecuteTest"
         delay:
@@ -2414,7 +2421,6 @@ components:
       type: object
       required:
         - duration
-        - name
       properties:
         duration:
           type: integer

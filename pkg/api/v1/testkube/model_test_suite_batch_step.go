@@ -9,7 +9,8 @@
  */
 package testkube
 
-type TestSuiteStep struct {
-	Execute *TestSuiteStepExecuteTest `json:"execute,omitempty"`
-	Delay   *TestSuiteStepDelay       `json:"delay,omitempty"`
+// set of steps run in parallel
+type TestSuiteBatchStep struct {
+	StopOnFailure bool            `json:"stopOnFailure"`
+	Batch         []TestSuiteStep `json:"batch,omitempty"`
 }
