@@ -7,7 +7,6 @@ import (
 
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -37,7 +36,7 @@ type k8sInformers struct {
 	ingressInformer      networkinginformerv1.IngressInformer
 	clusterEventInformer coreinformerv1.EventInformer
 	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
-	testSuiteInformer    testkubeinformerv2.TestSuiteInformer
+	testSuiteInformer    testkubeinformerv3.TestSuiteInformer
 	testInformer         testkubeinformerv3.TestInformer
 	configMapInformer    coreinformerv1.ConfigMapInformer
 }
@@ -55,7 +54,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
-	testSuiteInformer := testkubeInformerFactory.Tests().V2().TestSuites()
+	testSuiteInformer := testkubeInformerFactory.Tests().V3().TestSuites()
 	testInformer := testkubeInformerFactory.Tests().V3().Tests()
 
 	return &k8sInformers{

@@ -206,11 +206,12 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			if stepResult.IsFailed() {
 				hasFailedSteps = true
-/*				if stepResult.StopTestOnFailure {
-					cancelSteps = true
-					continue
-				}
-*/			}
+				/*				if stepResult.StopTestOnFailure {
+									cancelSteps = true
+									continue
+								}
+				*/
+			}
 		}
 	}
 
