@@ -34,6 +34,12 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 		output.PrintLog(fmt.Sprintf("%s Fetch - empty content, make sure test content has valid data structure and is not nil", ui.IconCross))
 		return "", fmt.Errorf("fetch - empty content, make sure test content has valid data structure and is not nil")
 	}
+
+	if content.Repository != nil && content.Repository.CertificateSecret != "" {
+		output.PrintLog(fmt.Sprintf("%s Using certificate for git authentication from secret: %s", ui.IconBox, content.Repository.CertificateSecret))
+		f.configureUseOfCertificate()
+	}
+
 	output.PrintLog(fmt.Sprintf("%s Fetching test content from %s...", ui.IconBox, content.Type_))
 
 	switch testkube.TestContentType(content.Type_) {
@@ -79,10 +85,6 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 		return path, err
 	}
 
-	if repo.CertificateSecret != "" {
-		f.configureUseOfCertificate()
-	}
-
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
 		path, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
@@ -109,10 +111,6 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch git file: %s", ui.IconCross, err.Error()))
 		return path, err
-	}
-
-	if repo.CertificateSecret != "" {
-		f.configureUseOfCertificate()
 	}
 
 	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
