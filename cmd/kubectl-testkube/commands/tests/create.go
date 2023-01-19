@@ -27,8 +27,12 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitBranch                string
 		gitCommit                string
 		gitPath                  string
+		gitWorkingDir            string
 		gitUsername              string
 		gitToken                 string
+		gitUsernameSecret        map[string]string
+		gitTokenSecret           map[string]string
+		gitCertificateSecret     string
 		sourceName               string
 		labels                   map[string]string
 		variables                map[string]string
@@ -40,15 +44,12 @@ func NewCreateTestsCmd() *cobra.Command {
 		envs                     map[string]string
 		secretEnvs               map[string]string
 		httpProxy, httpsProxy    string
-		gitUsernameSecret        map[string]string
-		gitTokenSecret           map[string]string
 		secretVariableReferences map[string]string
 		copyFiles                []string
 		image                    string
 		command                  []string
 		imagePullSecretNames     []string
 		timeout                  int64
-		gitWorkingDir            string
 		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
@@ -128,8 +129,12 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
+	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
@@ -142,15 +147,12 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
-	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
-	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
-	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
@@ -178,13 +180,18 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return err
 	}
 
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
+	if err != nil {
+		return err
+	}
+
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	sourceName := cmd.Flag("source").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
 
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
@@ -214,7 +221,11 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
+	if len(gitCertificateSecret) > 1 {
+		return fmt.Errorf("please pass only one git certificate")
+	}
+
+	if (gitUsername != "" || gitToken != "" || gitCertificateSecret != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
 		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
 	}
 

@@ -13,19 +13,20 @@ import (
 
 func NewCreateTestSourceCmd() *cobra.Command {
 	var (
-		name, uri         string
-		sourceType        string
-		file              string
-		gitUri            string
-		gitBranch         string
-		gitCommit         string
-		gitPath           string
-		gitUsername       string
-		gitToken          string
-		gitWorkingDir     string
-		labels            map[string]string
-		gitUsernameSecret map[string]string
-		gitTokenSecret    map[string]string
+		name, uri            string
+		sourceType           string
+		file                 string
+		gitUri               string
+		gitBranch            string
+		gitCommit            string
+		gitPath              string
+		gitUsername          string
+		gitToken             string
+		gitWorkingDir        string
+		labels               map[string]string
+		gitUsernameSecret    map[string]string
+		gitTokenSecret       map[string]string
+		gitCertificateSecret string
 	)
 
 	cmd := &cobra.Command{
@@ -89,6 +90,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 
 	return cmd
@@ -107,6 +109,11 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 	}
 
 	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return err
+	}
+
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
 	if err != nil {
 		return err
 	}
@@ -141,8 +148,8 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
-		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) && gitCertificateSecret != "" {
+		return fmt.Errorf("please pass only one auth method for git repository")
 	}
 
 	return nil

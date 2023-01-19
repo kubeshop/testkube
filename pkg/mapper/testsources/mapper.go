@@ -11,12 +11,13 @@ func MapCRDToAPI(item testsourcev1.TestSource) testkube.TestSource {
 	var repository *testkube.Repository
 	if item.Spec.Repository != nil {
 		repository = &testkube.Repository{
-			Type_:      item.Spec.Repository.Type_,
-			Uri:        item.Spec.Repository.Uri,
-			Branch:     item.Spec.Repository.Branch,
-			Commit:     item.Spec.Repository.Commit,
-			Path:       item.Spec.Repository.Path,
-			WorkingDir: item.Spec.Repository.WorkingDir,
+			Type_:             item.Spec.Repository.Type_,
+			Uri:               item.Spec.Repository.Uri,
+			Branch:            item.Spec.Repository.Branch,
+			Commit:            item.Spec.Repository.Commit,
+			Path:              item.Spec.Repository.Path,
+			WorkingDir:        item.Spec.Repository.WorkingDir,
+			CertificateSecret: item.Spec.Repository.CertificateSecret,
 		}
 
 		if item.Spec.Repository.UsernameSecret != nil {
@@ -50,12 +51,13 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 	var repository *testsourcev1.Repository
 	if request.Repository != nil {
 		repository = &testsourcev1.Repository{
-			Type_:      request.Repository.Type_,
-			Uri:        request.Repository.Uri,
-			Branch:     request.Repository.Branch,
-			Commit:     request.Repository.Commit,
-			Path:       request.Repository.Path,
-			WorkingDir: request.Repository.WorkingDir,
+			Type_:             request.Repository.Type_,
+			Uri:               request.Repository.Uri,
+			Branch:            request.Repository.Branch,
+			Commit:            request.Repository.Commit,
+			Path:              request.Repository.Path,
+			WorkingDir:        request.Repository.WorkingDir,
+			CertificateSecret: request.Repository.CertificateSecret,
 		}
 
 		if request.Repository.UsernameSecret != nil {
@@ -164,6 +166,10 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			{
 				(*request.Repository).WorkingDir,
 				&testSource.Spec.Repository.WorkingDir,
+			},
+			{
+				(*request.Repository).CertificateSecret,
+				&testSource.Spec.Repository.CertificateSecret,
 			},
 		}
 

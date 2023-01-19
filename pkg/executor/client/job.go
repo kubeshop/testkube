@@ -115,6 +115,7 @@ type JobOptions struct {
 	HTTPSProxy            string
 	UsernameSecret        *testkube.SecretRef
 	TokenSecret           *testkube.SecretRef
+	CertificateSecret     string
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
@@ -309,7 +310,7 @@ func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l
 	// parse job output log (JSON stream)
 	result, _, err = output.ParseRunnerOutput(logs)
 	if err != nil {
-		l.Errorw("parse ouput error", "error", err)
+		l.Errorw("parse output error", "error", err)
 		return result, err
 	}
 	// saving result in the defer function
@@ -430,6 +431,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		HTTPSProxy:            options.Request.HttpsProxy,
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
+		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
 	}

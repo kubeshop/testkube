@@ -154,6 +154,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.slackTemplate           | yes         | ""                                   |
 | testkube-api.slackConfig             | yes         | ""                                   |
 | testkube-api.jobServiceAccountName   | yes         | ""                                   |
+| testkube-api.logs.storage            | no          | "minio"                              |
+| testkube-api.logs.bucket             | no          | "testkube-logs"                      |
 
 >For more configuration parameters of `MongoDB` chart please visit:
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
@@ -238,3 +240,6 @@ metadata:
 2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser`, `minio.minioRootPassword` and `storage.port` empty and set `storage.endpoint` to `s3.amazonaws.com`.
 
 3. Install using Helm and the values file with the above modifications.
+
+## Configure Logging Storage
+There are two types of storage mongo and minio, more details [here](13-Logging.md)

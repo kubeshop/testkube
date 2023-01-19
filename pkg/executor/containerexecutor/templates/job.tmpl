@@ -9,6 +9,12 @@ spec:
   {{- end }}
   template:
     spec:
+      {{- if .CertificateSecret }}
+      volumes: 
+      - name: {{ .CertificateSecret }}
+        secret:
+          secretName: {{ .CertificateSecret }}
+      {{- end }}
 	    {{- if ne .InitImage "" }}
       initContainers:
       - name: {{ .Name }}-init
@@ -18,6 +24,10 @@ spec:
           - "/bin/runner"
           - '{{ .Jsn }}'
         volumeMounts:
+        {{- if .CertificateSecret }}
+        - name: {{ .CertificateSecret }}
+          mountPath: /etc/certs
+        {{- end }}
         - name: data-volume
           mountPath: /data
         {{- if .ArtifactRequest }}
