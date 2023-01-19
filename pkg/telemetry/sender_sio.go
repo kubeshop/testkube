@@ -10,7 +10,7 @@ import (
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
 
 // Brew builds can't be parametrized so we are embedding this one
-var SegmentioKey = "EZ3LWfY173Wm0SJ9Jzz7XGDBjMGcgbAw"
+var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
 
 // SegmentioSender sends ananymous telemetry data to segment.io
 // TODO refactor Sender func as out is not needed (use debug loggers to log output)
