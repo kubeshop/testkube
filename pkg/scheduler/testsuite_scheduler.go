@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
@@ -20,7 +20,7 @@ const (
 	abortionPollingInterval = 100 * time.Millisecond
 )
 
-func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite,
 	testkube.TestSuiteExecutionRequest,
 	testkube.TestSuiteExecution,
@@ -206,11 +206,11 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			if stepResult.IsFailed() {
 				hasFailedSteps = true
-				if stepResult.Step.StopTestOnFailure {
+/*				if stepResult.StopTestOnFailure {
 					cancelSteps = true
 					continue
 				}
-			}
+*/			}
 		}
 	}
 

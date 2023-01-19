@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
 	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -254,7 +254,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv2.TestSuiteList, error) {
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.TestSuiteList, error) {
 	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -513,7 +513,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
 
-		var testSuites []testsuitesv2.TestSuite
+		var testSuites []testsuitesv3.TestSuite
 		if name != "" {
 			testSuite, err := s.TestsSuitesClient.Get(name)
 			if err != nil {

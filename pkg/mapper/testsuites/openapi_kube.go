@@ -1,7 +1,7 @@
 package testsuites
 
 import (
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,48 +64,54 @@ func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) te
 	}
 }
 
-func MapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsuitesv2.TestSuite {
-	return testsuitesv2.TestSuite{
+func MapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest) testsuitesv3.TestSuite {
+	return testsuitesv3.TestSuite{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
 			Labels:    request.Labels,
 		},
-		Spec: testsuitesv2.TestSuiteSpec{
+		Spec: testsuitesv3.TestSuiteSpec{
 			Repeats:          int(request.Repeats),
 			Description:      request.Description,
-			Before:           mapTestStepsToCRD(request.Before),
-			Steps:            mapTestStepsToCRD(request.Steps),
-			After:            mapTestStepsToCRD(request.After),
+			Before:           mapTestBatchStepsToCRD(request.Before),
+			Steps:            mapTestBatchStepsToCRD(request.Steps),
+			After:            mapTestBatchStepsToCRD(request.After),
 			Schedule:         request.Schedule,
 			ExecutionRequest: MapExecutionRequestToSpecExecutionRequest(request.ExecutionRequest),
 		},
 	}
 }
 
-func mapTestStepsToCRD(steps []testkube.TestSuiteStep) (out []testsuitesv2.TestSuiteStepSpec) {
-	for _, step := range steps {
-		out = append(out, mapTestStepToCRD(step))
+func mapTestBatchStepsToCRD(batches []testkube.TestSuiteBatchStep) (out []testsuitesv3.TestSuiteBatchStep) {
+	for _, batch := range batches {
+		steps := make([]testsuitesv3.TestSuiteStepSpec, len(batch.Batch))
+		for i := range batch.Batch {
+			steps[i] = mapTestStepToCRD(batch.Batch[i])
+		}
+
+		out = append(out, testsuitesv3.TestSuiteBatchStep{
+			StopOnFailure: batch.StopOnFailure,
+			Batch:         steps,
+		})
 	}
 
 	return out
 }
 
-func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSuiteStepSpec) {
+func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSuiteStepSpec) {
 	switch step.Type() {
 
 	case testkube.TestSuiteStepTypeDelay:
-		stepSpec.Delay = &testsuitesv2.TestSuiteStepDelay{
+		stepSpec.Delay = &testsuitesv3.TestSuiteStepDelay{
 			Duration: step.Delay.Duration,
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:
 		s := step.Execute
-		stepSpec.Execute = &testsuitesv2.TestSuiteStepExecute{
+		stepSpec.Execute = &testsuitesv3.TestSuiteStepExecute{
 			Namespace: s.Namespace,
 			Name:      s.Name,
-			// TODO move StopOnFailure level up in operator model to mimic this one
-			StopOnFailure: step.StopTestOnFailure,
 		}
 	}
 
@@ -113,12 +119,12 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv2.TestSu
 }
 
 // MapExecutionRequestToSpecExecutionRequest maps ExecutionRequest OpenAPI spec to ExecutionRequest CRD spec
-func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSuiteExecutionRequest) *testsuitesv2.TestSuiteExecutionRequest {
+func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSuiteExecutionRequest) *testsuitesv3.TestSuiteExecutionRequest {
 	if executionRequest == nil {
 		return nil
 	}
 
-	return &testsuitesv2.TestSuiteExecutionRequest{
+	return &testsuitesv3.TestSuiteExecutionRequest{
 		Name:            executionRequest.Name,
 		Labels:          executionRequest.Labels,
 		ExecutionLabels: executionRequest.ExecutionLabels,
@@ -133,7 +139,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 }
 
 // MapTestSuiteUpsertRequestToTestCRD maps TestSuiteUpdateRequest OpenAPI spec to TestSuite CRD spec
-func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest, testSuite *testsuitesv2.TestSuite) *testsuitesv2.TestSuite {
+func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest, testSuite *testsuitesv3.TestSuite) *testsuitesv3.TestSuite {
 	var fields = []struct {
 		source      *string
 		destination *string
@@ -163,15 +169,15 @@ func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest,
 	}
 
 	if request.Before != nil {
-		testSuite.Spec.Before = mapTestStepsToCRD(*request.Before)
+		testSuite.Spec.Before = mapTestBatchStepsToCRD(*request.Before)
 	}
 
 	if request.Steps != nil {
-		testSuite.Spec.Steps = mapTestStepsToCRD(*request.Steps)
+		testSuite.Spec.Steps = mapTestBatchStepsToCRD(*request.Steps)
 	}
 
 	if request.After != nil {
-		testSuite.Spec.After = mapTestStepsToCRD(*request.After)
+		testSuite.Spec.After = mapTestBatchStepsToCRD(*request.After)
 	}
 
 	if request.Labels != nil {
@@ -191,13 +197,13 @@ func MapTestSuiteUpdateRequestToTestCRD(request testkube.TestSuiteUpdateRequest,
 
 // MapExecutionUpdateRequestToSpecExecutionRequest maps ExecutionUpdateRequest OpenAPI spec to ExecutionRequest CRD spec
 func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.TestSuiteExecutionUpdateRequest,
-	request *testsuitesv2.TestSuiteExecutionRequest) *testsuitesv2.TestSuiteExecutionRequest {
+	request *testsuitesv3.TestSuiteExecutionRequest) *testsuitesv3.TestSuiteExecutionRequest {
 	if executionRequest == nil {
 		return nil
 	}
 
 	if request == nil {
-		request = &testsuitesv2.TestSuiteExecutionRequest{}
+		request = &testsuitesv3.TestSuiteExecutionRequest{}
 	}
 
 	empty := true
@@ -267,14 +273,14 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 }
 
 // MapStatusToSpec maps OpenAPI spec TestSuiteStatus to CRD
-func MapStatusToSpec(testSuiteStatus *testkube.TestSuiteStatus) (specStatus testsuitesv2.TestSuiteStatus) {
+func MapStatusToSpec(testSuiteStatus *testkube.TestSuiteStatus) (specStatus testsuitesv3.TestSuiteStatus) {
 	if testSuiteStatus == nil || testSuiteStatus.LatestExecution == nil {
 		return specStatus
 	}
 
-	specStatus.LatestExecution = &testsuitesv2.TestSuiteExecutionCore{
+	specStatus.LatestExecution = &testsuitesv3.TestSuiteExecutionCore{
 		Id:     testSuiteStatus.LatestExecution.Id,
-		Status: (*testsuitesv2.TestSuiteExecutionStatus)(testSuiteStatus.LatestExecution.Status),
+		Status: (*testsuitesv3.TestSuiteExecutionStatus)(testSuiteStatus.LatestExecution.Status),
 	}
 
 	specStatus.LatestExecution.StartTime.Time = testSuiteStatus.LatestExecution.StartTime
@@ -284,10 +290,10 @@ func MapStatusToSpec(testSuiteStatus *testkube.TestSuiteStatus) (specStatus test
 }
 
 // MapExecutionToTestSuiteStatus maps OpenAPI Execution to TestSuiteStatus CRD
-func MapExecutionToTestSuiteStatus(execution *testkube.TestSuiteExecution) (specStatus testsuitesv2.TestSuiteStatus) {
-	specStatus.LatestExecution = &testsuitesv2.TestSuiteExecutionCore{
+func MapExecutionToTestSuiteStatus(execution *testkube.TestSuiteExecution) (specStatus testsuitesv3.TestSuiteStatus) {
+	specStatus.LatestExecution = &testsuitesv3.TestSuiteExecutionCore{
 		Id:     execution.Id,
-		Status: (*testsuitesv2.TestSuiteExecutionStatus)(execution.Status),
+		Status: (*testsuitesv3.TestSuiteExecutionStatus)(execution.Status),
 	}
 
 	specStatus.LatestExecution.StartTime.Time = execution.StartTime

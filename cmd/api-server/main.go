@@ -36,6 +36,7 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/internal/pkg/api"
@@ -125,7 +126,8 @@ func main() {
 	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
-	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
+	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, namespace)
+	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, namespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
 
 	// DI
@@ -170,7 +172,7 @@ func main() {
 	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
-	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClient))
+	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClientV2))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
 	}
@@ -246,7 +248,7 @@ func main() {
 		testResultsRepository,
 		executorsClient,
 		testsClientV3,
-		testsuitesClient,
+		testsuitesClientV3,
 		testsourcesClient,
 		secretClient,
 		eventsEmitter,
@@ -260,7 +262,7 @@ func main() {
 		testResultsRepository,
 		testsClientV3,
 		executorsClient,
-		testsuitesClient,
+		testsuitesClientV3,
 		secretClient,
 		webhooksClient,
 		clientset,
@@ -315,7 +317,7 @@ func main() {
 		scheduler,
 		clientset,
 		testkubeClientset,
-		testsuitesClient,
+		testsuitesClientV3,
 		testsClientV3,
 		resultsRepository,
 		testResultsRepository,

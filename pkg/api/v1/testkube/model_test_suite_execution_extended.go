@@ -42,11 +42,13 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 	}
 
 	// add queued execution steps
-	steps := append(testSuite.Before, testSuite.Steps...)
-	steps = append(steps, testSuite.After...)
+	batches := append(testSuite.Before, testSuite.Steps...)
+	batches = append(batches, testSuite.After...)
 
-	for i := range steps {
-		testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&steps[i]))
+	for i := range batches {
+		for j := range batches[i].Batch {
+			testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&batches[i].Batch[j]))
+		}
 	}
 
 	return testExecution

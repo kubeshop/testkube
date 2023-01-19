@@ -18,7 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
@@ -610,7 +610,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			testSuite, ok := obj.(*testsuitev2.TestSuite)
+			testSuite, ok := obj.(*testsuitev3.TestSuite)
 			if !ok {
 				s.logger.Errorf("failed to process create testsuite event due to it being an unexpected type, received type %+v", obj)
 				return

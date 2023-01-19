@@ -15,10 +15,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 
 	"go.uber.org/zap"
@@ -47,7 +47,7 @@ type Service struct {
 	scheduler            *scheduler.Scheduler
 	clientset            kubernetes.Interface
 	testKubeClientset    testkubeclientsetv1.Interface
-	testSuitesClient     testsuitesclientv2.Interface
+	testSuitesClient     testsuitesclientv3.Interface
 	testsClient          testsclientv3.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
@@ -61,7 +61,7 @@ func NewService(
 	scheduler *scheduler.Scheduler,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testSuitesClient testsuitesclientv2.Interface,
+	testSuitesClient testsuitesclientv3.Interface,
 	testsClient testsclientv3.Interface,
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
@@ -217,7 +217,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 }
 
-func (s *Service) addTestSuite(testSuite *testsuitev2.TestSuite) {
+func (s *Service) addTestSuite(testSuite *testsuitev3.TestSuite) {
 	ctx := context.Background()
 	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
 	if err != nil {
