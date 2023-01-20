@@ -70,6 +70,10 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			tests = append(tests, testList.Items...)
 		}
 
+		l := s.Log.With("testID", id)
+		if len(tests) != 0 {
+			l.Infow("executing test", "test", tests[0])
+		}
 		var results []testkube.Execution
 		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))

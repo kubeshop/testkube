@@ -221,10 +221,6 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
-	if len(gitCertificateSecret) > 1 {
-		return fmt.Errorf("please pass only one git certificate")
-	}
-
 	if (gitUsername != "" || gitToken != "" || gitCertificateSecret != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
 		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
 	}
