@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// Test suite executions data
-type TestSuiteExecution struct {
+// Test suite batch executions data
+type TestSuiteBatchExecution struct {
 	// execution id
 	Id string `json:"id"`
 	// execution name
@@ -34,8 +34,8 @@ type TestSuiteExecution struct {
 	Duration string `json:"duration,omitempty"`
 	// test duration in ms
 	DurationMs int32 `json:"durationMs,omitempty"`
-	// steps execution results
-	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
+	// batch steps execution results
+	BatchStepResults []TestSuiteBatchStepExecutionResult `json:"batchStepResults,omitempty"`
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 }
