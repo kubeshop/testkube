@@ -2486,68 +2486,6 @@ components:
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
             description: test execution results
-        labels:
-          type: object
-          description: "test suite labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
-
-    TestSuiteBatchExecution:
-      type: object
-      description: Test suite batch executions data
-      required:
-        - id
-        - name
-        - testSuite
-      properties:
-        id:
-          type: string
-          description: execution id
-          format: bson objectId
-          example: "62f395e004109209b50edfc1"
-        name:
-          type: string
-          description: "execution name"
-          example: "test-suite1.needlessly-sweet-imp"
-        testSuite:
-          $ref: "#/components/schemas/ObjectRef"
-          description: object name and namespace
-        status:
-          $ref: "#/components/schemas/TestSuiteExecutionStatus"
-        envs:
-          type: object
-          description: "environment variables passed to executor"
-          additionalProperties:
-            type: string
-          example:
-            record: "true"
-            prefix: "some-"
-        variables:
-          $ref: "#/components/schemas/Variables"
-        secretUUID:
-          type: string
-          description: secret uuid
-          readOnly: true
-          example: "7934600f-b367-48dd-b981-4353304362fb"
-        startTime:
-          type: string
-          description: "test start time"
-          format: date-time
-        endTime:
-          type: string
-          description: "test end time"
-          format: date-time
-        duration:
-          type: string
-          description: "test duration"
-          example: "2m"
-        durationMs:
-          type: integer
-          description: "test duration in ms"
-          example: 6000
         batchStepResults:
           type: array
           description: "batch steps execution results"
