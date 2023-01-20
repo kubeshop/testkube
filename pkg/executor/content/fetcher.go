@@ -180,10 +180,10 @@ func (f Fetcher) configureUseOfCertificate() error {
 	gitConfigCommand := fmt.Sprintf("git config --global http.sslCAInfo %s", certificatePath)
 	out, err := exec.Command("/bin/sh", "-c", gitConfigCommand).Output()
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Failed to configure git to use certificate: %s", ui.IconCross, err.Error()))
+		output.PrintLog(fmt.Sprintf("%s Failed to configure git to use certificate %s, output:%s \n Error: %s", ui.IconCross, certificatePath, out, err.Error()))
 		return err
 	}
-	output.PrintLog(fmt.Sprintf("%s Configured git to use certificate: %s", ui.IconCheckMark, out))
+	output.PrintLog(fmt.Sprintf("%s Configured git to use certificate: %s", ui.IconCheckMark, certificatePath))
 
 	return nil
 }
