@@ -68,7 +68,7 @@ selector:
 
 ### Resource Conditions
 
-Resource Conditions allows to define triggers based on status conditions for a specific resource.
+Resource Conditions allows triggers to be defined based on the status conditions for a specific resource.
 
 ```yaml
 conditionSpec:
