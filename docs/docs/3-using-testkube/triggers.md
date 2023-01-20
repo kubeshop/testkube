@@ -35,7 +35,7 @@ spec:
 **resourceSelector** and **testSelector** fields support selecting resources either by name or using
 Kubernetes [Label Selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
 
-Each selector should specify the **namespace** of the object, otherwise the namespace gets defaulted to **testkube**.
+Each selector should specify the **namespace** of the object, otherwise the namespace defaults to **testkube**.
 
 ```
 selector := resourceSelector | testSelector
