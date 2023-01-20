@@ -12,9 +12,22 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 	result := make([]testkube.TestSuiteExecutionSummary, len(executions))
 
 	for i, execution := range executions {
-		executionsSummary := make([]testkube.TestSuiteStepExecutionSummary, len(execution.StepResults))
-		for j, stepResult := range execution.StepResults {
-			executionsSummary[j] = mapStepResultToExecutionSummary(stepResult)
+		var executionsSummary []testkube.TestSuiteBatchStepExecutionSummary
+
+		if len(execution.StepResults) != 0 {
+			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.StepResults))
+			for j, stepResult := range execution.StepResults {
+				executionsSummary[j] = testkube.TestSuiteBatchStepExecutionSummary{
+					Batch: []testkube.TestSuiteStepExecutionSummary{mapStepResultToStepExecutionSummary(stepResult)},
+				}
+			}
+		}
+
+		if len(execution.BatchStepResults) != 0 {
+			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.BatchStepResults))
+			for j, stepResult := range execution.BatchStepResults {
+				executionsSummary[j] = mapBatchStepResultToExecutionSummary(stepResult)
+			}
 		}
 
 		result[i] = testkube.TestSuiteExecutionSummary{
@@ -34,7 +47,7 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 	return result
 }
 
-func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
+func mapStepResultToStepExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
 	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
@@ -61,6 +74,17 @@ func mapStepResultToExecutionSummary(r testkube.TestSuiteStepExecutionResult) te
 		TestName: testName,
 		Status:   status,
 		Type_:    stepType,
+	}
+}
+
+func mapBatchStepResultToExecutionSummary(r testkube.TestSuiteBatchStepExecutionResult) testkube.TestSuiteBatchStepExecutionSummary {
+	batch := make([]testkube.TestSuiteStepExecutionSummary, len(r.Batch))
+	for i := range r.Batch {
+		batch[i] = mapStepResultToStepExecutionSummary(r.Batch[i])
+	}
+
+	return testkube.TestSuiteBatchStepExecutionSummary{
+		Batch: batch,
 	}
 }
 

@@ -175,7 +175,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 		StartTime:     execution.StartTime.String(),
 		EndTime:       execution.EndTime.String(),
 		Duration:      execution.Duration,
-		TotalSteps:    len(execution.StepResults),
+		TotalSteps:    len(execution.BatchStepResults),
 		FailedSteps:   execution.FailedStepsCount(),
 	}
 
