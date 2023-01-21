@@ -9,7 +9,7 @@ import (
 func diffDeployments(old, new *apps_v1.Deployment) []testtrigger.Cause {
 	var causes []testtrigger.Cause
 
-	if old.Spec.Replicas != new.Spec.Replicas {
+	if *old.Spec.Replicas != *new.Spec.Replicas {
 		causes = append(causes, testtrigger.CauseDeploymentScaleUpdate)
 	}
 	for _, newContainer := range new.Spec.Template.Spec.Containers {

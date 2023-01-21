@@ -127,7 +127,8 @@ func TestExecute(t *testing.T) {
 				Conditions: []testtriggersv1.TestTriggerCondition{{
 					Type_:  "Progressing",
 					Status: &status,
-				}}},
+				}},
+			},
 			Action:       "run",
 			Execution:    "test",
 			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},

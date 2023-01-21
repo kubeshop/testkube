@@ -50,6 +50,7 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 		}
 	}
 }
+
 func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status *triggerStatus) {
 	for _, id := range status.testSuiteExecutionIDs {
 		execution, err := s.testResultRepository.Get(ctx, id)
