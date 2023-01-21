@@ -30,7 +30,7 @@ const (
 	defaultLeaseCheckInterval     = 5 * time.Second
 	defaultMaxLeaseDuration       = 1 * time.Minute
 	defaultConditionsCheckBackoff = 1 * time.Second
-	defaultConditionsCheckTimeout = 10 * time.Second
+	defaultConditionsCheckTimeout = 60 * time.Second
 	defaultClusterID              = "testkube-api"
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
