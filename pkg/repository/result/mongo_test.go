@@ -26,7 +26,7 @@ func TestStorage(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
@@ -263,7 +263,7 @@ func TestLabels(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	testName := "example-test"

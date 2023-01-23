@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func NewExecutionWithID(id, testType, testName string) *Execution {

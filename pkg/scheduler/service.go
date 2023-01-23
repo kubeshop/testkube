@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"go.uber.org/zap"
+
 	executorsv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
@@ -12,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"go.uber.org/zap"
 )
 
 type Scheduler struct {

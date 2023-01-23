@@ -3,11 +3,12 @@ package slack
 import (
 	"encoding/json"
 
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/slack"
-	"go.uber.org/zap"
 )
 
 var _ common.ListenerLoader = &SlackLoader{}

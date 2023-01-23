@@ -11,14 +11,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 func TestCommandExecution(t *testing.T) {

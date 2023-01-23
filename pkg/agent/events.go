@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )
 
 var _ common.ListenerLoader = &Agent{}

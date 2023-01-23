@@ -1,10 +1,11 @@
 package testsuites
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite

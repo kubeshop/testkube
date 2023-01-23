@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 func TestTrimSSEChunk(t *testing.T) {

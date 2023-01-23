@@ -10,6 +10,9 @@ import (
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
@@ -25,8 +28,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestExecute(t *testing.T) {

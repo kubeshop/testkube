@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/executor/secret"
 )
 
 func TestJSONWrapWritter(t *testing.T) {

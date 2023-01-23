@@ -7,9 +7,10 @@ import (
 	"html/template"
 
 	prShared "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+	"github.com/skratchdot/open-golang/open"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/skratchdot/open-golang/open"
 )
 
 const (

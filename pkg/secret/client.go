@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/kubeshop/testkube/pkg/log"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 const testkubeTestSecretLabel = "tests-secrets"

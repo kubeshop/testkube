@@ -25,6 +25,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
@@ -36,7 +38,6 @@ import (
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
-	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const (

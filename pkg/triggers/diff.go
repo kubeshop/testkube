@@ -2,8 +2,9 @@ package triggers
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	apps_v1 "k8s.io/api/apps/v1"
+
+	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 )
 
 func diffDeployments(old, new *apps_v1.Deployment) []testtrigger.Cause {

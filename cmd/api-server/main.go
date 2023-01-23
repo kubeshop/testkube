@@ -22,12 +22,13 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -156,8 +157,8 @@ func main() {
 	testResultsRepository := testresult.NewMongoRespository(db, Config.AllowDiskUse)
 	configRepository := configmongo.NewMongoRespository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
-	if os.Getenv("APISERVER_CONFIG") != "" {
-		configName = os.Getenv("APISERVER_CONFIG")
+	if cfg.APIServerConfig != "" {
+		configName = cfg.APIServerConfig
 	}
 
 	configMapConfig, err := configmap.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
@@ -314,7 +315,7 @@ func main() {
 			log.DefaultLogger.Info("setting minio as logs storage")
 			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
 			if ok {
-				mongoResultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.Coll, bucket)
+				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.ResultsColl, bucket)
 			}
 		} else {
 			log.DefaultLogger.Info("minio is not available, using default logs storage")

@@ -3,8 +3,9 @@ package storage
 import (
 	"io"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/minio/minio-go/v7"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // Client is storage client abstraction

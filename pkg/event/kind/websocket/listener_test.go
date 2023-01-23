@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/gofiber/websocket/v2"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestWebsocketListener(t *testing.T) {

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func List(cmd *cobra.Command, obj interface{}, w io.Writer) error {

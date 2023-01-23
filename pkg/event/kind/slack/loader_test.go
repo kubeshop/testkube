@@ -3,8 +3,9 @@ package slack
 import (
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestSlackLoader_Load(t *testing.T) {

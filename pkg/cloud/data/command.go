@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/cloud"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 type Command string

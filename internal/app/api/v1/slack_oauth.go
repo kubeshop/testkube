@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+
 	thttp "github.com/kubeshop/testkube/pkg/http"
 )
 

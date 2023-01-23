@@ -3,8 +3,9 @@ package output
 import (
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var exampleLogEntryLine = []byte(`{"type":"line","content":"  GET http://localhost:8088/health "}`)
