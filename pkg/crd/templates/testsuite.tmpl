@@ -16,63 +16,78 @@ spec:
   {{- if ne (len .Before) 0 }}
   before:
   {{- range .Before }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Batch) 0 }}
+    batch:
+    {{- range .Batch }}
+      {{- if .Execute }}
+    - execute:
+        {{- if .Execute.Namespace }}
+        namespace: {{ .Execute.Namespace }}
+        {{- end }}
+        {{- if .Execute.Name}}
+        name: {{ .Execute.Name }}
+        {{- end }}
       {{- end }}
-      {{- if .Execute.Name}}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay:
+        {{- if .Delay.Duration }}
+        duration: {{ .Delay.Duration }}
+        {{- end }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}
   {{- if ne (len .Steps) 0 }}
   steps:
   {{- range .Steps }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Batch) 0 }}
+    batch:
+    {{- range .Batch }}
+      {{- if .Execute }}
+    - execute:
+        {{- if .Execute.Namespace }}
+        namespace: {{ .Execute.Namespace }}
+        {{- end }}
+        {{- if .Execute.Name}}
+        name: {{ .Execute.Name }}
+        {{- end }}
       {{- end }}
-      {{- if .Execute.Name }}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay:
+        {{- if .Delay.Duration }}
+        duration: {{ .Delay.Duration }}
+        {{- end }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end}}
     {{- end }}
   {{- end }}
   {{- end }}
   {{- if ne (len .After) 0 }}
   after:
   {{- range .After }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Batch) 0 }}
+    batch:
+    {{- range .Batch }}
+      {{- if .Execute }}
+    - execute:
+        {{- if .Execute.Namespace }}
+        namespace: {{ .Execute.Namespace }}
+        {{- end }}
+        {{- if .Execute.Name}}
+        name: {{ .Execute.Name }}
+        {{- end }}
       {{- end }}
-      {{- if .Execute.Name }}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay:
+        {{- if .Delay.Duration }}
+        duration: {{ .Delay.Duration }}
+        {{- end }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}
