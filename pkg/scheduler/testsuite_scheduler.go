@@ -159,42 +159,56 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	hasFailedSteps := false
 	cancelSteps := false
-	var stepResult *testkube.TestSuiteStepExecutionResult
+	var batchStepResult *testkube.TestSuiteBatchStepExecutionResult
 
 	var abortionStatus *testkube.TestSuiteExecutionStatus
 	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
 
 	go s.abortionCheck(ctx, testsuiteExecution, request.Timeout, abortChan)
 
-	for i := range testsuiteExecution.StepResults {
-		stepResult = &testsuiteExecution.StepResults[i]
+	for i := range testsuiteExecution.BatchStepResults {
+		batchStepResult = &testsuiteExecution.BatchStepResults[i]
 		select {
 		case abortionStatus = <-abortChan:
 			s.logger.Infow("Aborting test suite execution", "execution", testsuiteExecution.Id, "i", i)
 
 			cancelSteps = true
-			stepResult.Execution.ExecutionResult.Abort()
+			for j := range batchStepResult.Batch {
+				batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+			}
+
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborting
 		default:
-			s.logger.Debugw("Running step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+			s.logger.Debugw("Running batch step", "step", batchStepResult.Batch, "i", i)
 
 			if cancelSteps {
-				s.logger.Debugw("Aborting step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+				s.logger.Debugw("Aborting batch step", "step", batchStepResult.Batch, "i", i)
 
-				stepResult.Execution.ExecutionResult.Abort()
+				for j := range batchStepResult.Batch {
+					batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+				}
+
 				continue
 			}
 
 			// start execution of given step
-			stepResult.Execution.ExecutionResult.InProgress()
+			for j := range batchStepResult.Batch {
+				batchStepResult.Batch[j].Execution.ExecutionResult.InProgress()
+			}
+
 			err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				s.logger.Infow("Updating test execution", "error", err)
 			}
 
-			s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
+			s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult)
 
-			s.logger.Debugw("Step execution result", "step", testsuiteExecution.StepResults[i].Step, "result", stepResult.Execution.ExecutionResult)
+			var results []*testkube.ExecutionResult
+			for j := range batchStepResult.Batch {
+				results = append(results, batchStepResult.Batch[j].Execution.ExecutionResult)
+			}
+
+			s.logger.Debugw("Batch step execution result", "step", batchStepResult.Batch, "results", results)
 
 			err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
@@ -204,13 +218,14 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 				continue
 			}
 
-			if stepResult.IsFailed() {
-				hasFailedSteps = true
-				/*				if stepResult.StopTestOnFailure {
-									cancelSteps = true
-									continue
-								}
-				*/
+			for j := range batchStepResult.Batch {
+				if batchStepResult.Batch[j].IsFailed() {
+					hasFailedSteps = true
+					if batchStepResult.StopOnFailure {
+						cancelSteps = true
+						break
+					}
+				}
 			}
 		}
 	}
@@ -288,50 +303,51 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteStepExecutionResult) {
+	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
-	step := result.Step
+	for i := range result.Batch {
+		step := result.Batch[i].Step
+		l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
 
-	l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
+		switch step.Type() {
+		case testkube.TestSuiteStepTypeExecuteTest:
+			executeTestStep := step.Execute
+			request := testkube.ExecutionRequest{
+				Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
+				TestSuiteName:         testSuiteName,
+				Namespace:             executeTestStep.Namespace,
+				Variables:             testsuiteExecution.Variables,
+				TestSuiteSecretUUID:   request.SecretUUID,
+				Sync:                  true,
+				HttpProxy:             request.HttpProxy,
+				HttpsProxy:            request.HttpsProxy,
+				ExecutionLabels:       request.ExecutionLabels,
+				ActiveDeadlineSeconds: int64(request.Timeout),
+				ContentRequest:        request.ContentRequest,
+			}
 
-	switch step.Type() {
-	case testkube.TestSuiteStepTypeExecuteTest:
-		executeTestStep := step.Execute
-		request := testkube.ExecutionRequest{
-			Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
-			TestSuiteName:         testSuiteName,
-			Namespace:             executeTestStep.Namespace,
-			Variables:             testsuiteExecution.Variables,
-			TestSuiteSecretUUID:   request.SecretUUID,
-			Sync:                  true,
-			HttpProxy:             request.HttpProxy,
-			HttpsProxy:            request.HttpsProxy,
-			ExecutionLabels:       request.ExecutionLabels,
-			ActiveDeadlineSeconds: int64(request.Timeout),
-			ContentRequest:        request.ContentRequest,
+			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
+
+			execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
+			if err != nil {
+				result.Batch[i].Err(err)
+				return
+			}
+
+			result.Batch[i].Execution = &execution
+		case testkube.TestSuiteStepTypeDelay:
+			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
+
+			duration := time.Millisecond * time.Duration(step.Delay.Duration)
+			s.delayWithAbortionCheck(duration, testsuiteExecution.Id, &result.Batch[i])
+		default:
+			result.Batch[i].Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 		}
-
-		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
-
-		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
-		if err != nil {
-			result.Err(err)
-			return
-		}
-
-		result.Execution = &execution
-	case testkube.TestSuiteStepTypeDelay:
-		l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
-
-		duration := time.Millisecond * time.Duration(step.Delay.Duration)
-		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
-	default:
-		result.Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 	}
 }
 
