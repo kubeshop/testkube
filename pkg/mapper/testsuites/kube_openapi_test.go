@@ -3,8 +3,9 @@ package testsuites
 import (
 	"testing"
 
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/stretchr/testify/assert"
+
+	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 )
 
 func TestMapTestSuiteListKubeToAPI(t *testing.T) {

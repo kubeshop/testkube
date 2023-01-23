@@ -3,9 +3,10 @@ package detector
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/stretchr/testify/assert"
 )
 
 const (

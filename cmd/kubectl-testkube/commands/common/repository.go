@@ -1,8 +1,9 @@
 package common
 
 import (
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // NewRepositoryFromFlags creates repository from command flags

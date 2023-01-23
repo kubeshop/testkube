@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"github.com/gofiber/websocket/v2"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

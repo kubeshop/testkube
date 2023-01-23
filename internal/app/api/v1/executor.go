@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {

@@ -1,9 +1,10 @@
 package metrics
 
 import (
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{

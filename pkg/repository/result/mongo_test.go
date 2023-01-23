@@ -4,13 +4,13 @@ package result
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
@@ -26,7 +26,7 @@ func TestStorage(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
@@ -263,7 +263,7 @@ func TestLabels(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	testName := "example-test"
@@ -360,7 +360,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, nil)
-	repository := NewMongoRespository(db, true)
+	repository := NewMongoRepository(db, true)
 	return repository, err
 }
 

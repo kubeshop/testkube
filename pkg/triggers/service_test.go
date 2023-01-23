@@ -5,9 +5,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"github.com/golang/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -15,8 +22,6 @@ import (
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -25,8 +30,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/stretchr/testify/assert"

@@ -6,13 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 type Rest struct {

@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/kubeshop/testkube/pkg/oauth"
 	"golang.org/x/oauth2"
+
+	"github.com/kubeshop/testkube/pkg/oauth"
 )
 
 type ContextType string

@@ -13,11 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/gofiber/fiber/v2"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"
 	triggerskeymapmapper "github.com/kubeshop/testkube/pkg/mapper/keymap/triggers"
 	testtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/testtriggers"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"

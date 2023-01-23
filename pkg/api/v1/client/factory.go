@@ -3,9 +3,10 @@ package client
 import (
 	"fmt"
 
+	"golang.org/x/oauth2"
+
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/oauth"
-	"golang.org/x/oauth2"
 )
 
 type ClientType string

@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	v1 "k8s.io/api/core/v1"
+
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
+
+	"github.com/pkg/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
@@ -13,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/pkg/errors"
 )
 
 const (

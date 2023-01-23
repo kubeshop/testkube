@@ -3,10 +3,11 @@ package config
 import (
 	"fmt"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/validation"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewConfigureNamespaceCmd() *cobra.Command {

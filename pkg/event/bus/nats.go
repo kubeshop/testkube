@@ -5,10 +5,11 @@ import (
 	"os"
 	"sync"
 
+	"github.com/nats-io/nats.go"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/nats-io/nats.go"
 )
 
 var _ Bus = &NATSBus{}

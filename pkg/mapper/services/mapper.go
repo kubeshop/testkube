@@ -1,8 +1,9 @@
 package services
 
 import (
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
 
 // MapCRDConditionsToAPI maps Service CRD conditions to OpenAPI spec TestTriggerConditions

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

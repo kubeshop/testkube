@@ -10,13 +10,14 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"

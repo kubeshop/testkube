@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const (
