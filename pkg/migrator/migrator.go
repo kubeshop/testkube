@@ -6,7 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/process"
-	"github.com/kubeshop/testkube/pkg/version"
+	"github.com/kubeshop/testkube/pkg/semver"
 	"go.uber.org/zap"
 )
 
@@ -87,7 +87,7 @@ func (m Migrator) IsValid(migrationVersion, currentVersion string) (bool, error)
 		return false, fmt.Errorf("empty version migration:'%s', current:'%s'", migrationVersion, currentVersion)
 	}
 
-	return version.Lte(currentVersion, migrationVersion)
+	return semver.Lte(currentVersion, migrationVersion)
 }
 
 // ExecuteCommands executes multiple commands returns multiple commands outputs

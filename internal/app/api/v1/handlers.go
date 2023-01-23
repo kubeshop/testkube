@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -51,8 +51,8 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 func (s TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
-			Commit:    pkg.Commit,
-			Version:   pkg.Version,
+			Commit:    version.Commit,
+			Version:   version.Version,
 			Namespace: s.Namespace,
 		})
 	}

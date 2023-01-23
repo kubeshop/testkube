@@ -7,10 +7,12 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data"
 	configmongo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -47,16 +49,10 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	configmap "github.com/kubeshop/testkube/pkg/config"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
-)
-
-const (
-	ModeStandalone = "standalone"
-	ModeAgent      = "agent"
 )
 
 type MongoConfig struct {
@@ -78,9 +74,9 @@ func init() {
 }
 
 func runMigrations() (err error) {
-	results := migrations.Migrator.GetValidMigrations(pkg.Version, migrator.MigrationTypeServer)
+	results := migrations.Migrator.GetValidMigrations(version.Version, migrator.MigrationTypeServer)
 	if len(results) == 0 {
-		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", pkg.Version)
+		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", version.Version)
 		return nil
 	}
 
@@ -88,12 +84,14 @@ func runMigrations() (err error) {
 	for _, migration := range results {
 		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
 	}
-	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", pkg.Version, "migrations", migrationInfo)
+	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", version.Version, "migrations", migrationInfo)
 
-	return migrations.Migrator.Run(pkg.Version, migrator.MigrationTypeServer)
+	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
 }
 
 func main() {
+	cfg, err := config.Get()
+	ui.ExitOnError("error getting application config", err)
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -111,34 +109,25 @@ func main() {
 		}
 	})
 
-	port := os.Getenv("APISERVER_PORT")
-	namespace := "testkube"
-	if ns, ok := os.LookupEnv("TESTKUBE_NAMESPACE"); ok {
-		namespace = ns
-	}
-
-	ln, err := net.Listen("tcp", ":"+port)
-	ui.ExitOnError("Checking if port "+port+"is free", err)
+	ln, err := net.Listen("tcp", ":"+cfg.APIServerPort)
+	ui.ExitOnError("Checking if port "+cfg.APIServerPort+"is free", err)
 	ln.Close()
-	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
+	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
 
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
-	secretClient, err := secret.NewClient(namespace)
+	secretClient, err := secret.NewClient(cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting secret client", err)
 
 	// agent
-	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
 	var grpcClient cloud.TestKubeCloudAPIClient
-	mode := ModeStandalone
-	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
-		mode = ModeAgent
+	mode := common.ModeStandalone
+	if cfg.TestkubeCloudAPIKey != "" {
+		mode = common.ModeAgent
 	}
-	if mode == ModeAgent {
-		cloudURL := os.Getenv("TESTKUBE_CLOUD_URL")
-		isInsecure := os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE") == "true"
-		grpcConn, err := agent.NewGRPCConnection(ctx, isInsecure, cloudURL, log.DefaultLogger)
+	if mode == common.ModeAgent {
+		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -146,39 +135,39 @@ func main() {
 	}
 
 	// k8s
-	scriptsClient := scriptsclient.NewClient(kubeClient, namespace)
-	testsClientV1 := testsclientv1.NewClient(kubeClient, namespace)
-	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
-	executorsClient := executorsclientv1.NewClient(kubeClient, namespace)
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, namespace)
-	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, namespace)
-	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, namespace)
+	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
+	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	// DI
 	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
 	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
 	ui.ExitOnError("Getting mongo database", err)
 	var resultsRepository result.Repository
-	if mode == ModeAgent {
-		resultsRepository = data.NewCloudResultRepository(grpcClient, apiKey)
+	if mode == common.ModeAgent {
+		resultsRepository = data.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 	} else {
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 	}
 	testResultsRepository := testresult.NewMongoRespository(db, Config.AllowDiskUse)
 	configRepository := configmongo.NewMongoRespository(db)
-	configName := fmt.Sprintf("testkube-api-server-config-%s", namespace)
+	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
 	if os.Getenv("APISERVER_CONFIG") != "" {
 		configName = os.Getenv("APISERVER_CONFIG")
 	}
 
-	configMapConfig, err := configmap.NewConfigMapConfig(configName, namespace)
+	configMapConfig, err := configmap.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
 	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
 	if err != nil {
 		// fallback to envs in case of failure (no record yet, or other error)
-		telemetryEnabled = envs.IsTrue("TESTKUBE_ANALYTICS_ENABLED")
+		telemetryEnabled = cfg.TestkubeAnalyticsEnabled
 	}
 
 	var clusterId string
@@ -211,16 +200,16 @@ func main() {
 		ui.ExitOnError("Creating k8s clientset", err)
 	}
 
-	cfg, err := k8sclient.GetK8sClientConfig()
+	k8sCfg, err := k8sclient.GetK8sClientConfig()
 	if err != nil {
 		ui.ExitOnError("Getting k8s client config", err)
 	}
-	testkubeClientset, err := testkubeclientset.NewForConfig(cfg)
+	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 	if err != nil {
 		ui.ExitOnError("Creating TestKube Clientset", err)
 	}
 
-	apiVersion := pkg.Version
+	apiVersion := version.Version
 
 	// configure NATS event bus
 	nc, err := bus.NewNATSConnection()
@@ -237,23 +226,22 @@ func main() {
 		ui.ExitOnError("Creating job templates", err)
 	}
 
-	readOnlyExecutors := false
-	if value, ok := os.LookupEnv("TESTKUBE_READONLY_EXECUTORS"); ok {
-		readOnlyExecutors, err = strconv.ParseBool(value)
-		if err != nil {
-			ui.ExitOnError("error parsing as bool envvar: TESTKUBE_READONLY_EXECUTORS", err)
-		}
-	}
-
-	defaultExecutors := os.Getenv("TESTKUBE_DEFAULT_EXECUTORS")
-	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, namespace, defaultExecutors, readOnlyExecutors)
+	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, cfg.TestkubeDefaultExecutors, cfg.TestkubeReadonlyExecutors)
 	if err != nil {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	serviceAccountName := os.Getenv("JOB_SERVICE_ACCOUNT_NAME")
-	executor, err := client.NewJobExecutor(resultsRepository, namespace, images, templates,
-		serviceAccountName, metrics, eventsEmitter, configMapConfig, testsClientV3)
+	executor, err := client.NewJobExecutor(
+		resultsRepository,
+		cfg.TestkubeNamespace,
+		images,
+		templates,
+		cfg.JobServiceAccountName,
+		metrics,
+		eventsEmitter,
+		configMapConfig,
+		testsClientV3,
+	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
 	}
@@ -263,13 +251,23 @@ func main() {
 		ui.ExitOnError("Creating container job templates", err)
 	}
 
-	containerExecutor, err := containerexecutor.NewContainerExecutor(resultsRepository, namespace, images, containerTemplates,
-		serviceAccountName, metrics, eventsEmitter, configMapConfig, executorsClient, testsClientV3)
+	containerExecutor, err := containerexecutor.NewContainerExecutor(
+		resultsRepository,
+		cfg.TestkubeNamespace,
+		images,
+		containerTemplates,
+		cfg.JobServiceAccountName,
+		metrics,
+		eventsEmitter,
+		configMapConfig,
+		executorsClient,
+		testsClientV3,
+	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
 	}
 
-	scheduler := scheduler.NewScheduler(
+	sched := scheduler.NewScheduler(
 		metrics,
 		executor,
 		containerExecutor,
@@ -286,7 +284,7 @@ func main() {
 	)
 
 	api := apiv1.NewTestkubeAPI(
-		namespace,
+		cfg.TestkubeNamespace,
 		resultsRepository,
 		testResultsRepository,
 		testsClientV3,
@@ -304,13 +302,12 @@ func main() {
 		containerExecutor,
 		metrics,
 		templates,
-		scheduler,
+		sched,
 	)
 
-	storageForLogs := os.Getenv("LOGS_STORAGE")
-	isMinioStorage := storageForLogs == "minio"
-	if api.Storage != nil && isMinioStorage && mode != ModeAgent {
-		bucket := os.Getenv("LOGS_BUCKET")
+	isMinioStorage := cfg.LogsStorage == "minio"
+	if api.Storage != nil && isMinioStorage && mode != common.ModeAgent {
+		bucket := cfg.LogsBucket
 		if bucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
 		} else if _, err := api.Storage.ListFiles(bucket); err == nil {
@@ -324,10 +321,10 @@ func main() {
 		}
 	}
 
-	if mode == ModeAgent {
+	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), apiKey, grpcClient)
+		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
@@ -344,7 +341,7 @@ func main() {
 	api.InitEvents()
 
 	triggerService := triggers.NewService(
-		scheduler,
+		sched,
 		clientset,
 		testkubeClientset,
 		testsuitesClient,
@@ -367,7 +364,7 @@ func main() {
 		"starting Testkube API server",
 		"telemetryEnabled", telemetryEnabled,
 		"clusterId", clusterId,
-		"namespace", namespace,
+		"namespace", cfg.TestkubeNamespace,
 		"version", apiVersion,
 	)
 

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -30,7 +31,7 @@ func NewGRPCConnection(ctx context.Context, isInsecure bool, server string, logg
 		creds = insecure.NewCredentials()
 	}
 
-	userAgent := pkg.Version + "/" + pkg.Commit
+	userAgent := version.Version + "/" + version.Commit
 	logger.Infow("initiating connection with Cloud API", "userAgent", userAgent)
 	return grpc.DialContext(ctx, server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
 }

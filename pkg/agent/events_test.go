@@ -3,11 +3,12 @@ package agent_test
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
 
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"

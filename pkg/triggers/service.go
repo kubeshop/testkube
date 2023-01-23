@@ -6,7 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
@@ -210,7 +211,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{
-		AppVersion: pkg.Version,
+		AppVersion: version.Version,
 		DataSource: dataSource,
 		Host:       host,
 		ClusterID:  clusterID,
@@ -246,7 +247,7 @@ func (s *Service) addTestSuite(testSuite *testsuitev2.TestSuite) {
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test_suite", telemetry.CreateParams{
-		AppVersion:     pkg.Version,
+		AppVersion:     version.Version,
 		Host:           host,
 		ClusterID:      clusterID,
 		TestSuiteSteps: int32(len(testSuite.Spec.Before) + len(testSuite.Spec.Steps) + len(testSuite.Spec.After)),

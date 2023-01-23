@@ -12,7 +12,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"go.uber.org/zap"
@@ -404,7 +405,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	}
 
 	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
-		AppVersion: pkg.Version,
+		AppVersion: version.Version,
 		DataSource: dataSource,
 		Host:       host,
 		ClusterID:  clusterID,

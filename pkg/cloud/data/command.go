@@ -35,30 +35,16 @@ const (
 	CmdResultGetTestMetrics         Command = "result_get_test_metrics"
 )
 
-const (
-	CmdTestResultGet                   Command = "testresult_get"
-	CmdTestResultGetByNameAndTestSuite Command = "testresult_get_by_name_and_test_suite"
-	CmdTestResultGetLatestByTestSuite  Command = "testresult_get_latest_by_test_suite"
-	CmdTestResultGetLatestByTestSuites Command = "testresult_get_latest_by_test_suites"
-	CmdTestResultGetExecutionsTotals   Command = "testresult_get_executions_totals"
-	CmdTestResultGetExecutions         Command = "testresult_get_executions"
-	CmdTestResultInsert                Command = "testresult_insert"
-	CmdTestResultUpdate                Command = "testresult_update"
-	CmdTestResultStartExecution        Command = "testresult_start_execution"
-	CmdTestResultEndExecution          Command = "testresult_end_execution"
-	CmdTestResultDeleteByTestSuite     Command = "testresult_delete_by_test_suite"
-	CmdTestResultDeleteAll             Command = "testresult_delete_all"
-	CmdTestResultDeleteByTestSuites    Command = "testresult_delete_by_test_suites"
-	CmdTestResultGetTestSuiteMetrics   Command = "testresult_get_test_suite_metrics"
-)
-
 type CommandRequest struct {
 	Command Command `json:"command"`
 	Payload any     `json:"payload"`
 }
 
 func execute(ctx context.Context, client cloud.TestKubeCloudAPIClient, command Command, payload any, apiKey string) (*cloud.CommandResponse, error) {
-	jsonPayload, _ := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
 	s := structpb.Struct{}
 	if err := s.UnmarshalJSON(jsonPayload); err != nil {
 		return nil, err

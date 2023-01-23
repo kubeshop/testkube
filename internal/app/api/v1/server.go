@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"github.com/kubeshop/testkube/pkg/datefilter"
-	result2 "github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
 	"k8s.io/client-go/kubernetes"
@@ -47,7 +48,7 @@ const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
-	testExecutionResults result2.Repository,
+	testExecutionResults result.Repository,
 	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
@@ -114,7 +115,7 @@ func NewTestkubeAPI(
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults     result2.Repository
+	ExecutionResults     result.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
 	ContainerExecutor    client.Executor
@@ -165,7 +166,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 		return
 	}
 
-	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, pkg.Version)
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, version.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	} else {
@@ -344,7 +345,7 @@ func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 				if err != nil {
 					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				out, err := telemetry.SendHeartbeatEvent(host, pkg.Version, s.Config.ClusterID)
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, s.Config.ClusterID)
 				if err != nil {
 					l.Debugw("sending heartbeat telemetry event error", "error", err)
 				} else {
@@ -359,9 +360,9 @@ func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 
 // TODO should we use single generic filter for all list based resources ?
 // currently filters for e.g. tests are done "by hand"
-func getFilterFromRequest(c *fiber.Ctx) result2.Filter {
+func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
-	filter := result2.NewExecutionsFilter()
+	filter := result.NewExecutionsFilter()
 
 	// id for /tests/ID/executions
 	testName := c.Params("id", "")

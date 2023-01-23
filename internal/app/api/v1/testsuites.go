@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
-	testresult2 "github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -469,7 +469,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
-			pageSize = testresult2.PageDefaultLimit
+			pageSize = testresult.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page filter invalid: %w", err))
@@ -679,9 +679,9 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	}
 }
 
-func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult2.Filter {
+func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
-	filter := testresult2.NewExecutionsFilter()
+	filter := testresult.NewExecutionsFilter()
 	name := c.Query("id", "")
 	if name != "" {
 		filter = filter.WithName(name)

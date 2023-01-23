@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -463,7 +463,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 	}
 
 	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
-		AppVersion: pkg.Version,
+		AppVersion: version.Version,
 		DataSource: dataSource,
 		Host:       host,
 		ClusterID:  clusterID,

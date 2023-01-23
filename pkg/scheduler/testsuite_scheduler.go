@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/version"
 
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -141,7 +141,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		}
 
 		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
-			AppVersion: pkg.Version,
+			AppVersion: version.Version,
 			Host:       host,
 			ClusterID:  clusterID,
 			DurationMs: testExecution.DurationMs,
