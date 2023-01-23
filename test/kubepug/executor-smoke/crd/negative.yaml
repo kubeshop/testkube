@@ -12,5 +12,5 @@ spec:
     repository:
       type: git-file
       uri: https://github.com/kubeshop/testkube.git
-      branch: main
+      branch: executor-tests-negative-tests
       path: test/kubepug/executor-smoke/kubepug-smoke-test-negative.yaml
