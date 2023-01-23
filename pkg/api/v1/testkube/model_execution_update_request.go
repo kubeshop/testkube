@@ -46,6 +46,8 @@ type ExecutionUpdateRequest struct {
 	HttpProxy *string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
 	HttpsProxy *string `json:"httpsProxy,omitempty"`
+	// whether to run test as negative test
+	NegativeTest *bool `json:"negativeTest,omitempty"`
 	// duration in seconds the test may be active, until its stopped
 	ActiveDeadlineSeconds *int64 `json:"activeDeadlineSeconds,omitempty"`
 	// list of file paths that need to be copied into the test from uploads

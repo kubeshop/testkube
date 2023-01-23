@@ -76,7 +76,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.ScraperTemplate)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.ScraperTemplate)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -145,6 +145,9 @@ spec:
     {{- range $secret := .ExecutionRequest.ImagePullSecrets }}
     - name: {{ $secret.Name -}}
     {{- end }}
+    {{- end }}
+    {{- if .ExecutionRequest.NegativeTest }}
+    negativeTest: {{ .ExecutionRequest.NegativeTest }}
     {{- end }}
     {{- if gt .ExecutionRequest.ActiveDeadlineSeconds 0}}
     activeDeadlineSeconds: {{ .ExecutionRequest.ActiveDeadlineSeconds }}

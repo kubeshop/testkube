@@ -40,6 +40,7 @@ testkube create test [flags]
       --job-template string                        job template file path for extensions to job template
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])
   -n, --name string                                unique test name - mandatory
+      --negative-test                              negative test if set to true will succeed if test fails and fail if test succeeds
       --prerun-script string                       path to script to be run before test execution
       --schedule string                            test schedule in a cronjob form: * * * * *
       --scraper-template string                    scraper template file path for extensions to scraper template

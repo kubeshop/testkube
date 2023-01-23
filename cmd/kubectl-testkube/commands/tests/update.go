@@ -47,6 +47,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		jobTemplate              string
 		preRunScript             string
 		scraperTemplate          string
+		negativeTest             bool
 	)
 
 	cmd := &cobra.Command{
@@ -116,6 +117,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test if set to true will succeed if test fails and fail if test succeeds")
 
 	return cmd
 }
