@@ -2529,6 +2529,8 @@ components:
       description: execution result returned from executor
       type: object
       properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteBatchStep"          
         batch:
           type: array
           items:

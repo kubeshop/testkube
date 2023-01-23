@@ -47,9 +47,15 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 	batches = append(batches, testSuite.After...)
 
 	for i := range batches {
+		var stepResults []TestSuiteStepExecutionResult
 		for j := range batches[i].Batch {
-			testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&batches[i].Batch[j]))
+			stepResults = append(stepResults, NewTestStepQueuedResult(&batches[i].Batch[j]))
 		}
+
+		testExecution.BatchStepResults = append(testExecution.BatchStepResults, TestSuiteBatchStepExecutionResult{
+			Step:  &batches[i],
+			Batch: stepResults,
+		})
 	}
 
 	return testExecution
@@ -61,6 +67,16 @@ func (e TestSuiteExecution) FailedStepsCount() (count int) {
 			count++
 		}
 	}
+
+	for _, batchStepResult := range e.BatchStepResults {
+		for _, stepResult := range batchStepResult.Batch {
+			if stepResult.Execution.IsFailed() {
+				count++
+				break
+			}
+		}
+	}
+
 	return
 }
 

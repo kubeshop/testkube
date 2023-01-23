@@ -11,5 +11,6 @@ package testkube
 
 // execution result returned from executor
 type TestSuiteBatchStepExecutionResult struct {
+	Step  *TestSuiteBatchStep            `json:"step,omitempty"`
 	Batch []TestSuiteStepExecutionResult `json:"batch,omitempty"`
 }

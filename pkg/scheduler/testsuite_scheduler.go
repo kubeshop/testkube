@@ -221,7 +221,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			for j := range batchStepResult.Batch {
 				if batchStepResult.Batch[j].IsFailed() {
 					hasFailedSteps = true
-					if batchStepResult.StopOnFailure {
+					if batchStepResult.Step != nil && batchStepResult.Step.StopOnFailure {
 						cancelSteps = true
 						break
 					}
