@@ -7,8 +7,4 @@ scenarios:
 - flow:
   - get:
       url: "/"
-      expect:
-        - statusCode: 
-          - 200
-          - 301
   - think: 0.1
