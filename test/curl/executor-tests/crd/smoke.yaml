@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: curl-executor-smoke
   namespace: testkube
+  labels:
+  core-tests: executors
 spec:
   type: curl/test
   content:
