@@ -1,0 +1,14 @@
+config:
+  target: "https://testkube.non.existing.url.example"
+  phases:
+  - duration: 1
+    arrivalRate: 1
+scenarios:
+- flow:
+  - get:
+      url: "/"
+      expect:
+        - statusCode: 
+          - 200
+          - 301
+  - think: 0.1
