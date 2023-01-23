@@ -10,6 +10,14 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/cloud/data"
+	configmongo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -38,17 +46,17 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
-	"github.com/kubeshop/testkube/internal/pkg/api"
-	configmongo "github.com/kubeshop/testkube/internal/pkg/api/repository/config"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	configmap "github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	ModeStandalone = "standalone"
+	ModeAgent      = "agent"
 )
 
 type MongoConfig struct {
@@ -70,9 +78,9 @@ func init() {
 }
 
 func runMigrations() (err error) {
-	results := migrations.Migrator.GetValidMigrations(api.Version, migrator.MigrationTypeServer)
+	results := migrations.Migrator.GetValidMigrations(pkg.Version, migrator.MigrationTypeServer)
 	if len(results) == 0 {
-		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", api.Version)
+		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", pkg.Version)
 		return nil
 	}
 
@@ -80,9 +88,9 @@ func runMigrations() (err error) {
 	for _, migration := range results {
 		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
 	}
-	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", api.Version, "migrations", migrationInfo)
+	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", pkg.Version, "migrations", migrationInfo)
 
-	return migrations.Migrator.Run(api.Version, migrator.MigrationTypeServer)
+	return migrations.Migrator.Run(pkg.Version, migrator.MigrationTypeServer)
 }
 
 func main() {
@@ -120,6 +128,24 @@ func main() {
 	secretClient, err := secret.NewClient(namespace)
 	ui.ExitOnError("Getting secret client", err)
 
+	// agent
+	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
+	var grpcClient cloud.TestKubeCloudAPIClient
+	mode := ModeStandalone
+	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
+		mode = ModeAgent
+	}
+	if mode == ModeAgent {
+		cloudURL := os.Getenv("TESTKUBE_CLOUD_URL")
+		isInsecure := os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE") == "true"
+		grpcConn, err := agent.NewGRPCConnection(ctx, isInsecure, cloudURL, log.DefaultLogger)
+		ui.ExitOnError("error creating gRPC connection", err)
+		defer grpcConn.Close()
+
+		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+	}
+
+	// k8s
 	scriptsClient := scriptsclient.NewClient(kubeClient, namespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, namespace)
 	testsClientV3 := testsclientv3.NewClient(kubeClient, namespace)
@@ -132,7 +158,12 @@ func main() {
 	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
 	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
 	ui.ExitOnError("Getting mongo database", err)
-	resultsRepository := result.NewMongoRespository(db, Config.AllowDiskUse)
+	var resultsRepository result.Repository
+	if mode == ModeAgent {
+		resultsRepository = data.NewCloudResultRepository(grpcClient, apiKey)
+	} else {
+		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
+	}
 	testResultsRepository := testresult.NewMongoRespository(db, Config.AllowDiskUse)
 	configRepository := configmongo.NewMongoRespository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", namespace)
@@ -189,7 +220,7 @@ func main() {
 		ui.ExitOnError("Creating TestKube Clientset", err)
 	}
 
-	apiVersion := api.Version
+	apiVersion := pkg.Version
 
 	// configure NATS event bus
 	nc, err := bus.NewNATSConnection()
@@ -277,25 +308,26 @@ func main() {
 	)
 
 	storageForLogs := os.Getenv("LOGS_STORAGE")
-	if api.Storage != nil && storageForLogs == "minio" {
+	isMinioStorage := storageForLogs == "minio"
+	if api.Storage != nil && isMinioStorage && mode != ModeAgent {
 		bucket := os.Getenv("LOGS_BUCKET")
 		if bucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
 		} else if _, err := api.Storage.ListFiles(bucket); err == nil {
 			log.DefaultLogger.Info("setting minio as logs storage")
-			resultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, resultsRepository.Coll, bucket)
+			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
+			if ok {
+				mongoResultsRepository.OutputLogs = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.Coll, bucket)
+			}
 		} else {
 			log.DefaultLogger.Info("minio is not available, using default logs storage")
 		}
 	}
 
-	apiKey := os.Getenv("TESTKUBE_CLOUD_API_KEY")
-	if apiKey != "" {
+	if mode == ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		cloudURL := os.Getenv("TESTKUBE_CLOUD_URL")
-		inSecure := os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE")
 
-		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cloudURL, apiKey, inSecure == "true")
+		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), apiKey, grpcClient)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}

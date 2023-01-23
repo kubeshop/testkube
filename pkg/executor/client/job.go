@@ -12,6 +12,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,8 +25,6 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -403,7 +404,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	}
 
 	out, err := telemetry.SendRunEvent("testkube_api_run_test", telemetry.RunParams{
-		AppVersion: api.Version,
+		AppVersion: pkg.Version,
 		DataSource: dataSource,
 		Host:       host,
 		ClusterID:  clusterID,

@@ -21,9 +21,23 @@ type MongoOutputRepository struct {
 	OutputColl *mongo.Collection
 }
 
-func NewMongoOutputRepository(db *mongo.Database) *MongoOutputRepository {
-	return &MongoOutputRepository{
+func NewMongoOutputRepository(db *mongo.Database, opts ...MongoOutputRepositoryOpt) *MongoOutputRepository {
+	r := &MongoOutputRepository{
 		OutputColl: db.Collection(CollectionOutput),
+	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
+}
+
+type MongoOutputRepositoryOpt func(*MongoOutputRepository)
+
+func WithMongoOutputRepositoryCollection(db *mongo.Database, collection string) MongoOutputRepositoryOpt {
+	return func(r *MongoOutputRepository) {
+		r.OutputColl = db.Collection(collection)
 	}
 }
 

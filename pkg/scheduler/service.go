@@ -6,11 +6,11 @@ import (
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"go.uber.org/zap"
 )

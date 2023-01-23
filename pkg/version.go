@@ -1,4 +1,4 @@
-package api
+package pkg
 
 var (
 	Version string

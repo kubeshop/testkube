@@ -7,6 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg"
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	result2 "github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,10 +25,6 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -46,7 +47,7 @@ const HeartbeatInterval = time.Hour
 
 func NewTestkubeAPI(
 	namespace string,
-	testExecutionResults result.Repository,
+	testExecutionResults result2.Repository,
 	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
@@ -113,7 +114,7 @@ func NewTestkubeAPI(
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults     result.Repository
+	ExecutionResults     result2.Repository
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
 	ContainerExecutor    client.Executor
@@ -164,7 +165,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 		return
 	}
 
-	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, pkg.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	} else {
@@ -343,7 +344,7 @@ func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 				if err != nil {
 					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
+				out, err := telemetry.SendHeartbeatEvent(host, pkg.Version, s.Config.ClusterID)
 				if err != nil {
 					l.Debugw("sending heartbeat telemetry event error", "error", err)
 				} else {
@@ -358,9 +359,9 @@ func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 
 // TODO should we use single generic filter for all list based resources ?
 // currently filters for e.g. tests are done "by hand"
-func getFilterFromRequest(c *fiber.Ctx) result.Filter {
+func getFilterFromRequest(c *fiber.Ctx) result2.Filter {
 
-	filter := result.NewExecutionsFilter()
+	filter := result2.NewExecutionsFilter()
 
 	// id for /tests/ID/executions
 	testName := c.Params("id", "")

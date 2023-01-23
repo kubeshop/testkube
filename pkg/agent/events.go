@@ -57,7 +57,7 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
 	var opts []grpc.CallOption
-	md := metadata.Pairs(apiKey, ag.apiKey)
+	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	stream, err := ag.client.Send(ctx, opts...)

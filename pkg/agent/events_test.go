@@ -3,6 +3,8 @@ package agent_test
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"net"
 	"testing"
 	"time"
@@ -38,7 +40,13 @@ func TestEventLoop(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	agent, err := agent.NewAgent(logger.Sugar(), nil, url, "api-key", true)
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	ui.ExitOnError("error creating gRPC connection", err)
+	defer grpcConn.Close()
+
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()

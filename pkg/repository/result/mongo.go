@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/common"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
@@ -23,13 +24,19 @@ const (
 	CollectionSequences = "sequences"
 )
 
-func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
-	return &MongoRepository{
+func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
+	r := &MongoRepository{
 		Coll:         db.Collection(CollectionName),
 		Sequences:    db.Collection(CollectionSequences),
 		OutputLogs:   NewMongoOutputRepository(db),
 		allowDiskUse: allowDiskUse,
 	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
 }
 
 func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
@@ -47,6 +54,20 @@ type MongoRepository struct {
 	Sequences    *mongo.Collection
 	OutputLogs   OutputRepository
 	allowDiskUse bool
+}
+
+type MongoRepositoryOpt func(*MongoRepository)
+
+func WithMongoRepositoryCollection(db *mongo.Database, collection string) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.Coll = db.Collection(collection)
+	}
+}
+
+func WithMongoRepositorySequenceCollection(db *mongo.Database, sequence string) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.Sequences = db.Collection(sequence)
+	}
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {

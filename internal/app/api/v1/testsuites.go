@@ -8,13 +8,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	testresult2 "github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -468,7 +469,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
-			pageSize = testresult.PageDefaultLimit
+			pageSize = testresult2.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page filter invalid: %w", err))
@@ -678,9 +679,9 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	}
 }
 
-func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
+func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult2.Filter {
 
-	filter := testresult.NewExecutionsFilter()
+	filter := testresult2.NewExecutionsFilter()
 	name := c.Query("id", "")
 	if name != "" {
 		filter = filter.WithName(name)
