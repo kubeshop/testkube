@@ -5,6 +5,7 @@
 		{"execute": {"name": "gradle-executor-smoke-jdk18"}},
 		{"execute": {"name": "gradle-executor-smoke-jdk17"}},
 		{"execute": {"name": "gradle-executor-smoke-jdk11"}},
-		{"execute": {"name": "gradle-executor-smoke-jdk8"}}
+		{"execute": {"name": "gradle-executor-smoke-jdk8"}},
+		{"execute": {"name": "gradle-executor-smoke-jdk18-negative"}}
 	]
 }

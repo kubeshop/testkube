@@ -23,3 +23,20 @@ spec:
     args:
       - -e
       - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-executor-smoke-negative
+  namespace: testkube
+  labels:
+    core-tests: executors-negative
+spec:
+  type: k6/script
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-negative-tests
+      path: test/k6/executor-tests/k6-smoke-test-negative.js
