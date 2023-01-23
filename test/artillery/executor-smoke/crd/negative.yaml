@@ -4,7 +4,7 @@ metadata:
   name: artillery-executor-smoke-negative
   namespace: testkube
   labels:
-    core-tests: executors
+    core-tests: executors-negative
 spec:
   type: artillery/test
   content:
