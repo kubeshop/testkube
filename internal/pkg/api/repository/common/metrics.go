@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/montanaflynn/stats"
 	"time"
@@ -53,6 +54,7 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 func calculate(durations []float64, quantile float64) float64 {
 	percentile, err := stats.PercentileNearestRank(durations, quantile)
 	if err != nil {
+		log.DefaultLogger.Errorw("Unable to calculate percentile", "error", err)
 		return 0
 	}
 	return percentile
