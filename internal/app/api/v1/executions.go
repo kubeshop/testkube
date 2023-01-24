@@ -21,8 +21,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/types"
-	"github.com/kubeshop/testkube/pkg/scheduler"	
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
