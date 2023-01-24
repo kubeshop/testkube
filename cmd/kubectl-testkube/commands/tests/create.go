@@ -160,7 +160,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
-	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test if set to true will succeed if test fails and fail if test succeeds")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 
 	return cmd
 }
