@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/bmizerany/perks v0.0.0-20220928223023-dcf613bf3504
 	github.com/cli/cli/v2 v2.20.2
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
@@ -18,6 +17,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.8.9
 	github.com/minio/minio-go/v7 v7.0.45
+	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.20.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -76,7 +76,6 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microcosm-cc/bluemonday v1.0.21 // indirect
-	github.com/montanaflynn/stats v0.6.6 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.13.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
