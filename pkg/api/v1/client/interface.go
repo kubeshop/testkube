@@ -172,6 +172,7 @@ type ExecuteTestSuiteOptions struct {
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
 	ContentRequest     *testkube.TestContentRequest
+	ConcurrencyLevel   int32
 }
 
 // Gettable is an interface of gettable objects
