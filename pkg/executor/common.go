@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,8 @@ import (
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/log"
 )
+
+var ErrPodInitializing = errors.New("PodInitializing")
 
 const (
 	// GitUsernameSecretName is git username secret name
@@ -93,9 +96,9 @@ type Images struct {
 }
 
 // IsPodReady defines if pod is ready or failed for logs scrapping
-func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
+func IsPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -113,9 +116,9 @@ func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 }
 
 // IsPodLoggable defines if pod is ready to get logs from it
-func IsPodLoggable(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
+func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -171,8 +174,8 @@ func isPodFailed(pod *corev1.Pod) (err error) {
 }
 
 // GetJobPods returns job pods
-func GetJobPods(podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
-	pods, err := podsClient.List(context.Background(), metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+func GetJobPods(ctx context.Context, podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
+	pods, err := podsClient.List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
 		return nil, err
 	}
@@ -181,14 +184,14 @@ func GetJobPods(podsClient tcorev1.PodInterface, jobName string, retryNr, retryC
 	}
 	if len(pods.Items) == 0 {
 		time.Sleep(time.Duration(retryNr * 500 * int(time.Millisecond))) // increase backoff timeout
-		return GetJobPods(podsClient, jobName, retryNr+1, retryCount)
+		return GetJobPods(ctx, podsClient, jobName, retryNr+1, retryCount)
 	}
 	return pods, nil
 }
 
 // GetPodLogs returns pod logs bytes
-func GetPodLogs(c kubernetes.Interface, namespace string, pod corev1.Pod, logLinesCount ...int64) (logs []byte, err error) {
-	count := int64(100)
+func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, pod corev1.Pod, logLinesCount ...int64) (logs []byte, err error) {
+	var count int64 = 100
 	if len(logLinesCount) > 0 {
 		count = logLinesCount[0]
 	}
@@ -203,49 +206,63 @@ func GetPodLogs(c kubernetes.Interface, namespace string, pod corev1.Pod, logLin
 	}
 
 	for _, container := range containers {
-		podLogOptions := corev1.PodLogOptions{
-			Follow:    false,
-			TailLines: &count,
-			Container: container,
-		}
-
-		podLogRequest := c.CoreV1().
-			Pods(namespace).
-			GetLogs(pod.Name, &podLogOptions)
-
-		stream, err := podLogRequest.Stream(context.Background())
+		containerLogs, err := getContainerLogs(ctx, c, &pod, container, namespace, &count)
 		if err != nil {
-			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
+			if errors.Is(err, ErrPodInitializing) {
 				return logs, nil
 			}
-
 			return logs, err
 		}
 
-		defer stream.Close()
-
-		buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, stream)
-		if err != nil {
-			if len(logs) != 0 && strings.Contains(err.Error(), "PodInitializing") {
-				return logs, nil
-			}
-
-			return logs, err
-		}
-
-		logs = append(logs, buf.Bytes()...)
+		logs = append(logs, containerLogs...)
 	}
 
 	return logs, nil
 }
 
+func getContainerLogs(
+	ctx context.Context,
+	c kubernetes.Interface,
+	pod *corev1.Pod,
+	container, namespace string,
+	tailLines *int64,
+) ([]byte, error) {
+	podLogOptions := corev1.PodLogOptions{
+		Follow:    false,
+		TailLines: tailLines,
+		Container: container,
+	}
+
+	podLogRequest := c.CoreV1().
+		Pods(namespace).
+		GetLogs(pod.Name, &podLogOptions)
+
+	stream, err := podLogRequest.Stream(ctx)
+	if err != nil {
+		isPodInitializingError := strings.Contains(err.Error(), "PodInitializing")
+		if isPodInitializingError {
+			return nil, errors.WithStack(ErrPodInitializing)
+		}
+
+		return nil, err
+	}
+	defer stream.Close()
+
+	var buff bytes.Buffer
+	_, err = io.Copy(&buff, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	return buff.Bytes(), nil
+}
+
 // AbortJob - aborts Kubernetes Job with no grace period
-func AbortJob(c kubernetes.Interface, namespace string, jobName string) *testkube.ExecutionResult {
+func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, jobName string) (*testkube.ExecutionResult, error) {
 	var zero int64 = 0
 	bg := metav1.DeletePropagationBackground
 	jobs := c.BatchV1().Jobs(namespace)
-	err := jobs.Delete(context.TODO(), jobName, metav1.DeleteOptions{
+	err := jobs.Delete(ctx, jobName, metav1.DeleteOptions{
 		GracePeriodSeconds: &zero,
 		PropagationPolicy:  &bg,
 	})
@@ -254,12 +271,12 @@ func AbortJob(c kubernetes.Interface, namespace string, jobName string) *testkub
 		return &testkube.ExecutionResult{
 			Status: testkube.ExecutionStatusFailed,
 			Output: err.Error(),
-		}
+		}, nil
 	}
 	log.DefaultLogger.Infof("Job %s aborted", jobName)
 	return &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusAborted,
-	}
+	}, nil
 }
 
 func PrepareEnvs(envs map[string]string) []corev1.EnvVar {

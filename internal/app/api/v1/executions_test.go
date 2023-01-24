@@ -211,19 +211,19 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Execute(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) ExecuteSync(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
+func (e MockExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Logs(id string) (chan output.Output, error) {
+func (e MockExecutor) Logs(ctx context.Context, id string) (chan output.Output, error) {
 	if e.LogsFn == nil {
 		panic("not implemented")
 	}

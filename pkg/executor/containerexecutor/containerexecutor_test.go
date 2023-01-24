@@ -19,6 +19,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 )
 
+var ctx = context.Background()
+
 func TestExecuteAsync(t *testing.T) {
 	ce := ContainerExecutor{
 		clientSet:   getFakeClient("1"),
@@ -33,10 +35,10 @@ func TestExecuteAsync(t *testing.T) {
 
 	execution := &testkube.Execution{Id: "1"}
 	options := client.ExecuteOptions{}
-	res, err := ce.Execute(execution, options)
+	res, err := ce.Execute(ctx, execution, options)
 	assert.NoError(t, err)
 
-	// Status is either running or passed, depending if async goroutine managed to finish
+	// Status is either running or passed, depends if async goroutine managed to finish
 	assert.Contains(t,
 		[]testkube.ExecutionStatus{testkube.RUNNING_ExecutionStatus, testkube.PASSED_ExecutionStatus},
 		*res.Status)
@@ -56,7 +58,7 @@ func TestExecuteSync(t *testing.T) {
 
 	execution := &testkube.Execution{Id: "1"}
 	options := client.ExecuteOptions{ImagePullSecretNames: []string{"secret-name1"}}
-	res, err := ce.ExecuteSync(execution, options)
+	res, err := ce.ExecuteSync(ctx, execution, options)
 	assert.NoError(t, err)
 	assert.Equal(t, testkube.PASSED_ExecutionStatus, *res.Status)
 }
@@ -87,7 +89,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
 		Envs:                  map[string]string{"key": "value"},
-		Variables:             map[string]testkube.Variable{"aa": testkube.Variable{Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
+		Variables:             map[string]testkube.Variable{"aa": {Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)

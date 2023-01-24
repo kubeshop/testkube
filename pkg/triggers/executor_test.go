@@ -34,7 +34,7 @@ func TestExecute(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	metrics := metrics.NewMetrics()
+	metricsHandle := metrics.NewMetrics()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -92,11 +92,11 @@ func TestExecute(t *testing.T) {
 	mockResultRepository.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultRepository.EXPECT().StartExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
-	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockExecutionResult, nil)
+	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockExecutionResult, nil)
 	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), mockExecutionResult).Return(nil)
 
 	sched := scheduler.NewScheduler(
-		metrics,
+		metricsHandle,
 		mockExecutor,
 		mockExecutor,
 		mockResultRepository,

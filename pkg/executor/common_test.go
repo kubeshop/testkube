@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -118,7 +119,7 @@ func TestGetPodLogs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotLogs, err := GetPodLogs(tt.args.c, tt.args.namespace, tt.args.pod, tt.args.logLinesCount...)
+			gotLogs, err := GetPodLogs(context.Background(), tt.args.c, tt.args.namespace, tt.args.pod, tt.args.logLinesCount...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetPodLogs() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -96,7 +96,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	// sync/async test execution
-	result, err := s.startTestExecution(options, &execution)
+	result, err := s.startTestExecution(ctx, options, &execution)
 
 	// set execution result to one created
 	execution.ExecutionResult = &result
@@ -122,12 +122,12 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	return execution, nil
 }
 
-func (s *Scheduler) startTestExecution(options client.ExecuteOptions, execution *testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (s *Scheduler) startTestExecution(ctx context.Context, options client.ExecuteOptions, execution *testkube.Execution) (result testkube.ExecutionResult, err error) {
 	executor := s.getExecutor(options.TestName)
 	if options.Sync {
-		result, err = executor.ExecuteSync(execution, options)
+		result, err = executor.ExecuteSync(ctx, execution, options)
 	} else {
-		result, err = executor.Execute(execution, options)
+		result, err = executor.Execute(ctx, execution, options)
 	}
 
 	return result, err
