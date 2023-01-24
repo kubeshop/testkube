@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/artifacts"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
@@ -11,7 +13,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetCmd() *cobra.Command {

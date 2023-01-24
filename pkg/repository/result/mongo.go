@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/common"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
@@ -19,43 +20,83 @@ import (
 var _ Repository = &MongoRepository{}
 
 const (
-	CollectionName      = "results"
+	CollectionResults   = "results"
 	CollectionSequences = "sequences"
 )
 
-func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
-	return &MongoRepository{
-		Coll:         db.Collection(CollectionName),
-		Sequences:    db.Collection(CollectionSequences),
-		OutputLogs:   NewMongoOutputRepository(db),
-		allowDiskUse: allowDiskUse,
+func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
+	r := &MongoRepository{
+		ResultsColl:      db.Collection(CollectionResults),
+		SequencesColl:    db.Collection(CollectionSequences),
+		OutputRepository: NewMongoOutputRepository(db),
+		allowDiskUse:     allowDiskUse,
 	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
+}
+
+func NewMongoRepositoryWithOutputRepository(
+	db *mongo.Database,
+	allowDiskUse bool,
+	outputRepository OutputRepository,
+	opts ...MongoRepositoryOpt,
+) *MongoRepository {
+	r := &MongoRepository{
+		ResultsColl:      db.Collection(CollectionResults),
+		SequencesColl:    db.Collection(CollectionSequences),
+		OutputRepository: outputRepository,
+		allowDiskUse:     allowDiskUse,
+	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
 }
 
 func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
 	repo := MongoRepository{
-		Coll:         db.Collection(CollectionName),
-		Sequences:    db.Collection(CollectionSequences),
-		allowDiskUse: allowDiskUse,
+		ResultsColl:   db.Collection(CollectionResults),
+		SequencesColl: db.Collection(CollectionSequences),
+		allowDiskUse:  allowDiskUse,
 	}
-	repo.OutputLogs = NewMinioOutputRepository(storageClient, repo.Coll, bucket)
+	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
 	return &repo
 }
 
 type MongoRepository struct {
-	Coll         *mongo.Collection
-	Sequences    *mongo.Collection
-	OutputLogs   OutputRepository
-	allowDiskUse bool
+	ResultsColl      *mongo.Collection
+	SequencesColl    *mongo.Collection
+	OutputRepository OutputRepository
+	allowDiskUse     bool
+}
+
+type MongoRepositoryOpt func(*MongoRepository)
+
+func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.ResultsColl = collection
+	}
+}
+
+func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.SequencesColl = collection
+	}
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	if err != nil {
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -64,12 +105,12 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 }
 
 func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
+	err = r.ResultsColl.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
 	if err != nil {
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -80,12 +121,12 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.Execution, err error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.Coll.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
 	if err != nil {
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputLogs.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -117,7 +158,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		optsA.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, optsA)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, optsA)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +181,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		optsF.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions}, optsF)
+	cursor, err = r.ResultsColl.Find(ctx, bson.M{"$or": conditions}, optsF)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +204,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{}, opts)
+	cursor, err := r.ResultsColl.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		return result, err
 	}
@@ -178,7 +219,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, query, opts)
+	cursor, err := r.ResultsColl.Find(ctx, query, opts)
 	if err != nil {
 		return
 	}
@@ -215,7 +256,7 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return totals, err
 	}
@@ -254,7 +295,7 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{}, opts)
+	cursor, err := r.ResultsColl.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -285,45 +326,45 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
 	output := result.ExecutionResult.Output
 	result.ExecutionResult.Output = ""
-	_, err = r.Coll.InsertOne(ctx, result)
+	_, err = r.ResultsColl.InsertOne(ctx, result)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+	err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution) (err error) {
 	output := result.ExecutionResult.Output
 	result.ExecutionResult.Output = ""
-	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.ResultsColl.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.UpdateOutput(ctx, result.Id, output)
+	err = r.OutputRepository.UpdateOutput(ctx, result.Id, output)
 	return
 }
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
 	output := result.Output
 	result.Output = ""
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
 	if err != nil {
 		return
 	}
-	err = r.OutputLogs.UpdateOutput(ctx, id, output)
+	err = r.OutputRepository.UpdateOutput(ctx, id, output)
 	return
 }
 
 // StartExecution updates execution start time
 func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTime time.Time) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"starttime": startTime}})
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"starttime": startTime}})
 	return
 }
 
 // EndExecution updates execution end time
 func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.Execution) (err error) {
-	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": e.Id}, bson.M{"$set": bson.M{"endtime": e.EndTime, "duration": e.Duration, "durationms": e.DurationMs}})
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": e.Id}, bson.M{"$set": bson.M{"endtime": e.EndTime, "duration": e.Duration, "durationms": e.DurationMs}})
 	return
 }
 
@@ -408,31 +449,31 @@ func addSelectorConditions(selector string, tag string, conditions primitive.A) 
 
 // DeleteByTest deletes execution results by test
 func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
-	err = r.OutputLogs.DeleteOutputByTest(ctx, testName)
+	err = r.OutputRepository.DeleteOutputByTest(ctx, testName)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testname": testName})
+	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testname": testName})
 	return
 }
 
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
-	err = r.OutputLogs.DeleteOutputByTestSuite(ctx, testSuiteName)
+	err = r.OutputRepository.DeleteOutputByTestSuite(ctx, testSuiteName)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
+	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
-	err = r.OutputLogs.DeleteAllOutput(ctx)
+	err = r.OutputRepository.DeleteAllOutput(ctx)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{})
 	return
 }
 
@@ -454,11 +495,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 		filter = bson.M{"testname": testNames[0]}
 	}
 
-	err = r.OutputLogs.DeleteOutputForTests(ctx, testNames)
+	err = r.OutputRepository.DeleteOutputForTests(ctx, testNames)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
 
@@ -480,21 +521,21 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		filter = bson.M{"testSuitename": testSuiteNames[0]}
 	}
 
-	err = r.OutputLogs.DeleteOutputForTestSuites(ctx, testSuiteNames)
+	err = r.OutputRepository.DeleteOutputForTestSuites(ctx, testSuiteNames)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
 
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
-	err = r.OutputLogs.DeleteOutputForAllTestSuite(ctx)
+	err = r.OutputRepository.DeleteOutputForAllTestSuite(ctx)
 	if err != nil {
 		return
 	}
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
+	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }
 
@@ -525,7 +566,7 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return metrics, err
 	}

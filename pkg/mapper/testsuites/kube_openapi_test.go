@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+
 	"github.com/stretchr/testify/assert"
 )
 

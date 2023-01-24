@@ -43,6 +43,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Commit:         ", execution.Content.Repository.Commit)
 		ui.Warn("  Path:           ", execution.Content.Repository.Path)
 		ui.Warn("  Working dir:    ", execution.Content.Repository.WorkingDir)
+		ui.Warn("  Certificate:    ", execution.Content.Repository.CertificateSecret)
 	}
 
 	render.RenderExecutionResult(&execution)

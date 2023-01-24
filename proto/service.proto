@@ -5,17 +5,28 @@ package cloud;
 option go_package = "pkg/cloud";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
 
 service TestKubeCloudAPI {
     rpc Execute(stream ExecuteResponse) returns (stream ExecuteRequest);
-    rpc Send(stream WebsocketData) returns (google.protobuf.Empty);
+    rpc Send(stream WebsocketData)      returns (google.protobuf.Empty);
+    rpc Call(CommandRequest)            returns (CommandResponse);
+}
+
+message CommandRequest {
+  string command = 1;
+  google.protobuf.Struct payload  = 2;
+}
+
+message CommandResponse {
+  bytes response     = 1;
 }
 
 message ExecuteRequest {
-    string method = 1;
-    string url = 2;
+    string method                    = 1;
+    string url                       = 2;
     map<string, HeaderValue> headers = 3;
-    bytes body = 4;
+    bytes body                       = 4;
 }
 
 message HeaderValue {
@@ -23,18 +34,19 @@ message HeaderValue {
 }
 
 message ExecuteResponse {
-    int64 status = 1;
+    int64 status                     = 1;
     map<string, HeaderValue> headers = 2;
-    bytes body = 3;
+    bytes body                       = 3;
 }
 
 enum Opcode {
-  UNSPECFIED = 0;
-  TEXT_FRAME = 1;
+  UNSPECFIED   = 0;
+  TEXT_FRAME   = 1;
   BINARY_FRAME = 2;
   HEALTH_CHECK = 3;
 }
+
 message WebsocketData {
     Opcode opcode = 1;
-    bytes body = 2;
+    bytes body    = 2;
 }

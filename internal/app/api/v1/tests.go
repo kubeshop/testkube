@@ -8,16 +8,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	executionsmapper "github.com/kubeshop/testkube/pkg/mapper/executions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )

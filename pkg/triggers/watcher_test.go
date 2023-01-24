@@ -5,13 +5,14 @@ import (
 	"testing"
 	"time"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestService_runWatcher_lease(t *testing.T) {

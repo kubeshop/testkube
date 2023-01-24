@@ -5,26 +5,28 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
+
 	networkingv1 "k8s.io/api/networking/v1"
 
 	"github.com/google/go-cmp/cmp"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
+
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
 )
 
 type k8sInformers struct {

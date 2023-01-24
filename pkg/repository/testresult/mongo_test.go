@@ -4,12 +4,12 @@ package testresult
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
@@ -88,7 +88,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("getting percentiles of execution duration", func(t *testing.T) {
 		assert.Contains(metrics.ExecutionDurationP50, "1m0")
 		assert.Contains(metrics.ExecutionDurationP90, "10m0")
-		assert.Contains(metrics.ExecutionDurationP99, "1h0m0")
+		assert.Contains(metrics.ExecutionDurationP99, "48h0m0s")
 	})
 
 	t.Run("limit should limit executions", func(t *testing.T) {

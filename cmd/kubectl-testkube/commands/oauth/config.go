@@ -3,11 +3,12 @@ package oauth
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	poauth "github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 // NewConfigureOAuthCmd is oauth config config cmd

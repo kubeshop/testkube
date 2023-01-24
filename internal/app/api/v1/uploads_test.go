@@ -11,11 +11,12 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/minio/minio-go/v7"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
-	"github.com/minio/minio-go/v7"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {

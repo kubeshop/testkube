@@ -6,13 +6,14 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/pkg/errors"
+
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/pkg/errors"
 )
 
 type Execution string

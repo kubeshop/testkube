@@ -3,8 +3,9 @@ package webhook
 import (
 	"testing"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/stretchr/testify/assert"
+
+	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 )
 
 type DummyLoader struct {

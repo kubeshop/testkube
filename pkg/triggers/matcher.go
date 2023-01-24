@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,7 +13,7 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
 
-const defaultTimeout = 10 * time.Second
+var ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
@@ -30,7 +29,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
-			matched, err := matchConditions(ctx, e, t, s.logger)
+			matched, err := s.matchConditions(ctx, e, t, s.logger)
 			if err != nil {
 				return err
 			}
@@ -91,31 +90,35 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 	return false
 }
 
-func matchConditions(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
-	timeout := defaultTimeout
-	if t.Spec.ConditionSpec.Timeout != 0 {
+func (s *Service) matchConditions(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+	timeout := s.defaultConditionsCheckTimeout
+	if t.Spec.ConditionSpec.Timeout > 0 {
 		timeout = time.Duration(t.Spec.ConditionSpec.Timeout) * time.Second
 	}
-
-	ticker := time.NewTicker(timeout)
-	defer ticker.Stop()
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 outer:
 	for {
 		select {
-		case <-ctx.Done():
-			logger.Infow("context done, stopping waiting for trigger conditions")
-			return false, fmt.Errorf("context done")
-		case <-ticker.C:
+		case <-timeoutCtx.Done():
 			logger.Errorf(
-				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s "+
-					"because we didn't match trigger conditions", t.Namespace, t.Name, e.eventType, e.resource,
+				"trigger service: matcher component: error waiting for conditions to match for trigger %s/%s by event %s on resource %s %s/%s"+
+					" because context got canceled by timeout or exit signal",
+				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
 			)
-			return false, errors.Errorf("timed-out waiting for trigger conditions")
+			return false, errors.WithStack(ErrConditionTimeout)
 		default:
+			logger.Debugf(
+				"trigger service: matcher component: running conditions check iteration for %s %s/%s",
+				e.resource, e.namespace, e.name,
+			)
 			conditions, err := e.conditionsGetter()
 			if err != nil {
-				logger.Errorf("trigger service: matcher component: error getting %s %s/%s because of %v", t.Kind, t.Namespace, t.Name, err)
+				logger.Errorf(
+					"trigger service: matcher component: error getting conditions for %s %s/%s because of %v",
+					e.resource, e.namespace, e.name, err,
+				)
 				return false, err
 			}
 
@@ -136,6 +139,8 @@ outer:
 			if matched {
 				break outer
 			}
+
+			time.Sleep(s.defaultConditionsCheckBackoff)
 		}
 	}
 

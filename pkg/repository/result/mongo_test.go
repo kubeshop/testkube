@@ -4,13 +4,13 @@ package result
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/storage"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
@@ -26,7 +26,7 @@ func TestStorage(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	oneDayAgo := time.Now().Add(-24 * time.Hour)
@@ -263,7 +263,7 @@ func TestLabels(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	t.Run("getting labels when there are no labels should return empty map", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	repository, err := getRepository()
 	assert.NoError(err)
 
-	err = repository.Coll.Drop(context.TODO())
+	err = repository.ResultsColl.Drop(context.TODO())
 	assert.NoError(err)
 
 	testName := "example-test"
@@ -342,7 +342,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 	t.Run("getting percentiles of execution duration", func(t *testing.T) {
 		assert.Contains(metrics.ExecutionDurationP50, "1m0")
 		assert.Contains(metrics.ExecutionDurationP90, "10m0")
-		assert.Contains(metrics.ExecutionDurationP99, "1h0m0")
+		assert.Contains(metrics.ExecutionDurationP99, "48h0m0s")
 	})
 
 	t.Run("limit should limit executions", func(t *testing.T) {
@@ -360,7 +360,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, nil)
-	repository := NewMongoRespository(db, true)
+	repository := NewMongoRepository(db, true)
 	return repository, err
 }
 

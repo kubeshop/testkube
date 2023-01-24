@@ -4,8 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func CreateVariables(cmd *cobra.Command) (vars map[string]testkube.Variable, err error) {

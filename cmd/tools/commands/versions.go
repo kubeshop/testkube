@@ -3,10 +3,11 @@ package commands
 import (
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/process"
-	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/process"
+	"github.com/kubeshop/testkube/pkg/semver"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewVersionBumpCmd() *cobra.Command {
@@ -23,18 +24,18 @@ func NewVersionBumpCmd() *cobra.Command {
 			ui.ExitOnError("getting tags", err)
 
 			versions := strings.Split(string(out), "\n")
-			currentVersion := version.GetNewest(versions)
+			currentVersion := semver.GetNewest(versions)
 
 			var nextVersion string
 
 			switch true {
-			case dev && version.IsPrerelease(currentVersion):
-				nextVersion, err = version.NextPrerelease(currentVersion)
-			case dev && !version.IsPrerelease(currentVersion):
-				nextVersion, err = version.Next(currentVersion, version.Patch)
+			case dev && semver.IsPrerelease(currentVersion):
+				nextVersion, err = semver.NextPrerelease(currentVersion)
+			case dev && !semver.IsPrerelease(currentVersion):
+				nextVersion, err = semver.Next(currentVersion, semver.Patch)
 				nextVersion = nextVersion + "-beta001"
 			default:
-				nextVersion, err = version.Next(currentVersion, kind)
+				nextVersion, err = semver.Next(currentVersion, kind)
 			}
 			ui.ExitOnError("getting next version for "+kind, err)
 

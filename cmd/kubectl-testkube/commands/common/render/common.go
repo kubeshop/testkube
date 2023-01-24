@@ -6,9 +6,10 @@ import (
 	"os"
 	"text/template"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"gopkg.in/yaml.v2"
 )
 
 type OutputType string

@@ -5,11 +5,12 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/oauth2"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
-	"golang.org/x/oauth2"
 )
 
 // GetClient returns api client

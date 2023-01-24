@@ -1,8 +1,9 @@
 package statefulsets
 
 import (
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	appsv1 "k8s.io/api/apps/v1"
+
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
 
 // MapCRDConditionsToAPI maps StatefulSet CRD conditions to OpenAPI spec TestTriggerConditions

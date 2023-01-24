@@ -7,14 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 func TestEventLoop(t *testing.T) {
@@ -38,7 +42,13 @@ func TestEventLoop(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	agent, err := agent.NewAgent(logger.Sugar(), nil, url, "api-key", true)
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	ui.ExitOnError("error creating gRPC connection", err)
+	defer grpcConn.Close()
+
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()

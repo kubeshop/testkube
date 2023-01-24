@@ -6,9 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/version"
+
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -25,34 +27,38 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var (
-	defaultScraperInterval    = 5 * time.Second
-	defaultLeaseCheckInterval = 5 * time.Second
-	defaultMaxLeaseDuration   = 1 * time.Minute
-	defaultClusterID          = "testkube-api"
-	defaultIdentifierFormat   = "testkube-api-%s"
+const (
+	defaultScraperInterval        = 5 * time.Second
+	defaultLeaseCheckInterval     = 5 * time.Second
+	defaultMaxLeaseDuration       = 1 * time.Minute
+	defaultConditionsCheckBackoff = 1 * time.Second
+	defaultConditionsCheckTimeout = 60 * time.Second
+	defaultClusterID              = "testkube-api"
+	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
 type Service struct {
-	informers            *k8sInformers
-	leaseBackend         LeaseBackend
-	identifier           string
-	clusterID            string
-	executor             ExecutorF
-	scraperInterval      time.Duration
-	leaseCheckInterval   time.Duration
-	maxLeaseDuration     time.Duration
-	watchFromDate        time.Time
-	triggerStatus        map[statusKey]*triggerStatus
-	scheduler            *scheduler.Scheduler
-	clientset            kubernetes.Interface
-	testKubeClientset    testkubeclientsetv1.Interface
-	testSuitesClient     testsuitesclientv3.Interface
-	testsClient          testsclientv3.Interface
-	resultRepository     result.Repository
-	testResultRepository testresult.Repository
-	logger               *zap.SugaredLogger
-	configMap            config.Repository
+	informers                     *k8sInformers
+	leaseBackend                  LeaseBackend
+	identifier                    string
+	clusterID                     string
+	executor                      ExecutorF
+	scraperInterval               time.Duration
+	leaseCheckInterval            time.Duration
+	maxLeaseDuration              time.Duration
+	defaultConditionsCheckTimeout time.Duration
+	defaultConditionsCheckBackoff time.Duration
+	watchFromDate                 time.Time
+	triggerStatus                 map[statusKey]*triggerStatus
+	scheduler                     *scheduler.Scheduler
+	clientset                     kubernetes.Interface
+	testKubeClientset             testkubeclientsetv1.Interface
+	testSuitesClient              testsuitesclientv3.Interface
+	testsClient                   testsclientv3.Interface
+	resultRepository              result.Repository
+	testResultRepository          testresult.Repository
+	logger                        *zap.SugaredLogger
+	configMap                     config.Repository
 }
 
 type Option func(*Service)
@@ -72,24 +78,26 @@ func NewService(
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
-		informers:            newK8sInformers(clientset, testKubeClientset),
-		identifier:           identifier,
-		clusterID:            defaultClusterID,
-		scraperInterval:      defaultScraperInterval,
-		leaseCheckInterval:   defaultLeaseCheckInterval,
-		maxLeaseDuration:     defaultMaxLeaseDuration,
-		scheduler:            scheduler,
-		clientset:            clientset,
-		testKubeClientset:    testKubeClientset,
-		testSuitesClient:     testSuitesClient,
-		testsClient:          testsClient,
-		resultRepository:     resultRepository,
-		testResultRepository: testResultRepository,
-		leaseBackend:         leaseBackend,
-		logger:               logger,
-		configMap:            configMap,
-		watchFromDate:        time.Now(),
-		triggerStatus:        make(map[statusKey]*triggerStatus),
+		informers:                     newK8sInformers(clientset, testKubeClientset),
+		identifier:                    identifier,
+		clusterID:                     defaultClusterID,
+		scraperInterval:               defaultScraperInterval,
+		leaseCheckInterval:            defaultLeaseCheckInterval,
+		maxLeaseDuration:              defaultMaxLeaseDuration,
+		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
+		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
+		scheduler:                     scheduler,
+		clientset:                     clientset,
+		testKubeClientset:             testKubeClientset,
+		testSuitesClient:              testSuitesClient,
+		testsClient:                   testsClient,
+		resultRepository:              resultRepository,
+		testResultRepository:          testResultRepository,
+		leaseBackend:                  leaseBackend,
+		logger:                        logger,
+		configMap:                     configMap,
+		watchFromDate:                 time.Now(),
+		triggerStatus:                 make(map[statusKey]*triggerStatus),
 	}
 	if s.executor == nil {
 		s.executor = s.execute
@@ -203,7 +211,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{
-		AppVersion: api.Version,
+		AppVersion: version.Version,
 		DataSource: dataSource,
 		Host:       host,
 		ClusterID:  clusterID,
@@ -239,7 +247,7 @@ func (s *Service) addTestSuite(testSuite *testsuitev3.TestSuite) {
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test_suite", telemetry.CreateParams{
-		AppVersion:     api.Version,
+		AppVersion:     version.Version,
 		Host:           host,
 		ClusterID:      clusterID,
 		TestSuiteSteps: int32(len(testSuite.Spec.Before) + len(testSuite.Spec.Steps) + len(testSuite.Spec.After)),

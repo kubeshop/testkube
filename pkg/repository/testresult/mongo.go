@@ -5,12 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/common"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

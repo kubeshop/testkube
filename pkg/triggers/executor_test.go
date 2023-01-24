@@ -4,9 +4,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
@@ -14,8 +20,6 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -24,8 +28,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestExecute(t *testing.T) {
@@ -127,7 +129,8 @@ func TestExecute(t *testing.T) {
 				Conditions: []testtriggersv1.TestTriggerCondition{{
 					Type_:  "Progressing",
 					Status: &status,
-				}}},
+				}},
+			},
 			Action:       "run",
 			Execution:    "test",
 			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},

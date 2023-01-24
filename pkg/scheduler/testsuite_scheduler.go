@@ -13,7 +13,6 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -143,7 +142,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		}
 
 		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
-			AppVersion: api.Version,
+			AppVersion: version.Version,
 			Host:       host,
 			ClusterID:  clusterID,
 			DurationMs: testExecution.DurationMs,

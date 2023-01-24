@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/version"
+
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/oauth"
@@ -50,8 +51,8 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 func (s TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
-			Commit:    api.Commit,
-			Version:   api.Version,
+			Commit:    version.Commit,
+			Version:   version.Version,
 			Namespace: s.Namespace,
 		})
 	}

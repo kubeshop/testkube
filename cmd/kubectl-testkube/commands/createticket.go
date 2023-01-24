@@ -1,11 +1,12 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	debuginfo "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/debug"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/github"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewCreateTicketCmd() *cobra.Command {

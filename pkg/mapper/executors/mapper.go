@@ -1,10 +1,11 @@
 package executors
 
 import (
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapCRDToAPI maps Executor CRD to OpenAPI spec Executor
