@@ -18,6 +18,8 @@ import (
 
 const (
 	abortionPollingInterval = 100 * time.Millisecond
+	// DefaultConcurrencyLevel is a default concurrency level for worker pool
+	DefaultConcurrencyLevel = 10
 )
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
@@ -310,6 +312,20 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
+	request := testkube.ExecutionRequest{
+		TestSuiteName:         testSuiteName,
+		Variables:             testsuiteExecution.Variables,
+		TestSuiteSecretUUID:   request.SecretUUID,
+		Sync:                  true,
+		HttpProxy:             request.HttpProxy,
+		HttpsProxy:            request.HttpsProxy,
+		ExecutionLabels:       request.ExecutionLabels,
+		ActiveDeadlineSeconds: int64(request.Timeout),
+		ContentRequest:        request.ContentRequest,
+	}	
+
+	var tests []testkube.Test
+	var duration time.Duration
 	for i := range result.Batch {
 		step := result.Batch[i].Step
 		l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
@@ -317,38 +333,56 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		switch step.Type() {
 		case testkube.TestSuiteStepTypeExecuteTest:
 			executeTestStep := step.Execute
-			request := testkube.ExecutionRequest{
-				Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
-				TestSuiteName:         testSuiteName,
-				Namespace:             executeTestStep.Namespace,
-				Variables:             testsuiteExecution.Variables,
-				TestSuiteSecretUUID:   request.SecretUUID,
-				Sync:                  true,
-				HttpProxy:             request.HttpProxy,
-				HttpsProxy:            request.HttpsProxy,
-				ExecutionLabels:       request.ExecutionLabels,
-				ActiveDeadlineSeconds: int64(request.Timeout),
-				ContentRequest:        request.ContentRequest,
-			}
 
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
+			tests = append(tests, testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace})
+/*			
 			execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 			if err != nil {
 				result.Batch[i].Err(err)
 				return
 			}
 
-			result.Batch[i].Execution = &execution
+			result.Batch[i].Execution = &execution*/
 		case testkube.TestSuiteStepTypeDelay:
 			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
 
-			duration := time.Millisecond * time.Duration(step.Delay.Duration)
-			s.delayWithAbortionCheck(duration, testsuiteExecution.Id, &result.Batch[i])
+		if time.Millisecond * time.Duration(step.Delay.Duration) > duration {
+			duration = time.Millisecond * time.Duration(step.Delay.Duration)
+		}
+//			s.delayWithAbortionCheck(duration, testsuiteExecution.Id, &result.Batch[i])
 		default:
 			result.Batch[i].Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 		}
 	}
+
+	var results []testkube.Execution
+	if len(tests) != 0 {
+		concurrencyLevel := DefaultConcurrencyLevel
+
+		workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
+
+		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(tests))
+		for i := range tests {
+			request.Name = fmt.Sprintf("%s-%s", testSuiteName, test.Name)
+			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
+				Object:  tests[i],
+				Options: request,
+				ExecFn:  s.executeTest,
+			}
+		}
+
+		go workerpoolService.SendRequests(requests)
+		go workerpoolService.Run(ctx)
+	}
+
+
+	if len(tests) != 0 {
+	for r := range workerpoolService.GetResponses() {
+		results = append(results, r.Result)
+	}
+}
 }
 
 func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteStepExecutionResult) {

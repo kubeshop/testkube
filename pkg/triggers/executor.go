@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,9 +9,9 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/workerpool"
+	"github.com/kubeshop/testkube/pkg/scheduler"	
 	"github.com/pkg/errors"
 )
 
@@ -28,10 +27,7 @@ type ExecutorF func(context.Context, *testtriggersv1.TestTrigger) error
 func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 
-	concurrencyLevel, err := strconv.Atoi(v1.DefaultConcurrencyLevel)
-	if err != nil {
-		return errors.Wrap(err, "error parsing default concurrency level")
-	}
+	concurrencyLevel := scheduler.DefaultConcurrencyLevel
 
 	switch t.Spec.Execution {
 	case ExecutionTest:

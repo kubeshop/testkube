@@ -21,12 +21,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/types"
+	"github.com/kubeshop/testkube/pkg/scheduler"	
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 const (
-	// DefaultConcurrencyLevel is a default concurrency level for worker pool
-	DefaultConcurrencyLevel = "10"
 	// latestExecutionNo defines the number of relevant latest executions
 	latestExecutions = 5
 
@@ -72,7 +71,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		var results []testkube.Execution
 		if len(tests) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}

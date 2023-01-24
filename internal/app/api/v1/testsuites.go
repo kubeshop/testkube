@@ -22,6 +22,7 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 )
 
 // GetTestSuiteHandler for getting test object
@@ -536,7 +537,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var results []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
 			}
