@@ -10,8 +10,8 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/kubeshop/testkube/pkg/scheduler"	
 	"github.com/pkg/errors"
 )
 

@@ -3494,6 +3494,11 @@ components:
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
+        concurrencyLevel:
+          type: integer
+          format: int32
+          description: number of tests run in parallel
+          example: 10
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body

@@ -93,7 +93,8 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 	return testsuiteExecution, nil
 }
 
-func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
+func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution,
+	request testkube.TestSuiteExecutionRequest) {
 	defer func(testExecution *testkube.TestSuiteExecution) {
 		testExecution.Stop()
 		err := s.testExecutionResults.EndExecution(ctx, *testExecution)
@@ -312,18 +313,6 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
-	request := testkube.ExecutionRequest{
-		TestSuiteName:         testSuiteName,
-		Variables:             testsuiteExecution.Variables,
-		TestSuiteSecretUUID:   request.SecretUUID,
-		Sync:                  true,
-		HttpProxy:             request.HttpProxy,
-		HttpsProxy:            request.HttpsProxy,
-		ExecutionLabels:       request.ExecutionLabels,
-		ActiveDeadlineSeconds: int64(request.Timeout),
-		ContentRequest:        request.ContentRequest,
-	}	
-
 	var tests []testkube.Test
 	var duration time.Duration
 	for i := range result.Batch {
@@ -337,38 +326,43 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
 			tests = append(tests, testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace})
-/*			
-			execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
-			if err != nil {
-				result.Batch[i].Err(err)
-				return
-			}
-
-			result.Batch[i].Execution = &execution*/
 		case testkube.TestSuiteStepTypeDelay:
 			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
 
-		if time.Millisecond * time.Duration(step.Delay.Duration) > duration {
-			duration = time.Millisecond * time.Duration(step.Delay.Duration)
-		}
-//			s.delayWithAbortionCheck(duration, testsuiteExecution.Id, &result.Batch[i])
+			if time.Millisecond*time.Duration(step.Delay.Duration) > duration {
+				duration = time.Millisecond * time.Duration(step.Delay.Duration)
+			}
 		default:
 			result.Batch[i].Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
 		}
 	}
 
-	var results []testkube.Execution
-	if len(tests) != 0 {
-		concurrencyLevel := DefaultConcurrencyLevel
+	concurrencyLevel := DefaultConcurrencyLevel
+	if request.ConcurrencyLevel != 0 {
+		concurrencyLevel = int(request.ConcurrencyLevel)
+	}
 
-		workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
+	workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
+
+	if len(tests) != 0 {
+		req := testkube.ExecutionRequest{
+			TestSuiteName:         testSuiteName,
+			Variables:             testsuiteExecution.Variables,
+			TestSuiteSecretUUID:   request.SecretUUID,
+			Sync:                  true,
+			HttpProxy:             request.HttpProxy,
+			HttpsProxy:            request.HttpsProxy,
+			ExecutionLabels:       request.ExecutionLabels,
+			ActiveDeadlineSeconds: int64(request.Timeout),
+			ContentRequest:        request.ContentRequest,
+		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(tests))
 		for i := range tests {
-			request.Name = fmt.Sprintf("%s-%s", testSuiteName, test.Name)
+			req.Name = fmt.Sprintf("%s-%s", testSuiteName, tests[i].Name)
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 				Object:  tests[i],
-				Options: request,
+				Options: req,
 				ExecFn:  s.executeTest,
 			}
 		}
@@ -377,15 +371,25 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		go workerpoolService.Run(ctx)
 	}
 
+	if duration != 0 {
+		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
+	}
 
+	results := make(map[string]*testkube.Execution, len(tests))
 	if len(tests) != 0 {
-	for r := range workerpoolService.GetResponses() {
-		results = append(results, r.Result)
+		for r := range workerpoolService.GetResponses() {
+			results[r.Result.Id] = &r.Result
+		}
+
+		for i := range result.Batch {
+			if _, ok := results[result.Batch[i].Execution.Id]; ok {
+				result.Batch[i].Execution = results[result.Batch[i].Execution.Id]
+			}
+		}
 	}
 }
-}
 
-func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteStepExecutionResult) {
+func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteBatchStepExecutionResult) {
 	timer := time.NewTimer(duration)
 	ticker := time.NewTicker(abortionPollingInterval)
 
@@ -399,13 +403,24 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 		case <-timer.C:
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
 
-			result.Execution.ExecutionResult.Success()
+			for i := range result.Batch {
+				result.Batch[i].Execution.ExecutionResult.Success()
+			}
+
 			return
 		case <-ticker.C:
 			if s.wasTestSuiteAborted(context.Background(), testSuiteId) {
 				s.logger.Infow("delay aborted", "testSuiteId", testSuiteId, "duration", duration)
 
-				result.Execution.ExecutionResult.Abort()
+				for i := range result.Batch {
+					if result.Batch[i].Step.Delay != nil &&
+						time.Millisecond*time.Duration(result.Batch[i].Step.Delay.Duration) < duration {
+						result.Batch[i].Execution.ExecutionResult.Success()
+						continue
+					}
+
+					result.Batch[i].Execution.ExecutionResult.Abort()
+				}
 				return
 			}
 		}
