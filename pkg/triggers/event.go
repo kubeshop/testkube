@@ -3,6 +3,9 @@ package triggers
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/mapper/daemonsets"
@@ -10,8 +13,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/pods"
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)

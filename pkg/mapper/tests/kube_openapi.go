@@ -1,10 +1,11 @@
 package tests
 
 import (
+	v1 "k8s.io/api/core/v1"
+
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	v1 "k8s.io/api/core/v1"
 )
 
 // MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list

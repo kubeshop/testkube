@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestMapTestCRToAPI(t *testing.T) {

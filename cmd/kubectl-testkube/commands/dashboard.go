@@ -9,11 +9,12 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/skratchdot/open-golang/open"
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/skratchdot/open-golang/open"
-	"github.com/spf13/cobra"
 )
 
 const maxPortNumber = 65535

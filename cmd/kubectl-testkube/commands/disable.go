@@ -1,10 +1,11 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewDisableCmd() *cobra.Command {

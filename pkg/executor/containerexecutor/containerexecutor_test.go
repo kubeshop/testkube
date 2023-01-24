@@ -5,17 +5,18 @@ import (
 	"testing"
 	"time"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 )
 
 func TestExecuteAsync(t *testing.T) {

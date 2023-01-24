@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/kubeshop/testkube/pkg/problem"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/kubeshop/testkube/pkg/problem"
 )
 
 const uri string = "/uploads"

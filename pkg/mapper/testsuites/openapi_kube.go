@@ -1,10 +1,11 @@
 package testsuites
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TODO move to testuites mapper

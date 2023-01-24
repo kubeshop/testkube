@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewInitCmd() *cobra.Command {

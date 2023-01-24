@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )
 
 var _ common.ListenerLoader = &Agent{}
@@ -57,7 +58,7 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
 	var opts []grpc.CallOption
-	md := metadata.Pairs(apiKey, ag.apiKey)
+	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	stream, err := ag.client.Send(ctx, opts...)

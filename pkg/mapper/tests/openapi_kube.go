@@ -1,11 +1,12 @@
 package tests
 
 import (
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapUpsertToSpec maps TestUpsertRequest to Test CRD spec

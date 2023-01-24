@@ -8,14 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 func TestCommandExecution(t *testing.T) {
@@ -40,8 +44,14 @@ func TestCommandExecution(t *testing.T) {
 		atomic.AddInt32(&msgCnt, 1)
 	}
 
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	ui.ExitOnError("error creating gRPC connection", err)
+	defer grpcConn.Close()
+
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, url, "api-key", true)
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient)
 	if err != nil {
 		t.Fatal(err)
 	}

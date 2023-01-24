@@ -3,9 +3,10 @@ package result
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 type executionNumber struct {
@@ -24,25 +25,25 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, testName s
 	opts.SetUpsert(true)
 	opts.SetReturnDocument(options.After)
 
-	err = r.Sequences.FindOne(context.Background(), bson.M{"testname": testName}).Decode(&execNmbr)
+	err = r.SequencesColl.FindOne(ctx, bson.M{"testname": testName}).Decode(&execNmbr)
 	if err != nil {
 		var execution testkube.Execution
-		execution, err = r.GetLatestByTest(context.Background(), testName, "number")
+		execution, err = r.GetLatestByTest(ctx, testName, "number")
 		if err != nil {
 			execNmbr.Number = 1
 		} else {
 			execNmbr.Number = int(execution.Number) + 1
 		}
-		_, err = r.Sequences.InsertOne(ctx, execNmbr)
+		_, err = r.SequencesColl.InsertOne(ctx, execNmbr)
 	} else {
-		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		err = r.SequencesColl.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
 	}
 
-	retry = (err != nil)
+	retry = err != nil
 
 	for retry {
 		retryAttempts++
-		err = r.Sequences.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
+		err = r.SequencesColl.FindOneAndUpdate(ctx, bson.M{"testname": testName}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&execNmbr)
 		if err == nil || retryAttempts >= maxRetries {
 			retry = false
 		}

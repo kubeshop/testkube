@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 )
 
 func TestLoader_UpdateListeners(t *testing.T) {

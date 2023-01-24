@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/oauth2"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"golang.org/x/oauth2"
 )
 
 type transport struct {

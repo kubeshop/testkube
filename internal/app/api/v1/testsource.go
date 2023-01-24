@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {

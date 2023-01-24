@@ -7,14 +7,15 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/kubeshop/testkube/pkg/log"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	batchv1 "k8s.io/client-go/applyconfigurations/batch/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // Client data struct for managing running cron jobs

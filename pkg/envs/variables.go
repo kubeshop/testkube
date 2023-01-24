@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
