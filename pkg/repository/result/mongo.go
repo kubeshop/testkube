@@ -96,7 +96,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -110,7 +110,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
@@ -126,7 +126,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id)
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
