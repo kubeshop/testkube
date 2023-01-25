@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -260,11 +262,91 @@ func (FakeEmitter) Notify(event testkube.Event) {
 type FakeResultRepository struct {
 }
 
+func (r FakeResultRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (result testkube.ExecutionsTotals, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) Insert(ctx context.Context, result testkube.Execution) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) Update(ctx context.Context, result testkube.Execution) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTest(ctx context.Context, testName string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteAll(ctx context.Context) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTests(ctx context.Context, testNames []string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (FakeResultRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
 	return testkube.Execution{}, nil
 }
 
-func (FakeResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
+func (FakeResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.Execution) error {
 	return nil
 }
 func (FakeResultRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {

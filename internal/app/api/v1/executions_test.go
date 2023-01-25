@@ -163,7 +163,7 @@ func (r MockExecutionResultsRepository) Update(ctx context.Context, result testk
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
+func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.Execution) error {
 	panic("not implemented")
 }
 
@@ -211,11 +211,11 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 

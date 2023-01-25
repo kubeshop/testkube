@@ -29,7 +29,7 @@ type Filter interface {
 	Type() string
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/internal/pkg/api/repository/result" Repository
+//go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" Repository
 type Repository interface {
 	Sequences
 	// Get gets execution result by id or name
@@ -49,7 +49,7 @@ type Repository interface {
 	// Update updates execution result
 	Update(ctx context.Context, result testkube.Execution) error
 	// UpdateResult updates result in execution
-	UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error
+	UpdateResult(ctx context.Context, id string, execution testkube.Execution) error
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
@@ -83,9 +83,9 @@ type OutputRepository interface {
 	// InsertOutput inserts new execution output
 	InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error
 	// UpdateOutput updates execution output
-	UpdateOutput(ctx context.Context, id, output string) error
+	UpdateOutput(ctx context.Context, id, testName, testSuiteName, output string) error
 	// DeleteOutput deletes execution output
-	DeleteOutput(ctx context.Context, id string) error
+	DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error
 	// DeleteOutputByTest deletes execution output by test
 	DeleteOutputByTest(ctx context.Context, testName string) error
 	// DeleteOutputForTests deletes execution output for tests

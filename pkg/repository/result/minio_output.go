@@ -66,7 +66,7 @@ func (m *MinioRepository) InsertOutput(ctx context.Context, id, testName, testSu
 	return m.saveOutput(eOutput)
 }
 
-func (m *MinioRepository) UpdateOutput(ctx context.Context, id, output string) error {
+func (m *MinioRepository) UpdateOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
 	log.DefaultLogger.Debugw("updating output", "id", id)
 	eOutput, err := m.getOutput(id)
 	if err != nil {
@@ -76,7 +76,7 @@ func (m *MinioRepository) UpdateOutput(ctx context.Context, id, output string) e
 	return m.saveOutput(eOutput)
 }
 
-func (m *MinioRepository) DeleteOutput(ctx context.Context, id string) error {
+func (m *MinioRepository) DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error {
 	log.DefaultLogger.Debugw("deleting output", "id", id)
 	return m.storage.DeleteFile(m.bucket, id)
 }
@@ -94,7 +94,7 @@ func (m *MinioRepository) DeleteOutputByTest(ctx context.Context, testName strin
 	}
 	for _, execution := range executions {
 		log.DefaultLogger.Debugw("deleting output for execution", "execution", execution)
-		err = m.DeleteOutput(ctx, execution.Id)
+		err = m.DeleteOutput(ctx, execution.Id, testName, "")
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (m *MinioRepository) DeleteOutputByTestSuite(ctx context.Context, testSuite
 		return err
 	}
 	for _, execution := range executions {
-		err = m.DeleteOutput(ctx, execution.Id)
+		err = m.DeleteOutput(ctx, execution.Id, "", testSuiteName)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func (m *MinioRepository) DeleteOutputForAllTestSuite(ctx context.Context) error
 		return err
 	}
 	for _, execution := range executions {
-		err = m.DeleteOutput(ctx, execution.Id)
+		err = m.DeleteOutput(ctx, execution.Id, "", "")
 		if err != nil {
 			return err
 		}

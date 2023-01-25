@@ -1,7 +1,7 @@
 package testkube
 
-func NewRunningExecutionResult() ExecutionResult {
-	return ExecutionResult{
+func NewRunningExecutionResult() *ExecutionResult {
+	return &ExecutionResult{
 		Status: StatusPtr(RUNNING_ExecutionStatus),
 	}
 }
@@ -68,20 +68,20 @@ func (e *ExecutionResult) IsTimeout() bool {
 	return *e.Status == TIMEOUT_ExecutionStatus
 }
 
-func (e *ExecutionResult) Err(err error) ExecutionResult {
+func (e *ExecutionResult) Err(err error) *ExecutionResult {
 	e.Status = ExecutionStatusFailed
 	e.ErrorMessage = err.Error()
-	return *e
+	return e
 }
 
-// Errs return error result if any of passed errors is not nil
-func (e *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
+// WithErrors return error result if any of passed errors is not nil
+func (e *ExecutionResult) WithErrors(errors ...error) *ExecutionResult {
 	for _, err := range errors {
 		if err != nil {
 			return e.Err(err)
 		}
 	}
-	return *e
+	return e
 }
 
 func (e *ExecutionResult) FailedStepsCount() int {

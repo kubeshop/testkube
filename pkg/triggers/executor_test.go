@@ -67,7 +67,9 @@ func TestExecute(t *testing.T) {
 	mockTestsClient.EXPECT().Get("some-test").Return(&mockTest, nil).AnyTimes()
 	var mockNextExecutionNumber int32 = 1
 	mockResultRepository.EXPECT().GetNextExecutionNumber(gomock.Any(), "some-test").Return(mockNextExecutionNumber, nil)
+	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
 	mockExecution := testkube.Execution{Name: "test-execution-1"}
+	mockExecution.ExecutionResult = &mockExecutionResult
 	mockResultRepository.EXPECT().GetByNameAndTest(gomock.Any(), "some-custom-execution-1", "some-test").Return(mockExecution, nil)
 	mockSecretUUID := "b524c2f6-6bcf-4178-87c1-1aa2b2abb5dc"
 	mockTestsClient.EXPECT().GetCurrentSecretUUID("some-test").Return(mockSecretUUID, nil)
@@ -91,9 +93,8 @@ func TestExecute(t *testing.T) {
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
 	mockResultRepository.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultRepository.EXPECT().StartExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
-	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockExecutionResult, nil)
-	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), mockExecutionResult).Return(nil)
+	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(&mockExecutionResult, nil)
+	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	sched := scheduler.NewScheduler(
 		metricsHandle,

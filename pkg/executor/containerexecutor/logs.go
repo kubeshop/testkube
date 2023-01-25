@@ -99,7 +99,7 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 					}
 					break
 				}
-				log.Debug("TailPodLogs stream scan", "out", b, "pod", pod.Name)
+				log.Debugw("TailPodLogs stream scan", "out", b, "pod", pod.Name)
 				logs <- b
 			}
 

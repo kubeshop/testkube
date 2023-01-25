@@ -21,11 +21,11 @@ type ResultEvent struct {
 type Executor interface {
 	// Execute starts new external test execution, reads data and returns ID
 	// execution is started asynchronously client can check later for results
-	Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
+	Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error)
 
 	// ExecuteSync starts new external test execution, reads data and returns ID
 	// execution is started synchronously client is blocked
-	ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error)
+	ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error)
 
 	// Abort aborts pending execution, do nothing when there is no pending execution
 	Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error)

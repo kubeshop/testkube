@@ -52,10 +52,10 @@ func (mr *MockExecutorMockRecorder) Abort(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Execute mocks base method.
-func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (testkube.ExecutionResult, error) {
+func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
-	ret0, _ := ret[0].(testkube.ExecutionResult)
+	ret0, _ := ret[0].(*testkube.ExecutionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -67,10 +67,10 @@ func (mr *MockExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomoc
 }
 
 // ExecuteSync mocks base method.
-func (m *MockExecutor) ExecuteSync(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (testkube.ExecutionResult, error) {
+func (m *MockExecutor) ExecuteSync(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteSync", arg0, arg1, arg2)
-	ret0, _ := ret[0].(testkube.ExecutionResult)
+	ret0, _ := ret[0].(*testkube.ExecutionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

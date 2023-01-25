@@ -157,8 +157,9 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
+	execution.ExecutionResult = result
 
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
@@ -178,7 +179,7 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution, result)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -195,8 +196,9 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 // ExecuteSync starts new external test execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
-func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
+	execution.ExecutionResult = result
 
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
@@ -214,7 +216,7 @@ func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execu
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, result)
+			return c.updateResultsFromPod(ctx, pod, l, execution)
 		}
 	}
 
@@ -288,12 +290,12 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
 	defer func() {
-		if err := c.stopExecution(ctx, l, execution, &result, err); err != nil {
+		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, err); err != nil {
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
 		}
 	}()
@@ -310,17 +312,17 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-		return result, err
+		return execution.ExecutionResult, err
 	}
 
 	// parse job output log (JSON stream)
-	result, err = output.ParseRunnerOutput(logs)
+	execution.ExecutionResult, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse output error", "error", err)
-		return result, err
+		return execution.ExecutionResult, err
 	}
 	// saving result in the defer function
-	return result, nil
+	return execution.ExecutionResult, nil
 
 }
 
@@ -344,7 +346,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	}
 
 	if passedErr != nil {
-		*result = result.Err(passedErr)
+		result.Err(passedErr)
 	}
 
 	eventToSend := testkube.NewEventEndTestSuccess(execution)
@@ -361,7 +363,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	// metrics increase
 	execution.ExecutionResult = result
 	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
-	if err = c.Repository.UpdateResult(ctx, execution.Id, *result); err != nil {
+	if err = c.Repository.UpdateResult(ctx, execution.Id, *execution); err != nil {
 		l.Errorw("Update execution result error", "error", err)
 		return err
 	}

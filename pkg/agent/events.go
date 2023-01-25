@@ -63,7 +63,7 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 
 	stream, err := ag.client.Send(ctx, opts...)
 	if err != nil {
-		ag.logger.Errorf("failed to execute: %w", err)
+		ag.logger.Errorf("failed to execute: %v", err)
 		return errors.Wrap(err, "failed to setup stream")
 	}
 

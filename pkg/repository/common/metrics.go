@@ -1,11 +1,13 @@
 package common
 
 import (
+	"time"
+
+	"github.com/montanaflynn/stats"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
-	"github.com/montanaflynn/stats"
-	"time"
 )
 
 func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) (metrics testkube.ExecutionsMetrics) {
