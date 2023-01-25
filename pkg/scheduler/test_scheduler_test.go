@@ -14,6 +14,7 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestParamsNilAssign(t *testing.T) {
@@ -59,7 +60,7 @@ func TestGetExecuteOptions(t *testing.T) {
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
 
-	sc := Scheduler{testsClient: mockTestsClient, executorsClient: mockExecutorsClient}
+	sc := Scheduler{testsClient: mockTestsClient, executorsClient: mockExecutorsClient, logger: log.DefaultLogger}
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
