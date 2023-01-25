@@ -63,14 +63,14 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 
 func (e TestSuiteExecution) FailedStepsCount() (count int) {
 	for _, stepResult := range e.StepResults {
-		if stepResult.Execution.IsFailed() {
+		if stepResult.Execution != nil && stepResult.Execution.IsFailed() {
 			count++
 		}
 	}
 
 	for _, batchStepResult := range e.BatchStepResults {
 		for _, stepResult := range batchStepResult.Batch {
-			if stepResult.Execution.IsFailed() {
+			if stepResult.Execution != nil && stepResult.Execution.IsFailed() {
 				count++
 				break
 			}
@@ -81,6 +81,10 @@ func (e TestSuiteExecution) FailedStepsCount() (count int) {
 }
 
 func (e TestSuiteExecution) IsCompleted() bool {
+	if e.Status == nil {
+		return false
+	}
+
 	return *e.Status == *TestSuiteExecutionStatusFailed ||
 		*e.Status == *TestSuiteExecutionStatusPassed ||
 		*e.Status == *TestSuiteExecutionStatusAborted ||
@@ -95,7 +99,6 @@ func (e *TestSuiteExecution) Stop() {
 }
 
 func (e *TestSuiteExecution) CalculateDuration() time.Duration {
-
 	end := e.EndTime
 	start := e.StartTime
 
@@ -119,6 +122,10 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 			status := "no-execution-result"
 			if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
 				status = string(*sr.Execution.ExecutionResult.Status)
+			}
+
+			if sr.Step == nil {
+				continue
 			}
 
 			switch sr.Step.Type() {
@@ -149,7 +156,11 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 				if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
 					status = string(*sr.Execution.ExecutionResult.Status)
 				}
+
 				statuses = append(statuses, status)
+				if sr.Step == nil {
+					continue
+				}
 
 				switch sr.Step.Type() {
 				case TestSuiteStepTypeExecuteTest:
@@ -178,17 +189,17 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 }
 
 func (e *TestSuiteExecution) IsRunning() bool {
-	return *e.Status == RUNNING_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == RUNNING_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsQueued() bool {
-	return *e.Status == QUEUED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == QUEUED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsPassed() bool {
-	return *e.Status == PASSED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == PASSED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsFailed() bool {
-	return *e.Status == FAILED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == FAILED_TestSuiteExecutionStatus
 }
