@@ -5,6 +5,7 @@
 package client
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,60 +37,61 @@ func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 }
 
 // Abort mocks base method.
-func (m *MockExecutor) Abort(arg0 *testkube.Execution) *testkube.ExecutionResult {
+func (m *MockExecutor) Abort(arg0 context.Context, arg1 *testkube.Execution) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Abort", arg0.Id)
+	ret := m.ctrl.Call(m, "Abort", arg0, arg1)
 	ret0, _ := ret[0].(*testkube.ExecutionResult)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Abort indicates an expected call of Abort.
-func (mr *MockExecutorMockRecorder) Abort(arg0 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Abort(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockExecutor)(nil).Abort), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockExecutor)(nil).Abort), arg0, arg1)
 }
 
 // Execute mocks base method.
-func (m *MockExecutor) Execute(arg0 *testkube.Execution, arg1 ExecuteOptions) (testkube.ExecutionResult, error) {
+func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
-	ret0, _ := ret[0].(testkube.ExecutionResult)
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*testkube.ExecutionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1, arg2)
 }
 
 // ExecuteSync mocks base method.
-func (m *MockExecutor) ExecuteSync(arg0 *testkube.Execution, arg1 ExecuteOptions) (testkube.ExecutionResult, error) {
+func (m *MockExecutor) ExecuteSync(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteSync", arg0, arg1)
-	ret0, _ := ret[0].(testkube.ExecutionResult)
+	ret := m.ctrl.Call(m, "ExecuteSync", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*testkube.ExecutionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ExecuteSync indicates an expected call of ExecuteSync.
-func (mr *MockExecutorMockRecorder) ExecuteSync(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) ExecuteSync(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSync", reflect.TypeOf((*MockExecutor)(nil).ExecuteSync), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSync", reflect.TypeOf((*MockExecutor)(nil).ExecuteSync), arg0, arg1, arg2)
 }
 
 // Logs mocks base method.
-func (m *MockExecutor) Logs(arg0 string) (chan output.Output, error) {
+func (m *MockExecutor) Logs(arg0 context.Context, arg1 string) (chan output.Output, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logs", arg0)
+	ret := m.ctrl.Call(m, "Logs", arg0, arg1)
 	ret0, _ := ret[0].(chan output.Output)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Logs indicates an expected call of Logs.
-func (mr *MockExecutorMockRecorder) Logs(arg0 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Logs(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockExecutor)(nil).Logs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockExecutor)(nil).Logs), arg0, arg1)
 }

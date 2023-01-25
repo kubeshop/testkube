@@ -146,7 +146,7 @@ func (r *CloudResultRepository) Update(ctx context.Context, result testkube.Exec
 	return nil
 }
 
-func (r *CloudResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
+func (r *CloudResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.Execution) error {
 	req := UpdateResultInExecutionResultRequest{ID: id, Execution: execution}
 	_, err := execute(ctx, r.cloudClient, CmdResultUpdateResult, req, r.apiKey)
 	if err != nil {

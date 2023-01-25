@@ -64,22 +64,20 @@ func getExecutions() []testkube.TestSuiteExecution {
 	}
 
 	execution1 := testkube.TestSuiteExecution{
-		"tid1",
-		"script1",
-		&testkube.ObjectRef{
-			"testkube",
-			"testsuite1",
+		Id:   "tid1",
+		Name: "script1",
+		TestSuite: &testkube.ObjectRef{
+			Namespace: "testkube",
+			Name:      "testsuite1",
 		},
-		testkube.TestSuiteExecutionStatusFailed,
-		map[string]string{"var": "key"},
-		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
-		"secret-uuid",
-		time.Now(),
-		time.Now(),
-		"",
-		0,
-		stepResults1,
-		map[string]string{"label": "value"},
+		Status:      testkube.TestSuiteExecutionStatusFailed,
+		Envs:        map[string]string{"var": "key"},
+		Variables:   map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
+		SecretUUID:  "secret-uuid",
+		StartTime:   time.Now(),
+		EndTime:     time.Now(),
+		StepResults: stepResults1,
+		Labels:      map[string]string{"label": "value"},
 	}
 
 	execution1.Stop()
@@ -98,22 +96,20 @@ func getExecutions() []testkube.TestSuiteExecution {
 	}
 
 	execution2 := testkube.TestSuiteExecution{
-		"tid2",
-		"script2",
-		&testkube.ObjectRef{
-			"testkube",
-			"testsuite2",
+		Id:   "tid2",
+		Name: "script2",
+		TestSuite: &testkube.ObjectRef{
+			Namespace: "testkube",
+			Name:      "testsuite2",
 		},
-		testkube.TestSuiteExecutionStatusPassed,
-		map[string]string{"var": "key"},
-		map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
-		"secret-uuid",
-		time.Now(),
-		time.Now(),
-		"",
-		0,
-		stepResults2,
-		map[string]string{"label": "value"},
+		Status:      testkube.TestSuiteExecutionStatusPassed,
+		Envs:        map[string]string{"var": "key"},
+		Variables:   map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
+		SecretUUID:  "secret-uuid",
+		StartTime:   time.Now(),
+		EndTime:     time.Now(),
+		StepResults: stepResults2,
+		Labels:      map[string]string{"label": "value"},
 	}
 
 	execution2.Stop()

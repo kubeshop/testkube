@@ -15,9 +15,23 @@ import (
 const CollectionName = "config"
 const Id = "api"
 
-func NewMongoRespository(db *mongo.Database) *MongoRepository {
-	return &MongoRepository{
+func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {
+	r := &MongoRepository{
 		Coll: db.Collection(CollectionName),
+	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
+}
+
+type Opt func(*MongoRepository)
+
+func WithCollection(collection *mongo.Collection) Opt {
+	return func(r *MongoRepository) {
+		r.Coll = collection
 	}
 }
 

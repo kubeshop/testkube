@@ -4,10 +4,11 @@ package result
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 
 	"github.com/stretchr/testify/require"
 
@@ -364,8 +365,8 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
-func (repository *MongoRepository) insertExecutionResult(testName string, execStatus testkube.ExecutionStatus, startTime time.Time, labels map[string]string) error {
-	return repository.Insert(context.Background(),
+func (r *MongoRepository) insertExecutionResult(testName string, execStatus testkube.ExecutionStatus, startTime time.Time, labels map[string]string) error {
+	return r.Insert(context.Background(),
 		testkube.Execution{
 			Id:              rand.Name(),
 			TestName:        testName,

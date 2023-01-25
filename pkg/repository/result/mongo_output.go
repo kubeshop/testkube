@@ -21,6 +21,8 @@ type MongoOutputRepository struct {
 	Coll *mongo.Collection
 }
 
+var _ OutputRepository = (*MongoOutputRepository)(nil)
+
 func NewMongoOutputRepository(db *mongo.Database, opts ...MongoOutputRepositoryOpt) *MongoOutputRepository {
 	r := &MongoOutputRepository{
 		Coll: db.Collection(CollectionOutput),
@@ -52,12 +54,12 @@ func (r *MongoOutputRepository) InsertOutput(ctx context.Context, id, testName, 
 	return err
 }
 
-func (r *MongoOutputRepository) UpdateOutput(ctx context.Context, id, output string) error {
+func (r *MongoOutputRepository) UpdateOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
 	_, err := r.Coll.UpdateOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}, bson.M{"$set": bson.M{"output": output}})
 	return err
 }
 
-func (r *MongoOutputRepository) DeleteOutput(ctx context.Context, id string) error {
+func (r *MongoOutputRepository) DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error {
 	_, err := r.Coll.DeleteOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}})
 	return err
 }

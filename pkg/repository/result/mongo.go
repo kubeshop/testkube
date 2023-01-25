@@ -341,18 +341,18 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.UpdateOutput(ctx, result.Id, output)
+	err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
-func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.ExecutionResult) (err error) {
-	output := result.Output
-	result.Output = ""
-	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result}})
+func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
+	output := result.ExecutionResult.Output
+	result.ExecutionResult.Output = ""
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.UpdateOutput(ctx, id, output)
+	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, output)
 	return
 }
 

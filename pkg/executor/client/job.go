@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -126,7 +127,7 @@ type JobOptions struct {
 }
 
 // Logs returns job logs stream channel using kubernetes api
-func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
+func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
 	logs := make(chan []byte)
 
@@ -136,7 +137,7 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 			close(out)
 		}()
 
-		if err := c.TailJobLogs(id, logs); err != nil {
+		if err := c.TailJobLogs(ctx, id, logs); err != nil {
 			out <- output.NewOutputError(err)
 			return
 		}
@@ -156,10 +157,10 @@ func (c JobExecutor) Logs(id string) (out chan output.Output, err error) {
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
+	execution.ExecutionResult = result
 
-	ctx := context.Background()
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
@@ -167,7 +168,7 @@ func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptio
 	go c.MonitorJobForTimeout(ctx, execution.Id)
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	pods, err := executor.GetJobPods(podsClient, execution.Id, 1, 10)
+	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -178,7 +179,7 @@ func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptio
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution, result)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -193,19 +194,19 @@ func (c JobExecutor) Execute(execution *testkube.Execution, options ExecuteOptio
 	return testkube.NewRunningExecutionResult(), nil
 }
 
-// Execute starts new external test execution, reads data and returns ID
+// ExecuteSync starts new external test execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
-func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteOptions) (result testkube.ExecutionResult, err error) {
+func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
+	execution.ExecutionResult = result
 
-	ctx := context.Background()
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
 		return result.Err(err), err
 	}
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	pods, err := executor.GetJobPods(podsClient, execution.Id, 1, 10)
+	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
 		return result.Err(err), err
 	}
@@ -215,7 +216,7 @@ func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteO
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, result)
+			return c.updateResultsFromPod(ctx, pod, l, execution)
 		}
 	}
 
@@ -225,7 +226,7 @@ func (c JobExecutor) ExecuteSync(execution *testkube.Execution, options ExecuteO
 
 }
 
-func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
+func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 	ticker := time.NewTicker(pollJobStatus)
 	l := c.Log.With("jobName", jobName)
 	for {
@@ -256,7 +257,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 					for _, condition := range job.Status.Conditions {
 						l.Infow("job timeout", "condition.reason", condition.Reason)
 						if condition.Reason == timeoutIndicator {
-							c.Timeout(jobName)
+							c.Timeout(ctx, jobName)
 						}
 					}
 				}
@@ -271,7 +272,7 @@ func (c JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
 }
 
 // CreateJob creates new Kubernetes job based on execution and execute options
-func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
+func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
 	if err != nil {
@@ -289,57 +290,63 @@ func (c JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, result testkube.ExecutionResult) (testkube.ExecutionResult, error) {
+func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
-	defer c.stopExecution(ctx, l, execution, &result, err)
+	defer func() {
+		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, err); err != nil {
+			l.Errorw("error stopping execution after updating results from pod", "error", err)
+		}
+	}()
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
 	l.Debug("poll immediate end")
 
 	var logs []byte
-	logs, err = executor.GetPodLogs(c.ClientSet, c.Namespace, pod)
+	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-		return result, err
+		return execution.ExecutionResult, err
 	}
 
 	// parse job output log (JSON stream)
-	result, err = output.ParseRunnerOutput(logs)
+	execution.ExecutionResult, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse output error", "error", err)
-		return result, err
+		return execution.ExecutionResult, err
 	}
 	// saving result in the defer function
-	return result, nil
+	return execution.ExecutionResult, nil
 
 }
 
-func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, passedErr error) {
+func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, passedErr error) error {
 	savedExecution, err := c.Repository.Get(ctx, execution.Id)
-	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "passedError", passedErr, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
 	if err != nil {
 		l.Errorw("get execution error", "error", err)
+		return err
 	}
+	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "passedError", passedErr, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
 
 	if savedExecution.IsCanceled() || savedExecution.IsTimeout() {
-		return
+		return nil
 	}
 
 	execution.Stop()
 	err = c.Repository.EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
+		return err
 	}
 
 	if passedErr != nil {
-		*result = result.Err(passedErr)
+		result.Err(passedErr)
 	}
 
 	eventToSend := testkube.NewEventEndTestSuccess(execution)
@@ -356,20 +363,22 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	// metrics increase
 	execution.ExecutionResult = result
 	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
-	err = c.Repository.UpdateResult(ctx, execution.Id, *result)
-	if err != nil {
+	if err = c.Repository.UpdateResult(ctx, execution.Id, *execution); err != nil {
 		l.Errorw("Update execution result error", "error", err)
+		return err
 	}
 
 	test, err := c.testsClient.Get(execution.TestName)
 	if err != nil {
 		l.Errorw("getting test error", "error", err)
+		return err
 	}
 
 	if test != nil {
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
 		if err = c.testsClient.UpdateStatus(test); err != nil {
 			l.Errorw("updating test error", "error", err)
+			return err
 		}
 	}
 
@@ -382,7 +391,7 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	}
 
 	if !telemetryEnabled {
-		return
+		return nil
 	}
 
 	clusterID, err := c.configMap.GetUniqueClusterId(ctx)
@@ -419,6 +428,8 @@ func (c JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, ex
 	} else {
 		l.Debugw("sending run test telemetry event", "output", out)
 	}
+
+	return nil
 }
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
@@ -441,12 +452,11 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 }
 
 // TailJobLogs - locates logs for job pod(s)
-func (c *JobExecutor) TailJobLogs(id string, logs chan []byte) (err error) {
+func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []byte) (err error) {
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	ctx := context.Background()
 
-	pods, err := executor.GetJobPods(podsClient, id, 1, 10)
+	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
 	if err != nil {
 		close(logs)
 		return err
@@ -464,13 +474,13 @@ func (c *JobExecutor) TailJobLogs(id string, logs chan []byte) (err error) {
 				return c.TailPodLogs(ctx, pod, logs)
 
 			case corev1.PodFailed:
-				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
+				err := errors.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
 				l.Errorw(err.Error())
 				return c.GetLastLogLineError(ctx, pod)
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return c.GetLastLogLineError(ctx, pod)
 				}
@@ -541,41 +551,41 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 // GetPodLogError returns last line as error
 func (c *JobExecutor) GetPodLogError(ctx context.Context, pod corev1.Pod) (logsBytes []byte, err error) {
 	// error line should be last one
-	return executor.GetPodLogs(c.ClientSet, c.Namespace, pod, 1)
+	return executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod, 1)
 }
 
 // GetLastLogLineError return error if last line is failed
 func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) error {
 	l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
-	log, err := c.GetPodLogError(ctx, pod)
+	errorLog, err := c.GetPodLogError(ctx, pod)
 	if err != nil {
-		return fmt.Errorf("getPodLogs error: %w", err)
+		return errors.Errorf("getPodLogs error: %v", err)
 	}
 
-	l.Debugw("log", "got last log bytes", string(log)) // in case distorted log bytes
-	entry, err := output.GetLogEntry(log)
+	l.Debugw("log", "got last log bytes", string(errorLog)) // in case distorted log bytes
+	entry, err := output.GetLogEntry(errorLog)
 	if err != nil {
-		return fmt.Errorf("GetLogEntry error: %w", err)
+		return errors.Errorf("GetLogEntry error: %v", err)
 	}
 
 	c.Log.Errorw("got last log entry", "log", entry.String())
-	return fmt.Errorf("error from last log entry: %s", entry.String())
+	return errors.Errorf("error from last log entry: %s", entry.String())
 }
 
-// AbortK8sJob aborts K8S by job name
-func (c *JobExecutor) Abort(execution *testkube.Execution) (result *testkube.ExecutionResult) {
+// Abort aborts K8S by job name
+func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	l := c.Log.With("execution", execution.Id)
-	ctx := context.Background()
-	result = executor.AbortJob(c.ClientSet, c.Namespace, execution.Id)
-	c.Log.Debugw("job aborted", "execution", execution.Id, "result", result)
-	c.stopExecution(ctx, l, execution, result, nil)
-	return
+	result, _ = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	l.Debugw("job aborted", "execution", execution.Id, "result", result)
+	if err := c.stopExecution(ctx, l, execution, result, nil); err != nil {
+		l.Errorw("error stopping execution on job executor abort", "error", err)
+	}
+	return result, nil
 }
 
-func (c *JobExecutor) Timeout(jobName string) (result *testkube.ExecutionResult) {
+func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *testkube.ExecutionResult) {
 	l := c.Log.With("jobName", jobName)
 	l.Infow("job timeout")
-	ctx := context.Background()
 	execution, err := c.Repository.Get(ctx, jobName)
 	if err != nil {
 		l.Errorw("error getting execution", "error", err)
@@ -584,7 +594,9 @@ func (c *JobExecutor) Timeout(jobName string) (result *testkube.ExecutionResult)
 	result = &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusTimeout,
 	}
-	c.stopExecution(ctx, l, &execution, result, nil)
+	if err := c.stopExecution(ctx, l, &execution, result, nil); err != nil {
+		l.Errorw("error stopping execution on job executor timeout", "error", err)
+	}
 
 	return
 }
@@ -596,13 +608,13 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("creating job spec from options.JobTemplate error: %w", err)
+		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
 	}
 
 	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
-		return nil, fmt.Errorf("executing job spec template: %w", err)
+		return nil, errors.Errorf("executing job spec template: %v", err)
 	}
 
 	var job batchv1.Job
@@ -610,23 +622,23 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	if options.JobTemplateExtensions != "" {
 		tmplExt, err := template.New("jobExt").Parse(options.JobTemplateExtensions)
 		if err != nil {
-			return nil, fmt.Errorf("creating job extensions spec from template error: %w", err)
+			return nil, errors.Errorf("creating job extensions spec from template error: %v", err)
 		}
 
 		var bufferExt bytes.Buffer
 		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
-			return nil, fmt.Errorf("executing job extensions spec template: %w", err)
+			return nil, errors.Errorf("executing job extensions spec template: %v", err)
 		}
 
 		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
-			return nil, fmt.Errorf("merging job spec templates: %w", err)
+			return nil, errors.Errorf("merging job spec templates: %v", err)
 		}
 	}
 
 	log.Debug("Job specification", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
-		return nil, fmt.Errorf("decoding job spec error: %w", err)
+		return nil, errors.Errorf("decoding job spec error: %v", err)
 	}
 
 	env := append(executor.RunnerEnvVars, secretEnvVars...)
