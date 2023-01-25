@@ -92,7 +92,7 @@ func TestGenerateYAML(t *testing.T) {
 	})
 	t.Run("generate test CRD yaml", func(t *testing.T) {
 		// given
-		expected := "apiVersion: tests.testkube.io/v3\nkind: Test\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  executionRequest:\n    name: execution-name\n    args:\n      - -v\n      - test\n    image: docker.io/curlimages/curl:latest\n    command:\n    - curl\n    imagePullSecrets:\n    - name: secret-name\n    activeDeadlineSeconds: 10\n"
+		expected := "apiVersion: tests.testkube.io/v3\nkind: Test\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  executionRequest:\n    name: execution-name\n    args:\n      - -v\n      - test\n    image: docker.io/curlimages/curl:latest\n    command:\n    - curl\n    imagePullSecrets:\n    - name: secret-name\n    negativeTest: true\n    activeDeadlineSeconds: 10\n"
 		tests := []testkube.TestUpsertRequest{
 			{
 				Name:      "name1",
@@ -109,6 +109,7 @@ func TestGenerateYAML(t *testing.T) {
 					Command:               []string{"curl"},
 					Args:                  []string{"-v", "test"},
 					ActiveDeadlineSeconds: 10,
+					NegativeTest:          true,
 				},
 			},
 		}

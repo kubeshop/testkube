@@ -143,6 +143,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		JobTemplate:           specExecutionRequest.JobTemplate,
 		PreRunScript:          specExecutionRequest.PreRunScript,
 		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
+		NegativeTest:          specExecutionRequest.NegativeTest,
 	}
 }
 

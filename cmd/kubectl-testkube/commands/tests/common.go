@@ -218,6 +218,11 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	negativeTest, err := cmd.Flags().GetBool("negative-test")
+	if err != nil {
+		return nil, err
+	}
+
 	imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
 	if err != nil {
 		return nil, err
@@ -277,6 +282,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		JobTemplate:           jobTemplateContent,
 		PreRunScript:          preRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
+		NegativeTest:          negativeTest,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -682,6 +688,15 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.ActiveDeadlineSeconds = &timeout
+		nonEmpty = true
+	}
+
+	if cmd.Flag("negative-test").Changed {
+		negativeTest, err := cmd.Flags().GetBool("negative-test")
+		if err != nil {
+			return nil, err
+		}
+		request.NegativeTest = &negativeTest
 		nonEmpty = true
 	}
 

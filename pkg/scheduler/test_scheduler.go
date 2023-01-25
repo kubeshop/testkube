@@ -304,6 +304,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
+		request.NegativeTest = test.ExecutionRequest.NegativeTest
 	}
 
 	// get executor from kubernetes CRs
