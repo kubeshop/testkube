@@ -304,7 +304,12 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
-		request.NegativeTest = test.ExecutionRequest.NegativeTest
+
+		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
+		if !request.IsNegativeTestChangedOnRun {
+			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
+			request.NegativeTest = test.ExecutionRequest.NegativeTest
+		}
 	}
 
 	// get executor from kubernetes CRs

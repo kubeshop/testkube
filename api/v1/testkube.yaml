@@ -3370,6 +3370,10 @@ components:
           type: boolean
           description: whether to run test as negative test
           example: false
+        isNegativeTestChangedOnRun:
+          type: boolean
+          description: whether negativeTest was changed by user
+          example: false
         activeDeadlineSeconds:
           type: integer
           format: int64

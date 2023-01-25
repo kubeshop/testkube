@@ -163,6 +163,8 @@ type ExecuteTestOptions struct {
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
 	ScraperTemplate               string
+	NegativeTest                  bool
+	IsNegativeTestChangedOnRun    bool
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
