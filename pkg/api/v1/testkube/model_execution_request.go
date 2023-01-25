@@ -48,6 +48,8 @@ type ExecutionRequest struct {
 	HttpsProxy string `json:"httpsProxy,omitempty"`
 	// whether to run test as negative test
 	NegativeTest bool `json:"negativeTest,omitempty"`
+	// whether negativeTest was changed by user
+	IsNegativeTestChangedOnRun bool `json:"isNegativeTestChangedOnRun,omitempty"`
 	// duration in seconds the test may be active, until its stopped
 	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
 	// list of file paths that need to be copied into the test from uploads
