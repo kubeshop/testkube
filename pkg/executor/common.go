@@ -31,6 +31,7 @@ import (
 var ErrPodInitializing = errors.New("PodInitializing")
 
 const (
+	defaultLogLinesCount = 100
 	// GitUsernameSecretName is git username secret name
 	GitUsernameSecretName = "git-username"
 	// GitUsernameEnvVarName is git username environment var name
@@ -191,7 +192,7 @@ func GetJobPods(ctx context.Context, podsClient tcorev1.PodInterface, jobName st
 
 // GetPodLogs returns pod logs bytes
 func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, pod corev1.Pod, logLinesCount ...int64) (logs []byte, err error) {
-	var count int64 = 100
+	var count int64 = defaultLogLinesCount
 	if len(logLinesCount) > 0 {
 		count = logLinesCount[0]
 	}
