@@ -179,7 +179,9 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			cancelSteps = true
 			for j := range batchStepResult.Batch {
-				batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+				if batchStepResult.Batch[j].Execution != nil && batchStepResult.Batch[j].Execution.ExecutionResult != nil {
+					batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+				}
 			}
 
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborting
@@ -190,7 +192,9 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 				s.logger.Debugw("Aborting batch step", "step", batchStepResult.Batch, "i", i)
 
 				for j := range batchStepResult.Batch {
-					batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+					if batchStepResult.Batch[j].Execution != nil && batchStepResult.Batch[j].Execution.ExecutionResult != nil {
+						batchStepResult.Batch[j].Execution.ExecutionResult.Abort()
+					}
 				}
 
 				continue
@@ -198,7 +202,9 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			// start execution of given step
 			for j := range batchStepResult.Batch {
-				batchStepResult.Batch[j].Execution.ExecutionResult.InProgress()
+				if batchStepResult.Batch[j].Execution != nil && batchStepResult.Batch[j].Execution.ExecutionResult != nil {
+					batchStepResult.Batch[j].Execution.ExecutionResult.InProgress()
+				}
 			}
 
 			err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
@@ -210,7 +216,9 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 			var results []*testkube.ExecutionResult
 			for j := range batchStepResult.Batch {
-				results = append(results, batchStepResult.Batch[j].Execution.ExecutionResult)
+				if batchStepResult.Batch[j].Execution != nil && batchStepResult.Batch[j].Execution.ExecutionResult != nil {
+					results = append(results, batchStepResult.Batch[j].Execution.ExecutionResult)
+				}
 			}
 
 			s.logger.Debugw("Batch step execution result", "step", batchStepResult.Batch, "results", results)
@@ -235,7 +243,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		}
 	}
 
-	if *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
+	if testsuiteExecution.Status != nil && *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
 			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusTimeout
@@ -304,7 +312,7 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 
 	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
 
-	return *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
+	return execution.Status != nil && *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
@@ -319,16 +327,27 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	var duration time.Duration
 	for i := range result.Batch {
 		step := result.Batch[i].Step
+		if step == nil {
+			continue
+		}
+
 		l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
 
 		switch step.Type() {
 		case testkube.TestSuiteStepTypeExecuteTest:
 			executeTestStep := step.Execute
+			if executeTestStep == nil {
+				continue
+			}
 
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
 			tests = append(tests, testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace})
 		case testkube.TestSuiteStepTypeDelay:
+			if step.Delay == nil {
+				continue
+			}
+
 			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
 
 			if time.Millisecond*time.Duration(step.Delay.Duration) > duration {
@@ -384,6 +403,10 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		}
 
 		for i := range result.Batch {
+			if result.Batch[i].Execution == nil {
+				continue
+			}
+
 			if _, ok := results[result.Batch[i].Execution.Id]; ok {
 				result.Batch[i].Execution = results[result.Batch[i].Execution.Id]
 			}
@@ -406,7 +429,9 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
 
 			for i := range result.Batch {
-				result.Batch[i].Execution.ExecutionResult.Success()
+				if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+					result.Batch[i].Execution.ExecutionResult.Success()
+				}
 			}
 
 			return
@@ -417,11 +442,15 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 				for i := range result.Batch {
 					if result.Batch[i].Step.Delay != nil &&
 						time.Millisecond*time.Duration(result.Batch[i].Step.Delay.Duration) < duration {
-						result.Batch[i].Execution.ExecutionResult.Success()
+						if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+							result.Batch[i].Execution.ExecutionResult.Success()
+						}
 						continue
 					}
 
-					result.Batch[i].Execution.ExecutionResult.Abort()
+					if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+						result.Batch[i].Execution.ExecutionResult.Abort()
+					}
 				}
 				return
 			}
