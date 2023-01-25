@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -52,30 +54,30 @@ func (c *ConfigMapConfig) GetTelemetryEnabled(ctx context.Context) (ok bool, err
 
 // Get config
 func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err error) {
-	data, err := c.client.Get(c.name)
+	data, err := c.client.Get(ctx, c.name)
 	if err != nil {
-		return result, fmt.Errorf("reading config map error: %w", err)
+		return result, errors.Wrap(err, "reading config map error")
 	}
 
 	result.ClusterId = data["clusterId"]
 	if enableTelemetry, ok := data["enableTelemetry"]; ok {
 		result.EnableTelemetry, err = strconv.ParseBool(enableTelemetry)
 		if err != nil {
-			return result, fmt.Errorf("parsing enable telemetry error: %w", err)
+			return result, errors.Wrap(err, "parsing enable telemetry error")
 		}
 	}
 
 	return
 }
 
-// Upserts inserts record if not exists, updates otherwise
+// Upsert inserts record if not exists, updates otherwise
 func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (err error) {
 	data := map[string]string{
 		"clusterId":       result.ClusterId,
 		"enableTelemetry": fmt.Sprint(result.EnableTelemetry),
 	}
-	if err = c.client.Apply(c.name, data); err != nil {
-		return fmt.Errorf("writing config map error: %w", err)
+	if err = c.client.Apply(ctx, c.name, data); err != nil {
+		return errors.Wrap(err, "writing config map error")
 	}
 
 	return

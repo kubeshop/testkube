@@ -96,13 +96,13 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	// sync/async test execution
-	result, err := s.startTestExecution(options, &execution)
+	result, err := s.startTestExecution(ctx, options, &execution)
 
 	// set execution result to one created
-	execution.ExecutionResult = &result
+	execution.ExecutionResult = result
 
 	// update storage with current execution status
-	if uerr := s.executionResults.UpdateResult(ctx, execution.Id, result); uerr != nil {
+	if uerr := s.executionResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
 		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
 		return execution.Errw("update execution error: %w", uerr), nil
 	}
@@ -122,12 +122,12 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	return execution, nil
 }
 
-func (s *Scheduler) startTestExecution(options client.ExecuteOptions, execution *testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (s *Scheduler) startTestExecution(ctx context.Context, options client.ExecuteOptions, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	executor := s.getExecutor(options.TestName)
 	if options.Sync {
-		result, err = executor.ExecuteSync(execution, options)
+		result, err = executor.ExecuteSync(ctx, execution, options)
 	} else {
-		result, err = executor.Execute(execution, options)
+		result, err = executor.Execute(ctx, execution, options)
 	}
 
 	return result, err
@@ -215,7 +215,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 		options.TestSpec.Type_,
 		int(options.Request.Number),
 		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
-		testkube.NewRunningExecutionResult(),
+		*testkube.NewRunningExecutionResult(),
 		options.Request.Variables,
 		options.Request.TestSecretUUID,
 		options.Request.TestSuiteSecretUUID,

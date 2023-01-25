@@ -4,8 +4,9 @@ package config
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,7 +20,7 @@ const (
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, nil)
-	repository := NewMongoRespository(db)
+	repository := NewMongoRepository(db)
 	return repository, err
 }
 

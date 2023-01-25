@@ -1,8 +1,9 @@
 package common
 
 import (
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func Test_ShouldCalculatePercentile_AndGiveNearestIndexResult(t *testing.T) {

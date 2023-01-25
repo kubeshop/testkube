@@ -135,6 +135,11 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			return testSource
 		}
 
+		if (*request.Repository).IsEmpty() {
+			testSource.Spec.Repository = nil
+			return testSource
+		}
+
 		if testSource.Spec.Repository == nil {
 			testSource.Spec.Repository = &testsourcev1.Repository{}
 		}

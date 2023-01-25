@@ -35,9 +35,8 @@ func NewClient(namespace string) (*Client, error) {
 }
 
 // Create is a method to create new configmap
-func (c *Client) Create(id string, stringData map[string]string) error {
+func (c *Client) Create(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Create(ctx, configMapSpec, metav1.CreateOptions{}); err != nil {
@@ -48,9 +47,8 @@ func (c *Client) Create(id string, stringData map[string]string) error {
 }
 
 // Get is a method to retrieve an existing configmap
-func (c *Client) Get(id string) (map[string]string, error) {
+func (c *Client) Get(ctx context.Context, id string) (map[string]string, error) {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec, err := configMapsClient.Get(ctx, id, metav1.GetOptions{})
 	if err != nil {
@@ -66,9 +64,8 @@ func (c *Client) Get(id string) (map[string]string, error) {
 }
 
 // Update is a method to update an existing configmap
-func (c *Client) Update(id string, stringData map[string]string) error {
+func (c *Client) Update(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Update(ctx, configMapSpec, metav1.UpdateOptions{}); err != nil {
@@ -79,9 +76,8 @@ func (c *Client) Update(id string, stringData map[string]string) error {
 }
 
 // Apply is a method to create or update a configmap
-func (c *Client) Apply(id string, stringData map[string]string) error {
+func (c *Client) Apply(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewApplySpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Apply(ctx, configMapSpec, metav1.ApplyOptions{

@@ -253,6 +253,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			return testContent
 		}
 
+		if (*content.Repository).IsEmpty() {
+			testContent.Repository = nil
+			return testContent
+		}
+
 		if testContent.Repository == nil {
 			testContent.Repository = &testsv3.Repository{}
 		}
@@ -464,6 +469,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ArtifactRequest != nil {
 		if *executionRequest.ArtifactRequest == nil {
+			request.ArtifactRequest = nil
+			return request
+		}
+
+		if (*executionRequest.ArtifactRequest).IsEmpty() {
 			request.ArtifactRequest = nil
 			return request
 		}

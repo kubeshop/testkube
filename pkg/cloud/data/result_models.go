@@ -82,8 +82,8 @@ type UpdateResultResponse struct {
 }
 
 type UpdateResultInExecutionResultRequest struct {
-	ID        string                   `json:"id"`
-	Execution testkube.ExecutionResult `json:"execution"`
+	ID        string             `json:"id"`
+	Execution testkube.Execution `json:"execution"`
 }
 
 type UpdateResultInExecutionResultResponse struct {

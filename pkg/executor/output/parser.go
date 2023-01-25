@@ -24,8 +24,8 @@ func GetLogEntry(b []byte) (out Output, err error) {
 // {"type": "line", "message": "runner execution started  ------------", "time": "..."}
 // {"type": "line", "message": "GET /results", "time": "..."}
 // {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
-func ParseRunnerOutput(b []byte) (testkube.ExecutionResult, error) {
-	result := testkube.ExecutionResult{}
+func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
+	result := &testkube.ExecutionResult{}
 	if len(b) == 0 {
 		errMessage := "no logs found"
 		result.Output = errMessage
@@ -48,7 +48,7 @@ func ParseRunnerOutput(b []byte) (testkube.ExecutionResult, error) {
 	switch log.Type_ {
 	case TypeResult:
 		if log.Result != nil {
-			result = *log.Result
+			result = log.Result
 			break
 		}
 		result.Err(errors.New("found result log with no content"))

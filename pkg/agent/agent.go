@@ -71,8 +71,8 @@ func (ag *Agent) Run(ctx context.Context) error {
 
 		ag.logger.Errorw("agent connection failed, reconnecting", "error", err)
 
-		// TODO some smart back off strategy?
-		time.Sleep(100 * time.Millisecond)
+		// TODO: some smart back off strategy?
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -135,7 +135,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream recv: %w", err)
+			ag.logger.Errorf("agent stream recv: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():

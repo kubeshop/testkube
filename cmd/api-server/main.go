@@ -82,7 +82,7 @@ func runMigrations() (err error) {
 		return nil
 	}
 
-	migrationInfo := []string{}
+	var migrationInfo []string
 	for _, migration := range results {
 		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
 	}
@@ -113,7 +113,7 @@ func main() {
 
 	ln, err := net.Listen("tcp", ":"+cfg.APIServerPort)
 	ui.ExitOnError("Checking if port "+cfg.APIServerPort+"is free", err)
-	ln.Close()
+	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
 
 	kubeClient, err := kubeclient.GetClient()
@@ -157,7 +157,7 @@ func main() {
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 	}
 	testResultsRepository := testresult.NewMongoRespository(db, Config.AllowDiskUse)
-	configRepository := configmongo.NewMongoRespository(db)
+	configRepository := configmongo.NewMongoRepository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
 	if cfg.APIServerConfig != "" {
 		configName = cfg.APIServerConfig
@@ -174,23 +174,23 @@ func main() {
 	}
 
 	var clusterId string
-	config, err := configMapConfig.Get(ctx)
-	if config.ClusterId != "" {
-		clusterId = config.ClusterId
+	cmConfig, err := configMapConfig.Get(ctx)
+	if cmConfig.ClusterId != "" {
+		clusterId = cmConfig.ClusterId
 	}
 
 	if clusterId == "" {
-		config, err = configRepository.Get(ctx)
-		config.EnableTelemetry = telemetryEnabled
-		if config.ClusterId == "" {
-			config.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
+		cmConfig, err = configRepository.Get(ctx)
+		cmConfig.EnableTelemetry = telemetryEnabled
+		if cmConfig.ClusterId == "" {
+			cmConfig.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
 		}
 
-		clusterId = config.ClusterId
-		err = configMapConfig.Upsert(ctx, config)
+		clusterId = cmConfig.ClusterId
+		err = configMapConfig.Upsert(ctx, cmConfig)
 	}
 
-	log.DefaultLogger.Debugw("Getting uniqe clusterId", "clusterId", clusterId, "error", err)
+	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClientV2))
@@ -327,18 +327,18 @@ func main() {
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agent, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient)
+		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
 		g.Go(func() error {
-			err = agent.Run(ctx)
+			err = agentHandle.Run(ctx)
 			if err != nil {
 				ui.ExitOnError("Running agent", err)
 			}
 			return nil
 		})
-		eventsEmitter.Register(agent)
+		eventsEmitter.Register(agentHandle)
 	}
 
 	api.InitEvents()

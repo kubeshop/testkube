@@ -1,9 +1,10 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -27,18 +28,18 @@ const (
 )
 
 // AuthHandler is auth middleware
-func (s TestkubeAPI) AuthHandler() fiber.Handler {
+func (s *TestkubeAPI) AuthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Get(cliIngressHeader, "") != "" {
 			token := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization", ""), oauth.AuthorizationPrefix))
-			scopes := []string{}
+			var scopes []string
 			if s.oauthParams.Scopes != "" {
 				scopes = strings.Split(s.oauthParams.Scopes, ",")
 			}
 
 			provider := oauth.NewProvider(s.oauthParams.ClientID, s.oauthParams.ClientSecret, scopes)
 			if err := provider.ValidateAccessToken(s.oauthParams.Provider, token); err != nil {
-				s.Log.Errorf("error validating token", "error", err)
+				s.Log.Errorw("error validating token", "error", err)
 				return s.Error(c, http.StatusUnauthorized, err)
 			}
 		}
@@ -48,7 +49,7 @@ func (s TestkubeAPI) AuthHandler() fiber.Handler {
 }
 
 // InfoHandler is a handler to get info
-func (s TestkubeAPI) InfoHandler() fiber.Handler {
+func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:    version.Commit,
@@ -59,9 +60,9 @@ func (s TestkubeAPI) InfoHandler() fiber.Handler {
 }
 
 // RoutesHandler is a handler to get existing routes
-func (s TestkubeAPI) RoutesHandler() fiber.Handler {
+func (s *TestkubeAPI) RoutesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		routes := []fiber.Route{}
+		var routes []fiber.Route
 
 		stack := s.Mux.Stack()
 		for _, e := range stack {
@@ -76,31 +77,31 @@ func (s TestkubeAPI) RoutesHandler() fiber.Handler {
 }
 
 // DebugHandler is a handler to get debug information
-func (s TestkubeAPI) DebugHandler() fiber.Handler {
+func (s *TestkubeAPI) DebugHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		clientSet, err := k8sclient.ConnectToK8s()
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not connect to cluster: %w", err))
+			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not connect to cluster"))
 		}
 
 		clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get cluster version: %w", err))
+			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get cluster version"))
 		}
 
-		apiLogs, err := k8sclient.GetAPIServerLogs(c.Context(), clientSet, s.Namespace)
+		apiLogs, err := k8sclient.GetAPIServerLogs(c.UserContext(), clientSet, s.Namespace)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get api server logs: %w", err))
+			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get api server logs"))
 		}
 
-		operatorLogs, err := k8sclient.GetOperatorLogs(c.Context(), clientSet, s.Namespace)
+		operatorLogs, err := k8sclient.GetOperatorLogs(c.UserContext(), clientSet, s.Namespace)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get operator logs: %w", err))
+			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get operator logs"))
 		}
 
-		executionLogs, err := s.GetLatestExecutionLogs(c.Context())
+		executionLogs, err := s.GetLatestExecutionLogs(c.UserContext())
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("could not get execution logs: %w", err))
+			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get execution logs"))
 		}
 
 		return c.JSON(testkube.DebugInfo{
