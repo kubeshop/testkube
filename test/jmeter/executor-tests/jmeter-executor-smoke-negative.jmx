@@ -89,6 +89,15 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
+        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">println &quot;\nJMeter negative test - failing Thread Group in purpose with System.exit(1)\n&quot;;
+System.exit(1);</stringProp>
+        </JSR223PostProcessor>
+        <hashTree/>
       </hashTree>
     </hashTree>
   </hashTree>
