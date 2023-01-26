@@ -79,7 +79,7 @@ type Sequences interface {
 
 type OutputRepository interface {
 	// GetOutput gets execution output by id or name
-	GetOutput(ctx context.Context, id string) (output string, err error)
+	GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error)
 	// InsertOutput inserts new execution output
 	InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error
 	// UpdateOutput updates execution output

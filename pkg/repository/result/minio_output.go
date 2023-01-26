@@ -28,7 +28,7 @@ func NewMinioOutputRepository(storageClient storage.Client, executionCollection 
 	}
 }
 
-func (m *MinioRepository) GetOutput(ctx context.Context, id string) (output string, err error) {
+func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error) {
 	eOutput, err := m.getOutput(id)
 	if err != nil {
 		return "", err
