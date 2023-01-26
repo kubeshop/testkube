@@ -93,7 +93,7 @@ spec:
     repository:
       type: git-file
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-negative-tests
+      branch: main
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
   executionRequest:
     negativeTest: true

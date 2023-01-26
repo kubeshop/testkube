@@ -38,7 +38,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-negative-tests
+      branch: main
       path: test/k6/executor-tests/k6-smoke-test-negative.js
   executionRequest:
     negativeTest: true

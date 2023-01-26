@@ -106,7 +106,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
-      branch: executor-tests-negative-tests
+      branch: main
       path: examples/hello-gradle-jdk18
   executionRequest:
     negativeTest: true
