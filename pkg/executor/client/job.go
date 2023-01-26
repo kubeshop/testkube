@@ -346,10 +346,10 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 			result.Status = testkube.ExecutionStatusPassed
 			result.Output = result.Output + "\nTest run was expected to fail, but it passed."
 		} else {
-			l.Infow("test run was expected to fail, but it passed", "test", execution.TestName)
+			l.Infow("test run was expected to fail - the result will be reversed", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
 			result.Status = testkube.ExecutionStatusFailed
-			result.Output = result.Output + "\nTest run was expected to fail, but it passed."
+			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
 		}
 	}
 
@@ -573,16 +573,18 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 	l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
 	errorLog, err := c.GetPodLogError(ctx, pod)
 	if err != nil {
+		l.Errorw("getPodLogs error", "error", err, "pod", pod)
 		return errors.Errorf("getPodLogs error: %v", err)
 	}
 
 	l.Debugw("log", "got last log bytes", string(errorLog)) // in case distorted log bytes
 	entry, err := output.GetLogEntry(errorLog)
 	if err != nil {
+		l.Errorw("GetLogEntry error", "error", err, "input", string(errorLog), "pod", pod)
 		return errors.Errorf("GetLogEntry error: %v", err)
 	}
 
-	c.Log.Errorw("got last log entry", "log", entry.String())
+	l.Infow("got last log entry", "log", entry.String())
 	return errors.Errorf("error from last log entry: %s", entry.String())
 }
 
