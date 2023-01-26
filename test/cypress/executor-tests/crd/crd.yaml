@@ -343,3 +343,24 @@ spec:
     args:
       - --browser
       - firefox
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-default-executor-smoke-electron-negative
+  namespace: testkube
+  labels:
+    core-tests: executors-negative
+spec:
+  type: cypress/project
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-11
+  executionRequest:
+    args:
+      - --some-incorrect-argument
+    negativeTest: true
