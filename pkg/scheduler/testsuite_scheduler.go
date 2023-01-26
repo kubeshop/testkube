@@ -449,7 +449,8 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
 
 			for i := range result.Batch {
-				if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+				if result.Batch[i].Step != nil && result.Batch[i].Step.Delay != nil &&
+					result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
 					result.Batch[i].Execution.ExecutionResult.Success()
 				}
 			}
@@ -460,18 +461,17 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 				s.logger.Infow("delay aborted", "testSuiteId", testSuiteId, "duration", duration)
 
 				for i := range result.Batch {
-					if result.Batch[i].Step.Delay != nil &&
-						time.Millisecond*time.Duration(result.Batch[i].Step.Delay.Duration) < duration {
-						if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+					if result.Batch[i].Step != nil && result.Batch[i].Step.Delay != nil &&
+						result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
+						if time.Millisecond*time.Duration(result.Batch[i].Step.Delay.Duration) < duration {
 							result.Batch[i].Execution.ExecutionResult.Success()
+							continue
 						}
-						continue
-					}
 
-					if result.Batch[i].Execution != nil && result.Batch[i].Execution.ExecutionResult != nil {
 						result.Batch[i].Execution.ExecutionResult.Abort()
 					}
 				}
+
 				return
 			}
 		}
