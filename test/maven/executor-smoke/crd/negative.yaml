@@ -16,3 +16,5 @@ spec:
       uri: https://github.com/kubeshop/testkube-executor-maven.git
       branch: executor-tests-negative-tests
       path: examples/hello-maven-jdk18
+  executionRequest:
+    negativeTest: true

@@ -27,3 +27,4 @@ spec:
     - $(URL)
     envs:
       URL: https://testkube.non.existing.url.example
+    negativeTest: true
