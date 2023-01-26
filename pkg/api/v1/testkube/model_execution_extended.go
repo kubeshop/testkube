@@ -21,12 +21,16 @@ func NewExecutionWithID(id, testType, testName string) *Execution {
 	}
 }
 
-func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
+func NewExecution(id, testNamespace, testName, testSuiteName, executionName, testType string,
 	executionNumber int, content *TestContent, result ExecutionResult,
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
+	if id == "" {
+		id = primitive.NewObjectID().Hex()
+	}
+
 	return Execution{
-		Id:                  primitive.NewObjectID().Hex(),
+		Id:                  id,
 		TestName:            testName,
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
@@ -187,4 +191,12 @@ func (e Execution) IsTimeout() bool {
 	}
 
 	return *e.ExecutionResult.Status == TIMEOUT_ExecutionStatus
+}
+
+func (e *Execution) WithID() *Execution {
+	if e.Id == "" {
+		e.Id = primitive.NewObjectID().Hex()
+	}
+
+	return e
 }

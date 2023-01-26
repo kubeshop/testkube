@@ -2,7 +2,7 @@ package testkube
 
 func NewTestStepQueuedResult(step *TestSuiteStep) (result TestSuiteStepExecutionResult) {
 	result.Step = step
-	result.Execution = NewQueuedExecution()
+	result.Execution = NewQueuedExecution().WithID()
 
 	return
 }

@@ -24,6 +24,11 @@ const (
 	DefaultConcurrencyLevel = 10
 )
 
+type testTuple struct {
+	test        testkube.Test
+	executionID string
+}
+
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite,
 	testkube.TestSuiteExecutionRequest,
@@ -323,7 +328,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
-	var tests []testkube.Test
+	var testTuples []testTuple
 	var duration time.Duration
 	for i := range result.Batch {
 		step := result.Batch[i].Step
@@ -340,9 +345,17 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				continue
 			}
 
+			execution := result.Batch[i].Execution
+			if execution == nil {
+				continue
+			}
+
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
-			tests = append(tests, testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace})
+			testTuples = append(testTuples, testTuple{
+				test:        testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace},
+				executionID: execution.Id,
+			})
 		case testkube.TestSuiteStepTypeDelay:
 			if step.Delay == nil {
 				continue
@@ -365,7 +378,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 	workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
-	if len(tests) != 0 {
+	if len(testTuples) != 0 {
 		req := testkube.ExecutionRequest{
 			TestSuiteName:         testSuiteName,
 			Variables:             testsuiteExecution.Variables,
@@ -378,11 +391,12 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			ContentRequest:        request.ContentRequest,
 		}
 
-		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(tests))
-		for i := range tests {
-			req.Name = fmt.Sprintf("%s-%s", testSuiteName, tests[i].Name)
+		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))
+		for i := range testTuples {
+			req.Name = fmt.Sprintf("%s-%s", testSuiteName, testTuples[i].test.Name)
+			req.Id = testTuples[i].executionID
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
-				Object:  tests[i],
+				Object:  testTuples[i].test,
 				Options: req,
 				ExecFn:  s.executeTest,
 			}
@@ -396,10 +410,16 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	}
 
-	results := make(map[string]*testkube.Execution, len(tests))
-	if len(tests) != 0 {
+	results := make(map[string]testkube.Execution, len(testTuples))
+	if len(testTuples) != 0 {
 		for r := range workerpoolService.GetResponses() {
-			results[r.Result.Id] = &r.Result
+			results[r.Result.Id] = r.Result
+			status := ""
+			if r.Result.ExecutionResult != nil && r.Result.ExecutionResult.Status != nil {
+				status = string(*r.Result.ExecutionResult.Status)
+			}
+
+			s.logger.Infow("execution result", "id", r.Result.Id, "status", status)
 		}
 
 		for i := range result.Batch {
@@ -407,8 +427,8 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				continue
 			}
 
-			if _, ok := results[result.Batch[i].Execution.Id]; ok {
-				result.Batch[i].Execution = results[result.Batch[i].Execution.Id]
+			if value, ok := results[result.Batch[i].Execution.Id]; ok {
+				result.Batch[i].Execution = &value
 			}
 		}
 	}

@@ -208,6 +208,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
+		options.Request.Id,
 		options.Namespace,
 		options.TestName,
 		options.Request.TestSuiteName,

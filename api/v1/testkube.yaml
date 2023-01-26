@@ -3306,6 +3306,11 @@ components:
       description: test execution request body
       type: object
       properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: test execution custom name
