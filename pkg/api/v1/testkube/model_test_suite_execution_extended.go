@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -172,11 +173,11 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 
 					names = append(names, sr.Step.FullName())
 					ids = append(ids, id)
-					errorMessages = append(errorMessages, errorMessage)
+					errorMessages = append(errorMessages, fmt.Sprintf("%q", errorMessage))
 				case TestSuiteStepTypeDelay:
 					names = append(names, sr.Step.FullName())
-					ids = append(ids, "")
-					errorMessages = append(errorMessages, "")
+					ids = append(ids, "\"\"")
+					errorMessages = append(errorMessages, "\"\"")
 				}
 			}
 
