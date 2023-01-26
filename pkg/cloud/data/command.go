@@ -36,11 +36,6 @@ const (
 	CmdResultGetTestMetrics         Command = "result_get_test_metrics"
 )
 
-type CommandRequest struct {
-	Command Command `json:"command"`
-	Payload any     `json:"payload"`
-}
-
 func execute(ctx context.Context, client cloud.TestKubeCloudAPIClient, command Command, payload any, apiKey string) (*cloud.CommandResponse, error) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
