@@ -12,3 +12,19 @@ spec:
     - $(URL)
     envs:
       URL: https://testkube.kubeshop.io/
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-curl-smoke-negative
+  namespace: testkube
+  labels:
+    core-tests: executors-negative
+spec:
+  type: container-executor-curl/test
+  executionRequest:
+    args:
+    - $(URL)
+    envs:
+      URL: https://testkube.non.existing.url.example
+    negativeTest: true
