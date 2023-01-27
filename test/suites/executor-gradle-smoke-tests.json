@@ -5,6 +5,7 @@
 		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk18"}}]},
 		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk17"}}]},
 		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk11"}}]},
-		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk8"}}]}
+		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk8"}}]},
+		{"batch": [{"execute": {"name": "gradle-executor-smoke-jdk18-negative"}}]}
 	]
 }

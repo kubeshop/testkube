@@ -148,6 +148,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		JobTemplate:           executionRequest.JobTemplate,
 		PreRunScript:          executionRequest.PreRunScript,
 		ScraperTemplate:       executionRequest.ScraperTemplate,
+		NegativeTest:          executionRequest.NegativeTest,
 	}
 }
 
@@ -449,6 +450,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.Sync != nil {
 		request.Sync = *executionRequest.Sync
+		emptyExecution = false
+	}
+
+	if executionRequest.NegativeTest != nil {
+		request.NegativeTest = *executionRequest.NegativeTest
 		emptyExecution = false
 	}
 

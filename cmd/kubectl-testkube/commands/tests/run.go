@@ -48,6 +48,7 @@ func NewRunTestCmd() *cobra.Command {
 		gitWorkingDir            string
 		preRunScript             string
 		scraperTemplate          string
+		negativeTest             bool
 	)
 
 	cmd := &cobra.Command{
@@ -111,6 +112,7 @@ func NewRunTestCmd() *cobra.Command {
 				JobTemplate:                   jobTemplateContent,
 				PreRunScriptContent:           preRunScriptContent,
 				ScraperTemplate:               scraperTemplateContent,
+				IsNegativeTestChangedOnRun:    false,
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
@@ -119,6 +121,11 @@ func NewRunTestCmd() *cobra.Command {
 					VolumeMountPath:  artifactVolumeMountPath,
 					Dirs:             artifactDirs,
 				}
+			}
+
+			if cmd.Flag("negative-test").Changed {
+				options.NegativeTest = negativeTest
+				options.IsNegativeTestChangedOnRun = true
 			}
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
@@ -236,6 +243,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 
 	return cmd
 }

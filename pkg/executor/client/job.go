@@ -179,7 +179,7 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -216,7 +216,7 @@ func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execu
 	// get job pod and
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution)
+			return c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
 		}
 	}
 
@@ -290,12 +290,12 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
-func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
+func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, isNegativeTest bool) (*testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
 	defer func() {
-		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, err); err != nil {
+		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, isNegativeTest, err); err != nil {
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
 		}
 	}()
@@ -326,7 +326,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 
 }
 
-func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, passedErr error) error {
+func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, isNegativeTest bool, passedErr error) error {
 	savedExecution, err := c.Repository.Get(ctx, execution.Id)
 	if err != nil {
 		l.Errorw("get execution error", "error", err)
@@ -339,6 +339,20 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	}
 
 	execution.Stop()
+	if isNegativeTest {
+		if result.IsFailed() {
+			l.Infow("test run was expected to fail, and it failed as expected", "test", execution.TestName)
+			execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
+			result.Status = testkube.ExecutionStatusPassed
+			result.Output = result.Output + "\nTest run was expected to fail, but it passed."
+		} else {
+			l.Infow("test run was expected to fail - the result will be reversed", "test", execution.TestName)
+			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
+			result.Status = testkube.ExecutionStatusFailed
+			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
+		}
+	}
+
 	err = c.Repository.EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
@@ -559,16 +573,18 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 	l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
 	errorLog, err := c.GetPodLogError(ctx, pod)
 	if err != nil {
+		l.Errorw("getPodLogs error", "error", err, "pod", pod)
 		return errors.Errorf("getPodLogs error: %v", err)
 	}
 
 	l.Debugw("log", "got last log bytes", string(errorLog)) // in case distorted log bytes
 	entry, err := output.GetLogEntry(errorLog)
 	if err != nil {
+		l.Errorw("GetLogEntry error", "error", err, "input", string(errorLog), "pod", pod)
 		return errors.Errorf("GetLogEntry error: %v", err)
 	}
 
-	c.Log.Errorw("got last log entry", "log", entry.String())
+	l.Infow("got last log entry", "log", entry.String())
 	return errors.Errorf("error from last log entry: %s", entry.String())
 }
 
@@ -577,7 +593,7 @@ func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) 
 	l := c.Log.With("execution", execution.Id)
 	result, _ = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
 	l.Debugw("job aborted", "execution", execution.Id, "result", result)
-	if err := c.stopExecution(ctx, l, execution, result, nil); err != nil {
+	if err := c.stopExecution(ctx, l, execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor abort", "error", err)
 	}
 	return result, nil
@@ -594,7 +610,7 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 	result = &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusTimeout,
 	}
-	if err := c.stopExecution(ctx, l, &execution, result, nil); err != nil {
+	if err := c.stopExecution(ctx, l, &execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor timeout", "error", err)
 	}
 

@@ -2,6 +2,7 @@
 	"name": "executor-container-smoke-tests",
 	"description": "container executor smoke tests",
 	"steps": [
-		{"batch": [{"execute": {"name": "container-executor-curl-smoke"}}]}
+		{"batch": [{"execute": {"name": "container-executor-curl-smoke"}}]},
+		{"batch": [{"execute": {"name": "container-executor-curl-smoke-negative"}}]}
 	]
 }

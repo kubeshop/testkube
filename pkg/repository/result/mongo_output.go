@@ -43,7 +43,7 @@ func WithMongoOutputRepositoryCollection(collection *mongo.Collection) MongoOutp
 	}
 }
 
-func (r *MongoOutputRepository) GetOutput(ctx context.Context, id string) (output string, err error) {
+func (r *MongoOutputRepository) GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error) {
 	var eOutput ExecutionOutput
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&eOutput)
 	return eOutput.Output, err

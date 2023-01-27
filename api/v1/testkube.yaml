@@ -3401,6 +3401,14 @@ components:
           type: string
           description: https proxy for executor containers
           example: user:pass@my.proxy.server:8081
+        negativeTest:
+          type: boolean
+          description: whether to run test as negative test
+          example: false
+        isNegativeTestChangedOnRun:
+          type: boolean
+          description: whether negativeTest was changed by user
+          example: false
         activeDeadlineSeconds:
           type: integer
           format: int64
