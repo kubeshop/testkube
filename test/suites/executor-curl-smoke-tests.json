@@ -2,6 +2,6 @@
 	"name": "executor-curl-smoke-tests",
 	"description": "curl executor smoke tests",
 	"steps": [
-		{"execute": {"name": "curl-executor-smoke"}}
+		{"batch": [{"execute": {"name": "curl-executor-smoke"}}]}
 	]
 }

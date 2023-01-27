@@ -2,12 +2,12 @@
 	"name": "testkube",
 	"description": "Testkube test suite, api, dashboard and performance",
 	"steps": [
-		{"execute": {"name": "testkube-api"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-dashboard"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-api-performance"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-homepage-performance"}}
+		{"batch": [{"execute": {"name": "testkube-api"}}]},
+		{"batch": [{"delay": {"duration": 1000}}]},
+		{"batch": [{"execute": {"name": "testkube-dashboard"}}]},
+		{"batch": [{"delay": {"duration": 1000}}]},
+		{"batch": [{"execute": {"name": "testkube-api-performance"}}]},
+		{"batch": [{"delay": {"duration": 1000}}]},
+		{"batch": [{"execute": {"name": "testkube-homepage-performance"}}]}
 	]
 }

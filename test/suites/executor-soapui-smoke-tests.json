@@ -2,6 +2,6 @@
 	"name": "executor-soapui-smoke-tests",
 	"description": "soapui executor smoke tests",
 	"steps": [
-		{"execute": {"name": "soapui-executor-smoke"}}
+		{"batch": [{"execute": {"name": "soapui-executor-smoke"}}]}
 	]
 }

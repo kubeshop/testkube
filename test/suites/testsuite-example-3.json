@@ -2,8 +2,8 @@
 	"name": "test-example-3",
 	"description": "Tests fast first",
 	"steps": [
-		{"execute": {"namespace": "testkube", "name": "testkube-variables-test"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"namespace": "testkube", "name": "testkube-variables-test"}}
+		{"batch": [{"execute": {"namespace": "testkube", "name": "testkube-variables-test"}}]},
+		{"batch": [{"delay": {"duration": 1000}}]},
+		{"batch": [{"execute": {"namespace": "testkube", "name": "testkube-variables-test"}}]}
 	]
 }

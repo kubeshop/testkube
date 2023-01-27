@@ -2,6 +2,6 @@
 	"name": "executor-k6-smoke-tests",
 	"description": "k6 executor smoke tests",
 	"steps": [
-		{"execute": {"name": "k6-executor-smoke"}}
+		{"batch": [{"execute": {"name": "k6-executor-smoke"}}]}
 	]
 }

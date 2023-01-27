@@ -2,6 +2,6 @@
 	"name": "executor-kubepug-smoke-tests",
 	"description": "kubepug executor smoke tests",
 	"steps": [
-		{"execute": {"name": "kubepug-executor-smoke"}}
+		{"batch": [{"execute": {"name": "kubepug-executor-smoke"}}]}
 	]
 }

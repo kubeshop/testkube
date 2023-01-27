@@ -187,18 +187,28 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 		}
 
 		if (*request.Repository).UsernameSecret != nil {
-			testSource.Spec.Repository.UsernameSecret = &testsourcev1.SecretRef{
-				Name: (*(*request.Repository).UsernameSecret).Name,
-				Key:  (*(*request.Repository).UsernameSecret).Key,
+			if (*(*request.Repository).UsernameSecret).IsEmpty() {
+				testSource.Spec.Repository.UsernameSecret = nil
+			} else {
+				testSource.Spec.Repository.UsernameSecret = &testsourcev1.SecretRef{
+					Name: (*(*request.Repository).UsernameSecret).Name,
+					Key:  (*(*request.Repository).UsernameSecret).Key,
+				}
 			}
+
 			empty = false
 		}
 
 		if (*request.Repository).TokenSecret != nil {
-			testSource.Spec.Repository.TokenSecret = &testsourcev1.SecretRef{
-				Name: (*(*request.Repository).TokenSecret).Name,
-				Key:  (*(*request.Repository).TokenSecret).Key,
+			if (*(*request.Repository).TokenSecret).IsEmpty() {
+				testSource.Spec.Repository.TokenSecret = nil
+			} else {
+				testSource.Spec.Repository.TokenSecret = &testsourcev1.SecretRef{
+					Name: (*(*request.Repository).TokenSecret).Name,
+					Key:  (*(*request.Repository).TokenSecret).Key,
+				}
 			}
+
 			empty = false
 		}
 
