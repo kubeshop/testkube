@@ -4,24 +4,20 @@ sidebar_label: Custom Resources
 ---
 # Testkube Custom Resources
 
-In Testkube, Tests, Test Suites, Executors and Webhooks are defined using [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). The current definitions can be found in the [kubeshop/testkube-operator](https://github.com/kubeshop/testkube-operator/tree/main/config/crd) repository.
+In Testkube, Tests, Test Suites, Executors and Webhooks, Test Sources and Test Triggers are defined using [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). The current definitions can be found in the [kubeshop/testkube-operator](https://github.com/kubeshop/testkube-operator/tree/main/config/crd) repository.
 
 You can always check the list of all CRDs using `kubectl` configured to point to your Kubernetes cluster with Testkube installed:
 
 ```bash
 $ kubectl get crds
 NAME                                  CREATED AT
-certificaterequests.cert-manager.io   2022-04-01T10:53:54Z
-certificates.cert-manager.io          2022-04-01T10:53:54Z
-challenges.acme.cert-manager.io       2022-04-01T10:53:54Z
-clusterissuers.cert-manager.io        2022-04-01T10:53:54Z
 executors.executor.testkube.io        2022-04-13T11:44:22Z
-issuers.cert-manager.io               2022-04-01T10:53:54Z
-orders.acme.cert-manager.io           2022-04-01T10:53:54Z
 scripts.tests.testkube.io             2022-04-13T11:44:22Z
 tests.tests.testkube.io               2022-04-13T11:44:22Z
 testsuites.tests.testkube.io          2022-04-13T11:44:22Z
 webhooks.executor.testkube.io         2022-04-13T11:44:22Z
+testsources.tests.testkube.io         2022-04-13T11:44:22Z
+testtriggers.tests.testkube.io        2022-04-13T11:44:22Z
 ```
 
 To check details on one of the CRDs, use `describe`:
@@ -108,7 +104,7 @@ spec:
 Testkube Test Suites are collections of Testkube Tests of the same or different types.
 
 ```yml
-apiVersion: tests.testkube.io/v2
+apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
   name: example-testsuite
@@ -116,14 +112,16 @@ metadata:
 spec:
   description: Example Test Suite
   steps:
+  - stopOnFailure: false
+    batch:
     - execute:
-        name: example-test1
-        namespace: testkube
+        name: testkube-api
+    - execute:
+        name: testkube-dashboard
+  - stopOnFailure: false
+    batch:
     - delay:
         duration: 1000
-    - execute:
-        name: example-test2
-        namespace: testkube
 ```
 
 ## **Executors**
@@ -168,4 +166,54 @@ spec:
   events:
   - start-test
   - end-test
+```
+
+## **Test Triggers**
+
+Testkube Test Triggers specifies conditions for triggering of Testkube Tests or Test Suites on certain events.
+
+```yml
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: testtrigger-conditions
+  namespace: testkube
+spec:
+  action: run
+  conditionSpec:
+    conditions:
+    - status: "True"
+      type: Progressing
+    - status: "True"
+      type: Available
+    timeout: 100
+  event: created
+  execution: test
+  resource: deployment
+  resourceSelector:
+    labelSelector:
+      matchLabels:
+        app: nginx
+  testSelector:
+    name: cli-test
+    namespace: testkube
+```
+
+## **Test Sources**
+
+Testkube Test Sources allow your to define shared data sources for multiple tests.
+
+```yml
+apiVersion: tests.testkube.io/v1
+kind: TestSource
+metadata:
+  name: testsource-postman-executor
+  namespace: testkube
+spec:
+  repository:
+    branch: main
+    path: test/postman/executor-tests/postman-executor.postman_collection.json
+    type: git
+    uri: https://github.com/kubeshop/testkube.git
+  type: git-file
 ```
