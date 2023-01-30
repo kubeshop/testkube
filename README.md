@@ -104,7 +104,7 @@ Shout-out to our contributors 🎉 - you're great!
 - ⭐️ [@lreimer](https://github.com/lreimer) - [K6 executor](https://github.com/kubeshop/testkube-executor-k6) [Gradle executor](https://github.com/kubeshop/testkube-executor-gradle) [Maven executor](https://github.com/kubeshop/testkube-executor-maven)
 - ⭐️ [@jdborneman-terminus](https://github.com/jdborneman-terminus) - [Ginkgo executor](https://github.com/kubeshop/testkube-executor-ginkgo) 
 - ️⭐️ [@abhishek9686](https://github.com/abhishek9686)
-- ⭐️ [@andrei-n-cosma](https://github.com/andrei-n-cosma)
+- ⭐️ [@ancosma](https://github.com/ancosma)
 - ⭐️ [@Stupremee](https://github.com/Stupremee)
 - ⭐️ [@artem-zherdiev-ingio](https://github.com/artem-zherdiev-ingio)
 
