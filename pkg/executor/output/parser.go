@@ -15,7 +15,9 @@ import (
 )
 
 func GetLogEntry(b []byte) (out Output, err error) {
-	err = json.Unmarshal(b, &out)
+	r := bytes.NewReader(b)
+	dec := json.NewDecoder(r)
+	err = dec.Decode(&out)
 	return out, err
 }
 
