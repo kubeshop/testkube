@@ -344,7 +344,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 			l.Infow("test run was expected to fail, and it failed as expected", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
 			result.Status = testkube.ExecutionStatusPassed
-			result.Output = result.Output + "\nTest run was expected to fail, but it passed."
+			result.Output = result.Output + "\nTest run was expected to fail, and it failed as expected"
 		} else {
 			l.Infow("test run was expected to fail - the result will be reversed", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
