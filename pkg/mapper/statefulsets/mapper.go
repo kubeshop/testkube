@@ -13,6 +13,7 @@ func MapCRDConditionsToAPI(conditions []appsv1.StatefulSetCondition) []testtrigg
 		results = append(results, testtriggersv1.TestTriggerCondition{
 			Type_:  string(condition.Type),
 			Status: (*testtriggersv1.TestTriggerConditionStatuses)(&condition.Status),
+			Reason: condition.Reason,
 		})
 	}
 

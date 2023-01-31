@@ -306,18 +306,28 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		}
 
 		if (*content.Repository).UsernameSecret != nil {
-			testContent.Repository.UsernameSecret = &testsv3.SecretRef{
-				Name: (*(*content.Repository).UsernameSecret).Name,
-				Key:  (*(*content.Repository).UsernameSecret).Key,
+			if (*(*content.Repository).UsernameSecret).IsEmpty() {
+				testContent.Repository.UsernameSecret = nil
+			} else {
+				testContent.Repository.UsernameSecret = &testsv3.SecretRef{
+					Name: (*(*content.Repository).UsernameSecret).Name,
+					Key:  (*(*content.Repository).UsernameSecret).Key,
+				}
 			}
+
 			emptyRepository = false
 		}
 
 		if (*content.Repository).TokenSecret != nil {
-			testContent.Repository.TokenSecret = &testsv3.SecretRef{
-				Name: (*(*content.Repository).TokenSecret).Name,
-				Key:  (*(*content.Repository).TokenSecret).Key,
+			if (*(*content.Repository).TokenSecret).IsEmpty() {
+				testContent.Repository.TokenSecret = nil
+			} else {
+				testContent.Repository.TokenSecret = &testsv3.SecretRef{
+					Name: (*(*content.Repository).TokenSecret).Name,
+					Key:  (*(*content.Repository).TokenSecret).Key,
+				}
 			}
+
 			emptyRepository = false
 		}
 

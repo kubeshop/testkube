@@ -76,6 +76,7 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 		conditions = append(conditions, testkube.TestTriggerCondition{
 			Type_:  condition.Type_,
 			Status: (*testkube.TestTriggerConditionStatuses)(condition.Status),
+			Reason: condition.Reason,
 		})
 	}
 
