@@ -95,6 +95,18 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		return options, err
 	}
 
+	if len(options.Steps) == 0 {
+		return options, fmt.Errorf("no test suite batch steps provided")
+	}
+
+	for _, step := range options.Steps {
+		if len(step.Batch) == 0 {
+			return options, fmt.Errorf("no steps defined for batch step")
+		}
+	}
+
+	fmt.Println("steps", options.Steps)
+
 	name := cmd.Flag("name").Value.String()
 	if name != "" {
 		options.Name = name
