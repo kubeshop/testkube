@@ -52,6 +52,9 @@ spec:
     {{- range $exp := .ConditionSpec.Conditions }}
     - type: {{ $exp.Type_ }}
       status: {{ $exp.Status }}
+      {{- if $exp.Reason }}
+      reason: {{ $exp.Reason }}
+      {{- end }}
     {{- end }}
     {{- end }}
   {{- end }}

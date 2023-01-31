@@ -130,6 +130,7 @@ func TestExecute(t *testing.T) {
 				Conditions: []testtriggersv1.TestTriggerCondition{{
 					Type_:  "Progressing",
 					Status: &status,
+					Reason: "NewReplicaSetAvailable",
 				}},
 			},
 			Action:       "run",

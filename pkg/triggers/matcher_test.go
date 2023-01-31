@@ -34,6 +34,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 				{
 					Type_:  "Progressing",
 					Status: &status,
+					Reason: "NewReplicaSetAvailable",
 				},
 				{
 					Type_:  "Available",
@@ -57,6 +58,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 					{
 						Type_:  "Progressing",
 						Status: &status,
+						Reason: "NewReplicaSetAvailable",
 					},
 					{
 						Type_:  "Available",
@@ -107,6 +109,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 				{
 					Type_:  "Progressing",
 					Status: &status,
+					Reason: "NewReplicaSetAvailable",
 				},
 				{
 					Type_:  "Available",
@@ -130,6 +133,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 					{
 						Type_:  "Progressing",
 						Status: &status,
+						Reason: "NewReplicaSetAvailable",
 					},
 					{
 						Type_:  "Available",
@@ -178,6 +182,7 @@ func TestService_match(t *testing.T) {
 				{
 					Type_:  "Progressing",
 					Status: &status,
+					Reason: "NewReplicaSetAvailable",
 				},
 				{
 					Type_:  "Available",
@@ -199,6 +204,7 @@ func TestService_match(t *testing.T) {
 					{
 						Type_:  "Progressing",
 						Status: &status,
+						Reason: "NewReplicaSetAvailable",
 					},
 					{
 						Type_:  "Available",

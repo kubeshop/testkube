@@ -3981,6 +3981,10 @@ components:
           type: string
           description: test trigger condition
           example: Progressing
+        reason:
+          type: string
+          description: test trigger condition reason
+          example: NewReplicaSetAvailable
 
     TestTriggerConditionStatuses:
       description: supported kubernetes condition statuses for test triggers

@@ -122,15 +122,17 @@ outer:
 				return false, err
 			}
 
-			conditionMap := make(map[string]*testtriggersv1.TestTriggerConditionStatuses, len(conditions))
+			conditionMap := make(map[string]testtriggersv1.TestTriggerCondition, len(conditions))
 			for _, condition := range conditions {
-				conditionMap[condition.Type_] = condition.Status
+				conditionMap[condition.Type_] = condition
 			}
 
 			matched := true
-			for _, condition := range t.Spec.ConditionSpec.Conditions {
-				status, ok := conditionMap[condition.Type_]
-				if !ok || status == nil || condition.Status == nil || *status != *condition.Status {
+			for _, triggerCondition := range t.Spec.ConditionSpec.Conditions {
+				resourceCondition, ok := conditionMap[triggerCondition.Type_]
+				if !ok || resourceCondition.Status == nil || triggerCondition.Status == nil ||
+					*resourceCondition.Status != *triggerCondition.Status ||
+					(triggerCondition.Reason != "" && triggerCondition.Reason != resourceCondition.Reason) {
 					matched = false
 					break
 				}

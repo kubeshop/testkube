@@ -6,8 +6,8 @@ sidebar_label: OAuth for UI
 
 Testkube doesn't provide a separate user/role management system to protect access to its UI.
 Users can configure and OAuth based authentication module using Testkube Helm chart parameters.
-Testkube can automatically create an OAuth2-Proxy service and deployment integrated 
-with GitHub, as well as properly configure Kubernetes Nginx Ingress Controller and create required 
+Testkube can automatically create an OAuth2-Proxy service and deployment integrated
+with GitHub, as well as properly configure Kubernetes Nginx Ingress Controller and create required
 ingresses.
 
 ## **Provide Parameters for UI and API Ingresses**
@@ -21,7 +21,7 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 --set testkube-api.uiIngress.enabled=true \
 --set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
 --set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri" \
---set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/access-control-allow-origin" = "*"
+--set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/access-control-allow-origin"="*"
 ```
 
 ### **UI Ingress**
@@ -31,8 +31,8 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 
 ```bash
 --set testkube-dashboard.ingress.enabled=true \
---set testkube-dashboard.ingress.annotations.nginx."ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth"
---set testkube-dashboard.ingress.annotations.nginx."ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri"
+--set testkube-dashboard.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
+--set testkube-dashboard.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri"
 ```
 
 ## **Create Cookie Secret**

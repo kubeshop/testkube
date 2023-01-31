@@ -76,6 +76,7 @@ conditionSpec:
     conditions:
     - type: test trigger condition type
       status: test trigger condition status, supported values - True, False, Unknown
+      reason: test trigger condition reason
 ```
 
 ### Supported values
@@ -89,7 +90,7 @@ conditionSpec:
 ## Example
 
 Here is an example for a **Test Trigger** *default/testtrigger-example* which runs the **TestSuite** *frontend/sanity-test*
-when a **pod** containing the label **testkube.io/tier: backend** gets **modified** and also has the conditions **Progressing: True** and **Available: True**.
+when a **pod** containing the label **testkube.io/tier: backend** gets **modified** and also has the conditions **Progressing: True: NewReplicaSetAvailable** and **Available: True**.
 
 ```yaml
 apiVersion: tests.testkube.io/v1
@@ -109,6 +110,7 @@ spec:
     conditions:
     - type: Progressing
       status: "True"
+      reason: "NewReplicaSetAvailable"
     - type: Available
       status: "True"
   action: run
