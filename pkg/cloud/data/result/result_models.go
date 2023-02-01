@@ -1,4 +1,4 @@
-package data
+package result
 
 import (
 	"time"
@@ -7,146 +7,146 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
-type NextExecutionNumberResultRequest struct {
+type NextExecutionNumberRequest struct {
 	TestName string `json:"testName"`
 }
 
-type NextExecutionNumberResultResponse struct {
+type NextExecutionNumberResponse struct {
 	TestNumber int32 `json:"testNumber"`
 }
 
-type GetResultRequest struct {
+type GetRequest struct {
 	ID string `json:"id"`
 }
 
-type GetResultResponse struct {
+type GetResponse struct {
 	Execution testkube.Execution `json:"execution"`
 }
 
-type GetByNameAndTestResultRequest struct {
+type GetByNameAndTestRequest struct {
 	Name     string `json:"name"`
 	TestName string `json:"testName"`
 }
 
-type GetByNameAndTestResultResponse struct {
+type GetByNameAndTestResponse struct {
 	Execution testkube.Execution `json:"execution"`
 }
 
-type GetLatestByTestResultRequest struct {
+type GetLatestByTestRequest struct {
 	TestName  string `json:"testName"`
 	SortField string `json:"sortField"`
 }
 
-type GetLatestByTestResultResponse struct {
+type GetLatestByTestResponse struct {
 	Execution testkube.Execution `json:"execution"`
 }
 
-type GetLatestByTestsResultRequest struct {
+type GetLatestByTestsRequest struct {
 	TestNames []string `json:"testNames"`
 	SortField string   `json:"sortField"`
 }
 
-type GetLatestByTestsResultResponse struct {
+type GetLatestByTestsResponse struct {
 	Executions []testkube.Execution `json:"executions"`
 }
 
-type GetExecutionsResultRequest struct {
+type GetExecutionsRequest struct {
 	Filter *result.FilterImpl `json:"filter"`
 }
 
-type GetExecutionsResultResponse struct {
+type GetExecutionsResponse struct {
 	Executions []testkube.Execution `json:"executions"`
 }
 
-type GetExecutionTotalsResultRequest struct {
+type GetExecutionTotalsRequest struct {
 	Paging bool                 `json:"paging"`
 	Filter []*result.FilterImpl `json:"filter"`
 }
 
-type GetExecutionTotalsResultResponse struct {
+type GetExecutionTotalsResponse struct {
 	Result testkube.ExecutionsTotals `json:"result"`
 }
 
-type InsertResultRequest struct {
+type InsertRequest struct {
 	Result testkube.Execution `json:"result"`
 }
 
-type InsertResultResponse struct {
+type InsertResponse struct {
 }
 
-type UpdateResultRequest struct {
+type UpdateRequest struct {
 	Result testkube.Execution `json:"result"`
 }
 
-type UpdateResultResponse struct {
+type UpdateResponse struct {
 }
 
-type UpdateResultInExecutionResultRequest struct {
+type UpdateResultInExecutionRequest struct {
 	ID        string             `json:"id"`
 	Execution testkube.Execution `json:"execution"`
 }
 
-type UpdateResultInExecutionResultResponse struct {
+type UpdateResultInExecutionResponse struct {
 }
 
-type StartExecutionResultRequest struct {
+type StartExecutionRequest struct {
 	ID        string    `json:"id"`
 	StartTime time.Time `json:"startTime"`
 }
 
-type StartExecutionResultResponse struct {
+type StartExecutionResponse struct {
 }
 
-type EndExecutionResultRequest struct {
+type EndExecutionRequest struct {
 	Execution testkube.Execution `json:"execution"`
 }
 
-type EndExecutionResultResponse struct {
+type EndExecutionResponse struct {
 }
 
-type GetLabelsResultResponse struct {
+type GetLabelsResponse struct {
 	Labels map[string][]string `json:"labels"`
 }
 
-type DeleteByTestResultRequest struct {
+type DeleteByTestRequest struct {
 	TestName string `json:"testName"`
 }
 
-type DeleteByTestResultResponse struct {
+type DeleteByTestResponse struct {
 }
 
-type DeleteByTestSuiteResultRequest struct {
+type DeleteByTestSuiteRequest struct {
 	TestSuiteName string `json:"testSuiteName"`
 }
 
-type DeleteByTestSuiteResultResponse struct {
+type DeleteByTestSuiteResponse struct {
 }
 
-type DeleteAllResultRequest struct{}
+type DeleteAllRequest struct{}
 
-type DeleteAllResultResponse struct{}
+type DeleteAllResponse struct{}
 
-type DeleteByTestsResultRequest struct {
+type DeleteByTestsRequest struct {
 	TestNames []string `json:"testNames"`
 }
 
-type DeleteByTestsResultResponse struct{}
+type DeleteByTestsResponse struct{}
 
-type DeleteByTestSuitesResultRequest struct {
+type DeleteByTestSuitesRequest struct {
 	TestSuiteNames []string `json:"testSuiteNames"`
 }
 
-type DeleteByTestSuitesResultResponse struct{}
+type DeleteByTestSuitesResponse struct{}
 
-type DeleteForAllTestSuitesResultResponse struct {
+type DeleteForAllTestSuitesResponse struct {
 }
 
-type GetTestMetricsResultRequest struct {
+type GetTestMetricsRequest struct {
 	Name  string `json:"name"`
 	Limit int    `json:"limit"`
 	Last  int    `json:"last"`
 }
 
-type GetTestMetricsResultResponse struct {
+type GetTestMetricsResponse struct {
 	Metrics testkube.ExecutionsMetrics `json:"metrics"`
 }

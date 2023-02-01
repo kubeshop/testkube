@@ -9,12 +9,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	result2 "github.com/kubeshop/testkube/pkg/cloud/data/result"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data"
 	configmongo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -150,7 +151,7 @@ func main() {
 	ui.ExitOnError("Getting mongo database", err)
 	var resultsRepository result.Repository
 	if mode == common.ModeAgent {
-		resultsRepository = data.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		resultsRepository = result2.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 	} else {
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 	}
