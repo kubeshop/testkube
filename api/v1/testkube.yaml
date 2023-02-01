@@ -2385,6 +2385,76 @@ components:
         status:
           $ref: "#/components/schemas/TestSuiteStatus"
 
+    TestSuiteV2:
+      type: object
+      required:
+        - name
+        - status
+        - steps
+      properties:
+        name:
+          type: string
+          example: "test-suite1"
+        namespace:
+          type: string
+          example: "testkube"
+        description:
+          type: string
+          example: "collection of tests"
+        before:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+          description: Run this step before whole suite
+          example:
+            - stopTestOnFailure: true
+              execute:
+                namespace: "testkube"
+                name: "example-test"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+          description: Steps to run
+          example:
+            - stopTestOnFailure: true
+              execute:
+                namespace: "testkube"
+                name: "example-test"
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+          description: Run this step after whole suite
+          example:
+            - stopTestOnFailure: true
+              execute:
+                namespace: "testkube"
+                name: "example-test"
+        labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        schedule:
+          type: string
+          description: schedule to run test suite
+          example: "* * * * *"
+        repeats:
+          type: integer
+          default: 1
+          example: 1
+        created:
+          type: string
+          format: date-time
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
+        status:
+          $ref: "#/components/schemas/TestSuiteStatus"
+
     TestSuiteStepType:
       type: string
       enum:
@@ -3543,12 +3613,30 @@ components:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
+    TestSuiteUpsertRequestV2:
+      description: test suite create request body
+      type: object
+      required:
+        - name
+        - namespace
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
+        - $ref: "#/components/schemas/ObjectRef"
+
     TestSuiteUpdateRequest:
       description: test suite update body
       type: object
       nullable: true
       allOf:
         - $ref: "#/components/schemas/TestSuite"
+        - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteUpdateRequestV2:
+      description: test suite update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
         - $ref: "#/components/schemas/ObjectRef"
 
     TestTriggerUpsertRequest:
