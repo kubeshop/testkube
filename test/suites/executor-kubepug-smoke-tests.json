@@ -2,11 +2,6 @@
 	"name": "executor-kubepug-smoke-tests",
 	"description": "kubepug executor smoke tests",
 	"steps": [
-<<<<<<< Updated upstream
-		{"execute": {"name": "kubepug-executor-smoke"}},
-		{"execute": {"name": "kubepug-executor-smoke-negative"}}
-=======
 		{"batch": [{"execute": {"name": "kubepug-executor-smoke"}}, {"execute": {"name": "kubepug-executor-smoke-negative"}}]}
->>>>>>> Stashed changes
 	]
 }
