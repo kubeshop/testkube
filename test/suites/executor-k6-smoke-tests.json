@@ -1,7 +1,8 @@
 {
 	"name": "executor-k6-smoke-tests",
-	"description": "k6 executor smoke tests",
+	"description": "k6 executor smoke tests - sequential execution (backwards compatibility)",
 	"steps": [
-		{"batch": [{"execute": {"name": "k6-executor-smoke"}}, {"execute": {"name": "k6-executor-smoke-negative"}}]}
+		{"execute": {"name": "k6-executor-smoke"}},
+		{"execute": {"name": "k6-executor-smoke-negative"}}
 	]
 }
