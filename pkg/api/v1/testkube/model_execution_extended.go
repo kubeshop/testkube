@@ -107,11 +107,12 @@ func (e *Execution) Err(err error) Execution {
 	e.ExecutionResult.Err(err)
 	return *e
 }
-func (e *Execution) Errw(msg string, err error) Execution {
+func (e *Execution) Errw(id, msg string, err error) Execution {
 	if e.ExecutionResult == nil {
 		e.ExecutionResult = &ExecutionResult{}
 	}
 
+	e.Id = id
 	e.ExecutionResult.Err(fmt.Errorf(msg, err))
 	return *e
 }
