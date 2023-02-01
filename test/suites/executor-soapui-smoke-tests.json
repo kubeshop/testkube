@@ -2,7 +2,11 @@
 	"name": "executor-soapui-smoke-tests",
 	"description": "soapui executor smoke tests",
 	"steps": [
+<<<<<<< Updated upstream
 		{"execute": {"name": "soapui-executor-smoke"}},
 		{"execute": {"name": "soapui-executor-smoke-negative"}}
+=======
+		{"batch": [{"execute": {"name": "soapui-executor-smoke"}}, {"execute": {"name": "soapui-executor-smoke-negative"}}]}
+>>>>>>> Stashed changes
 	]
 }
