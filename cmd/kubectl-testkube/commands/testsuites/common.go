@@ -105,8 +105,6 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		}
 	}
 
-	fmt.Println("steps", options.Steps)
-
 	name := cmd.Flag("name").Value.String()
 	if name != "" {
 		options.Name = name
