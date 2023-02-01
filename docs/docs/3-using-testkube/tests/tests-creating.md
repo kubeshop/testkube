@@ -324,16 +324,16 @@ spec:
 ```
 
 As we can see, this test has `spec.repository` with git repository data. This data can now be used by the executor to download test data.
-#### **Providing certificates**
+#### **Providing Certificates**
 
-If the git repository is using self-signed certificate, you can provide the certificate using kubernetes secrets and passing the secret name to the `--git-certificate-secret` flag.
+If the git repository is using a self-signed certificate, you can provide the certificate using Kubernetes secrets and passing the secret name to the `--git-certificate-secret` flag.
 
-In order to create a secret, you can use the following command:
+In order to create a secret, use the following command:
 
 ```bash
 kubectl create secret generic git-cert --from-file=git-cert.crt --from-file=git-cert.key
 ```
-Then you can pass the secret name to the `--git-certificate-secret` flag and during the test execution, the certificate will be mounted to the test container and added to the trusted authorities.
+Then you can pass the secret name to the `--git-certificate-secret` flag and, during the test execution, the certificate will be mounted to the test container and added to the trusted authorities.
 
 ### **Mapping local files**
 
