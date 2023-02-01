@@ -2404,7 +2404,7 @@ components:
         before:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step before whole suite
           example:
             - stopTestOnFailure: true
@@ -2414,7 +2414,7 @@ components:
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Steps to run
           example:
             - stopTestOnFailure: true
@@ -2424,7 +2424,7 @@ components:
         after:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step after whole suite
           example:
             - stopTestOnFailure: true
@@ -2478,6 +2478,21 @@ components:
     TestSuiteStep:
       type: object
       properties:
+        execute:
+          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
+        delay:
+          $ref: "#/components/schemas/TestSuiteStepDelay"
+
+    TestSuiteStepV2:
+      type: object
+      required:
+        - name
+        - type
+        - stopTestOnFailure
+      properties:
+        stopTestOnFailure:
+          type: boolean
+          default: true
         execute:
           $ref: "#/components/schemas/TestSuiteStepExecuteTest"
         delay:
