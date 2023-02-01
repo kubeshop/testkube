@@ -4,6 +4,8 @@ sidebar_label: Cypress
 ---
 # Cypress Tests
 
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/lGCkfIqzGfw" title="YouTube Tutorial: End-to-End Testing in Kubernetes with Cypress and Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 **Check out our [blog post](https://kubeshop.io/blog/end-to-end-tests-of-your-kubernetes-applications-with-cypress) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Cypress.**
 
 Testkube makes running Cypress tests simple. As Cypress is organized in projects, Testkube allows tests to be defined in a Github repository.
