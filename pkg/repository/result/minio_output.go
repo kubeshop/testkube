@@ -37,7 +37,7 @@ func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuite
 }
 
 func (m *MinioRepository) getOutput(id string) (ExecutionOutput, error) {
-	file, err := m.storage.DownloadFile(m.bucket, id)
+	file, err := m.storage.DownloadFileFromBucket(m.bucket, "", id)
 	if err != nil {
 		return ExecutionOutput{}, err
 	}
@@ -56,7 +56,7 @@ func (m *MinioRepository) saveOutput(eOutput ExecutionOutput) error {
 		return err
 	}
 	reader := bytes.NewReader(data)
-	err = m.storage.UploadFile(m.bucket, eOutput.Id, reader, reader.Size())
+	err = m.storage.UploadFileToBucket(m.bucket, "", eOutput.Id, reader, reader.Size())
 	return err
 }
 
@@ -78,7 +78,7 @@ func (m *MinioRepository) UpdateOutput(ctx context.Context, id, testName, testSu
 
 func (m *MinioRepository) DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error {
 	log.DefaultLogger.Debugw("deleting output", "id", id)
-	return m.storage.DeleteFile(m.bucket, id)
+	return m.storage.DeleteFileFromBucket(m.bucket, "", id)
 }
 
 func (m *MinioRepository) DeleteOutputByTest(ctx context.Context, testName string) error {

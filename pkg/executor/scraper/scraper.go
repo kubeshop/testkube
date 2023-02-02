@@ -15,7 +15,7 @@ type Scraper interface {
 }
 
 // NewMinioScraper returns a Minio implementation of the Scraper
-func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *MinioScraper {
+func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) *MinioScraper {
 
 	return &MinioScraper{
 		Endpoint:        endpoint,
@@ -23,6 +23,7 @@ func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token str
 		SecretAccessKey: secretAccessKey,
 		Location:        location,
 		Token:           token,
+		Bucket:          bucket,
 		Ssl:             ssl,
 	}
 
@@ -30,14 +31,14 @@ func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token str
 
 // MinioScraper manages getting artifacts from job pods
 type MinioScraper struct {
-	Endpoint, AccessKeyID, SecretAccessKey, Location, Token string
-	Ssl                                                     bool
+	Endpoint, AccessKeyID, SecretAccessKey, Location, Token, Bucket string
+	Ssl                                                             bool
 }
 
 // Scrape gets artifacts from pod based on execution ID and directories list
 func (s MinioScraper) Scrape(id string, directories []string) error {
 	output.PrintLog(fmt.Sprintf("%s Scraping artifacts %s", ui.IconCabinet, directories))
-	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Location, s.Token, s.Ssl) // create storage client
+	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Location, s.Token, s.Bucket, s.Ssl) // create storage client
 	err := client.Connect()
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to scrape artifacts: %s", ui.IconCross, err.Error()))
