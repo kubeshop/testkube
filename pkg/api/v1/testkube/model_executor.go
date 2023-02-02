@@ -30,5 +30,6 @@ type Executor struct {
 	// executor labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// Available executor features
-	Features []string `json:"features,omitempty"`
+	Features []string      `json:"features,omitempty"`
+	Meta     *ExecutorMeta `json:"meta,omitempty"`
 }
