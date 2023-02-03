@@ -29,6 +29,8 @@ type ExecutorUpsertRequest struct {
 	Types []string `json:"types"`
 	// URI for rest based executors
 	Uri string `json:"uri,omitempty"`
+	// list of handled content types
+	ContentTypes []string `json:"contentTypes,omitempty"`
 	// Job template to launch executor
 	JobTemplate string `json:"jobTemplate,omitempty"`
 	// executor labels

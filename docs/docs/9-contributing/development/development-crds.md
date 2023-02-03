@@ -151,6 +151,11 @@ spec:
   features: 
   - artifacts
   - junit-report
+  meta:
+   iconURI: http://mydomain.com/icon.jpg
+   docsURI: http://mydomain.com/docs
+   tooltips:
+    name: please enter executor name
 ```
 
 ## **Webhooks**

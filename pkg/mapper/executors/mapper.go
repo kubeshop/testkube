@@ -23,6 +23,8 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 		Args:             item.Spec.Args,
 		JobTemplate:      item.Spec.JobTemplate,
 		Features:         mapFeaturesToAPI(item.Spec.Features),
+		ContentTypes:     mapContentTypesToAPI(item.Spec.ContentTypes),
+		Meta:             mapMetaToAPI(item.Spec.Meta),
 	}
 }
 
@@ -44,6 +46,8 @@ func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 			Args:             request.Args,
 			JobTemplate:      request.JobTemplate,
 			Features:         mapFeaturesToCRD(request.Features),
+			ContentTypes:     mapContentTypesToCRD(request.ContentTypes),
+			Meta:             mapMetaToCRD(request.Meta),
 		},
 	}
 }
@@ -63,6 +67,8 @@ func MapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			JobTemplate:      item.Spec.JobTemplate,
 			Labels:           item.Labels,
 			Features:         mapFeaturesToAPI(item.Spec.Features),
+			ContentTypes:     mapContentTypesToAPI(item.Spec.ContentTypes),
+			Meta:             mapMetaToAPI(item.Spec.Meta),
 		},
 	}
 }
@@ -95,6 +101,44 @@ func mapFeaturesToAPI(features []executorv1.Feature) (out []string) {
 		out = append(out, string(feature))
 	}
 	return out
+}
+
+func mapContentTypesToCRD(contentTypes []string) (out []executorv1.ScriptContentType) {
+	for _, contentType := range contentTypes {
+		out = append(out, executorv1.ScriptContentType(contentType))
+	}
+	return out
+}
+
+func mapMetaToCRD(meta *testkube.ExecutorMeta) *executorv1.ExecutorMeta {
+	if meta == nil {
+		return nil
+	}
+
+	return &executorv1.ExecutorMeta{
+		IconURI:  meta.IconURI,
+		DocsURI:  meta.DocsURI,
+		Tooltips: meta.Tooltips,
+	}
+}
+
+func mapContentTypesToAPI(contentTypes []executorv1.ScriptContentType) (out []string) {
+	for _, contentType := range contentTypes {
+		out = append(out, string(contentType))
+	}
+	return out
+}
+
+func mapMetaToAPI(meta *executorv1.ExecutorMeta) *testkube.ExecutorMeta {
+	if meta == nil {
+		return nil
+	}
+
+	return &testkube.ExecutorMeta{
+		IconURI:  meta.IconURI,
+		DocsURI:  meta.DocsURI,
+		Tooltips: meta.Tooltips,
+	}
 }
 
 // MapUpdateToSpec maps ExecutorUpdateRequest to Executor CRD spec
@@ -169,6 +213,38 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 
 	if request.Features != nil {
 		executor.Spec.Features = mapFeaturesToCRD(*request.Features)
+	}
+
+	if request.ContentTypes != nil {
+		executor.Spec.ContentTypes = mapContentTypesToCRD(*request.ContentTypes)
+	}
+
+	if request.Meta != nil {
+		if (*request.Meta) == nil {
+			executor.Spec.Meta = nil
+			return executor
+		}
+
+		if (*request.Meta).IsEmpty() {
+			executor.Spec.Meta = nil
+			return executor
+		}
+
+		if executor.Spec.Meta == nil {
+			executor.Spec.Meta = &executorv1.ExecutorMeta{}
+		}
+
+		if (*request.Meta).IconURI != nil {
+			executor.Spec.Meta.IconURI = *(*request.Meta).IconURI
+		}
+
+		if (*request.Meta).DocsURI != nil {
+			executor.Spec.Meta.DocsURI = *(*request.Meta).DocsURI
+		}
+
+		if (*request.Meta).Tooltips != nil {
+			executor.Spec.Meta.Tooltips = *(*request.Meta).Tooltips
+		}
 	}
 
 	return executor

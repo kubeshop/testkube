@@ -3595,6 +3595,11 @@ components:
         uri:
           description: URI for rest based executors
           type: string
+        contentTypes:
+          description: list of handled content types
+          items:
+            type: string
+          type: array
         jobTemplate:
           description: Job template to launch executor
           type: string
@@ -3674,6 +3679,13 @@ components:
             type: string
           example:
             general: "please provide k6 test script for execution"
+
+    ExecutorMetaUpdate:
+      description: Executor meta update data
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/ExecutorMeta"
 
     Webhook:
       description: CRD based webhook data

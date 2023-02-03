@@ -79,7 +79,15 @@ func TestGenerateYAML(t *testing.T) {
 				Labels: map[string]string{
 					"key1": "value1",
 				},
-				Features: []string{},
+				Features:     []string{"artifacts"},
+				ContentTypes: []string{"git-file", "git-dir"},
+				Meta: &testkube.ExecutorMeta{
+					IconURI: "http://mydomain.com/icon.jpg",
+					DocsURI: "http://mydomain.com/docs",
+					Tooltips: map[string]string{
+						"name": "please enter executor name",
+					},
+				},
 			},
 		}
 

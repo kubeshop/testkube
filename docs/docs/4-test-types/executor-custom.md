@@ -156,13 +156,18 @@ spec:
   - example/test      
   # your custom type registered (used when creating and running your testkube tests)
   content_types:
-  - string             # test content as string 
-  - file-uri           # http based file content
-  - git-file           # file stored in Git
-  - git-dir            # entire dir/project stored in Git
+  - string                               # test content as string 
+  - file-uri                             # http based file content
+  - git-file                             # file stored in Git
+  - git-dir                              # entire dir/project stored in Git
   features: 
-  - artifacts          # executor can have artifacts after test run (e.g. videos, screenshots)
-  - junit-report       # executor can have junit xml based results
+  - artifacts                            # executor can have artifacts after test run (e.g. videos, screenshots)
+  - junit-report                         # executor can have junit xml based results
+  meta:
+   iconURI: http://mydomain.com/icon.jpg # URI to executor icon
+   docsURI: http://mydomain.com/docs     # URI to executor docs
+   tooltips:
+    name: please enter executor name     # tooltip for executor fields
 ```
 
 Finally, create and run your custom tests by passing `URI` as the test content:
