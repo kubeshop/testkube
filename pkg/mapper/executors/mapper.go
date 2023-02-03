@@ -22,9 +22,9 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 		Command:          item.Spec.Command,
 		Args:             item.Spec.Args,
 		JobTemplate:      item.Spec.JobTemplate,
-		Features:         mapFeaturesToAPI(item.Spec.Features),
-		ContentTypes:     mapContentTypesToAPI(item.Spec.ContentTypes),
-		Meta:             mapMetaToAPI(item.Spec.Meta),
+		Features:         MapFeaturesToAPI(item.Spec.Features),
+		ContentTypes:     MapContentTypesToAPI(item.Spec.ContentTypes),
+		Meta:             MapMetaToAPI(item.Spec.Meta),
 	}
 }
 
@@ -45,9 +45,9 @@ func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 			Command:          request.Command,
 			Args:             request.Args,
 			JobTemplate:      request.JobTemplate,
-			Features:         mapFeaturesToCRD(request.Features),
-			ContentTypes:     mapContentTypesToCRD(request.ContentTypes),
-			Meta:             mapMetaToCRD(request.Meta),
+			Features:         MapFeaturesToCRD(request.Features),
+			ContentTypes:     MapContentTypesToCRD(request.ContentTypes),
+			Meta:             MapMetaToCRD(request.Meta),
 		},
 	}
 }
@@ -66,9 +66,9 @@ func MapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 			Uri:              item.Spec.URI,
 			JobTemplate:      item.Spec.JobTemplate,
 			Labels:           item.Labels,
-			Features:         mapFeaturesToAPI(item.Spec.Features),
-			ContentTypes:     mapContentTypesToAPI(item.Spec.ContentTypes),
-			Meta:             mapMetaToAPI(item.Spec.Meta),
+			Features:         MapFeaturesToAPI(item.Spec.Features),
+			ContentTypes:     MapContentTypesToAPI(item.Spec.ContentTypes),
+			Meta:             MapMetaToAPI(item.Spec.Meta),
 		},
 	}
 }
@@ -89,28 +89,28 @@ func mapImagePullSecretsToAPI(secrets []v1.LocalObjectReference) []testkube.Loca
 	return res
 }
 
-func mapFeaturesToCRD(features []string) (out []executorv1.Feature) {
+func MapFeaturesToCRD(features []string) (out []executorv1.Feature) {
 	for _, feature := range features {
 		out = append(out, executorv1.Feature(feature))
 	}
 	return out
 }
 
-func mapFeaturesToAPI(features []executorv1.Feature) (out []string) {
+func MapFeaturesToAPI(features []executorv1.Feature) (out []string) {
 	for _, feature := range features {
 		out = append(out, string(feature))
 	}
 	return out
 }
 
-func mapContentTypesToCRD(contentTypes []string) (out []executorv1.ScriptContentType) {
+func MapContentTypesToCRD(contentTypes []string) (out []executorv1.ScriptContentType) {
 	for _, contentType := range contentTypes {
 		out = append(out, executorv1.ScriptContentType(contentType))
 	}
 	return out
 }
 
-func mapMetaToCRD(meta *testkube.ExecutorMeta) *executorv1.ExecutorMeta {
+func MapMetaToCRD(meta *testkube.ExecutorMeta) *executorv1.ExecutorMeta {
 	if meta == nil {
 		return nil
 	}
@@ -122,14 +122,14 @@ func mapMetaToCRD(meta *testkube.ExecutorMeta) *executorv1.ExecutorMeta {
 	}
 }
 
-func mapContentTypesToAPI(contentTypes []executorv1.ScriptContentType) (out []string) {
+func MapContentTypesToAPI(contentTypes []executorv1.ScriptContentType) (out []string) {
 	for _, contentType := range contentTypes {
 		out = append(out, string(contentType))
 	}
 	return out
 }
 
-func mapMetaToAPI(meta *executorv1.ExecutorMeta) *testkube.ExecutorMeta {
+func MapMetaToAPI(meta *executorv1.ExecutorMeta) *testkube.ExecutorMeta {
 	if meta == nil {
 		return nil
 	}
@@ -212,11 +212,11 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 	}
 
 	if request.Features != nil {
-		executor.Spec.Features = mapFeaturesToCRD(*request.Features)
+		executor.Spec.Features = MapFeaturesToCRD(*request.Features)
 	}
 
 	if request.ContentTypes != nil {
-		executor.Spec.ContentTypes = mapContentTypesToCRD(*request.ContentTypes)
+		executor.Spec.ContentTypes = MapContentTypesToCRD(*request.ContentTypes)
 	}
 
 	if request.Meta != nil {
