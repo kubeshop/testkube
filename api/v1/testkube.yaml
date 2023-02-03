@@ -3674,11 +3674,6 @@ components:
             type: string
           example:
             general: "please provide k6 test script for execution"
-        contentTypes:
-          description: supported content type
-          type: array
-          items:
-            type: string
 
     Webhook:
       description: CRD based webhook data
