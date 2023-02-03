@@ -69,15 +69,15 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	if err != nil {
 		return options, err
 	}
-	
+
 	iconURI := cmd.Flag("icon-uri").Value.String()
 	docsURI := cmd.Flag("docs-uri").Value.String()
 
 	var meta *testkube.ExecutorMeta
-	if iconURI != "" || docsURI !="" || len(tooltips) != 0 {
+	if iconURI != "" || docsURI != "" || len(tooltips) != 0 {
 		meta = &testkube.ExecutorMeta{
-			IconURI: iconURI,
-			DocsURI: docsURI,
+			IconURI:  iconURI,
+			DocsURI:  docsURI,
 			Tooltips: tooltips,
 		}
 	}
@@ -95,7 +95,7 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		JobTemplate:      jobTemplateContent,
 		Features:         features,
 		Labels:           labels,
-		Meta: meta,
+		Meta:             meta,
 	}
 
 	return options, nil
@@ -155,7 +155,7 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		{
 			"content-type",
 			&options.ContentTypes,
-		}
+		},
 	}
 
 	for _, slice := range slices {
@@ -201,6 +201,30 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		}
 
 		options.Labels = &labels
+	}
+
+	if cmd.Flag("icon-uri").Changed || cmd.Flag("docs-uri").Changed || cmd.Flag("tooltip").Changed {
+		meta := &testkube.ExecutorMetaUpdate{}
+		if cmd.Flag("icon-uri").Changed {
+			value := cmd.Flag("icon-uri").Value.String()
+			meta.IconURI = &value
+		}
+
+		if cmd.Flag("docs-uri").Changed {
+			value := cmd.Flag("docs-uri").Value.String()
+			meta.DocsURI = &value
+		}
+
+		if cmd.Flag("tooltip").Changed {
+			tooltips, err := cmd.Flags().GetStringToString("tooltip")
+			if err != nil {
+				return options, err
+			}
+
+			meta.Tooltips = &tooltips
+		}
+
+		options.Meta = &meta
 	}
 
 	return options, nil
