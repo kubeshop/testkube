@@ -157,20 +157,20 @@ func (m MockStorage) DeleteBucket(bucket string, force bool) error {
 func (m MockStorage) ListBuckets() ([]string, error) {
 	panic("not implemented")
 }
-func (m MockStorage) ListFiles(bucket string) ([]testkube.Artifact, error) {
+func (m MockStorage) ListFiles(bucketFolder string) ([]testkube.Artifact, error) {
 	panic("not implemented")
 }
-func (m MockStorage) SaveFile(bucket, filePath string) error {
+func (m MockStorage) SaveFile(bucketFolder, filePath string) error {
 	panic("not implemented")
 }
-func (m MockStorage) DownloadFile(bucket, file string) (*minio.Object, error) {
+func (m MockStorage) DownloadFile(bucketFolder, file string) (*minio.Object, error) {
 	panic("not implemented")
 }
-func (m MockStorage) UploadFile(bucket string, filePath string, reader io.Reader, objectSize int64) error {
+func (m MockStorage) UploadFile(bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
 	if m.UploadFileFn == nil {
 		panic("not implemented")
 	}
-	return m.UploadFileFn(bucket, filePath, reader, objectSize)
+	return m.UploadFileFn(bucketFolder, filePath, reader, objectSize)
 }
 
 func (m MockStorage) PlaceFiles(buckets []string, prefix string) error {
@@ -188,5 +188,25 @@ func (m MockStorage) GetValidBucketName(parentType string, parentName string) st
 }
 
 func (m MockStorage) DeleteFile(bucket, filePath string) error {
+	panic("not implemented")
+}
+
+func (m MockStorage) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error) {
+	panic("not implemented")
+}
+
+func (m MockStorage) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
+	panic("not implemented")
+}
+
+func (m MockStorage) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
+	panic("not implemented")
+}
+
+func (m MockStorage) UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
+	panic("not implemented")
+}
+
+func (m MockStorage) DeleteFileFromBucket(bucket, bucketFolder, file string) error {
 	panic("not implemented")
 }

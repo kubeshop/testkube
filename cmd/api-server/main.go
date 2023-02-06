@@ -315,14 +315,14 @@ func main() {
 		bucket := cfg.LogsBucket
 		if bucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if _, err := api.Storage.ListFiles(bucket); err == nil {
+		} else if _, err := api.Storage.ListBuckets(); err == nil {
 			log.DefaultLogger.Info("setting minio as logs storage")
 			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
 			if ok {
 				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.ResultsColl, bucket)
 			}
 		} else {
-			log.DefaultLogger.Info("minio is not available, using default logs storage")
+			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
 		}
 	}
 
