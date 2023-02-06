@@ -16,7 +16,7 @@ require (
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubeshop/testkube-operator v1.9.0
-	github.com/minio/minio-go/v7 v7.0.45
+	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.22.1
@@ -71,8 +71,7 @@ require (
 	github.com/itchyny/timefmt-go v0.1.4 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/klauspost/cpuid/v2 v2.1.2 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -88,7 +87,6 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/onsi/gomega v1.20.2 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20220922232305-70b4d362a8cb // indirect
@@ -115,7 +113,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -129,7 +127,7 @@ require (
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.15.13 // indirect
+	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect

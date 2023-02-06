@@ -70,6 +70,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("STORAGE_TOKEN"),
 	},
 	{
+		Name:  "RUNNER_BUCKET",
+		Value: os.Getenv("STORAGE_BUCKET"),
+	},
+	{
 		Name:  "RUNNER_SSL",
 		Value: os.Getenv("STORAGE_SSL"),
 	},
