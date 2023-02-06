@@ -97,7 +97,7 @@ func NewDashboardCmd() *cobra.Command {
 
 func readinessCheck(apiURI, dashboardURI string) (bool, error) {
 	const readinessCheckTimeout = 30 * time.Second
-	client := http.NewClient()
+	client := http.NewClient(0)
 
 	ticker := time.NewTicker(readinessCheckTimeout)
 	defer ticker.Stop()

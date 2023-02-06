@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
 
@@ -50,6 +51,9 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 
 // UploadFile uploads a copy file to the API server
 func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+	spew.Dump("===============UploadFile Timeout================")
+	spew.Dump(c.client.Timeout)
+	spew.Dump("=================================================")
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err

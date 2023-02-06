@@ -23,7 +23,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType)
 		name:       name,
 		Uri:        uri,
 		Log:        log.DefaultLogger,
-		HttpClient: thttp.NewClient(),
+		HttpClient: thttp.NewClient(0),
 		selector:   selector,
 		events:     events,
 	}
