@@ -100,70 +100,8 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 	return testsuiteExecution, nil
 }
 
-func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest) {
-	defer func(testExecution *testkube.TestSuiteExecution) {
-		testExecution.Stop()
-		err := s.testExecutionResults.EndExecution(ctx, *testExecution)
-		if err != nil {
-			s.logger.Errorw("error setting end time", "error", err.Error())
-		}
-
-		wg.Done()
-
-		if testsuiteExecution.TestSuite != nil {
-			testSuite, err := s.testSuitesClient.Get(testsuiteExecution.TestSuite.Name)
-			if err != nil {
-				s.logger.Errorw("getting test suite error", "error", err)
-			}
-
-			if testSuite != nil {
-				testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
-				if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
-					s.logger.Errorw("updating test suite error", "error", err)
-				}
-			}
-		}
-
-		telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
-		if err != nil {
-			s.logger.Debugw("getting telemetry enabled error", "error", err)
-		}
-
-		if !telemetryEnabled {
-			return
-		}
-
-		clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-		if err != nil {
-			s.logger.Debugw("getting cluster id error", "error", err)
-		}
-
-		host, err := os.Hostname()
-		if err != nil {
-			s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
-		}
-
-		status := ""
-		if testExecution.Status != nil {
-			status = string(*testExecution.Status)
-		}
-
-		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
-			AppVersion: version.Version,
-			Host:       host,
-			ClusterID:  clusterID,
-			DurationMs: testExecution.DurationMs,
-			Status:     status,
-		})
-
-		if err != nil {
-			s.logger.Debugw("sending run test suite telemetry event error", "error", err)
-		} else {
-			s.logger.Debugw("sending run test suite telemetry event", "output", out)
-		}
-
-	}(testsuiteExecution)
+func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
+	defer s.runAfterEachStep(ctx, testsuiteExecution, wg)
 
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
 
@@ -269,6 +207,68 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
 	if err != nil {
 		s.logger.Errorw("saving final test suite execution result error", "error", err)
+	}
+}
+
+func (s *Scheduler) runAfterEachStep(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
+	testsuiteExecution.Stop()
+	err := s.testExecutionResults.EndExecution(ctx, *testsuiteExecution)
+	if err != nil {
+		s.logger.Errorw("error setting end time", "error", err.Error())
+	}
+
+	wg.Done()
+
+	if testsuiteExecution.TestSuite != nil {
+		testSuite, err := s.testSuitesClient.Get(testsuiteExecution.TestSuite.Name)
+		if err != nil {
+			s.logger.Errorw("getting test suite error", "error", err)
+		}
+
+		if testSuite != nil {
+			testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
+			if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
+				s.logger.Errorw("updating test suite error", "error", err)
+			}
+		}
+	}
+
+	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		s.logger.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		s.logger.Debugw("getting cluster id error", "error", err)
+	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	status := ""
+	if testsuiteExecution.Status != nil {
+		status = string(*testsuiteExecution.Status)
+	}
+
+	out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
+		AppVersion: version.Version,
+		Host:       host,
+		ClusterID:  clusterID,
+		DurationMs: testsuiteExecution.DurationMs,
+		Status:     status,
+	})
+
+	if err != nil {
+		s.logger.Debugw("sending run test suite telemetry event error", "error", err)
+	} else {
+		s.logger.Debugw("sending run test suite telemetry event", "output", out)
 	}
 }
 

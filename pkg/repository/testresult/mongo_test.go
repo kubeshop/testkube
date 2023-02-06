@@ -106,12 +106,12 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, nil)
-	repository := NewMongoRespository(db, true)
+	repository := NewMongoRepository(db, true)
 	return repository, err
 }
 
-func (repository *MongoRepository) insertExecutionResult(testSuiteName string, execStatus testkube.TestSuiteExecutionStatus, startTime time.Time, labels map[string]string) error {
-	return repository.Insert(context.Background(),
+func (r *MongoRepository) insertExecutionResult(testSuiteName string, execStatus testkube.TestSuiteExecutionStatus, startTime time.Time, labels map[string]string) error {
+	return r.Insert(context.Background(),
 		testkube.TestSuiteExecution{
 			Id:        rand.Name(),
 			TestSuite: &testkube.ObjectRef{Namespace: "testkube", Name: testSuiteName},
