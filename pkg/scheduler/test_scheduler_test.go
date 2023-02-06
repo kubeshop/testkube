@@ -88,6 +88,7 @@ func TestGetExecuteOptions(t *testing.T) {
 			Features:         nil,
 			ContentTypes:     nil,
 			JobTemplate:      "",
+			Meta:             nil,
 		},
 	}
 

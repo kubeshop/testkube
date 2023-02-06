@@ -3595,6 +3595,11 @@ components:
         uri:
           description: URI for rest based executors
           type: string
+        contentTypes:
+          description: list of handled content types
+          items:
+            type: string
+          type: array
         jobTemplate:
           description: Job template to launch executor
           type: string
@@ -3614,6 +3619,8 @@ components:
             enum:
               - artifacts
               - junit-report
+        meta:
+          $ref: "#/components/schemas/ExecutorMeta"
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions
@@ -3652,6 +3659,33 @@ components:
           format: date-time
           description: Timestamp of log
           example: "2018-03-20T09:12:28Z"
+  
+    ExecutorMeta:
+      description: Executor meta data
+      type: object
+      properties:
+        iconURI:
+          description: URI for executor icon
+          type: string
+          example: /assets/k6.jpg
+        docsURI:
+          description: URI for executor docs
+          type: string
+          example: https://kubeshop.github.io/testkube/test-types/executor-k6
+        tooltips:
+          type: object
+          description: executor tooltips
+          additionalProperties:
+            type: string
+          example:
+            general: "please provide k6 test script for execution"
+
+    ExecutorMetaUpdate:
+      description: Executor meta update data
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/ExecutorMeta"
 
     Webhook:
       description: CRD based webhook data

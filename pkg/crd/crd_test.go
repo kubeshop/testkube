@@ -63,7 +63,7 @@ func TestGenerateYAML(t *testing.T) {
 	})
 	t.Run("generate executor CRD yaml", func(t *testing.T) {
 		// given
-		expected := "apiVersion: executor.testkube.io/v1\nkind: Executor\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  types:\n  - custom-curl-container/test\n  executor_type: container\n  image: docker.io/curlimages/curl:latest\n  args:\n  - -v\n  - test\n  command:\n  - curl\n  imagePullSecrets:\n  - name: secret-name\n"
+		expected := "apiVersion: executor.testkube.io/v1\nkind: Executor\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  types:\n  - custom-curl-container/test\n  executor_type: container\n  image: docker.io/curlimages/curl:latest\n  args:\n  - -v\n  - test\n  command:\n  - curl\n  imagePullSecrets:\n  - name: secret-name\n  features:\n  - artifacts\n  content_types:\n  - git-file\n  - git-dir\n  meta:\n    iconURI: http://mydomain.com/icon.jpg\n    docsURI: http://mydomain.com/docs\n    tooltips:\n      name: please enter executor name\n"
 		executors := []testkube.ExecutorUpsertRequest{
 			{
 				Namespace:    "namespace1",
@@ -79,7 +79,15 @@ func TestGenerateYAML(t *testing.T) {
 				Labels: map[string]string{
 					"key1": "value1",
 				},
-				Features: []string{},
+				Features:     []string{"artifacts"},
+				ContentTypes: []string{"git-file", "git-dir"},
+				Meta: &testkube.ExecutorMeta{
+					IconURI: "http://mydomain.com/icon.jpg",
+					DocsURI: "http://mydomain.com/docs",
+					Tooltips: map[string]string{
+						"name": "please enter executor name",
+					},
+				},
 			},
 		}
 

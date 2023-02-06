@@ -90,6 +90,8 @@ func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testk
 		}
 
 		options.Features = executor.Executor.Features
+		options.ContentTypes = executor.Executor.ContentTypes
+		options.Meta = executor.Executor.Meta
 	}
 
 	return options
