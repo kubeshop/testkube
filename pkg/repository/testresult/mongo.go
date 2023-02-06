@@ -19,17 +19,31 @@ var _ Repository = &MongoRepository{}
 
 const CollectionName = "testresults"
 
-func NewMongoRespository(db *mongo.Database, allowDiskUse bool) *MongoRepository {
-	return &MongoRepository{
+func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
+	r := &MongoRepository{
 		Coll:         db.Collection(CollectionName),
 		allowDiskUse: allowDiskUse,
 	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
 }
 
 type MongoRepository struct {
 	Coll         *mongo.Collection
 	allowDiskUse bool
 }
+
+func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.Coll = collection
+	}
+}
+
+type MongoRepositoryOpt func(*MongoRepository)
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
@@ -280,7 +294,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	return query, opts
 }
 
-// DeleteByTest deletes execution results by test suite
+// DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuite.name": testSuiteName})
 	return
@@ -318,7 +332,7 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"testsuite.name": name}
 
-	pipeline := []bson.D{}
+	var pipeline []bson.D
 	if last > 0 {
 		query["starttime"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
 	}

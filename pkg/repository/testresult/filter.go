@@ -6,128 +6,128 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-type filter struct {
-	name       string
-	lastNDays  int
-	startDate  *time.Time
-	endDate    *time.Time
-	statuses   testkube.TestSuiteExecutionStatuses
-	page       int
-	pageSize   int
-	textSearch string
-	selector   string
+type FilterImpl struct {
+	FName       string
+	FLastNDays  int
+	FStartDate  *time.Time
+	FEndDate    *time.Time
+	FStatuses   testkube.TestSuiteExecutionStatuses
+	FPage       int
+	FPageSize   int
+	FTextSearch string
+	FSelector   string
 }
 
-func NewExecutionsFilter() *filter {
-	result := filter{page: 0, pageSize: PageDefaultLimit}
+func NewExecutionsFilter() *FilterImpl {
+	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
 	return &result
 }
 
-func (f *filter) WithName(name string) *filter {
-	f.name = name
+func (f *FilterImpl) WithName(name string) *FilterImpl {
+	f.FName = name
 	return f
 }
 
-func (f *filter) WithLastNDays(days int) *filter {
-	f.lastNDays = days
+func (f *FilterImpl) WithLastNDays(days int) *FilterImpl {
+	f.FLastNDays = days
 	return f
 }
 
-func (f *filter) WithStartDate(date time.Time) *filter {
-	f.startDate = &date
+func (f *FilterImpl) WithStartDate(date time.Time) *FilterImpl {
+	f.FStartDate = &date
 	return f
 }
 
-func (f *filter) WithEndDate(date time.Time) *filter {
-	f.endDate = &date
+func (f *FilterImpl) WithEndDate(date time.Time) *FilterImpl {
+	f.FEndDate = &date
 	return f
 }
 
-func (f *filter) WithStatus(status string) *filter {
+func (f *FilterImpl) WithStatus(status string) *FilterImpl {
 	statuses, err := testkube.ParseTestSuiteExecutionStatusList(status, ",")
 	if err == nil {
-		f.statuses = statuses
+		f.FStatuses = statuses
 	}
 
 	return f
 }
 
-func (f *filter) WithPage(page int) *filter {
-	f.page = page
+func (f *FilterImpl) WithPage(page int) *FilterImpl {
+	f.FPage = page
 	return f
 }
 
-func (f *filter) WithPageSize(pageSize int) *filter {
-	f.pageSize = pageSize
+func (f *FilterImpl) WithPageSize(pageSize int) *FilterImpl {
+	f.FPageSize = pageSize
 	return f
 }
 
-func (f *filter) WithTextSearch(textSearch string) *filter {
-	f.textSearch = textSearch
+func (f *FilterImpl) WithTextSearch(textSearch string) *FilterImpl {
+	f.FTextSearch = textSearch
 	return f
 }
 
-func (f *filter) WithSelector(selector string) *filter {
-	f.selector = selector
+func (f *FilterImpl) WithSelector(selector string) *FilterImpl {
+	f.FSelector = selector
 	return f
 }
 
-func (f filter) Name() string {
-	return f.name
+func (f FilterImpl) Name() string {
+	return f.FName
 }
 
-func (f filter) NameDefined() bool {
-	return f.name != ""
+func (f FilterImpl) NameDefined() bool {
+	return f.FName != ""
 }
 
-func (f filter) LastNDaysDefined() bool {
-	return f.lastNDays > 0
+func (f FilterImpl) LastNDaysDefined() bool {
+	return f.FLastNDays > 0
 }
 
-func (f filter) LastNDays() int {
-	return f.lastNDays
+func (f FilterImpl) LastNDays() int {
+	return f.FLastNDays
 }
 
-func (f filter) StartDateDefined() bool {
-	return f.startDate != nil
+func (f FilterImpl) StartDateDefined() bool {
+	return f.FStartDate != nil
 }
 
-func (f filter) StartDate() time.Time {
-	return *f.startDate
+func (f FilterImpl) StartDate() time.Time {
+	return *f.FStartDate
 }
 
-func (f filter) EndDateDefined() bool {
-	return f.endDate != nil
+func (f FilterImpl) EndDateDefined() bool {
+	return f.FEndDate != nil
 }
 
-func (f filter) EndDate() time.Time {
-	return *f.endDate
+func (f FilterImpl) EndDate() time.Time {
+	return *f.FEndDate
 }
 
-func (f filter) StatusesDefined() bool {
-	return len(f.statuses) != 0
+func (f FilterImpl) StatusesDefined() bool {
+	return len(f.FStatuses) != 0
 }
 
-func (f filter) Statuses() testkube.TestSuiteExecutionStatuses {
-	return f.statuses
+func (f FilterImpl) Statuses() testkube.TestSuiteExecutionStatuses {
+	return f.FStatuses
 }
 
-func (f filter) Page() int {
-	return f.page
+func (f FilterImpl) Page() int {
+	return f.FPage
 }
 
-func (f filter) PageSize() int {
-	return f.pageSize
+func (f FilterImpl) PageSize() int {
+	return f.FPageSize
 }
 
-func (f filter) TextSearchDefined() bool {
-	return f.textSearch != ""
+func (f FilterImpl) TextSearchDefined() bool {
+	return f.FTextSearch != ""
 }
 
-func (f filter) TextSearch() string {
-	return f.textSearch
+func (f FilterImpl) TextSearch() string {
+	return f.FTextSearch
 }
 
-func (f filter) Selector() string {
-	return f.selector
+func (f FilterImpl) Selector() string {
+	return f.FSelector
 }
