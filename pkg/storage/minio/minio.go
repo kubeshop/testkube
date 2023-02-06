@@ -58,7 +58,7 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token, bucket s
 // Connect connects to MinIO server
 func (c *Client) Connect() error {
 	creds := credentials.NewIAM("")
-	c.Log.Infow("connecting to minio", "endpoint", c.Endpoint, "accessKeyID", c.accessKeyID, "location", c.location, "token", c.token, "ssl", c.ssl)
+	c.Log.Debugw("connecting to minio", "endpoint", c.Endpoint, "accessKeyID", c.accessKeyID, "location", c.location, "token", c.token, "ssl", c.ssl)
 	if c.accessKeyID != "" && c.secretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
 	}
@@ -131,7 +131,7 @@ func (c *Client) listFiles(bucket, bucketFolder string) ([]testkube.Artifact, er
 	}
 
 	if !exists {
-		log.DefaultLogger.Infow("List: bucket doesn't exist", "bucket", bucket)
+		c.Log.Debugw("bucket doesn't exist", "bucket", bucket)
 		return nil, ErrArtifactsNotFound
 	}
 	listOptions := minio.ListObjectsOptions{Recursive: true}
@@ -170,7 +170,7 @@ func (c *Client) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error)
 
 // saveFile saves file defined by local filePath to S3 bucket
 func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
-	c.Log.Infow("saving file", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
+	c.Log.Debugw("saving file", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
 	if err := c.Connect(); err != nil {
 		return err
 	}
@@ -205,18 +205,19 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 
 // SaveFile saves file defined by local filePath to S3 bucket from the config
 func (c *Client) SaveFile(bucketFolder, filePath string) error {
-	log.DefaultLogger.Infow("SaveFile", "bucket", c.bucket, "bucketFolder", bucketFolder, "filePath", filePath)
+	c.Log.Debugw("SaveFile", "bucket", c.bucket, "bucketFolder", bucketFolder, "filePath", filePath)
 	return c.saveFile(c.bucket, bucketFolder, filePath)
 }
 
 // SaveFileToBucket saves file defined by local filePath to given S3 bucket
 func (c *Client) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
-	log.DefaultLogger.Infow("SaveFileToBucket", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
+	c.Log.Debugw("SaveFileToBucket", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
 	return c.saveFile(bucket, bucketFolder, filePath)
 }
 
 // downloadFile downloads file from bucket
 func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object, error) {
+	c.Log.Infow("downloadFile", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
 	}
@@ -227,7 +228,7 @@ func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object,
 	}
 
 	if !exists {
-		log.DefaultLogger.Infow("Download: bucket doesn't exist", "bucket", bucket)
+		c.Log.Infow("bucket doesn't exist", "bucket", bucket)
 		return nil, ErrArtifactsNotFound
 	}
 
@@ -250,13 +251,13 @@ func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object,
 
 // DownloadFile downloads file from bucket from the config
 func (c *Client) DownloadFile(bucketFolder, file string) (*minio.Object, error) {
-	log.DefaultLogger.Infow("Def: downloading file", "bucket", c.bucket, "bucketFolder", bucketFolder, "file", file)
+	c.Log.Infow("Download file", "bucket", c.bucket, "bucketFolder", bucketFolder, "file", file)
 	// TODO: this is for back compatibility, remove it sometime in the future
 	var errFirst error
 	exists, err := c.minioclient.BucketExists(context.TODO(), bucketFolder)
-	log.DefaultLogger.Infow("Checking if bucket exists", exists, err)
+	c.Log.Debugw("Checking if bucket exists", exists, err)
 	if err == nil && exists {
-		log.DefaultLogger.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
+		c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
 		objFirst, errFirst := c.downloadFile(bucketFolder, "", file)
 		if errFirst == nil && objFirst != nil {
 			return objFirst, nil
@@ -271,7 +272,7 @@ func (c *Client) DownloadFile(bucketFolder, file string) (*minio.Object, error) 
 
 // DownloadFileFromBucket downloads file from given bucket
 func (c *Client) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
-	log.DefaultLogger.Infow("DownloadFileFromBucket: Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
+	c.Log.Infow("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	return c.downloadFile(bucket, bucketFolder, file)
 }
 
@@ -415,7 +416,7 @@ func (c *Client) deleteFile(bucket, bucketFolder, file string) error {
 	}
 
 	if !exists {
-		log.DefaultLogger.Warnf("Delete: bucket %s does not exist", bucket)
+		c.Log.Warnf("bucket %s does not exist", bucket)
 		return ErrArtifactsNotFound
 	}
 
