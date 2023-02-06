@@ -96,7 +96,12 @@ func NewCreateTestsCmd() *cobra.Command {
 				executors, err := client.ListExecutors("")
 				ui.ExitOnError("getting available executors", err)
 
-				err = validateExecutorType(options.Type_, executors)
+				contentType := ""
+				if options.Content != nil {
+					contentType = options.Content.Type_
+				}
+
+				err = validateExecutorTypeAndContent(options.Type_, contentType, executors)
 				ui.ExitOnError("validating executor type", err)
 
 				if len(copyFiles) > 0 {
@@ -230,21 +235,38 @@ func validateCreateOptions(cmd *cobra.Command) error {
 	return nil
 }
 
-func validateExecutorType(executorType string, executors testkube.ExecutorsDetails) error {
+func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {
 	typeValid := false
 	executorTypes := []string{}
+	contentTypes := []string{}
 
 	for _, ed := range executors {
 		executorTypes = append(executorTypes, ed.Executor.Types...)
 		for _, et := range ed.Executor.Types {
 			if et == executorType {
 				typeValid = true
+				contentTypes = ed.Executor.ContentTypes
+				break
 			}
 		}
 	}
 
 	if !typeValid {
 		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
+	}
+
+	if len(contentTypes) != 0 {
+		contentValid := false
+		for _, ct := range contentTypes {
+			if ct == contentType {
+				contentValid = true
+				break
+			}
+		}
+
+		if !contentValid {
+			return fmt.Errorf("invalid content type '%s' use one of: %v", contentType, contentTypes)
+		}
 	}
 
 	return nil

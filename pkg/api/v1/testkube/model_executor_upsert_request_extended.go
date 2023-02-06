@@ -18,4 +18,12 @@ func (e *ExecutorUpsertRequest) QuoteExecutorTextFields() {
 			e.Args[i] = fmt.Sprintf("%q", e.Args[i])
 		}
 	}
+
+	if e.Meta != nil {
+		for key, value := range e.Meta.Tooltips {
+			if value != "" {
+				e.Meta.Tooltips[key] = fmt.Sprintf("%q", value)
+			}
+		}
+	}
 }
