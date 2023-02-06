@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
 type MinioRepository struct {
@@ -38,8 +40,12 @@ func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuite
 
 func (m *MinioRepository) getOutput(id string) (ExecutionOutput, error) {
 	file, err := m.storage.DownloadFileFromBucket(m.bucket, "", id)
+	if err != nil && err == minio.ErrArtifactsNotFound {
+		log.DefaultLogger.Infow("output not found in minio", "id", id)
+		return ExecutionOutput{}, nil
+	}
 	if err != nil {
-		return ExecutionOutput{}, err
+		return ExecutionOutput{}, fmt.Errorf("error downloading output logs from minio: %w", err)
 	}
 	var eOutput ExecutionOutput
 	decoder := json.NewDecoder(file)
