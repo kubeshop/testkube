@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -30,9 +31,30 @@ import (
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestSuiteUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		emptyBatch := true
+		for _, step := range request.Steps {
+			if len(step.Batch) != 0 {
+				emptyBatch = false
+				break
+			}
+		}
+
+		if emptyBatch {
+			var requestV2 testkube.TestSuiteUpsertRequestV2
+			if err := json.Unmarshal(data, &requestV2); err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			request = *requestV2.ToTestSuiteUpsertRequest()
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
@@ -63,9 +85,32 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestSuiteUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		if request.Steps != nil {
+			emptyBatch := true
+			for _, step := range *request.Steps {
+				if len(step.Batch) != 0 {
+					emptyBatch = false
+					break
+				}
+			}
+
+			if emptyBatch {
+				var requestV2 testkube.TestSuiteUpdateRequestV2
+				if err := json.Unmarshal(data, &requestV2); err != nil {
+					return s.Error(c, http.StatusBadRequest, err)
+				}
+
+				request = *requestV2.ToTestSuiteUpdateRequest()
+			}
 		}
 
 		var name string
