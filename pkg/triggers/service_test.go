@@ -95,6 +95,7 @@ func TestService_Run(t *testing.T) {
 			Features:         nil,
 			ContentTypes:     nil,
 			JobTemplate:      "",
+			Meta:             nil,
 		},
 	}
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
 type MinioRepository struct {
@@ -37,9 +39,13 @@ func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuite
 }
 
 func (m *MinioRepository) getOutput(id string) (ExecutionOutput, error) {
-	file, err := m.storage.DownloadFile(m.bucket, id)
+	file, err := m.storage.DownloadFileFromBucket(m.bucket, "", id)
+	if err != nil && err == minio.ErrArtifactsNotFound {
+		log.DefaultLogger.Infow("output not found in minio", "id", id)
+		return ExecutionOutput{}, nil
+	}
 	if err != nil {
-		return ExecutionOutput{}, err
+		return ExecutionOutput{}, fmt.Errorf("error downloading output logs from minio: %w", err)
 	}
 	var eOutput ExecutionOutput
 	decoder := json.NewDecoder(file)
@@ -56,7 +62,7 @@ func (m *MinioRepository) saveOutput(eOutput ExecutionOutput) error {
 		return err
 	}
 	reader := bytes.NewReader(data)
-	err = m.storage.UploadFile(m.bucket, eOutput.Id, reader, reader.Size())
+	err = m.storage.UploadFileToBucket(m.bucket, "", eOutput.Id, reader, reader.Size())
 	return err
 }
 
@@ -78,7 +84,7 @@ func (m *MinioRepository) UpdateOutput(ctx context.Context, id, testName, testSu
 
 func (m *MinioRepository) DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error {
 	log.DefaultLogger.Debugw("deleting output", "id", id)
-	return m.storage.DeleteFile(m.bucket, id)
+	return m.storage.DeleteFileFromBucket(m.bucket, "", id)
 }
 
 func (m *MinioRepository) DeleteOutputByTest(ctx context.Context, testName string) error {

@@ -60,6 +60,28 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		return options, err
 	}
 
+	tooltips, err := cmd.Flags().GetStringToString("tooltip")
+	if err != nil {
+		return options, err
+	}
+
+	contentTypes, err := cmd.Flags().GetStringArray("content-type")
+	if err != nil {
+		return options, err
+	}
+
+	iconURI := cmd.Flag("icon-uri").Value.String()
+	docsURI := cmd.Flag("docs-uri").Value.String()
+
+	var meta *testkube.ExecutorMeta
+	if iconURI != "" || docsURI != "" || len(tooltips) != 0 {
+		meta = &testkube.ExecutorMeta{
+			IconURI:  iconURI,
+			DocsURI:  docsURI,
+			Tooltips: tooltips,
+		}
+	}
+
 	options = apiClient.UpsertExecutorOptions{
 		Name:             name,
 		Types:            types,
@@ -69,9 +91,11 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		Command:          command,
 		Args:             executorArgs,
 		Uri:              uri,
+		ContentTypes:     contentTypes,
 		JobTemplate:      jobTemplateContent,
 		Features:         features,
 		Labels:           labels,
+		Meta:             meta,
 	}
 
 	return options, nil
@@ -128,6 +152,10 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 			"feature",
 			&options.Features,
 		},
+		{
+			"content-type",
+			&options.ContentTypes,
+		},
 	}
 
 	for _, slice := range slices {
@@ -173,6 +201,30 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		}
 
 		options.Labels = &labels
+	}
+
+	if cmd.Flag("icon-uri").Changed || cmd.Flag("docs-uri").Changed || cmd.Flag("tooltip").Changed {
+		meta := &testkube.ExecutorMetaUpdate{}
+		if cmd.Flag("icon-uri").Changed {
+			value := cmd.Flag("icon-uri").Value.String()
+			meta.IconURI = &value
+		}
+
+		if cmd.Flag("docs-uri").Changed {
+			value := cmd.Flag("docs-uri").Value.String()
+			meta.DocsURI = &value
+		}
+
+		if cmd.Flag("tooltip").Changed {
+			tooltips, err := cmd.Flags().GetStringToString("tooltip")
+			if err != nil {
+				return options, err
+			}
+
+			meta.Tooltips = &tooltips
+		}
+
+		options.Meta = &meta
 	}
 
 	return options, nil

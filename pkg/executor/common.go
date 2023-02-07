@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/log"
+	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
 
 var ErrPodInitializing = errors.New("PodInitializing")
@@ -68,6 +69,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_TOKEN",
 		Value: os.Getenv("STORAGE_TOKEN"),
+	},
+	{
+		Name:  "RUNNER_BUCKET",
+		Value: os.Getenv("STORAGE_BUCKET"),
 	},
 	{
 		Name:  "RUNNER_SSL",
@@ -390,11 +395,6 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 			continue
 		}
 
-		var features []executorv1.Feature
-		for _, f := range executor.Executor.Features {
-			features = append(features, executorv1.Feature(f))
-		}
-
 		obj := &executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      executor.Name,
@@ -404,7 +404,9 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 				Types:        executor.Executor.Types,
 				ExecutorType: executor.Executor.ExecutorType,
 				Image:        executor.Executor.Image,
-				Features:     features,
+				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
+				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),
+				Meta:         executorsmapper.MapMetaToCRD(executor.Executor.Meta),
 			},
 		}
 

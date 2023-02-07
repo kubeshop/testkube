@@ -15,8 +15,8 @@ type CopyFilesPlacer struct {
 }
 
 // NewCopyFilesPlaces creates a new
-func NewCopyFilesPlacer(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *CopyFilesPlacer {
-	c := minio.NewClient(endpoint, accessKeyID, secretAccessKey, location, token, ssl)
+func NewCopyFilesPlacer(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) *CopyFilesPlacer {
+	c := minio.NewClient(endpoint, accessKeyID, secretAccessKey, location, token, bucket, ssl)
 	return &CopyFilesPlacer{
 		client: c,
 	}

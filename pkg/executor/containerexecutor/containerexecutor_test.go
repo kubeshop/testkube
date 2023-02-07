@@ -98,11 +98,17 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	assert.NotNil(t, spec)
 
 	wantEnvs := []corev1.EnvVar{
-		{Name: "DEBUG", Value: ""}, {Name: "RUNNER_ENDPOINT", Value: ""},
-		{Name: "RUNNER_ACCESSKEYID", Value: ""}, {Name: "RUNNER_SECRETACCESSKEY", Value: ""},
-		{Name: "RUNNER_LOCATION", Value: ""}, {Name: "RUNNER_TOKEN", Value: ""},
-		{Name: "RUNNER_SSL", Value: ""}, {Name: "RUNNER_SCRAPPERENABLED", Value: ""},
-		{Name: "RUNNER_DATADIR", Value: "/data"}, {Name: "NAME", Value: "value"},
+		{Name: "DEBUG", Value: ""},
+		{Name: "RUNNER_ENDPOINT", Value: ""},
+		{Name: "RUNNER_ACCESSKEYID", Value: ""},
+		{Name: "RUNNER_SECRETACCESSKEY", Value: ""},
+		{Name: "RUNNER_LOCATION", Value: ""},
+		{Name: "RUNNER_TOKEN", Value: ""},
+		{Name: "RUNNER_BUCKET", Value: ""},
+		{Name: "RUNNER_SSL", Value: ""},
+		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
+		{Name: "RUNNER_DATADIR", Value: "/data"},
+		{Name: "NAME", Value: "value"},
 		{Name: "key", Value: "value"},
 	}
 

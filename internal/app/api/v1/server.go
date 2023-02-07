@@ -146,6 +146,7 @@ type storageParams struct {
 	SecretAccessKey string
 	Location        string
 	Token           string
+	Bucket          string
 }
 
 type oauthParams struct {
@@ -186,7 +187,13 @@ func (s *TestkubeAPI) InitEnvs() {
 }
 
 func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
+	s.Storage = minio.NewClient(s.storageParams.Endpoint,
+		s.storageParams.AccessKeyId,
+		s.storageParams.SecretAccessKey,
+		s.storageParams.Location,
+		s.storageParams.Token,
+		s.storageParams.Bucket,
+		s.storageParams.SSL)
 }
 
 func (s *TestkubeAPI) InitRoutes() {

@@ -16,6 +16,7 @@ type Params struct {
 	SecretAccessKey string // RUNNER_SECRETACCESSKEY
 	Location        string // RUNNER_LOCATION
 	Token           string // RUNNER_TOKEN
+	Bucket          string // RUNNER_BUCKET
 	Ssl             bool   // RUNNER_SSL
 	ScrapperEnabled bool   // RUNNER_SCRAPPERENABLED
 	DataDir         string // RUNNER_DATADIR
@@ -45,6 +46,7 @@ func printParams(params Params) {
 	printSensitiveParam("RUNNER_SECRETACCESSKEY", params.SecretAccessKey)
 	output.PrintLog(fmt.Sprintf("RUNNER_LOCATION=\"%s\"", params.Location))
 	printSensitiveParam("RUNNER_TOKEN", params.Token)
+	output.PrintLog(fmt.Sprintf("RUNNER_BUCKET=\"%s\"", params.Bucket))
 	output.PrintLog(fmt.Sprintf("RUNNER_SSL=%t", params.Ssl))
 	output.PrintLog(fmt.Sprintf("RUNNER_SCRAPPERENABLED=\"%t\"", params.ScrapperEnabled))
 	output.PrintLog(fmt.Sprintf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername))
