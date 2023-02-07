@@ -20,7 +20,7 @@ type TestSuiteV2 struct {
 	// Run this step before whole suite
 	Before []TestSuiteStepV2 `json:"before,omitempty"`
 	// Steps to run
-	Steps []TestSuiteStepV2 `json:"steps"`
+	Steps []TestSuiteStepV2 `json:"steps,omitempty"`
 	// Run this step after whole suite
 	After []TestSuiteStepV2 `json:"after,omitempty"`
 	// test suite labels

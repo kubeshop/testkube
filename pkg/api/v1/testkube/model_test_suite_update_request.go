@@ -23,7 +23,7 @@ type TestSuiteUpdateRequest struct {
 	// Run these batch steps before whole suite
 	Before *[]TestSuiteBatchStep `json:"before,omitempty"`
 	// Batch steps to run
-	Steps *[]TestSuiteBatchStep `json:"steps"`
+	Steps *[]TestSuiteBatchStep `json:"steps,omitempty"`
 	// Run these batch steps after whole suite
 	After *[]TestSuiteBatchStep `json:"after,omitempty"`
 	// test suite labels

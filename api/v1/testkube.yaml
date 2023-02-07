@@ -2320,7 +2320,6 @@ components:
       required:
         - name
         - status
-        - steps
       properties:
         name:
           type: string
@@ -2390,7 +2389,6 @@ components:
       required:
         - name
         - status
-        - steps
       properties:
         name:
           type: string
