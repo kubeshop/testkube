@@ -58,8 +58,8 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 					}
 
 					if value, ok := data[item.secretRef.Key]; !ok {
-						return s.Error(c, http.StatusBadGateway, fmt.Errorf("missed key %s in secret %s/%s"),
-							item.secretRef.Key, item.secretRef.Namespace, item.secretRef.Name)
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("missed key %s in secret %s/%s",
+							item.secretRef.Key, item.secretRef.Namespace, item.secretRef.Name))
 					} else {
 						item.field = &value
 					}
