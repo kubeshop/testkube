@@ -21,7 +21,6 @@ testkube run test <testName> [flags]
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically
       --download-dir string                        download dir (default "artifacts")
-      --env stringToString                         envs in a form of name1=val1 passed to executor (default [])
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
       --git-branch string                          if uri is git repository we can set additional branch parameter
       --git-commit string                          if uri is git repository we can use commit id (sha) parameter
@@ -38,7 +37,6 @@ testkube run test <testName> [flags]
       --negative-test                              negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa
       --prerun-script string                       path to script to be run before test execution
       --scraper-template string                    scraper template file path for extensions to scraper template
-      --secret stringToString                      secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
   -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
   -v, --variable stringToString                    execution variable passed to executor (default [])

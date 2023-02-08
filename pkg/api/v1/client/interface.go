@@ -151,8 +151,6 @@ type ExecuteTestOptions struct {
 	ExecutionVariablesFileContent string
 	ExecutionLabels               map[string]string
 	Args                          []string
-	Envs                          map[string]string
-	SecretEnvs                    map[string]string
 	HTTPProxy                     string
 	HTTPSProxy                    string
 	Image                         string
