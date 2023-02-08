@@ -143,6 +143,9 @@ func (c *Client) listFiles(bucket, bucketFolder string) ([]testkube.Artifact, er
 		if obj.Err != nil {
 			return nil, obj.Err
 		}
+		if bucketFolder != "" {
+			obj.Key = strings.TrimPrefix(obj.Key, bucketFolder+"/")
+		}
 		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
 	}
 
