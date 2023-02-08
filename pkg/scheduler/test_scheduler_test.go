@@ -96,22 +96,16 @@ func TestGetExecuteOptions(t *testing.T) {
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutor, nil)
 
 	req := testkube.ExecutionRequest{
-		Name:             "id-1",
-		Number:           1,
-		ExecutionLabels:  map[string]string{"label": "value"},
-		Namespace:        "namespace",
-		VariablesFile:    "",
-		Variables:        map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
-		Command:          []string{},
-		Args:             []string{},
-		Image:            "executor-image",
-		ImagePullSecrets: []testkube.LocalObjectReference{},
-		Envs: map[string]string{
-			"env": "var",
-		},
-		SecretEnvs: map[string]string{
-			"secretEnv": "secretVar",
-		},
+		Name:                  "id-1",
+		Number:                1,
+		ExecutionLabels:       map[string]string{"label": "value"},
+		Namespace:             "namespace",
+		VariablesFile:         "",
+		Variables:             map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
+		Command:               []string{},
+		Args:                  []string{},
+		Image:                 "executor-image",
+		ImagePullSecrets:      []testkube.LocalObjectReference{},
 		Sync:                  false,
 		HttpProxy:             "",
 		HttpsProxy:            "",
