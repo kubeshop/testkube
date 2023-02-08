@@ -26,7 +26,7 @@ RUN cd cmd/api-server; \
         -o /app -mod mod -a .
 
 FROM alpine:3.16  
-RUN apk --no-cache add ca-certificates libssl1.1
+RUN apk --no-cache add ca-certificates libssl1.1 git
 WORKDIR /root/
 COPY  --from=build /app /bin/app
 

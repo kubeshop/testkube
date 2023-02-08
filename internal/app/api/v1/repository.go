@@ -30,7 +30,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, errWrongRepositoryType)
 		}
 
-		if request.CertificateSecret == "" {
+		if request.CertificateSecret == "" && request.Username == "" && request.Token == "" {
 			var items = []struct {
 				secretRef *testkube.SecretRef
 				field     *string
@@ -61,7 +61,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 						return s.Error(c, http.StatusBadGateway, fmt.Errorf("missed key %s in secret %s/%s",
 							item.secretRef.Key, item.secretRef.Namespace, item.secretRef.Name))
 					} else {
-						item.field = &value
+						*item.field = value
 					}
 				}
 			}
