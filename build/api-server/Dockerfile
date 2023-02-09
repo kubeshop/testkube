@@ -25,7 +25,7 @@ RUN cd cmd/api-server; \
             -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey=$SEGMENTIO_KEY" \
         -o /app -mod mod -a .
 
-FROM alpine:3.16  
+FROM alpine:3.17  
 RUN apk --no-cache add ca-certificates libssl1.1 git
 WORKDIR /root/
 COPY  --from=build /app /bin/app
