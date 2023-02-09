@@ -108,7 +108,6 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_SSL", Value: ""},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
-		{Name: "AA", Value: "bb"},
 		{Name: "key", Value: "value"},
 		{Name: "aa", Value: "bb"},
 	}
