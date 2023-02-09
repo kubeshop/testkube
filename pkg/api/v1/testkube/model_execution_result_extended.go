@@ -93,3 +93,30 @@ func (e *ExecutionResult) FailedStepsCount() int {
 	}
 	return count
 }
+
+// GetDeepCopy gives a copy of ExecutionResult with new pointers
+func (e *ExecutionResult) GetDeepCopy() *ExecutionResult {
+	if e == nil {
+		return nil
+	}
+
+	status := new(ExecutionStatus)
+	if e.Status != nil {
+		*status = *e.Status
+	}
+
+	reports := new(ExecutionResultReports)
+	if e.Reports != nil {
+		*reports = *e.Reports
+	}
+
+	result := ExecutionResult{
+		Status:       status,
+		Output:       e.Output,
+		OutputType:   e.OutputType,
+		ErrorMessage: e.ErrorMessage,
+		Steps:        e.Steps,
+		Reports:      reports,
+	}
+	return &result
+}
