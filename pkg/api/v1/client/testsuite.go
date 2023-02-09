@@ -17,6 +17,7 @@ func NewTestSuiteClient(
 	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution],
 	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary],
 	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult],
+	testSuiteArtifactTransport Transport[testkube.Artifact],
 ) TestSuiteClient {
 	return TestSuiteClient{
 		testSuiteTransport:                     testSuiteTransport,
@@ -24,6 +25,7 @@ func NewTestSuiteClient(
 		testSuiteWithExecutionTransport:        testSuiteWithExecutionTransport,
 		testSuiteWithExecutionSummaryTransport: testSuiteWithExecutionSummaryTransport,
 		testSuiteExecutionsResultTransport:     testSuiteExecutionsResultTransport,
+		testSuiteArtifactTransport:             testSuiteArtifactTransport,
 	}
 }
 
@@ -34,6 +36,7 @@ type TestSuiteClient struct {
 	testSuiteWithExecutionTransport        Transport[testkube.TestSuiteWithExecution]
 	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary]
 	testSuiteExecutionsResultTransport     Transport[testkube.TestSuiteExecutionsResult]
+	testSuiteArtifactTransport             Transport[testkube.Artifact]
 }
 
 // GetTestSuite returns single test suite by id
@@ -121,6 +124,12 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions/%s", executionID)
 	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
+}
+
+// GetTestSuiteExecutionArtifacts returns test suite execution artifacts by excution id
+func (c TestSuiteClient) GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.testSuiteArtifactTransport.GetURI("/test-suite-executions/%s/artifacts", executionID)
+	return c.testSuiteArtifactTransport.ExecuteMultiple(http.MethodGet, uri, nil, nil)
 }
 
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID

@@ -15,4 +15,6 @@ type Artifact struct {
 	Name string `json:"name,omitempty"`
 	// file size in bytes
 	Size int32 `json:"size,omitempty"`
+	// execution name that produced the artifact
+	ExecutionName string `json:"executionName,omitempty"`
 }

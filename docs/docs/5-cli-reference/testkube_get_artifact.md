@@ -1,6 +1,6 @@
 ## testkube get artifact
 
-List artifacts of the given execution name
+List artifacts of the given test or test suite execution name
 
 ```
 testkube get artifact <executionName> [flags]
