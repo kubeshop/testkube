@@ -21,7 +21,8 @@ type TestSuiteExecution struct {
 	Name      string                    `json:"name"`
 	TestSuite *ObjectRef                `json:"testSuite,omitempty"`
 	Status    *TestSuiteExecutionStatus `json:"status,omitempty"`
-	// environment variables passed to executor
+	// Environment variables passed to executor.
+	// Deprecated: use Basic Variables instead
 	Envs      map[string]string   `json:"envs,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// secret uuid

@@ -2481,7 +2481,7 @@ components:
         envs:
           deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
@@ -2912,7 +2912,7 @@ components:
         envs:
           deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
@@ -3379,7 +3379,7 @@ components:
         envs:
           deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
@@ -3388,7 +3388,7 @@ components:
         secretEnvs:
           deprecated: true
           type: object
-          description: "execution variables passed to executor from secrets"
+          description: "Execution variables passed to executor from secrets. Deprecated: use Secret Variables instead"
           additionalProperties:
             type: string
           example:
