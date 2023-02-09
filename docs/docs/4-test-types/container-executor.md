@@ -39,8 +39,9 @@ spec:
   executionRequest:
     args:
     - https://testkube.kubeshop.io/
-    envs:
-      TESTKUBE_ENV: example
+    variables:
+      - name: TESTKUBE_ENV
+        value: example
 ```
 
 Executing this test will run a Kubernetes Job with:

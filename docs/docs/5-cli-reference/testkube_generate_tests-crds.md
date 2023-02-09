@@ -17,6 +17,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
       --executor-args stringArray   executor binary additional arguments
   -h, --help                        help for tests-crds
       --prerun-script string        path to script to be run before test execution
+      --variable stringToString     variable key value pair: --variable key1=value1
 ```
 
 ### Options inherited from parent commands
@@ -32,4 +33,3 @@ testkube generate tests-crds <manifestDirectory> [flags]
 ### SEE ALSO
 
 * [testkube generate](testkube_generate.md)	 - Generate resources commands
-

@@ -50,6 +50,7 @@ type EnvManager struct {
 func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]testkube.Variable) (secretEnvVars []corev1.EnvVar) {
 	// preparet secret envs
 	i := 1
+	// Deprecated: use Secret Variables instead
 	for secretVar, secretName := range secretEnvs {
 		// TODO: these are duplicated because Postman executor is expecting it as json string
 		// and gets unmarshalled and the name and the value are taken from there, for other executors it will be like a normal env var.
@@ -64,6 +65,7 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 				},
 			},
 		})
+
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
 			Name: fmt.Sprintf("%s%d", SecretEnvVarPrefix, i),
 			ValueFrom: &corev1.EnvVarSource{
@@ -78,11 +80,39 @@ func (m EnvManager) Prepare(secretEnvs map[string]string, variables map[string]t
 		i++
 	}
 
+	i = 1
 	// prepare secret vars
 	for name, variable := range variables {
 		if !variable.IsSecret() || variable.SecretRef == nil {
 			continue
 		}
+
+		// TODO: these are duplicated because Postman executor is expecting it as json string
+		// and gets unmarshalled and the name and the value are taken from there, for other executors it will be like a normal env var.
+		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+			Name: name,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: variable.SecretRef.Name,
+					},
+					Key: variable.SecretRef.Key,
+				},
+			},
+		})
+
+		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
+			Name: fmt.Sprintf("%s%d", SecretEnvVarPrefix, i),
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: variable.SecretRef.Name,
+					},
+					Key: variable.SecretRef.Key,
+				},
+			},
+		})
+		i++
 
 		secretEnvVars = append(secretEnvVars, corev1.EnvVar{
 			Name: fmt.Sprintf("%s%s", SecretVarPrefix, name),

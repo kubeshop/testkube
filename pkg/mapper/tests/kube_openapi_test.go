@@ -42,6 +42,9 @@ func TestMapTestCRToAPI(t *testing.T) {
 				ImagePullSecrets: []v1.LocalObjectReference{
 					{Name: "secret"},
 				},
+				Envs: map[string]string{
+					"TESTKUBE": "1",
+				},
 				Sync: false,
 			},
 		},
@@ -71,6 +74,9 @@ func TestMapTestCRToAPI(t *testing.T) {
 			Image:         "curlimages/curl:7.85.0",
 			ImagePullSecrets: []testkube.LocalObjectReference{
 				{Name: "secret"},
+			},
+			Envs: map[string]string{
+				"TESTKUBE": "1",
 			},
 			Sync: false,
 		},

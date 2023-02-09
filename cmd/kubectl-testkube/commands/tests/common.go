@@ -184,6 +184,16 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	}
 
 	executionName := cmd.Flag("execution-name").Value.String()
+	envs, err := cmd.Flags().GetStringToString("env")
+	if err != nil {
+		return nil, err
+	}
+
+	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
+	if err != nil {
+		return nil, err
+	}
+
 	paramsFileContent := ""
 	variablesFile := cmd.Flag("variables-file").Value.String()
 	if variablesFile != "" {
@@ -264,6 +274,8 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		Command:               command,
 		Args:                  executorArgs,
 		ImagePullSecrets:      imageSecrets,
+		Envs:                  envs,
+		SecretEnvs:            secretEnvs,
 		HttpProxy:             httpProxy,
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
@@ -616,6 +628,32 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 
 		request.Args = &executorArgs
 		nonEmpty = true
+	}
+
+	var hashes = []struct {
+		name        string
+		destination **map[string]string
+	}{
+		{
+			"env",
+			&request.Envs,
+		},
+		{
+			"secret-env",
+			&request.SecretEnvs,
+		},
+	}
+
+	for _, hash := range hashes {
+		if cmd.Flag(hash.name).Changed {
+			value, err := cmd.Flags().GetStringToString(hash.name)
+			if err != nil {
+				return nil, err
+			}
+
+			*hash.destination = &value
+			nonEmpty = true
+		}
 	}
 
 	if cmd.Flag("variables-file").Changed {

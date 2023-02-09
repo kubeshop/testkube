@@ -92,7 +92,7 @@ spec:
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
       {{ $key }}:
-        name: {{ $key }}
+      - name: {{ $key }}
         {{- if $value.Value }}
         value: {{ $value.Value }}
         {{- end }}

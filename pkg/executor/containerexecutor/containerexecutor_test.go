@@ -90,6 +90,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		Command:               []string{"/bin/curl"},
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
+		Envs:                  map[string]string{"key": "value"},
 		Variables:             map[string]testkube.Variable{"aa": {Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)

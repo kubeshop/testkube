@@ -23,6 +23,7 @@ import (
 var (
 	executorArgs []string
 	envs         map[string]string
+	variables    map[string]string
 	preRunScript string
 )
 
@@ -131,7 +132,10 @@ func NewCRDTestsCmd() *cobra.Command {
 
 	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+
 	return cmd
 }
 

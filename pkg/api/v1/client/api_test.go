@@ -69,6 +69,7 @@ func TestDefaultDirectAPIClient(t *testing.T) {
 		// when
 		options := ExecuteTestOptions{
 			ExecutionVariables: map[string]testkube.Variable{},
+			SecretEnvs:         map[string]string{},
 		}
 		execution, err := client.ExecuteTest("test", "some name", options)
 

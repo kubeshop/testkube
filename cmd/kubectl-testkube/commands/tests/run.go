@@ -30,6 +30,8 @@ func NewRunTestCmd() *cobra.Command {
 		variablesFile            string
 		downloadArtifactsEnabled bool
 		downloadDir              string
+		envs                     map[string]string
+		secretEnvs               map[string]string
 		selectors                []string
 		concurrencyLevel         int
 		httpProxy, httpsProxy    string
@@ -99,8 +101,10 @@ func NewRunTestCmd() *cobra.Command {
 				ExecutionVariablesFileContent: paramsFileContent,
 				ExecutionLabels:               executionLabels,
 				Args:                          executorArgs,
+				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
+				Envs:                          envs,
 				Image:                         image,
 				JobTemplate:                   jobTemplateContent,
 				PreRunScriptContent:           preRunScriptContent,
@@ -216,6 +220,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
+	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "how many times to run the test")
@@ -235,6 +241,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().MarkDeprecated("secret", "secret-env is deprecated use secret-variable instead")
 
 	return cmd
 }
