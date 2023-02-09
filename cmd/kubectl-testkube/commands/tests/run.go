@@ -64,6 +64,9 @@ func NewRunTestCmd() *cobra.Command {
 				paramsFileContent = string(b)
 			}
 
+			envs, err := cmd.Flags().GetStringToString("env")
+			ui.WarnOnError("getting envs", err)
+
 			variables, err := common.CreateVariables(cmd)
 			ui.WarnOnError("getting variables", err)
 
