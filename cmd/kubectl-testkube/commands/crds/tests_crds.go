@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -119,7 +120,19 @@ func NewCRDTestsCmd() *cobra.Command {
 					}
 				}
 
-				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, PreRunScript: scriptBody}
+				vars, err := common.CreateVariables(cmd)
+				if err != nil {
+					return err
+				}
+
+				for name, variable := range vars {
+					if variable.Value != "" {
+						variable.Value = fmt.Sprintf("%q", variable.Value)
+						vars[name] = variable
+					}
+				}
+
+				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, Variables: vars, PreRunScript: scriptBody}
 				tests[testType][testName] = *test
 				return nil
 			})
