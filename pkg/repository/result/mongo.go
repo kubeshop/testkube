@@ -347,6 +347,7 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
 	output := result.ExecutionResult.Output
+	result.ExecutionResult = result.ExecutionResult.GetDeepCopy()
 	result.ExecutionResult.Output = ""
 	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
 	if err != nil {
