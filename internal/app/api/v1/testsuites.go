@@ -628,6 +628,44 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
+		ctx := context.Background()
+		id := c.Params("executionID")
+		execution, err := s.TestExecutionResults.Get(ctx, id)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		var artifacts []testkube.Artifact
+		for _, stepResult := range execution.StepResults {
+			if stepResult.Execution.Id == "" {
+				continue
+			}
+			stepArtifacts, err := s.Storage.ListFiles(stepResult.Execution.Id)
+			if err != nil {
+				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
+				continue
+			}
+			s.Log.Debugw("listing artifacts for step", "executionID", stepResult.Execution.Id, "artifacts", stepArtifacts)
+			for i := range stepArtifacts {
+				stepArtifacts[i].ExecutionName = stepResult.Execution.Name
+				artifacts = append(artifacts, stepArtifacts[i])
+			}
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.JSON(artifacts)
+	}
+}
+
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))

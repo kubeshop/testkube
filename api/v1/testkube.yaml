@@ -728,6 +728,35 @@ paths:
                   $ref: "#/components/schemas/Problem"
         204:
           description: "no content"
+  
+  /test-suites/{id}/executions/{executionID}/artifacts:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get test suite execution artifacts"
+      description: "Returns test suite execution artifacts with given executionID"
+      operationId: getTestSuiteExecutionArtifacts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  
   /test-suite-executions:
     post:
       parameters:
@@ -861,6 +890,34 @@ paths:
                   $ref: "#/components/schemas/Problem"
         204:
           description: "no content"
+  
+  /test-suite-executions/{executionID}/artifacts:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get test suite execution artifacts"
+      description: "Returns test suite execution artifacts with given executionID"
+      operationId: getTestSuiteExecutionArtifacts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  
   /executions:
     post:
       parameters:
@@ -2995,6 +3052,10 @@ components:
         size:
           type: integer
           description: file size in bytes
+        executionName:
+          type: string
+          description: execution name that produced the artifact
+          example: "test-1"
 
     ExecutionsResult:
       description: the result for a page of executions

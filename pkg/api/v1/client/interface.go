@@ -63,6 +63,7 @@ type TestSuiteExecutionAPI interface {
 	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 	AbortTestSuiteExecution(executionID string) error
+	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 }
 
 // ExecutorAPI describes executor api methods
