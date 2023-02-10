@@ -17,5 +17,9 @@ func uiPrintCloudContext(contextType string, cloudContext config.CloudContext) {
 			"API Key        ": text.Obfuscate(cloudContext.ApiKey),
 			"API URI        ": cloudContext.ApiUri,
 		})
+	} else {
+		ui.InfoGrid(map[string]string{
+			"context type": "kubeconfig",
+		})
 	}
 }

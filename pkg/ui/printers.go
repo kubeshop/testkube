@@ -35,6 +35,14 @@ func (ui *UI) Warn(message string, subMessages ...string) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) Alert(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", White(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", LightRed(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
 func (ui *UI) LogLine(message string) {
 	fmt.Fprintf(ui.Writer, "%s\n", DarkGray(message))
 }
