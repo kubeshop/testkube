@@ -55,7 +55,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestTriggerKeyMap"
 
-
   /triggers:
     get:
       tags:
@@ -728,7 +727,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
         204:
           description: "no content"
-  
+
   /test-suites/{id}/executions/{executionID}/artifacts:
     get:
       parameters:
@@ -740,7 +739,7 @@ paths:
         - executions
       summary: "Get test suite execution artifacts"
       description: "Returns test suite execution artifacts with given executionID"
-      operationId: getTestSuiteExecutionArtifacts
+      operationId: getTestSuiteExecutionArtifactsByTestsuite
       responses:
         200:
           description: successful operation
@@ -756,7 +755,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-  
+
   /test-suite-executions:
     post:
       parameters:
@@ -890,7 +889,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
         204:
           description: "no content"
-  
+
   /test-suite-executions/{executionID}/artifacts:
     get:
       parameters:
@@ -917,7 +916,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-  
+
   /executions:
     post:
       parameters:
@@ -2237,7 +2236,7 @@ paths:
                   $ref: "#/components/schemas/Problem"
 
   /repositories:
-    post:        
+    post:
       tags:
         - repository
         - api
@@ -2269,7 +2268,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Problem" 
+                  $ref: "#/components/schemas/Problem"
 
 components:
   schemas:
@@ -3040,7 +3039,7 @@ components:
         preRunScript:
           type: string
           description: script to run before test execution
-          example:  "echo -n '$SECRET_ENV' > ./secret_file"
+          example: "echo -n '$SECRET_ENV' > ./secret_file"
 
     Artifact:
       type: object
@@ -3258,7 +3257,7 @@ components:
         namespace:
           type: string
           description: server installaton namespace
-          example: "my-testkube"         
+          example: "my-testkube"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -3498,11 +3497,11 @@ components:
         preRunScript:
           type: string
           description: script to run before test execution
-          example:  "echo -n '$SECRET_ENV' > ./secret_file"
+          example: "echo -n '$SECRET_ENV' > ./secret_file"
         scraperTemplate:
           type: string
-          description: scraper template extensions         
-  
+          description: scraper template extensions
+
     ExecutionUpdateRequest:
       description: test execution request update body
       type: object
@@ -3755,7 +3754,7 @@ components:
           format: date-time
           description: Timestamp of log
           example: "2018-03-20T09:12:28Z"
-  
+
     ExecutorMeta:
       description: Executor meta data
       type: object
@@ -3895,7 +3894,7 @@ components:
           $ref: "#/components/schemas/TestSuite"
         latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
-  
+
     TestSuiteWithExecutionSummary:
       description: Test suite with latest execution result
       type: object
@@ -4083,7 +4082,7 @@ components:
         - "True"
         - "False"
         - "Unknown"
-  
+
     TestTriggerKeyMap:
       type: object
       required:
@@ -4097,7 +4096,17 @@ components:
           items:
             type: string
           description: list of supported values for resources
-          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event", "configmap"]
+          example:
+            [
+              "pod",
+              "deployment",
+              "statefulset",
+              "daemonset",
+              "service",
+              "ingress",
+              "event",
+              "configmap",
+            ]
         actions:
           type: array
           items:
@@ -4117,7 +4126,11 @@ components:
             items:
               type: string
           description: mapping between resources and supported events
-          example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
+          example:
+            {
+              "pod": ["created", "modified", "deleted"],
+              "deployment": ["created", "modified", "deleted"],
+            }
 
     TestSourceBatchRequest:
       description: Test source batch request
@@ -4331,17 +4344,17 @@ components:
       required: true
       content:
         multipart/form-data:
-           schema:
-              type: object
-              properties:
-                parentName:
-                  type: string
-                  example: "test-1"
-                parentType:
-                  type: string
-                  enum:
-                   - test
-                   - execution
-                filePath:
-                  type: string
-                  example: folder/file.txt
+          schema:
+            type: object
+            properties:
+              parentName:
+                type: string
+                example: "test-1"
+              parentType:
+                type: string
+                enum:
+                  - test
+                  - execution
+              filePath:
+                type: string
+                example: folder/file.txt
