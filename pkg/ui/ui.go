@@ -50,6 +50,7 @@ func SuccessAndExit(message string, subMessages ...string) {
 	ui.SuccessAndExit(message, subMessages...)
 }
 func Warn(message string, subMessages ...string)  { ui.Warn(message, subMessages...) }
+func Alert(message string, subMessages ...string) { ui.Alert(message, subMessages...) }
 func LogLine(message string)                      { ui.LogLine(message) }
 func Debug(message string, subMessages ...string) { ui.Debug(message, subMessages...) }
 func Info(message string, subMessages ...string)  { ui.Info(message, subMessages...) }
@@ -73,6 +74,7 @@ func ShellCommand(title string, commands ...string)         { ui.ShellCommand(ti
 func Table(tableData TableData, writer io.Writer)           { ui.Table(tableData, writer) }
 func JSONTable(tableData TableData, writer io.Writer) error { return ui.JSONTable(tableData, writer) }
 func NewArrayTable(a [][]string) ArrayTable                 { return ui.NewArrayTable(a) }
+func Confirm(message string) bool                           { return ui.Confirm(message) }
 
 func UseStdout() { ui = uiOut }
 func UseStderr() { ui = uiErr }
