@@ -39,8 +39,8 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 }
 
 type HelmUpgradeOrInstalTestkubeOptions struct {
-	Name, Namespace, Chart, Values, AgentKey string
-	NoDashboard, NoMinio, NoMongo, NoConfirm bool
+	Name, Namespace, Chart, Values, AgentKey, AgentUri string
+	NoDashboard, NoMinio, NoMongo, NoConfirm           bool
 }
 
 func GetCurrentKubernetesContext() (string, error) {
@@ -58,8 +58,8 @@ func GetCurrentKubernetesContext() (string, error) {
 }
 
 func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
-	if options.AgentKey == "" {
-		return fmt.Errorf("agent key is required, please pass it with --agentKey flag")
+	if options.AgentKey == "" || options.AgentUri == "" {
+		return fmt.Errorf("agentKey and agnetUri are required, please pass it with `--agentKey` and `--agentUri` flags")
 	}
 
 	helmPath, err := exec.LookPath("helm")
@@ -79,7 +79,7 @@ func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions
 		"--create-namespace", "--namespace", options.Namespace,
 		"--set", "testkube-api.minio.enabled=false",
 		"--set", "testkube-api.mongodb.enabled=false",
-		"--set", "testkube-api.cloud.url=" + cfg.CloudContext.ApiUri,
+		"--set", "testkube-api.cloud.url=" + options.AgentUri,
 		"--set", "testkube-api.cloud.key=" + options.AgentKey,
 	}
 
@@ -93,6 +93,8 @@ func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions
 	if err != nil {
 		return err
 	}
+
+	ui.Info(fmt.Sprintf("%v", ui.Verbose))
 
 	ui.Debug("Helm command output:")
 	ui.Debug(helmPath, command...)
@@ -148,6 +150,7 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 	cmd.Flags().StringVar(&options.AgentKey, "agentKey", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&options.AgentUri, "agentUri", "", "Testkube Cloud agent URI [required for cloud mode]")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
