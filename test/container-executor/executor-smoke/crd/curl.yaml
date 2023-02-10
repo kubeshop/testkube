@@ -11,7 +11,8 @@ spec:
     args:
     - $(URL)
     variables:
-      - name: URL
+      URL:
+        name: URL
         value: https://testkube.kubeshop.io/
 ---
 apiVersion: tests.testkube.io/v3
@@ -27,6 +28,7 @@ spec:
     args:
     - $(URL)
     variables:
-      - name: URL
+      URL:
+        name: URL
         value: https://testkube.non.existing.url.example
     negativeTest: true

@@ -21,6 +21,7 @@ spec:
       - --env
       - API_URL=http://testkube-api-server.testkube.svc.cluster.local:8088/v1
     # variables:
-    #   - name: DEBUG
+    #   DEBUG:
+    #     name: DEBUG
     #     value: cypress:*
   schedule: "15 */4 * * *"

@@ -40,7 +40,8 @@ spec:
     args:
     - https://testkube.kubeshop.io/
     variables:
-      - name: TESTKUBE_ENV
+      TESTKUBE_ENV:
+        name: TESTKUBE_ENV
         value: example
 ```
 
