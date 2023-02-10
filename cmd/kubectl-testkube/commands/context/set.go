@@ -10,6 +10,7 @@ import (
 func NewSetContextCmd() *cobra.Command {
 	var (
 		org, env, apiKey, apiUri string
+		agentKey, agentUri       string
 		kubeconfig               bool
 	)
 
@@ -29,8 +30,8 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if org == "" && env == "" && apiKey == "" {
-					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key")
+				if org == "" && env == "" && apiKey == "" && agentKey == "" && agentUri == "" {
+					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-api-uri, --cloud-agent-key, --cloud-agent-uri")
 				}
 
 				if org != "" {
@@ -47,6 +48,18 @@ func NewSetContextCmd() *cobra.Command {
 					cfg.CloudContext.ApiKey = apiKey
 					cfg.CloudContext.ApiUri = apiUri
 				}
+				if apiKey != "" {
+					cfg.CloudContext.ApiKey = apiKey
+					cfg.CloudContext.ApiUri = apiUri
+				}
+
+				if agentKey != "" {
+					cfg.CloudContext.AgentKey = agentKey
+				}
+				if agentUri != "" {
+					cfg.CloudContext.AgentUri = agentUri
+				}
+
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
 
@@ -67,7 +80,9 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud organization ID")
 	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud environment ID")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
-	cmd.Flags().StringVarP(&apiUri, "cloud-api-uri", "", "", "https://api.testkube.io")
+	cmd.Flags().StringVarP(&apiUri, "cloud-api-uri", "", "https://api.testkube.io", "Testkube Cloud API URI")
+	cmd.Flags().StringVarP(&agentKey, "cloud-agent-key", "", "", "Agent Key for Testkube Cloud")
+	cmd.Flags().StringVarP(&agentUri, "cloud-agent-uri", "", "agent.testkube.io:443", "Testkube Cloud Agent URI")
 
 	return cmd
 }

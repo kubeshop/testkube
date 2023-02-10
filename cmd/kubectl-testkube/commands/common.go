@@ -58,8 +58,16 @@ func GetCurrentKubernetesContext() (string, error) {
 }
 
 func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.AgentKey == "" {
+		options.AgentKey = cfg.CloudContext.AgentKey
+	}
+	if cfg.CloudContext.AgentUri != "" && options.AgentUri == "" {
+		options.AgentUri = cfg.CloudContext.AgentUri
+	}
+
 	if options.AgentKey == "" || options.AgentUri == "" {
-		return fmt.Errorf("agentKey and agnetUri are required, please pass it with `--agentKey` and `--agentUri` flags")
+		return fmt.Errorf("agentKey and agentUri are required, please pass it with `--agentKey` and `--agentUri` flags")
 	}
 
 	helmPath, err := exec.LookPath("helm")
