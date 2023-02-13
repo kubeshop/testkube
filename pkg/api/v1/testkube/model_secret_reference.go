@@ -9,8 +9,11 @@
  */
 package testkube
 
-// Reference to Kubernetes object
-type LocalObjectReference struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+// Reference to secret
+type SecretReference struct {
+	Item *LocalObjectReference `json:"item,omitempty"`
+	// whether we shoud mount config map
+	Mount bool `json:"mount,omitempty"`
+	// whether we shoud read variables from secret
+	ReadVariables bool `json:"readVariables,omitempty"`
 }

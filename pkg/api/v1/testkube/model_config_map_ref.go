@@ -9,8 +9,12 @@
  */
 package testkube
 
-// Reference to Kubernetes object
-type LocalObjectReference struct {
-	Name      string `json:"name,omitempty"`
+// Testkube internal reference for data in Kubernetes config maps
+type ConfigMapRef struct {
+	// object kubernetes namespace
 	Namespace string `json:"namespace,omitempty"`
+	// object name
+	Name string `json:"name"`
+	// object key
+	Key string `json:"key"`
 }

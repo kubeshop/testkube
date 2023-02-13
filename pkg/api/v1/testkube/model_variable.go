@@ -10,8 +10,9 @@
 package testkube
 
 type Variable struct {
-	Name      string        `json:"name,omitempty"`
-	Value     string        `json:"value,omitempty"`
-	Type_     *VariableType `json:"type,omitempty"`
-	SecretRef *SecretRef    `json:"secretRef,omitempty"`
+	Name         string        `json:"name,omitempty"`
+	Value        string        `json:"value,omitempty"`
+	Type_        *VariableType `json:"type,omitempty"`
+	SecretRef    *SecretRef    `json:"secretRef,omitempty"`
+	ConfigMapRef *ComfigMapRef `json:"configMapRef,omitempty"`
 }

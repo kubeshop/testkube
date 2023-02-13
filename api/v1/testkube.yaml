@@ -2368,6 +2368,8 @@ components:
           $ref: "#/components/schemas/VariableType"
         secretRef:
           $ref: "#/components/schemas/SecretRef"
+        configMapRef:
+          $ref: "#/components/schemas/ComfigMapRef"          
 
     VariableType:
       type: string
@@ -2395,6 +2397,23 @@ components:
         - key
       type: object
       description: Testkube internal reference for secret storage in Kubernetes secrets
+      properties:
+        namespace:
+          type: string
+          description: object kubernetes namespace
+        name:
+          type: string
+          description: object name
+        key:
+          type: string
+          description: object key
+
+    ConfigMapRef:
+      required:
+        - name
+        - key
+      type: object
+      description: Testkube internal reference for data in Kubernetes config maps
       properties:
         namespace:
           type: string
@@ -3505,6 +3524,16 @@ components:
         scraperTemplate:
           type: string
           description: scraper template extensions
+        envConfigMaps:
+          type: array
+          description: "config map references"
+          items:
+            $ref: "#/components/schemas/ConfigMapReference"
+        envSecret:
+          type: array
+          description: "secret references"
+          items:
+            $ref: "#/components/schemas/SecretReference"
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -4005,6 +4034,38 @@ components:
       properties:
         name:
           type: string
+        namespace:
+          type: string
+
+    ConfigMapReference:
+      description: Reference to config map
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/LocalObjectReference"
+        mount:
+          type: bool
+          description: whether we shoud mount config map
+          default: false
+        readVariables:
+          type: bool
+          description: whether we shoud read variables from config map
+          default: false
+
+    SecretReference:
+      description: Reference to secret
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/LocalObjectReference"
+        mount:
+          type: bool
+          description: whether we shoud mount config map
+          default: false
+        readVariables:
+          type: bool
+          description: whether we shoud read variables from secret
+          default: false
 
     TestTriggerSelector:
       type: object
