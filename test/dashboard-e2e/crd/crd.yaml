@@ -23,5 +23,6 @@ spec:
     # variables:
     #   DEBUG:
     #     name: DEBUG
+    #     type: basic
     #     value: cypress:*
   schedule: "15 */4 * * *"

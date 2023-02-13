@@ -13,6 +13,7 @@ spec:
     variables:
       URL:
         name: URL
+        type: basic
         value: https://testkube.kubeshop.io/
 ---
 apiVersion: tests.testkube.io/v3
@@ -30,5 +31,6 @@ spec:
     variables:
       URL:
         name: URL
+        type: basic
         value: https://testkube.non.existing.url.example
     negativeTest: true
