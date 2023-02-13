@@ -85,8 +85,10 @@ func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions
 	command := []string{
 		"upgrade", "--install",
 		"--create-namespace", "--namespace", options.Namespace,
-		"--set", "testkube-api.minio.enabled=false",
-		"--set", "testkube-api.mongodb.enabled=false",
+		// TODO disable it when all data will be passed to cloud
+		// "--set", "testkube-api.minio.enabled=false",
+		// "--set", "testkube-api.mongodb.enabled=false",
+		// "--set", "mongodb.enabled=false",
 		"--set", "testkube-api.cloud.url=" + options.AgentUri,
 		"--set", "testkube-api.cloud.key=" + options.AgentKey,
 	}
@@ -157,8 +159,8 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
-	cmd.Flags().StringVar(&options.AgentKey, "agentKey", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&options.AgentUri, "agentUri", "", "Testkube Cloud agent URI [required for cloud mode]")
+	cmd.Flags().StringVar(&options.AgentKey, "agent-key", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&options.AgentUri, "agent-uri", "", "Testkube Cloud agent URI [required for cloud mode]")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
