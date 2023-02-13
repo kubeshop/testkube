@@ -181,43 +181,53 @@ testkube purge
 
 ## Installation on OpenShift
 
-Because of upgrade issues from Mongo 11 to 13, Testkube can't work on root-less OpenShift environment by default. Fortunately, you'll be able to install it manually.
+To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
 
-To do it you need an empty OpenShift cluster and follow the steps below:
-
-1. Save mongo chart values (named `values.yaml`)
+1. Add security context for MongoDB to `values.yaml`:
 
 ```yaml
-securityContext:
-  enabled: true
-  fsGroup: 1000650001
-  runAsUser: 1000650001
-
-podSecurityContext:
-  enabled: false
-
-containerSecurityContext:
-  enabled: true
-  runAsUser: 1000650001
-  runAsNonRoot: true
-
-volumePermissions:
-  enabled: false
-
-auth: 
-   enabled: false
+mongodb: 
+  securityContext:
+    enabled: true
+    fsGroup: 1000650001
+    runAsUser: 1000650001
+  podSecurityContext:
+    enabled: false
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1000650001
+    runAsNonRoot: true
+  volumePermissions:
+    enabled: false
+  auth: 
+     enabled: false
 ```
 
-2. Install MongoDB
+2. Add security context for `Patch` and `Migrate` jobs that are a part of Testkube Operator configuration to `values.yaml`: 
 
-```sh
-helm install testkube-mongodb bitnami/mongodb --namespace=testkube --values values.yaml
+```yaml
+testkube-operator:
+  webhook:
+    migrate:
+      enabled: true
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+    
+    patch:
+      enabled: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000650000
+        fsGroup: 1000650000
+
 ```
 
-3. Install Testkube configured to use our Custom MongoDB instance
+3. Install Testkube specifying the path to the new `values.yaml` file
 
 ```
-helm install --create-namespace --namespace testkube testkube testkube/testkube --set mongodb.enabled=false --set testkube-dashboard.service.port=8080
+helm install testkube testkube/testkube --create-namespace --namespace testkube --values values.yaml
 ```
 
 Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
