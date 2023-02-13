@@ -72,12 +72,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	for _, variable := range options.Variables {
-		if variable.Type_ != nil && *variable.Type_ == testkube.BASIC_VariableType {
-			env = append(env, corev1.EnvVar{Name: strings.ToUpper(variable.Name), Value: variable.Value})
-		}
-	}
-	env = append(env, executor.PrepareEnvs(options.Envs)...)
+	env = append(env, executor.PrepareEnvs(options.Envs, options.Variables)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)

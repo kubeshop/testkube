@@ -114,6 +114,7 @@ type JobOptions struct {
 	TestName              string
 	InitImage             string
 	JobTemplate           string
+	Envs                  map[string]string
 	SecretEnvs            map[string]string
 	HTTPProxy             string
 	HTTPSProxy            string
@@ -454,6 +455,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
 		Namespace:             options.Namespace,
+		Envs:                  options.Request.Envs,
 		SecretEnvs:            options.Request.SecretEnvs,
 		HTTPProxy:             options.Request.HttpProxy,
 		HTTPSProxy:            options.Request.HttpsProxy,
@@ -665,6 +667,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	if options.HTTPSProxy != "" {
 		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
+
+	env = append(env, executor.PrepareEnvs(options.Envs, options.Variables)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)

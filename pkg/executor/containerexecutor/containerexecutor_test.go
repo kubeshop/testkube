@@ -91,7 +91,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
 		Envs:                  map[string]string{"key": "value"},
-		Variables:             map[string]testkube.Variable{"aa": {Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
+		Variables:             map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -108,8 +108,8 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_SSL", Value: ""},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
-		{Name: "NAME", Value: "value"},
 		{Name: "key", Value: "value"},
+		{Name: "aa", Value: "bb"},
 	}
 
 	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)

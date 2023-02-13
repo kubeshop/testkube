@@ -564,6 +564,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		WorkingDir:                workingDir,
 		TestName:                  options.TestName,
 		Namespace:                 options.Namespace,
+		Envs:                      options.Request.Envs,
 		SecretEnvs:                options.Request.SecretEnvs,
 		HTTPProxy:                 options.Request.HttpProxy,
 		HTTPSProxy:                options.Request.HttpsProxy,

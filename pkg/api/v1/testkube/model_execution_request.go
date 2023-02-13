@@ -36,9 +36,11 @@ type ExecutionRequest struct {
 	Image string `json:"image,omitempty"`
 	// container image pull secrets
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	// environment variables passed to executor
+	// Environment variables passed to executor.
+	// Deprecated: use Basic Variables instead
 	Envs map[string]string `json:"envs,omitempty"`
-	// execution variables passed to executor from secrets
+	// Execution variables passed to executor from secrets.
+	// Deprecated: use Secret Variables instead
 	SecretEnvs map[string]string `json:"secretEnvs,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`

@@ -29,7 +29,8 @@ type Execution struct {
 	Name string `json:"name,omitempty"`
 	// execution number
 	Number int32 `json:"number,omitempty"`
-	// environment variables passed to executor
+	// Environment variables passed to executor.
+	// Deprecated: use Basic Variables instead
 	Envs map[string]string `json:"envs,omitempty"`
 	// additional arguments/flags passed to executor binary
 	Args      []string            `json:"args,omitempty"`

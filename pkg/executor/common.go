@@ -285,12 +285,23 @@ func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, job
 	}, nil
 }
 
-func PrepareEnvs(envs map[string]string) []corev1.EnvVar {
+func PrepareEnvs(envs map[string]string, variables map[string]testkube.Variable) []corev1.EnvVar {
 	var env []corev1.EnvVar
 	for k, v := range envs {
 		env = append(env, corev1.EnvVar{
 			Name:  k,
 			Value: v,
+		})
+	}
+	// prepare vars
+	for name, variable := range variables {
+		if variable.IsSecret() {
+			continue
+		}
+
+		env = append(env, corev1.EnvVar{
+			Name:  name,
+			Value: variable.Value,
 		})
 	}
 

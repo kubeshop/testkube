@@ -13,10 +13,10 @@ testkube generate tests-crds <manifestDirectory> [flags]
 ### Options
 
 ```
-      --env stringToString          envs in a form of name1=val1 passed to executor (default [])
       --executor-args stringArray   executor binary additional arguments
   -h, --help                        help for tests-crds
       --prerun-script string        path to script to be run before test execution
+  -v, --variable stringToString     variable key value pair: --variable key1=value1 (default [])
 ```
 
 ### Options inherited from parent commands

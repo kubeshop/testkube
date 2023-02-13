@@ -10,8 +10,10 @@ spec:
   executionRequest:
     args:
     - $(URL)
-    envs:
-      URL: https://testkube.kubeshop.io/
+    variables:
+      URL:
+        name: URL
+        value: https://testkube.kubeshop.io/
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -25,6 +27,8 @@ spec:
   executionRequest:
     args:
     - $(URL)
-    envs:
-      URL: https://testkube.non.existing.url.example
+    variables:
+      URL:
+        name: URL
+        value: https://testkube.non.existing.url.example
     negativeTest: true
