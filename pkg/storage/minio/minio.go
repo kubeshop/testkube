@@ -384,8 +384,8 @@ func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
 		for _, f := range files {
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
-			fileName := strings.TrimPrefix(f.Name, folder)
-			err = c.minioclient.FGetObject(context.Background(), c.bucket, f.Name, prefix+fileName, minio.GetObjectOptions{})
+			objectName := fmt.Sprintf("%s/%s", folder, f.Name)
+			err = c.minioclient.FGetObject(context.Background(), c.bucket, objectName, prefix+f.Name, minio.GetObjectOptions{})
 			if err != nil {
 				output.PrintEvent(fmt.Sprintf("%s Could not download file %s", ui.IconCross, f.Name))
 				return fmt.Errorf("could not persist file %s from bucket %s, folder %s: %w", f.Name, c.bucket, folder, err)
