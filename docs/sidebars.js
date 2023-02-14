@@ -72,6 +72,10 @@ const sidebars = {
     {
       type: "category",
       label: "Test Types",
+      link: {
+        type: 'generated-index',
+        description: "Supported Test Types / Executors within Testkube"
+      },
       items: [
         "test-types/executor-artillery",
         "test-types/executor-curl",
