@@ -18,7 +18,6 @@ We love to improve Testkube with additional features suggested by our users!
 
 Please visit our [Contribution](../contributing/intro.md) page to see the guidelines for contributing to the Testkube project.
 
-
 # Custom Executors
 
 ## **Creating a Custom Executor**
@@ -119,7 +118,6 @@ If running any testing framework binary, it is a best practice to wrap its outpu
 
 Here is an example of [mapping in the Testkube Postman Executor](https://github.com/kubeshop/testkube-executor-postman/blob/main/pkg/runner/newman/newman.go#L60), which is using a [Postman to Testkube Mapper](https://github.com/kubeshop/testkube-executor-postman/blob/1b95fd85e5b73e9a243fbff59d5e96c27d0f69c5/pkg/runner/newman/mapper.go#L9).
 
-
 ### **Deploying a Custom Executor**
 
 The following example will build and deploy your runner into a Kubernetes cluster:
@@ -181,7 +179,6 @@ This is a very basic example of a custom executor. Please visit our internal pro
 - [Cypress runner implementation](https://github.com/kubeshop/testkube-executor-cypress/blob/main/pkg/runner/cypress.go).
 - [Curl runner implementation](https://github.com/kubeshop/testkube-executor-curl/blob/main/pkg/runner/runner.go).
 
-
 ## **Creating a Custom Executor in a Programming Language other than `Go`**
 
 [You can find the fully commented code example here](https://github.com/kubeshop/testkube-executor-example-nodejs/blob/main/app.js).
@@ -203,7 +200,7 @@ We have created a simple NodeJS executor.
 
 The executor will get the URI and try to call the HTTP GET method on the passed value, and will return:
 
-- **success** - when the status code is 200. 
+- **success** - when the status code is 200.
 - **failed** - for any other status code.
 
 ```javascript
@@ -259,9 +256,8 @@ As we can see, we are pushing JSON output to `stdin` with the `console.log` func
 
 The two basic output types handled here are:
 
-- For executor failures (non-test related), return `error`. 
+- For executor failures (non-test related), return `error`.
 - For a test result, return `result` with the test status (success, error).
-
 
 When the executor code is ready, the next steps are to create:
 
@@ -272,12 +268,14 @@ When the executor code is ready, the next steps are to create:
 We will simplify and use the latest tag for the steps below but a best practice is to use versioning. Currently, Testkube runs the command directly and passes the execution information as an argument.
 
 1. Add the runner binary (we have plans to remove this step in a future release):
+
 ```bash
 #!/usr/bin/env sh
 node app.js "$@"
 ```
 
 2. Add the runner binary into the Dockerfile:
+
 ```Dockerfile
 FROM node:17
 
@@ -293,17 +291,18 @@ EXPOSE 8080
 CMD [ "/bin/runner" ]
 ```
 
-3. Build and push the docker container (change `user/repo` to your Docker Hub username): 
+3. Build and push the docker container (change `user/repo` to your Docker Hub username):
+
 ```bash
 docker build --platform=linux/amd64 -t USER/testkube-executor-example-nodejs:latest -f Dockerfile .
 docker push USER/testkube-executor-example-nodejs:latest
 ```
 
 4. After the image is in place for Kubernetes to load, create the executor:
+
 ```bash
 kubectl testkube create executor --image kubeshop/testkube-executor-example-nodejs:latest --types "example/test" --name example-nodejs-executor
 ```
-
 
 When everything is in place, we can add our Testkube tests.
 
@@ -347,8 +346,6 @@ $ kubectl testkube watch execution 6218ccd2a26fa94ee7a7cfd1
 ```
 
 Our test completed successfully! Create another test with a different status code and check to see the result.
-
-
 
 ## **Resources**
 
