@@ -357,7 +357,7 @@ func (c *Client) UploadFileToBucket(bucket, bucketFolder, filePath string, reade
 	return c.uploadFile(bucket, bucketFolder, filePath, reader, objectSize)
 }
 
-// laceFiles saves the content of the buckets to the filesystem
+// PlaceFiles saves the content of the buckets to the filesystem
 func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
 	output.PrintLog(fmt.Sprintf("%s Getting the contents of bucket folders %s", ui.IconFile, bucketFolders))
 	if err := c.Connect(); err != nil {
@@ -384,7 +384,8 @@ func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
 		for _, f := range files {
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
-			err = c.minioclient.FGetObject(context.Background(), c.bucket, f.Name, prefix+f.Name, minio.GetObjectOptions{})
+			fileName := strings.TrimPrefix(f.Name, folder)
+			err = c.minioclient.FGetObject(context.Background(), c.bucket, f.Name, prefix+fileName, minio.GetObjectOptions{})
 			if err != nil {
 				output.PrintEvent(fmt.Sprintf("%s Could not download file %s", ui.IconCross, f.Name))
 				return fmt.Errorf("could not persist file %s from bucket %s, folder %s: %w", f.Name, c.bucket, folder, err)
