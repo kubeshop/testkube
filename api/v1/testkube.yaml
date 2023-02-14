@@ -2369,7 +2369,7 @@ components:
         secretRef:
           $ref: "#/components/schemas/SecretRef"
         configMapRef:
-          $ref: "#/components/schemas/ComfigMapRef"          
+          $ref: "#/components/schemas/ConfigMapRef"
 
     VariableType:
       type: string
@@ -3528,12 +3528,12 @@ components:
           type: array
           description: "config map references"
           items:
-            $ref: "#/components/schemas/ConfigMapReference"
-        envSecret:
+            $ref: "#/components/schemas/EnvReference"
+        envSecrets:
           type: array
           description: "secret references"
           items:
-            $ref: "#/components/schemas/SecretReference"
+            $ref: "#/components/schemas/EnvReference"
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -4034,37 +4034,22 @@ components:
       properties:
         name:
           type: string
-        namespace:
-          type: string
 
-    ConfigMapReference:
-      description: Reference to config map
+    EnvReference:
+      description: Reference to env resource
       type: object
+      required:
+        - reference
       properties:
-        item:
+        reference:
           $ref: "#/components/schemas/LocalObjectReference"
         mount:
           type: bool
-          description: whether we shoud mount config map
+          description: whether we shoud mount resource
           default: false
-        readVariables:
+        mapToVariables:
           type: bool
-          description: whether we shoud read variables from config map
-          default: false
-
-    SecretReference:
-      description: Reference to secret
-      type: object
-      properties:
-        item:
-          $ref: "#/components/schemas/LocalObjectReference"
-        mount:
-          type: bool
-          description: whether we shoud mount config map
-          default: false
-        readVariables:
-          type: bool
-          description: whether we shoud read variables from secret
+          description: whether we shoud map to variables from resource
           default: false
 
     TestTriggerSelector:

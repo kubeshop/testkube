@@ -11,6 +11,5 @@ package testkube
 
 // Reference to Kubernetes object
 type LocalObjectReference struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Name string `json:"name,omitempty"`
 }

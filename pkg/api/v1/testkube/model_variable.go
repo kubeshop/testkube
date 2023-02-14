@@ -14,5 +14,5 @@ type Variable struct {
 	Value        string        `json:"value,omitempty"`
 	Type_        *VariableType `json:"type,omitempty"`
 	SecretRef    *SecretRef    `json:"secretRef,omitempty"`
-	ConfigMapRef *ComfigMapRef `json:"configMapRef,omitempty"`
+	ConfigMapRef *ConfigMapRef `json:"configMapRef,omitempty"`
 }

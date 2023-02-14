@@ -9,11 +9,11 @@
  */
 package testkube
 
-// Reference to config map
-type ConfigMapReference struct {
-	Item *LocalObjectReference `json:"item,omitempty"`
-	// whether we shoud mount config map
+// Reference to env resource
+type EnvReference struct {
+	Reference *LocalObjectReference `json:"reference"`
+	// whether we shoud mount resource
 	Mount bool `json:"mount,omitempty"`
-	// whether we shoud read variables from config map
-	ReadVariables bool `json:"readVariables,omitempty"`
+	// whether we shoud map to variables from resource
+	MapToVariables bool `json:"mapToVariables,omitempty"`
 }
