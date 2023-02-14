@@ -1,6 +1,6 @@
 # What is a Container Executor?
 
-The TestKube Container Executor allows you to run your own container images for executing tests. TestKube orchestrates the Tests using the container image as Kubernetes Jobs.
+The Testkube Container Executor allows you to run your own container images for executing tests. Testkube orchestrates the Tests using the container image as Kubernetes Jobs.
 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
 
@@ -42,6 +42,7 @@ spec:
 ```
 
 Executing this test will run a Kubernetes Job with:
+
 - `curlimages/curl:7.85.0` image
 - `secret-name` image pull secret
 - `curl` command
@@ -55,7 +56,7 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 
 ## Input Data
 
-You can provide input data via string, files, and Git repositories via TestKube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
+You can provide input data via string, files, and Git repositories via Testkube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
@@ -107,7 +108,9 @@ Downloads into `/data/repo` directory
 $ ls /data/repO
 CODE_OF_CONDUCT.md  CONTRIBUTING.md  LICENSE  Makefile  README.md  build  cmd  go.mod  go.sum  pkg
 ```
+
 ## Collecting test artifacts
+
 For container executors that produce files during test execution we support collecting (scraping) these artifacts and storing them in our S3 compatible file storage. You need to save test related files into specified directories on the dynamically created volume, they will be uploaded from there to Testkube file storage and available later for downloading using standard CLI or UI commands. For example:
 
 ```yaml
