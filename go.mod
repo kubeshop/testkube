@@ -15,7 +15,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.9.1
+	github.com/kubeshop/testkube-operator v1.9.0-beta003
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
