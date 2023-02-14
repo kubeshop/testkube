@@ -1,28 +1,24 @@
 ---
 sidebar_position: 0
-sidebar_label: Welcome
-hide_table_of_contents: true
+sidebar_label: What is Testkube?
+hide_table_of_contents: false
 ---
 
 import Card from "@site/src/components/Card";
 import CardWrapper from "@site/src/components/CardWrapper";
 
-# Testkube
+# What is Testkube?
 
-<p class="intro--index">
-  <small>
-    Testkube is a Kubernetes-native testing framework for Testers and Developers that allows you to automate the executions 
-    of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD/GitOps pipelines.
-  </small>
-</p>
+Testkube is a Kubernetes-native testing framework for Testers, Developers and DevOps practitioners that allows you to automate the executions of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD pipelines.
 
-Tests are meant to be part of a cluster's state and can be executed as needed:
+With Testkube, tests are part of a cluster's state and can be executed as needed:
 
-- Manually via kubectl CLI.
-- Externally triggered via API (CI, external tooling, etc).
-- Automatically on deployment of annotated/labeled services/pods/etc (WIP).
+- Automatically on deployment of annotated/labeled Kubernetes objects (services, pods, etc)
+- On a schedule
+- Manually via Testkube's CLI
+- Externally triggered via API
 
-### Testkube helps you:
+### Testkube helps you
 
 - Avoid vendor lock-in for test orchestration and execution in CI/CD pipelines.
 - Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc.,
@@ -30,34 +26,3 @@ Tests are meant to be part of a cluster's state and can be executed as needed:
 - Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
 - Centralize all test results in a consistent format for actionable QA analytics.
 - Provide a modular architecture for adding new types of test scripts and executors.
-
-### The main Testkube components are:
-
-- Kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with API server.
-- API Server - Work orchestrator, Runs executors, gathers execution results.
-- Custom Resource Descriptors (CRD) Operator - Watches Testkube Custom Resources (CR), handles changes, communicates with API Server.
-- Executors - Run tests defined for specific runner.
-- Results DB - For centralized test results management.
-- A simple browser-based [User Interface](3-using-testkube/UI.md) for monitoring test results.
-
-
-### Testkube Cloud
-
-- Testkube managed solution for enterprises
-- It can manage complexinty of storing artifacts and test execution results for you
-- It can manage multiple clusters
-- It can manage your organisation and access the structure
-- It can manage API keys access for easier integration into CI/CD systems
-
-## Blog Posts
-
-Check out our [blog posts](https://testkube.io/blog) that highlight Testkube functionality, provide tutorials and keep you up to date on our latest releases.
-
-Release Notes:
-
-- [Testkube Release v1.8](https://testkube.io/blog/testkube-v18-release-notes) - December 13, 2022
-- [Testkube Release v1.7](https://testkube.io/blog/testkube-v17-release-notes) - November 9, 2022
-
-## Questions or Comments?
-
-What do you think of Testkube? We'd LOVE to hear from you! Please share your experiences and, of course, ideas on how we can make it better. Feel free to reach out on our [Discord server](https://discord.gg/uNuhy6GDyn).
