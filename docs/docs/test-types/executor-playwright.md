@@ -1,12 +1,12 @@
-# Playwright tests
+# Playwright Tests
 
 [Playwright](https://playwright.dev/) is an end-to-end testing and automation framework developed by Microsoft. Starting from the Testkube Helm chart version 1.9.5, it is now possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
 
-## Running Playwright tests
+## Running Playwright Tests
 
 The Playwright Testkube runner pulls the test code from Git directories. When creating a new test, this needs to be configured via the `--git-*` flags.
 
-### Create test
+### Create Test
 
 ```bash
 $ testkube create test --git-branch lilla/feat/playwright-executor --git-uri https://github.com/vLia/testkube-tests.git --git-path "playwright" --name playwright-test-demo --type playwright/test
@@ -14,7 +14,7 @@ $ testkube create test --git-branch lilla/feat/playwright-executor --git-uri htt
 Test created testkube / playwright-test-demo 🥇
 ```
 
-### Run test
+### Run Test
 
 ```bash
 $ testkube run test playwright-test-demo
@@ -42,9 +42,9 @@ $ kubectl testkube get execution playwright-test-demo-1
 
 To follow up with the results of the execution, you can either `watch` the execution while it is running or `get` the results of it after it is done, as seen in the commands printed out by the cli.
 
-### Check artifacts
+### Check Artifacts
 
-To get a list of the created artifact, use the following command:
+To get a list of the created artifacts, use the following command:
 
 ```bash
 $ testkube get artifact playwright-test-demo-1
@@ -60,9 +60,9 @@ $ testkube download artifact playwright-test-demo-1 playwright-report.zip data
 File data/playwright-report.zip downloaded.
 ```
 
-## Special requirements
+## Special Requirements
 
-Running tests in a containerized environment is convenient: it's simple, portable and increases the speed of development. There is a need to be aware of the limitations of this environment. Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. Having this option on the default setting, will block the Testkube test runner. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
+Running tests in a containerized environment is convenient: it's simple, portable and increases the speed of development. There is a need to be aware of the limitations of this environment. Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. Having this option on the default setting will block the Testkube test runner. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
 
 ```bash
 reporter: [
