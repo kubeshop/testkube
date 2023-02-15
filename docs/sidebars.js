@@ -25,8 +25,9 @@ const sidebars = {
       items: ["overview/faq"],
     },
     {
-      type: "doc",
-      id: "getting-started",
+      type: "category",
+      label: "Getting Started",
+      items: ["getting-started/installation", "getting-started/quickstart"],
     },
     {
       type: "category",
@@ -67,14 +68,15 @@ const sidebars = {
         "using-testkube/metrics",
         "using-testkube/triggers",
         "using-testkube/dependencies",
+        "using-testkube/common-issues",
       ],
     },
     {
       type: "category",
       label: "Test Types",
       link: {
-        type: 'generated-index',
-        description: "Supported Test Types / Executors within Testkube"
+        type: "generated-index",
+        description: "Supported Test Types / Executors within Testkube",
       },
       items: [
         "test-types/executor-artillery",
@@ -119,7 +121,6 @@ const sidebars = {
       type: "category",
       label: "Reference",
       items: [
-        "reference/installation",
         "reference/openapi",
         "reference/architecture",
       ],
