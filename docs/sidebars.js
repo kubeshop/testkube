@@ -53,7 +53,7 @@ const sidebars = {
         },
         {
           type: "category",
-          label: "Tests",
+          label: "Tests Suites",
           items: [
             "using-testkube/test-suites/testsuites-creating",
             "using-testkube/test-suites/testsuites-running",
