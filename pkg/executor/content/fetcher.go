@@ -53,17 +53,6 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
 	case testkube.TestContentTypeEmpty:
-		if content.Repository != nil && content.Repository.Type_ == "git" {
-			path, err := f.FetchGitDir(content.Repository)
-			if err != nil {
-				return "", err
-			}
-			content.Type_ = string(testkube.TestContentTypeGitFile)
-
-			if isDir(path) {
-				content.Type_ = string(testkube.TestContentTypeGitDir)
-			}
-		}
 		output.PrintLog(fmt.Sprintf("%s Empty content type", ui.IconCross))
 		return path, nil
 	default:
@@ -201,21 +190,24 @@ func (f Fetcher) configureUseOfCertificate() error {
 	return nil
 }
 
-// IsGitDir returns true if the git repo is a directory, false otherwise
-func (f Fetcher) IsGitDir(repo *testkube.Repository) (bool, error) {
+// CalculateGitContentType returns the type of the git test source
+func (f Fetcher) CalculateGitContentType(repo *testkube.Repository) (string, error) {
 	if repo.Uri == "" || repo.Path == "" {
-		return false, errors.New("repository Uri and Path should be populated")
+		return "", errors.New("repository Uri and Path should be populated")
 	}
 
 	path, err := f.FetchGitFile(repo)
 	if err != nil {
-		return false, fmt.Errorf("could not fetch: %w", err)
+		return "", fmt.Errorf("could not fetch: %w", err)
 	}
 
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		return false, fmt.Errorf("could not check path %s: %w", path, err)
+		return "", fmt.Errorf("could not check path %s: %w", path, err)
 	}
 
-	return fileInfo.IsDir(), nil
+	if fileInfo.IsDir() {
+		return string(testkube.TestContentTypeGitDir), nil
+	}
+	return string(testkube.TestContentTypeGitFile), nil
 }

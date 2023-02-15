@@ -1,5 +1,3 @@
-//go:build integration
-
 // this test need git to test fetchers
 package content
 
@@ -95,17 +93,17 @@ func TestFetcher(t *testing.T) {
 		t.Run("with file", func(t *testing.T) {
 			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("example.json")
 
-			ok, err := f.IsGitDir(repo)
+			contentType, err := f.CalculateGitContentType(repo)
 			assert.NoError(t, err)
-			assert.False(t, ok)
+			assert.Equal(t, "git-file", contentType)
 		})
 
 		t.Run("with dir", func(t *testing.T) {
 			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("subdir")
 
-			ok, err := f.IsGitDir(repo)
+			contentType, err := f.CalculateGitContentType(repo)
 			assert.NoError(t, err)
-			assert.True(t, ok)
+			assert.Equal(t, "git-dir", contentType)
 		})
 	})
 }
