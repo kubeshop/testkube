@@ -168,7 +168,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 }
 
 func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionRequest, err error) {
-	variables, err := common.CreateVariables(cmd)
+	variables, err := common.CreateVariables(cmd, false)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 	}
 
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd)
+		variables, err := common.CreateVariables(cmd, false)
 		if err != nil {
 			return nil, err
 		}
