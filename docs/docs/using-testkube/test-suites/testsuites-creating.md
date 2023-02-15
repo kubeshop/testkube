@@ -59,7 +59,6 @@ metadata:
 spec:
   description: Example simple tests orchestration
   steps:
-  steps:
   - execute:
       name: testkube-api
   - delay:
