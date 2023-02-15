@@ -32,13 +32,13 @@ choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/ch
 choco install testkube -y
 ```
 
-#### Linux
+#### Ubuntu/Debian
 
 ```bash
 wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
 ```
 
-#### Shell
+#### Script Installation
 
 ```bash
 curl -sSLf https://get.testkube.io | sh
@@ -166,84 +166,6 @@ The following Helm defaults are used in the `testkube` chart:
 
 >For more configuration parameters of `NATS` chart please visit:
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
-
-## Other installation methods
-### Installation on OpenShift
-
-To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
-
-1. Add security context for MongoDB to `values.yaml`:
-
-```yaml
-mongodb: 
-  securityContext:
-    enabled: true
-    fsGroup: 1000650001
-    runAsUser: 1000650001
-  podSecurityContext:
-    enabled: false
-  containerSecurityContext:
-    enabled: true
-    runAsUser: 1000650001
-    runAsNonRoot: true
-  volumePermissions:
-    enabled: false
-  auth: 
-     enabled: false
-```
-
-2. Add security context for `Patch` and `Migrate` jobs that are a part of Testkube Operator configuration to `values.yaml`: 
-
-```yaml
-testkube-operator:
-  webhook:
-    migrate:
-      enabled: true
-      securityContext:
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: ["ALL"]
-    
-    patch:
-      enabled: true
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000650000
-        fsGroup: 1000650000
-
-```
-
-3. Install Testkube specifying the path to the new `values.yaml` file
-
-```
-helm install testkube testkube/testkube --create-namespace --namespace testkube --values values.yaml
-```
-
-Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
-
-### Installation with S3 Storage and IAM Authentication
-
-To use S3 as storage, the steps are as follows:
-
-1. Create a ServiceAccount with the ARN specified.
-e.g.
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::265500248336:role/minio-example
-  name: s3-access
-  namespace: testkube
-```
-
-2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser`, `minio.minioRootPassword` and `storage.port` empty and set `storage.endpoint` to `s3.amazonaws.com`.
-
-3. Install using Helm and the values file with the above modifications.
-
-## Configure Logging Storage
-There are two types of storage mongo and minio, more details [here](../observability/logging.md)
 
 ## Uninstall Testkube
 
