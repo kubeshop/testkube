@@ -91,6 +91,7 @@ const sidebars = {
         "test-types/executor-k6",
         "test-types/executor-kubepug",
         "test-types/executor-maven",
+        "test-types/executor-playwright",
         "test-types/executor-postman",
         "test-types/executor-soapui",
         "test-types/executor-custom",

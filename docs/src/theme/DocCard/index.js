@@ -121,6 +121,10 @@ const testExecutorLogo = new Map([
     "/test-types/executor-soapui",
     "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/soapIcon.svg",
   ],
+  [
+    "/test-types/executor-playwright",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/playwrightIcon.svg",
+  ],
 ]);
 
 function CardLink({ item }) {
