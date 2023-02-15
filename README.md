@@ -107,6 +107,7 @@ Shout-out to our contributors 🎉 - you're great!
 - ⭐️ [@ancosma](https://github.com/ancosma)
 - ⭐️ [@Stupremee](https://github.com/Stupremee)
 - ⭐️ [@artem-zherdiev-ingio](https://github.com/artem-zherdiev-ingio)
+- ⭐️ [@chooco13](https://github.com/chooco13) - [Playwright executor](https://github.com/kubeshop/testkube-executor-playwright)
 
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥

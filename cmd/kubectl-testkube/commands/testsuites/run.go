@@ -46,7 +46,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 
-			variables, err := common.CreateVariables(cmd)
+			variables, err := common.CreateVariables(cmd, false)
 			ui.WarnOnError("getting variables", err)
 			options := apiv1.ExecuteTestSuiteOptions{
 				ExecutionVariables: variables,

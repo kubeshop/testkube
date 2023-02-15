@@ -22,10 +22,11 @@ import (
 )
 
 var (
-	executorArgs []string
-	envs         map[string]string
-	variables    map[string]string
-	preRunScript string
+	executorArgs             []string
+	envs                     map[string]string
+	variables                map[string]string
+	preRunScript             string
+	secretVariableReferences map[string]string
 )
 
 // NewCRDTestsCmd is command to generate test CRDs
@@ -120,7 +121,7 @@ func NewCRDTestsCmd() *cobra.Command {
 					}
 				}
 
-				vars, err := common.CreateVariables(cmd)
+				vars, err := common.CreateVariables(cmd, true)
 				if err != nil {
 					return err
 				}
@@ -148,6 +149,7 @@ func NewCRDTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 
 	return cmd
 }

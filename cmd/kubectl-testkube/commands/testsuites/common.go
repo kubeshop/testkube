@@ -108,7 +108,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	options.Namespace = cmd.Flag("namespace").Value.String()
 	options.Labels = labels
 
-	variables, err := common.CreateVariables(cmd)
+	variables, err := common.CreateVariables(cmd, false)
 	if err != nil {
 		return options, fmt.Errorf("invalid variables %w", err)
 	}
@@ -191,7 +191,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	var executionRequest testkube.TestSuiteExecutionUpdateRequest
 	var nonEmpty bool
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd)
+		variables, err := common.CreateVariables(cmd, false)
 		if err != nil {
 			return options, fmt.Errorf("invalid variables %w", err)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func CreateVariables(cmd *cobra.Command) (vars map[string]testkube.Variable, err error) {
+func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[string]testkube.Variable, err error) {
 	basicParams, err := cmd.Flags().GetStringToString("variable")
 	if err != nil {
 		return vars, err
@@ -21,12 +21,14 @@ func CreateVariables(cmd *cobra.Command) (vars map[string]testkube.Variable, err
 		vars[k] = testkube.NewBasicVariable(k, v)
 	}
 
-	secretParams, err := cmd.Flags().GetStringToString("secret-variable")
-	if err != nil {
-		return vars, err
-	}
-	for k, v := range secretParams {
-		vars[k] = testkube.NewSecretVariable(k, v)
+	if !ignoreSecretVariable {
+		secretParams, err := cmd.Flags().GetStringToString("secret-variable")
+		if err != nil {
+			return vars, err
+		}
+		for k, v := range secretParams {
+			vars[k] = testkube.NewSecretVariable(k, v)
+		}
 	}
 
 	secretParamReferences, err := cmd.Flags().GetStringToString("secret-variable-reference")
