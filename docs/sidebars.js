@@ -22,7 +22,10 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["overview/faq"],
+      items: [
+        "overview/supported-tests",
+        "overview/does-testkube-replace-cicd",
+      ],
     },
     {
       type: "category",
@@ -120,10 +123,7 @@ const sidebars = {
     {
       type: "category",
       label: "Reference",
-      items: [
-        "reference/openapi",
-        "reference/architecture",
-      ],
+      items: ["reference/openapi", "reference/architecture"],
     },
     {
       type: "category",
