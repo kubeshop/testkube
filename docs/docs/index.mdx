@@ -1,11 +1,5 @@
----
-sidebar_position: 0
-sidebar_label: What is Testkube?
-hide_table_of_contents: false
----
-
-import Card from "@site/src/components/Card";
-import CardWrapper from "@site/src/components/CardWrapper";
+import CICDComparison from "./img/cicd-comparison.png";
+import clsx from "clsx";
 
 # What is Testkube?
 
@@ -13,10 +7,12 @@ Testkube is a Kubernetes-native testing framework for Testers, Developers and De
 
 With Testkube, tests are part of a cluster's state and can be executed as needed:
 
-- Automatically on deployment of annotated/labeled Kubernetes objects (services, pods, etc)
-- On a schedule
-- Manually via Testkube's CLI
-- Externally triggered via API
+- ✨Automatically on deployment of annotated/labeled Kubernetes objects (services, pods, etc)
+- ⏲️ On a schedule
+- 🧑‍💻 Manually via Testkube's CLI or Open Source Dashboard
+- ⚡ Externally triggered via API
+
+<img src={CICDComparison} />
 
 ### Testkube helps you
 

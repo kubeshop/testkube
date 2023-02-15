@@ -22,11 +22,15 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["overview/faq"],
+      items: [
+        "overview/supported-tests",
+        "overview/does-testkube-replace-cicd",
+      ],
     },
     {
-      type: "doc",
-      id: "getting-started",
+      type: "category",
+      label: "Getting Started",
+      items: ["getting-started/installation", "getting-started/quickstart"],
     },
     {
       type: "category",
@@ -53,7 +57,7 @@ const sidebars = {
         },
         {
           type: "category",
-          label: "Tests",
+          label: "Test Suites",
           items: [
             "using-testkube/test-suites/testsuites-creating",
             "using-testkube/test-suites/testsuites-running",
@@ -67,14 +71,15 @@ const sidebars = {
         "using-testkube/metrics",
         "using-testkube/triggers",
         "using-testkube/dependencies",
+        "using-testkube/common-issues",
       ],
     },
     {
       type: "category",
       label: "Test Types",
       link: {
-        type: 'generated-index',
-        description: "Supported Test Types / Executors within Testkube"
+        type: "generated-index",
+        description: "Supported Test Types / Executors within Testkube",
       },
       items: [
         "test-types/executor-artillery",
@@ -86,6 +91,7 @@ const sidebars = {
         "test-types/executor-k6",
         "test-types/executor-kubepug",
         "test-types/executor-maven",
+        "test-types/executor-playwright",
         "test-types/executor-postman",
         "test-types/executor-soapui",
         "test-types/executor-custom",
@@ -118,11 +124,7 @@ const sidebars = {
     {
       type: "category",
       label: "Reference",
-      items: [
-        "reference/installation",
-        "reference/openapi",
-        "reference/architecture",
-      ],
+      items: ["reference/openapi", "reference/architecture"],
     },
     {
       type: "category",
