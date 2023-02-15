@@ -122,6 +122,55 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
 		}
+
+		var mountConfigMaps, variableConfigMaps, mountSecrets, variableSecrets []string
+		for _, configMap := range test.ExecutionRequest.EnvConfigMaps {
+			if configMap.Reference == nil {
+				continue
+			}
+
+			if configMap.Mount {
+				mountConfigMaps = append(mountConfigMaps, configMap.Reference.Name)
+			}
+
+			if configMap.MapToVariables {
+				variableConfigMaps = append(variableConfigMaps, configMap.Reference.Name)
+			}
+		}
+
+		for _, secret := range test.ExecutionRequest.EnvSecrets {
+			if secret.Reference == nil {
+				continue
+			}
+
+			if secret.Mount {
+				mountSecrets = append(mountSecrets, secret.Reference.Name)
+			}
+
+			if secret.MapToVariables {
+				variableSecrets = append(variableSecrets, secret.Reference.Name)
+			}
+		}
+
+		if len(mountConfigMaps) > 0 {
+			ui.NL()
+			ui.Warn("  Mount config maps:      ", mountConfigMaps...)
+		}
+
+		if len(variableConfigMaps) > 0 {
+			ui.NL()
+			ui.Warn("  Variable config maps:   ", variableConfigMaps...)
+		}
+
+		if len(mountSecrets) > 0 {
+			ui.NL()
+			ui.Warn("  Mount secrets:          ", mountSecrets...)
+		}
+
+		if len(variableSecrets) > 0 {
+			ui.NL()
+			ui.Warn("  Variable secrets:       ", variableSecrets...)
+		}
 	}
 
 	return nil

@@ -46,6 +46,24 @@ func TestMapTestCRToAPI(t *testing.T) {
 					"TESTKUBE": "1",
 				},
 				Sync: false,
+				EnvConfigMaps: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "configmap",
+						},
+						Mount:          true,
+						MapToVariables: false,
+					},
+				},
+				EnvSecrets: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "secret",
+						},
+						Mount:          false,
+						MapToVariables: true,
+					},
+				},
 			},
 		},
 	}
@@ -79,6 +97,24 @@ func TestMapTestCRToAPI(t *testing.T) {
 				"TESTKUBE": "1",
 			},
 			Sync: false,
+			EnvConfigMaps: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "configmap",
+					},
+					Mount:          true,
+					MapToVariables: false,
+				},
+			},
+			EnvSecrets: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "secret",
+					},
+					Mount:          false,
+					MapToVariables: true,
+				},
+			},
 		},
 	}
 	assert.Equal(t, want, got)

@@ -57,6 +57,10 @@ func NewCreateTestsCmd() *cobra.Command {
 		preRunScript             string
 		scraperTemplate          string
 		negativeTest             bool
+		mountConfigMaps          []string
+		variableConfigMaps       []string
+		mountSecrets             []string
+		variableSecrets          []string
 	)
 
 	cmd := &cobra.Command{

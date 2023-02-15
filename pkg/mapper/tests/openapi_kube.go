@@ -149,6 +149,8 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		PreRunScript:          executionRequest.PreRunScript,
 		ScraperTemplate:       executionRequest.ScraperTemplate,
 		NegativeTest:          executionRequest.NegativeTest,
+		EnvConfigMaps:         mapEnvReferences(executionRequest.EnvConfigMaps),
+		EnvSecrets:            mapEnvReferences(executionRequest.EnvSecrets),
 	}
 }
 
@@ -156,6 +158,28 @@ func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.Loca
 	for _, secret := range secrets {
 		res = append(res, v1.LocalObjectReference{Name: secret.Name})
 	}
+	return res
+}
+
+func mapEnvReferences(envs []testkube.EnvReference) []testsv3.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testsv3.EnvReference
+	for _, env := range envs {
+		if env.Reference == nil {
+			continue
+		}
+
+		res = append(res, testsv3.EnvReference{
+			LocalObjectReference: v1.LocalObjectReference{
+				Name: env.Reference.Name,
+			},
+			Mount:          env.Mount,
+			MapToVariables: env.MapToVariables,
+		})
+	}
+
 	return res
 }
 
@@ -480,6 +504,16 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ImagePullSecrets != nil {
 		request.ImagePullSecrets = mapImagePullSecrets(*executionRequest.ImagePullSecrets)
+		emptyExecution = false
+	}
+
+	if executionRequest.EnvConfigMaps != nil {
+		request.EnvConfigMaps = mapEnvReferences(*executionRequest.EnvConfigMaps)
+		emptyExecution = false
+	}
+
+	if executionRequest.EnvSecrets != nil {
+		request.EnvSecrets = mapEnvReferences(*executionRequest.EnvSecrets)
 		emptyExecution = false
 	}
 

@@ -144,6 +144,8 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		PreRunScript:          specExecutionRequest.PreRunScript,
 		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
 		NegativeTest:          specExecutionRequest.NegativeTest,
+		EnvConfigMaps:         MapEnvReferences(specExecutionRequest.EnvConfigMaps),
+		EnvSecrets:            MapEnvReferences(specExecutionRequest.EnvSecrets),
 	}
 }
 
@@ -175,4 +177,23 @@ func MapStatusFromSpec(specStatus testsv3.TestStatus) *testkube.TestStatus {
 			EndTime:   specStatus.LatestExecution.EndTime.Time,
 		},
 	}
+}
+
+// MapEnvReferences maps CRD to OpenAPI spec EnvReference
+func MapEnvReferences(envs []testsv3.EnvReference) []testkube.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testkube.EnvReference
+	for _, env := range envs {
+		res = append(res, testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: env.Name,
+			},
+			Mount:          env.Mount,
+			MapToVariables: env.MapToVariables,
+		})
+	}
+
+	return res
 }

@@ -188,8 +188,6 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.ScraperTemplate = templates.Scraper
 	jobOptions.PVCTemplate = templates.PVC
 	jobOptions.Variables = execution.Variables
-	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
-	jobOptions.Envs = options.Request.Envs
 	jobOptions.ServiceAccountName = serviceAccountName
 	return jobOptions, nil
 }

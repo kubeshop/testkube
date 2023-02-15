@@ -128,6 +128,8 @@ type JobOptions struct {
 	DelaySeconds              int
 	JobTemplateExtensions     string
 	ScraperTemplateExtensions string
+	EnvConfigMaps             []testkube.EnvReference
+	EnvSecrets                []testkube.EnvReference
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -576,6 +578,8 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		DelaySeconds:              jobDelaySeconds,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+		EnvConfigMaps:             options.Request.EnvConfigMaps,
+		EnvSecrets:                options.Request.EnvSecrets,
 	}
 }
 

@@ -121,6 +121,31 @@ func TestGetExecuteOptions(t *testing.T) {
 		JobTemplate:           "",
 		PreRunScript:          "",
 		ScraperTemplate:       "",
+		EnvConfigMaps: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "configmap",
+				},
+				Mount:          true,
+				MapToVariables: true,
+			},
+		},
+		EnvSecrets: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "secret-1",
+				},
+				Mount:          true,
+				MapToVariables: false,
+			},
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "secret-2",
+				},
+				Mount:          false,
+				MapToVariables: true,
+			},
+		},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

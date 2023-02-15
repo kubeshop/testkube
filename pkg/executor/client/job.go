@@ -125,6 +125,8 @@ type JobOptions struct {
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
 	JobTemplateExtensions string
+	EnvConfigMaps         []testkube.EnvReference
+	EnvSecrets            []testkube.EnvReference
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -452,6 +454,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
+		ImagePullSecrets:      options.ImagePullSecretNames,
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
 		Namespace:             options.Namespace,
@@ -464,6 +467,8 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
+		EnvConfigMaps:         options.EnvConfigMaps,
+		EnvSecrets:            options.EnvSecrets,
 	}
 }
 
@@ -701,7 +706,7 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, exe
 		jobOptions.JobTemplate = jobTemplate
 	}
 	jobOptions.Variables = execution.Variables
-	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	jobOptions.ServiceAccountName = serviceAccountName
+
 	return
 }
