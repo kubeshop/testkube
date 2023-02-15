@@ -90,4 +90,22 @@ func TestFetcher(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "", path)
 	})
+
+	t.Run("test IsGitDir", func(t *testing.T) {
+		t.Run("with file", func(t *testing.T) {
+			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("example.json")
+
+			ok, err := f.IsGitDir(repo)
+			assert.NoError(t, err)
+			assert.False(t, ok)
+		})
+
+		t.Run("with dir", func(t *testing.T) {
+			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("subdir")
+
+			ok, err := f.IsGitDir(repo)
+			assert.NoError(t, err)
+			assert.True(t, ok)
+		})
+	})
 }
