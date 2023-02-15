@@ -10,7 +10,7 @@ In this section you will:
 
 Watch the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys).
 
-## **1. Installing the Testkube CLI**
+## 1. Installing the Testkube CLI
 
 To install Testkube you'll need the following tools:
 
@@ -19,26 +19,32 @@ To install Testkube you'll need the following tools:
 
 Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
 
-### **MacOS**
+#### MacOS
 
 ```bash
 brew install testkube
 ```
 
-### **Windows**
+#### Windows
 
 ```bash
 choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/chocolatey  
 choco install testkube -y
 ```
 
-### **Linux**
+#### Linux
 
 ```bash
 wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
 ```
 
-### **Manual Download**
+#### Shell
+
+```bash
+curl -sSLf https://get.testkube.io | sh
+```
+
+#### Manual Download
 
 If you don't want to use scripts or package managers you can always do a manual install:
 
@@ -50,14 +56,14 @@ For Windows, you will need to unpack the binary and add it to the `%PATH%` as we
 
 If you use a package manager that we don't support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
 
-## **2. Installing Testkube Server Components**
+##*2. Installing Testkube Server Components**
 
 To deploy Testkube to your K8s cluster you will need the following packages installed:
 
 - [Kubectl docs](https://kubernetes.io/docs/tasks/tools/)
 - [Helm docs](https://helm.sh/docs/intro/install/#through-package-managers)
 
-### **Using Testkube's CLI to Deploy the Server Components**
+### 2.a Using Testkube's CLI to Deploy the Server Components
 
 The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
 Run:
@@ -85,7 +91,7 @@ kubectl get all -n testkube
 
 By default Testkube is installed in the `testkube` namespace.
 
-### **Using HELM to Deploy the Server Components**
+### 2.b Using Helm to Deploy the Server Components
 
 1. Add the Kubeshop Helm repository as follows:
 
@@ -123,7 +129,7 @@ And from a namespace other than `testkube`:
 helm delete --namespace namespace_name my-testkube testkube/testkube
 ```
 
-#### **Helm Properties**
+#### Helm Properties
 
 The following Helm defaults are used in the `testkube` chart:
 
@@ -161,21 +167,8 @@ The following Helm defaults are used in the `testkube` chart:
 >For more configuration parameters of `NATS` chart please visit:
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
 
-## **Remove Testkube Server Components**
-
-### **Using Helm:**
-
-```bash
-helm delete testkube
-```
-
-### **Using Testkube's CLI:**
-
-```bash
-testkube purge
-```
-
-## Installation on OpenShift
+## Other installation methods
+### Installation on OpenShift
 
 To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
 
@@ -228,7 +221,7 @@ helm install testkube testkube/testkube --create-namespace --namespace testkube 
 
 Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.
 
-## Installation with S3 Storage and IAM Authentication
+### Installation with S3 Storage and IAM Authentication
 
 To use S3 as storage, the steps are as follows:
 
@@ -251,3 +244,17 @@ metadata:
 
 ## Configure Logging Storage
 There are two types of storage mongo and minio, more details [here](../observability/logging.md)
+
+## Uninstall Testkube
+
+### Using Helm:
+
+```bash
+helm delete testkube
+```
+
+### Using Testkube's CLI:
+
+```bash
+testkube purge
+```

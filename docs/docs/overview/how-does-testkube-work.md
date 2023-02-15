@@ -1,4 +1,4 @@
-### How do I install Testkube?
+# How do I install Testkube?
 
 To install Testkube, you'll need to install Testkube CLI (which is currently available on MacOS, Linux, and Windows) and install Testkube's API in your cluster using Helm.
 
