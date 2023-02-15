@@ -191,12 +191,12 @@ func (f Fetcher) configureUseOfCertificate() error {
 }
 
 // CalculateGitContentType returns the type of the git test source
-func (f Fetcher) CalculateGitContentType(repo *testkube.Repository) (string, error) {
+func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, error) {
 	if repo.Uri == "" || repo.Path == "" {
 		return "", errors.New("repository Uri and Path should be populated")
 	}
 
-	path, err := f.FetchGitFile(repo)
+	path, err := f.FetchGitFile(&repo)
 	if err != nil {
 		return "", fmt.Errorf("could not fetch: %w", err)
 	}
