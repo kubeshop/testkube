@@ -150,8 +150,8 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		ScraperTemplate:            options.ScraperTemplate,
 		NegativeTest:               options.NegativeTest,
 		IsNegativeTestChangedOnRun: options.IsNegativeTestChangedOnRun,
-		EnvConfigMaps: options.EnvConfigMaps,
-		EnvSecrets: options.EnvSecrets,
+		EnvConfigMaps:              options.EnvConfigMaps,
+		EnvSecrets:                 options.EnvSecrets,
 	}
 
 	body, err := json.Marshal(request)
