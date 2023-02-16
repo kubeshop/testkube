@@ -49,7 +49,11 @@ func MergeVariablesAndParams(variables map[string]testsv3.Variable, params map[s
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 

@@ -63,6 +63,17 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsv3.Variabl
 			}
 		}
 
+		if v.ConfigMapRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.ConfigMapRef.Name,
+					},
+					Key: v.ConfigMapRef.Key,
+				},
+			}
+		}
+
 		out[k] = variable
 	}
 	return out

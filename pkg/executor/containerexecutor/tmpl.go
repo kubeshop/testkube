@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/env"
 )
 
 //go:embed templates/job.tmpl
@@ -26,8 +27,9 @@ var defaultJobTemplate string
 
 // NewExecutorJobSpec is a method to create new executor job spec
 func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, error) {
-	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
-		options.UsernameSecret, options.TokenSecret)
+	envManager := env.NewManager()
+	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
+		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
@@ -63,23 +65,23 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
 	}
 
-	env := append(executor.RunnerEnvVars, secretEnvVars...)
+	envs := append(executor.RunnerEnvVars, secretEnvVars...)
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	env = append(env, executor.PrepareEnvs(options.Envs, options.Variables)...)
+	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 		// override container image if provided
 		if options.ImageOverride != "" {
 			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
@@ -126,17 +128,17 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 		return nil, fmt.Errorf("decoding scraper job spec error: %w", err)
 	}
 
-	env := executor.RunnerEnvVars
+	envs := executor.RunnerEnvVars
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 	}
 
 	return &job, nil

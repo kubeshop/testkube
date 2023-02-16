@@ -99,6 +99,17 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv2.Va
 			}
 		}
 
+		if v.ConfigMapRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.ConfigMapRef.Name,
+					},
+					Key: v.ConfigMapRef.Key,
+				},
+			}
+		}
+
 		out[k] = variable
 	}
 	return out
@@ -119,7 +130,11 @@ func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params 
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 

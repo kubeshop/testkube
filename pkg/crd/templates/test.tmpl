@@ -105,6 +105,16 @@ spec:
             key: {{ $value.SecretRef.Key }}
             {{- end }}
         {{- end }}
+        {{- if $value.ConfigMapRef }}
+        valueFrom:
+          configMapKeyRef:
+            {{- if $value.ConfigMapRef.Name }}
+            name: {{ $value.ConfigMapRef.Name }}
+            {{- end }}
+            {{- if $value.ConfigMapRef.Key }}
+            key: {{ $value.ConfigMapRef.Key }}
+            {{- end }}
+        {{- end }}
     {{- end }}
     {{- end }}
     {{- if ne (len .ExecutionRequest.Args) 0 }}
