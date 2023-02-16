@@ -71,11 +71,11 @@ Please stop the application that listens on 8080, 8088 ports.
 - Services inside the same Kubernetes cluster can be accessed using the address `\<service-name\>.\<service-namespace\>.svc.cluster.local:\<port-number\>`. If there are network restrictions configured, Testkube will need permissions to access the SUT over the local network of the cluster.
 - If Testkube and the SUT are not in the same cluster, SUT will have to be exposed to Testkube using an Ingress or a Load Balancer.
 
-## If you're still having issues
+## If You're Still Having Issues
 
 If these guides do not solve the issue that you encountered or you have other questions or comments, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
 
-## Other installation methods
+## Other Installation Methods
 ### Installation on OpenShift
 
 To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
