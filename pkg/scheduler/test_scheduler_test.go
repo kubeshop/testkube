@@ -127,6 +127,7 @@ func TestGetExecuteOptions(t *testing.T) {
 					Name: "configmap",
 				},
 				Mount:          true,
+				MountPath:      "/data",
 				MapToVariables: true,
 			},
 		},
@@ -136,6 +137,7 @@ func TestGetExecuteOptions(t *testing.T) {
 					Name: "secret-1",
 				},
 				Mount:          true,
+				MountPath:      "/data",
 				MapToVariables: false,
 			},
 			{
@@ -143,6 +145,7 @@ func TestGetExecuteOptions(t *testing.T) {
 					Name: "secret-2",
 				},
 				Mount:          false,
+				MountPath:      "",
 				MapToVariables: true,
 			},
 		},

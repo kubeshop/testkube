@@ -180,6 +180,9 @@ spec:
     envConfigMaps:
     {{- range $configMap := .ExecutionRequest.EnvConfigMaps }}
     - mount: {{ $configMap.Mount }}
+      {{- if $configMap.MountPath }}
+      mountPath: {{ $configMap.MountPath }}
+      {{- end }}
       mapToVariables: {{ $configMap.MapToVariables }}
       {{- if $configMap.Reference }}
       reference: 
@@ -191,6 +194,9 @@ spec:
     envSecrets:
     {{- range $secret := .ExecutionRequest.EnvSecrets }}
     - mount: {{ $secret.Mount }}
+      {{- if $secret.MountPath }}
+      mountPath: {{ $secret.MountPath }}
+      {{- end }}
       mapToVariables: {{ $secret.MapToVariables }}
       {{- if $secret.Reference }}
       reference: 

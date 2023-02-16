@@ -168,7 +168,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 }
 
 func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []testkube.EnvReference, err error) {
-	mountConfigMaps, err := cmd.Flags().GetStringArray("mount-configmap")
+	mountConfigMaps, err := cmd.Flags().GetStringToString("mount-configmap")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -178,7 +178,7 @@ func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []
 		return nil, nil, err
 	}
 
-	mountSecrets, err := cmd.Flags().GetStringArray("mount-secret")
+	mountSecrets, err := cmd.Flags().GetStringToString("mount-secret")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,12 +189,13 @@ func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []
 	}
 
 	mapConfigMaps := make(map[string]testkube.EnvReference)
-	for _, configMap := range mountConfigMaps {
+	for configMap, path := range mountConfigMaps {
 		mapConfigMaps[configMap] = testkube.EnvReference{
 			Reference: &testkube.LocalObjectReference{
 				Name: configMap,
 			},
-			Mount: true,
+			Mount:     true,
+			MountPath: path,
 		}
 	}
 
@@ -217,12 +218,13 @@ func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []
 	}
 
 	mapSecrets := make(map[string]testkube.EnvReference)
-	for _, secret := range mountSecrets {
+	for secret, path := range mountSecrets {
 		mapSecrets[secret] = testkube.EnvReference{
 			Reference: &testkube.LocalObjectReference{
 				Name: secret,
 			},
-			Mount: true,
+			Mount:     true,
+			MountPath: path,
 		}
 	}
 

@@ -57,9 +57,9 @@ func NewCreateTestsCmd() *cobra.Command {
 		preRunScript             string
 		scraperTemplate          string
 		negativeTest             bool
-		mountConfigMaps          []string
+		mountConfigMaps          map[string]string
 		variableConfigMaps       []string
-		mountSecrets             []string
+		mountSecrets             map[string]string
 		variableSecrets          []string
 	)
 
@@ -170,9 +170,9 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
-	cmd.Flags().StringArrayVar(&mountConfigMaps, "mount-configmap", []string{}, "config map name used to mount it to executor pod")
+	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
 	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
-	cmd.Flags().StringArrayVar(&mountSecrets, "mount-secret", []string{}, "secret name used to mount it to executor pod")
+	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")

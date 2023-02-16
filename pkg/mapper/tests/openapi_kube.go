@@ -176,6 +176,7 @@ func mapEnvReferences(envs []testkube.EnvReference) []testsv3.EnvReference {
 				Name: env.Reference.Name,
 			},
 			Mount:          env.Mount,
+			MountPath:      env.MountPath,
 			MapToVariables: env.MapToVariables,
 		})
 	}
