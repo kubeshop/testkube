@@ -14,6 +14,8 @@ type EnvReference struct {
 	Reference *LocalObjectReference `json:"reference"`
 	// whether we shoud mount resource
 	Mount bool `json:"mount,omitempty"`
+	// where we shoud mount resource
+	MountPath string `json:"mountPath,omitempty"`
 	// whether we shoud map to variables from resource
 	MapToVariables bool `json:"mapToVariables,omitempty"`
 }

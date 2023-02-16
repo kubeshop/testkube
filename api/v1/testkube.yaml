@@ -4046,7 +4046,10 @@ components:
         mount:
           type: bool
           description: whether we shoud mount resource
-          default: false
+          example: /etc/data
+        mountPath:
+          type: string
+          description: where we shoud mount resource          
         mapToVariables:
           type: bool
           description: whether we shoud map to variables from resource
