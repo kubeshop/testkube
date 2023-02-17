@@ -196,7 +196,7 @@ func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, erro
 		return "", errors.New("repository uri and path should be populated")
 	}
 
-	dir, err := os.MkdirTemp("/tmp", "temp-git-files")
+	dir, err := os.MkdirTemp("", "temp-git-files")
 	if err != nil {
 		return "", fmt.Errorf("could not create temporary directory for CalculateGitContentType: %s", err.Error())
 	}

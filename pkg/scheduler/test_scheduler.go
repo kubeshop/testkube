@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"os"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -21,8 +22,6 @@ import (
 
 const (
 	containerType = "container"
-	// tempDir is the temporary directory used to evaluate a type of a 'git' source
-	tempDir = "/tmp"
 )
 
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
@@ -252,12 +251,11 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
 
 		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
-			fetcher := content.NewFetcher(tempDir)
+			fetcher := content.NewFetcher(os.TempDir())
 			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
 			t, err := fetcher.CalculateGitContentType(*content.Repository)
 			if err == nil {
 				testCR.Spec.Content.Type_ = t
-				testCR.Spec.Content.Repository.Type_ = t
 				s.logger.Infof("Test %s content type was set to %s", testCR.Name, t)
 			} else {
 				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
