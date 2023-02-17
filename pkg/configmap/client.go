@@ -13,6 +13,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+type Interface interface {
+	Get(ctx context.Context, id string) (map[string]string, error)
+	Create(ctx context.Context, id string, stringData map[string]string) error
+	Apply(ctx context.Context, id string, stringData map[string]string) error
+	Update(ctx context.Context, id string, stringData map[string]string) error
+}
+
 // Client provide methods to manage configmaps
 type Client struct {
 	ClientSet *kubernetes.Clientset
