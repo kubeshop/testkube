@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/config"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -47,7 +48,8 @@ func TestExecute(t *testing.T) {
 	mockTestSuitesClient := testsuitesv2.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
-	configMap := config.NewMockRepository(mockCtrl)
+	configMapConfig := config.NewMockRepository(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -110,7 +112,8 @@ func TestExecute(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		log.DefaultLogger,
-		configMap,
+		configMapConfig,
+		mockConfigMapClient,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
