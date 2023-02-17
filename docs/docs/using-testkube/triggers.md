@@ -86,7 +86,7 @@ conditionSpec:
 ## Example
 
 Here is an example for a **Test Trigger** *default/testtrigger-example* which runs the **TestSuite** *frontend/sanity-test*
-when a **pod** containing the label **testkube.io/tier: backend** gets **modified** and also has the conditions **Progressing: True: NewReplicaSetAvailable** and **Available: True**.
+when a **deployment** containing the label **testkube.io/tier: backend** gets **modified** and also has the conditions **Progressing: True: NewReplicaSetAvailable** and **Available: True**.
 
 ```yaml
 apiVersion: tests.testkube.io/v1
@@ -95,7 +95,7 @@ metadata:
   name: testtrigger-example
   namespace: default
 spec:
-  resource: pod
+  resource: deployment
   resourceSelector:
     labelSelector:
       matchLabels:
