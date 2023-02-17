@@ -1,15 +1,6 @@
-# Testkube Quickstart
+# 3. Create your first Test
 
-## Getting Help
-
-```bash
-kubectl testkube --help 
-
-# or any other command
-kubectl testkube get --help 
-```
-
-## Launching Testkube UI
+## Launching Testkube Dashboard
 ```bash
 kubectl testkube dashboard
 ```

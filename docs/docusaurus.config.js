@@ -199,27 +199,27 @@ const config = {
           },
           {
             from: "/UI",
-            to: "/using-testkube/UI",
+            to: "/guides/dashboard",
           },
           {
             from: "/tests-running",
-            to: "/using-testkube/tests/tests-running",
+            to: "/guides/tests/tests-running",
           },
           {
             from: "/tests-creating",
-            to: "/using-testkube/tests/tests-creating",
+            to: "/guides/tests/tests-creating",
           },
           {
             from: "/tests-variables",
-            to: "/using-testkube/tests/tests-variables",
+            to: "/guides/tests/tests-variables",
           },
           {
             from: "/testsuites-running",
-            to: "/using-testkube/test-suites/testsuites-running",
+            to: "/guides/test-suites/testsuites-running",
           },
           {
             from: "/testsuites-creating",
-            to: "/using-testkube/test-suites/testsuites-creating",
+            to: "/guides/test-suites/testsuites-creating",
           },
         ],
       },

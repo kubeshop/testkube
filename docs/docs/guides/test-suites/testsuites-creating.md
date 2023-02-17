@@ -1,4 +1,4 @@
-# Creating Testsuites
+# Creating Test Suites
 
 A large IT department has a frontend team and a backend team, everything is
 deployed on Kubernetes cluster, and each team is responsible for its part of the work. The frontend engineers test their code using the  Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have a lot of Postman collections defined and want to run them against a Kubernetes cluster but some of their services are not exposed externally.
