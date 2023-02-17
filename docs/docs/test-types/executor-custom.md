@@ -194,7 +194,7 @@ Testkube will store its files and directories in a directory defined by the `RUN
 - URI - Testkube will get the content of the file defined by the uri.
 - Git related content - Testkube will checkout the repo content in the current directory.
 
-To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../reference/installation.md).
+To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../getting-started/installation.md).
 
 We have created a simple NodeJS executor.
 

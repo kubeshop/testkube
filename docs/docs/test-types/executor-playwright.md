@@ -1,4 +1,4 @@
-# Playwright Tests
+# Playwright
 
 [Playwright](https://playwright.dev/) is an end-to-end testing and automation framework developed by Microsoft. Starting from the Testkube Helm chart version 1.9.5, it is now possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
 

@@ -10,6 +10,7 @@ type ContentFetcher interface {
 	GitFileFetcher
 
 	Fetch(content *testkube.TestContent) (path string, err error)
+	CalculateGitContentType(repo testkube.Repository) (string, error)
 }
 
 // StringFetcher interface for fetching string based content to file

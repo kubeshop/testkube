@@ -1,60 +1,6 @@
-# Getting Started
+# Testkube Quickstart
 
-## Installing the Testkube CLI
-
-:::note 
-
-To install Testkube you'll need the following tools:
-
-- [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
-- [Helm](https://helm.sh/)
-
-Installing the Testkube CLI with Chocolatey and Homebrew will automatically install these dependencies if they are not present. For Linux-based systems please install them manually in advance.
-
-:::
-
-#### **MacOS**
-
-```bash
-brew install testkube
-```
-
-#### **Windows**
-
-```bash
-choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/chocolatey  
-choco install testkube -y
-```
-
-#### **Linux**
-
-```bash
-wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-```
-
-## Installing Testkube Cluster Components
-
-The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
-
-Run:
-
-```bash
-testkube init
-```
-
-:::note
-
-You must have your `KUBECONFIG` pointing to the desired location of the installation.
-
-:::
-
-Confirm that Testkube is running:
-
-```bash
-kubectl get all -n testkube
-```
-
-## **Getting Help**
+## Getting Help
 
 ```bash
 kubectl testkube --help 
@@ -63,12 +9,12 @@ kubectl testkube --help
 kubectl testkube get --help 
 ```
 
-## **Launching Testkube UI**
+## Launching Testkube UI
 ```bash
 kubectl testkube dashboard
 ```
 
-## **Defining Tests**
+## Defining Tests
 
 After installing, you will need to add Tests to your cluster, which are created as a Custom Resource in Kubernetes
 (access to Kubernetes cluster is required).
@@ -77,7 +23,7 @@ This document provides examples for using  *Postman collections* and *Cypress* e
 
 If you don't want to create Custom Resources "by hand", we have a little helper for this: 
 
-### **Creating Postman Collections Based Tests**
+### Creating Postman Collections Based Tests
 
 First, let's export a Postman collection from Postman UI (the file content should look similar to the one below):
 
@@ -165,7 +111,7 @@ kubectl testkube create test --file my_postman_collection.json --type postman/co
 
 **Note**: This is just an example of how it works. For further details you can visit the [Postman documentation](test-types/executor-postman.md).
 
-### **Creating Cypress Tests**
+### Creating Cypress Tests
 
 Cypress is in the form of projects. To run them we need to pass the whole directory structure with the npm based dependencies. You can create a new test with Testkube:
 
@@ -181,7 +127,7 @@ Where:
 - `name` - is the unique Script Custom Resource name.
 - `type` - cypress/project - for Cypress based project test structure.
 
-## **Starting a New Test Execution**
+## Starting a New Test Execution
 
 When our test is defined as a Custom Resource we can now run it:
 
@@ -202,7 +148,7 @@ kubectl testkube watch execution 611b6da38cd74034e7c9d408
 
 ```
 
-## **Getting Execution Details**
+## Getting Execution Details
 
 After the test execution is complete, access the test details by running the
 tests execution command:
@@ -214,7 +160,7 @@ kubectl testkube get execution 6103a45b7e18c4ea04883866
 
 ```
 
-## **Getting Available Scripts**
+## Getting Available Scripts
 
 To run a test execution, you'll need to know the test name:
 
@@ -236,7 +182,7 @@ Output:
 
 ```
 
-## **Getting Available Executions**
+## Getting Available Executions
 
 ```bash
 kubectl testkube get executions TEST_NAME
@@ -255,7 +201,7 @@ Output:
 +------------+--------------------+--------------------------+---------------------------+----------+
 ```
 
-## **Changing the Output Format**
+## Changing the Output Format
 
 For lists and details, you can use different output formats via the `--output` flag. The following formats are currently supported:
 
@@ -265,6 +211,6 @@ For lists and details, you can use different output formats via the `--output` f
 
 There plans to support other output formats like junit etc. If there is something specific that you need, please reach out to us.
 
-## **Deleting a Test**
+## Deleting a Test
 
 The command to delete a test is `kubectl testkube delete tests TEST_NAME`. The `--all` flag can be used to delete all.

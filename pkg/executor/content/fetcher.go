@@ -1,6 +1,7 @@
 package content
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -52,6 +53,7 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
 	case testkube.TestContentTypeEmpty:
+		output.PrintLog(fmt.Sprintf("%s Empty content type", ui.IconCross))
 		return path, nil
 	default:
 		output.PrintLog(fmt.Sprintf("%s Unhandled content type: '%s'", ui.IconCross, content.Type_))
@@ -186,4 +188,38 @@ func (f Fetcher) configureUseOfCertificate() error {
 	output.PrintLog(fmt.Sprintf("%s Configured git to use certificate: %s", ui.IconCheckMark, certificatePath))
 
 	return nil
+}
+
+// CalculateGitContentType returns the type of the git test source
+func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, error) {
+	if repo.Uri == "" || repo.Path == "" {
+		return "", errors.New("repository uri and path should be populated")
+	}
+
+	dir, err := os.MkdirTemp("", "temp-git-files")
+	if err != nil {
+		return "", fmt.Errorf("could not create temporary directory for CalculateGitContentType: %s", err.Error())
+	}
+	// this will not overwrite the original path given how we used a value receiver for this function
+	f.path = dir
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			output.PrintLog(fmt.Sprintf("%s Could not clean up after CalculateGitContentType: %s", ui.IconWarning, err.Error()))
+		}
+	}()
+
+	path, err := f.FetchGitFile(&repo)
+	if err != nil {
+		return "", fmt.Errorf("could not fetch from git: %w", err)
+	}
+
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("could not check path %s: %w", path, err)
+	}
+
+	if fileInfo.IsDir() {
+		return string(testkube.TestContentTypeGitDir), nil
+	}
+	return string(testkube.TestContentTypeGitFile), nil
 }
