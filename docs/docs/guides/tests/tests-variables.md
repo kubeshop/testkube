@@ -1,6 +1,6 @@
 # Using Test Variables
 
-To synchronize Testkube's feature set between the CLI and the UI, Test variables can be defined in the UI. On the Tests screen, select a Test and click on the **Settings** tab and select **Variables & Secrets**:
+To synchronize Testkube's feature set between the Testkube CLI and the Testkube Dashboard, Test Variables can be defined in the Testkube Dashboard. On the Tests screen, select a Test and click on the **Settings** tab and select **Variables & Secrets**:
 
 ![Variable Tab](../../img/variable-tab-1.6.png)
 

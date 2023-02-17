@@ -1,12 +1,12 @@
 # Common issues
 
-## **How do I expose Testkube to the internet?**
+## How do I expose Testkube to the internet?
 
-To expose Testkube to the Internet, you will need to create ingresses both for Testkube's API and Testkube's dashboard. 
+To expose Testkube to the Internet, you will need to create ingresses both for Testkube's API and Testkube's dashboard.
 
-You can follow the example ingresses created for our Testkube Demo [here](https://github.com/kubeshop/helm-charts/blob/260fcdf810aa4ed0760a3d953170989c82f62a6e/charts/testkube/values-demo.yaml#L124) and [here](https://github.com/kubeshop/helm-charts/blob/260fcdf810aa4ed0760a3d953170989c82f62a6e/charts/testkube/values-demo.yaml#L238).
+Check the guides [here](../guides/exposing-testkube/overview.md) for different configurations.
 
-## **Why is the UI not working or does not return results?**
+## Why is the Testkube Dashboard not working or does not return results?
 
 - Make sure the API endpoint is configured:
 
@@ -15,7 +15,7 @@ You can follow the example ingresses created for our Testkube Demo [here](https:
 - Make sure the endpoint is providing data, e.g. accessing the executors path:
 
 ```sh
-curl <endpoint>/v1/executors 
+curl <endpoint>/v1/executors
 ```
 
 - If no data is provided, make sure that all the Testkube components are running properly:
@@ -30,7 +30,7 @@ pod/testkube-mongodb-74587998bb-8pzl2                       1/1     Running   0 
 pod/testkube-operator-controller-manager-77ffbb8fdc-rxhvx   2/2     Running   0          5d23h
 ```
 
-## **Opening the Dashboard Using CLI Is Not Working**
+## Opening the Dashboard Using CLI Is Not Working
 
 If there is a timeout error reported:
 
@@ -59,6 +59,7 @@ Check for errors and try accessing:
 [http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1](http://localhost:8081/apiEndpoint?apiEndpoint=localhost:8088/v1)
 
 If you see errors like:
+
 ```
 Unable to listen on port 8080: Listeners failed to create with the following errors: [unable to create listener: Error listen tcp4 127.0.0.1:8080: bind: address already in use unable to create listener: Error listen tcp6 [::1]:8080: bind: address already in use]
 error: unable to listen on any of the requested ports: [{8080 8080}]
@@ -76,6 +77,7 @@ Please stop the application that listens on 8080, 8088 ports.
 If these guides do not solve the issue that you encountered or you have other questions or comments, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
 
 ## Other Installation Methods
+
 ### Installation on OpenShift
 
 To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
@@ -83,7 +85,7 @@ To install Testkube you need an empty OpenShift cluster. Once the cluster is up 
 1. Add security context for MongoDB to `values.yaml`:
 
 ```yaml
-mongodb: 
+mongodb:
   securityContext:
     enabled: true
     fsGroup: 1000650001
@@ -96,11 +98,11 @@ mongodb:
     runAsNonRoot: true
   volumePermissions:
     enabled: false
-  auth: 
-     enabled: false
+  auth:
+    enabled: false
 ```
 
-2. Add security context for `Patch` and `Migrate` jobs that are a part of Testkube Operator configuration to `values.yaml`: 
+2. Add security context for `Patch` and `Migrate` jobs that are a part of Testkube Operator configuration to `values.yaml`:
 
 ```yaml
 testkube-operator:
@@ -111,14 +113,13 @@ testkube-operator:
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
-    
+
     patch:
       enabled: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000650000
         fsGroup: 1000650000
-
 ```
 
 3. Install Testkube specifying the path to the new `values.yaml` file
@@ -134,7 +135,7 @@ Please notice that since we've just installed MongoDB with a `testkube-mongodb` 
 To use S3 as storage, the steps are as follows:
 
 1. Create a ServiceAccount with the ARN specified.
-e.g.
+   e.g.
 
 ```yaml
 apiVersion: v1

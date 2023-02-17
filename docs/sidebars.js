@@ -30,48 +30,71 @@ const sidebars = {
     {
       type: "category",
       label: "Getting Started",
-      items: ["getting-started/installation", "getting-started/quickstart"],
-    },
-    {
-      type: "category",
-      label: "Testkube Cloud",
+      link: {
+        type: "doc",
+        id: "getting-started/overview",
+      },
       items: [
-        "testkube-cloud/intro",
-        "testkube-cloud/installing-agent",
-        "testkube-cloud/architecture",
+        "getting-started/installing-cli",
+        {
+          type: "category",
+          label: "2. Installing Testkube in your Kubernetes Cluster",
+          items: [
+            {
+              type: "doc",
+              id: "getting-started/installing-cluster-components/using-cli",
+              label: "Using CLI",
+            },
+            {
+              type: "doc",
+              id: "getting-started/installing-cluster-components/helm-chart",
+              label: "Helm Chart",
+            },
+          ],
+        },
+        "getting-started/create-first-test",
       ],
     },
     {
       type: "category",
-      label: "Using Testkube",
+      label: "Guides",
       items: [
         {
           type: "category",
           label: "Tests",
           items: [
-            "using-testkube/tests/tests-creating",
-            "using-testkube/tests/tests-running",
-            "using-testkube/tests/tests-getting-results",
-            "using-testkube/tests/tests-variables",
+            "guides/tests/tests-creating",
+            "guides/tests/tests-running",
+            "guides/tests/tests-getting-results",
+            "guides/tests/tests-variables",
           ],
         },
         {
           type: "category",
           label: "Test Suites",
           items: [
-            "using-testkube/test-suites/testsuites-creating",
-            "using-testkube/test-suites/testsuites-running",
-            "using-testkube/test-suites/testsuites-getting-results",
+            "guides/test-suites/testsuites-creating",
+            "guides/test-suites/testsuites-running",
+            "guides/test-suites/testsuites-getting-results",
           ],
         },
-        "using-testkube/UI",
-        "using-testkube/secrets",
-        "using-testkube/scheduling",
-        "using-testkube/artifacts-storage",
-        "using-testkube/metrics",
-        "using-testkube/triggers",
-        "using-testkube/dependencies",
-        "using-testkube/common-issues",
+        {
+          type: "category",
+          label: "Exposing Testkube Dashboard",
+          link: {
+            type: "doc",
+            id: "guides/exposing-testkube/overview",
+          },
+          items: ["guides/exposing-testkube/ingress-nginx"],
+        },
+        "guides/dashboard",
+        "guides/secrets",
+        "guides/scheduling",
+        "guides/artifacts-storage",
+        "guides/metrics",
+        "guides/triggers",
+        "guides/dependencies",
+        "guides/common-issues",
       ],
     },
     {
@@ -100,6 +123,15 @@ const sidebars = {
     },
     {
       type: "category",
+      label: "Testkube Cloud",
+      items: [
+        "testkube-cloud/intro",
+        "testkube-cloud/installing-agent",
+        "testkube-cloud/architecture",
+      ],
+    },
+    {
+      type: "category",
       label: "Integrations",
       items: [
         "integrations/testkube-automation",
@@ -120,6 +152,11 @@ const sidebars = {
       type: "category",
       label: "Observability",
       items: ["observability/telemetry", "observability/logging"],
+    },
+    {
+      type: "category",
+      label: "Quick Links",
+      items: ["quick-links/uninstall"],
     },
     {
       type: "category",

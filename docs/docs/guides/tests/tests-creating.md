@@ -1,4 +1,4 @@
-# Creating
+# Creating Tests
 
 Tests are single executor oriented objects. Test can have different types, which depends on which executors are installed in your cluster.
 
