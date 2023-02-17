@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"os"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -247,6 +249,18 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
+
+		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
+			fetcher := content.NewFetcher(os.TempDir())
+			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
+			t, err := fetcher.CalculateGitContentType(*content.Repository)
+			if err == nil {
+				testCR.Spec.Content.Type_ = t
+				s.logger.Infof("Test %s content type was set to %s", testCR.Name, t)
+			} else {
+				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
+			}
+		}
 	}
 
 	if request.ContentRequest != nil {
