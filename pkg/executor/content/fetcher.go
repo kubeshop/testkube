@@ -193,10 +193,9 @@ func (f Fetcher) configureUseOfCertificate() error {
 // CalculateGitContentType returns the type of the git test source
 func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, error) {
 	if repo.Uri == "" || repo.Path == "" {
-		return "", errors.New("repository Uri and Path should be populated")
+		return "", errors.New("repository uri and path should be populated")
 	}
 
-	// this will not overwrite the original path given how we used a value receiver for this function
 	dir, err := os.MkdirTemp("/tmp", "temp-git-files")
 	if err != nil {
 		return "", fmt.Errorf("could not create temporary directory for CalculateGitContentType: %s", err.Error())
@@ -208,10 +207,6 @@ func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, erro
 			output.PrintLog(fmt.Sprintf("%s Could not clean up after CalculateGitContentType: %s", ui.IconWarning, err.Error()))
 		}
 	}()
-
-	if err != nil {
-		return "", fmt.Errorf("could not create temporary directory %s: %w", f.path, err)
-	}
 
 	path, err := f.FetchGitFile(&repo)
 	if err != nil {

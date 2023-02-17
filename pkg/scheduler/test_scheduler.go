@@ -263,8 +263,6 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
 			}
 		}
-
-		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
 	}
 
 	if request.ContentRequest != nil {
