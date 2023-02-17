@@ -14,12 +14,15 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 const (
 	containerType = "container"
+	// tempDir is the temporary directory used to evaluate a type of a 'git' source
+	tempDir = "/tmp"
 )
 
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
@@ -244,6 +247,21 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		testSourceCR, err := s.testSourcesClient.Get(testCR.Spec.Source)
 		if err != nil {
 			return options, errors.Errorf("cannot get test source custom resource: %v", err)
+		}
+
+		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
+
+		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
+			fetcher := content.NewFetcher(tempDir)
+			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
+			t, err := fetcher.CalculateGitContentType(*content.Repository)
+			if err == nil {
+				testCR.Spec.Content.Type_ = t
+				testCR.Spec.Content.Repository.Type_ = t
+				s.logger.Infof("Test %s content type was set to %s", testCR.Name, t)
+			} else {
+				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
+			}
 		}
 
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)

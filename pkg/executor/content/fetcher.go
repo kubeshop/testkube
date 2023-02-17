@@ -196,9 +196,26 @@ func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, erro
 		return "", errors.New("repository Uri and Path should be populated")
 	}
 
+	// this will not overwrite the original path given how we used a value receiver for this function
+	dir, err := os.MkdirTemp("/tmp", "temp-git-files")
+	if err != nil {
+		return "", fmt.Errorf("could not create temporary directory for CalculateGitContentType: %s", err.Error())
+	}
+	// this will not overwrite the original path given how we used a value receiver for this function
+	f.path = dir
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			output.PrintLog(fmt.Sprintf("%s Could not clean up after CalculateGitContentType: %s", ui.IconWarning, err.Error()))
+		}
+	}()
+
+	if err != nil {
+		return "", fmt.Errorf("could not create temporary directory %s: %w", f.path, err)
+	}
+
 	path, err := f.FetchGitFile(&repo)
 	if err != nil {
-		return "", fmt.Errorf("could not fetch: %w", err)
+		return "", fmt.Errorf("could not fetch from git: %w", err)
 	}
 
 	fileInfo, err := os.Stat(path)
