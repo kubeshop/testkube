@@ -4,6 +4,8 @@ sidebar_label: JMeter
 ---
 # JMeter Performance Tests
 
+**Check out our [blog post](https://testkube.io/blog/jmeter-and-kubernetes-how-to-run-tests-efficiently-with-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with JMeter.**
+
 The Apache JMeter™ application is open source software, a 100% pure Java application designed to load test functional behavior and measure performance. It was originally designed for testing Web Applications but has since expanded to other test functions.
 
 ## What can I do with it?
