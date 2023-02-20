@@ -9,10 +9,13 @@ testkube init [flags]
 ### Options
 
 ```
+      --agentKey string    Testkube Cloud agent key [required for cloud mode]
+      --agentUri string    Testkube Cloud agent URI [required for cloud mode]
       --chart string       chart name (default "kubeshop/testkube")
   -h, --help               help for init
       --name string        installation name (default "testkube")
       --namespace string   namespace where to install (default "testkube")
+      --no-confirm         don't ask for confirmation - unatended installation mode
       --no-dashboard       don't install dashboard
       --no-minio           don't install MinIO
       --no-mongo           don't install MongoDB
