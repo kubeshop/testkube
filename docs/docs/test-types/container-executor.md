@@ -85,7 +85,7 @@ testkube create executor --name curl-container-executor --executor-type containe
 ```
 
 
-## CRDs and other configuration options
+## Custom Resource Definitions (CRDs) and other configuration options
 
 In order to use the Container Executor, create a new executor with `executor_type: container` and your custom type. For example:
 

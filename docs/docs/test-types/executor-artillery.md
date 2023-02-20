@@ -52,9 +52,22 @@ Our test is ready but how do we run it in a Kubernetes cluster? Testkube will he
 Let's create a new Testkube test based on the saved Artillery test definition.
 
 ## **Create a New Testkube Test**
+If you want to upload a test file directly (like in this example) you can use Dashboard, or CLI - depending on your preferences.
+
+### Testkube Dashboard
+If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`artillery/test`), Test Source (`File`, which allow you to upload specific file), and choose the File.
+![Container executor creation dialog](../img/dashboard-create-artillery-api-test.png)
+
+### Testkube CLI
+If you prefer using the CLI instead, you can create the test with `testcube create test`.
+You need to set test:
+- `--name` (for example, `artillery-api-test`)
+- `--type` (in this case `artillery/test`)
+- `--file` which is a path to your test file (in this case `test.yaml`)
+
 
 ```bash
-kubectl testkube create test --name artillery-api-test --file test.yaml --type artillery/test
+testkube create test --name artillery-api-test --type artillery/test --file test.yaml
 ```
 
 Output:
@@ -66,19 +79,26 @@ Test created  🥇
 ## **Running a Test**
 
 ```bash
-kubectl testkube run test artillery-api-test
+$ testkube run test artillery-api-test                                                                                                                       
+Type:              artillery/test
+Name:              artillery-api-test
+Execution ID:      63ee9ca6872e05f0ea790d73
+Execution name:    artillery-api-test-1
+Execution number:  1
+Status:            running
+Start time:        2023-02-16 21:14:14.451905194 +0000 UTC
+End time:          0001-01-01 00:00:00 +0000 UTC
+Duration:          
 
-Type          : postman/collection
-Name          : artillery-api-test
-Execution ID  : 615d6398b046f8fbd3d955d4
-Execution name: openly-full-bream
 
-Test queued for execution
-Use the following command to get test execution details:
-$ kubectl testkube get execution 615d6398b046f8fbd3d955d4
 
-or watch test execution until complete:
-$ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
+Test execution started
+Watch test execution until complete:
+$ kubectl testkube watch execution artillery-api-test-1
+
+
+Use following command to get test execution details:
+$ kubectl testkube get execution artillery-api-test-1
 ```
 
 You can also watch your test results in real-time with `-f` flag (like "follow"). 
@@ -91,79 +111,53 @@ Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 Let's get back our finished test results. The test report and output will be stored in Testkube storage to revisit when necessary.
 
 ```bash
-➜  testkube git:(jacek/docs/executors-docs-update) ✗ kubectl testkube get execution 628c957d2c8d8a7c1b1ead66                                                 
-ID:        628c957d2c8d8a7c1b1ead66
-Name:      tightly-adapting-hippo
-Type:      artillery/test
-Duration:  00:03:13
+testkube get execution artillery-api-test-1                                               
+ID:         63ee9cd8872e05f0ea790d76
+Name:       artillery-api-test-1
+Number:            1
+Test name:         artillery-api-test
+Type:              artillery/test
+Status:            passed
+Start time:        2023-02-16 21:15:04.979 +0000 UTC
+End time:          2023-02-16 21:18:19.463 +0000 UTC
+Duration:          00:03:14
 
-  Telemetry is on. Learn more: https://artillery.io/docs/resources/core/telemetry.html
-Phase started: Warm up (index: 0, duration: 6s) 08:21:22(+0000)
+...
+... (long output)
+...
 
-Phase completed: Warm up (index: 0, duration: 6s) 08:21:28(+0000)
-
-Phase started: Ramp up load (index: 1, duration: 120s) 08:21:28(+0000)
-
---------------------------------------
-Metrics for period to: 08:21:30(+0000) (width: 6.167s)
---------------------------------------
-
-http.codes.200: ................................................................ 41
-http.request_rate: ............................................................. 9/sec
-http.requests: ................................................................. 41
-http.response_time:
-  min: ......................................................................... 0
-  max: ......................................................................... 5
-  median: ...................................................................... 1
-  p95: ......................................................................... 3
-  p99: ......................................................................... 3
-http.responses: ................................................................ 41
-vusers.completed: .............................................................. 41
-vusers.created: ................................................................ 41
-vusers.created_by_name.Check health endpoint: .................................. 41
-vusers.failed: ................................................................. 0
-vusers.session_length:
-  min: ......................................................................... 3.6
-  max: ......................................................................... 73
-  median: ...................................................................... 10.5
-  p95: ......................................................................... 66
-  p99: ......................................................................... 70.1
-
-..... a lot of other .......
-
-
-All VUs finished. Total time: 3 minutes, 9 seconds
+All VUs finished. Total time: 3 minutes, 7 seconds
 
 --------------------------------
-Summary report @ 08:24:30(+0000)
+Summary report @ 21:18:16(+0000)
 --------------------------------
 
-http.codes.200: ................................................................ 6469
-http.request_rate: ............................................................. 36/sec
-http.requests: ................................................................. 6469
+http.codes.200: ................................................................ 6330
+http.request_rate: ............................................................. 33/sec
+http.requests: ................................................................. 6330
 http.response_time:
   min: ......................................................................... 0
-  max: ......................................................................... 17
-  median: ...................................................................... 1
-  p95: ......................................................................... 2
-  p99: ......................................................................... 4
-http.responses: ................................................................ 6469
-vusers.completed: .............................................................. 6469
-vusers.created: ................................................................ 6469
-vusers.created_by_name.Check health endpoint: .................................. 6469
+  max: ......................................................................... 11
+  median: ...................................................................... 0
+  p95: ......................................................................... 1
+  p99: ......................................................................... 2
+http.responses: ................................................................ 6330
+vusers.completed: .............................................................. 6330
+vusers.created: ................................................................ 6330
+vusers.created_by_name.Check health endpoint: .................................. 6330
 vusers.failed: ................................................................. 0
 vusers.session_length:
-  min: ......................................................................... 1.7
-  max: ......................................................................... 73
-  median: ...................................................................... 3
-  p95: ......................................................................... 7.2
-  p99: ......................................................................... 12.6
+  min: ......................................................................... 0.9
+  max: ......................................................................... 25.6
+  median: ...................................................................... 1.3
+  p95: ......................................................................... 3.3
+  p99: ......................................................................... 9.5
 Log file: /tmp/test-report.json
 
-Status Test execution completed with success 🥇
+
+Test execution completed with success in 3m14.484s 🥇
 
 ```
 
-## **Summary**
-
-With the Artillery executor you can now run your tests in Kubernetes with ease. Testkube simplifies running tests inside a cluster and stores tests and tests results for later use.
+## ** Additional examples**
+Additional Artillery examples can be found in the Testkube repository [here](https://github.com/kubeshop/testkube/blob/main/test/artillery/executor-smoke/).

@@ -3,15 +3,15 @@
 ## Getting Help
 
 ```bash
-kubectl testkube --help 
+testkube --help 
 
 # or any other command
-kubectl testkube get --help 
+testkube get --help 
 ```
 
 ## Launching Testkube UI
 ```bash
-kubectl testkube dashboard
+testkube dashboard
 ```
 
 ## Defining Tests
@@ -116,7 +116,7 @@ kubectl testkube create test --file my_postman_collection.json --type postman/co
 Cypress is in the form of projects. To run them we need to pass the whole directory structure with the npm based dependencies. You can create a new test with Testkube:
 
 ```bash
- kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name my-test-name --type cypress/project
+testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name my-test-name --type cypress/project
 ```
 
 Where:

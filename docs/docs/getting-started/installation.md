@@ -32,13 +32,14 @@ choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/ch
 choco install testkube -y
 ```
 
-#### Ubuntu/Debian
+#### Linux
+Ubuntu/Debian - APT repository
 
 ```bash
 wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
 ```
 
-#### Script Installation
+#### Installation Script
 
 ```bash
 curl -sSLf https://get.testkube.io | sh
@@ -49,8 +50,8 @@ curl -sSLf https://get.testkube.io | sh
 If you don't want to use scripts or package managers you can always do a manual install:
 
 1. Download the binary for the version and platform of your choice [here](https://github.com/kubeshop/testkube/releases)
-2. Unpack it. For example, in Linux use (tar -zxvf testkube_1.5.1_Linux_arm64.tar.gz)
-3. Move it to a location in the PATH. For example, `mv  testkube_0.6.5_Linux_arm64/kubectl-testkube /usr/local/bin/kubectl-testkube`.
+2. Unpack it. For example, in Linux use (tar -zxvf testkube_1.9.13_Linux_x86_64.tar.gz)
+3. Move it to a location in the PATH. For example, `mv testkube_1.9.13_Linux_x86_64/kubectl-testkube /usr/local/bin/kubectl-testkube`.
 
 For Windows, you will need to unpack the binary and add it to the `%PATH%` as well.
 
@@ -106,7 +107,7 @@ testkube` to see the charts.
 2. To install the `testkube` chart:
 
 ```bash
-helm install --create-namespace my-testkube testkube/testkube
+helm install --create-namespace --namespace testkube testkube testkube/testkube
 ```
 
 Please note that, by default, the namespace for the installation will be `testkube`. If the `testkube` namespace does not exist, it will be created for you.
@@ -114,19 +115,19 @@ Please note that, by default, the namespace for the installation will be `testku
 If you wish to install into a different namespace, please use following command:
 
 ```bash
-helm install --namespace namespace_name my-testkube testkube/testkube
+helm install --namespace namespace_name testkube testkube/testkube
 ```
 
-To uninstall the `testkube` chart if it was installed into default namespace:
+To uninstall the `testkube` chart if it was installed into `testkube` namespace:
 
 ```bash
-helm delete my-testkube testkube/testkube
+helm delete --namespace testkube testkube testkube/testkube
 ```
 
 And from a namespace other than `testkube`:
 
 ```bash
-helm delete --namespace namespace_name my-testkube testkube/testkube
+helm delete --namespace namespace_name testkube testkube/testkube
 ```
 
 #### Helm Properties
@@ -172,7 +173,7 @@ The following Helm defaults are used in the `testkube` chart:
 ### Using Helm:
 
 ```bash
-helm delete testkube
+helm delete --namespace testkube testkube
 ```
 
 ### Using Testkube's CLI:
