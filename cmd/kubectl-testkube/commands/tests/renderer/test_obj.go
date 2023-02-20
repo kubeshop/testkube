@@ -169,7 +169,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Mount config maps:      ")
 			for _, mount := range mountConfigMaps {
 				ui.Warn("    - name      :         ", mount.name)
-				ui.Warn("    - mount path:         ", mount.name)
+				ui.Warn("    - mount path:         ", mount.path)
 			}
 		}
 
@@ -183,7 +183,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Mount secrets:          ")
 			for _, mount := range mountSecrets {
 				ui.Warn("    - name      :         ", mount.name)
-				ui.Warn("    - mount path:         ", mount.name)
+				ui.Warn("    - mount path:         ", mount.path)
 			}
 		}
 
