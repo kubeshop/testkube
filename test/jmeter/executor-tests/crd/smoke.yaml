@@ -29,7 +29,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: jmeter-env-property-test # TODO: update before merge
+      branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
   executionRequest:
     variables:
