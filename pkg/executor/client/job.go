@@ -468,8 +468,8 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
-		EnvConfigMaps:         options.EnvConfigMaps,
-		EnvSecrets:            options.EnvSecrets,
+		EnvConfigMaps:         options.Request.EnvConfigMaps,
+		EnvSecrets:            options.Request.EnvSecrets,
 	}
 }
 

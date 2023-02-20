@@ -27,6 +27,4 @@ type ExecuteOptions struct {
 	CertificateSecret    string
 	ImageOverride        string
 	ImagePullSecretNames []string
-	EnvConfigMaps        []testkube.EnvReference
-	EnvSecrets           []testkube.EnvReference
 }
