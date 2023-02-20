@@ -18,6 +18,31 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: jmeter-executor-smoke-env-and-property-values
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: jmeter/test
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: jmeter-env-property-test # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
+  executionRequest:
+    variables:
+      URL_ENV:
+        name: URL_ENV
+        value: "testkube.io"
+        type: basic
+    args:
+      - "-JURL_PROPERTY=testkube.io"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: jmeter-executor-smoke-negative
   namespace: testkube
   labels:
