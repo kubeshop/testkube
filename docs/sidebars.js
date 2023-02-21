@@ -24,7 +24,7 @@ const sidebars = {
       },
       items: [
         "overview/supported-tests",
-        "overview/does-testkube-replace-cicd",
+        "overview/how-can-testkube-be-used",
       ],
     },
     {
@@ -35,49 +35,48 @@ const sidebars = {
         id: "getting-started/overview",
       },
       items: [
-        "getting-started/installing-cli",
-        {
-          type: "category",
-          label: "2. Installing Testkube in your Kubernetes Cluster",
-          items: [
-            {
-              type: "doc",
-              id: "getting-started/installing-cluster-components/using-cli",
-              label: "Using CLI",
-            },
-            {
-              type: "doc",
-              id: "getting-started/installing-cluster-components/helm-chart",
-              label: "Helm Chart",
-            },
-          ],
-        },
-        "getting-started/create-first-test",
+        "getting-started/step1-installing-cli",
+        "getting-started/step2-installing-cluster-components",
+        "getting-started/step3-creating-first-test",
       ],
     },
     {
       type: "category",
-      label: "Guides",
+      label: "Concepts",
       items: [
         {
           type: "category",
           label: "Tests",
           items: [
-            "guides/tests/tests-creating",
-            "guides/tests/tests-running",
-            "guides/tests/tests-getting-results",
-            "guides/tests/tests-variables",
+            "concepts/tests/tests-creating",
+            "concepts/tests/tests-running",
+            "concepts/tests/tests-getting-results",
+            "concepts/tests/tests-variables",
           ],
         },
         {
           type: "category",
           label: "Test Suites",
           items: [
-            "guides/test-suites/testsuites-creating",
-            "guides/test-suites/testsuites-running",
-            "guides/test-suites/testsuites-getting-results",
+            "concepts/test-suites/testsuites-creating",
+            "concepts/test-suites/testsuites-running",
+            "concepts/test-suites/testsuites-getting-results",
           ],
         },
+        "concepts/dashboard",
+        "concepts/secrets",
+        "concepts/scheduling",
+        "concepts/artifacts-storage",
+        "concepts/metrics",
+        "concepts/triggers",
+        "concepts/dependencies",
+        "concepts/common-issues",
+      ],
+    },
+    {
+      type: "category",
+      label: "Guides",
+      items: [
         {
           type: "category",
           label: "Exposing Testkube Dashboard",
@@ -87,14 +86,50 @@ const sidebars = {
           },
           items: ["guides/exposing-testkube/ingress-nginx"],
         },
-        "guides/dashboard",
-        "guides/secrets",
-        "guides/scheduling",
-        "guides/artifacts-storage",
-        "guides/metrics",
-        "guides/triggers",
-        "guides/dependencies",
-        "guides/common-issues",
+        {
+          type: "category",
+          label: "Continuous Integration and Deployment",
+          link: {
+            type: "doc",
+            id: "guides/cicd/index",
+          },
+          items: [
+            "guides/cicd/github-actions",
+            {
+              type: "category",
+              label: "GitOps",
+              link: {
+                type: "doc",
+                id: "guides/cicd/gitops/index",
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/flux",
+                  label: "Flux",
+                },
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/argocd",
+                  label: "ArgoCD",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Authentication",
+          items: [
+            "guides/authentication/oauth-cli",
+            "guides/authentication/oauth-ui",
+          ],
+        },
+        "guides/webhooks",
+        "guides/slack-integration",
+        "guides/generate-test-crds",
+        "guides/logging",
+        "guides/uninstall",
       ],
     },
     {
@@ -122,6 +157,10 @@ const sidebars = {
       ],
     },
     {
+      type: "html",
+      value: "<hr />",
+    },
+    {
       type: "category",
       label: "Testkube Cloud",
       items: [
@@ -132,62 +171,17 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Integrations",
-      items: [
-        "integrations/testkube-automation",
-        "integrations/webhooks",
-        "integrations/slack-integration",
-        "integrations/generate-test-crds",
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "integrations/authentication/oauth-cli",
-            "integrations/authentication/oauth-ui",
-          ],
-        },
-        {
-          type: "category",
-          label: "Continuous Integration and Deployment",
-          items: [
-            {
-              type: "category",
-              label: "GitOps",
-              link: {
-                type: "doc",
-                id: "integrations/cicd/gitops/index",
-              },
-              items: [
-                {
-                  type: "doc",
-                  id: "integrations/cicd/gitops/flux",
-                  label: "Flux",
-                },
-                {
-                  type: "doc",
-                  id: "integrations/cicd/gitops/argocd",
-                  label: "ArgoCD",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Observability",
-      items: ["observability/telemetry", "observability/logging"],
-    },
-    {
-      type: "category",
-      label: "Quick Links",
-      items: ["quick-links/uninstall"],
-    },
-    {
-      type: "category",
       label: "Reference",
-      items: ["reference/openapi", "reference/architecture"],
+      items: [
+        {
+          type: "doc",
+          id: "reference/helm-chart",
+          label: "Helm Chart",
+        },
+        "reference/openapi",
+        "reference/architecture",
+        "reference/telemetry",
+      ],
     },
     {
       type: "category",
@@ -197,10 +191,11 @@ const sidebars = {
         {
           type: "category",
           label: "Development",
-          items: [
-            "contributing/development/development-crds",
-            "contributing/development/developments",
-          ],
+          link: {
+            type: "doc",
+            id: "contributing/development/index",
+          },
+          items: ["contributing/development/crds"],
         },
       ],
     },

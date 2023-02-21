@@ -199,27 +199,27 @@ const config = {
           },
           {
             from: "/UI",
-            to: "/guides/dashboard",
+            to: "/concepts/dashboard",
           },
           {
             from: "/tests-running",
-            to: "/guides/tests/tests-running",
+            to: "/concepts/tests/tests-running",
           },
           {
             from: "/tests-creating",
-            to: "/guides/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
           },
           {
             from: "/tests-variables",
-            to: "/guides/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
           },
           {
             from: "/testsuites-running",
-            to: "/guides/test-suites/testsuites-running",
+            to: "/concepts/test-suites/testsuites-running",
           },
           {
             from: "/testsuites-creating",
-            to: "/guides/test-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
           },
         ],
       },
