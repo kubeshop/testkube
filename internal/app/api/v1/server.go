@@ -154,6 +154,7 @@ type storageParams struct {
 	AccessKeyId     string
 	SecretAccessKey string
 	Location        string
+	Region          string
 	Token           string
 	Bucket          string
 }
@@ -200,6 +201,7 @@ func (s *TestkubeAPI) InitStorage() {
 		s.storageParams.AccessKeyId,
 		s.storageParams.SecretAccessKey,
 		s.storageParams.Location,
+		s.storageParams.Region,
 		s.storageParams.Token,
 		s.storageParams.Bucket,
 		s.storageParams.SSL)
