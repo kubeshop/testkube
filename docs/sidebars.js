@@ -29,7 +29,7 @@ const sidebars = {
       label: "Getting Started",
       link: {
         type: "doc",
-        id: "getting-started/overview",
+        id: "getting-started/index",
       },
       items: [
         "getting-started/step1-installing-cli",

@@ -56,7 +56,7 @@ const config = {
         specs: [
           {
             spec: "https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml",
-            route: "/openapi",
+            route: "/reference/openapi",
           },
         ],
         theme: {
@@ -220,6 +220,50 @@ const config = {
           {
             from: "/testsuites-creating",
             to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/helm-charts",
+            to: "/reference/helm-chart",
+          },
+          {
+            from: "/telemetry",
+            to: "/reference/telemetry",
+          },
+          {
+            from: "/installing",
+            to: "/getting-started",
+          },
+          {
+            from: "/using-testkube/tests/tests-running",
+            to: "/concepts/tests/tests-running",
+          },
+          {
+            from: "/using-testkube/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
+          },
+          {
+            from: "/using-testkube/tests-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/openapi",
+            to: "/reference/openapi",
+          },
+          {
+            from: "/category/tests",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/triggers",
+            to: "/concepts/triggers",
+          },
+          {
+            from: "/using-testkube/UI",
+            to: "/concepts/dashboard",
           },
         ],
       },

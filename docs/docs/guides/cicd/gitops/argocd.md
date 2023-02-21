@@ -8,7 +8,7 @@ Let’s start with setting things up for our GitOps-powered testing machine!
 
 ### 1. Make sure you have Testkube installed in your cluster
 
-If you haven't installed Testkube in your cluster yet, check the [Getting Started guide](../../../getting-started/overview.md) for a walkthrough on installing Testkube.
+If you haven't installed Testkube in your cluster yet, check the [Getting Started guide](../../../getting-started/index.md) for a walkthrough on installing Testkube.
 
 ### 2. Install ArgoCD
 
