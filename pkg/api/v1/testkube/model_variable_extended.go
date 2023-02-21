@@ -20,7 +20,7 @@ func NewBasicVariable(name, value string) Variable {
 func NewConfigMapVariableReference(name, configMap, key string) Variable {
 	return Variable{
 		Name:  name,
-		Type_: VariableTypeSecret,
+		Type_: VariableTypeBasic,
 		ConfigMapRef: &ConfigMapRef{
 			Name: configMap,
 			Key:  key,
