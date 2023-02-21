@@ -119,22 +119,15 @@ const sidebars = {
       type: "category",
       label: "Integrations",
       items: [
-        "integrations/testkube-automation",
-        "integrations/webhooks",
-        "integrations/slack-integration",
-        "integrations/generate-test-crds",
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "integrations/authentication/oauth-cli",
-            "integrations/authentication/oauth-ui",
-          ],
-        },
         {
           type: "category",
           label: "Continuous Integration and Deployment",
+          link: {
+            type: "doc",
+            id: "integrations/cicd/index",
+          },
           items: [
+            "integrations/cicd/github-actions",
             {
               type: "category",
               label: "GitOps",
@@ -157,6 +150,17 @@ const sidebars = {
             },
           ],
         },
+        {
+          type: "category",
+          label: "Authentication",
+          items: [
+            "integrations/authentication/oauth-cli",
+            "integrations/authentication/oauth-ui",
+          ],
+        },
+        "integrations/webhooks",
+        "integrations/slack-integration",
+        "integrations/generate-test-crds",
       ],
     },
     {
