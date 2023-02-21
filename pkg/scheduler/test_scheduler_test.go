@@ -104,7 +104,6 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient.EXPECT().Get("id").Return(&mockTest, nil).Times(1)
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutor, nil)
-	mockSecretClient.EXPECT().Get("secret-2").Times(1)
 	mockConfigMapClient.EXPECT().Get(gomock.Any(), "configmap").Times(1)
 
 	req := testkube.ExecutionRequest{
@@ -151,14 +150,6 @@ func TestGetExecuteOptions(t *testing.T) {
 				Mount:          true,
 				MountPath:      "/data",
 				MapToVariables: false,
-			},
-			{
-				Reference: &testkube.LocalObjectReference{
-					Name: "secret-2",
-				},
-				Mount:          false,
-				MountPath:      "",
-				MapToVariables: true,
 			},
 		},
 	}
