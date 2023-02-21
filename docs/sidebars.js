@@ -146,6 +146,32 @@ const sidebars = {
             "integrations/authentication/oauth-ui",
           ],
         },
+        {
+          type: "category",
+          label: "Continuous Integration and Deployment",
+          items: [
+            {
+              type: "category",
+              label: "GitOps",
+              link: {
+                type: "doc",
+                id: "integrations/cicd/gitops/index",
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "integrations/cicd/gitops/flux",
+                  label: "Flux",
+                },
+                {
+                  type: "doc",
+                  id: "integrations/cicd/gitops/argocd",
+                  label: "ArgoCD",
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
     {

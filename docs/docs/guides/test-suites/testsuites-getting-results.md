@@ -2,10 +2,11 @@
 
 To get recent results, call the `tests executions` subcommand:
 
-```bash
+```sh
+testkube get tse
+```
 
-kubectl testkube get tse
-
+```sh title="Expected output:"
              ID            |  TEST NAME   |           EXECUTION NAME            | STATUS  | STEPS  
 +--------------------------+--------------+-------------------------------------+---------+-------+
   61e1142465e59a318346512b | test-example | test-example.equally-enabled-heron  | success |     3  
@@ -21,7 +22,7 @@ kubectl testkube get tse
 With the test execution ID, you can get single test results:
 
 ```bash 
-kubectl testkube get tse 61e1136165e59a3183465125 
+testkube get tse 61e1136165e59a3183465125 
 
 Name: test-example.fairly-humble-tick
 Status: success
@@ -35,7 +36,7 @@ Status: success
 
 
 Use the following command to get test execution details:
-$ kubectl testkube get tse 61e1136165e59a3183465125
+$ testkube get tse 61e1136165e59a3183465125
 ```
 
 Test Suite steps that are running workflows based on `Test` Custom Resources have a Test Execution ID. You can get the details of each in a separate command: 
