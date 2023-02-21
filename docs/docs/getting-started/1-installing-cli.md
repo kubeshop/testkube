@@ -1,4 +1,4 @@
-# 1. Installing Testkube CLI
+# Step 1 - Installing Testkube CLI
 
 To install Testkube CLI you'll need the following tools:
 

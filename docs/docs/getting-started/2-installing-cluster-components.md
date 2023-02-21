@@ -1,4 +1,4 @@
-# Install Testkube Cluster components using Testkube's CLI
+# Step 2 - Install Testkube Cluster components using Testkube's CLI
 
 The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
 Run:
