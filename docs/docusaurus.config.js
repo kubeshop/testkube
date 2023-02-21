@@ -221,6 +221,14 @@ const config = {
             from: "/testsuites-creating",
             to: "/concepts/test-suites/testsuites-creating",
           },
+          {
+            from: "/helm-charts",
+            to: "/reference/helm-chart",
+          },
+          {
+            from: "/telemetry",
+            to: "/reference/telemetry",
+          },
         ],
       },
     ],

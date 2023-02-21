@@ -4,7 +4,7 @@
 
 To expose Testkube to the Internet, you will need to create ingresses both for Testkube's API and Testkube's dashboard.
 
-Check the guides [here](../guides/exposing-testkube/overview.md) for different configurations.
+Check the guides [here](../guides/exposing-testkube/index.md) for different configurations.
 
 ## Why is the Testkube Dashboard not working or does not return results?
 

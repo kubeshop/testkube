@@ -11,7 +11,7 @@ Testkube bot
 
 ## **Configure Testkube to Use the Slack bot Token**
 
-Populate slackToken in the Helm values file, then install Testkube using Helm install, see [Manual Testkube Helm Charts Installation](../getting-started/overview.md) for more information.
+Populate slackToken in the Helm values file, then install Testkube using Helm install, see [Manual Testkube Helm Charts Installation](../getting-started/index.md) for more information.
 
 ## **Adjust Slack Config File**
 
