@@ -28,6 +28,18 @@ spec:
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
         {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
+        {{- end }}
       {{- end }}
       containers:
       - name: {{ .Name }}
@@ -59,6 +71,18 @@ spec:
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
         {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
+        {{- end }}
       volumes:
       - name: data-volume
         emptyDir: {}
@@ -71,6 +95,20 @@ spec:
       - name: artifact-volume
         persistentVolumeClaim:
           claimName: {{ .Name }}-pvc
+      {{- end }}
+      {{- range $configmap := .EnvConfigMaps }}
+      {{- if and $configmap.Mount $configmap.Reference }}
+      - name: {{ $configmap.Reference.Name }}
+        configmap:
+          name: {{ $configmap.Reference.Name }}
+      {{- end }}
+      {{- end }}
+      {{- range $secret := .EnvSecrets }}
+      {{- if and $secret.Mount $secret.Reference }}
+      - name: {{ $secret.Reference.Name }}
+        secret:
+          secretName: {{ $secret.Reference.Name }}
+      {{- end }}
       {{- end }}
       restartPolicy: Never
       {{- if .ServiceAccountName }}

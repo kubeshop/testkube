@@ -13,8 +13,10 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 func TestParamsNilAssign(t *testing.T) {
@@ -59,8 +61,16 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
+	mockSecretClient := secret.NewMockInterface(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
-	sc := Scheduler{testsClient: mockTestsClient, executorsClient: mockExecutorsClient, logger: log.DefaultLogger}
+	sc := Scheduler{
+		testsClient:     mockTestsClient,
+		executorsClient: mockExecutorsClient,
+		logger:          log.DefaultLogger,
+		secretClient:    mockSecretClient,
+		configMapClient: mockConfigMapClient,
+	}
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
@@ -94,6 +104,7 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient.EXPECT().Get("id").Return(&mockTest, nil).Times(1)
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutor, nil)
+	mockConfigMapClient.EXPECT().Get(gomock.Any(), "configmap").Times(1)
 
 	req := testkube.ExecutionRequest{
 		Name:             "id-1",
@@ -121,6 +132,26 @@ func TestGetExecuteOptions(t *testing.T) {
 		JobTemplate:           "",
 		PreRunScript:          "",
 		ScraperTemplate:       "",
+		EnvConfigMaps: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "configmap",
+				},
+				Mount:          true,
+				MountPath:      "/data",
+				MapToVariables: true,
+			},
+		},
+		EnvSecrets: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "secret-1",
+				},
+				Mount:          true,
+				MountPath:      "/data",
+				MapToVariables: false,
+			},
+		},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

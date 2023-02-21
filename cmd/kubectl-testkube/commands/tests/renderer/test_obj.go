@@ -9,6 +9,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+type mountParams struct {
+	name string
+	path string
+}
+
 func TestRenderer(ui *ui.UI, obj interface{}) error {
 	test, ok := obj.(testkube.Test)
 	if !ok {
@@ -121,6 +126,70 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
+		}
+
+		var mountConfigMaps, mountSecrets []mountParams
+		var variableConfigMaps, variableSecrets []string
+		for _, configMap := range test.ExecutionRequest.EnvConfigMaps {
+			if configMap.Reference == nil {
+				continue
+			}
+
+			if configMap.Mount {
+				mountConfigMaps = append(mountConfigMaps, mountParams{
+					name: configMap.Reference.Name,
+					path: configMap.MountPath,
+				})
+			}
+
+			if configMap.MapToVariables {
+				variableConfigMaps = append(variableConfigMaps, configMap.Reference.Name)
+			}
+		}
+
+		for _, secret := range test.ExecutionRequest.EnvSecrets {
+			if secret.Reference == nil {
+				continue
+			}
+
+			if secret.Mount {
+				mountSecrets = append(mountSecrets, mountParams{
+					name: secret.Reference.Name,
+					path: secret.MountPath,
+				})
+			}
+
+			if secret.MapToVariables {
+				variableSecrets = append(variableSecrets, secret.Reference.Name)
+			}
+		}
+
+		if len(mountConfigMaps) > 0 {
+			ui.NL()
+			ui.Warn("  Mount config maps:      ")
+			for _, mount := range mountConfigMaps {
+				ui.Warn("    - name      :         ", mount.name)
+				ui.Warn("    - mount path:         ", mount.path)
+			}
+		}
+
+		if len(variableConfigMaps) > 0 {
+			ui.NL()
+			ui.Warn("  Variable config maps:   ", variableConfigMaps...)
+		}
+
+		if len(mountSecrets) > 0 {
+			ui.NL()
+			ui.Warn("  Mount secrets:          ")
+			for _, mount := range mountSecrets {
+				ui.Warn("    - name      :         ", mount.name)
+				ui.Warn("    - mount path:         ", mount.path)
+			}
+		}
+
+		if len(variableSecrets) > 0 {
+			ui.NL()
+			ui.Warn("  Variable secrets:       ", variableSecrets...)
 		}
 	}
 

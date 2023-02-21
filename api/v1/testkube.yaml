@@ -2368,6 +2368,8 @@ components:
           $ref: "#/components/schemas/VariableType"
         secretRef:
           $ref: "#/components/schemas/SecretRef"
+        configMapRef:
+          $ref: "#/components/schemas/ConfigMapRef"
 
     VariableType:
       type: string
@@ -2395,6 +2397,23 @@ components:
         - key
       type: object
       description: Testkube internal reference for secret storage in Kubernetes secrets
+      properties:
+        namespace:
+          type: string
+          description: object kubernetes namespace
+        name:
+          type: string
+          description: object name
+        key:
+          type: string
+          description: object key
+
+    ConfigMapRef:
+      required:
+        - name
+        - key
+      type: object
+      description: Testkube internal reference for data in Kubernetes config maps
       properties:
         namespace:
           type: string
@@ -3505,6 +3524,16 @@ components:
         scraperTemplate:
           type: string
           description: scraper template extensions
+        envConfigMaps:
+          type: array
+          description: "config map references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
+        envSecrets:
+          type: array
+          description: "secret references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -4005,6 +4034,26 @@ components:
       properties:
         name:
           type: string
+
+    EnvReference:
+      description: Reference to env resource
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/LocalObjectReference"
+        mount:
+          type: bool
+          description: whether we shoud mount resource
+          example: /etc/data
+        mountPath:
+          type: string
+          description: where we shoud mount resource          
+        mapToVariables:
+          type: bool
+          description: whether we shoud map to variables from resource
+          default: false
 
     TestTriggerSelector:
       type: object

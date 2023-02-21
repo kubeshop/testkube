@@ -38,6 +38,8 @@ testkube create test [flags]
       --image-pull-secrets stringArray             secret name used to pull the image in container executor
       --job-template string                        job template file path for extensions to job template
   -l, --label stringToString                       label key value pair: --label key1=value1 (default [])
+      --mount-configmap stringToString             config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath (default [])
+      --mount-secret stringToString                secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath (default [])
   -n, --name string                                unique test name - mandatory
       --negative-test                              negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa
       --prerun-script string                       path to script to be run before test execution
@@ -51,6 +53,8 @@ testkube create test [flags]
   -t, --type string                                test type (defaults to postman/collection)
       --uri string                                 URI of resource - will be loaded by http GET
   -v, --variable stringToString                    variable key value pair: --variable key1=value1 (default [])
+      --variable-configmap stringArray             config map name used to map all keys to basis variables
+      --variable-secret stringArray                secret name used to map all keys to secret variables
       --variables-file string                      variables file path, e.g. postman env file - will be passed to executor if supported
 ```
 

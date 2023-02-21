@@ -17,13 +17,20 @@ func RenderVariables(variables testkube.Variables) {
 				if v.SecretRef != nil {
 					t = fmt.Sprintf("[secret:%s key:%s]", v.SecretRef.Name, v.SecretRef.Key)
 				}
+
 				if v.Value != "" {
-					t += v.Value
+					t = v.Value
 				}
 
 				t += " 🔒"
 			} else {
-				t = v.Value
+				if v.ConfigMapRef != nil {
+					t = fmt.Sprintf("[configmap:%s key:%s]", v.ConfigMapRef.Name, v.ConfigMapRef.Key)
+				}
+
+				if v.Value != "" {
+					t = v.Value
+				}
 			}
 
 			ui.Info("  -", fmt.Sprintf("%s = %s", v.Name, t))

@@ -66,4 +66,8 @@ type ExecutionUpdateRequest struct {
 	PreRunScript *string `json:"preRunScript,omitempty"`
 	// scraper template extensions
 	ScraperTemplate *string `json:"scraperTemplate,omitempty"`
+	// config *map references
+	EnvConfigMaps *[]EnvReference `json:"envConfigMaps,omitempty"`
+	// secret references
+	EnvSecrets *[]EnvReference `json:"envSecrets,omitempty"`
 }

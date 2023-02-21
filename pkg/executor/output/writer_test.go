@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/pkg/executor/secret"
+	"github.com/kubeshop/testkube/pkg/executor/env"
 )
 
 func TestJSONWrapWritter(t *testing.T) {
@@ -16,7 +16,7 @@ func TestJSONWrapWritter(t *testing.T) {
 
 		buff := bytes.NewBuffer([]byte(""))
 
-		writer := NewJSONWrapWriter(buff, secret.NewEnvManager())
+		writer := NewJSONWrapWriter(buff, env.NewManager())
 		line1 := "some log line"
 		_, err := writer.Write([]byte(line1))
 		assert.NoError(t, err)

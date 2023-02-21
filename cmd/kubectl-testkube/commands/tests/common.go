@@ -167,6 +167,88 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 	return request, nil
 }
 
+func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []testkube.EnvReference, err error) {
+	mountConfigMaps, err := cmd.Flags().GetStringToString("mount-configmap")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	variableConfigMaps, err := cmd.Flags().GetStringArray("variable-configmap")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mountSecrets, err := cmd.Flags().GetStringToString("mount-secret")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	variableSecrets, err := cmd.Flags().GetStringArray("variable-secret")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mapConfigMaps := make(map[string]testkube.EnvReference)
+	for configMap, path := range mountConfigMaps {
+		mapConfigMaps[configMap] = testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: configMap,
+			},
+			Mount:     true,
+			MountPath: path,
+		}
+	}
+
+	for _, configMap := range variableConfigMaps {
+		if value, ok := mapConfigMaps[configMap]; ok {
+			value.MapToVariables = true
+			mapConfigMaps[configMap] = value
+		} else {
+			mapConfigMaps[configMap] = testkube.EnvReference{
+				Reference: &testkube.LocalObjectReference{
+					Name: configMap,
+				},
+				MapToVariables: true,
+			}
+		}
+	}
+
+	for _, value := range mapConfigMaps {
+		envConfigMaps = append(envConfigMaps, value)
+	}
+
+	mapSecrets := make(map[string]testkube.EnvReference)
+	for secret, path := range mountSecrets {
+		mapSecrets[secret] = testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: secret,
+			},
+			Mount:     true,
+			MountPath: path,
+		}
+	}
+
+	for _, secret := range variableSecrets {
+		if value, ok := mapSecrets[secret]; ok {
+			value.MapToVariables = true
+			mapSecrets[secret] = value
+		} else {
+			mapSecrets[secret] = testkube.EnvReference{
+				Reference: &testkube.LocalObjectReference{
+					Name: secret,
+				},
+				MapToVariables: true,
+			}
+		}
+	}
+
+	for _, value := range mapSecrets {
+		envSecrets = append(envSecrets, value)
+	}
+
+	return envConfigMaps, envSecrets, nil
+}
+
 func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionRequest, err error) {
 	variables, err := common.CreateVariables(cmd, false)
 	if err != nil {
@@ -266,6 +348,11 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		scraperTemplateContent = string(b)
 	}
 
+	envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
 	request = &testkube.ExecutionRequest{
 		Name:                  executionName,
 		VariablesFile:         paramsFileContent,
@@ -283,6 +370,8 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		PreRunScript:          preRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
+		EnvConfigMaps:         envConfigMaps,
+		EnvSecrets:            envSecrets,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -760,6 +849,24 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.ScraperTemplate = &scraperTemplateContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("mount-configmap").Changed || cmd.Flag("variable-configmap").Changed {
+		envConfigMaps, _, err := newEnvReferencesFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
+		request.EnvConfigMaps = &envConfigMaps
+		nonEmpty = true
+	}
+
+	if cmd.Flag("mount-secret").Changed || cmd.Flag("variable-secret").Changed {
+		_, envSecrets, err := newEnvReferencesFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
+		request.EnvSecrets = &envSecrets
 		nonEmpty = true
 	}
 
