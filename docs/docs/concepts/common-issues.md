@@ -153,4 +153,4 @@ metadata:
 
 ## Observability
 
-There are two types of storage Mongo and Minio, more details [here](../observability/logging.md)
+There are two types of storage Mongo and Minio, more details [here](../guides/logging.md)
