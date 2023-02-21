@@ -36,23 +36,8 @@ const sidebars = {
       },
       items: [
         "getting-started/installing-cli",
-        {
-          type: "category",
-          label: "2. Installing Testkube in your Kubernetes Cluster",
-          items: [
-            {
-              type: "doc",
-              id: "getting-started/installing-cluster-components/using-cli",
-              label: "Using CLI",
-            },
-            {
-              type: "doc",
-              id: "getting-started/installing-cluster-components/helm-chart",
-              label: "Helm Chart",
-            },
-          ],
-        },
-        "getting-started/create-first-test",
+        "getting-started/installing-cluster-components",
+        "getting-started/creating-first-test",
       ],
     },
     {
@@ -161,7 +146,15 @@ const sidebars = {
     {
       type: "category",
       label: "Reference",
-      items: ["reference/openapi", "reference/architecture"],
+      items: [
+        {
+          type: "doc",
+          id: "reference/helm-chart",
+          label: "Helm Chart",
+        },
+        "reference/openapi",
+        "reference/architecture",
+      ],
     },
     {
       type: "category",

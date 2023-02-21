@@ -1,8 +1,8 @@
-# Using Helm to Deploy the Testkube Cluster Components
+# Testkube Helm Charts
 
-1. Add the Kubeshop Helm repository as follows:
+## 1. Add the Kubeshop Helm repository
 
-```bash
+```sh
 helm repo add testkube https://kubeshop.github.io/helm-charts
 ```
 
@@ -10,17 +10,18 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
-2. To install the `testkube` chart:
+## 2. Install the `testkube` chart
 
-```bash
+```sh
 helm install --create-namespace my-testkube testkube/testkube
 ```
 
-Please note that, by default, the namespace for the installation will be `testkube`. If the `testkube` namespace does not exist, it will be created for you.
+:::note
+By default, the namespace for the installation will be `testkube`. If the `testkube` namespace does not exist, it will be created for you.
 
 If you wish to install into a different namespace, please use following command:
 
-```bash
+```sh
 helm install --namespace namespace_name my-testkube testkube/testkube
 ```
 
@@ -35,6 +36,7 @@ And from a namespace other than `testkube`:
 ```bash
 helm delete --namespace namespace_name my-testkube testkube/testkube
 ```
+:::
 
 #### Helm Properties
 
