@@ -35,9 +35,9 @@ const sidebars = {
         id: "getting-started/overview",
       },
       items: [
-        "getting-started/installing-cli",
-        "getting-started/installing-cluster-components",
-        "getting-started/creating-first-test",
+        "getting-started/step1-installing-cli",
+        "getting-started/step2-installing-cluster-components",
+        "getting-started/step3-creating-first-test",
       ],
     },
     {
