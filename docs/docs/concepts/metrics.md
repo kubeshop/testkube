@@ -10,7 +10,7 @@ The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Pr
 * `testkube_testsuite_updates_count` - The total number of test suites updated events.
 * `testkube_test_aborts_count` - The total number of tests aborted by type events.
 
-## **Installation**
+## Installation
 
 If a Prometheus operator is not installed, please follow the steps here: [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/).
 
@@ -35,7 +35,7 @@ spec:
 
 If you're installing Testkube manually with our Helm chart, you can pass the `prometheus.enabled` value to the install command.
 
-## **Grafana Dashboard**
+## Grafana Dashboard
 
 To use the Grafana dashboard, import this JSON definition:
 

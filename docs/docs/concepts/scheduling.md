@@ -4,53 +4,47 @@ In order to run Tests and Test Suites on a regular basis, we support a schedulin
 CRDs both for test and test suite contain a **schedule** field used to define rules for launching them in time.
 Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details <https://en.wikipedia.org/wiki/Cron>).
 
-## **Scheduling Architecture**
+## Scheduling Architecture
 
 Testkube uses the scheduling engine from Kubernetes Cron jobs.
 In fact, for each scheduled Test or Test Suite, a special cron job is created from this template:
 <https://github.com/kubeshop/helm-charts/tree/main/charts/testkube-api/cronjob-template.yml>.
 Technically, it is a callback to Testkube API server method launching either Test or Test Suite execution.
-This works similarly to scheduled Test and Test Suite executions done by external scheduling platforms. 
+This works similarly to scheduled Test and Test Suite executions done by external scheduling platforms.
 
-## **Create a Test with a Schedule**
+## Create a Test with a Schedule
 
 Let's create a test with a required schedule using Testkube CLI command:
 
-```bash
+```sh
 kubectl testkube create test --file test/postman/TODO.postman_collection.json --name scheduled-test --schedule="*/1 * * * *"
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Detected test type postman/collection
 Test created  / scheduled-test 🥇
 ```
 
 We successfully created a scheduled test and can check a list of the available tests:
 
-```bash
+```sh
 kubectl testkube get tests
 ```
 
-Output:
-
-```bash
-  NAME              | TYPE               | CREATED                       | LABELS | SCHEDULE    | STATUS | EXECUTION ID              
+```sh title="Expected output:"
+  NAME              | TYPE               | CREATED                       | LABELS | SCHEDULE    | STATUS | EXECUTION ID
 +-------------------+--------------------+-------------------------------+--------+-------------+--------+--------------------------+
-  scheduled-test    | postman/collection | 2022-04-13 12:37:40 +0000 UTC |        | */1 * * * * |        |                           
+  scheduled-test    | postman/collection | 2022-04-13 12:37:40 +0000 UTC |        | */1 * * * * |        |
 ```
 
 The scheduled test was created and successfully scheduled for execution.
 Let's check a Cron job connected to this test.
 
-```bash
+```sh
 kubectl get cronjobs -A
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 NAMESPACE   NAME                   SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
 testkube    scheduled-test-tests   */1 * * * *   False     1        42s           3m22s
 ```
@@ -58,13 +52,11 @@ testkube    scheduled-test-tests   */1 * * * *   False     1        42s         
 The Cron job for this test was successfully created and the test was executed.
 To the check Cron job details:
 
-```bash
+```sh
 kubectl describe cronjob scheduled-test-tests -n testkube
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Name:                          scheduled-test-tests
 Namespace:                     testkube
 Labels:                        testkube=tests
@@ -103,73 +95,65 @@ Events:
 
 As mentioned above, we have a scheduled callback for launching our test.
 
-## **Getting Scheduled Test Results**
+## Getting Scheduled Test Results
 
 Now we can check whether the test is executed every minute for the schedule we provided.
 
-```bash
+```sh
 kubectl testkube get execution
 ```
 
-Output:
-
-```bash
-  ID                       | NAME                | TYPE               | STATUS  | LABELS  
+```sh title="Expected output:"
+  ID                       | NAME                | TYPE               | STATUS  | LABELS
 +--------------------------+---------------------+--------------------+---------+--------+
-  6256c98f418062706814e1fc | scheduled-test      | postman/collection | passed  |         
-  6256c953418062706814e1fa | scheduled-test      | postman/collection | passed  |         
-  6256c91e418062706814e1f8 | scheduled-test      | postman/collection | passed  |         
-  6256c8db418062706814e1f6 | scheduled-test      | postman/collection | passed  |         
-  6256c89f418062706814e1f4 | scheduled-test      | postman/collection | passed  |         
-  6256c885418062706814e1f2 | scheduled-test      | postman/collection | passed  |         
-  6256c87e418062706814e1f0 | scheduled-test      | postman/collection | passed  | 
+  6256c98f418062706814e1fc | scheduled-test      | postman/collection | passed  |
+  6256c953418062706814e1fa | scheduled-test      | postman/collection | passed  |
+  6256c91e418062706814e1f8 | scheduled-test      | postman/collection | passed  |
+  6256c8db418062706814e1f6 | scheduled-test      | postman/collection | passed  |
+  6256c89f418062706814e1f4 | scheduled-test      | postman/collection | passed  |
+  6256c885418062706814e1f2 | scheduled-test      | postman/collection | passed  |
+  6256c87e418062706814e1f0 | scheduled-test      | postman/collection | passed  |
 ```
 
 The test is successfully regularly executed.
 
-## **Create a Test Suite with a Schedule**
+## Create a Test Suite with a Schedule
 
 Let's create a Test Suite with a required schedule using the Testkube CLI command:
 
-```bash
+```sh
 cat test/suites/testsuite.json | kubectl testkube create testsuite --name scheduled-testsuite --schedule="*/1 * * * *"
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 TestSuite created scheduled-testsuite 🥇
 ```
 
 We successfully created a scheduled Test Suite and can view a list of the available Test Suites:
 
-```bash
+```sh
 kubectl testkube get testsuites
 ```
 
-Output:
-
-```bash
-  NAME                | DESCRIPTION            | STEPS | LABELS | SCHEDULE    | STATUS | EXECUTION ID  
+```sh title="Expected output:"
+  NAME                | DESCRIPTION            | STEPS | LABELS | SCHEDULE    | STATUS | EXECUTION ID
 +---------------------+------------------------+-------+--------+-------------+--------+--------------+
-  scheduled-testsuite | Run test several times |     2 |        | */1 * * * * |        |    
+  scheduled-testsuite | Run test several times |     2 |        | */1 * * * * |        |
 ```
 
 The scheduled test suite was created and successfully scheduled for execution.
 We will skip the Cron job details, they are fully similar to test one described above.
 
-## **Getting Scheduled Test Suite Results**
+## Getting Scheduled Test Suite Results
 
 The Test Suite is executed every minute for the schedule we provided.
 
-```bash
+```sh
 kubectl testkube get tse
 ```
 
-Output:
-
-```bash
-  ID                       | TEST SUITE NAME     | EXECUTION NAME                             | STATUS | STEPS | LABELS  
+```sh title="Expected output:"
+  ID                       | TEST SUITE NAME     | EXECUTION NAME                             | STATUS | STEPS | LABELS
 +--------------------------+---------------------+--------------------------------------------+--------+-------+--------+
   6256ce3f418062706814e210 | scheduled-testsuite | scheduled-testsuite.abnormally-in-lark     | passed |     2 |
   6256ce04418062706814e20c | scheduled-testsuite | scheduled-testsuite.kindly-evolved-primate | passed |     2 |

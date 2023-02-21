@@ -1,11 +1,11 @@
 # OAuth for Testkube Dashboard
 
 Testkube doesn't provide a separate user/role management system to protect access to its Dashboard.
-Users can configure and OAuth based authentication module using Testkube Helm chart parameters.
-Testkube can automatically create an OAuth2-Proxy service and deployment integrated
-with GitHub, as well as properly configure Kubernetes NGINX Ingress Controller and create required
-ingresses.
 
+Users can configure and OAuth based authentication module using Testkube Helm chart parameters.
+
+Testkube can automatically create an OAuth2-Proxy service and deployment integrated
+with GitHub, as well as properly configure Kubernetes NGINX Ingress Controller and create required ingresses.
 ## Provide Parameters for Dashboard and API Ingresses
 
 ### API Ingress
@@ -13,7 +13,7 @@ ingresses.
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
 Pay attention to the usage of the scheme (http or https) in URIs.
 
-```bash
+```sh
 --set testkube-api.uiIngress.enabled=true \
 --set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
 --set testkube-api.uiIngress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri" \
@@ -25,7 +25,7 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 Pass values to Testkube Helm chart during installation or upgrade (they are empty by default).
 Pay attention to the usage of the scheme (http or https) in URIs.
 
-```bash
+```sh
 --set testkube-dashboard.ingress.enabled=true \
 --set testkube-dashboard.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-url"="http://\$host/oauth2/auth" \
 --set testkube-dashboard.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri"
@@ -35,7 +35,7 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 
 Use OpenSSL to generate a shared secret or it can be any 16 or 32 byte value 64base encoded.
 
-```bash
+```sh
 $ openssl rand -hex 16
 48f0a2b815ddc0a437825ccb27548d25
 ```
@@ -61,7 +61,7 @@ Remember the generated Client ID and Client Secret.
 Pass values to the Testkube Helm chart during installation or upgrade (they are empty by default).
 Pay attention to the usage of the scheme (http or https) in URIs.
 
-```bash
+```sh
 --set testkube-dashboard.oauth2.enabled=true \
 --set testkube-dashboard.oauth2.env.clientId="Client ID from Github OAuth application" \
 --set testkube-dashboard.oauth2.env.clientSecret="Client Secret from Github OAuth application" \

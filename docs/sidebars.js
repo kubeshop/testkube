@@ -24,7 +24,7 @@ const sidebars = {
       },
       items: [
         "overview/supported-tests",
-        "overview/does-testkube-replace-cicd",
+        "overview/how-can-testkube-be-used",
       ],
     },
     {
@@ -42,27 +42,41 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Guides",
+      label: "Concepts",
       items: [
         {
           type: "category",
           label: "Tests",
           items: [
-            "guides/tests/tests-creating",
-            "guides/tests/tests-running",
-            "guides/tests/tests-getting-results",
-            "guides/tests/tests-variables",
+            "concepts/tests/tests-creating",
+            "concepts/tests/tests-running",
+            "concepts/tests/tests-getting-results",
+            "concepts/tests/tests-variables",
           ],
         },
         {
           type: "category",
           label: "Test Suites",
           items: [
-            "guides/test-suites/testsuites-creating",
-            "guides/test-suites/testsuites-running",
-            "guides/test-suites/testsuites-getting-results",
+            "concepts/test-suites/testsuites-creating",
+            "concepts/test-suites/testsuites-running",
+            "concepts/test-suites/testsuites-getting-results",
           ],
         },
+        "concepts/dashboard",
+        "concepts/secrets",
+        "concepts/scheduling",
+        "concepts/artifacts-storage",
+        "concepts/metrics",
+        "concepts/triggers",
+        "concepts/dependencies",
+        "concepts/common-issues",
+      ],
+    },
+    {
+      type: "category",
+      label: "Guides",
+      items: [
         {
           type: "category",
           label: "Exposing Testkube Dashboard",
@@ -72,14 +86,50 @@ const sidebars = {
           },
           items: ["guides/exposing-testkube/ingress-nginx"],
         },
-        "guides/dashboard",
-        "guides/secrets",
-        "guides/scheduling",
-        "guides/artifacts-storage",
-        "guides/metrics",
-        "guides/triggers",
-        "guides/dependencies",
-        "guides/common-issues",
+        {
+          type: "category",
+          label: "Continuous Integration and Deployment",
+          link: {
+            type: "doc",
+            id: "guides/cicd/index",
+          },
+          items: [
+            "guides/cicd/github-actions",
+            {
+              type: "category",
+              label: "GitOps",
+              link: {
+                type: "doc",
+                id: "guides/cicd/gitops/index",
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/flux",
+                  label: "Flux",
+                },
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/argocd",
+                  label: "ArgoCD",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Authentication",
+          items: [
+            "guides/authentication/oauth-cli",
+            "guides/authentication/oauth-ui",
+          ],
+        },
+        "guides/webhooks",
+        "guides/slack-integration",
+        "guides/generate-test-crds",
+        "guides/logging",
+        "guides/uninstall",
       ],
     },
     {
@@ -107,6 +157,10 @@ const sidebars = {
       ],
     },
     {
+      type: "html",
+      value: "<hr />",
+    },
+    {
       type: "category",
       label: "Testkube Cloud",
       items: [
@@ -114,64 +168,6 @@ const sidebars = {
         "testkube-cloud/installing-agent",
         "testkube-cloud/architecture",
       ],
-    },
-    {
-      type: "category",
-      label: "Integrations",
-      items: [
-        {
-          type: "category",
-          label: "Continuous Integration and Deployment",
-          link: {
-            type: "doc",
-            id: "integrations/cicd/index",
-          },
-          items: [
-            "integrations/cicd/github-actions",
-            {
-              type: "category",
-              label: "GitOps",
-              link: {
-                type: "doc",
-                id: "integrations/cicd/gitops/index",
-              },
-              items: [
-                {
-                  type: "doc",
-                  id: "integrations/cicd/gitops/flux",
-                  label: "Flux",
-                },
-                {
-                  type: "doc",
-                  id: "integrations/cicd/gitops/argocd",
-                  label: "ArgoCD",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "integrations/authentication/oauth-cli",
-            "integrations/authentication/oauth-ui",
-          ],
-        },
-        "integrations/webhooks",
-        "integrations/slack-integration",
-        "integrations/generate-test-crds",
-      ],
-    },
-    {
-      type: "category",
-      label: "Observability",
-      items: ["observability/telemetry", "observability/logging"],
-    },
-    {
-      type: "category",
-      label: "Quick Links",
-      items: ["quick-links/uninstall"],
     },
     {
       type: "category",
@@ -184,6 +180,7 @@ const sidebars = {
         },
         "reference/openapi",
         "reference/architecture",
+        "reference/telemetry",
       ],
     },
     {
@@ -194,10 +191,11 @@ const sidebars = {
         {
           type: "category",
           label: "Development",
-          items: [
-            "contributing/development/development-crds",
-            "contributing/development/developments",
-          ],
+          link: {
+            type: "doc",
+            id: "contributing/development/index",
+          },
+          items: ["contributing/development/crds"],
         },
       ],
     },

@@ -2,28 +2,31 @@
 
 Testkube now offers many ways to pass secrets to the test and to the executors, here are following types:
 
-### Secret Variables
+## Secret Variables
+
 Secret Variables are variables passed during the test/test suite creation or run in a simple form that can be accessed in the test as an environment variable.
 
-```shell
+```sh
 --secret-variable <secret-name>=<secret-value>
 ```
 
 Usage Example:
 
-```shell
+```sh
 testkube run test my-test --secret-variable api-key="3472bjdvadncaj"
 ```
+
 and it can be accessed in the test in ways that the executors allow for Postman tests it can be accessed like this:
 
 ```js
-test_api_key = pm.environment.get("api-key")
+test_api_key = pm.environment.get("api-key");
 ```
 
 ### Secret References
+
 If there are secrets that are already in the cluster's Secrets, Testkube allows you to use them and provides the secret name and the key from that secret that will be used in the tests.
 
-```shell
+```sh
 --secret-variable-reference <secret-name>=<k8s-secret-name>=<secret-key>
 ```
 
@@ -51,21 +54,21 @@ type: Opaque
 
 This secret can be used in the run or create operation as follows:
 
-```shell
+```sh
 testkube run test my-test --secret-variable-reference my-sec1=my-secret=sec1
 ```
 
 And, in the test, it can be accessed as an environment variable. Here is a Postman example:
 
 ```js
-test_api_key = pm.environment.get("my-sec1")
+test_api_key = pm.environment.get("my-sec1");
 ```
 
 ### Secret Environment Variables
 
 Secret Environment Variables pass environment variables for the executor itself like `--env` when `--env` cannot be used because it contains sensitive information. Instead a k8s secret can be created and passed with `--secret-env <secret-key>=<k8s-secret-name>`.
 
-For example, if the executor needs `env-secret` from the secret, 
+For example, if the executor needs `env-secret` from the secret,
 it can be passed using `--secret-env env-secret=my-env-secret` and executor will receive it as `env-secret`:
 
 ```yaml
@@ -78,7 +81,9 @@ metadata:
   namespace: testkube
 type: Opaque
 ```
-Note: Postman is expecting to have the JSON object in the secret with the postman env file data json format:
+
+:::info
+Postman is expecting to have the JSON object in the secret with the postman env file data json format:
 
 ```js
 {
@@ -96,3 +101,5 @@ Note: Postman is expecting to have the JSON object in the secret with the postma
 	"_postman_exported_using": "Postman/9.21.1"
 }
 ```
+
+:::
