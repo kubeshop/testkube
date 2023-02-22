@@ -225,7 +225,6 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 // GetContainerLogs returns container logs
 func GetContainerLogs(ctx context.Context, c kubernetes.Interface, pod *corev1.Pod, container, namespace string, tailLines *int64) ([]byte, error) {
 	podLogOptions := corev1.PodLogOptions{
-		Follow:    false,
 		Container: container,
 	}
 
