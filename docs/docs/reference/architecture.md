@@ -1,23 +1,23 @@
 # Architecture
 
-## **Info**
+## Info
 
 This diagram was made with the C4 diagram technique
 (<https://c4model.com/>).
 
-## **Diagrams**
+## Diagrams
 
-### **System Context**
+### System Context
 
 ![testkube system context diagram](../img/system_context.png)
 
-### **Containers**
+### Containers
 
 ![testkube container diagram](../img/containers.png)
 
-### **Components**
+### Components
 
-#### **API**
+#### API
 
 ![API](../img/components_api.png)
 

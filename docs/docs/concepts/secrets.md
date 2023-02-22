@@ -101,5 +101,4 @@ Postman is expecting to have the JSON object in the secret with the postman env 
 	"_postman_exported_using": "Postman/9.21.1"
 }
 ```
-
 :::

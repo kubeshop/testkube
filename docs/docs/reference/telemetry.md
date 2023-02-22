@@ -30,7 +30,7 @@ The collected data looks like this.
 }
 ```
 
-## **What We Collect**
+## What We Collect
 
 The telemetry data we use in our metrics is limited to:
 
@@ -41,19 +41,22 @@ The telemetry data we use in our metrics is limited to:
  - The number of people who disable telemetry.
  - The number of unique sessions in the Testkube Dashboard.
 
-## **How to Opt Out?**
+## How to Opt Out?
 
 To opt out of the Testkube telemetry collection:
-```
-kubectl testkube disable telemetry
+
+```sh
+testkube disable telemetry
 ```
 
 To *opt in*:
-```
-kubectl testkube enable telemetry
+
+```sh
+testkube enable telemetry
 ```
 
 To check the current *status*:
-``` 
-kubectl testkube status telemetry
+
+```sh
+testkube status telemetry
 ```

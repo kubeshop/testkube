@@ -1,7 +1,7 @@
 # Creating Test Suites
 
 A large IT department has a frontend team and a backend team, everything is
-deployed on Kubernetes cluster, and each team is responsible for its part of the work. The frontend engineers test their code using the  Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have a lot of Postman collections defined and want to run them against a Kubernetes cluster but some of their services are not exposed externally.
+deployed on Kubernetes cluster, and each team is responsible for its part of the work. The frontend engineers test their code using the Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have a lot of Postman collections defined and want to run them against a Kubernetes cluster but some of their services are not exposed externally.
 
 A QA leader is responsible for release trains and wants to be sure that before the release all tests are completed successfully. The QA leader will need to create pipelines that orchestrate each teams' tests into a common platform.
 
@@ -9,13 +9,13 @@ This is easily done with Testkube. Each team can run their tests against cluster
 
 `Test Suites` stands for the orchestration of different test steps such as test execution, delay, or other (future) steps.
 
-## **Test Suite Creation**
+## Test Suite Creation
 
 Creating tests is really simple - create the test definition in a JSON file and pass it to the `testkube` `kubectl` plugin.
 
 An example test file could look like this:
 
-```bash
+```sh
 echo '
 {
 	"name": "testkube-suite",
@@ -34,9 +34,11 @@ echo '
 
 To check if the test was created correctly, you can look at `TestSuite` Custom Resource in your Kubernetes cluster:
 
-```bash
+```sh
 kubectl get testsuites -ntestkube
+```
 
+```sh title="Expected output:"
 NAME                  AGE
 testkube-suite           1m
 testsuite-example-2   2d21h
@@ -44,9 +46,11 @@ testsuite-example-2   2d21h
 
 Get the details of a test:
 
-```bash
+```sh
 kubectl get testsuites -ntestkube testkube-suite -oyaml
+```
 
+```yaml title="Expected output:"
 apiVersion: tests.testkube.io/v1
 kind: Test
 metadata:

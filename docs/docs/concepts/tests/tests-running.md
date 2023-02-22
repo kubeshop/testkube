@@ -2,22 +2,20 @@
 
 Tests are stored in Kubernetes clusters as Custom Resources. Testkube tests are reusable and can get results with the use of kubectl testkube plugin or with an API.
 
-## **Running**
+## Running
 
 Running tests looks the same for any type of test.
 In this example, we have previously created a test with the name `api-incluster-test`.
 
-### **Standard Run Command**
+### Standard Run Command
 
 This is an example of the simplest run command:
 
-```bash
-kubectl testkube run test api-incluster-test
+```sh
+testkube run test api-incluster-test
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Type          : postman/collection
 Name          : api-incluster-test
 Execution ID  : 615d6398b046f8fbd3d955d4
@@ -34,20 +32,18 @@ $ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 
 Testkube will inform us about possible commands to get test results:
 
-- `kubectl testkube get execution 615d6398b046f8fbd3d955d4` to get execution details.
-- `kubectl testkube watch execution 615d6398b046f8fbd3d955d4` to watch the current pending execution. Watch will also get details when a test is completed and is good for long running tests to lock your terminal until test execution completes.
+- `testkube get execution 615d6398b046f8fbd3d955d4` to get execution details.
+- `testkube watch execution 615d6398b046f8fbd3d955d4` to watch the current pending execution. Watch will also get details when a test is completed and is good for long running tests to lock your terminal until test execution completes.
 
-## **Run with Watch for Changes**
+## Run with Watch for Changes
 
 If we want to wait until a test execution completes we can pass the `-f` flag (follow) to the test run command:
 
-```bash
-kubectl testkube run test api-incluster-test -f
+```sh
+testkube run test api-incluster-test -f
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Type          : postman/collection
 Name          : api-incluster-test
 Execution ID  : 615d7e1ab046f8fbd3d955d6
@@ -105,7 +101,7 @@ Test execution completed in 595ms
 
 This command will wait until the test execution completes.
 
-### **Passing Parameters**
+### Passing Parameters
 
 For some 'real world' tests, configuration variables are passed in order to run them on different environments or with different test configurations.
 
@@ -117,13 +113,11 @@ It's possible to pass parameters securely to the executed test. It's necessary t
 which contains a key value pair - a name of the kubernetes secret and a secret key.
 Pass it multiple times if needed.
 
-```bash
+```sh
 kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f --secret secret-name=secret-key
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Type          : cypress/project
 Name          : kubeshop-cypress
 Execution ID  : 615d5372b046f8fbd3d955d2
@@ -204,14 +198,14 @@ $ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 Test execution completed in 1m45.405939s
 ```
 
-### **Mapping local files**
+### Mapping local files
 
 Local files can be set on the execution of a Testkube Test. Pass the file in the format `source_path:destination_path` using the flag `--copy-files`.
 
-```bash
-kubectl testkube run test maven-example-file-test --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml" --args "--settings" --args "/tmp/settings.xml" -v "TESTKUBE_MAVEN=true"
+```sh
+testkube run test maven-example-file-test --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml" --args "--settings" --args "/tmp/settings.xml" -v "TESTKUBE_MAVEN=true"
 ```
 
-## **Summary**
+## Summary
 
 As we can see, running tests in Kubernetes cluster is really easy with use of the Testkube kubectl plugin!
