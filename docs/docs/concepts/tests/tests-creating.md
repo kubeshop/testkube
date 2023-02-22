@@ -444,7 +444,7 @@ kubectl testkube create test --file test/postman/LocalHealth.postman_collection.
 
 ### **Automatically add all config map and secret keys to test variables**
 Sometimes you may want to automatcially add all keys from your config map and secret to your test. In this you need to provide them as additional  
-parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution:
+parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All config map keys will be added with key as varibale name to Basic variables and all secret keys will be added with key as varibale name to Secret variables:
 
 ```bash
 kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name var-test --type postman/collection --variable-configmap your_configmap --variable-secret your_secret
