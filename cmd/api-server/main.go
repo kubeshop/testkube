@@ -344,7 +344,7 @@ func main() {
 			}
 			return nil
 		})
-		eventsEmitter.Register(agentHandle)
+		eventsEmitter.Loader.Register(agentHandle)
 	}
 
 	api.InitEvents()
