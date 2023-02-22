@@ -15,6 +15,7 @@ type Params struct {
 	AccessKeyID         string // RUNNER_ACCESSKEYID
 	SecretAccessKey     string // RUNNER_SECRETACCESSKEY
 	Location            string // RUNNER_LOCATION
+	Region              string // RUNNER_REGION
 	Token               string // RUNNER_TOKEN
 	Bucket              string // RUNNER_BUCKET
 	Ssl                 bool   // RUNNER_SSL
@@ -49,6 +50,7 @@ func printParams(params Params) {
 	printSensitiveParam("RUNNER_ACCESSKEYID", params.AccessKeyID)
 	printSensitiveParam("RUNNER_SECRETACCESSKEY", params.SecretAccessKey)
 	output.PrintLog(fmt.Sprintf("RUNNER_LOCATION=\"%s\"", params.Location))
+	output.PrintLog(fmt.Sprintf("RUNNER_REGION=\"%s\"", params.Region))
 	printSensitiveParam("RUNNER_TOKEN", params.Token)
 	output.PrintLog(fmt.Sprintf("RUNNER_BUCKET=\"%s\"", params.Bucket))
 	output.PrintLog(fmt.Sprintf("RUNNER_SSL=%t", params.Ssl))
