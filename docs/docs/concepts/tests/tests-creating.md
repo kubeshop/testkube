@@ -434,6 +434,22 @@ spec:
 
 When you run such a test you will face a memory limit for the scraper pod, when the default scraper job template doesn't have any resource constraints.
 
+### **Mounting config maps and secrets to executor pod**
+If you need to mount your config maps and secrets to your executor environment, then you can provide them as additional  
+parameters when you create or run the test using `--mount-configmap` and `--mount-secret` options:
+
+```bash
+kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name mount-test --type postman/collection --mount-configmap your_configmap=/pod_mount_path --mount-secret your_secret=/pod_mount_path
+```
+
+### **Automatically add all config map and secret keys to test variables**
+Sometimes you may want to automatcially add all keys from your config map and secret to your test. In this you need to provide them as additional  
+parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution:
+
+```bash
+kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name var-test --type postman/collection --variable-configmap your_configmap --variable-secret your_secret
+```
+
 ## **Summary**
 
 Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
