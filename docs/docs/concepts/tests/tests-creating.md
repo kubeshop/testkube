@@ -441,7 +441,7 @@ parameters when you create or run the test using `--mount-configmap` and `--moun
 ```sh
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name mount-test --type postman/collection --mount-configmap your_configmap=/pod_mount_path --mount-secret your_secret=/pod_mount_path
 
-### **Automatically add all config map and secret keys to test variables**
+### Automatically add all ConfigMap and Secret keys to Test Variables
 Sometimes you may want to automatcially add all keys from your config map and secret to your test. In this you need to provide them as additional  
 parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All config map keys will be added with key as varibale name to Basic variables and all secret keys will be added with key as varibale name to Secret variables:
 
