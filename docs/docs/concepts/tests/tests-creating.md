@@ -438,9 +438,8 @@ When you run such a test you will face a memory limit for the scraper pod, when 
 If you need to mount your config maps and secrets to your executor environment, then you can provide them as additional  
 parameters when you create or run the test using `--mount-configmap` and `--mount-secret` options:
 
-```bash
-kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name mount-test --type postman/collection --mount-configmap your_configmap=/pod_mount_path --mount-secret your_secret=/pod_mount_path
-```
+```sh
+testkube create test --file test/postman/LocalHealth.postman_collection.json --name mount-test --type postman/collection --mount-configmap your_configmap=/pod_mount_path --mount-secret your_secret=/pod_mount_path
 
 ### **Automatically add all config map and secret keys to test variables**
 Sometimes you may want to automatcially add all keys from your config map and secret to your test. In this you need to provide them as additional  
