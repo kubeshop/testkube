@@ -22,56 +22,111 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: [
-        "overview/supported-tests",
-        "overview/does-testkube-replace-cicd",
-      ],
+      items: ["overview/supported-tests", "overview/how-can-testkube-be-used"],
     },
     {
       type: "category",
       label: "Getting Started",
-      items: ["getting-started/installation", "getting-started/quickstart"],
-    },
-    {
-      type: "category",
-      label: "Testkube Cloud",
+      link: {
+        type: "doc",
+        id: "getting-started/index",
+      },
       items: [
-        "testkube-cloud/intro",
-        "testkube-cloud/installing-agent",
-        "testkube-cloud/architecture",
+        "getting-started/step1-installing-cli",
+        "getting-started/step2-installing-cluster-components",
+        "getting-started/step3-creating-first-test",
       ],
     },
     {
       type: "category",
-      label: "Using Testkube",
+      label: "Concepts",
       items: [
         {
           type: "category",
           label: "Tests",
           items: [
-            "using-testkube/tests/tests-creating",
-            "using-testkube/tests/tests-running",
-            "using-testkube/tests/tests-getting-results",
-            "using-testkube/tests/tests-variables",
+            "concepts/tests/tests-creating",
+            "concepts/tests/tests-running",
+            "concepts/tests/tests-getting-results",
+            "concepts/tests/tests-variables",
           ],
         },
         {
           type: "category",
           label: "Test Suites",
           items: [
-            "using-testkube/test-suites/testsuites-creating",
-            "using-testkube/test-suites/testsuites-running",
-            "using-testkube/test-suites/testsuites-getting-results",
+            "concepts/test-suites/testsuites-creating",
+            "concepts/test-suites/testsuites-running",
+            "concepts/test-suites/testsuites-getting-results",
           ],
         },
-        "using-testkube/UI",
-        "using-testkube/secrets",
-        "using-testkube/scheduling",
-        "using-testkube/artifacts-storage",
-        "using-testkube/metrics",
-        "using-testkube/triggers",
-        "using-testkube/dependencies",
-        "using-testkube/common-issues",
+        "concepts/dashboard",
+        "concepts/secrets",
+        "concepts/scheduling",
+        "concepts/artifacts-storage",
+        "concepts/metrics",
+        "concepts/triggers",
+        "concepts/dependencies",
+        "concepts/common-issues",
+      ],
+    },
+    {
+      type: "category",
+      label: "Guides",
+      items: [
+        {
+          type: "category",
+          label: "Exposing Testkube Dashboard",
+          link: {
+            type: "doc",
+            id: "guides/exposing-testkube/overview",
+          },
+          items: ["guides/exposing-testkube/ingress-nginx"],
+        },
+        {
+          type: "category",
+          label: "Continuous Integration and Deployment",
+          link: {
+            type: "doc",
+            id: "guides/cicd/index",
+          },
+          items: [
+            "guides/cicd/github-actions",
+            {
+              type: "category",
+              label: "GitOps",
+              link: {
+                type: "doc",
+                id: "guides/cicd/gitops/index",
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/flux",
+                  label: "Flux",
+                },
+                {
+                  type: "doc",
+                  id: "guides/cicd/gitops/argocd",
+                  label: "ArgoCD",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Authentication",
+          items: [
+            "guides/authentication/oauth-cli",
+            "guides/authentication/oauth-ui",
+          ],
+        },
+        "guides/webhooks",
+        "guides/slack-integration",
+        "guides/generate-test-crds",
+        "guides/logging",
+        "guides/uninstall",
       ],
     },
     {
@@ -99,32 +154,41 @@ const sidebars = {
       ],
     },
     {
+      type: "html",
+      value: "<hr />",
+    },
+    {
       type: "category",
-      label: "Integrations",
+      label: "Testkube Cloud",
       items: [
-        "integrations/testkube-automation",
-        "integrations/webhooks",
-        "integrations/slack-integration",
-        "integrations/generate-test-crds",
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "integrations/authentication/oauth-cli",
-            "integrations/authentication/oauth-ui",
-          ],
-        },
+        "testkube-cloud/intro",
+        "testkube-cloud/installing-agent",
+        "testkube-cloud/architecture",
       ],
     },
     {
       type: "category",
-      label: "Observability",
-      items: ["observability/telemetry", "observability/logging"],
-    },
-    {
-      type: "category",
       label: "Reference",
-      items: ["reference/openapi", "reference/architecture"],
+      items: [
+        {
+          type: "category",
+          label: "CLI",
+          items: [
+            {
+              type: "autogenerated",
+              dirName: "reference/cli",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          id: "reference/helm-chart",
+          label: "Helm Chart",
+        },
+        "reference/openapi",
+        "reference/architecture",
+        "reference/telemetry",
+      ],
     },
     {
       type: "category",
@@ -134,10 +198,11 @@ const sidebars = {
         {
           type: "category",
           label: "Development",
-          items: [
-            "contributing/development/development-crds",
-            "contributing/development/developments",
-          ],
+          link: {
+            type: "doc",
+            id: "contributing/development/index",
+          },
+          items: ["contributing/development/crds"],
         },
       ],
     },

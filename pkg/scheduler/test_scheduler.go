@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"os"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -247,6 +249,18 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
+
+		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
+			fetcher := content.NewFetcher(os.TempDir())
+			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
+			t, err := fetcher.CalculateGitContentType(*content.Repository)
+			if err == nil {
+				testCR.Spec.Content.Type_ = t
+				s.logger.Infof("Test %s content type was set to %s", testCR.Name, t)
+			} else {
+				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
+			}
+		}
 	}
 
 	if request.ContentRequest != nil {
@@ -262,6 +276,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
+		request.EnvSecrets = mergeEnvReferences(request.EnvSecrets, test.ExecutionRequest.EnvSecrets)
 
 		var fields = []struct {
 			source      string
@@ -338,6 +354,46 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	case len(executorCR.Spec.ImagePullSecrets) != 0:
 
 		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	}
+
+	configMapVars := make(map[string]testkube.Variable, 0)
+	for _, configMap := range request.EnvConfigMaps {
+		if configMap.Reference == nil || !configMap.MapToVariables {
+			continue
+		}
+
+		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name)
+		if err != nil {
+			return options, errors.Errorf("can't get config map: %v", err)
+		}
+
+		for key := range data {
+			configMapVars[key] = testkube.NewConfigMapVariableReference(key, configMap.Reference.Name, key)
+		}
+	}
+
+	if len(configMapVars) != 0 {
+		request.Variables = mergeVariables(configMapVars, request.Variables)
+	}
+
+	secretVars := make(map[string]testkube.Variable, 0)
+	for _, secret := range request.EnvSecrets {
+		if secret.Reference == nil || !secret.MapToVariables {
+			continue
+		}
+
+		data, err := s.secretClient.Get(secret.Reference.Name)
+		if err != nil {
+			return options, errors.Errorf("can't get secret: %v", err)
+		}
+
+		for key := range data {
+			secretVars[key] = testkube.NewSecretVariableReference(key, secret.Reference.Name, key)
+		}
+	}
+
+	if len(secretVars) != 0 {
+		request.Variables = mergeVariables(secretVars, request.Variables)
 	}
 
 	return client.ExecuteOptions{
@@ -525,4 +581,46 @@ func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) 
 	}
 
 	return test
+}
+
+func mergeEnvReferences(envs1 []testkube.EnvReference, envs2 []testkube.EnvReference) []testkube.EnvReference {
+	envs := make(map[string]testkube.EnvReference, 0)
+	for i := range envs1 {
+		if envs1[i].Reference == nil {
+			continue
+		}
+
+		envs[envs1[i].Reference.Name] = envs1[i]
+	}
+
+	for i := range envs2 {
+		if envs2[i].Reference == nil {
+			continue
+		}
+
+		if value, ok := envs[envs2[i].Reference.Name]; !ok {
+			envs[envs2[i].Reference.Name] = envs2[i]
+		} else {
+			if !value.Mount {
+				value.Mount = envs2[i].Mount
+			}
+
+			if value.MountPath == "" {
+				value.MountPath = envs2[i].MountPath
+			}
+
+			if !value.MapToVariables {
+				value.MapToVariables = envs2[i].MapToVariables
+			}
+
+			envs[envs2[i].Reference.Name] = value
+		}
+	}
+
+	res := make([]testkube.EnvReference, 0)
+	for key := range envs {
+		res = append(res, envs[key])
+	}
+
+	return res
 }

@@ -1,5 +1,7 @@
 # JMeter
 
+**Check out our [blog post](https://testkube.io/blog/jmeter-and-kubernetes-how-to-run-tests-efficiently-with-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with JMeter.**
+
 The Apache JMeter™ application is open source software, a 100% pure Java application designed to load test functional behavior and measure performance. It was originally designed for testing Web Applications but has since expanded to other test functions.
 
 ## What can I do with it?
@@ -132,7 +134,7 @@ $ kubectl testkube run test -f jmeter-test --args '-LsutHost=https://staging.kub
 ### **JMeter Test Results**
 
 A JMeter test will be successful in Testkube when all checks and thresholds are successful. In the case of an error, the test will have `failed` status,
-JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in Testkube UI, 
+JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in Testkube Dashboard, 
 or download it with the `testkube get artifacts EXECUTION_ID` command.
 
 

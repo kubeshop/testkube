@@ -166,6 +166,8 @@ type ExecuteTestOptions struct {
 	ScraperTemplate               string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool
+	EnvConfigMaps                 []testkube.EnvReference
+	EnvSecrets                    []testkube.EnvReference
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

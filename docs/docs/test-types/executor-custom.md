@@ -194,7 +194,7 @@ Testkube will store its files and directories in a directory defined by the `RUN
 - URI - Testkube will get the content of the file defined by the uri.
 - Git related content - Testkube will checkout the repo content in the current directory.
 
-To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../getting-started/installation.md).
+To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../getting-started/index.md).
 
 We have created a simple NodeJS executor.
 
@@ -252,7 +252,7 @@ function error(message) {
 
 The code is ready and working. With the defaults assumed, `RUNNER_DATADIR` will be `/data` and the file will be saved in the `/data/test-content` directory.
 
-As we can see, we are pushing JSON output to `stdin` with the `console.log` function that is based on our [OpenAPI spec - ExecutorOutput](https://kubeshop.github.io/testkube/openapi/).
+As we can see, we are pushing JSON output to `stdin` with the `console.log` function that is based on our [OpenAPI spec - ExecutorOutput](https://kubeshop.github.io/testkube/reference/openapi/).
 
 The two basic output types handled here are:
 
@@ -349,7 +349,7 @@ Our test completed successfully! Create another test with a different status cod
 
 ## **Resources**
 
-- [OpenAPI spec details](https://kubeshop.github.io/testkube/openapi/).
+- [OpenAPI spec details](https://kubeshop.github.io/testkube/reference/openapi/).
 - [Spec in YAML file](https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml).
 
 Go-based resources for input and output objects:

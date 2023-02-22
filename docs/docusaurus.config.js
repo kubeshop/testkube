@@ -9,8 +9,8 @@ const config = {
   title: "Testkube Documentation",
   tagline:
     "Your somewhat opinionated and friendly Kubernetes testing framework",
-  url: "https://docs.testkube.io",
-  baseUrl: "/",
+  url: "https://kubeshop.github.io",
+  baseUrl: "/testkube/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/logo.svg",
@@ -56,7 +56,7 @@ const config = {
         specs: [
           {
             spec: "https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml",
-            route: "/openapi",
+            route: "/reference/openapi",
           },
         ],
         theme: {
@@ -199,27 +199,71 @@ const config = {
           },
           {
             from: "/UI",
-            to: "/using-testkube/UI",
+            to: "/concepts/dashboard",
           },
           {
             from: "/tests-running",
-            to: "/using-testkube/tests/tests-running",
+            to: "/concepts/tests/tests-running",
           },
           {
             from: "/tests-creating",
-            to: "/using-testkube/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
           },
           {
             from: "/tests-variables",
-            to: "/using-testkube/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
           },
           {
             from: "/testsuites-running",
-            to: "/using-testkube/test-suites/testsuites-running",
+            to: "/concepts/test-suites/testsuites-running",
           },
           {
             from: "/testsuites-creating",
-            to: "/using-testkube/test-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/helm-charts",
+            to: "/reference/helm-chart",
+          },
+          {
+            from: "/telemetry",
+            to: "/reference/telemetry",
+          },
+          {
+            from: "/installing",
+            to: "/getting-started",
+          },
+          {
+            from: "/using-testkube/tests/tests-running",
+            to: "/concepts/tests/tests-running",
+          },
+          {
+            from: "/using-testkube/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
+          },
+          {
+            from: "/using-testkube/tests-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/openapi",
+            to: "/reference/openapi",
+          },
+          {
+            from: "/category/tests",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/triggers",
+            to: "/concepts/triggers",
+          },
+          {
+            from: "/using-testkube/UI",
+            to: "/concepts/dashboard",
           },
         ],
       },

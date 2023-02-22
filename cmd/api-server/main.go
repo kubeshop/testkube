@@ -51,7 +51,8 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
-	configmap "github.com/kubeshop/testkube/pkg/config"
+	configapi "github.com/kubeshop/testkube/pkg/config"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -123,6 +124,8 @@ func main() {
 	secretClient, err := secret.NewClient(cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting secret client", err)
 
+	configMapClient, err := configmap.NewClient(cfg.TestkubeNamespace)
+	ui.ExitOnError("Getting config map client", err)
 	// agent
 	var grpcClient cloud.TestKubeCloudAPIClient
 	mode := common.ModeStandalone
@@ -165,7 +168,7 @@ func main() {
 		configName = cfg.APIServerConfig
 	}
 
-	configMapConfig, err := configmap.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
+	configMapConfig, err := configapi.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
@@ -286,6 +289,7 @@ func main() {
 		eventsEmitter,
 		log.DefaultLogger,
 		configMapConfig,
+		configMapClient,
 	)
 
 	api := apiv1.NewTestkubeAPI(
@@ -340,7 +344,7 @@ func main() {
 			}
 			return nil
 		})
-		eventsEmitter.Register(agentHandle)
+		eventsEmitter.Loader.Register(agentHandle)
 	}
 
 	api.InitEvents()

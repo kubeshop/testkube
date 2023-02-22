@@ -24,7 +24,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/log"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
@@ -35,12 +34,8 @@ const (
 	defaultLogLinesCount = 100
 	// GitUsernameSecretName is git username secret name
 	GitUsernameSecretName = "git-username"
-	// GitUsernameEnvVarName is git username environment var name
-	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
-	// GitTokenEnvVarName is git token environment var name
-	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 	pollTimeout        = 24 * time.Hour
 	pollInterval       = 200 * time.Millisecond
 )
@@ -113,7 +108,7 @@ func IsPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace 
 			return true, nil
 		}
 
-		if err = isPodFailed(pod); err != nil {
+		if err = IsPodFailed(pod); err != nil {
 			return true, err
 		}
 
@@ -133,7 +128,7 @@ func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespa
 			return true, nil
 		}
 
-		if err = isPodFailed(pod); err != nil {
+		if err = IsPodFailed(pod); err != nil {
 			return true, err
 		}
 
@@ -141,10 +136,10 @@ func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespa
 	}
 }
 
-// isWaitStateFailed defines possible failed wait state
+// IsWaitStateFailed defines possible failed wait state
 // those states are defined and throwed as errors in Kubernetes runtime
 // https://github.com/kubernetes/kubernetes/blob/127f33f63d118d8d61bebaba2a240c60f71c824a/pkg/kubelet/kuberuntime/kuberuntime_container.go#L59
-func isWaitStateFailed(state string) bool {
+func IsWaitStateFailed(state string) bool {
 	var failedWaitingStates = []string{
 		"CreateContainerConfigError",
 		"PreCreateHookError",
@@ -162,8 +157,9 @@ func isWaitStateFailed(state string) bool {
 	return false
 }
 
+// IsPodFailed checks if pod failed
 // pod can be in wait state with reason which is error for us on the end
-func isPodFailed(pod *corev1.Pod) (err error) {
+func IsPodFailed(pod *corev1.Pod) (err error) {
 	if pod.Status.Phase == corev1.PodFailed {
 		return errors.New(pod.Status.Message)
 	}
@@ -171,7 +167,7 @@ func isPodFailed(pod *corev1.Pod) (err error) {
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
 		waitState := initContainerStatus.State.Waiting
 		// TODO there could be more edge cases but didn't found any constants in go libraries
-		if waitState != nil && isWaitStateFailed(waitState.Reason) {
+		if waitState != nil && IsWaitStateFailed(waitState.Reason) {
 			return errors.New(waitState.Message)
 		}
 	}
@@ -212,7 +208,7 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 	}
 
 	for _, container := range containers {
-		containerLogs, err := getContainerLogs(ctx, c, &pod, container, namespace, &count)
+		containerLogs, err := GetContainerLogs(ctx, c, &pod, container, namespace, &count)
 		if err != nil {
 			if errors.Is(err, ErrPodInitializing) {
 				return logs, nil
@@ -226,13 +222,8 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 	return logs, nil
 }
 
-func getContainerLogs(
-	ctx context.Context,
-	c kubernetes.Interface,
-	pod *corev1.Pod,
-	container, namespace string,
-	tailLines *int64,
-) ([]byte, error) {
+// GetContainerLogs returns container logs
+func GetContainerLogs(ctx context.Context, c kubernetes.Interface, pod *corev1.Pod, container, namespace string, tailLines *int64) ([]byte, error) {
 	podLogOptions := corev1.PodLogOptions{
 		Follow:    false,
 		TailLines: tailLines,
@@ -283,69 +274,6 @@ func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, job
 	return &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusAborted,
 	}, nil
-}
-
-func PrepareEnvs(envs map[string]string, variables map[string]testkube.Variable) []corev1.EnvVar {
-	var env []corev1.EnvVar
-	for k, v := range envs {
-		env = append(env, corev1.EnvVar{
-			Name:  k,
-			Value: v,
-		})
-	}
-	// prepare vars
-	for name, variable := range variables {
-		if variable.IsSecret() {
-			continue
-		}
-
-		env = append(env, corev1.EnvVar{
-			Name:  name,
-			Value: variable.Value,
-		})
-	}
-
-	return env
-}
-
-// PrepareSecretEnvs prepares all the secrets for templating
-func PrepareSecretEnvs(secretEnvs map[string]string, variables map[string]testkube.Variable,
-	usernameSecret, tokenSecret *testkube.SecretRef) []corev1.EnvVar {
-
-	secretEnvVars := secretenv.NewEnvManager().Prepare(secretEnvs, variables)
-
-	// prepare git credentials
-	var data = []struct {
-		envVar    string
-		secretRef *testkube.SecretRef
-	}{
-		{
-			GitUsernameEnvVarName,
-			usernameSecret,
-		},
-		{
-			GitTokenEnvVarName,
-			tokenSecret,
-		},
-	}
-
-	for _, value := range data {
-		if value.secretRef != nil {
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: value.secretRef.Name,
-						},
-						Key: value.secretRef.Key,
-					},
-				},
-			})
-		}
-	}
-
-	return secretEnvVars
 }
 
 // NewTemplatesFromEnv returns base64 encoded templates from nev

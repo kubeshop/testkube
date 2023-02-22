@@ -49,6 +49,10 @@ func NewRunTestCmd() *cobra.Command {
 		preRunScript             string
 		scraperTemplate          string
 		negativeTest             bool
+		mountConfigMaps          map[string]string
+		variableConfigMaps       []string
+		mountSecrets             map[string]string
+		variableSecrets          []string
 	)
 
 	cmd := &cobra.Command{
@@ -75,6 +79,9 @@ func NewRunTestCmd() *cobra.Command {
 
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
+
+			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
+			ui.WarnOnError("getting env config maps and secrets", err)
 
 			jobTemplateContent := ""
 			if jobTemplate != "" {
@@ -113,6 +120,8 @@ func NewRunTestCmd() *cobra.Command {
 				PreRunScriptContent:           preRunScriptContent,
 				ScraperTemplate:               scraperTemplateContent,
 				IsNegativeTestChangedOnRun:    false,
+				EnvConfigMaps:                 envConfigMaps,
+				EnvSecrets:                    envSecrets,
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
@@ -244,6 +253,10 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
+	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
+	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
+	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret", "secret-env is deprecated use secret-variable instead")
 

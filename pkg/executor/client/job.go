@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -125,6 +126,8 @@ type JobOptions struct {
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
 	JobTemplateExtensions string
+	EnvConfigMaps         []testkube.EnvReference
+	EnvSecrets            []testkube.EnvReference
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -452,6 +455,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
+		ImagePullSecrets:      options.ImagePullSecretNames,
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
 		Namespace:             options.Namespace,
@@ -464,6 +468,8 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
+		EnvConfigMaps:         options.Request.EnvConfigMaps,
+		EnvSecrets:            options.Request.EnvSecrets,
 	}
 }
 
@@ -621,8 +627,9 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
-	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
-		options.UsernameSecret, options.TokenSecret)
+	envManager := env.NewManager()
+	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
+		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
@@ -659,23 +666,23 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		return nil, errors.Errorf("decoding job spec error: %v", err)
 	}
 
-	env := append(executor.RunnerEnvVars, secretEnvVars...)
+	envs := append(executor.RunnerEnvVars, secretEnvVars...)
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	env = append(env, executor.PrepareEnvs(options.Envs, options.Variables)...)
+	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 		// override container image if provided
 		if options.ImageOverride != "" {
 			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
@@ -701,7 +708,7 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, exe
 		jobOptions.JobTemplate = jobTemplate
 	}
 	jobOptions.Variables = execution.Variables
-	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	jobOptions.ServiceAccountName = serviceAccountName
+
 	return
 }

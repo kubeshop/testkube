@@ -5,6 +5,8 @@
 <iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
 </iframe> -->
 
+**Check out our [blog post](https://testkube.io/blog/api-testing-in-kubernetes-with-postman) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Postman.**
+
 Testkube is able to run Postman collections inside your Kubernetes cluster so it can be used to test internal or external services.
 
 

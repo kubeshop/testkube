@@ -49,7 +49,11 @@ func MergeVariablesAndParams(variables map[string]testsv3.Variable, params map[s
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 
@@ -144,6 +148,8 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		PreRunScript:          specExecutionRequest.PreRunScript,
 		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
 		NegativeTest:          specExecutionRequest.NegativeTest,
+		EnvConfigMaps:         MapEnvReferences(specExecutionRequest.EnvConfigMaps),
+		EnvSecrets:            MapEnvReferences(specExecutionRequest.EnvSecrets),
 	}
 }
 
@@ -175,4 +181,24 @@ func MapStatusFromSpec(specStatus testsv3.TestStatus) *testkube.TestStatus {
 			EndTime:   specStatus.LatestExecution.EndTime.Time,
 		},
 	}
+}
+
+// MapEnvReferences maps CRD to OpenAPI spec EnvReference
+func MapEnvReferences(envs []testsv3.EnvReference) []testkube.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testkube.EnvReference
+	for _, env := range envs {
+		res = append(res, testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: env.Name,
+			},
+			Mount:          env.Mount,
+			MountPath:      env.MountPath,
+			MapToVariables: env.MapToVariables,
+		})
+	}
+
+	return res
 }
