@@ -435,7 +435,7 @@ spec:
 When you run such a test you will face a memory limit for the scraper pod, when the default scraper job template doesn't have any resource constraints.
 
 ### Mounting ConfigMap and Secret to executor pod
-If you need to mount your config maps and secrets to your executor environment, then you can provide them as additional  
+If you need to mount your ConfigMap and Secret to your executor environment, then you can provide them as additional  
 parameters when you create or run the test using `--mount-configmap` and `--mount-secret` options:
 
 ```sh
