@@ -1,282 +1,315 @@
 # Cypress
+Cypress is an open-source end-to-end testing framework for web applications. Dedicated Cypress executor allow running Cypress tests with Testkube - directly from your Git repository.
 
 <iframe width="100%" height="315" src="https://www.youtube.com/embed/lGCkfIqzGfw" title="YouTube Tutorial: End-to-End Testing in Kubernetes with Cypress and Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 **Check out our [blog post](https://kubeshop.io/blog/end-to-end-tests-of-your-kubernetes-applications-with-cypress) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Cypress.**
 
-Testkube makes running Cypress tests simple. As Cypress is organized in projects, Testkube allows tests to be defined in a Github repository.
 
-To create a new Cypress test, you will need a Git repository with an example Cypress project. Please follow the Cypress documentation for details - <https://docs.cypress.io/guides/dashboard/projects>.
+## Example Cypress project
+If you haven't created the Cypress project yet please follow the Cypress documentation for details: https://docs.cypress.io/guides/dashboard/projects.
 
-## **Creating a New Test**
-
-Let's assume we've created a Cypress project in <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples>,
-which contains a really simple test that checks for the existence of a particular string on a web site.  We'll also check
-if the **env** parameter exists to show how to pass additional parameters into the test.
-
-<https://github.com/kubeshop/testkube-executor-cypress/blob/main/examples/cypress/integration/simple-test.js>
+In this example we will use the following Cypress project: https://github.com/kubeshop/testkube/tree/main/test/cypress/executor-tests/cypress-11
+`smoke.cy.js` contains three `it` steps:
 
 ```js
-describe('The Home Page', () => {
-  it('successfully loads', () => {
-    cy.visit('https://testkube.io') 
-
-    expect(Cypress.env('testparam')).to.equal('testvalue')
-
-    cy.contains('Efficient testing of k8s applications')
+describe('Testkube website', () => {
+  it('Open Testkube website', () => {
+    cy.visit('/')
+  })
+  it(`Validate CYPRESS_CUSTOM_ENV ENV (${Cypress.env('CUSTOM_ENV')})`, () => {
+    expect('CYPRESS_CUSTOM_ENV_value').to.equal(Cypress.env('CUSTOM_ENV')) //CYPRESS_CUSTOM_ENV - "cypress" prefix - auto-loaded from global ENVs
+  })
+  it(`Validate NON_CYPRESS_ENV ENV (${Cypress.env('NON_CYPRESS_ENV')})`, () => {
+    expect('NON_CYPRESS_ENV_value').to.equal(Cypress.env('NON_CYPRESS_ENV')) //NON_CYPRESS_ENV - need to be loaded with --env parameter
   })
 })
 ```
 
-## **Creating the Testkube Test Script**
+The test opens Testkube website, and validates 2 methods of loading ENV variables.
 
-Create the Testkube test script from this example. The parameters passed are **repository**, **branch** and **the path where the project exists**. In the case of a mono repository, the parameters are **name** and **type**.
-We will use the default Cypress executor (Testkube Cypress image).
+## Creating and running Test
 
-```bash
-kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+Cypress projects consist of multiple files, so the Test can only be created using Git Directory as the test source. Git Directory checkouts whole Cypress project directory from your repository.
+
+### Testkube Dashboard
+If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`cypress/project`), and choose Test Source (`Git Directory`). Then, you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to Cypress project directory in your repository (`test/cypress/executor-tests/cypress-11`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+
+![Cypress test - creation dialog](../img/dashboard-create-cypress-test.png)
+
+Now, when the test is created you can run it. But, in this example, the test checks ENV variables, which aren't set yet.
+In order for this test to pass:
+- `CYPRESS_CUSTOM_ENV` ENV need to be set to `CYPRESS_CUSTOM_ENV_value`
+- `NON_CYPRESS_ENV` ENV need to be set to `NON_CYPRESS_ENV_value`
+
+#### Setting ENV variables
+In order to set ENV variables, or arguments you need to open the test you created, and then go to `Settings`, and `Variables & Secrets`.
+
+Cypress auto-loads ENV variables with `CYPRESS_` prefix, which are available in the tests without this prefix. So, if you will set `CYPRESS_CUSTOM_ENV` ENV, it will be available as `CUSTOM_ENV`. So, let's add it. Choose `Add a new variable`, leave the default type (`Basic`), and fill in variable name `CYPRESS_CUSTOM_ENV`, and it's value `CYPRESS_CUSTOM_ENV_value`. Then, click Save to set it.
+
+![Cypress test - setting ENV variable](../img/dashboard-cypress-env.png)
+
+Another way of setting ENVs in Cypress is by `--env` argument. That's something you can also do at `Variables & Secrets` settings - just go to `Arguments` section.
+![Cypress test - setting arguments](../img/dashboard-cypress-arguments.png)
+
+
+### Testkube CLI
+#### Creating a Test
+If you prefer using the CLI instead, you can create the test with `testcube create test`.
+
+You need to set test:
+- `--name` (for example, `cypress-test-2`)
+- `--type` (in this case `cypress/project`)
+- `--test-content-type` (`git-dir`, so the whole test directory will be checked out from the Git repository)
+- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-branch`
+- `--git-path` - path to the Cypress project directory in the repository (in this case `test/cypress/executor-tests/cypress-11`). If it's in the roo path in the repository you can omit it.
+
+
+Additionally, because the test from this example require 2 ENVs to be set we need to set them.
+- `--variable CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value` (global ENV variable that will be set in the execution container)
+- `--executor-args "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value"` (`--execution-args` pass arguments to the executor binary - in this case `--env`)
+
+So, the final command will be:
+
+
+```sh
+testkube create test --name cypress-test-2 --type cypress/project --test-content-type git-dir --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/cypress/executor-tests/cypress-11 --variable CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value --executor-args "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value"
 ```
 
-| If your test files are located in root path of the repository, you can omit the `--git-path` flag.
+You will get the confirmation the test has been created:
+```bash
+Test created testkube / cypress-test-2 🥇
+```
 
-Check that script is created:
+#### Running the Test
+
+The test can be started using `testkube run test` command.
 
 ```bash
-kubectl get tests 
+testkube run test cypress-test-2
 ```
 
 Output:
 
 ```bash
-NAME                  AGE
-kubeshop-cypress      51s
+
+Type:              cypress/project
+Name:              cypress-test-2
+Execution ID:      63f625d01e00af08138c4ea6
+Execution name:    cypress-test-2-1
+Execution number:  1
+Status:            running
+Start time:        2023-02-22 14:25:20.821507561 +0000 UTC
+End time:          0001-01-01 00:00:00 +0000 UTC
+Duration:          
+
+  Variables:    1
+  - CYPRESS_CUSTOM_ENV = CYPRESS_CUSTOM_ENV_value
+
+
+
+Test execution started
+Watch test execution until complete:
+$ kubectl testkube watch execution cypress-test-2-1
+
+
+Use following command to get test execution details:
+$ kubectl testkube get execution cypress-test-2-1
 ```
 
-## **Starting the Test**
+#### **Getting Execution Results**
 
-Start the test:
-
-```bash
-kubectl testkube run test kubeshop-cypress
-```
-
-Output:
+You can then get test result with `testkube get execution` command using execution name, or execution ID.
 
 ```bash
-
-Type          : cypress/project
-Name          : kubeshop-cypress
-Execution ID  : 615d5265b046f8fbd3d955d0
-Execution name: wildly-popular-worm
-
-Test queued for execution
-Use the following command to get test execution details:
-$ kubectl testkube get execution 615d5265b046f8fbd3d955d0
-
-or watch test execution until complete:
-$ kubectl testkube watch execution 615d5265b046f8fbd3d955d0
-```
-
-## **Getting Execution Results**
-
-Let's watch our test execution:
-
-```bash
-kubectl testkube watch execution 615d43d3b046f8fbd3d955ca
+testkube get execution cypress-test-2-1
 ```
 
 Output:
 
 ```bash
-Type          : cypress/project
-Name          : cypress-example
-Execution ID  : 615d43d3b046f8fbd3d955ca
-Execution name: early-vast-turtle
+ID:         63f625d01e00af08138c4ea6
+Name:       cypress-test-2-1
+Number:            1
+Test name:         cypress-test-2
+Type:              cypress/project
+Status:            passed
+Start time:        2023-02-22 14:25:20.821 +0000 UTC
+End time:          2023-02-22 14:25:43.025 +0000 UTC
+Duration:          00:00:22
 
-Watching for changes
-Status: error, Duration: 1m16s
+  Variables:    1
+  - CYPRESS_CUSTOM_ENV = CYPRESS_CUSTOM_ENV_value
+Args:     --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+Repository parameters:
+  Branch:          main
+  Commit:          
+  Path:            test/cypress/executor-tests/cypress-11
+  Working dir:     
+  Certificate:     
 
-Getting results
-Name: early-vast-turtle, Status: error, Duration: 1m16s
-process error: exit status 1
-output:
+running test [63f625d01e00af08138c4ea6]
+🚚 Initializing...
+🌍 Reading environment variables...
+✅ Environment variables read successfully
+RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
+RUNNER_ACCESSKEYID="********"
+RUNNER_SECRETACCESSKEY="********"
+RUNNER_LOCATION=""
+RUNNER_TOKEN=""
+RUNNER_BUCKET="testkube-artifacts"
+RUNNER_SSL=false
+RUNNER_SCRAPPERENABLED="true"
+RUNNER_GITUSERNAME=""
+RUNNER_GITTOKEN=""
+RUNNER_DATADIR="/data"
+📦 Fetching test content from git-dir...
+✅ Test content fetched to path /data/repo/test/cypress/executor-tests/cypress-11
+📂 Fetching uploads from object store testkube-minio-service-testkube:9000...
+📂 Placing files from buckets into /data/uploads/ []
+📂 Getting the contents of bucket folders [test-cypress-test-2]
+
+📂 Setting up access to files in /data
+🔬 Executing in directory /data: 
+ $ chmod 
+✅ Execution succeeded
+✅ Access to files enabled
+✅ Initialization successful
+0xc0020faad0
+🚚 Preparing test runner
+🌍 Reading environment variables...
+✅ Environment variables read successfully
+RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
+RUNNER_ACCESSKEYID="********"
+RUNNER_SECRETACCESSKEY="********"
+RUNNER_LOCATION=""
+RUNNER_TOKEN=""
+RUNNER_BUCKET="testkube-artifacts"
+RUNNER_SSL=false
+RUNNER_SCRAPPERENABLED="true"
+RUNNER_GITUSERNAME=""
+RUNNER_GITTOKEN=""
+RUNNER_DATADIR="/data"
+running test [63f625d01e00af08138c4ea6]
+🚚 Preparing for test run
+📦 Checking test content from git-dir...
+✅ Test content checked
+🔬 Executing in directory /data/repo/test/cypress/executor-tests/cypress-11: 
+ $ npm 
+
+added 165 packages, and audited 166 packages in 4s
+
+
+
+28 packages are looking for funding
+
+  run `npm fund` for details
+
+
+found 0 vulnerabilities
+
+✅ Execution succeeded
+🔬 Executing in directory /data/repo/test/cypress/executor-tests/cypress-11: 
+ $ ./node_modules/cypress/bin/cypress 
+✅ Execution succeeded
+CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value
+🔬 Executing in directory /data/repo/test/cypress/executor-tests/cypress-11: 
+ $ ./node_modules/cypress/bin/cypress run --reporter junit --reporter-options mochaFile=/data/repo/test/cypress/executor-tests/cypress-11/results/junit.xml,toConsole=false --env CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+
+... # Long output skipped
 ====================================================================================================
 
   (Run Starting)
 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    8.3.0                                                                              │
-  │ Browser:    Electron 91 (headless)                                                             │
-  │ Specs:      1 found (simple-test.js)                                                           │
+  │ Cypress:        11.2.0                                                                         │
+  │ Browser:        Electron 106 (headless)                                                        │
+  │ Node Version:   v16.16.0 (/usr/local/bin/node)                                                 │
+  │ Specs:          1 found (smoke.cy.js)                                                          │
+  │ Searched:       cypress/e2e/**/*.cy.{js,jsx,ts,tsx}                                            │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-
-  Running:  simple-test.js                                                                  (1 of 1)
-
-
-  The Home Page
-    1) successfully loads
-
-
-  0 passing (2s)
-  1 failing
-
-  1) The Home Page
-       successfully loads:
-     AssertionError: expected undefined to equal 'testvalue'
-      at Context.eval (http://localhost:34845/__cypress/tests?p=cypress/integration/simple-test.js:102:41)
-
-
-
+                                                                                                    
+  Running:  smoke.cy.js                                                                     (1 of 1)
+[62:0222/142530.135873:ERROR:zygote_host_impl_linux.cc(263)] Failed to adjust OOM score of renderer with pid 424: Permission denied (13)
 
   (Results)
 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        1                                                                                │
-  │ Passing:      0                                                                                │
-  │ Failing:      1                                                                                │
-  │ Pending:      0                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     2 seconds                                                                        │
-  │ Spec Ran:     simple-test.js                                                                   │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /tmp/testkube-scripts1127226423/repo/examples/cypress/screenshots/simple-test.js/     (1280x720)
-     The Home Page -- successfully loads (failed).png
-
-
-  (Video)
-
-  -  Started processing:  Compressing to 32 CRF
-    Compression progress:  35%
-  -  Finished processing: /tmp/testkube-scripts1127226423/repo/examples/cypress/videos   (19 seconds)
-                          /simple-test.js.mp4
-
-
-====================================================================================================
-
-  (Run Finished)
-
-
-       Spec                                              Tests  Passing  Failing  Pending  Skipped
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  simple-test.js                           00:02        1        -        1        -        - │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✖  1 of 1 failed (100%)                     00:02        1        -        1        -        -
-
-
-
-Test execution completed in 1m17s
-
-```
-
-## **Adding Parameters**
-
-The test failed because of `AssertionError: expected undefined to equal 'testvalue'`.
-
-The test parameter was not passed into the test script. In this test, the parameter will have the name `testparam` and its value will be `testvalue`.   
-
-Add the `-f` flag to follow the execution and watch for changes. Currently, we're only looking for test completion, but, in the future, we'll pipe test output in real time.
-
-```bash
-kubectl testkube run test kubeshop-cypress -v testparam=testvalue -f
-```
-
-Tip: If you want to pass secret variables pass `-s somesecretvar=secretvalue` (or `--secret-variable`)
-Testkube will convert value of this variable into Kubernetes `Secret` rescource.
-
-Output:
-
-```bash
-
-Type          : cypress/project
-Name          : kubeshop-cypress
-Execution ID  : 615d5372b046f8fbd3d955d2
-Execution name: nominally-able-glider
-
-Test queued for execution
-Use the following command to get test execution details:
-$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
-
-or watch test execution until complete:
-$ kubectl testkube watch execution 615d5372b046f8fbd3d955d2
-
-
-Watching for changes
-Status: queued, Duration: 0s
-Status: pending, Duration: 383.064ms
-....
-Status: pending, Duration: 1m45.405939s
-Status: success, Duration: 1m45.405939s
-
-Getting results
-Name: nominally-able-glider, Status: success, Duration: 2562047h47m16.854775807s
-
-====================================================================================================
-
-  (Run Starting)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    8.5.0                                                                              │
-  │ Browser:    Electron 91 (headless)                                                             │
-  │ Specs:      1 found (simple-test.js)                                                           │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-
-  Running:  simple-test.js                                                                  (1 of 1)
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        1                                                                                │
-  │ Passing:      1                                                                                │
+  │ Tests:        3                                                                                │
+  │ Passing:      3                                                                                │
   │ Failing:      0                                                                                │
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     19 seconds                                                                       │
-  │ Spec Ran:     simple-test.js                                                                   │
+  │ Video:        false                                                                            │
+  │ Duration:     7 seconds                                                                        │
+  │ Spec Ran:     smoke.cy.js                                                                      │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-
-  (Video)
-
-  -  Started processing:  Compressing to 32 CRF
-    Compression progress:  39%
-    Compression progress:  81%
-  -  Finished processing: /tmp/testkube-scripts531364188/repo/examples/cypress/videos/   (30 seconds)
-                          simple-test.js.mp4
-
-    Compression progress:  100%
 
 ====================================================================================================
 
   (Run Finished)
 
 
-       Spec                                              Tests  Passing  Failing  Pending  Skipped
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  simple-test.js                           00:19        1        1        -        -        - │
+  │ ✔  smoke.cy.js                              00:07        3        3        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        00:19        1        1        -        -        -
+    ✔  All specs passed!                        00:07        3        3        -        -        -  
 
-Use the following command to get test execution details:
-$ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 
-Test execution completed in 1m45.405939s
+
+Test execution completed with success in 22.204s 🥇
+
 ```
 
-## Using Different Cypress Images 
+### Custom Resource Definitions (CRDs)
+Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
+
+You can also get a definition while using `testkube create test` command by adding `--crd-only`.
+In that case, the test won't be create, but the definition will be displayed.
+
+```sh
+testkube create test --name cypress-test-3 --type cypress/project --test-content-type git-dir --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/cypress/executor-tests/cypress-11 --variable CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value --executor-args "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value" --crd-only
+```
+
+Output:
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-test-3
+  namespace: testkube
+spec:
+  type: cypress/project
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/cypress/executor-tests/cypress-11
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: "CYPRESS_CUSTOM_ENV_value"
+        type: basic
+    args:
+      - "--env"
+      - "NON_CYPRESS_ENV=NON_CYPRESS_ENV_value"
+```
+
+
+When the Test CRD is saved to the yaml file it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
+
+
+## Using Non-default Cypress Images 
 
 In the Cypress world, there are instances when you want to have control over your Runtime environment. Testkube can easily handle that for you! 
 We're building several Cypress images to handle features that different versions of Cypress can support.
@@ -298,7 +331,7 @@ spec:
   - cypress:v10/test # <-- just create different test type with naming convention "framework:version/type"
 ```
 
-> Tip: Look for recent executor versions here https://hub.docker.com/repository/registry-1.docker.io/kubeshop/testkube-cypress-executor/tags?page=1&ordering=last_updated.
+> Tip: Look for recent executor versions here: https://hub.docker.com/r/kubeshop/testkube-cypress-executor/tags.
 
 
 And add it to your cluster: 
@@ -309,13 +342,9 @@ kubectl apply -f cypress-v10-executor.yaml
 Now, create a new test with a type which our new executor can handle e.g.: `cypress:v10/test`
 
 ```bash 
- # create test
- kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-path examples --type cypress:v10/test --name cypress-v10-example-test --git-branch main
+# create test
+testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-path examples --type cypress:v10/test --name cypress-v10-example-test --git-branch main
 
 # and run it
-kubectl testkube run test cypress-v10-example-test -f
+testkube run test cypress-v10-example-test -f
 ```
-
-## **Summary**
-
-Our first test completed successfully! As we've seen above, it's really easy to run Cypress tests with Testkube!
