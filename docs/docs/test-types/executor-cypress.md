@@ -55,7 +55,7 @@ Another way of setting ENVs in Cypress is by `--env` argument. That's something 
 
 ### Testkube CLI
 #### Creating a Test
-If you prefer using the CLI instead, you can create the test with `testcube create test`.
+If you prefer using the CLI instead, you can create the test with `testkube create test`.
 
 You need to set test:
 - `--name` (for example, `cypress-test-2`)

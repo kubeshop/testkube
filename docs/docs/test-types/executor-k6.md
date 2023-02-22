@@ -2,59 +2,157 @@
 
 **Check out our [blog post](https://kubeshop.io/blog/load-testing-in-kubernetes-with-k6-and-testkube) to follow tutorial steps to harness the power of k6 load testing in Kubernetes with Testkube's CLI and API.**
 
-[K6](https://k6.io/docs/) Grafana k6 is an open-source load testing tool that makes performance testing easy and productive for engineering teams. K6 is free, developer-centric and extensible.
+[K6](https://k6.io/docs/) is an open-source load testing tool that makes performance testing easy and productive for engineering teams. K6 is free, developer-centric and extensible.
 
 Using k6, you can test the reliability and performance of your systems and catch performance regressions and problems earlier. K6 will help you to build resilient and performant applications that scale.
 
 K6 is developed by Grafana Labs and the community.
 
-## **Running a K6 Test**
+Testkube's k6 executor provides a convenient way of running k6 tests.
 
-K6 is integral part of Testkube. The Testkube k6 executor is installed by default during the Testkube installation. To run a k6 test in Testkube you need to create a Test. 
+## Example k6 test
+In this example we will use the following k6 test:
+https://github.com/kubeshop/testkube/blob/main/test/k6/executor-tests/k6-smoke-test-without-envs.js
 
-### **Using Files as Input**
-
-Let's save our k6 test in file e.g. `test.js`. 
-
-```js 
+```js
 import http from 'k6/http';
-import { sleep } from 'k6';
 
 export default function () {
-  http.get('https://kubeshop.github.io/testkube/');
-  sleep(1);
+  http.get('https://testkube.kubeshop.io/');
 }
 ```
 
-Testkube and the k6 executor accept a test file as an input.
+### Test Source
+K6 tests may vary significantly. The test may be just a single file, but may also consist of multiple files (modules, dependencies, or test data files). That's why all of the available Test Sources may be used with K6:
+- Git file
+- Git directory
+- File
+- String
 
-```bash
-kubectl testkube create test --file test.js --name k6-test
+## Creating and running Test
+### Testkube Dashboard
+#### File
+TODO: dashboard-k6-create-test-file.png
+#### Git file
+TODO: dashboard-k6-create-test-git-file.png
+#### String
+
+### Testkube CLI
+If you prefer using the CLI, you can create the test with `testkube create test`.
+
+You need to set:
+- `--name` (for example, `k6-test`)
+- `--type` (in this case `k6/script`)
+
+And, then choose Test Content type based on Test Source you want to use:
+
+#### File
+In case of File test source:
+- `--test-content-type` (`file-uri`)
+- `--file` (path to your k6 script - in this case `test/k6/executor-tests/k6-smoke-test-without-envs.js`)
+
+
+```sh
+testkube create test --name k6-test --type k6/script --test-content-type file-uri --file test/k6/executor-tests/k6-smoke-test-without-envs.js
 ```
-You don't need to pass a type here, Testkube will autodetect it. 
-
-
-To run the test, pass previously created test name: 
-
-```bash 
-kubectl testkube run test -f k6-test
+Output:
+```sh
+Test created testkube / k6-test 🥇
 ```
 
-You can also create a Test based on Git repository:
+#### Git file
+- `--test-content-type` (`git-file`, so specific file will be checked out from the Git repository)
+- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-branch`
+- `--git-path` - path to the k6 script in the repository (in this case `test/k6/executor-tests/k6-smoke-test-without-envs.js`)
 
-```bash
-# create k6-test-script.js from this Git repository
-kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-k6.git --git-branch main --git-path examples --type "k6/script" --name k6-test-script-git
+```sh
+testkube create test --name k6-test --type k6/script --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/k6/executor-tests/k6-smoke-test-without-envs.js
+```
+Output:
+```sh
+Test created testkube / k6-test 🥇
 ```
 
-Testkube will clone the repository and create a Testkube Test Custom Resource in your cluster. 
+#### Git directory
+- `--test-content-type` (`git-directory`, so the whole directory will be checked out from the Git repository)
+- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-branch`
+- `--git-path` (path to the directory that should be checked out)
+- `--executor-args` (whole directory will be checked out - specific test file must be set as k6 argument - in this example `test/k6/executor-tests/k6-smoke-test-without-envs.js`)
+
+```sh
+testkube create test --name k6-test --type k6/script --test-content-type git-dir --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/k6/executor-tests --executor-args test/k6/executor-tests/k6-smoke-test-without-envs.js
+```
+Output:
+```sh
+Test created testkube / k6-test 🥇
+```
+
+### Custom Resource Definitions (CRDs)
+#### Git file
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-test
+  namespace: testkube
+spec:
+  type: k6/script
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+```
+
+#### Git directory
+Checking out whole git directory (in the following example `test/k6/executor-tests`), and running specific test file (`test/k6/executor-tests/k6-smoke-test-without-envs.js`):
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-test
+  namespace: testkube
+spec:
+  type: k6/script
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/executor-tests
+  executionRequest:
+    args:
+      - test/k6/executor-tests/k6-smoke-test-without-envs.js
+```
+
+
+#### String
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-test
+  namespace: testkube
+spec:
+  type: k6/script
+  content:
+    type: string
+    data: "import http from 'k6/http';\n\nexport default function () {\n  http.get('https://testkube.kubeshop.io/');\n}"
+```
+
 
 ### **Using Additional K6 Arguments in Your Tests**
+Additional agruments can be passed to the `k6` binary both on test creation (`--executor-args`), and during test execution (`--args`).
 
-You can also pass additional arguments to `k6` binary thanks to `--args` flag:
 
 ```bash
-$ kubectl testkube run test -f k6-test --args '--vus 100 --no-connection-reuse'
+testkube run test -k6-test --args '--vus 100 --no-connection-reuse'
 ```
 
 ### **K6 Test Results**
