@@ -6,7 +6,7 @@ Testkube includes `postman/collection`, `cypress/project`, `curl/test`, `k6/scri
 
 As Testkube was designed with flexibility in mind, you can add your own executors to handle additional test types.
 
-## **Test Source**
+## Test Source
 
 Tests can be currently created from multiple sources:
 
@@ -15,11 +15,13 @@ Tests can be currently created from multiple sources:
 3. Git directory - we can pass `repository`, `path` and `branch` where our tests are stored. This is used in Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
 4. Git file - similarly to Git directories, we can use files located on Git by specifying `git-uri` and `branch`.
 
-Note: not all executors support all input types. Please refer to the individual executors' documentation to see which options are available.
+:::note
+Not all executors support all input types. Please refer to the individual executors' documentation to see which options are available.
+:::
 
-## **Create a Test**
+## Create a Test
 
-### **Create Your First Test from a File (Postman Collection Test)**
+### Create Your First Test from a File (Postman Collection Test)
 
 To create your first Postman collection in Testkube, export your collection into a file.
 
@@ -37,59 +39,51 @@ Save in a convenient location. In this example, we are using `~/Downloads/TODO.p
 
 Create a Testkube test using the exported JSON and give it a unique and fitting name. For simplicity's sake we used `test` in this example.
 
-```bash
-kubectl testkube create test --file ~/Downloads/TODO.postman_collection.json --name test
+```sh
+testkube create test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Detected test type postman/collection
 Test created test 🥇
 ```
 
 Test created! Now we have a reusable test.
 
-### **Updating Tests**
+### Updating Tests
 
 If you need to update your test after change in Postman, re-export it to a file and run the update command:
 
-```bash
-kubectl testkube update test --file ~/Downloads/TODO.postman_collection.json --name test
+```sh
+testkube update test --file ~/Downloads/TODO.postman_collection.json --name test
 ```
 
 To check if the test was created correctly, look at the `Test Custom Resource` in your Kubernetes cluster:
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Detected test test type postman/collection
 Test updated test 🥇
 ```
 
 Testkube will override all test settings and content with the `update` method.
 
-### **Checking Test Content**
+### Checking Test Content
 
 Let's see what has been created:
 
-```bash
-kubectl get tests -ntestkube
+```sh
+kubectl get tests -n testkube
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 NAME   AGE
 test   32s
 ```
 
 Get the details of a test:
 
-```bash
-kubectl get tests -ntestkube test-example -oyaml
-```bash
-$ kubectl testkube get test test
+```sh
+kubectl get tests -n testkube test-example -oyaml
 
 name: test
 type_: postman/collection
@@ -274,31 +268,29 @@ We can see that the test resource was created with Postman collection JSON conte
 
 You can also check tests with the standard `kubectl` command which will list the tests Custom Resource.
 
-```bash
+```sh
 kubectl get tests -n testkube test -oyaml
 ```
 
-### **Create a Test from Git**
+### Create a Test from Git
 
-Some executors can handle files and some can handle only git resources. You'll need to follow the particular executor **readme** file to be aware which test types the executor handles.
+Some executors can handle files and some can handle only git resources. You'll need to follow the particular executor **README** file to be aware which test types the executor handles.
 
 Let's assume that a Cypress project is created in a git repository - <https://github.com/kubeshop/testkube-executor-cypress/tree/main/examples> - where **examples** is a test directory in the `https://github.com/kubeshop/testkube-executor-cypress.git` repository.
 
 Now we can create our Cypress-based test as shown below. In git based tests, we need to pass the test type.
 
-```bash
-kubectl testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
+```sh
+testkube create test --uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Test created kubeshop-cypress 🥇
 ```
 
 Let's check how the test created by Testkube is defined in the cluster:
 
-```bash
+```sh
 $ kubectl get tests -n testkube kubeshop-cypress -o yaml
 apiVersion: tests.testkube.io/v1
 kind: Test
@@ -319,43 +311,43 @@ spec:
 ```
 
 As we can see, this test has `spec.repository` with git repository data. This data can now be used by the executor to download test data.
-#### **Providing Certificates**
+
+#### Providing Certificates
 
 If the git repository is using a self-signed certificate, you can provide the certificate using Kubernetes secrets and passing the secret name to the `--git-certificate-secret` flag.
 
 In order to create a secret, use the following command:
 
-```bash
+```sh
 kubectl create secret generic git-cert --from-file=git-cert.crt --from-file=git-cert.key
 ```
+
 Then you can pass the secret name to the `--git-certificate-secret` flag and, during the test execution, the certificate will be mounted to the test container and added to the trusted authorities.
 
-### **Mapping local files**
+### Mapping local files
 
 Local files can be added into a Testkube Test. This can be set on Test level passing the file in the format `source_path:destination_path` using the flag `--copy-files`. The file will be copied upon execution from the machine running `kubectl`. The files will be then available in the `/data/uploads` folder inside the test container.
 
-```bash
-kubectl testkube create test --name maven-example-file-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-settings --type maven/test  --git-branch main --copy-files "/Users/local_user/local_maven_settings.xml:settings.xml"
+```sh
+testkube create test --name maven-example-file-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven-settings --type maven/test  --git-branch main --copy-files "/Users/local_user/local_maven_settings.xml:settings.xml"
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 Test created maven-example-file-test 🥇
 ```
 
 To run this test, refer to `settings.xml` from the `/data/uploads` folder:
 
-```bash
+```sh
 testkube run test maven-example-file-test --args "--settings" --args "/data/uploads/settings.xml" -v "TESTKUBE_MAVEN=true" --args "-e" --args "-X" --env "DEBUG=\"true\""
 ```
 
-### **Changing the default job template used for test execution**
+### Changing the default job template used for test execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
 
-```bash
-kubectl testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
+```sh
+testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
 ```
 
 Where `job.yaml` file contains adjusted job template parts for merging with default job template:
@@ -367,23 +359,24 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ .Name }}
-        image: {{ .Image }}
-        imagePullPolicy: Always
-        command:
-          - "/bin/runner"
-          - '{{ .Jsn }}'
-        volumeMounts:
-        - name: data-volume
-          mountPath: /data
-        resources:
-          limits:
-            memory: 128Mi
+        - name: { { .Name } }
+          image: { { .Image } }
+          imagePullPolicy: Always
+          command:
+            - "/bin/runner"
+            - "{{ .Jsn }}"
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          resources:
+            limits:
+              memory: 128Mi
 ```
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
-### **Executing pre run script**
+### Executing pre run script
+
 If you need to provide additional configuration for your executor environment, you can submit prerun script to be executed before test started. For example, we have such a simple shell script stored in `script.sh` file:
 
 ```sh
@@ -395,16 +388,16 @@ echo "$SSL_CERT" > /data/ssl.crt
 
 Then just provide it when you create or run the test using `--prerun-script` parameter:
 
-```bash
-kubectl testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script script.sh --secret-env SSL_CERT=your-k8s-secret
+```sh
+testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
-### **Changing the default scraper job template used for container executor tests**
+### Changing the default scraper job template used for container executor tests
 
 When you use container executor tests generating artifacts for scraping, then we launch 2 sequential kubernetes jobs, one is for test execution and other one is for scraping test results. Sometimes you need to adjust an existing scraper job template of a standard Testkube scraper with a few parameters. In this case you can use additional parameter `--scraper-template` when you create or run the test:
 
-```bash
-kubectl testkube create test --name scraper-test --type scraper/test --artifact-storage-class-name standard --artifact-volume-mount-path /share --artifact-dir test/files --scraper-template scraper.yaml
+```sh
+testkube create test --name scraper-test --type scraper/test --artifact-storage-class-name standard --artifact-volume-mount-path /share --artifact-dir test/files --scraper-template scraper.yaml
 ```
 
 Where `scraper.yaml` file contains adjusted scraper job template parts for merging with default scraper job template:
@@ -435,6 +428,7 @@ spec:
 When you run such a test you will face a memory limit for the scraper pod, when the default scraper job template doesn't have any resource constraints.
 
 ### Mounting ConfigMap and Secret to executor pod
+
 If you need to mount your ConfigMap and Secret to your executor environment, then you can provide them as additional  
 parameters when you create or run the test using `--mount-configmap` and `--mount-secret` options:
 
@@ -443,13 +437,13 @@ testkube create test --file test/postman/LocalHealth.postman_collection.json --n
 ```
 
 ### Automatically add all ConfigMap and Secret keys to Test Variables
-Sometimes you may want to automatcially add all keys from your ConfigMap and Secret to your test. In this you need to provide them as additional  
-parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All ConfigMap keys will be added with key as variable name to Basic variables and all DSecret keys will be added with key as variable name to Secret variables:
+Sometimes you may want to automatcially add all keys from your config map and secret to your test. In this you need to provide them as additional
+parameters when you create or run the test using `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All config map keys will be added with key as varibale name to Basic variables and all secret keys will be added with key as varibale name to Secret variables:
 
 ```sh
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name var-test --type postman/collection --variable-configmap your_configmap --variable-secret your_secret
 ```
 
-## **Summary**
+## Summary
 
 Tests are the main smallest abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
