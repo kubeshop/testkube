@@ -130,7 +130,16 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 
 // FetchGit returns path to git based file or dir saved in local temp directory
 func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
-	return "", nil
+	contentType, err := f.CalculateGitContentType(*repo)
+	if err != nil {
+		return "", err
+	}
+
+	if contentType == string(testkube.TestContentTypeGitDir) {
+		return f.FetchGitDir(repo)
+	}
+
+	return f.FetchGitFile(repo)
 }
 
 // gitUri merge creds with git uri
