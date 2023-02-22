@@ -48,7 +48,7 @@ testkube create test [flags]
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --source string                              source name - will be used together with content parameters
-      --test-content-type string                   content type of test one of string|file-uri|git-file|git-dir
+      --test-content-type string                   content type of test one of string|file-uri|git
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.
   -t, --type string                                test type (defaults to postman/collection)
       --uri string                                 URI of resource - will be loaded by http GET

@@ -100,9 +100,9 @@ spec:
   content:
     repository:
       branch: main
-      type: git-dir
+      type: git
       uri: https://github.com/kubeshop/testkube-executor-init
-    type: git-dir
+    type: git
 ```
 
 Downloads into `/data/repo` directory

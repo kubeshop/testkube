@@ -556,7 +556,7 @@ func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) 
 	}
 
 	switch testkube.TestContentType(test.Content.Type_) {
-	case testkube.TestContentTypeGitFile, testkube.TestContentTypeGitDir:
+	case testkube.TestContentTypeGitFile, testkube.TestContentTypeGitDir, testkube.TestContentTypeGit:
 		if test.Content.Repository == nil {
 			return test
 		}

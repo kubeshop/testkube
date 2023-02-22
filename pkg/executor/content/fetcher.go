@@ -52,6 +52,8 @@ func (f Fetcher) Fetch(content *testkube.TestContent) (path string, err error) {
 		return f.FetchGitFile(content.Repository)
 	case testkube.TestContentTypeGitDir:
 		return f.FetchGitDir(content.Repository)
+	case testkube.TestContentTypeGit:
+		return f.FetchGit(content.Repository)
 	case testkube.TestContentTypeEmpty:
 		output.PrintLog(fmt.Sprintf("%s Empty content type", ui.IconCross))
 		return path, nil
@@ -124,6 +126,11 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 	path = filepath.Join(repoPath, repo.Path)
 	output.PrintLog(fmt.Sprintf("%s Test content fetched to path %s", ui.IconCheckMark, path))
 	return path, nil
+}
+
+// FetchGit returns path to git based file or dir saved in local temp directory
+func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
+	return "", nil
 }
 
 // gitUri merge creds with git uri
