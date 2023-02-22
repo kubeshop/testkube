@@ -1,3 +1,6 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 # Cypress
 Cypress is an open-source end-to-end testing framework for web applications. Dedicated Cypress executor allow running Cypress tests with Testkube - directly from your Git repository.
 
@@ -32,7 +35,9 @@ The test opens Testkube website, and validates 2 methods of loading ENV variable
 
 Cypress projects consist of multiple files, so the Test can only be created using Git Directory as the test source. Git Directory checkouts whole Cypress project directory from your repository.
 
-### Testkube Dashboard
+<Tabs groupId="dashboard-cli">
+<TabItem value="dash" label="Dashboard">
+
 If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`cypress/project`), and choose Test Source (`Git Directory`). Then, you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to Cypress project directory in your repository (`test/cypress/executor-tests/cypress-11`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
 
 ![Cypress test - creation dialog](../img/dashboard-create-cypress-test.png)
@@ -53,7 +58,8 @@ Another way of setting ENVs in Cypress is by `--env` argument. That's something 
 ![Cypress test - setting arguments](../img/dashboard-cypress-arguments.png)
 
 
-### Testkube CLI
+</TabItem>
+<TabItem value="cli" label="CLI">
 #### Creating a Test
 If you prefer using the CLI instead, you can create the test with `testkube create test`.
 
@@ -307,7 +313,8 @@ spec:
 
 
 When the Test CRD is saved to the yaml file it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
-
+</TabItem>
+</Tabs>
 
 ## Using Non-default Cypress Images 
 
