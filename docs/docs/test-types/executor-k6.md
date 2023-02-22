@@ -31,11 +31,23 @@ K6 tests may vary significantly. The test may be just a single file, but may als
 
 ## Creating and running Test
 ### Testkube Dashboard
+If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`k6 script`), and then choose Test Source:
+
 #### File
-TODO: dashboard-k6-create-test-file.png
+In case of File source the test file is uploaded directly.
+
+![K6 test - creation dialog - file](../img/dashboard-k6-create-test-file.png)
+
 #### Git file
-TODO: dashboard-k6-create-test-git-file.png
+In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to k6 script in your repository (`est/k6/executor-tests/k6-smoke-test-without-envs.js`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+
+![K6 test - creation dialog - git file](../img/dashboard-k6-create-test-git-file.png)
+
 #### String
+
+For String source the test script is added directly.
+
+![K6 test - creation dialog - string](../img/dashboard-k6-create-test-string.png)
 
 ### Testkube CLI
 If you prefer using the CLI, you can create the test with `testkube create test`.
@@ -158,5 +170,3 @@ testkube run test -k6-test --args '--vus 100 --no-connection-reuse'
 ### **K6 Test Results**
 
 A k6 test will be successful in Testkube when all checks and thresholds are successful. In the case of an error, the test will have `failed` status, even if there is no failure in the summary report in the test logs. For details check [this k6 issue](https://github.com/grafana/k6/issues/1680).
-
-
