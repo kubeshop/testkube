@@ -31,11 +31,11 @@ Additionally, the Definition tab allows you to check the Executor CRD:
 
 Now, the container executor is created, and configured - it can be used for running tests.
 
-## Testkube CLI
+### Testkube CLI
 Custom Container Executor can also be created with Testkube CLI using `testkube create executor` command:
 
 Let's check available configuration options first:
-```
+```sh
 $ testkube create executor --help
 Create new Executor Custom Resource
 
@@ -80,7 +80,7 @@ Global Flags:
 - `--command` (for example, `curl`)
 
 Which result in:
-```
+```sh
 testkube create executor --name curl-container-executor --executor-type container --image curlimages/curl:7.85.0 --types curl-container/test --command curl
 ```
 
