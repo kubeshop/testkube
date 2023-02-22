@@ -220,7 +220,7 @@ func (c *Client) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
 
 // downloadFile downloads file from bucket
 func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object, error) {
-	c.Log.Infow("downloadFile", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
+	c.Log.Debugw("downloadFile", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
 	}
@@ -275,7 +275,7 @@ func (c *Client) DownloadFile(bucketFolder, file string) (*minio.Object, error) 
 
 // DownloadFileFromBucket downloads file from given bucket
 func (c *Client) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
-	c.Log.Infow("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
+	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	return c.downloadFile(bucket, bucketFolder, file)
 }
 
