@@ -14,7 +14,7 @@ See the [UI Results Endpoint section](#ui-results-endpoint) below to find the en
 
 Alternatively, the Testkube Dashboard can be opened on your local machine using command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../reference/cli/testkube_dashboard.md)).
 
-## **Explore the Testkube Dashboard**
+## Explore the Testkube Dashboard
 
 The Testkube Dashboard displays the current status of Tests and Test Suites executed in your environment.
 
@@ -44,7 +44,7 @@ The **Settings** tab contains 3 types of information about the Test or Test Suit
 
 ![Setting](../img/settings-1.6.png)
 
-### **General Settings**
+### General Settings
 
 Clicking the **General** box under the **Settings** tab displays the **Test name & description** and **Labels** for the Test or Test Suite:
 
@@ -54,13 +54,13 @@ It is also the place to delete a Test or Test Suite:
 
 ![Settings General Delete](../img/settings-general-delete-1.6.png)
 
-### **Variables & Secrets**
+### Variables & Secrets
 
 ![Variable Tab](../img/variable-tab-1.6.png)
 
 Visit [Using Tests Variables](./tests/tests-variables.md) for a description of adding Variables and Secrets.
 
-### **Definition**
+### Definition
 
 Clicking the **Definition** box under the **Settings** tab allows the validation and export the configuration for the Test or Test Suite:
 

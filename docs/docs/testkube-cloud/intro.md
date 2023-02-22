@@ -8,7 +8,7 @@ of environments.
 Testkube Cloud is in Alpha phase - so feel free to give us feedback! 
 
 
-# Testkube Cloud Agent - Installation manual
+## Testkube Cloud Agent - Installation manual
 
 Testkube Cloud is able to connect to Testkube Agents. Testkube Agent is Testkube engine for managing test runs into your cluster
 it's also responsible for getting insights into Testkube resources stored into cluster.

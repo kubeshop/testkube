@@ -77,8 +77,11 @@ spec:
 
 Puts data into `/data/test-content` file:
 
-```bash
-$ cat /data/test-content
+```sh
+cat /data/test-content
+```
+
+```json title="Expected output:"
 {
   "project": "testkube",
   "is": "awesome"
@@ -104,7 +107,7 @@ spec:
 
 Downloads into `/data/repo` directory
 
-```bash
+```sh
 $ ls /data/repO
 CODE_OF_CONDUCT.md  CONTRIBUTING.md  LICENSE  Makefile  README.md  build  cmd  go.mod  go.sum  pkg
 ```
@@ -154,19 +157,17 @@ spec:
 
 Run your test using CLI command:
 
-```bash
-kubectl testkube run test cli-container
+```sh
+testkube run test cli-container
 ```
 
 Then get available artifacts for your test execution id:
 
-```bash
-kubectl testkube get artifact 638a08b94ff1d2c694aeebf2
+```sh
+testkube get artifact 638a08b94ff1d2c694aeebf2
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
   NAME       | SIZE (KB)  
 -------------+------------
   result.txt |        10  

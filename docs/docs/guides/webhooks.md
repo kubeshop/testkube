@@ -4,7 +4,7 @@ Webhooks allow you to build or set up integrations and send HTTP POST payloads (
 
 To set them up when using Testkube, you'll need to create your webhook as shown in the following format example and `kubectl apply` it:
 
-```yml
+```yaml
 apiVersion: executor.testkube.io/v1
 kind: Webhook
 metadata:

@@ -27,13 +27,13 @@ helm install --namespace namespace_name my-testkube testkube/testkube
 
 To uninstall the `testkube` chart if it was installed into default namespace:
 
-```bash
+```sh
 helm delete my-testkube testkube/testkube
 ```
 
 And from a namespace other than `testkube`:
 
-```bash
+```sh
 helm delete --namespace namespace_name my-testkube testkube/testkube
 ```
 :::

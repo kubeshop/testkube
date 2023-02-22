@@ -4,8 +4,11 @@ In Testkube, Tests, Test Suites, Executors and Webhooks are defined using [Custo
 
 You can always check the list of all CRDs using `kubectl` configured to point to your Kubernetes cluster with Testkube installed:
 
-```bash
+```sh
 $ kubectl get crds
+```
+
+```sh title="Expected output:"
 NAME                                  CREATED AT
 certificaterequests.cert-manager.io   2022-04-01T10:53:54Z
 certificates.cert-manager.io          2022-04-01T10:53:54Z
@@ -22,10 +25,13 @@ webhooks.executor.testkube.io         2022-04-13T11:44:22Z
 
 To check details on one of the CRDs, use `describe`:
 
-```bash
+```sh
 $ kubectl describe crd tests.tests.testkube.io
+```
+
+```sh title="Expected output:"
 Name:         tests.tests.testkube.io
-Namespace:    
+Namespace:
 Labels:       app.kubernetes.io/managed-by=Helm
 Annotations:  controller-gen.kubebuilder.io/version: v0.4.1
               meta.helm.sh/release-name: testkube
@@ -37,14 +43,17 @@ Kind:         CustomResourceDefinition
 
 Below, you will find short descriptions and example declarations of the custom resources defined by Testkube.
 
-## **Tests**
+## Tests
 
 Testkube Tests can be defined as a single executable unit of tests. Depending on the test type, this can mean one or multiple test files.
 
 To get all the test types available in your cluster, check the executors:
 
-```bash
-$ kubectl testkube get executors -o yaml | grep -A1 types
+```sh
+testkube get executors -o yaml | grep -A1 types
+```
+
+```sh title="Expected output:"
     types:
     - postman/collection
 --
@@ -66,14 +75,14 @@ $ kubectl testkube get executors -o yaml | grep -A1 types
 
 When creating a Testkube Test, there are multiple supported input types:
 
-* String
-* Git directory
-* Git file
-* File URI
+- String
+- Git directory
+- Git file
+- File URI
 
 Variables can be configured using the `variables` field as shown below.
 
-```yml
+```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
@@ -99,11 +108,11 @@ spec:
             name: vartest4-testvars
 ```
 
-## **Test Suites**
+## Test Suites
 
 Testkube Test Suites are collections of Testkube Tests of the same or different types.
 
-```yml
+```yaml
 apiVersion: tests.testkube.io/v2
 kind: TestSuite
 metadata:
@@ -122,43 +131,41 @@ spec:
         namespace: testkube
 ```
 
-## **Executors**
+## Executors
 
 Executors are Testkube-specific test runners. There are a list of predefined Executors coming with Testkube. You can also write your own custom Testkube Executor using [this guide](https://kubeshop.github.io/testkube/executor-custom/).
 
-Example:
-
-```yml
+```yaml title="Example:"
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: example-executor
   namespace: testkube
 spec:
-  executor_type: job  
-  image: YOUR_USER/testkube-executor-example:1.0.0 
+  executor_type: job
+  image: YOUR_USER/testkube-executor-example:1.0.0
   types:
-  - example/test      
+    - example/test
   content_types:
-  - string
-  - file-uri
-  - git-file
-  - git-dir
-  features: 
-  - artifacts
-  - junit-report
+    - string
+    - file-uri
+    - git-file
+    - git-dir
+  features:
+    - artifacts
+    - junit-report
   meta:
-   iconURI: http://mydomain.com/icon.jpg
-   docsURI: http://mydomain.com/docs
-   tooltips:
-    name: please enter executor name
+    iconURI: http://mydomain.com/icon.jpg
+    docsURI: http://mydomain.com/docs
+    tooltips:
+      name: please enter executor name
 ```
 
-## **Webhooks**
+## Webhooks
 
 Testkube Webhooks are HTTP POST calls having the Testkube Execution object and its current state as payload. They are sent when a test is either started or finished. This can be defined under `events`.
 
-```yml
+```yaml
 apiVersion: executor.testkube.io/v1
 kind: Webhook
 metadata:
@@ -167,6 +174,6 @@ metadata:
 spec:
   uri: http://localhost:8080/events
   events:
-  - start-test
-  - end-test
+    - start-test
+    - end-test
 ```

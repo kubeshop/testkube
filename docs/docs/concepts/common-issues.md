@@ -22,6 +22,9 @@ curl <endpoint>/v1/executors
 
 ```sh
 kubectl get pods -n testkube
+```
+
+```sh title="Expected output:"
 NAME                                                        READY   STATUS    RESTARTS   AGE
 pod/testkube-api-server-8445fd7b9f-jq5rh                    1/1     Running   0          10d
 pod/testkube-dashboard-99f4c6cf5-x4dkz                      1/1     Running   0          12d
@@ -36,6 +39,9 @@ If there is a timeout error reported:
 
 ```sh
 testkube dashboard
+```
+
+```sh title="Expected output:"
 checking readiness of services (error: timed-out waiting for dashboard and api)
 ```
 
@@ -43,6 +49,9 @@ Make sure that there is not another dashboard process running in the background 
 
 ```sh
 ps aux | grep dashboard
+```
+
+```sh title="Expected output:"
 user         76005   0.0  0.0 408628368   1648 s002  S+   12:32PM   0:00.00 grep dashboard
 user         75985   0.0  0.1 409292320  43584 s001  S+   12:32PM   0:00.12 kubectl port-forward --namespace testkube deployment/testkube-dashboard 8080:8080
 user         75984   0.0  0.1 409263376  37488 s001  S+   12:32PM   0:00.22 testkube dashboard
@@ -50,7 +59,7 @@ user         75984   0.0  0.1 409263376  37488 s001  S+   12:32PM   0:00.22 test
 
 Also, there might be some other process listening on the same port. To debug this, try port-forwarding manually:
 
-```
+```sh
 kubectl port-forward svc/testkube-dashboard 8080
 kubectl port-forward svc/testkube-api-server 8088
 ```
