@@ -8,12 +8,10 @@ type TestContentType string
 const (
 	TestContentTypeString  TestContentType = "string"
 	TestContentTypeFileURI TestContentType = "file-uri"
-	// Deprecated: use git instead
 	TestContentTypeGitFile TestContentType = "git-file"
-	// Deprecated: use git instead
-	TestContentTypeGitDir TestContentType = "git-dir"
-	TestContentTypeGit    TestContentType = "git"
-	TestContentTypeEmpty  TestContentType = ""
+	TestContentTypeGitDir  TestContentType = "git-dir"
+	TestContentTypeGit     TestContentType = "git"
+	TestContentTypeEmpty   TestContentType = ""
 )
 
 var ErrTestContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
