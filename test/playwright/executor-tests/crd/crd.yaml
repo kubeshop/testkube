@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: playwright-executor-smoke
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: playwright/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/playwright/executor-tests/playwright-project
