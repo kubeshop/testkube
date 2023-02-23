@@ -60,6 +60,7 @@ Another way of setting ENVs in Cypress is by `--env` argument. That's something 
 
 </TabItem>
 <TabItem value="cli" label="CLI">
+
 #### Creating a Test
 If you prefer using the CLI instead, you can create the test with `testkube create test`.
 
@@ -84,7 +85,7 @@ testkube create test --name cypress-test-2 --type cypress/project --test-content
 ```
 
 You will get the confirmation the test has been created:
-```bash
+```sh
 Test created testkube / cypress-test-2 🥇
 ```
 
@@ -92,14 +93,13 @@ Test created testkube / cypress-test-2 🥇
 
 The test can be started using `testkube run test` command.
 
-```bash
+```sh
 testkube run test cypress-test-2
 ```
 
 Output:
 
-```bash
-
+```sh
 Type:              cypress/project
 Name:              cypress-test-2
 Execution ID:      63f625d01e00af08138c4ea6
@@ -124,17 +124,15 @@ Use following command to get test execution details:
 $ kubectl testkube get execution cypress-test-2-1
 ```
 
-#### **Getting Execution Results**
+#### Getting Execution Results
 
 You can then get test result with `testkube get execution` command using execution name, or execution ID.
 
-```bash
+```sh
 testkube get execution cypress-test-2-1
 ```
 
-Output:
-
-```bash
+```sh title="Expected output:"
 ID:         63f625d01e00af08138c4ea6
 Name:       cypress-test-2-1
 Number:            1
@@ -273,8 +271,9 @@ CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value
 Test execution completed with success in 22.204s 🥇
 
 ```
+</TabItem>
 
-### Custom Resource Definitions (CRDs)
+<TabItem value="crd" label="Custom Resource">
 Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
 
 You can also get a definition while using `testkube create test` command by adding `--crd-only`.
@@ -342,13 +341,13 @@ spec:
 
 
 And add it to your cluster: 
-```bash
+```sh
 kubectl apply -f cypress-v10-executor.yaml 
 ```
 
 Now, create a new test with a type which our new executor can handle e.g.: `cypress:v10/test`
 
-```bash 
+```sh 
 # create test
 testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-path examples --type cypress:v10/test --name cypress-v10-example-test --git-branch main
 
