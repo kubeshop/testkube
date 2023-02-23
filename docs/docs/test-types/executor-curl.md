@@ -1,5 +1,4 @@
 # cURL
-cURL is a simple command-line tool used for 
 
 Testkube is able to run cURL commands as tests. There are 2 possibilities to validate the outputs of the cURL command:
 
@@ -29,9 +28,9 @@ The test Custom Resource Definition (CRD) should be created with the type `curl/
 
 Save a test in a format as described above. In this example, it is `curl-test.json`.
 
-Create the test by running `testkube create test --file curl-test.json --name curl-test --type "curl/test"`.
+Create the test by running `kubectl testkube create test --file curl-test.json --name curl-test --type "curl/test"`.
 
-Check if the test was created using the command `testkube get tests`. The output will be similar to:
+Check if the test was created using the command `kubectl testkube get tests`. The output will be similar to:
 
 
 ```bash
@@ -57,7 +56,7 @@ Or watch the script execution until complete:
 $ kubectl testkube watch execution 613a2d7056499e6e3d5b9c3e
 ```
 
-As seen above, results can be checked using `testkube get execution 613a2d7056499e6e3d5b9c3e`, where the id of the execution is unique for each execution. Ensure that the correct id is used. The output will look something like:
+As seen above, results can be checked using `kubectl testkube get execution 613a2d7056499e6e3d5b9c3e`, where the id of the execution is unique for each execution. Ensure that the correct id is used. The output will look something like:
 
 ```bash
 Name: painfully-super-colt,Status: success,Duration: 534ms

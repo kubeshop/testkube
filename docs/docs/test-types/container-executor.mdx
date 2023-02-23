@@ -12,9 +12,8 @@ The Test execution fails if the container exits with an error and succeeds when 
 In the following example, the custom Curl executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
 
 <Tabs groupId="dashboard-cli">
-<TabItem value="dash" label="Dashboard">
-
-Let's start with Dashboard first. You can view existing executors by going to the Executors tab.
+  <TabItem value="dash" label="Dashboard">
+  Let's start with Dashboard first. You can view existing executors by going to the Executors tab.
 
 ![Dashboard menu - executors icon](../img/dashboard-executors-icon.png)
 
@@ -39,9 +38,7 @@ Additionally, the Definition tab allows you to check the Executor CRD:
 Now, the container executor is created, and configured - it can be used for running tests.
 
 </TabItem>
-
 <TabItem value="cli" label="CLI">
-  
 Custom Container Executor can also be created with Testkube CLI using `testkube create executor` command:
 
 Let's check available configuration options first:
@@ -95,9 +92,7 @@ Which result in:
 testkube create executor --name curl-container-executor --executor-type container --image curlimages/curl:7.85.0 --types curl-container/test --command curl
 ```
 
-</TabItem>
-
-<TabItem value="crd" label="Custom Resource">
+## Custom Resource Definitions (CRDs) and other configuration options
 
 In order to use the Container Executor, create a new executor with `executor_type: container` and your custom type. For example:
 
@@ -148,9 +143,6 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 1. HTTP Request.
 2. Test.Spec.ExecutionRequest fields are used if they are not filled before.
 3. Executor.Spec fields are used if they are not filled before.
-
-</TabItem>
-</Tabs>
 
 ## Input Data
 
@@ -269,3 +261,6 @@ testkube get artifact 638a08b94ff1d2c694aeebf2
 -------------+------------
   result.txt |        10
 ```
+
+</TabItem>
+</Tabs>
