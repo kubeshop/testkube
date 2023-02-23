@@ -4047,14 +4047,18 @@ components:
         reference:
           $ref: "#/components/schemas/LocalObjectReference"
         mount:
+<<<<<<< HEAD
           type: boolk
+=======
+          type: boolean
+>>>>>>> origin/main
           description: whether we shoud mount resource
           example: /etc/data
         mountPath:
           type: string
-          description: where we shoud mount resource          
+          description: where we shoud mount resource
         mapToVariables:
-          type: bool
+          type: boolean
           description: whether we shoud map to variables from resource
           default: false
 
