@@ -277,7 +277,7 @@ Test execution completed with success in 22.204s 🥇
 Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
 
 You can also get a definition while using `testkube create test` command by adding `--crd-only`.
-In that case, the test won't be create, but the definition will be displayed.
+In that case, the test won't be created, but the definition will be displayed.
 
 ```sh
 testkube create test --name cypress-test-3 --type cypress/project --test-content-type git-dir --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/cypress/executor-tests/cypress-11 --variable CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value --executor-args "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value" --crd-only

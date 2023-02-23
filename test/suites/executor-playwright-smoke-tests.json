@@ -1,0 +1,7 @@
+{
+	"name": "executor-playwright-smoke-tests",
+	"description": "playwright executor smoke tests",
+	"steps": [
+		{"execute": {"name": "playwright-executor-smoke"}}
+	]
+}
