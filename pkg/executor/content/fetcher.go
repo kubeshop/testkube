@@ -130,16 +130,30 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 
 // FetchGit returns path to git based file or dir saved in local temp directory
 func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
-	contentType, err := f.CalculateGitContentType(*repo)
+	uri, err := f.gitURI(repo)
 	if err != nil {
-		return "", err
+		output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
+		return path, err
 	}
 
-	if contentType == string(testkube.TestContentTypeGitDir) {
-		return f.FetchGitDir(repo)
+	// if path not set make full repo checkout
+	if repo.Path == "" || repo.WorkingDir != "" {
+		path, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
+		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
+			return path, fmt.Errorf("failed to fetch git: %w", err)
+		}
+		output.PrintLog(fmt.Sprintf("%s Test content fetched to path %s", ui.IconCheckMark, path))
+		return path, nil
 	}
 
-	return f.FetchGitFile(repo)
+	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, f.path)
+	if err != nil {
+		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git: %s", ui.IconCross, err.Error()))
+		return path, fmt.Errorf("failed to do partial checkout on git: %w", err)
+	}
+	output.PrintLog(fmt.Sprintf("%s Test content fetched to path %s", ui.IconCheckMark, path))
+	return path, nil
 }
 
 // gitUri merge creds with git uri
@@ -207,6 +221,7 @@ func (f Fetcher) configureUseOfCertificate() error {
 }
 
 // CalculateGitContentType returns the type of the git test source
+// Deprecated: use git instead
 func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, error) {
 	if repo.Uri == "" || repo.Path == "" {
 		return "", errors.New("repository uri and path should be populated")

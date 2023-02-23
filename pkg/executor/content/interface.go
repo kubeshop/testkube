@@ -11,6 +11,7 @@ type ContentFetcher interface {
 	GitFetcher
 
 	Fetch(content *testkube.TestContent) (path string, err error)
+	// Deprecated: use git instead
 	CalculateGitContentType(repo testkube.Repository) (string, error)
 }
 

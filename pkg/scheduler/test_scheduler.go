@@ -253,13 +253,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
 			fetcher := content.NewFetcher(os.TempDir())
 			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
-			t, err := fetcher.CalculateGitContentType(*content.Repository)
-			if err == nil {
-				testCR.Spec.Content.Type_ = t
-				s.logger.Infof("Test %s content type was set to %s", testCR.Name, t)
-			} else {
-				s.logger.Warnf("Unable to calculate Git content type for Test Source %s: %w", testSourceCR.Name, err)
-			}
+			testCR.Spec.Content.Type_ = testkube.TestContentTypeGit
 		}
 	}
 
