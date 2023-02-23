@@ -4047,11 +4047,7 @@ components:
         reference:
           $ref: "#/components/schemas/LocalObjectReference"
         mount:
-<<<<<<< HEAD
-          type: boolk
-=======
           type: boolean
->>>>>>> origin/main
           description: whether we shoud mount resource
           example: /etc/data
         mountPath:
