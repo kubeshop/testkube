@@ -8,6 +8,7 @@ The Testkube Container Executor allows you to run your own container images for 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
 
 ## Creating and configuring Container Executor
+
 In the following example, the custom Curl executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
 
 <Tabs groupId="dashboard-cli">
@@ -25,6 +26,7 @@ The executor creation dialog will be displayed. That's where you can name you ex
 After the executor is created, you will be redirected to executor settings view. That's where you can set additional seetings.
 
 #### Additional settings
+
 Command & Arguments tab is a place, where you can define the Command your custom executor will run, and default arguments. Let's set the Command to `curl`:
 
 ![Container executor settings - Command and Arguments](../img/dashboard-executor-settings-command-arguments.png)
@@ -37,12 +39,11 @@ Additionally, the Definition tab allows you to check the Executor CRD:
 Now, the container executor is created, and configured - it can be used for running tests.
 
 </TabItem>
-
 <TabItem value="cli" label="CLI">
-
 Custom Container Executor can also be created with Testkube CLI using `testkube create executor` command:
 
 Let's check available configuration options first:
+
 ```sh
 $ testkube create executor --help
 Create new Executor Custom Resource
@@ -80,7 +81,6 @@ Global Flags:
       --verbose            show additional debug messages
 ```
 
-
 - `--name` is mandatory - that's custom executor's name.
 - `--executor-type` need to be set to `container`
 - `--image` is the executor image (for example, `curlimages/curl:7.85.0`)
@@ -88,12 +88,17 @@ Global Flags:
 - `--command` (for example, `curl`)
 
 Which result in:
+
 ```sh
 testkube create executor --name curl-container-executor --executor-type container --image curlimages/curl:7.85.0 --types curl-container/test --command curl
 ```
 </TabItem>
 
+<<<<<<< HEAD
 <TabItem value="crd" label="Custom Resource">
+=======
+## Custom Resource Definitions (CRDs) and other configuration options
+>>>>>>> origin/main
 
 In order to use the Container Executor, create a new executor with `executor_type: container` and your custom type. For example:
 
@@ -110,7 +115,7 @@ spec:
   imagePullSecrets:
     - name: secret-name
   types:
-  - curl-container/test
+    - curl-container/test
 ```
 
 In the above example, all Tests of `curl-container/test` will be executed by this Executor. Then you can create a new test that uses this Executor:
@@ -125,7 +130,7 @@ spec:
   type: curl-container/test
   executionRequest:
     args:
-    - https://testkube.kubeshop.io/
+      - https://testkube.kubeshop.io/
     variables:
       TESTKUBE_ENV:
         name: TESTKUBE_ENV
@@ -223,7 +228,7 @@ spec:
       storageClassName: standard
       volumeMountPath: /share
       dirs:
-      - test/reports
+        - test/reports
 ```
 
 You have to define the storage class name, volume mount path and directories in this volume with test artifacts.
@@ -237,16 +242,15 @@ metadata:
   namespace: testkube
 spec:
   types:
-  - cli/container
+    - cli/container
   executor_type: container
   image: soleware/nx-cli:8.5.2
   command:
-  - /bin/bash
-  - -c
-  - pwd; echo 'Change dir to /share'; cd /share; echo 'create test/reports'; mkdir -p test/reports; echo 'test data' > test/reports/result.txt
+    - /bin/bash
+    - -c
+    - pwd; echo 'Change dir to /share'; cd /share; echo 'create test/reports'; mkdir -p test/reports; echo 'test data' > test/reports/result.txt
   features:
-  - artifacts
-
+    - artifacts
 ```
 
 Run your test using CLI command:
@@ -262,7 +266,10 @@ testkube get artifact 638a08b94ff1d2c694aeebf2
 ```
 
 ```sh title="Expected output:"
-  NAME       | SIZE (KB)  
+  NAME       | SIZE (KB)
 -------------+------------
-  result.txt |        10  
+  result.txt |        10
 ```
+
+</TabItem>
+</Tabs>
