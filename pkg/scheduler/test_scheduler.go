@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"os"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -15,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/executor/content"
+
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -251,9 +250,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
 
 		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
-			fetcher := content.NewFetcher(os.TempDir())
-			content := testsmapper.MapTestContentFromSpec(testCR.Spec.Content)
-			testCR.Spec.Content.Type_ = testkube.TestContentTypeGit
+			testCR.Spec.Content.Type_ = string(testkube.TestContentTypeGit)
 		}
 	}
 
