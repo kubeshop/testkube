@@ -191,6 +191,15 @@ maven-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+playwright-smoke() {
+  name="playwright"
+  test_crd_file="test/playwright/executor-tests/crd/crd.yaml"
+  testsuite_name="executor-playwright-smoke-tests"
+  testsuite_file="test/suites/executor-playwright-smoke-tests.json"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 postman-smoke() {
   name="postman"
   test_crd_file="test/postman/executor-tests/crd/crd.yaml"
@@ -223,6 +232,7 @@ main() {
       kubepug-smoke
       maven-smoke
       postman-smoke
+      playwright-smoke
       soapui-smoke
       ;;
     smoke)
@@ -235,6 +245,7 @@ main() {
       k6-smoke
       kubepug-smoke
       maven-smoke
+      playwright-smoke
       postman-smoke
       soapui-smoke
       ;;
