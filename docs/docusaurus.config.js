@@ -246,8 +246,16 @@ const config = {
             to: "/concepts/tests/tests-variables",
           },
           {
-            from: "/using-testkube/tests-suites/testsuites-creating",
+            from: "/using-testkube/test-suites/testsuites-creating",
             to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/guides/test-suites/testsuites-getting-results",
+            to: "/concepts/test-suites/testsuites-getting-results",
+          },
+          {
+            from: "/using-testkube/test-suites/testsuites-getting-results",
+            to: "/concepts/test-suites/testsuites-getting-results",
           },
           {
             from: "/openapi",
@@ -265,6 +273,18 @@ const config = {
             from: "/using-testkube/UI",
             to: "/concepts/dashboard",
           },
+          {
+            from: "/FAQ",
+            to: "/concepts/common-issues"
+          },
+          {
+            from: "/integrations/testkube-automation",
+            to: "/guides/cicd"
+          },
+          {
+            from: "/guides/tests/tests-creating", 
+            to: "/concepts/tests/tests-creating"
+          }
         ],
       },
     ],
