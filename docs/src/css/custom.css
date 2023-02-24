@@ -152,6 +152,7 @@ html[data-theme="dark"] {
 }
 .menu {
   padding: 20px !important;
+  background-color: var(--ifm-background-surface-color-hover);
 }
 .menu__link {
   color: var(--ifm-color-content-secondary);
@@ -184,7 +185,6 @@ html[data-theme="dark"] {
 }
 
 .theme-doc-sidebar-container {
-  margin-left: 20px;
   border-right: none !important;
   font-size: 14px !important;
 }
