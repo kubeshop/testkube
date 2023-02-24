@@ -76,16 +76,33 @@ const sidebars = {
       items: [
         {
           type: "category",
-          label: "Exposing Testkube Dashboard",
-          link: {
-            type: "doc",
-            id: "guides/exposing-testkube/overview",
-          },
-          items: ["guides/exposing-testkube/ingress-nginx"],
+          label: "Getting to Production",
+          items: [
+            {
+              type: "category",
+              label: "Exposing Testkube Dashboard",
+              link: {
+                type: "doc",
+                id: "guides/getting-to-production/exposing-testkube/overview",
+              },
+              items: [
+                "guides/getting-to-production/exposing-testkube/ingress-nginx",
+              ],
+            },
+            {
+              type: "category",
+              label: "Authentication",
+              items: [
+                "guides/getting-to-production/authentication/oauth-cli",
+                "guides/getting-to-production/authentication/oauth-ui",
+              ],
+            },
+            "guides/getting-to-production/aws",
+          ],
         },
         {
           type: "category",
-          label: "Continuous Integration and Deployment",
+          label: "CI/CD Integration",
           link: {
             type: "doc",
             id: "guides/cicd/index",
@@ -112,14 +129,6 @@ const sidebars = {
                 },
               ],
             },
-          ],
-        },
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "guides/authentication/oauth-cli",
-            "guides/authentication/oauth-ui",
           ],
         },
         "guides/webhooks",
