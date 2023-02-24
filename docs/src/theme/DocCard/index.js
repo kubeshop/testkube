@@ -151,7 +151,20 @@ export default function DocCard({ item }) {
       return <CardLink item={item} />;
     case "category":
       return <CardCategory item={item} />;
+    case "intro":
+      return <CardIntro item={item} />;
     default:
       throw new Error(`unknown item type ${JSON.stringify(item)}`);
   }
+}
+
+function CardIntro({ item }) {
+  return (
+    <CardLayout
+      href={item.href}
+      icon={item.icon}
+      title={item.label}
+      description={item.description}
+    />
+  );
 }
