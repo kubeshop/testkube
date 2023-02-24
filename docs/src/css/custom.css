@@ -267,12 +267,9 @@ ul:hover {
   box-shadow: 0 1.5px 3px 0 rgb(0 0 0 / 15%);
   border-radius: 4px;
   margin: 10px 10px 10px 20px;
-  margin-right: 10px;
-  margin-left: 20px;
   height: auto;
 }
 .intro__card h2 {
-  display: flex;
   white-space: unset;
   font-size: 1rem;
 }
