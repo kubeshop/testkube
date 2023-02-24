@@ -14,4 +14,4 @@ Testkube is the first GitOps-friendly Cloud-native test orchestration/execution 
 
 Conceptually, this can be illustrated as follows:
 
-![GitOps CLoud Testing](../../../img/GitOps-cloud-testing.jpeg)
+![GitOps CLoud Testing](../../img/GitOps-cloud-testing.jpeg)

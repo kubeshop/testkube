@@ -160,12 +160,13 @@ html[data-theme="dark"] {
 }
 .theme-doc-sidebar-item-link-level-2 .menu__link,
 .theme-doc-sidebar-item-category-level-2 .menu__link {
-  padding: 4px 0 4px 0;
+  padding: 4px 0 4px 10px;
 }
 .menu__link:hover,
 .menu__link--active,
 .menu__list-item-collapsible:hover {
-  color: var(--ifm-heading-color);
+  font-weight: bold;
+  color: var(--ifm-color-primary);
   background-color: transparent;
 }
 .menu__link--active {

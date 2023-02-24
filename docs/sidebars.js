@@ -72,6 +72,37 @@ const sidebars = {
     },
     {
       type: "category",
+      label: "Continuous Integration and Deployment",
+      link: {
+        type: "doc",
+        id: "cicd/index",
+      },
+      items: [
+        "cicd/github-actions",
+        {
+          type: "category",
+          label: "GitOps",
+          link: {
+            type: "doc",
+            id: "cicd/gitops/index",
+          },
+          items: [
+            {
+              type: "doc",
+              id: "cicd/gitops/flux",
+              label: "Flux",
+            },
+            {
+              type: "doc",
+              id: "cicd/gitops/argocd",
+              label: "ArgoCD",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "Guides",
       items: [
         {
@@ -82,37 +113,6 @@ const sidebars = {
             id: "guides/exposing-testkube/overview",
           },
           items: ["guides/exposing-testkube/ingress-nginx"],
-        },
-        {
-          type: "category",
-          label: "Continuous Integration and Deployment",
-          link: {
-            type: "doc",
-            id: "guides/cicd/index",
-          },
-          items: [
-            "guides/cicd/github-actions",
-            {
-              type: "category",
-              label: "GitOps",
-              link: {
-                type: "doc",
-                id: "guides/cicd/gitops/index",
-              },
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/cicd/gitops/flux",
-                  label: "Flux",
-                },
-                {
-                  type: "doc",
-                  id: "guides/cicd/gitops/argocd",
-                  label: "ArgoCD",
-                },
-              ],
-            },
-          ],
         },
         {
           type: "category",

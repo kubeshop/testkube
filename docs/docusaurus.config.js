@@ -279,7 +279,7 @@ const config = {
           },
           {
             from: "/integrations/testkube-automation",
-            to: "/guides/cicd"
+            to: "/cicd"
           },
           {
             from: "/guides/tests/tests-creating", 
