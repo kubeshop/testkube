@@ -22,7 +22,7 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["overview/supported-tests", "overview/how-can-testkube-be-used"],
+      items: ["overview/supported-tests", "overview/testkube-benefits"],
     },
     {
       type: "category",
@@ -83,21 +83,21 @@ const sidebars = {
               label: "Exposing Testkube Dashboard",
               link: {
                 type: "doc",
-                id: "guides/getting-to-production/exposing-testkube/overview",
+                id: "guides/going-to-production/exposing-testkube/overview",
               },
               items: [
-                "guides/getting-to-production/exposing-testkube/ingress-nginx",
+                "guides/going-to-production/exposing-testkube/ingress-nginx",
               ],
             },
             {
               type: "category",
               label: "Authentication",
               items: [
-                "guides/getting-to-production/authentication/oauth-cli",
-                "guides/getting-to-production/authentication/oauth-ui",
+                "guides/going-to-production/authentication/oauth-cli",
+                "guides/going-to-production/authentication/oauth-ui",
               ],
             },
-            "guides/getting-to-production/aws",
+            "guides/going-to-production/aws",
           ],
         },
         {
