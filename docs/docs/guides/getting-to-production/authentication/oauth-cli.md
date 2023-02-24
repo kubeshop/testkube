@@ -1,10 +1,10 @@
 # OAuth for CLI
 
 Testkube doesn't provide a separate user/role management system to protect access to its CLI.
-Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and
-the CLI config command.
-Testkube can automatically configure the Kubernetes NGINX Ingress Controller and create required
-ingresses.
+
+Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and the CLI config command.
+
+Testkube can automatically configure the Kubernetes NGINX Ingress Controller and create required ingresses.
 
 ## Provide Parameters for API Ingress
 
@@ -23,14 +23,14 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 
 Register a new Github OAuth application for your personal or organization account.
 
-![Register new App](../../img/github_app_request_cli.png)
+![Register new App](../../../img/github_app_request_cli.png)
 
 Pay attention to the usage of the scheme (http or https) in URIs.
 The homepage URL should be the Testkube Dashboard home page http://127.0.0.1:13254.
 
 The authorization callback URL should be a prebuilt page at the Testkube Dashboard website http://127.0.0.1:13254/oauth/callback.
 
-![View created App](../../img/github_app_response_cli.png)
+![View created App](../../../img/github_app_response_cli.png)
 
 Remember the generated Client ID and Client Secret.
 
@@ -51,10 +51,10 @@ Authentication will be cancelled in 60 seconds
 ```
 
 Authorization for the Github application will be requested and access will need to be confirmed.
-![Confirm App authorization](../../img/github_app_authorize_cli.png)
+![Confirm App authorization](../../../img/github_app_authorize_cli.png)
 
 If authorization is successful, you will see the success page.
-![Success Page](../../img/github_app_success_cli.png)
+![Success Page](../../../img/github_app_success_cli.png)
 
 Output:
 
