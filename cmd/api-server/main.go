@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
@@ -150,20 +151,23 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	// DI
-	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
-	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
-	ui.ExitOnError("Getting mongo database", err)
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
 	var configRepository configrepository.Repository
+	var triggerLeaseBackend triggers.LeaseBackend
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 	} else {
+		mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
+		db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
+		ui.ExitOnError("Getting mongo database", err)
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 		testResultsRepository = testresult.NewMongoRepository(db, Config.AllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
+		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 	}
 
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
@@ -352,11 +356,6 @@ func main() {
 
 	api.InitEvents()
 
-	var triggerLeaseBackend triggers.LeaseBackend
-	triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-	if mode == common.ModeAgent {
-		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-	}
 	triggerService := triggers.NewService(
 		sched,
 		clientset,
