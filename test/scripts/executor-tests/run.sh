@@ -102,13 +102,24 @@ artillery-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-container-smoke() {
-  name="Container executor"
+container-curl-smoke() {
+  name="Container executor - Curl"
   test_crd_file="test/container-executor/executor-smoke/crd/curl.yaml"
-  testsuite_name="executor-container-smoke-tests"
-  testsuite_file="test/suites/executor-container-smoke-tests.json"
+  testsuite_name="executor-container-curl-smoke-tests"
+  testsuite_file="test/suites/executor-container-curl-smoke-tests.json"
 
   custom_executor_crd_file="test/executors/container-executor-curl.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+container-playwright-smoke() {
+  name="Container executor - Playwright"
+  test_crd_file="test/container-executor/executor-smoke/crd/playwright.yaml"
+  testsuite_name="executor-container-playwright-smoke-tests"
+  testsuite_file="test/suites/executor-container-playwright-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-playwright.yaml"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
@@ -222,7 +233,8 @@ main() {
   case $executor_type in
     all)
       artillery-smoke
-      container-smoke
+      container-curl-smoke
+      container-playwright-smoke
       curl-smoke
       cypress-smoke
       gradle-smoke
@@ -237,7 +249,8 @@ main() {
       ;;
     smoke)
       artillery-smoke
-      container-smoke
+      container-curl-smoke
+      container-playwright-smoke
       curl-smoke
       cypress-smoke
       gradle-smoke
