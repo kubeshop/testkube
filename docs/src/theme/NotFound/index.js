@@ -37,7 +37,7 @@ export default function NotFound() {
         .split("/")
         .filter((word) => !removeList.includes(word))
         .join(" ");
-      
+
       const searchResults = await index.search(parsedQuery, {
         hitsPerPage: 5,
       });
@@ -62,14 +62,6 @@ export default function NotFound() {
         <main className="container margin-vert--xl">
           <div className="row">
             <div className="col col--6 col--offset-3">
-              <h1 className="hero__title">
-                <Translate
-                  id="theme.NotFound.title"
-                  description="The title of the 404 page"
-                >
-                  Page Not Found
-                </Translate>
-              </h1>
               <h1>
                 <Translate
                   id="theme.NotFound.title"
@@ -85,7 +77,7 @@ export default function NotFound() {
                   description="The 2nd paragraph of the 404 page"
                 >
                   {!loading && searchResults.length > 0
-                    ? `Our team has been notified and they're on it. Is there a chance one of these links will help?`
+                    ? `Is there a chance one of these links will help?`
                     : ``}
                 </Translate>
               </p>
