@@ -71,14 +71,14 @@ func (c *ConfigMapConfig) Get(ctx context.Context) (result testkube.Config, err 
 }
 
 // Upsert inserts record if not exists, updates otherwise
-func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (err error) {
+func (c *ConfigMapConfig) Upsert(ctx context.Context, result testkube.Config) (updated testkube.Config, err error) {
 	data := map[string]string{
 		"clusterId":       result.ClusterId,
 		"enableTelemetry": fmt.Sprint(result.EnableTelemetry),
 	}
 	if err = c.client.Apply(ctx, c.name, data); err != nil {
-		return errors.Wrap(err, "writing config map error")
+		return result, errors.Wrap(err, "writing config map error")
 	}
 
-	return
+	return result, err
 }

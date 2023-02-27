@@ -24,6 +24,16 @@ type LeaseBackend interface {
 	TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error)
 }
 
+type AcquireAlwaysLeaseBackend struct{}
+
+func NewAcquireAlwaysLeaseBackend() *AcquireAlwaysLeaseBackend {
+	return &AcquireAlwaysLeaseBackend{}
+}
+
+func (b *AcquireAlwaysLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error) {
+	return true, nil
+}
+
 type MongoLeaseBackend struct {
 	coll *mongo.Collection
 }

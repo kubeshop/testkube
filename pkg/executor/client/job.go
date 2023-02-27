@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -30,7 +32,6 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"

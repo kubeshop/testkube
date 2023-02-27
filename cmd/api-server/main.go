@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
+
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 
@@ -17,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
-	configmongo "github.com/kubeshop/testkube/pkg/repository/config"
+	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -51,7 +53,6 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
-	configapi "github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
@@ -150,25 +151,31 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	// DI
-	mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
-	db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
-	ui.ExitOnError("Getting mongo database", err)
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
+	var configRepository configrepository.Repository
+	var triggerLeaseBackend triggers.LeaseBackend
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 	} else {
+		mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
+		db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
+		ui.ExitOnError("Getting mongo database", err)
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 		testResultsRepository = testresult.NewMongoRepository(db, Config.AllowDiskUse)
+		configRepository = configrepository.NewMongoRepository(db)
+		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 	}
-	configRepository := configmongo.NewMongoRepository(db)
+
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
 	if cfg.APIServerConfig != "" {
 		configName = cfg.APIServerConfig
 	}
 
-	configMapConfig, err := configapi.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
+	configMapConfig, err := configrepository.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
@@ -192,7 +199,7 @@ func main() {
 		}
 
 		clusterId = cmConfig.ClusterId
-		err = configMapConfig.Upsert(ctx, cmConfig)
+		_, err = configMapConfig.Upsert(ctx, cmConfig)
 	}
 
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
@@ -357,7 +364,7 @@ func main() {
 		testsClientV3,
 		resultsRepository,
 		testResultsRepository,
-		triggers.NewMongoLeaseBackend(db),
+		triggerLeaseBackend,
 		log.DefaultLogger,
 		configMapConfig,
 		triggers.WithHostnameIdentifier(),
