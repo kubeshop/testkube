@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
-	configmongo "github.com/kubeshop/testkube/pkg/repository/config"
+	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -161,13 +161,13 @@ func main() {
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 		testResultsRepository = testresult.NewMongoRepository(db, Config.AllowDiskUse)
 	}
-	configRepository := configmongo.NewMongoRepository(db)
+	configRepository := configrepository.NewMongoRepository(db)
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
 	if cfg.APIServerConfig != "" {
 		configName = cfg.APIServerConfig
 	}
 
-	configMapConfig, err := configmongo.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
+	configMapConfig, err := configrepository.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
