@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
@@ -27,7 +29,6 @@ import (
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"

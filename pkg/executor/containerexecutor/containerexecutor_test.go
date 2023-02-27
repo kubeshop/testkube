@@ -377,8 +377,8 @@ func (FakeConfigRepository) Get(ctx context.Context) (testkube.Config, error) {
 	return testkube.Config{}, nil
 }
 
-func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) error {
-	return nil
+func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) (testkube.Config, error) {
+	return config, nil
 }
 
 type FakeTestsClient struct {

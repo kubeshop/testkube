@@ -51,7 +51,6 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
-	configapi "github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
@@ -168,7 +167,7 @@ func main() {
 		configName = cfg.APIServerConfig
 	}
 
-	configMapConfig, err := configapi.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
+	configMapConfig, err := configmongo.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
@@ -192,7 +191,7 @@ func main() {
 		}
 
 		clusterId = cmConfig.ClusterId
-		err = configMapConfig.Upsert(ctx, cmConfig)
+		_, err = configMapConfig.Upsert(ctx, cmConfig)
 	}
 
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
@@ -349,6 +348,11 @@ func main() {
 
 	api.InitEvents()
 
+	var triggerLeaseBackend triggers.LeaseBackend
+	triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+	if mode == common.ModeAgent {
+		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
+	}
 	triggerService := triggers.NewService(
 		sched,
 		clientset,
@@ -357,7 +361,7 @@ func main() {
 		testsClientV3,
 		resultsRepository,
 		testResultsRepository,
-		triggers.NewMongoLeaseBackend(db),
+		triggerLeaseBackend,
 		log.DefaultLogger,
 		configMapConfig,
 		triggers.WithHostnameIdentifier(),
