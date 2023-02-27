@@ -7,7 +7,7 @@ spec:
   image: mcr.microsoft.com/playwright:v1.31.1-focal
   command: ["/bin/sh", "-c"]
   args:
-  - "cd /data/repo/test/playwright/executor-tests/playwright-project; npm install; npx playwright test"
+  - "npm install; npx playwright test"
   executor_type: container
   types:
   - container-executor-playwright-v1.31.1/test
