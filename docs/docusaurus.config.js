@@ -32,7 +32,7 @@ const config = {
     [
       "classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
-      ({
+      {
         docs: {
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
@@ -47,7 +47,7 @@ const config = {
         googleAnalytics: {
           trackingID: "UA-204665550-6",
         },
-      }),
+      },
     ],
     [
       "redocusaurus",
@@ -68,7 +68,7 @@ const config = {
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
-    ({
+    {
       navbar: {
         logo: {
           alt: "Testkube",
@@ -142,7 +142,7 @@ const config = {
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },
-    }),
+    },
   plugins: [
     [
       "@docusaurus/plugin-client-redirects",
@@ -275,17 +275,55 @@ const config = {
           },
           {
             from: "/FAQ",
-            to: "/concepts/common-issues"
+            to: "/concepts/common-issues",
           },
           {
             from: "/integrations/testkube-automation",
-            to: "/guides/cicd"
+            to: "/guides/cicd",
           },
           {
-            from: "/guides/tests/tests-creating", 
-            to: "/concepts/tests/tests-creating"
-          }
+            from: "/guides/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/guides/exposing-testkube/ingress-nginx",
+            to: "/guides/going-to-production/exposing-testkube/ingress-nginx",
+          },
+          {
+            from: "/guides/exposing-testkube/overview",
+            to: "/guides/going-to-production/exposing-testkube/overview",
+          },
+          {
+            from: "/architecture",
+            to: "/reference/architecture",
+          },
+          {
+            from: "/integrations/slack-integration",
+            to: "/guides/slack-integration",
+          },
+          {
+            from: "/integrations",
+            to: "/getting-started",
+          },
         ],
+        createRedirects(existingPath) {
+          if (existingPath.includes("/reference/cli")) {
+            // Redirect from /cli-reference to /reference/cli
+            return [existingPath.replace("/reference/cli", "/cli-reference")];
+          }
+
+          if (
+            existingPath.includes("/guides/going-to-production/authentication")
+          ) {
+            return [
+              existingPath.replace(
+                "/guides/going-to-production/authentication",
+                "/authentication"
+              ),
+            ];
+          }
+          return undefined; // Return a falsy value: no redirect created
+        },
       },
     ],
   ],

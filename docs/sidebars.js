@@ -22,7 +22,7 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["overview/supported-tests", "overview/how-can-testkube-be-used"],
+      items: ["overview/supported-tests", "overview/testkube-benefits"],
     },
     {
       type: "category",
@@ -76,16 +76,33 @@ const sidebars = {
       items: [
         {
           type: "category",
-          label: "Exposing Testkube Dashboard",
-          link: {
-            type: "doc",
-            id: "guides/exposing-testkube/overview",
-          },
-          items: ["guides/exposing-testkube/ingress-nginx"],
+          label: "Getting to Production",
+          items: [
+            {
+              type: "category",
+              label: "Exposing Testkube Dashboard",
+              link: {
+                type: "doc",
+                id: "guides/going-to-production/exposing-testkube/overview",
+              },
+              items: [
+                "guides/going-to-production/exposing-testkube/ingress-nginx",
+              ],
+            },
+            {
+              type: "category",
+              label: "Authentication",
+              items: [
+                "guides/going-to-production/authentication/oauth-cli",
+                "guides/going-to-production/authentication/oauth-ui",
+              ],
+            },
+            "guides/going-to-production/aws",
+          ],
         },
         {
           type: "category",
-          label: "Continuous Integration and Deployment",
+          label: "CI/CD Integration",
           link: {
             type: "doc",
             id: "guides/cicd/index",
@@ -112,14 +129,6 @@ const sidebars = {
                 },
               ],
             },
-          ],
-        },
-        {
-          type: "category",
-          label: "Authentication",
-          items: [
-            "guides/authentication/oauth-cli",
-            "guides/authentication/oauth-ui",
           ],
         },
         "guides/webhooks",

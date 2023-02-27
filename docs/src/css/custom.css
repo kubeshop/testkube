@@ -152,10 +152,11 @@ html[data-theme="dark"] {
 }
 .menu {
   padding: 20px !important;
+  background-color: var(--ifm-background-surface-color-hover);
 }
 .menu__link {
   color: var(--ifm-color-content-secondary);
-  padding: 8px 12px 8px 0;
+  padding: 8px 12px 8px 12px;
 }
 .theme-doc-sidebar-item-link-level-2 .menu__link,
 .theme-doc-sidebar-item-category-level-2 .menu__link {
@@ -184,7 +185,6 @@ html[data-theme="dark"] {
 }
 
 .theme-doc-sidebar-container {
-  margin-left: 20px;
   border-right: none !important;
   font-size: 14px !important;
 }
@@ -205,14 +205,17 @@ html[data-theme="dark"] {
 
 .markdown h1:first-child {
   --ifm-h1-font-size: 2rem;
+  margin-bottom: 1rem;
 }
 
 .markdown > h2 {
   --ifm-h2-font-size: 1.5rem;
+  margin: 1rem 0 1rem 0;
 }
 
 .markdown > h3 {
   --ifm-h2-font-size: 1.25rem;
+  margin: 1rem 0 1rem 0;
 }
 
 pre code {
@@ -259,8 +262,31 @@ ul:hover {
   color: var(--ifm-color-content);
 }
 
+.intro__card {
+  background-color: var(--ifm-background-surface-color-hover);
+  box-shadow: 0 1.5px 3px 0 rgb(0 0 0 / 15%);
+  border-radius: 4px;
+  margin: 10px 10px 10px 20px;
+  height: auto;
+}
+.intro__card h2 {
+  white-space: unset;
+  font-size: 1rem;
+}
+.intro__card p {
+  white-space: unset;
+}
+.intro__card:hover {
+  transform: translateY(3px);
+  transition: 200ms;
+}
+
 .intro--index {
   margin-top: -1.9rem;
+}
+
+.nopadding {
+  padding: 0 !important;
 }
 
 /* article {

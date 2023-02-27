@@ -1,9 +1,56 @@
 import CICDComparison from "./img/cicd-comparison.png";
+import DocCard from "../src/theme/DocCard";
 import clsx from "clsx";
 
-# What is Testkube?
+# Testkube Documentation
 
-Testkube is a Kubernetes-native testing framework for Testers, Developers and DevOps practitioners that allows you to automate the executions of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD pipelines.
+Welcome to our documentation!
+This is the place where you'll find everything you need to get ramped up and start testing with Testkube.
+
+## What is Testkube?
+
+Testkube is a Kubernetes-native testing framework for Testers, Developers, and DevOps practitioners that allows you to automate the executions of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD pipelines.
+
+## Try it out
+
+export const DocCardList = (input) => (
+  <section className={clsx("row")}>
+    {[
+      {
+        icon: "🛠",
+        label: "Getting Started",
+        description:
+          "Get up and running by installing the Testkube CLI and its components within minutes! ",
+        href: "/getting-started",
+        type: "intro",
+      },
+      {
+        icon: "🏎💨",
+        label: "Run your first test",
+        description:
+          "Learn how to create, run, and display the results for your first test.",
+        href: "/getting-started/step3-creating-first-test",
+        type: "intro",
+      },
+      {
+        icon: "🚀",
+        label: "Connect with your CI/CD",
+        description:
+          "Our guides will walk you through incorporating Testkube into your CI/CD environment, with the tools you already use.",
+        href: "/guides/cicd",
+        type: "intro",
+      },
+    ].map((item, i) => (
+      <article key={i} className="col nopadding intro__card">
+        <DocCard item={item} />
+      </article>
+    ))}
+  </section>
+);
+
+<DocCardList />
+
+## Advantages of using Testkube
 
 With Testkube, tests are part of a cluster's state and can be executed as needed:
 
