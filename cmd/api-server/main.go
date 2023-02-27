@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 	"net"
 	"os"
 	"os/signal"
@@ -154,14 +155,17 @@ func main() {
 	ui.ExitOnError("Getting mongo database", err)
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
+	var configRepository configrepository.Repository
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 	} else {
 		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
 		testResultsRepository = testresult.NewMongoRepository(db, Config.AllowDiskUse)
+		configRepository = configrepository.NewMongoRepository(db)
 	}
-	configRepository := configrepository.NewMongoRepository(db)
+
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
 	if cfg.APIServerConfig != "" {
 		configName = cfg.APIServerConfig
