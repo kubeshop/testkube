@@ -143,6 +143,19 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 			output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
 			return path, fmt.Errorf("failed to fetch git: %w", err)
 		}
+
+		if repo.Path != "" {
+			fileInfo, err := os.Stat(filepath.Join(path, repo.Path))
+			if err != nil {
+				output.PrintLog(fmt.Sprintf("%s Failed to get file stat: %s", ui.IconCross, err.Error()))
+				return path, fmt.Errorf("failed to get file stat: %w", err)
+			}
+
+			if !fileInfo.IsDir() {
+				path = filepath.Join(path, repo.Path)
+			}
+		}
+
 		output.PrintLog(fmt.Sprintf("%s Test content fetched to path %s", ui.IconCheckMark, path))
 		return path, nil
 	}
@@ -152,6 +165,7 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git: %s", ui.IconCross, err.Error()))
 		return path, fmt.Errorf("failed to do partial checkout on git: %w", err)
 	}
+
 	output.PrintLog(fmt.Sprintf("%s Test content fetched to path %s", ui.IconCheckMark, path))
 	return path, nil
 }
