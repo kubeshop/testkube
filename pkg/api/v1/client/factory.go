@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"time"
 
 	"golang.org/x/oauth2"
 
@@ -37,8 +36,8 @@ type Options struct {
 }
 
 // GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
-func GetClient(clientType ClientType, clientTimeout time.Duration, options Options) (client Client, err error) {
-	httpClient := phttp.NewClient(clientTimeout)
+func GetClient(clientType ClientType, options Options) (client Client, err error) {
+	httpClient := phttp.NewClient()
 	sseClient := phttp.NewSSEClient()
 
 	switch clientType {

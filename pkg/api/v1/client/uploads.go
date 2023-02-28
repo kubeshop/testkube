@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -20,7 +21,7 @@ import (
 const uri string = "/uploads"
 
 type CopyFileClient interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
 type CopyFileDirectClient struct {
@@ -50,9 +51,9 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
-	spew.Dump("===============UploadFile Timeout================")
-	spew.Dump(c.client.Timeout)
+func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
+	spew.Dump("===============CopyFileDirectClient UploadFile Timeout================")
+	spew.Dump(timeout)
 	spew.Dump("=================================================")
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
@@ -72,7 +73,7 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 	}
 
 	if err = httpResponseError(resp); err != nil {
-		return fmt.Errorf("api%s returned error: %w", uri, err)
+		return fmt.Errorf("api %s returned error: %w", uri, err)
 	}
 
 	return nil
@@ -83,7 +84,11 @@ func (c CopyFileDirectClient) getUri() string {
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
+	spew.Dump("===============CopyFileProxyClient UploadFile Timeout================")
+	spew.Dump(timeout)
+	spew.Dump("=================================================")
+
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
@@ -95,6 +100,7 @@ func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingTyp
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy").
+		Timeout(timeout).
 		Suffix(Version + uri).
 		Body(body)
 

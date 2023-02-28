@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
@@ -17,9 +16,6 @@ import (
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string) {
 	clientType := cmd.Flag("client").Value.String()
-	clientTimeout, err := strconv.ParseInt(cmd.Flag("client-timeout").Value.String(), 10, 64)
-	ui.ExitOnError("invalid timeout for HTTP client", err)
-
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 	oauthEnabled, err := strconv.ParseBool(cmd.Flag("oauth-enabled").Value.String())
@@ -63,7 +59,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		ui.Failf("unknown context type: %s", cfg.ContextType)
 	}
 
-	c, err := client.GetClient(client.ClientType(clientType), time.Duration(clientTimeout*int64(time.Second)), options)
+	c, err := client.GetClient(client.ClientType(clientType), options)
 	ui.ExitOnError("setting up client type", err)
 
 	return c, namespace

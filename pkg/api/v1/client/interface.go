@@ -1,6 +1,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -109,7 +111,7 @@ type TestSourceAPI interface {
 
 // CopyFileAPI describes methods to handle files in the object storage
 type CopyFileAPI interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
 // TODO consider replacing below types by testkube.*

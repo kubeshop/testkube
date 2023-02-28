@@ -68,7 +68,7 @@ func (f Fetcher) FetchString(str string) (path string, err error) {
 
 // FetchURI stores uri as local file
 func (f Fetcher) FetchURI(uri string) (path string, err error) {
-	client := http.NewClient(0)
+	client := http.NewClient()
 	resp, err := client.Get(uri)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch test content: %s", ui.IconCross, err.Error()))

@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	client  = httpclient.NewClient(0)
+	client  = httpclient.NewClient()
 	senders = map[string]Sender{
 		"google":    GoogleAnalyticsSender,
 		"testkube":  TestkubeAnalyticsSender,

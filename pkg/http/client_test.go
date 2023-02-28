@@ -10,21 +10,12 @@ import (
 
 func TestNewClient(t *testing.T) {
 
-	t.Run("returns new client instance with default timeouts configured", func(t *testing.T) {
+	t.Run("returns new client instance with configured timeouts correctly", func(t *testing.T) {
 		// given / when
-		c := NewClient(0)
+		c := NewClient()
 
 		// then
-		assert.Equal(t, DefaultClientTimeout, c.Timeout)
-		assert.Equal(t, TLSHandshakeTimeout, c.Transport.(*http.Transport).TLSHandshakeTimeout)
-	})
-
-	t.Run("returns new client instance with custom timeout", func(t *testing.T) {
-		timeout := 30 * time.Second
-		c := NewClient(timeout)
-
-		// then
-		assert.Equal(t, timeout, c.Timeout)
+		assert.Equal(t, ClientTimeout, c.Timeout)
 		assert.Equal(t, TLSHandshakeTimeout, c.Transport.(*http.Transport).TLSHandshakeTimeout)
 	})
 
