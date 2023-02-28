@@ -1,0 +1,42 @@
+{
+	"info": {
+		"_postman_id": "965de4bb-e581-4f34-93bb-667be6b395d7",
+		"name": "testkube-api-server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22855798"
+	},
+	"item": [
+		{
+			"name": "testkube-api-server",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"  pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://testkube-api-server:8088/health",
+					"protocol": "http",
+					"host": [
+						"testkube-api-server"
+					],
+					"port": "8088",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
