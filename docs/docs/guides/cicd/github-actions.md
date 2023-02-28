@@ -131,5 +131,5 @@ If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` bl
 # Run Helm delpoy/upgrade of the Testkube release on a GKE cluster
 - name: Deploy
   run: |-
-    helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
+    helm upgrade --install --atomic --timeout 180s testkube kubeshop/testkube --namespace testkube --create-namespace
 ```
