@@ -39,7 +39,7 @@ func NewUpgradeCmd() *cobra.Command {
 
 			if cfg.ContextType == config.ContextTypeCloud {
 				ui.Info("Testkube Cloud agent upgrade started")
-				err = HelmUpgradeOrInstalTestkubeCloud(options, cfg)
+				err = HelmUpgradeOrInstallTestkubeCloud(options, cfg)
 				ui.ExitOnError("Upgrading Testkube Cloud Agent", err)
 			} else {
 				ui.Info("Updating testkube")
