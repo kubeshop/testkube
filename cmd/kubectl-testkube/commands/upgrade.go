@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 func NewUpgradeCmd() *cobra.Command {
@@ -29,6 +30,15 @@ func NewUpgradeCmd() *cobra.Command {
 				ui.ExitOnError("getting current context", err)
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
+
+				if ui.IsVerbose() && cfg.ContextType == config.ContextTypeCloud {
+					ui.Info("Your Testkube is in 'cloud' mode with following context")
+					ui.InfoGrid(map[string]string{
+						"Agent Key": text.Obfuscate(cfg.CloudContext.AgentKey),
+						"Agent URI": cfg.CloudContext.AgentUri,
+					})
+					ui.NL()
+				}
 
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {

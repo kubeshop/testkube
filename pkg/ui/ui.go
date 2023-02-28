@@ -39,6 +39,7 @@ type UI struct {
 }
 
 func SetVerbose(verbose bool)                       { ui.Verbose = verbose }
+func IsVerbose() bool                               { return ui.Verbose }
 func ExitOnError(item string, errors ...error)      { ui.ExitOnError(item, errors...) }
 func PrintOnError(item string, errors ...error)     { ui.PrintOnError(item, errors...) }
 func WarnOnError(item string, errors ...error)      { ui.WarnOnError(item, errors...) }
