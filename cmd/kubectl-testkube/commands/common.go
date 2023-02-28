@@ -167,3 +167,21 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 }
+
+func PopulateAgentDataToContext(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
+	updated := false
+	if options.AgentKey != "" {
+		cfg.CloudContext.AgentKey = options.AgentKey
+		updated = true
+	}
+	if options.AgentUri != "" {
+		cfg.CloudContext.AgentUri = options.AgentUri
+		updated = true
+	}
+
+	if updated {
+		return config.Save(cfg)
+	}
+
+	return nil
+}
