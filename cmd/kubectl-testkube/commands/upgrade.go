@@ -21,6 +21,12 @@ func NewUpgradeCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 			ui.NL()
 
+			// set to cloud context explicitly when user pass agent key and store the key later
+			if options.AgentKey != "" {
+				cfg.CloudContext.AgentKey = options.AgentKey
+				cfg.ContextType = config.ContextTypeCloud
+			}
+
 			if !options.NoConfirm {
 				ui.Warn("This will upgrade Testkube to the latest version. This may take a few minutes.")
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
