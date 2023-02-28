@@ -41,10 +41,10 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 	sseClient := phttp.NewSSEClient()
 
 	switch clientType {
+
 	case ClientCloud:
 		ConfigureClient(httpClient, nil, options.CloudApiKey)
 		ConfigureClient(sseClient, nil, options.CloudApiKey)
-		// merge PATH prefix wirt
 		client = NewDirectAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
 
 	case ClientDirect:

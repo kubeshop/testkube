@@ -41,6 +41,8 @@ func NewUpgradeCmd() *cobra.Command {
 				ui.Info("Testkube Cloud agent upgrade started")
 				err = HelmUpgradeOrInstallTestkubeCloud(options, cfg)
 				ui.ExitOnError("Upgrading Testkube Cloud Agent", err)
+				err = PopulateAgentDataToContext(options, cfg)
+				ui.ExitOnError("Storing agent data in context", err)
 			} else {
 				ui.Info("Updating testkube")
 				hasMigrations, err := RunMigrations(cmd)
