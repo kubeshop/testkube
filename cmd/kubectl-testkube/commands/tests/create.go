@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -61,6 +62,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		variableConfigMaps       []string
 		mountSecrets             map[string]string
 		variableSecrets          []string
+		uploadTimeout            string
 	)
 
 	cmd := &cobra.Command{
@@ -109,7 +111,14 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.ExitOnError("validating executor type", err)
 
 				if len(copyFiles) > 0 {
-					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
+					var timeout time.Duration
+					if uploadTimeout != "" {
+						timeout, err = time.ParseDuration(uploadTimeout)
+						if err != nil {
+							ui.ExitOnError("invalid upload timeout duration", err)
+						}
+					}
+					err := uploadFiles(client, testName, apiv1.Test, copyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
 
@@ -176,6 +185,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
+	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
 }
