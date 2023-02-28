@@ -3,7 +3,7 @@
 ## 1. Add the Kubeshop Helm repository
 
 ```sh
-helm repo add testkube https://kubeshop.github.io/helm-charts
+helm repo add kubeshop https://kubeshop.github.io/helm-charts
 ```
 
 If this repo already exists, run `helm repo update` to retrieve
