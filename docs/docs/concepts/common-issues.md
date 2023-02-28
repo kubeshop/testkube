@@ -134,7 +134,7 @@ testkube-operator:
 3. Install Testkube specifying the path to the new `values.yaml` file
 
 ```
-helm install testkube testkube/testkube --create-namespace --namespace testkube --values values.yaml
+helm install testkube kubeshop/testkube --create-namespace --namespace testkube --values values.yaml
 ```
 
 Please notice that since we've just installed MongoDB with a `testkube-mongodb` Helm release name, you are not required to reconfigure the Testkube API MongoDB connection URI. If you've installed with a different name/namespace, please adjust `--set testkube-api.mongodb.dsn: "mongodb://testkube-mongodb:27017"` to your MongoDB service.

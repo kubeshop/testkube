@@ -82,7 +82,7 @@ helm repo add kubeshop https://kubeshop.github.io/helm-chart
 
 helm repo update
 
-helm install --create-namespace testkube testkube/testkube --namespace testkube --values values.yaml
+helm install --create-namespace testkube kubeshop/testkube --namespace testkube --values values.yaml
 ```
 
 After the installation command is complete, you will see the following resources created into your AWS Console.

@@ -31,7 +31,7 @@ SCRAPPERENABLED
 Which can be set while installing with Helm:
 
 ```sh
-helm install --create-namespace my-testkube testkube/testkube --set STORAGE_ENDPOINT=custom_value
+helm install --create-namespace my-testkube kubeshop/testkube --set STORAGE_ENDPOINT=custom_value
 ```
 
 Alternatively, these values can be read from Kubernetes secrets and set:

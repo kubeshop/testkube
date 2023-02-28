@@ -13,7 +13,7 @@ testkube` to see the charts.
 ## 2. Install the `testkube` chart
 
 ```sh
-helm install --create-namespace my-testkube testkube/testkube
+helm install --create-namespace my-testkube kubeshop/testkube
 ```
 
 :::note
@@ -22,19 +22,19 @@ By default, the namespace for the installation will be `testkube`. If the `testk
 If you wish to install into a different namespace, please use following command:
 
 ```sh
-helm install --namespace namespace_name my-testkube testkube/testkube
+helm install --namespace namespace_name my-testkube kubeshop/testkube
 ```
 
 To uninstall the `testkube` chart if it was installed into default namespace:
 
 ```sh
-helm delete my-testkube testkube/testkube
+helm delete my-testkube kubeshop/testkube
 ```
 
 And from a namespace other than `testkube`:
 
 ```sh
-helm delete --namespace namespace_name my-testkube testkube/testkube
+helm delete --namespace namespace_name my-testkube kubeshop/testkube
 ```
 :::
 
