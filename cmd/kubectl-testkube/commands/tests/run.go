@@ -161,11 +161,9 @@ func NewRunTestCmd() *cobra.Command {
 					ui.Debug(err.Error())
 					os.Exit(1)
 				}
-				panic(uploadTimeout)
 
 				if len(copyFiles) > 0 {
 					var timeout time.Duration
-					panic(uploadTimeout)
 					if uploadTimeout != "" {
 						timeout, err = time.ParseDuration(uploadTimeout)
 						if err != nil {
@@ -269,7 +267,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret", "secret-env is deprecated use secret-variable instead")
-	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files")
+	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
 }

@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
 
@@ -52,9 +51,6 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 
 // UploadFile uploads a copy file to the API server
 func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
-	spew.Dump("===============CopyFileDirectClient UploadFile Timeout================")
-	spew.Dump(timeout)
-	spew.Dump("=================================================")
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
@@ -67,7 +63,12 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
+	clientTimeout := c.client.Timeout
+	if timeout != clientTimeout {
+		c.client.Timeout = timeout
+	}
 	resp, err := c.client.Do(req)
+	c.client.Timeout = clientTimeout
 	if err != nil {
 		return err
 	}
@@ -85,22 +86,23 @@ func (c CopyFileDirectClient) getUri() string {
 
 // UploadFile uploads a copy file to the API server
 func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
-	spew.Dump("===============CopyFileProxyClient UploadFile Timeout================")
-	spew.Dump(timeout)
-	spew.Dump("=================================================")
-
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
 	}
 
+	// by default the timeout is 0 for the K8s client, which means no timeout
+	clientTimeout := time.Duration(0)
+	if timeout != clientTimeout {
+		clientTimeout = timeout
+	}
 	req := c.client.CoreV1().RESTClient().Verb(http.MethodPost).
 		Namespace(c.config.Namespace).
 		Resource("services").
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy").
-		Timeout(timeout).
+		Timeout(clientTimeout).
 		Suffix(Version + uri).
 		Body(body)
 
