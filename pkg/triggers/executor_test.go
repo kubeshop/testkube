@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
@@ -21,7 +23,6 @@ import (
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"

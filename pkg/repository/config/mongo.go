@@ -29,7 +29,7 @@ func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {
 
 type Opt func(*MongoRepository)
 
-func WithCollection(collection *mongo.Collection) Opt {
+func WithMongoRepositoryCollection(collection *mongo.Collection) Opt {
 	return func(r *MongoRepository) {
 		r.Coll = collection
 	}
@@ -43,10 +43,10 @@ func (r *MongoRepository) GetUniqueClusterId(ctx context.Context) (clusterId str
 	config := testkube.Config{}
 	_ = r.Coll.FindOne(ctx, bson.M{"id": Id}).Decode(&config)
 
-	// generate new cluster Id and save if there is not already
+	// generate new cluster id and save if there is not already
 	if config.ClusterId == "" {
 		config.ClusterId = fmt.Sprintf("cluster%s", telemetry.GetMachineID())
-		err := r.Upsert(ctx, config)
+		_, err := r.Upsert(ctx, config)
 		return config.ClusterId, err
 	}
 
@@ -64,9 +64,9 @@ func (r *MongoRepository) Get(ctx context.Context) (result testkube.Config, err 
 	return
 }
 
-func (r *MongoRepository) Upsert(ctx context.Context, result testkube.Config) (err error) {
+func (r *MongoRepository) Upsert(ctx context.Context, result testkube.Config) (updated testkube.Config, err error) {
 	upsert := true
 	result.Id = Id
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": Id}, result, &options.ReplaceOptions{Upsert: &upsert})
-	return
+	return result, err
 }

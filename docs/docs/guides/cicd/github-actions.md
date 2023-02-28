@@ -125,11 +125,11 @@ If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` bl
 
 - name: Installing repositories
   run: |
-    helm repo add helm-charts https://kubeshop.github.io/helm-charts
+    helm repo add kubeshop https://kubeshop.github.io/helm-charts
     helm repo add bitnami https://charts.bitnami.com/bitnami
 
 # Run Helm delpoy/upgrade of the Testkube release on a GKE cluster
 - name: Deploy
   run: |-
-    helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
+    helm upgrade --install --atomic --timeout 180s testkube kubeshop/testkube --namespace testkube --create-namespace
 ```

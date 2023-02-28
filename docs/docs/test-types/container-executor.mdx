@@ -7,7 +7,7 @@ The Testkube Container Executor allows you to run your own container images for 
 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
 
-## Creating and configuring Container Executor
+## Creating and configuring Container Executor: Curl
 
 In the following example, the custom Curl executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
 
@@ -21,7 +21,7 @@ Let's start with Dashboard first. You can view existing executors by going to th
 That's also a place where you can create a new custom Container Executor. In order to do it just click the `Create a new executor` button.
 The executor creation dialog will be displayed. That's where you can name you executor, and set image that will be used for execution. That's where you also need to set `Executor type` - that's the name you will later use in your Tests as the test type. In this example we created a custom Curl executor:
 
-![Container executor creation dialog](../img/dashboard-create-an-executor-dialog.png)
+![Container executor creation dialog](../img/dashboard-create-an-executor-dialog-curl.png)
 
 After the executor is created, you will be redirected to executor settings view. That's where you can set additional seetings.
 
@@ -148,6 +148,96 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 1. HTTP Request.
 2. Test.Spec.ExecutionRequest fields are used if they are not filled before.
 3. Executor.Spec fields are used if they are not filled before.
+
+</TabItem>
+</Tabs>
+
+## Creating and configuring Container Executor: Playwright
+Despite having the dedicated [Playwright executor](executor-playwright.md), you may want to use, for example, a version that isn't supported. That's where you can use the Container executor - it allow you to use any Playwright image you may need.
+
+The example Playwright project uses Playwright `1.31.1`: https://github.com/kubeshop/testkube/tree/main/test/playwright/executor-tests/playwright-project
+That's the specific version that's needed to run the tests. So, in this example the container executor will be created with `mcr.microsoft.com/playwright:v1.31.1-focal` Playwright official image. If you need another image you can find specific image tags in the Playwright Docs: https://playwright.dev/docs/docker#image-tags
+
+<Tabs groupId="dashboard-cli">
+<TabItem value="dash" label="Dashboard">
+
+Again, let's start with Dashboard first. In order to create a new custom Container Executor you need to go to the Executors tab, and then click the `Create a new executor` button.
+
+![Dashboard menu - executors icon](../img/dashboard-executors-icon.png)
+
+The executor creation dialog will be displayed. That's where you can name you executor, and set image that will be used for execution. That's where you also need to set `Executor type` - that's the name you will later use in your Tests as the test type. In this example we created a custom Playwright executor:
+
+![Container executor creation dialog](../img/dashboard-create-an-executor-dialog-playwright.png)
+
+After the executor is created, you will be redirected to executor settings view. That's where you can set additional seetings.
+
+In this case you will need to set Command that will be executed.
+
+![Container executor settings - command and arguments](../img/dashboard-create-executor-playwright-command-args.png)
+
+Command: `/bin/sh -c`
+Arguments: `npm install; npx playwright test`
+
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+Custom Container Executor can also be created with Testkube CLI using `testkube create executor` command.
+
+- `--name` is mandatory - that's custom executor's name.
+- `--executor-type` need to be set to `container`
+- `--image` is the executor image (`mcr.microsoft.com/playwright:v1.31.1-focal`)
+- `--types` that's the name you will later use in your Tests as the test type (for example, `executor-playwright/test`)
+- `--command` (in this case `/bin/sh -c`)
+- `--args` (arguments - in this case `npm install; npx playwright test`)
+
+So, the final command may look like this:
+```sh
+testkube create executor --name container-executor-playwright --executor-type container --image mcr.microsoft.com/playwright:v1.31.1-focal --types executor-playwright/test  --command "/bin/sh -c" --args "npm install; npx playwright test"
+```
+
+</TabItem>
+<TabItem value="crd" label="Custom Resource">
+
+Executor CRD:
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-playwright-v1.31.1
+  namespace: testkube
+spec:
+  image: mcr.microsoft.com/playwright:v1.31.1-focal
+  command: ["/bin/sh", "-c"]
+  args:
+  - "npm install; npx playwright test"
+  executor_type: container
+  types:
+  - container-executor-playwright-v1.31.1/test
+```
+
+Test CRD:
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-playwright-smoke
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-playwright-v1.31.1/test
+  content:
+    type: git-dir
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/playwright/executor-tests/playwright-project
+      workingDir: test/playwright/executor-tests/playwright-project
+```
 
 </TabItem>
 </Tabs>

@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,7 +20,7 @@ import (
 const uri string = "/uploads"
 
 type CopyFileClient interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
 type CopyFileDirectClient struct {
@@ -49,7 +50,7 @@ func NewCopyFileProxyClient(client kubernetes.Interface, config APIConfig) *Copy
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
@@ -62,13 +63,18 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
+	clientTimeout := c.client.Timeout
+	if timeout != clientTimeout {
+		c.client.Timeout = timeout
+	}
 	resp, err := c.client.Do(req)
+	c.client.Timeout = clientTimeout
 	if err != nil {
 		return err
 	}
 
 	if err = httpResponseError(resp); err != nil {
-		return fmt.Errorf("api%s returned error: %w", uri, err)
+		return fmt.Errorf("api %s returned error: %w", uri, err)
 	}
 
 	return nil
@@ -79,18 +85,24 @@ func (c CopyFileDirectClient) getUri() string {
 }
 
 // UploadFile uploads a copy file to the API server
-func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error {
+func (c CopyFileProxyClient) UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
 	body, writer, err := createUploadFileBody(filePath, fileContent, parentName, parentType)
 	if err != nil {
 		return err
 	}
 
+	// by default the timeout is 0 for the K8s client, which means no timeout
+	clientTimeout := time.Duration(0)
+	if timeout != clientTimeout {
+		clientTimeout = timeout
+	}
 	req := c.client.CoreV1().RESTClient().Verb(http.MethodPost).
 		Namespace(c.config.Namespace).
 		Resource("services").
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		Name(fmt.Sprintf("%s:%d", c.config.ServiceName, c.config.ServicePort)).
 		SubResource("proxy").
+		Timeout(clientTimeout).
 		Suffix(Version + uri).
 		Body(body)
 

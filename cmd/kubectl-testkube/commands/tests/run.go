@@ -53,6 +53,7 @@ func NewRunTestCmd() *cobra.Command {
 		variableConfigMaps       []string
 		mountSecrets             map[string]string
 		variableSecrets          []string
+		uploadTimeout            string
 	)
 
 	cmd := &cobra.Command{
@@ -162,8 +163,15 @@ func NewRunTestCmd() *cobra.Command {
 				}
 
 				if len(copyFiles) > 0 {
+					var timeout time.Duration
+					if uploadTimeout != "" {
+						timeout, err = time.ParseDuration(uploadTimeout)
+						if err != nil {
+							ui.ExitOnError("invalid upload timeout duration", err)
+						}
+					}
 					options.BucketName = uuid.New().String()
-					err = uploadFiles(client, options.BucketName, apiv1.Execution, copyFiles)
+					err = uploadFiles(client, options.BucketName, apiv1.Execution, copyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
 
@@ -259,6 +267,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret", "secret-env is deprecated use secret-variable instead")
+	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
 }

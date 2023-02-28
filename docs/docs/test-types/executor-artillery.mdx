@@ -1,3 +1,6 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 # Artillery.io
 Artillery.io is an open-source load testing tool. It's designed to be both straightforward in configuration (YAML files), and powerful. Artillery executor allow you to run Artillery tests with Testkube.
 
@@ -51,14 +54,19 @@ Our test is ready but how do we run it in a Kubernetes cluster? Testkube will he
 
 Let's create a new Testkube test based on the saved Artillery test definition.
 
-## **Create a New Testkube Test**
+## Create a New Testkube Test
 If you want to upload a test file directly (like in this example) you can use Dashboard, or CLI - depending on your preferences.
 
-### Testkube Dashboard
+<Tabs groupId="dashboard-cli">
+<TabItem value="dash" label="Dashboard">
+
 If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`artillery/test`), Test Source (`File`, which allow you to upload specific file), and choose the File.
 ![Container executor creation dialog](../img/dashboard-create-artillery-api-test.png)
 
-### Testkube CLI
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+
 If you prefer using the CLI instead, you can create the test with `testcube create test`.
 You need to set test:
 - `--name` (for example, `artillery-api-test`)
@@ -76,7 +84,10 @@ Output:
 Test created  🥇
 ```
 
-## **Running a Test**
+</TabItem>
+</Tabs>
+
+## Running a Test
 
 ```bash
 $ testkube run test artillery-api-test                                                                                                                       
@@ -105,7 +116,7 @@ You can also watch your test results in real-time with `-f` flag (like "follow")
 
 Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 
-## **Getting Test Results**
+## Getting Test Results
 
 
 Let's get back our finished test results. The test report and output will be stored in Testkube storage to revisit when necessary.
@@ -159,5 +170,5 @@ Test execution completed with success in 3m14.484s 🥇
 
 ```
 
-## ** Additional examples**
+## Additional examples
 Additional Artillery examples can be found in the Testkube repository [here](https://github.com/kubeshop/testkube/blob/main/test/artillery/executor-smoke/).

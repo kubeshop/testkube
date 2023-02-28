@@ -53,7 +53,7 @@ func TestStorage(t *testing.T) {
 	t.Run("Upsert should insert new config entry", func(t *testing.T) {
 		// given,
 		clusterId := "uniq3"
-		err := repository.Upsert(context.Background(), testkube.Config{
+		_, err := repository.Upsert(context.Background(), testkube.Config{
 			ClusterId: clusterId,
 		})
 		assert.NoError(err)
