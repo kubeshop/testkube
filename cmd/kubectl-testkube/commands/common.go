@@ -57,7 +57,7 @@ func GetCurrentKubernetesContext() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
+func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.AgentKey == "" {
 		options.AgentKey = cfg.CloudContext.AgentKey
@@ -89,6 +89,8 @@ func HelmUpgradeOrInstalTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions
 		"--set", "testkube-api.mongodb.enabled=false",
 		"--set", "testkube-api.cloud.url=" + options.AgentUri,
 		"--set", "testkube-api.cloud.key=" + options.AgentKey,
+		"--set", "testkube-api.minio.enabled=false",
+		"--set", "mongodb.enabled=false",
 	}
 
 	command = append(command, options.Name, options.Chart)
