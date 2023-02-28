@@ -125,7 +125,7 @@ If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` bl
 
 - name: Installing repositories
   run: |
-    helm repo add helm-charts https://kubeshop.github.io/helm-charts
+    helm repo add kubeshop https://kubeshop.github.io/helm-charts
     helm repo add bitnami https://charts.bitnami.com/bitnami
 
 # Run Helm delpoy/upgrade of the Testkube release on a GKE cluster

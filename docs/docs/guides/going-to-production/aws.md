@@ -78,7 +78,7 @@ Do not forget to add `apiServerEndpoint` to the `values.yaml` for `testkube-dash
 Once we are ready with the `values.yaml` file, we can deploy Testkube into our cluster:
 
 ```sh
-helm repo add testkube https://kubeshop.github.io/helm-chart
+helm repo add kubeshop https://kubeshop.github.io/helm-chart
 
 helm repo update
 
