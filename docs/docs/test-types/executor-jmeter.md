@@ -118,7 +118,7 @@ You can also create a Test based on a Git repository:
 
 ```bash
 # create test from this Git repository
-kubectl testkube create test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube-executor-jmeter.git --git-branch main --git-path examples/kubeshop.jmx --type jmeter/test --name jmeter-test-from-git
+kubectl testkube create test --test-content-type git --git-uri https://github.com/kubeshop/testkube-executor-jmeter.git --git-branch main --git-path examples/kubeshop.jmx --type jmeter/test --name jmeter-test-from-git
 ```
 
 Testkube will clone the repository and create a Testkube Test Custom Resource in your cluster automatically on each test run. 

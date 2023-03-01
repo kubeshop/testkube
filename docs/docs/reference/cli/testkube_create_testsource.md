@@ -27,7 +27,7 @@ testkube create testsource [flags]
   -h, --help                                 help for testsource
   -l, --label stringToString                 label key value pair: --label key1=value1 (default [])
   -n, --name string                          unique test source name - mandatory
-      --source-type string                   source type of test one of string|file-uri|git-file|git-dir
+      --source-type string                   source type of test one of string|file-uri|git
   -u, --uri string                           URI which should be called when given event occurs
 ```
 

@@ -149,8 +149,7 @@ spec:
   content_types:
     - string
     - file-uri
-    - git-file
-    - git-dir
+    - git
   features:
     - artifacts
     - junit-report

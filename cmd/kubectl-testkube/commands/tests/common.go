@@ -135,7 +135,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	}
 
 	if repository != nil && testContentType == "" {
-		testContentType = string(testkube.TestContentTypeGitDir)
+		testContentType = string(testkube.TestContentTypeGit)
 	}
 
 	content = &testkube.TestContent{
