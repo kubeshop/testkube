@@ -113,6 +113,17 @@ container-curl-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-k6-smoke() {
+  name="Container executor - K6"
+  test_crd_file="test/container-executor/executor-smoke/crd/k6.yaml"
+  testsuite_name="executor-container-k6-smoke-tests"
+  testsuite_file="test/suites/executor-container-k6-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-k6.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 container-playwright-smoke() {
   name="Container executor - Playwright"
   test_crd_file="test/container-executor/executor-smoke/crd/playwright.yaml"
@@ -234,6 +245,7 @@ main() {
     all)
       artillery-smoke
       container-curl-smoke
+      container-k6-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke
@@ -250,6 +262,7 @@ main() {
     smoke)
       artillery-smoke
       container-curl-smoke
+      container-k6-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke
