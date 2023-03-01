@@ -1300,7 +1300,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-
+  /tests/{id}/abort:
+    post:
+      tags:
+        - tests
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: "Abort all executions of a test"
+      description: "Abort all test executions"
+      operationId: abortTestExecutions
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /tests/{id}/metrics:
     get:
       tags:
