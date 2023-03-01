@@ -2,7 +2,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: k6-executor-smoke-git-dir
+  name: k6-executor-smoke-directory
   namespace: testkube
   labels:
     core-tests: executors
