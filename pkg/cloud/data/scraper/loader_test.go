@@ -57,7 +57,7 @@ func TestCloudLoader_Load(t *testing.T) {
 					TestSuiteName: "my-test-suite",
 				}
 
-				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, req).Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil).Times(1)
+				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil).Times(1)
 				return cloudscraper.NewCloudLoader(mockExecutor)
 			},
 			putErr:  nil,
@@ -106,7 +106,7 @@ func TestCloudLoader_Load(t *testing.T) {
 					TestSuiteName: "my-test-suite",
 				}
 
-				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, req).Return(nil, errors.New("connection error")).Times(1)
+				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return(nil, errors.New("connection error")).Times(1)
 				return cloudscraper.NewCloudLoader(mockExecutor)
 			},
 			wantErr:     true,

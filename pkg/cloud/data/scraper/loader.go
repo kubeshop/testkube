@@ -23,7 +23,7 @@ func NewCloudLoader(executor executor.Executor) *CloudLoader {
 }
 
 func (l *CloudLoader) Load(ctx context.Context, object *scraper.Object, meta map[string]any) error {
-	meta["object"] = object
+	meta["object"] = object.Name
 	req, err := l.validateInfo(meta)
 	if err != nil {
 		return err
