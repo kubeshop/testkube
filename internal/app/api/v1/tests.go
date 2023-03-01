@@ -481,6 +481,33 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	}
 }
 
+// AbortTestHandler is a method for aborting a executions of a test with id
+func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		filter := result.NewExecutionsFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
+		executions, err := s.ExecutionResults.GetExecutions(ctx, filter)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("executions with name %s not found", name))
+			}
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		for _, execution := range executions {
+			res, errAbort := s.Executor.Abort(ctx, &execution)
+			if errAbort != nil {
+				s.Log.Errorw("aborting execution failed", "execution", execution, "error", errAbort)
+				err = errAbort
+			}
+			s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
+		}
+
+		return s.Error(c, http.StatusInternalServerError, err)
+	}
+}
+
 // DeleteTestsHandler for deleting all tests
 func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

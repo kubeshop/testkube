@@ -242,6 +242,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
+	tests.Post("/:id/abort", s.AbortTestHandler())
 
 	tests.Get("/:id/metrics", s.TestMetricsHandler())
 
