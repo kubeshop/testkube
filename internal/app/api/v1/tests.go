@@ -495,6 +495,7 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
+		var results []testkube.ExecutionResult
 		for _, execution := range executions {
 			res, errAbort := s.Executor.Abort(ctx, &execution)
 			if errAbort != nil {
@@ -502,9 +503,10 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 				err = errAbort
 			}
 			s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
+			results = append(results, *res)
 		}
 
-		return s.Error(c, http.StatusInternalServerError, err)
+		return c.JSON(results)
 	}
 }
 
