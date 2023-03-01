@@ -1,0 +1,7 @@
+{
+	"name": "executor-container-k6-smoke-tests",
+	"description": "container executor k6 smoke tests",
+	"steps": [
+		{"execute": {"name": "container-executor-k6-smoke"}}
+	]
+}

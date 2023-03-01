@@ -1,0 +1,10 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-k6-0.43.1
+  namespace: testkube
+spec:
+  image: grafana/k6:0.43.1
+  executor_type: container
+  types:
+  - container-executor-k6-0.43.1/test
