@@ -62,7 +62,7 @@ metadata:
   namespace: testkube
 spec:
   type: postman/collection
-  source: testsource-postman-executor-smoke-testsource-git-file
+  source: testsource-postman-executor-smoke-testsource
   executionRequest:
     args:
       - --env-var
@@ -75,7 +75,7 @@ metadata:
   name: testsource-postman-executor-smoke-testsource-git-file
   namespace: testkube
 spec:
-  type: git-file
+  type: git-file # backwards compatibility check
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
