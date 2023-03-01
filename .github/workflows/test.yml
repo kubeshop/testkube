@@ -20,6 +20,15 @@ jobs:
           - 4222:4222
           - 6222:6222
           - 8222:8222
+      minio:
+        image: quay.io/minio/minio
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minio99
+          MINIO_ROOT_PASSWORD: minio123
+
 
     steps:
       - uses: actions/checkout@v2

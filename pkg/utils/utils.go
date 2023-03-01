@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"math/big"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func ContainsTag(tags []string, tag string) bool {
@@ -69,4 +71,14 @@ func RandAlphanum(n int) string {
 		b[i] = letters[nBig.Int64()]
 	}
 	return string(b)
+}
+
+func CheckStringKey(m map[string]any, key string) error {
+	if _, ok := m[key]; !ok {
+		return errors.New(key + " is missing")
+	}
+	if _, ok := m[key].(string); !ok {
+		return errors.New(key + " is not a string")
+	}
+	return nil
 }
