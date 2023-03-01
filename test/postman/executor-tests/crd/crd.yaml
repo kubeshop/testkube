@@ -8,9 +8,9 @@ metadata:
 spec:
   type: postman/collection
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
@@ -26,7 +26,7 @@ metadata:
   name: testsource-postman-executor-smoke-testsource-git-file
   namespace: testkube
 spec:
-  type: git-file
+  type: git
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
@@ -54,7 +54,7 @@ metadata:
   name: testsource-postman-executor-smoke-testsource-overwrite
   namespace: testkube
 spec:
-  type: git-file
+  type: git
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
@@ -89,9 +89,9 @@ metadata:
 spec:
   type: postman/collection
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json

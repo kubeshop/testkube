@@ -8,7 +8,7 @@ metadata:
 spec:
   type: k6/script
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
@@ -34,7 +34,7 @@ metadata:
 spec:
   type: k6/script
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git

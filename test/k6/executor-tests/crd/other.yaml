@@ -9,7 +9,7 @@ metadata:
 spec:
   type: k6/script
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
