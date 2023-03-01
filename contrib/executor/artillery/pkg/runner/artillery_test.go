@@ -15,11 +15,13 @@ func TestRun(t *testing.T) {
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
 		// given
 		// install artillery before running test
-		_, err := executor.Run("", "npm", "install", "-g", "artillery@2.0.0-27")
+		_, err := executor.Run("", "npm", nil, "install", "-g", "artillery@2.0.0-27")
 		if err != nil {
 			t.Errorf("npm install artillery error: %v", err)
 		}
-		runner := NewArtilleryRunner()
+		runner, err := NewArtilleryRunner()
+		assert.NoError(t, err)
+
 		repoURI := "https://github.com/kubeshop/testkube-executor-artillery.git"
 		result, err := runner.Run(testkube.Execution{
 			Content: &testkube.TestContent{
