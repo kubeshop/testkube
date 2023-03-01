@@ -56,7 +56,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		options.CloudOrganization = cfg.CloudContext.Organization
 		options.ApiUri = cfg.CloudContext.ApiUri
 	default:
-		ui.Failf("unknown context type: %s", cfg.ContextType)
+		ui.Warn("unknown context type: " + string(cfg.ContextType))
 	}
 
 	c, err := client.GetClient(client.ClientType(clientType), options)
