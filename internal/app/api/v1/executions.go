@@ -299,7 +299,7 @@ func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 		}
 		s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
 
-		return err
+		return c.JSON(res)
 	}
 }
 

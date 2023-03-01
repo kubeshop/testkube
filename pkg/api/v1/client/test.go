@@ -204,6 +204,12 @@ func (c TestClient) AbortExecution(testID, id string) error {
 	return c.executionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
+// AbortExecutions aborts all the executions of a test
+func (c TestClient) AbortExecutions(testID string) error {
+	uri := c.executionTransport.GetURI("/tests/%s/abort", testID)
+	return c.executionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
 // ListExecutions list all executions for given test name
 func (c TestClient) ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error) {
 	uri := c.executionsResultTransport.GetURI("/executions/")

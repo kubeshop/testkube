@@ -26,3 +26,20 @@ func NewAbortExecutionCmd() *cobra.Command {
 		},
 	}
 }
+
+func NewAbortExecutionsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "executions <testName>",
+		Short: "Aborts all executions of the test",
+		Args:  validator.ExecutionName,
+		Run: func(cmd *cobra.Command, args []string) {
+			testName := args[0]
+
+			client, _ := common.GetClient(cmd)
+
+			err := client.AbortExecutions(testName)
+			ui.ExitOnError(fmt.Sprintf("aborting executions of test %s", testName), err)
+			ui.SuccessAndExit("Succesfully aborted all executions of the test", testName)
+		},
+	}
+}
