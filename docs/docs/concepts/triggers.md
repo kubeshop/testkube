@@ -1,11 +1,14 @@
 # Test Triggers
 
-Testkube allows you to automate running tests and test suites by defining triggers on certain events for various
-Kubernetes resources.
+Testkube allows you to automate running tests and test suites by defining triggers on certain events for various Kubernetes resources.
 
-In generic terms, a **trigger** defines an **action** which will be executed for a given **execution** when a certain **event** on a specific **resource** occurs.
+## What is a Testkube Test Trigger?
 
-For example, we could define a **trigger** which **runs** a **test** when a **configmap** gets **modified**.
+In generic terms, a **trigger** defines an **action** which will be executed for a given **execution** when a certain **event** on a specific **resource** occurs. For example, we could define a **trigger** which **runs** a **test** when a **configmap** gets **modified**.
+
+Watch our guide on using Testkube Test Triggers to perform **Asynchronous Testing in Kubernetes**:
+<iframe width="100%" height="350px" src="https://www.youtube.com/embed/t4V6E9rQ5W4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 
 ## Custom Resource Definition Model
 
