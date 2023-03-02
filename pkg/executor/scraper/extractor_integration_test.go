@@ -60,7 +60,7 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 		return nil
 	}
 
-	extractor := scraper.NewFilesystemExtractor(tempDir, filesystem.NewOSFileSystem())
+	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
 	err = extractor.Extract(context.Background(), processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)

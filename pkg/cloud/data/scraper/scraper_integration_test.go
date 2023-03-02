@@ -45,7 +45,7 @@ func TestCloudScraper(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewFilesystemExtractor(tempDir, filesystem.NewOSFileSystem())
+	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
 
 	testServerRequests := 0
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

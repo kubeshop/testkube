@@ -41,7 +41,7 @@ func TestMinIOScraper(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewFilesystemExtractor(tempDir, filesystem.NewOSFileSystem())
+	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
 
 	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
 	if err != nil {
