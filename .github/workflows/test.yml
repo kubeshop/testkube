@@ -56,39 +56,40 @@ jobs:
         run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json ./...
 
       - name: Unit Test Summary
-        if: steps.unit_test.outcome == 'success' || steps.unit_test.outcome == 'failure'
+        if: always()
         uses: test-summary/action@v1
         with:
           paths: |
             unit-tests.xml
 
       - name: Annotate unit tests
-        if: steps.unit_test.outcome == 'success' || steps.unit_test.outcome == 'failure'
+        if: always()
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: unit-tests.json
 
       - name: Integration tests
         id: integration_test
-        if: steps.unit_test.outcome == 'success' || steps.unit_test.outcome == 'failure'
+        if: always()
         run: |
           sudo apt-get install -y git
           gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration ./...
 
       - name: Integration Test Summary
-        if: steps.integration_test.outcome == 'success' || steps.integration_test.outcome == 'failure'
+        if: always()
         uses: test-summary/action@v1
         with:
           paths: |
             integration-tests.xml
 
       - name: Annotate integration tests
-        if: steps.integration_test.outcome == 'success' || steps.integration_test.outcome == 'failure'
+        if: always()
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: integration-tests.json
 
       - name: OpenAPI Lint Checks
+        if: always()
         uses: nwestfall/openapi-action@v1.0.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
