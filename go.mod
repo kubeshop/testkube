@@ -88,6 +88,7 @@ require (
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/onsi/gomega v1.20.2 // indirect
+	github.com/rikatz/kubepug v1.4.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
