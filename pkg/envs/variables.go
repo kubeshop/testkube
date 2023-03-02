@@ -11,17 +11,21 @@ import (
 
 // Params are the environment variables provided by the Testkube api-server
 type Params struct {
-	Endpoint        string // RUNNER_ENDPOINT
-	AccessKeyID     string // RUNNER_ACCESSKEYID
-	SecretAccessKey string // RUNNER_SECRETACCESSKEY
-	Location        string // RUNNER_LOCATION
-	Token           string // RUNNER_TOKEN
-	Bucket          string // RUNNER_BUCKET
-	Ssl             bool   // RUNNER_SSL
-	ScrapperEnabled bool   // RUNNER_SCRAPPERENABLED
-	DataDir         string // RUNNER_DATADIR
-	GitUsername     string // RUNNER_GITUSERNAME
-	GitToken        string // RUNNER_GITTOKEN
+	Endpoint            string // RUNNER_ENDPOINT
+	AccessKeyID         string // RUNNER_ACCESSKEYID
+	SecretAccessKey     string // RUNNER_SECRETACCESSKEY
+	Location            string // RUNNER_LOCATION
+	Token               string // RUNNER_TOKEN
+	Bucket              string // RUNNER_BUCKET
+	Ssl                 bool   // RUNNER_SSL
+	ScrapperEnabled     bool   // RUNNER_SCRAPPERENABLED
+	DataDir             string // RUNNER_DATADIR
+	GitUsername         string // RUNNER_GITUSERNAME
+	GitToken            string // RUNNER_GITTOKEN
+	CloudMode           bool   // RUNNER_CLOUD_MODE
+	CloudAPIKey         string // RUNNER_CLOUD_API_KEY
+	CloudAPITLSInsecure bool   // RUNNER_CLOUD_API_TLS_INSECURE
+	CloudAPIURL         string // RUNNER_CLOUD_API_URL
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
@@ -52,6 +56,10 @@ func printParams(params Params) {
 	output.PrintLog(fmt.Sprintf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername))
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
 	output.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.DataDir))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_MODE=\"%t\"", params.CloudMode))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL))
+	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not
