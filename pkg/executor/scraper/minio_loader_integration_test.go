@@ -14,7 +14,7 @@ import (
 func TestMinIOLoader_Load(t *testing.T) {
 	t.Parallel()
 
-	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket", false)
+	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
 	}

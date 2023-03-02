@@ -43,7 +43,7 @@ func TestMinIOScraper(t *testing.T) {
 
 	extractor := scraper.NewFilesystemExtractor(tempDir, filesystem.NewOSFileSystem())
 
-	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket", false)
+	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
 	}
