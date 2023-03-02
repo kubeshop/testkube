@@ -29,6 +29,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	cfg, err := config.Load()
 	ui.ExitOnError("loading config file", err)
 
+	// set kubeconfig as default config type
+	if cfg.ContextType == "" {
+		cfg.ContextType = config.ContextTypeKubeconfig
+	}
+
 	switch cfg.ContextType {
 	case config.ContextTypeKubeconfig:
 		if oauthEnabled {
@@ -55,8 +60,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		options.CloudEnvironment = cfg.CloudContext.Environment
 		options.CloudOrganization = cfg.CloudContext.Organization
 		options.ApiUri = cfg.CloudContext.ApiUri
-	default:
-		ui.Warn("unknown context type: " + string(cfg.ContextType))
 	}
 
 	c, err := client.GetClient(client.ClientType(clientType), options)
