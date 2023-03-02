@@ -11,7 +11,7 @@ func NewEventStartTest(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
 		Type_:         EventStartTest,
-		TestExecution: execution,
+		TestExecution: NewTestExecutionWithoutLogs(execution),
 	}
 }
 
@@ -19,7 +19,7 @@ func NewEventEndTestSuccess(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestSuccess,
-		TestExecution: execution,
+		TestExecution: NewTestExecutionWithoutLogs(execution),
 	}
 }
 
@@ -27,7 +27,7 @@ func NewEventEndTestFailed(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestFailed,
-		TestExecution: execution,
+		TestExecution: NewTestExecutionWithoutLogs(execution),
 	}
 }
 
@@ -35,7 +35,7 @@ func NewEventEndTestAborted(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestAborted,
-		TestExecution: execution,
+		TestExecution: NewTestExecutionWithoutLogs(execution),
 	}
 }
 
@@ -43,7 +43,7 @@ func NewEventEndTestTimeout(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestTimeout,
-		TestExecution: execution,
+		TestExecution: NewTestExecutionWithoutLogs(execution),
 	}
 }
 
@@ -51,7 +51,7 @@ func NewEventStartTestSuite(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
 		Type_:              EventStartTestSuite,
-		TestSuiteExecution: execution,
+		TestSuiteExecution: NewTestSuiteExecutionWithoutLogs(execution),
 	}
 }
 
@@ -59,7 +59,7 @@ func NewEventEndTestSuiteSuccess(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
 		Type_:              EventEndTestSuiteSuccess,
-		TestSuiteExecution: execution,
+		TestSuiteExecution: NewTestSuiteExecutionWithoutLogs(execution),
 	}
 }
 
@@ -67,7 +67,7 @@ func NewEventEndTestSuiteFailed(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
 		Type_:              EventEndTestSuiteFailed,
-		TestSuiteExecution: execution,
+		TestSuiteExecution: NewTestSuiteExecutionWithoutLogs(execution),
 	}
 }
 
@@ -75,7 +75,7 @@ func NewEventEndTestSuiteAborted(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
 		Type_:              EventEndTestSuiteAborted,
-		TestSuiteExecution: execution,
+		TestSuiteExecution: NewTestSuiteExecutionWithoutLogs(execution),
 	}
 }
 
@@ -83,8 +83,24 @@ func NewEventEndTestSuiteTimeout(execution *TestSuiteExecution) Event {
 	return Event{
 		Id:                 uuid.NewString(),
 		Type_:              EventEndTestSuiteTimeout,
-		TestSuiteExecution: execution,
+		TestSuiteExecution: NewTestSuiteExecutionWithoutLogs(execution),
 	}
+}
+
+func NewTestExecutionWithoutLogs(execution *Execution) *Execution {
+	if execution.ExecutionResult != nil {
+		execution.ExecutionResult.Output = ""
+	}
+	return execution
+}
+
+func NewTestSuiteExecutionWithoutLogs(execution *TestSuiteExecution) *TestSuiteExecution {
+	for i := range execution.StepResults {
+		if execution.StepResults[i].Execution != nil && execution.StepResults[i].Execution.ExecutionResult != nil {
+			execution.StepResults[i].Execution.ExecutionResult.Output = ""
+		}
+	}
+	return execution
 }
 
 func (e Event) Type() EventType {
