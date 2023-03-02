@@ -113,3 +113,34 @@ func TestEvent_IsSuccess(t *testing.T) {
 	})
 
 }
+
+func TestNewTestExecutionWithoutLogs(t *testing.T) {
+	// given
+	execution := Execution{ExecutionResult: &ExecutionResult{Output: "log output"}}
+
+	// when
+	logless := NewTestExecutionWithoutLogs(&execution)
+
+	// then
+	assert.Equal(t, "", logless.ExecutionResult.Output)
+
+}
+
+func TestNewTestSuiteExecutionWithoutLogs(t *testing.T) {
+	// given
+	execution := TestSuiteExecution{
+		StepResults: []TestSuiteStepExecutionResult{
+			{Execution: &Execution{ExecutionResult: &ExecutionResult{Output: "log output"}}},
+			{Execution: &Execution{ExecutionResult: &ExecutionResult{Output: "log output"}}},
+			{Execution: &Execution{ExecutionResult: &ExecutionResult{Output: "log output"}}},
+		},
+	}
+
+	// when
+	logless := NewTestSuiteExecutionWithoutLogs(&execution)
+
+	// then
+	assert.Equal(t, "", logless.StepResults[0].Execution.ExecutionResult.Output)
+	assert.Equal(t, "", logless.StepResults[1].Execution.ExecutionResult.Output)
+	assert.Equal(t, "", logless.StepResults[2].Execution.ExecutionResult.Output)
+}
