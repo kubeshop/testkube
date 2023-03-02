@@ -52,35 +52,37 @@ jobs:
         run: go install gotest.tools/gotestsum@latest
 
       - name: Unit test
+        id: unit_test
         run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json ./...
 
       - name: Unit Test Summary
-        if: always()
+        if: steps.unit_test.conclusion == 'success'
         uses: test-summary/action@v1
         with:
           paths: |
             unit-tests.xml
 
       - name: Annotate unit tests
-        if: always()
+        if: steps.unit_test.conclusion == 'success'
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: unit-tests.json
 
       - name: Integration tests
+        id: integration_test
         run: |
           sudo apt-get install -y git
           gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration ./...
 
       - name: Integration Test Summary
-        if: always()
+        if: steps.integration_test.conclusion == 'success'
         uses: test-summary/action@v1
         with:
           paths: |
             integration-tests.xml
 
       - name: Annotate integration tests
-        if: always()
+        if: steps.integration_test.conclusion == 'success'
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: integration-tests.json
