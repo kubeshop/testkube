@@ -33,7 +33,7 @@ jobs:
 
       - name: Unit Test
         id: unit_test
-        run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json ./...
+        run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- -coverprofile=unit.cov -covermode=atomic ./...
 
       - name: Unit Test Summary
         if: always()
@@ -47,6 +47,23 @@ jobs:
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: unit-tests.json
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-test-coverage
+          path: unit.cov
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Send coverage report
+        if: always()
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          file: ./unit.cov
+          flags: unittests
+          name: codecov-testkube-unit-tests
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -94,7 +111,7 @@ jobs:
       - name: Integration Tests
         run: |
           sudo apt-get install -y git
-          gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration ./...
+          gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration -coverprofile=integration.cov -covermode=atomic ./...
 
       - name: Integration Test Summary
         if: always()
@@ -108,3 +125,20 @@ jobs:
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: integration-tests.json
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-coverage
+          path: integration.cov
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload coverage report
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./integration.cov
+          flags: integrationtests
+          name: codecov-testkube-integration-tests
