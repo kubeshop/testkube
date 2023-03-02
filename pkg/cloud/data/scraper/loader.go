@@ -3,9 +3,10 @@ package scraper
 import (
 	"context"
 	"encoding/json"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"io"
 	"net/http"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/pkg/errors"
 

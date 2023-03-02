@@ -3,10 +3,11 @@ package scraper_test
 import (
 	"bufio"
 	"context"
-	filesystem2 "github.com/kubeshop/testkube/pkg/filesystem"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	filesystem2 "github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestFilesystemExtractor_Extract(t *testing.T) {
 
 	fs := filesystem2.NewMockFileSystem(ctrl)
 	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader("test")), nil)
-	extractor := scraper.NewFilesystemExtractor("/my/directory", fs)
+	extractor := scraper.NewFilesystemExtractor([]string{"/my/directory"}, fs)
 
 	// Set up the expected calls to the mocked fs object
 	fs.EXPECT().Walk("/my/directory", gomock.Any()).Return(nil).DoAndReturn(func(_ string, walkFn filepath.WalkFunc) error {

@@ -2,8 +2,9 @@ package scraper
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/filesystem"
 	"os"
+
+	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/pkg/errors"
 )
