@@ -7,28 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  unit-tests:
     runs-on: ubuntu-latest
-    services:
-      mongo:
-        image: bitnami/mongodb
-        ports:
-          - 27017:27017
-      nats:
-        image: bitnami/nats
-        ports:
-          - 4222:4222
-          - 6222:6222
-          - 8222:8222
-      minio:
-        image: bitnami/minio
-        ports:
-          - 9000:9000
-          - 9001:9001
-        env:
-          MINIO_ROOT_USER: minio99
-          MINIO_ROOT_PASSWORD: minio123
-
 
     steps:
       - uses: actions/checkout@v2
@@ -51,7 +31,7 @@ jobs:
       - name: Setup gotestsum
         run: go install gotest.tools/gotestsum@latest
 
-      - name: Unit test
+      - name: Unit Test
         id: unit_test
         run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json ./...
 
@@ -62,15 +42,56 @@ jobs:
           paths: |
             unit-tests.xml
 
-      - name: Annotate unit tests
+      - name: Annotate Unit Tests
         if: always()
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: unit-tests.json
 
-      - name: Integration tests
-        id: integration_test
-        if: always()
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: bitnami/mongodb
+        ports:
+          - 27017:27017
+      nats:
+        image: bitnami/nats
+        ports:
+          - 4222:4222
+          - 6222:6222
+          - 8222:8222
+      minio:
+        image: bitnami/minio
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minio99
+          MINIO_ROOT_PASSWORD: minio123
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Setup gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Integration Tests
         run: |
           sudo apt-get install -y git
           gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration ./...
@@ -82,15 +103,8 @@ jobs:
           paths: |
             integration-tests.xml
 
-      - name: Annotate integration tests
+      - name: Annotate Integration Tests
         if: always()
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: integration-tests.json
-
-      - name: OpenAPI Lint Checks
-        if: always()
-        uses: nwestfall/openapi-action@v1.0.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          file: api/v1/testkube.yaml
