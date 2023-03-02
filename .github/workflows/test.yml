@@ -48,7 +48,7 @@ jobs:
         with:
           test-results: unit-tests.json
 
-      - name: Upload code coverage
+      - name: Upload code coverage artifact
         if: always()
         uses: actions/upload-artifact@v3
         with:
@@ -57,9 +57,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Send coverage report
+      - name: Send coverage report to Codecov
         if: always()
-        uses: codecov/codecov-action@v1.0.2
+        uses: codecov/codecov-action@v3
         with:
           file: ./unit.cov
           flags: unittests
@@ -126,7 +126,7 @@ jobs:
         with:
           test-results: integration-tests.json
 
-      - name: Upload code coverage
+      - name: Upload code coverage artifact
         if: always()
         uses: actions/upload-artifact@v3
         with:
@@ -135,7 +135,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Upload coverage report
+      - name: Send coverage report to Codecov
         if: always()
         uses: codecov/codecov-action@v3
         with:
