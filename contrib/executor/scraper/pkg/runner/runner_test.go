@@ -16,21 +16,21 @@ func TestRun(t *testing.T) {
 		scraper        func(id string, directories []string) error
 		execution      testkube.Execution
 		expectedError  string
-		expectedStatus testkube.ExecutionStatus
+		expectedStatus *testkube.ExecutionStatus
 	}{
 		{
 			name:           "successful scraper",
 			scraper:        func(id string, directories []string) error { return nil },
 			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}},
 			expectedError:  "",
-			expectedStatus: *testkube.ExecutionStatusPassed,
+			expectedStatus: nil,
 		},
 		{
 			name:           "failing scraper",
 			scraper:        func(id string, directories []string) error { return errors.New("Scraping failed") },
 			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}},
 			expectedError:  "failed getting artifacts: Scraping failed",
-			expectedStatus: *testkube.ExecutionStatusFailed,
+			expectedStatus: testkube.ExecutionStatusFailed,
 		},
 	}
 
@@ -48,8 +48,13 @@ func TestRun(t *testing.T) {
 			}
 
 			res, err := runner.Run(test.execution)
-			assert.EqualError(t, err, test.expectedError)
-			assert.Equal(t, test.expectedStatus, *res.Status)
+			if err != nil {
+				assert.EqualError(t, err, test.expectedError)
+				assert.Equal(t, *test.expectedStatus, *res.Status)
+			} else {
+				assert.Empty(t, test.expectedError)
+				assert.Empty(t, res.Status)
+			}
 		})
 	}
 

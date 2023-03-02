@@ -89,7 +89,11 @@ func TestRun(t *testing.T) {
 			}
 
 			res, err := runner.Run(test.execution)
-			assert.EqualError(t, err, test.expectedError)
+			if err != nil {
+				assert.EqualError(t, err, test.expectedError)
+			} else {
+				assert.Empty(t, test.expectedError)
+			}
 			assert.Equal(t, test.expectedStatus, *res.Status)
 		})
 	}
