@@ -1,12 +1,16 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 # cURL
-cURL is a simple command-line tool used for 
+Testkube is able to run cURL commands as tests.
 
-Testkube is able to run cURL commands as tests. There are 2 possibilities to validate the outputs of the cURL command:
+## Abstraction over curl
+Testkube executor provides an abstraction over curl, that allow you to create JSON-based curl test files. They allow you to combine curl command with expected results:
 
-- By using the status returned.
-- By checking the body of the response.
+- `expected_status` allow you to assert specific status code is returned
+- `expected_body` allow to validate the body of the response.
 
-Below is an example of how to format the tests:
+Below is an example of how to format the test:
 
 ```js
 {
@@ -21,7 +25,60 @@ Below is an example of how to format the tests:
 }
 ```
 
+You can also find this test in the Testkube repository: https://github.com/kubeshop/testkube/blob/main/test/curl/curl.json
+
+## Example test
+In this example we will use the following curl test: https://github.com/kubeshop/testkube/blob/main/test/curl/executor-tests/curl-smoke-test.json
+
+```js
+{
+	"command": [
+	  "curl",
+	  "https://testkube.io/"
+	],
+	"expected_status": "200"
+}
+```
+
+## Creating and running Test
+
+<Tabs groupId="dashboard-cli">
+<TabItem value="dash" label="Dashboard">
+
+If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`curl/test`), and then choose Test Source.
+
+### File
+In case of File source the test file is uploaded directly.
+
+### Git file
+In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to curl test in your repository (`test/curl/executor-tests/curl-smoke-test.json`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+//TODO: CLI
+
+</TabItem>
+<TabItem value="crd" label="Custom Resource">
+
+//TODO: CRD
+
+</TabItem>
+</Tabs>
+
+
 The test Custom Resource Definition (CRD) should be created with the type `curl/test`.
+
+
+
+
+
+
+
+
+
+
+
 
 ## **Running Tests Using cURL Commands**
 
