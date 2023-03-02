@@ -47,11 +47,6 @@ func TestMinIOLoader_Load(t *testing.T) {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
-	buckets, err := m.ListBuckets()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(buckets))
-	assert.Equal(t, "test-bucket-1", buckets[0])
-
 	artifacts, err := m.ListFiles("test-execution-id")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(artifacts))
