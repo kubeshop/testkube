@@ -12,10 +12,10 @@ type Scraper interface {
 
 type ScraperV2 struct {
 	extractor Extractor
-	loader    Loader
+	loader    Uploader
 }
 
-func NewScraperV2(extractor Extractor, loader Loader) *ScraperV2 {
+func NewScraperV2(extractor Extractor, loader Uploader) *ScraperV2 {
 	return &ScraperV2{
 		extractor: extractor,
 		loader:    loader,
@@ -26,6 +26,6 @@ func (s *ScraperV2) Scrape(ctx context.Context, meta map[string]any) error {
 	return s.
 		extractor.
 		Extract(ctx, func(ctx context.Context, object *Object) error {
-			return s.loader.Load(ctx, object, meta)
+			return s.loader.Upload(ctx, object, meta)
 		})
 }

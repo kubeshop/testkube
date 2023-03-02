@@ -36,7 +36,7 @@ func TestCloudLoader_Load(t *testing.T) {
 		name        string
 		meta        map[string]any
 		data        io.Reader
-		setup       func() *cloudscraper.CloudLoader
+		setup       func() *cloudscraper.CloudUploader
 		putErr      error
 		wantErr     bool
 		errContains string
@@ -49,7 +49,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				"testSuiteName": "my-test-suite",
 			},
 			data: nil,
-			setup: func() *cloudscraper.CloudLoader {
+			setup: func() *cloudscraper.CloudUploader {
 				req := &cloudscraper.PutObjectSignedURLRequest{
 					Object:        "my-object",
 					ExecutionID:   "my-execution-id",
@@ -58,7 +58,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil).Times(1)
-				return cloudscraper.NewCloudLoader(mockExecutor)
+				return cloudscraper.NewCloudUploader(mockExecutor)
 			},
 			putErr:  nil,
 			wantErr: false,
@@ -69,8 +69,8 @@ func TestCloudLoader_Load(t *testing.T) {
 				"object": "my-object",
 			},
 			data: nil,
-			setup: func() *cloudscraper.CloudLoader {
-				return cloudscraper.NewCloudLoader(mockExecutor)
+			setup: func() *cloudscraper.CloudUploader {
+				return cloudscraper.NewCloudUploader(mockExecutor)
 			},
 			wantErr:     true,
 			errContains: "executionId is missing",
@@ -84,8 +84,8 @@ func TestCloudLoader_Load(t *testing.T) {
 				"testSuiteName": "my-test-suite",
 			},
 			data: nil,
-			setup: func() *cloudscraper.CloudLoader {
-				return cloudscraper.NewCloudLoader(mockExecutor)
+			setup: func() *cloudscraper.CloudUploader {
+				return cloudscraper.NewCloudUploader(mockExecutor)
 			},
 			wantErr:     true,
 			errContains: "executionId is not a string",
@@ -98,7 +98,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				"testSuiteName": "my-test-suite",
 			},
 			data: nil,
-			setup: func() *cloudscraper.CloudLoader {
+			setup: func() *cloudscraper.CloudUploader {
 				req := &cloudscraper.PutObjectSignedURLRequest{
 					Object:        "my-object",
 					ExecutionID:   "my-execution-id",
@@ -107,7 +107,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return(nil, errors.New("connection error")).Times(1)
-				return cloudscraper.NewCloudLoader(mockExecutor)
+				return cloudscraper.NewCloudUploader(mockExecutor)
 			},
 			wantErr:     true,
 			errContains: "failed to get signed URL for object [my-object]: connection error",
@@ -123,7 +123,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				Name: "my-object",
 				Data: tt.data,
 			}
-			err := cloudLoader.Load(ctx, object, tt.meta)
+			err := cloudLoader.Upload(ctx, object, tt.meta)
 			if tt.wantErr {
 				assert.ErrorContains(t, err, tt.errContains)
 			} else {

@@ -38,7 +38,7 @@ func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, buc
 	return l, nil
 }
 
-func (l *MinIOLoader) Load(ctx context.Context, object *Object, meta map[string]any) error {
+func (l *MinIOLoader) Upload(ctx context.Context, object *Object, meta map[string]any) error {
 	client := minio.NewClient(l.Endpoint, l.AccessKeyID, l.SecretAccessKey, l.Location, l.Token, l.Bucket, l.Ssl) // create storage client
 	err := client.Connect()
 	if err != nil {

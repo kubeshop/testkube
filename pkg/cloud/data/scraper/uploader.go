@@ -6,24 +6,25 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/kubeshop/testkube/pkg/utils"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-type CloudLoader struct {
+type CloudUploader struct {
 	executor executor.Executor
 }
 
-func NewCloudLoader(executor executor.Executor) *CloudLoader {
-	return &CloudLoader{executor: executor}
+func NewCloudUploader(executor executor.Executor) *CloudUploader {
+	return &CloudUploader{executor: executor}
 }
 
-func (l *CloudLoader) Load(ctx context.Context, object *scraper.Object, meta map[string]any) error {
+func (l *CloudUploader) Upload(ctx context.Context, object *scraper.Object, meta map[string]any) error {
 	meta["object"] = object.Name
 	req, err := l.validateInfo(meta)
 	if err != nil {
@@ -41,20 +42,25 @@ func (l *CloudLoader) Load(ctx context.Context, object *scraper.Object, meta map
 	return nil
 }
 
-func (l *CloudLoader) validateInfo(info map[string]any) (*PutObjectSignedURLRequest, error) {
-	if err := utils.CheckStringKey(info, "object"); err != nil {
+func (l *CloudUploader) validateInfo(info map[string]any) (*PutObjectSignedURLRequest, error) {
+	object, err := utils.GetStringKey(info, "object")
+	if err != nil {
 		return nil, err
 	}
-	if err := utils.CheckStringKey(info, "executionId"); err != nil {
+	executionID, err := utils.GetStringKey(info, "executionId")
+	if err != nil {
 		return nil, err
 	}
-	if err := utils.CheckStringKey(info, "testName"); err != nil {
+	testName, err := utils.GetStringKey(info, "testName")
+	if err != nil {
 		return nil, err
 	}
+	testSuiteName, _ := utils.GetStringKey(info, "testSuiteName")
 	req := &PutObjectSignedURLRequest{
-		Object:      info["object"].(string),
-		ExecutionID: info["executionId"].(string),
-		TestName:    info["testName"].(string),
+		Object:        object,
+		ExecutionID:   executionID,
+		TestName:      testName,
+		TestSuiteName: testSuiteName,
 	}
 
 	if info["testSuiteName"] != nil {
@@ -66,7 +72,7 @@ func (l *CloudLoader) validateInfo(info map[string]any) (*PutObjectSignedURLRequ
 	return req, nil
 }
 
-func (l *CloudLoader) getSignedURL(ctx context.Context, req *PutObjectSignedURLRequest) (string, error) {
+func (l *CloudUploader) getSignedURL(ctx context.Context, req *PutObjectSignedURLRequest) (string, error) {
 	response, err := l.executor.Execute(ctx, CmdScraperPutObjectSignedURL, req)
 	if err != nil {
 		return "", err
@@ -78,7 +84,7 @@ func (l *CloudLoader) getSignedURL(ctx context.Context, req *PutObjectSignedURLR
 	return commandResponse.URL, nil
 }
 
-func (l *CloudLoader) putObject(ctx context.Context, url string, data io.Reader) error {
+func (l *CloudUploader) putObject(ctx context.Context, url string, data io.Reader) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, data)
 	if err != nil {
 		return err

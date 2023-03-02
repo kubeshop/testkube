@@ -36,6 +36,7 @@ func TestFilesystemExtractor_Extract(t *testing.T) {
 		assert.Equal(t, "file1", object.Name)
 		return nil
 	}
+	assert.Equal(t, 1, 2)
 
 	// Call the Extract function
 	err := extractor.Extract(context.Background(), processFn)

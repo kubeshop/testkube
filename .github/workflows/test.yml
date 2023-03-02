@@ -48,17 +48,45 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Setup gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
       - name: Unit test
-        run: go test -v ./...
+        run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json ./...
+
+      - name: Unit Test Summary
+        if: always()
+        uses: test-summary/action@v1
+        with:
+          paths: |
+            unit-tests.xml
+
+      - name: Annotate unit tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.5.1
+        with:
+          test-results: unit-tests.json
 
       - name: Integration tests
         run: |
           sudo apt-get install -y git
-          go test --tags=integration -v ./...
+          gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration ./...
 
-      # Don't work yet as expected https://github.com/nwestfall/openapi-action/issues/3
+      - name: Integration Test Summary
+        if: always()
+        uses: test-summary/action@v1
+        with:
+          paths: |
+            integration-tests.xml
+
+      - name: Annotate integration tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.5.1
+        with:
+          test-results: integration-tests.json
+
       - name: OpenAPI Lint Checks
-        uses: nwestfall/openapi-action@v1.0.1
+        uses: nwestfall/openapi-action@v1.0.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           file: api/v1/testkube.yaml

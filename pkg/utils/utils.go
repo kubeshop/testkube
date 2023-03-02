@@ -82,3 +82,14 @@ func CheckStringKey(m map[string]any, key string) error {
 	}
 	return nil
 }
+
+func GetStringKey(m map[string]any, key string) (string, error) {
+	if _, ok := m[key]; !ok {
+		return "", errors.New(key + " is missing")
+	}
+	s, ok := m[key].(string)
+	if !ok {
+		return "", errors.New(key + " is not a string")
+	}
+	return s, nil
+}

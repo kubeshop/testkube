@@ -56,6 +56,10 @@ func printParams(params Params) {
 	output.PrintLog(fmt.Sprintf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername))
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
 	output.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.DataDir))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_MODE=\"%t\"", params.CloudMode))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure))
+	output.PrintLog(fmt.Sprintf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL))
+	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not

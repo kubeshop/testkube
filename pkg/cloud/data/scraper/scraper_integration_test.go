@@ -57,7 +57,7 @@ func TestCloudScraper(t *testing.T) {
 	defer testServer.Close()
 
 	mockExecutor := executor.NewMockExecutor(mockCtrl)
-	cloudLoader := cloudscraper.NewCloudLoader(mockExecutor)
+	cloudLoader := cloudscraper.NewCloudUploader(mockExecutor)
 	req1 := &cloudscraper.PutObjectSignedURLRequest{
 		Object:        "file1.txt",
 		ExecutionID:   "my-execution-id",

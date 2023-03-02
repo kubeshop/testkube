@@ -42,7 +42,7 @@ func TestMinIOLoader_Load(t *testing.T) {
 	}
 
 	// Call the Load function to save the object to MinIO
-	err = loader.Load(ctx, testObject, testMeta)
+	err = loader.Upload(ctx, testObject, testMeta)
 	if err != nil {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
