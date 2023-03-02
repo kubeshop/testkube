@@ -60,7 +60,48 @@ In case of Git file you need to fill in repository details - Git repository URI 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
-//TODO: CLI
+If you prefer using the CLI, you can create the test with `testkube create test`.
+
+You need to set:
+
+- `--name` (for example, `curl-test`)
+- `--type` (in this case `curl/test`)
+
+And, then choose Test Content type based on Test Source you want to use:
+
+### File
+
+In case of File test source:
+
+- `--test-content-type` (`file-uri`)
+- `--file` (path to your curl test - in this case `test/curl/executor-tests/curl-smoke-test.json`)
+
+```sh
+testkube create test --name curl-test --type curl/test --test-content-type file-uri --file test/curl/executor-tests/curl-smoke-test.json
+```
+
+```sh title="Expected output:"
+Test created testkube / curl-test 🥇
+```
+
+You can then run the test with `testkube run test curl-test`.
+
+### Git file
+
+- `--test-content-type` (`git-file`, so specific file will be checked out from the Git repository)
+- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-branch`
+- `--git-path` - path to the k6 script in the repository (in this case `test/curl/executor-tests/curl-smoke-test.json`)
+
+```sh
+testkube create test --name curl-test --type curl/test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/curl/executor-tests/curl-smoke-test.json
+```
+
+```sh title="Expected output:"
+Test created testkube / curl-test 🥇
+```
+
+You can then run the test with `testkube run test curl-test`.
 
 </TabItem>
 <TabItem value="crd" label="Custom Resource">
@@ -76,9 +117,7 @@ The test Custom Resource Definition (CRD) should be created with the type `curl/
 
 
 
-
-
-
+///////////////////////////////
 
 
 
