@@ -20,7 +20,7 @@ func TestMinIOLoader_Load(t *testing.T) {
 	}
 
 	// Create a new MinIO loader with the appropriate configuration
-	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket", false)
+	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
 	}
