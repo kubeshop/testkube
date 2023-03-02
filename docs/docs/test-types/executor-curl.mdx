@@ -106,18 +106,42 @@ You can then run the test with `testkube run test curl-test`.
 </TabItem>
 <TabItem value="crd" label="Custom Resource">
 
-//TODO: CRD
+Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
+
+You can also get a definition while using `testkube create test` command by adding `--crd-only`.
+In that case, the test won't be created, but the definition will be displayed.
+
+Output:
+```sh
+testkube create test --name curl-test --type curl/test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/curl/executor-tests/curl-smoke-test.json --crd-only
+```
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: curl-executor-smoke
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: curl/test
+  content:
+    type: git-file
+    repository:
+      type: git-file
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/curl/executor-tests/curl-smoke-test.json
+```
 
 </TabItem>
 </Tabs>
 
-
-The test Custom Resource Definition (CRD) should be created with the type `curl/test`.
-
+When the Test CRD is saved to the yaml file it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
 
 
 
-///////////////////////////////
 
 
 
