@@ -11,17 +11,21 @@ import (
 
 // Params are the environment variables provided by the Testkube api-server
 type Params struct {
-	Endpoint        string // RUNNER_ENDPOINT
-	AccessKeyID     string // RUNNER_ACCESSKEYID
-	SecretAccessKey string // RUNNER_SECRETACCESSKEY
-	Location        string // RUNNER_LOCATION
-	Token           string // RUNNER_TOKEN
-	Bucket          string // RUNNER_BUCKET
-	Ssl             bool   // RUNNER_SSL
-	ScrapperEnabled bool   // RUNNER_SCRAPPERENABLED
-	DataDir         string // RUNNER_DATADIR
-	GitUsername     string // RUNNER_GITUSERNAME
-	GitToken        string // RUNNER_GITTOKEN
+	Endpoint            string // RUNNER_ENDPOINT
+	AccessKeyID         string // RUNNER_ACCESSKEYID
+	SecretAccessKey     string // RUNNER_SECRETACCESSKEY
+	Location            string // RUNNER_LOCATION
+	Token               string // RUNNER_TOKEN
+	Bucket              string // RUNNER_BUCKET
+	Ssl                 bool   // RUNNER_SSL
+	ScrapperEnabled     bool   // RUNNER_SCRAPPERENABLED
+	DataDir             string // RUNNER_DATADIR
+	GitUsername         string // RUNNER_GITUSERNAME
+	GitToken            string // RUNNER_GITTOKEN
+	CloudMode           bool   // RUNNER_CLOUD_MODE
+	CloudAPIKey         string // RUNNER_CLOUD_API_KEY
+	CloudAPITLSInsecure bool   // RUNNER_CLOUD_API_TLS_INSECURE
+	CloudAPIURL         string // RUNNER_CLOUD_API_URL
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD

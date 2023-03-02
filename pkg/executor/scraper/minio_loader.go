@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/pkg/errors"
 
@@ -53,4 +54,10 @@ func (l *MinIOLoader) Load(ctx context.Context, object *Object, meta map[string]
 	}
 
 	return nil
+}
+
+func ExtractMinIOLoaderMeta(execution testkube.Execution) map[string]any {
+	return map[string]any{
+		"executionId": execution.Id,
+	}
 }

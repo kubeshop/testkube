@@ -5,10 +5,10 @@ package scraper_test
 import (
 	"context"
 	"github.com/golang/mock/gomock"
-	"github.com/kubeshop/testkube/internal/common/filesystem"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"

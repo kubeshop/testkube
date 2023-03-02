@@ -3,6 +3,7 @@ package scraper
 import (
 	"context"
 	"encoding/json"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"io"
 	"net/http"
 
@@ -19,7 +20,6 @@ type CloudLoader struct {
 
 func NewCloudLoader(executor executor.Executor) *CloudLoader {
 	return &CloudLoader{executor: executor}
-
 }
 
 func (l *CloudLoader) Load(ctx context.Context, object *scraper.Object, meta map[string]any) error {
@@ -91,4 +91,12 @@ func (l *CloudLoader) putObject(ctx context.Context, url string, data io.Reader)
 		return errors.New("response code was not OK")
 	}
 	return nil
+}
+
+func ExtractCloudLoaderMeta(execution testkube.Execution) map[string]any {
+	return map[string]any{
+		"executionId":   execution.Id,
+		"testName":      execution.TestName,
+		"testSuiteName": execution.TestSuiteName,
+	}
 }
