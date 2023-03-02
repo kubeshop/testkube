@@ -71,13 +71,14 @@ func TestRun(t *testing.T) {
 	}
 
 	for i := range tests {
-		t.Run(tests[i].name, func(t *testing.T) {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			s := mock.Scraper{}
-			s.ScrapeFn = tests[i].scraper
+			s.ScrapeFn = test.scraper
 
-			file, err := tests[i].testFileCreator()
+			file, err := test.testFileCreator()
 			assert.NoError(t, err)
 			defer file.Close()
 
@@ -87,9 +88,9 @@ func TestRun(t *testing.T) {
 				Scraper:        s,
 			}
 
-			res, err := runner.Run(tests[i].execution)
-			assert.EqualError(t, err, tests[i].expectedError)
-			assert.Equal(t, tests[i].expectedStatus, *res.Status)
+			res, err := runner.Run(test.execution)
+			assert.EqualError(t, err, test.expectedError)
+			assert.Equal(t, test.expectedStatus, *res.Status)
 		})
 	}
 }
