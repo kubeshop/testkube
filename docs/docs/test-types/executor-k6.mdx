@@ -42,19 +42,19 @@ K6 tests may vary significantly. The test may be just a single file, but may als
 
 If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`k6 script`), and then choose Test Source.
 
-#### File
+### File
 
 In case of File source the test file is uploaded directly.
 
 ![K6 test - creation dialog - file](../img/dashboard-k6-create-test-file.png)
 
-#### Git file
+### Git file
 
-In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to k6 script in your repository (`est/k6/executor-tests/k6-smoke-test-without-envs.js`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to k6 script in your repository (`test/k6/executor-tests/k6-smoke-test-without-envs.js`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
 
 ![K6 test - creation dialog - git file](../img/dashboard-k6-create-test-git-file.png)
 
-#### String
+### String
 
 For String source the test script is added directly.
 
@@ -71,7 +71,7 @@ You need to set:
 
 And, then choose Test Content type based on Test Source you want to use:
 
-#### File
+### File
 
 In case of File test source:
 
@@ -86,7 +86,7 @@ testkube create test --name k6-test --type k6/script --test-content-type file-ur
 Test created testkube / k6-test 🥇
 ```
 
-#### Git file
+### Git file
 
 - `--test-content-type` (`git-file`, so specific file will be checked out from the Git repository)
 - `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
@@ -101,7 +101,7 @@ testkube create test --name k6-test --type k6/script --test-content-type git-fil
 Test created testkube / k6-test 🥇
 ```
 
-#### Git directory
+### Git directory
 
 - `--test-content-type` (`git-directory`, so the whole directory will be checked out from the Git repository)
 - `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
