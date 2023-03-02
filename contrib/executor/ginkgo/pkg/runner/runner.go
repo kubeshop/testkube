@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	junit "github.com/joshdk/go-junit"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"

@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	cp "github.com/otiai10/copy"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRunGradle(t *testing.T) {

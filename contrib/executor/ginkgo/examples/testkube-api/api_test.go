@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var _ = Describe("API Test", func() {

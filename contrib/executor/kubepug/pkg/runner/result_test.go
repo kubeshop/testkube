@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	kubepug "github.com/rikatz/kubepug/pkg/results"
 	"github.com/stretchr/testify/assert"
+
+	kubepug "github.com/rikatz/kubepug/pkg/results"
 )
 
 func TestResultParser(t *testing.T) {

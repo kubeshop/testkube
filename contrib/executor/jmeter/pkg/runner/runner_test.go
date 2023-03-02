@@ -3,9 +3,10 @@ package runner
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMapStatus(t *testing.T) {

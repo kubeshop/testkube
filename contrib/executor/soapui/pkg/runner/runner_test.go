@@ -5,9 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRun(t *testing.T) {

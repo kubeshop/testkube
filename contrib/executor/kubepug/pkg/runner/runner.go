@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	kubepug "github.com/rikatz/kubepug/pkg/results"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/content"
@@ -14,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/ui"
-	kubepug "github.com/rikatz/kubepug/pkg/results"
 )
 
 type Params struct {

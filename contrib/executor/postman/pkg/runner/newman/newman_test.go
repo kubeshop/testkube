@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // TestRun runs newman instance on top of example collection

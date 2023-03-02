@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const repoURI = "https://github.com/kubeshop/testkube-executor-ginkgo.git"
