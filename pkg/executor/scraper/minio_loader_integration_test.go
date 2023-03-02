@@ -50,7 +50,7 @@ func TestMinIOLoader_Load(t *testing.T) {
 	buckets, err := m.ListBuckets()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(buckets))
-	assert.Equal(t, "test-bucket", buckets[0])
+	assert.Equal(t, "test-bucket-1", buckets[0])
 
 	artifacts, err := m.ListFiles("test-execution-id")
 	assert.NoError(t, err)
