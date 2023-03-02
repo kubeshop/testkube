@@ -34,21 +34,21 @@ func TestRun(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
 			t.Parallel()
 
 			s := Scraper{}
-			s.ScrapeFn = test.scraper
+			s.ScrapeFn = tests[i].scraper
 
 			runner := ScraperRunner{
 				ScrapperEnabled: true,
 				Scraper:         s,
 			}
 
-			res, err := runner.Run(test.execution)
-			assert.EqualError(t, err, test.expectedError)
-			assert.Equal(t, test.expectedStatus, *res.Status)
+			res, err := runner.Run(tests[i].execution)
+			assert.EqualError(t, err, tests[i].expectedError)
+			assert.Equal(t, tests[i].expectedStatus, *res.Status)
 		})
 	}
 
