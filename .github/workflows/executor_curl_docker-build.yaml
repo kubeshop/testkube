@@ -9,7 +9,7 @@ jobs:
   docker:
     strategy:
       matrix:
-        version: [artillery, curl]
+        executor: [artillery, curl]
 
     runs-on: ubuntu-latest
     steps:
@@ -34,11 +34,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       -
-        name: Docker meta for ${{ matrix.value }} executor
+        name: Docker meta for ${{ matrix.executor }} executor
         id: meta_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-${{ matrix.value }}-executor
+          images: kubeshop/testkube-${{ matrix.executor }}-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -47,11 +47,11 @@ jobs:
             type=sha
 
       -
-        name: Build ${{ matrix.value }} executor
+        name: Build ${{ matrix.executor }} executor
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/${{ matrix.value }}/build/agent/docker-bake.hcl
+            contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
