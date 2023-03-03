@@ -1,0 +1,41 @@
+name: testkube-curl-executor-helm-releaser
+
+on:
+  push:
+    tags: 
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+"
+      # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+
+jobs:
+  releasing_helm_chart_curl_executor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: getting Tag name pushed.
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+
+      - name: Editing helm-release repo with version based on a Tag pushed.
+        run: |
+
+          # Setting up Git:
+            
+          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          cd ./helm-charts
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          
+          # Calling chart releaser script by passing needed folder name:
+          # E.G. in order to relase api-server": 
+          # -->> ./chart_releaser.sh --helm-chart-folder api-server
+          
+          export GH_PUSH_TOKEN
+          export RELEASE_VERSION
+
+          cd ./scripts
+          ./chart_releaser.sh --testkube-executor-name curl --main-chart false
+
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
