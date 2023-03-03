@@ -119,7 +119,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
-		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
+		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: ""},
 		{Name: "key", Value: "value"},
 		{Name: "aa", Value: "bb"},
 	}
