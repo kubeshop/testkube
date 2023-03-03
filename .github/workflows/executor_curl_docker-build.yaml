@@ -6,21 +6,12 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.matrix.outputs.value }}
-    steps:
-      - id: matrix
-        run: |
-          echo '::set-output name=value::[\"artillery\", \"curl\"]'
-
   docker:
-    needs: [ setup ]
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        value: ${{fromJson(needs.setup.outputs.matrix)}}
+        version: [artillery, curl]
+
+    runs-on: ubuntu-latest
     steps:
 
       -
