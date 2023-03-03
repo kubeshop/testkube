@@ -4,8 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/log"
-
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/pkg/errors"
@@ -21,9 +19,7 @@ func NewFilesystemExtractor(dirs []string, fs filesystem.FileSystem) *Filesystem
 }
 
 func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) error {
-	log.DefaultLogger.Infof("extracting files from directories: %v", e.dirs)
 	for _, dir := range e.dirs {
-		log.DefaultLogger.Infof("walking directory: %v", e.dirs)
 		err := e.fs.Walk(
 			dir,
 			func(path string, fileInfo os.FileInfo, err error) error {
@@ -44,7 +40,6 @@ func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) er
 					Size: fileInfo.Size(),
 					Data: reader,
 				}
-				log.DefaultLogger.Infof("filesystem extractor is sending file to be processed: %v", fileInfo.Name())
 				if err := process(ctx, object); err != nil {
 					return errors.Wrapf(err, "failed to process file %s", fileInfo.Name())
 				}
