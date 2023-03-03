@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.18
-WORKDIR /build
+WORKDIR contrib/executor/curl/build
 COPY . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
 
-RUN cd cmd/agent;go build -o /runner -mod mod -a .
+RUN cd contrib/executor/curl/cmd/agent;go build -o /runner -mod mod -a .
 
 # TODO add valid dockerfile with executor
 FROM alpine
