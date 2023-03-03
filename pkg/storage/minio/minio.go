@@ -2,14 +2,13 @@ package minio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -202,28 +201,6 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", fileName, err)
-	}
-
-	return nil
-}
-
-func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data io.Reader, size int64) error {
-	exists, err := c.minioclient.BucketExists(ctx, c.bucket)
-	if err != nil {
-		return errors.Wrapf(err, "error checking does bucket %s exists", c.bucket)
-	}
-	if !exists {
-		if err := c.CreateBucket(c.bucket); err != nil {
-			return errors.Wrapf(err, "error creating bucket %s", c.bucket)
-		}
-	}
-
-	filename := fmt.Sprintf("%s/%s", folder, file)
-
-	c.Log.Debugw("saving object in minio", "filename", filename, "bucket", c.bucket, "size", size)
-	_, err = c.minioclient.PutObject(ctx, c.bucket, filename, data, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
-	if err != nil {
-		return errors.Wrapf(err, "minio saving file (%s) put object error", filename)
 	}
 
 	return nil

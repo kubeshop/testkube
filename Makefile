@@ -1,4 +1,4 @@
-.PHONY: test cover
+.PHONY: test cover 
 
 CHART_NAME=api-server
 BIN_DIR ?= $(HOME)/bin
@@ -14,11 +14,11 @@ ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
 PROTOC := ${BIN_DIR}/protoc/bin/protoc
 PROTOC_GEN_GO := ${BIN_DIR}/protoc-gen-go
 PROTOC_GEN_GO_GRPC := ${BIN_DIR}/protoc-gen-go-grpc
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID)
+LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION)
+LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) 
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
 
 define setup_env
@@ -26,11 +26,11 @@ define setup_env
 	$(eval export)
 endef
 
-use-env-file:
+use-env-file: 
 	$(call setup_env)
 
 run-api: use-env-file
-	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
 run-api-race-detector: use-env-file
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
@@ -38,16 +38,16 @@ run-api-race-detector: use-env-file
 run-api-telepresence: use-env-file
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
-run-mongo-dev:
+run-mongo-dev: 
 	docker run --name mongodb -p 27017:27017 --rm mongo
 
 
 build: build-api-server build-testkube-bin
 
 build-api-server:
-	go build -o $(BIN_DIR)/api-server -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+	go build -o $(BIN_DIR)/api-server -ldflags='$(LD_FLAGS)' cmd/api-server/main.go 
 
-build-testkube-bin:
+build-testkube-bin: 
 	go build \
 		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
 			-X main.commit=$(COMMIT) \
@@ -60,7 +60,7 @@ build-testkube-bin:
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
-build-testkube-bin-intel:
+build-testkube-bin-intel: 
 	env GOARCH=amd64 \
 	go build \
 		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
@@ -80,10 +80,10 @@ docker-build-api:
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
 
-install-swagger-codegen-mac:
+install-swagger-codegen-mac: 
 	brew install swagger-codegen
 
-openapi-generate-model: openapi-generate-model-testkube
+openapi-generate-model: openapi-generate-model-testkube 
 
 openapi-generate-model-testkube:
 	swagger-codegen generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube
@@ -126,19 +126,18 @@ $(PROTOC_GEN_GO_GRPC):
 	@echo "[INFO]: Installing protobuf GRPC go generation plugin."
 	GOBIN=${BIN_DIR} go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
-.PHONY: unit-tests
-unit-tests:
-	gotestsum --format short-verbose -- -cover ./...
-
-.PHONY: integration-tests
-integration-tests:
-	gotestsum --format short-verbose -- -tags=integration -cover ./...
+test: 
+	go test ./... -cover -failfast
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e
 
+test-integration:
+	go test -failfast --tags=integration ./...
+
+
 test-e2e-namespace:
-	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e
+	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
 
 create-examples:
 	test/create.sh
@@ -157,21 +156,21 @@ test-reload-sanity-test:
 test-api-local:
 	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var test_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
 
-# run by newman but on top of port-forwarded cluster service to api-server
+# run by newman but on top of port-forwarded cluster service to api-server 
 # e.g. kubectl port-forward svc/testkube-api-server 8088
 test-api-port-forwarded:
 	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var test_api_uri=http://testkube-api-server:8088 --verbose
 
 # run test by testkube plugin
-test-api-on-cluster:
+test-api-on-cluster: 
 	kubectl testkube run test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
 
 
-cover:
-	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
+cover: 
+	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
 	open testCoverage.html
 
-diagrams:
+diagrams: 
 	plantuml ./docs/puml/*.puml -o ../img/
 
 version-bump: version-bump-patch
@@ -188,18 +187,18 @@ version-bump-major:
 version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
-commands-reference:
+commands-reference: 
 	go run cmd/kubectl-testkube/main.go generate doc
 
 docs: commands-reference
 
-prerelease:
+prerelease: 
 	go run cmd/tools/main.go release -d -a $(CHART_NAME)
 
-release:
+release: 
 	go run cmd/tools/main.go release -a $(CHART_NAME)
 
-video:
+video: 
 	gource \
 		-s .5 \
 		-1280x720 \
@@ -215,21 +214,21 @@ video:
 		--background-colour 000000 \
 		--font-size 25 \
 		--output-ppm-stream stream.out \
-		--output-framerate 30
+		--output-framerate 30 
 
 	ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
 
 
 port-forward-minio:
-	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube
+	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube 
 
-port-forward-mongo:
+port-forward-mongo: 
 	kubectl port-forward svc/testkube-mongodb 27017 -ntestkube
 
-port-forward-api:
+port-forward-api: 
 	kubectl port-forward svc/testkube-api-server 8088 -ntestkube
 
-run-proxy:
+run-proxy: 
 	go run cmd/proxy/main.go --namespace $(NAMESPACE)
 
 define install-protoc

@@ -7,66 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-
-      - name: Go Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Setup gotestsum
-        run: go install gotest.tools/gotestsum@latest
-
-      - name: Unit Test
-        id: unit_test
-        run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- -coverprofile=coverage.out -covermode=atomic ./...
-
-      - name: Unit Test Summary
-        if: always()
-        uses: test-summary/action@v1
-        with:
-          paths: |
-            unit-tests.xml
-
-      - name: Annotate Unit Tests
-        if: always()
-        uses: guyarb/golang-test-annotations@v0.5.1
-        with:
-          test-results: unit-tests.json
-
-      - name: Upload code coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: unit-test-coverage
-          path: coverage.out
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-testkube-unit-tests
-          verbose: true
-
-  integration-tests:
+  build:
     runs-on: ubuntu-latest
     services:
       mongo:
@@ -79,14 +20,6 @@ jobs:
           - 4222:4222
           - 6222:6222
           - 8222:8222
-      minio:
-        image: bitnami/minio
-        ports:
-          - 9000:9000
-          - 9001:9001
-        env:
-          MINIO_ROOT_USER: minio99
-          MINIO_ROOT_PASSWORD: minio123
 
     steps:
       - uses: actions/checkout@v2
@@ -106,41 +39,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Setup gotestsum
-        run: go install gotest.tools/gotestsum@latest
+      - name: Unit test
+        run: go test -v ./...
 
-      - name: Integration Tests
+      - name: Integration tests
         run: |
           sudo apt-get install -y git
-          gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration -coverprofile=coverage.out -covermode=atomic ./...
+          go test --tags=integration -v ./...
 
-      - name: Integration Test Summary
-        if: always()
-        uses: test-summary/action@v1
+      # Don't work yet as expected https://github.com/nwestfall/openapi-action/issues/3
+      - name: OpenAPI Lint Checks
+        uses: nwestfall/openapi-action@v1.0.1
         with:
-          paths: |
-            integration-tests.xml
-
-      - name: Annotate Integration Tests
-        if: always()
-        uses: guyarb/golang-test-annotations@v0.5.1
-        with:
-          test-results: integration-tests.json
-
-      - name: Upload code coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: integration-test-coverage
-          path: coverage.out
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.out
-          flags: integrationtests
-          name: codecov-testkube-integration-tests
-          verbose: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          file: api/v1/testkube.yaml
