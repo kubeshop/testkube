@@ -3,9 +3,10 @@ package artifact
 import (
 	"context"
 	"encoding/json"
-	"github.com/kubeshop/testkube/pkg/log"
 	"io"
 	"net/http"
+
+	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 

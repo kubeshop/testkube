@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+
 	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
