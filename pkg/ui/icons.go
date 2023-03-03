@@ -47,3 +47,5 @@ const IconCabinet = "🗄️"
 
 // IconWarning emoji
 const IconWarning = "🚨"
+
+const CloudIcon = "☁️"
