@@ -1,5 +1,0 @@
-FROM golang:1.18
-RUN apt update && apt install -y curl
-WORKDIR /
-ADD . /
-RUN go build -o /usr/local/bin/agent cmd/agent/main.go 
