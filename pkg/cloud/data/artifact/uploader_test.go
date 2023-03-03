@@ -1,4 +1,4 @@
-package scraper_test
+package artifact_test
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 
 	"github.com/golang/mock/gomock"
