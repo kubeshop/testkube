@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.18
-WORKDIR /build
+WORKDIR contrib/executor/artillery//build
 COPY . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
 
-RUN cd cmd/agent;go build -o /runner -mod mod -a .
+RUN cd contrib/executor/artillery/cmd/agent;go build -o /runner -mod mod -a .
 
 FROM node:17
 
