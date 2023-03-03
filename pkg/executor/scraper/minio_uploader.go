@@ -3,8 +3,6 @@ package scraper
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/pkg/log"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/pkg/errors"
@@ -41,13 +39,18 @@ func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, buc
 }
 
 func (l *MinIOLoader) Upload(ctx context.Context, object *Object, meta map[string]any) error {
-	folder, err := utils.GetStringKey(meta, "executionId")
+	client := minio.NewClient(l.Endpoint, l.AccessKeyID, l.SecretAccessKey, l.Location, l.Token, l.Bucket, l.Ssl) // create storage client
+	err := client.Connect()
 	if err != nil {
+		return errors.Errorf("error occured creating minio client: %v", err)
+	}
+
+	if err := utils.CheckStringKey(meta, "executionId"); err != nil {
 		return err
 	}
 
-	log.DefaultLogger.Infow("MinIO loader is uploading file", "file", object.Name, "folder", folder, "size", object.Size)
-	if err := l.client.SaveFileDirect(ctx, folder, object.Name, object.Data, object.Size); err != nil {
+	folder := meta["executionId"].(string)
+	if err := client.SaveFileDirect(ctx, folder, object.Name, object.Data, object.Size); err != nil {
 		return errors.Wrapf(err, "error saving file %s", object.Name)
 	}
 

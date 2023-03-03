@@ -1,4 +1,4 @@
-package artifact
+package scraper
 
 import "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 

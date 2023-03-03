@@ -81,30 +81,6 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "RUNNER_DATADIR",
 		Value: "/data",
 	},
-	{
-		Name:  "RUNNER_CLOUD_MODE",
-		Value: getRunnerCloudMode(),
-	},
-	{
-		Name:  "RUNNER_CLOUD_API_KEY",
-		Value: os.Getenv("TESTKUBE_CLOUD_API_KEY"),
-	},
-	{
-		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"),
-	},
-	{
-		Name:  "RUNNER_CLOUD_API_URL",
-		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
-	},
-}
-
-func getRunnerCloudMode() string {
-	mode := "false"
-	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
-		mode = "true"
-	}
-	return mode
 }
 
 // Templates contains templates for executor

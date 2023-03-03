@@ -24,8 +24,6 @@ import (
 var ctx = context.Background()
 
 func TestExecuteAsync(t *testing.T) {
-	t.Parallel()
-
 	ce := ContainerExecutor{
 		clientSet:   getFakeClient("1"),
 		log:         logger(),
@@ -49,8 +47,6 @@ func TestExecuteAsync(t *testing.T) {
 }
 
 func TestExecuteSync(t *testing.T) {
-	t.Parallel()
-
 	ce := ContainerExecutor{
 		clientSet:   getFakeClient("1"),
 		log:         logger(),
@@ -70,8 +66,6 @@ func TestExecuteSync(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
-	t.Parallel()
-
 	jobOptions := &JobOptions{
 		Name:        "name",
 		Namespace:   "namespace",
@@ -86,8 +80,6 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithArgs(t *testing.T) {
-	t.Parallel()
-
 	jobOptions := &JobOptions{
 		Name:                  "name",
 		Namespace:             "namespace",
@@ -116,20 +108,14 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_SSL", Value: ""},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
-		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
-		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
-		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
-		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: ""},
 		{Name: "key", Value: "value"},
 		{Name: "aa", Value: "bb"},
 	}
 
-	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
+	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
 func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
-	t.Parallel()
-
 	jobOptions := &JobOptions{
 		Name:        "name",
 		Namespace:   "namespace",
@@ -144,8 +130,6 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
-	t.Parallel()
-
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
@@ -176,8 +160,6 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
-	t.Parallel()
-
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
@@ -208,8 +190,6 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
-	t.Parallel()
-
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},

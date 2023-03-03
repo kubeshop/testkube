@@ -1,12 +1,12 @@
 //go:build integration
 
-package artifact_test
+package scraper_test
 
 import (
 	"context"
 	"github.com/golang/mock/gomock"
-	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/stretchr/testify/assert"
