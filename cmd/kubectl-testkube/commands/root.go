@@ -48,6 +48,9 @@ func init() {
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
+
+	RootCmd.AddCommand(NewAgentCmd())
+
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
 
