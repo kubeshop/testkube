@@ -44,7 +44,7 @@ jobs:
 
       -
         name: Docker meta for ${{ matrix.value }} executor
-        id: meta_${{ matrix.value }}_executor
+        id: meta_executor
         uses: docker/metadata-action@v3
         with:
           images: kubeshop/testkube-${{ matrix.value }}-executor
@@ -56,12 +56,12 @@ jobs:
             type=sha
 
       -
-        name: Build ${{ matrix.value }} Executor
+        name: Build ${{ matrix.value }} executor
         uses: docker/bake-action@v1
         with:
           files: |
             contrib/executor/${{ matrix.value }}/build/agent/docker-bake.hcl
-            ${{ steps.meta_${{ matrix.value }}_executor.outputs.bake-file }}
+            ${{ steps.meta_executor.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
