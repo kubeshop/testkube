@@ -1,4 +1,4 @@
-name: Docker images building and pushing for curl executor
+name: Docker images building and pushing for executor
 on:
   push:
     tags:
@@ -6,8 +6,21 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  docker:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - id: matrix
+        run: |
+          echo '::set-output name=value::[\"artillery\", \"curl\"]'
+
+  docker:
+    needs: [ setup ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        value: ${{fromJson(needs.setup.outputs.matrix)}}
     steps:
 
       -
@@ -30,11 +43,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       -
-        name: Docker meta for Curl executor
-        id: meta_curl_executor
+        name: Docker meta for ${{ matrix.value }} executor
+        id: meta_${{ matrix.value }}_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-curl-executor
+          images: kubeshop/testkube-${{ matrix.value }}-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -43,12 +56,12 @@ jobs:
             type=sha
 
       -
-        name: Build Curl Executor
+        name: Build ${{ matrix.value }} Executor
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/curl/build/agent/docker-bake.hcl
-            ${{ steps.meta_curl_executor.outputs.bake-file }}
+            contrib/executor/${{ matrix.value }}/build/agent/docker-bake.hcl
+            ${{ steps.meta_${{ matrix.value }}_executor.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
