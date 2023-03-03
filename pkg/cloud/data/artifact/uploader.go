@@ -1,10 +1,12 @@
-package scraper
+package artifact
 
 import (
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 
@@ -30,11 +32,13 @@ func (l *CloudUploader) Upload(ctx context.Context, object *scraper.Object, meta
 	if err != nil {
 		return err
 	}
+	log.DefaultLogger.Infow("cloud uploader is requesting signed URL", "file", object.Name, "folder", req.ExecutionID, "size", object.Size)
 	signedURL, err := l.getSignedURL(ctx, req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get signed URL for object [%s]", req.Object)
 	}
 
+	log.DefaultLogger.Infow("cloud uploader is uploading file", "file", object.Name, "folder", req.ExecutionID, "size", object.Size)
 	if err := l.putObject(ctx, signedURL, object.Data); err != nil {
 		return errors.Wrapf(err, "failed to send object [%s] to cloud", req.Object)
 	}

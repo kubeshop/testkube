@@ -3,6 +3,7 @@ package context
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -63,7 +64,7 @@ func NewSetContextCmd() *cobra.Command {
 
 			ui.Success("Your config was updated with new values")
 			ui.NL()
-			uiPrintCloudContext(string(cfg.ContextType), cfg.CloudContext)
+			common.UiPrintContext(cfg)
 		},
 	}
 
