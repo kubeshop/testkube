@@ -9,7 +9,7 @@ jobs:
   docker:
     strategy:
       matrix:
-        executor: [artillery, curl]
+        executor: [artillery, curl, example, ginkgo, jmeter, k6, kubepug, postman, soapui, template]
 
     runs-on: ubuntu-latest
     steps:
@@ -25,6 +25,26 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+
+      - 
+        name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      -
+        name: Docker Cache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       -
         name: Login to DockerHub
