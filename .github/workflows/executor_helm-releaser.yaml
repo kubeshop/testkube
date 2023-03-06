@@ -1,4 +1,4 @@
-name: testkube-curl-executor-helm-releaser
+name: testkube-executor-helm-releaser
 
 on:
   push:
@@ -9,7 +9,12 @@ on:
       # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  releasing_helm_chart_curl_executor:
+  docker:
+    strategy:
+      matrix:
+        executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
+
+  releasing_helm_chart_executor:
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
@@ -34,7 +39,7 @@ jobs:
           export RELEASE_VERSION
 
           cd ./scripts
-          ./chart_releaser.sh --testkube-executor-name curl --main-chart false
+          ./chart_releaser.sh --testkube-executor-name ${{ matrix.executor }} --main-chart false
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
