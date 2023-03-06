@@ -375,6 +375,18 @@ spec:
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
+If you need to provide a value that will be applied to both containers, update the PodSpec definition:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: yourSecretName
+```
+
 ### Executing pre run script
 
 If you need to provide additional configuration for your executor environment, you can submit prerun script to be executed before test started. For example, we have such a simple shell script stored in `script.sh` file:
