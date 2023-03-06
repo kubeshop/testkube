@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.18
-WORKDIR /build
+WORKDIR contrib/executor/kubepug/build
 COPY . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
 
-RUN cd cmd/agent;go build -o /runner -mod mod -a .
+RUN cd contrib/executor/kubepug/cmd/agent;go build -o /runner -mod mod -a .
 
 FROM bitnami/kubectl
 USER root

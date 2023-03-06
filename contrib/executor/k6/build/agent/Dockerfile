@@ -5,15 +5,15 @@ FROM golang:1.18 as builder
 ENV K6_VERSION=v0.36.0
 RUN go install go.k6.io/xk6/cmd/xk6@v0.6.1 && xk6 build --with github.com/grafana/xk6-output-prometheus-remote@latest
 
-WORKDIR /build
+WORKDIR contrib/executor/k6/build
 
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
 COPY . .
-RUN cd cmd/agent;go build -o /build/runner -mod mod -a .
+RUN cd contrib/executor/k6/cmd/agent;go build -o /build/runner -mod mod -a .
 
 FROM loadimpact/k6:0.36.0
 WORKDIR /home/k6
 COPY --from=builder /go/k6 /usr/bin/k6
-COPY --from=builder /build/runner /bin/runner
+COPY --from=builder /contrib/executor/k6/build/runner /bin/runner
 ENTRYPOINT ["/bin/runner"]

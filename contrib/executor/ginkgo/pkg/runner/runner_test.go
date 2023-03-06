@@ -159,8 +159,8 @@ func TestRun(t *testing.T) {
 		}
 		passThroughs := BuildGinkgoPassThroughFlags(execution)
 		assert.Contains(t, passThroughs, "--")
-		assert.Contains(t, passThroughs, "--one=one")
-		assert.Contains(t, passThroughs, "--two=two")
+		assert.Equal(t, os.Getenv("one"), "one")
+		assert.Equal(t, os.Getenv("two"), "two")
 		assert.Contains(t, passThroughs, "--three")
 		assert.Contains(t, passThroughs, "--four=four")
 	})

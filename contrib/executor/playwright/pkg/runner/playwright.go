@@ -72,12 +72,17 @@ func (r *PlaywrightRunner) Run(execution testkube.Execution) (result testkube.Ex
 		output.PrintLog(fmt.Sprintf("%s Dependencies successfully installed", ui.IconBox))
 	}
 
-	runner := "npx"
+	var runner string
+	var args []string
+
 	if r.dependency == "pnpm" {
-		runner = "pnpx"
+		runner = "pnpm"
+		args = []string{"dlx", "playwright", "test"}
+	} else {
+		runner = "npx"
+		args = []string{"playwright", "test"}
 	}
 
-	args := []string{"playwright", "test"}
 	args = append(args, execution.Args...)
 
 	envManager := env.NewManagerWithVars(execution.Variables)

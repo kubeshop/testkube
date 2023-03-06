@@ -262,8 +262,7 @@ func BuildGinkgoPassThroughFlags(execution testkube.Execution) []string {
 	args := execution.Args
 	flags := []string{}
 	for _, v := range vars {
-		flag := "--" + v.Name + "=" + v.Value
-		flags = append(flags, flag)
+		os.Setenv(v.Name, v.Value)
 	}
 
 	if len(args) > 0 {

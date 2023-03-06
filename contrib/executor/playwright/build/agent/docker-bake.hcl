@@ -8,7 +8,7 @@ group "default" {
 target "npm" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.npm"
+  dockerfile = "contrib/executor/playwright/build/agent/Dockerfile.npm"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -18,7 +18,7 @@ target "npm" {
 target "pnpm" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.pnpm"
+  dockerfile = "contrib/executor/playwright/build/agent/Dockerfile.pnpm"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -28,7 +28,7 @@ target "pnpm" {
 target "yarn" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.yarn"
+  dockerfile = "contrib/executor/playwright/build/agent/Dockerfile.yarn"
   platforms = [
     "linux/amd64",
     "linux/arm64"
