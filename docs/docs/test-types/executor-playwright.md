@@ -62,10 +62,25 @@ File data/playwright-report.zip downloaded.
 
 ## Special Requirements
 
-Running tests in a containerized environment is convenient: it's simple, portable and increases the speed of development. There is a need to be aware of the limitations of this environment. Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. Having this option on the default setting will block the Testkube test runner. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
+Running tests in a containerized environment is convenient: it's simple, portable and increases the speed of development. There is a need to be aware of the limitations of this environment.
+
+### Reports
+
+Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
 
 ```bash
 reporter: [
   ['html', { open: 'never' }]
 ],
 ```
+
+Having this option on the default setting will not block the Testkube test runner, as the following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
+
+```bash
+ENV CI=1
+ENV PWTEST_SKIP_TEST_OUTPUT=1
+```
+
+### Using Different Playwright Versions
+
+The Testkube Playwright executor supports only one version for now: 1.30.0. In case this does not suffice, the [container executor docs](https://kubeshop.github.io/testkube/test-types/container-executor/#creating-and-configuring-container-executor-playwright) contain instructions on how to set up your own executor with a different version of Playwright.
