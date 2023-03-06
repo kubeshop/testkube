@@ -10,6 +10,7 @@ jobs:
     strategy:
       matrix:
         version: [default, jdk8, jdk11, jdk17,jdk18]
+        executor: [gradle, maven]
 
     runs-on: ubuntu-latest
     steps:
@@ -54,12 +55,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - 
-        name: Docker meta for ${{ matrix.version }} gradle executor
+        name: Docker meta for ${{ matrix.version }} ${{ matrix.executor }} executor
         if: ${{matrix.version == 'default'}}
         id: meta_executor_default
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-gradle-executor
+          images: kubeshop/testkube-${{ matrix.executor }}-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -71,12 +72,12 @@ jobs:
             prefix=
 
       -
-        name: Docker meta for gradle executor ${{ matrix.version }}
+        name: Docker meta for ${{ matrix.executor }} executor ${{ matrix.version }}
         if: ${{matrix.version != 'default'}}
         id: meta_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-gradle-executor
+          images: kubeshop/testkube-${{ matrix.executor }}-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -89,24 +90,24 @@ jobs:
             suffix=-${{ matrix.version }}
 
       - 
-        name: Build ${{ matrix.version }} gradle executor
+        name: Build ${{ matrix.version }} ${{ matrix.executor }} executor
         if: ${{matrix.version == 'default'}}
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/gradle/build/agent/docker-bake.hcl
+            contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
             ${{ steps.meta_executor_default.outputs.bake-file }}
           targets: jdk11
           set: jdk11.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
 
       -
-        name: Build ${{ matrix.executor }} gradle executor
+        name: Build ${{ matrix.executor }} ${{ matrix.executor }} executor
         if: ${{matrix.version != 'default'}}
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/gradle/build/agent/docker-bake.hcl
+            contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
           targets: ${{ matrix.version }}
           set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
