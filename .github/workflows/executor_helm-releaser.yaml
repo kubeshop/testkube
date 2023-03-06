@@ -9,12 +9,10 @@ on:
       # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  docker:
+  releasing_helm_chart_executor:
     strategy:
       matrix:
         executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
-
-  releasing_helm_chart_executor:
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
