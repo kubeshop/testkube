@@ -97,7 +97,7 @@ jobs:
             contrib/executor/gradle/build/agent/docker-bake.hcl
             ${{ steps.meta_executor_default.outputs.bake-file }}
           targets: jdk11
-          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          set: jdk11.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
 
       -
@@ -109,5 +109,5 @@ jobs:
             contrib/executor/gradle/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
           targets: ${{ matrix.version }}
-          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
