@@ -15,19 +15,20 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
+	"github.com/pkg/errors"
 )
 
 // GetClientSet configures Kube client set, can override host with local proxy
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get clientset config")
 	}
 
 	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
 		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get non-interactive client config")
 	}
 
 	// override host is needed to override kubeconfig kubernetes proxy host name
