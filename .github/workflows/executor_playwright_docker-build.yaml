@@ -1,4 +1,4 @@
-name: Docker images building and pushing for cypress executor
+name: Docker images building and pushing for playwright executor
 on:
   push:
     tags:
@@ -9,7 +9,7 @@ jobs:
   docker:
     strategy:
       matrix:
-        version: [default, legacy, yarn, cypress8, cypress9, cypress10]
+        version: [default, npm, pnpm, yarn]
 
     runs-on: ubuntu-latest
     steps:
@@ -54,29 +54,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - 
-        name: Docker meta for ${{ matrix.version }} cypress executor
-        if: ${{ matrix.version == 'legacy' }}
-        id: meta_executor_legacy
-        uses: docker/metadata-action@v3
-        with:
-          images: kubeshop/testkube-cypress-executor
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-          flavor: |
-            prefix=
-            suffix=-legacy
-
-      - 
-        name: Docker meta for ${{ matrix.version }} cypress executor
-        if: ${{ matrix.version == 'default' }}
+        name: Docker meta for ${{ matrix.version }} playwright executor
+        if: ${{matrix.version == 'default'}}
         id: meta_executor_default
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-cypress-executor
+          images: kubeshop/testkube-playwright-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -88,12 +71,12 @@ jobs:
             prefix=
 
       -
-        name: Docker meta for cypress executor ${{ matrix.version }}
-        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
+        name: Docker meta for playwright executor ${{ matrix.version }}
+        if: ${{matrix.version != 'default'}}
         id: meta_executor
         uses: docker/metadata-action@v3
         with:
-          images: kubeshop/testkube-cypress-executor
+          images: kubeshop/testkube-playwright-executor
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -106,36 +89,24 @@ jobs:
             suffix=-${{ matrix.version }}
 
       - 
-        name: Build ${{ matrix.version }} cypress executor
-        if: ${{ matrix.version == 'legacy' }}
+        name: Build ${{ matrix.version }} playwright executor
+        if: ${{matrix.version == 'default'}}
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/cypress/build/agent/docker-bake.hcl
-            ${{ steps.meta_executor_legacy.outputs.bake-file }}
+            contrib/executor/playwright/build/agent/docker-bake.hcl
+            ${{ steps.meta_executor_default.outputs.bake-file }}
           targets: npm
           set: npm.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
 
-      - 
-        name: Build ${{ matrix.version }} cypress executor
-        if: ${{ matrix.version == 'default' }}
-        uses: docker/bake-action@v1
-        with:
-          files: |
-            contrib/executor/cypress/build/agent/docker-bake.hcl
-            ${{ steps.meta_executor_default.outputs.bake-file }}
-          targets: cypress11
-          set: cypress11.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          push: true
-
       -
-        name: Build cypress ${{ matrix.executor }} executor
-        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
+        name: Build ${{ matrix.executor }} playwright executor
+        if: ${{matrix.version != 'default'}}
         uses: docker/bake-action@v1
         with:
           files: |
-            contrib/executor/cypress/build/agent/docker-bake.hcl
+            contrib/executor/playwright/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
           targets: ${{ matrix.version }}
           set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}

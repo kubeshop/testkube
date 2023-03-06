@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.18
-WORKDIR /build
+WORKDIR contrib/executor/cypress/build
 COPY . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
 
-RUN cd cmd/agent;go build -o /runner -mod mod -a .
+RUN cd contrib/executor/cypress/cmd/agent;go build -o /runner -mod mod -a .
 
 # using debian based image as alpine is not supported by Cypress yet
 # https://github.com/cypress-io/cypress/issues/419 

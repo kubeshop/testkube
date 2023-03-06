@@ -8,7 +8,7 @@ group "default" {
 target "npm" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.npm"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.npm"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -18,7 +18,7 @@ target "npm" {
 target "yarn" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.yarn"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.yarn"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -28,7 +28,7 @@ target "yarn" {
 target "cypress8" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.cypress8"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.cypress8"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -38,7 +38,7 @@ target "cypress8" {
 target "cypress9" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.cypress9"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.cypress9"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -48,7 +48,7 @@ target "cypress9" {
 target "cypress10" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.cypress10"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.cypress10"
   platforms = [
     "linux/amd64",
     "linux/arm64"
@@ -58,7 +58,7 @@ target "cypress10" {
 target "cypress11" {
   inherits = ["docker-metadata-action"]
   context = "./"
-  dockerfile = "build/agent/Dockerfile.cypress11"
+  dockerfile = "contrib/executor/cypress/build/agent/Dockerfile.cypress11"
   platforms = [
     "linux/amd64",
     "linux/arm64"
