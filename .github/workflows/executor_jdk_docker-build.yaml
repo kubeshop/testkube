@@ -9,7 +9,7 @@ jobs:
   docker:
     strategy:
       matrix:
-      version: [default, jdk8, jdk11, jdk17,jdk18]
+        version: [default, jdk8, jdk11, jdk17,jdk18]
 
     runs-on: ubuntu-latest
     steps:
