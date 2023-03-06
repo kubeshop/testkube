@@ -15,7 +15,7 @@ RUN apk --no-cache add gcc musl-dev gcompat
 RUN apk --no-cache add ca-certificates git
 WORKDIR /root/
 COPY --from=0 /runner /bin/runner
-COPY --from=0 /contrib/executor/ginkgo/build/ginkgo /bin/ginkgo
+COPY --from=0 /build/ginkgo /bin/ginkgo
 RUN go version
 RUN ginkgo version
 ENTRYPOINT ["/bin/runner"]
