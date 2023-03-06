@@ -1,4 +1,4 @@
-name: Docker images building and pushing for executor
+name: Docker images building and pushing for single executor
 on:
   push:
     tags:
@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
 #        executor: [artillery, curl, example, ginkgo, jmeter, k6, kubepug, postman, soapui, template]
-        executor: []
+        executor: [example]
 
     runs-on: ubuntu-latest
     steps:
