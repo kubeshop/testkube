@@ -44,9 +44,10 @@ jobs:
   releasing_helm_chart_main:
     runs-on: ubuntu-latest
     steps:
-      - name: getting Tag name pushed
-        id: nvars
-        run: echo ::set-output name=ntag::${GITHUB_REF#refs/*/}
+      - name: getting Tag name pushed.
+        id: vars
+        run: echo 'test'
+
       - name: Publish helm-release repo with version based on a Tag pushed.
         run: |
 
@@ -64,4 +65,4 @@ jobs:
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ steps.nvars.outputs.ntag }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
