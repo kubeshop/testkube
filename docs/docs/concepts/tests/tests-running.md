@@ -110,8 +110,8 @@ Let's assume that our example Cypress test needs the `testparam` parameter with 
 This is done by using the `-p` parameter. If you need to pass more parameters, simply pass multiple `-p` flags.
 
 It's possible to pass parameters securely to the executed test. It's necessary to use `--secret` flag,
-which contains a key value pair - a name of the kubernetes secret and a secret key.
-Pass it multiple times if needed.
+which contains a key value pair - a name of the Kubernetes secret and a secret key.
+It can be passed multiple times if needed.
 
 ```sh
 kubectl testkube run test kubeshop-cypress -p testparam=testvalue -f --secret secret-name=secret-key
@@ -198,7 +198,7 @@ $ kubectl testkube get execution 615d5372b046f8fbd3d955d2
 Test execution completed in 1m45.405939s
 ```
 
-### Mapping local files
+### Mapping Local Files
 
 Local files can be set on the execution of a Testkube Test. Pass the file in the format `source_path:destination_path` using the flag `--copy-files`.
 

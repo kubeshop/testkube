@@ -1,6 +1,6 @@
 # Secret Variables
 
-Testkube now offers many ways to pass secrets to the test and to the executors, here are following types:
+Testkube now offers many ways to pass secrets to the test and to the executors. Here are following types:
 
 ## Secret Variables
 
@@ -16,7 +16,7 @@ Usage Example:
 testkube run test my-test --secret-variable api-key="3472bjdvadncaj"
 ```
 
-and it can be accessed in the test in ways that the executors allow for Postman tests it can be accessed like this:
+It can be accessed in the test in ways that the executors allow. For Postman tests it can be accessed like this:
 
 ```js
 test_api_key = pm.environment.get("api-key");
@@ -30,7 +30,7 @@ If there are secrets that are already in the cluster's Secrets, Testkube allows 
 --secret-variable-reference <secret-name>=<k8s-secret-name>=<secret-key>
 ```
 
-Let's say that there is this secret already in the cluster:
+Let's say that this secret already in the cluster:
 
 ```yaml
 apiVersion: v1
@@ -83,7 +83,7 @@ type: Opaque
 ```
 
 :::info
-Postman is expecting to have the JSON object in the secret with the postman env file data json format:
+Postman expects the JSON object in the secret with the postman env file data json format:
 
 ```js
 {

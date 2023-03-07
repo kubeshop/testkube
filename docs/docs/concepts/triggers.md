@@ -31,8 +31,8 @@ spec:
 
 ### Selectors
 
-**resourceSelector** and **testSelector** fields support selecting resources either by name or using
-Kubernetes [Label Selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+The **resourceSelector** and **testSelector** fields support selecting resources either by name or using
+the Kubernetes [Label Selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
 
 Each selector should specify the **namespace** of the object, otherwise the namespace defaults to **testkube**.
 
@@ -78,11 +78,11 @@ conditionSpec:
       reason: test trigger condition reason
 ```
 
-### Supported values
-* **resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
-* **action**    - run
-* **event**     - created, modified, deleted
-* **execution** - test, testsuite
+### Supported Values
+* **eRsource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
+* **Action**    - run
+* **Event**     - created, modified, deleted
+* **Execution** - test, testsuite
 
 **NOTE**: All resources support the above-mentioned events, a list of finer-grained events is in the works, stay tuned...
 

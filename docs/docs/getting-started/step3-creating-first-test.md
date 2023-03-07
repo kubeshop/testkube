@@ -1,4 +1,4 @@
-# Step 3 - Creating your first Test
+# Step 3 - Creating Your First Test
 
 ## Using the CLI or the Dashboard
 
@@ -12,13 +12,13 @@ testkube dashboard
 
 ## Kubernetes-native Tests
 
-Tests in Testkube are created as a Custom Resources in Kubernetes and live inside your cluster.
+Tests in Testkube are created as a Custom Resource in Kubernetes and live inside your cluster.
 
 You can create your tests directly as a Custom Resource, or use the CLI or the Testkube Dashboard to create them.
 
 This section provides an example of creating a _Postman_ test. Nevertheless, Testkube supports a long [list of testing tools](../category/test-types).
 
-## Creating a Postman test
+## Creating a Postman Test
 
 First, let's create a `postman-collection.json` file containing a Postman test (the file content should look similar to the one below):
 
@@ -95,12 +95,12 @@ testkube create test --file postman_collection.json --type postman/collection --
 ```
 
 :::note
-This example is testing that the website https://kubeshop.io is returning a `200` status code. It just demostrates a way of creating a simple Postman test. In practice, you would test an internal Kubernetes service.
+This example is testing that the website https://kubeshop.io is returning a `200` status code. It demostrates a way of creating a simple Postman test. In practice, you would test an internal Kubernetes service.
 :::
 
-## Starting a new Test Execution
+## Starting a New Test Execution
 
-When our test is defined as a Custom Resource we can now run it:
+After our test is defined as a Custom Resource, we can run it:
 
 ```sh
 testkube run test my-first-test
@@ -126,9 +126,9 @@ Use following command to get test execution details:
 $ testkube get execution my-frst-test-1
 ```
 
-## Getting the result of a Test Execution
+## Getting the Result of a Test Execution
 
-To see the result of a Test Execution, first you need to get the Test Execution list:
+To see the result of a Test Execution, first, you need to get the Test Execution list:
 
 ```sh
 testkube get executions

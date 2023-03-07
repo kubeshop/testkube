@@ -93,7 +93,7 @@ TODO
 
 ```
 
-### Getting a Test Suite status of a Given Test Suite from Test Suite CRD
+### Getting a Test Suite Status of a Given Test Suite from Test Suite CRD
 
 To get the Test Suite CRD status of a particular test suite, pass the test suite name as a parameter:
 
