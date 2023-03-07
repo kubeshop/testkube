@@ -24,8 +24,10 @@ jobs:
           # Setting up Git:
 
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts vsukhin/feature/monorepo
-          git checkout -b "release-$RELEASE_VERSION"
           cd ./helm-charts
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"          
+          git checkout -b "release-$RELEASE_VERSION"          
           cd ./scripts
 
         env:
@@ -38,11 +40,11 @@ jobs:
 
           # Setting up Git:
             
-          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts vsukhin/feature/monorepo
-          git checkout "release-$RELEASE_VERSION"         
+          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts vsukhin/feature/monorepo        
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
+          git checkout "release-$RELEASE_VERSION" 
           
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase api-server": 
