@@ -1,7 +1,6 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import Admonition from "@theme/Admonition";
-import clsx from "clsx";
 
 # Cypress
 
@@ -10,7 +9,7 @@ Our dedicated Cypress executor allows running Cypress tests with Testkube - dire
 export const ExecutorInfo = () => {
   return (
     <div>
-      <Admonition className={clsx("executorInfo")} type="info" icon="🎓" title="What is Cypress?">
+      <Admonition type="info" icon="🎓" title="What is Cypress?">
         <ul>
           <li>Cypress is a framework for making end-to-end tests of your applications, mostly used for front-end testing.</li>
           <li>When you run your Cypress tests, a browser is spun up so you can assert against it in an automatic way.</li>
