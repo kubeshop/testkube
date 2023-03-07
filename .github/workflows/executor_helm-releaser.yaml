@@ -47,7 +47,6 @@ jobs:
       - name: getting Tag name pushed.
         id: vars
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-
       - name: Publish helm-release repo with version based on a Tag pushed.
         run: |
 
