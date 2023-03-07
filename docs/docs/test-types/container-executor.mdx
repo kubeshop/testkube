@@ -3,6 +3,8 @@ import TabItem from "@theme/TabItem";
 
 # Container Executor
 
+**That's the new, and recommended way of running custom images. Docs about the legacy way of creating custom executors can be found [here](legacy-executor.md).**
+
 The Testkube Container Executor allows you to run your own container images for executing tests. Testkube orchestrates the Tests using the container image as Kubernetes Jobs.
 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
