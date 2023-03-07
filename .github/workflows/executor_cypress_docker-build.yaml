@@ -9,8 +9,8 @@ jobs:
   docker:
     strategy:
       matrix:
-      # version: [default, legacy, yarn, cypress8, cypress9, cypress10]
-        version: [default]
+        version: [default, legacy, yarn, cypress8, cypress9, cypress10]
+
     runs-on: ubuntu-latest
     steps:
 
