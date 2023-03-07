@@ -2,16 +2,15 @@
   --ifm-link-color: var(--ifm-color-emphasis-800);
   --ifm-link-hover-color: var(--ifm-color-emphasis-700);
   --ifm-link-hover-decoration: none;
-
+  background-color: var(--ifm-background-surface-color-hover);
   box-shadow: 0 1.5px 3px 0 rgb(0 0 0 / 15%);
-  border: 1px solid var(--ifm-color-emphasis-200);
   transition: all var(--ifm-transition-fast) ease;
   transition-property: border, box-shadow;
   height: 100%;
 }
 
 .cardContainer:hover {
-  border-color: var(--ifm-color-primary);
+  outline: var(--ifm-color-primary) solid 2px;
   box-shadow: 0 3px 6px 0 rgb(0 0 0 / 20%);
 }
 
