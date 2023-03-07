@@ -9,8 +9,8 @@ jobs:
   docker:
     strategy:
       matrix:
-        executor: [init, scraper]
-
+      # executor: [init, scraper]
+        executor: [init]
     runs-on: ubuntu-latest
     steps:
 

@@ -9,7 +9,8 @@ jobs:
   docker:
     strategy:
       matrix:
-        version: [default, npm, pnpm, yarn]
+        # version: [default, npm, pnpm, yarn]
+        version: [default]
 
     runs-on: ubuntu-latest
     steps:

@@ -9,8 +9,10 @@ jobs:
   docker:
     strategy:
       matrix:
-        version: [default, jdk8, jdk11, jdk17,jdk18]
-        executor: [gradle, maven]
+      # version: [default, jdk8, jdk11, jdk17,jdk18]
+      # executor: [gradle, maven]
+        version: [default]
+        xecutor: [gradle]     
 
     runs-on: ubuntu-latest
     steps:
