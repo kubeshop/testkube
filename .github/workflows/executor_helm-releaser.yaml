@@ -1,7 +1,7 @@
 name: testkube-executor-helm-releaser
 on:
   workflow_run:
-    workflows: ["Docker images building and pushing for single executor", "Docker images"]
+    workflows: ["Docker images building and pushing for single executor", "Docker images building and pushing for playwright executor", "Docker images building and pushing for jdk executor", "Docker images building and pushing for helper executor", "Docker images building and pushing for cypress executor", "Docker images"]
     types: 
       - completed
 
