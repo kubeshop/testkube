@@ -1,13 +1,35 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+import clsx from "clsx";
 
 # Cypress
-Cypress is an open-source end-to-end testing framework for web applications. Dedicated Cypress executor allow running Cypress tests with Testkube - directly from your Git repository.
 
-<iframe width="100%" height="315" src="https://www.youtube.com/embed/lGCkfIqzGfw" title="YouTube Tutorial: End-to-End Testing in Kubernetes with Cypress and Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+Our dedicated Cypress executor allows running Cypress tests with Testkube - directly from your Git repository.
+
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition className={clsx("executorInfo")} type="info" icon="🎓" title="What is Cypress?">
+        <ul>
+          <li>Cypress is a framework for making end-to-end tests of your applications, mostly used for front-end testing.</li>
+          <li>When you run your Cypress tests, a browser is spun up so you can assert against it in an automatic way.</li>
+          <li>With Cypress you can, for example, check that you get the expected behaviour when a button in your UI is clicked.
+          Cypress can then record the test execution and provide you with a video of what happened with the actual test.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
+
 
 **Check out our [blog post](https://kubeshop.io/blog/end-to-end-tests-of-your-kubernetes-applications-with-cypress) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Cypress.**
 
+<span class="embed-container">
+<iframe width="100%" height="315px" src="https://www.youtube.com/embed/lGCkfIqzGfw" title="YouTube Tutorial: End-to-End Testing in Kubernetes with Cypress and Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</span>
 
 ## Example Cypress project
 If you haven't created the Cypress project yet please follow the Cypress documentation for details: https://docs.cypress.io/guides/dashboard/projects.
