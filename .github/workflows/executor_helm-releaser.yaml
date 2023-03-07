@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
-  #  if: ${{ contains(GITHUB_REF#refs/*/, '-') }}        
+    if: ${{ contains(GITHUB_REF#refs/*/, '-') }}        
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
