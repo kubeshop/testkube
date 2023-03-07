@@ -22,10 +22,10 @@ type Params struct {
 	DataDir             string // RUNNER_DATADIR
 	GitUsername         string // RUNNER_GITUSERNAME
 	GitToken            string // RUNNER_GITTOKEN
-	CloudMode           bool   // RUNNER_CLOUD_MODE
-	CloudAPIKey         string // RUNNER_CLOUD_API_KEY
-	CloudAPITLSInsecure bool   // RUNNER_CLOUD_API_TLS_INSECURE
-	CloudAPIURL         string // RUNNER_CLOUD_API_URL
+	CloudMode           bool   `envconfig:"RUNNER_CLOUD_MODE"`             // RUNNER_CLOUD_MODE
+	CloudAPIKey         string `envconfig:"RUNNER_CLOUD_API_KEY"`          // RUNNER_CLOUD_API_KEY
+	CloudAPITLSInsecure bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"` // RUNNER_CLOUD_API_TLS_INSECURE
+	CloudAPIURL         string `envconfig:"RUNNER_CLOUD_API_URL"`          // RUNNER_CLOUD_API_URL
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
