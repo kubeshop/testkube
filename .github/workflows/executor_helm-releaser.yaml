@@ -1,7 +1,7 @@
 name: testkube-executor-helm-releaser
 on:
   workflow_run:
-    workflows: ["Docker images building and pushing for single executor", "Docker images building and pushing for playwright executor", "Docker images building and pushing for jdk executor", "Docker images building and pushing for helper executor", "Docker images building and pushing for cypress executor", "Docker images"]
+    workflows: [Docker images building and pushing for executor]
     types: 
       - completed
 
@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
-    if: ${{ !contains(GITHUB_REF#refs/*/, '-') }}        
+    if: ${{ !contains(GITHUB_REF#refs/*/, '-') }}
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
@@ -23,10 +23,10 @@ jobs:
           # Setting up Git:
             
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
-          git checkout "release-$RELEASE_VERSION"         
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
+          git checkout "release-$RELEASE_VERSION"
           
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase api-server": 
