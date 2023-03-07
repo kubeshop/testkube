@@ -12,6 +12,7 @@
   --ifm-font-family-base: "Roboto";
   --ifm-font-size-base: 16px;
   --ifm-color-primary: #818cf8;
+  --ifm-color-secondary: #c8cdff;
   --ifm-color-primary-dark: #29784c;
   --ifm-color-primary-darker: #277148;
   --ifm-color-primary-darkest: #205d3b;
@@ -45,6 +46,7 @@
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme="dark"] {
   --ifm-color-primary: #818cf8;
+  --ifm-color-secondary: #6660f6;
   --ifm-color-primary-dark: #21af90;
   --ifm-color-primary-darker: #1fa588;
   --ifm-color-primary-darkest: #1a8870;
@@ -160,7 +162,7 @@ html[data-theme="dark"] {
 }
 .theme-doc-sidebar-item-link-level-2 .menu__link,
 .theme-doc-sidebar-item-category-level-2 .menu__link {
-  padding: 4px 0 4px 0;
+  padding: 4px 0 4px 4px;
 }
 .menu__link:hover,
 .menu__link--active,
@@ -264,10 +266,10 @@ ul:hover {
 
 .intro__card {
   background-color: var(--ifm-background-surface-color-hover);
-  box-shadow: 0 1.5px 3px 0 rgb(0 0 0 / 15%);
-  border-radius: 4px;
-  margin: 10px 10px 10px 20px;
-  height: auto;
+  box-shadow: 0 1.5px 5px 0 rgb(0 0 0 / 20%);
+  border-radius: 5px;
+  margin: 10px 15px 10px 0;
+  width: 100%;
 }
 .intro__card h2 {
   white-space: unset;
@@ -277,7 +279,6 @@ ul:hover {
   white-space: unset;
 }
 .intro__card:hover {
-  transform: translateY(3px);
   transition: 200ms;
 }
 
@@ -289,6 +290,42 @@ ul:hover {
   padding: 0 !important;
 }
 
+.indent--min {
+  margin-left: 5px;
+}
+
+.tools__card {
+  position: relative;
+  background-color: var(--ifm-background-surface-color-hover);
+  box-shadow: 0 1.5px 5px 0 rgb(0 0 0 / 20%);
+  border-radius: 4px;
+  margin: 0 15px 10px 0;
+  width: 6em;
+}
+.tools__card img {
+  position: relative;
+  top: 15%;
+  width: 100%;
+
+}
+.tools__card::before {
+  position: absolute;
+  content: "";
+  top: 70%;
+  width: 100%;
+  height: 30%;
+  background-color: var(--ifm-color-secondary);
+  border-end-end-radius: 4px;
+  border-end-start-radius: 4px;
+}
+.tools__card p {
+  position: relative;
+  top: 15%;
+  font-size: 0.8rem;
+  font-weight: bold;
+  z-index: 1;
+  text-align: center;
+}
 /* article {
   max-width: 700px;
   margin-left: auto;

@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
@@ -21,13 +23,13 @@ import (
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get clientset config")
 	}
 
 	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
 		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get non-interactive client config")
 	}
 
 	// override host is needed to override kubeconfig kubernetes proxy host name
