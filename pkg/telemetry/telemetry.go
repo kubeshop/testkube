@@ -1,15 +1,18 @@
 package telemetry
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
 	"strings"
 
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -99,4 +102,42 @@ func getCurrentContext() RunContext {
 		OrganizationId: data.CloudContext.Organization,
 		EnvironmentId:  data.CloudContext.Environment,
 	}
+}
+
+func GetClusterType() string {
+
+	clientset, err := k8sclient.ConnectToK8s()
+	if err != nil {
+		log.DefaultLogger.Debugw("Creating k8s clientset", err)
+	}
+
+	pods, err := clientset.CoreV1().Pods("kube-system").List(context.Background(), v1.ListOptions{})
+	if err != nil {
+		log.DefaultLogger.Debugw("Getting pods from kube-system namespace", err)
+	}
+
+	// Loop through the pods and check if their name contains the search string.
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "-kind-") || strings.Contains(pod.Name, "kindnet") {
+			return "kind"
+		}
+		if strings.Contains(pod.Name, "-minikube") {
+			return "minikube"
+		}
+		if strings.Contains(pod.Name, "docker-desktop") {
+			return "docker-desktop"
+		}
+		if strings.Contains(pod.Name, "gke-") || strings.Contains(pod.Name, "-gke-") {
+			return "gke"
+		}
+		if strings.Contains(pod.Name, "aws-") || strings.Contains(pod.Name, "-aws-") {
+			return "eks"
+		}
+		if strings.Contains(pod.Name, "azure-") || strings.Contains(pod.Name, "-azuredisk-") || strings.Contains(pod.Name, "-azurefile-") {
+			return "aks"
+		}
+
+	}
+
+	return "others"
 }

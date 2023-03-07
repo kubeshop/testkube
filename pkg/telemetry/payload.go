@@ -25,6 +25,7 @@ type Params struct {
 	TestSource       string     `json:"test_source,omitempty"`
 	TestSuiteSteps   int32      `json:"test_suite_steps,omitempty"`
 	Context          RunContext `json:"context,omitempty"`
+	ClusterType      string     `json:"cluster_type,omitempty"`
 }
 
 type Event struct {
@@ -83,6 +84,7 @@ func NewCLIPayload(context RunContext, id, name, version, category string) Paylo
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					Context:         context,
+					ClusterType:     GetClusterType(),
 				},
 			}},
 	}
@@ -105,6 +107,7 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
+					ClusterType:     GetClusterType(),
 				},
 			}},
 	}
@@ -132,6 +135,7 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					TestType:        params.TestType,
 					TestSource:      params.TestSource,
 					TestSuiteSteps:  params.TestSuiteSteps,
+					ClusterType:     GetClusterType(),
 				},
 			}},
 	}
@@ -159,6 +163,7 @@ func NewRunPayload(name string, params RunParams) Payload {
 					TestType:        params.TestType,
 					DurationMs:      params.DurationMs,
 					Status:          params.Status,
+					ClusterType:     GetClusterType(),
 				},
 			}},
 	}
