@@ -20,17 +20,17 @@ jobs:
         run: |
 
           # Setting up Git:
-            
+
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
           git checkout "release-$RELEASE_VERSION"
-          
+
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase api-server": 
           # -->> ./chart_releaser.sh --helm-chart-folder api-server
-          
+
           export GH_PUSH_TOKEN
           export RELEASE_VERSION
 
@@ -46,13 +46,13 @@ jobs:
     steps:
       - name: getting Tag name pushed.
         id: vars
-        run: echo 'test'
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
 
       - name: Publish helm-release repo with version based on a Tag pushed.
         run: |
 
-           # Setting up Git:
-       
+          # Setting up Git:
+
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           cd ./helm-charts
           git config user.name "kubeshop-bot"
