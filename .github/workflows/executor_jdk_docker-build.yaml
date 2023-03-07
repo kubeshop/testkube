@@ -12,7 +12,7 @@ jobs:
       # version: [default, jdk8, jdk11, jdk17,jdk18]
       # executor: [gradle, maven]
         version: [default]
-        xecutor: [gradle]     
+        executor: [gradle]     
 
     runs-on: ubuntu-latest
     steps:
