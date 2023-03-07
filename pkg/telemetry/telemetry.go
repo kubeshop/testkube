@@ -106,14 +106,17 @@ func getCurrentContext() RunContext {
 
 func GetClusterType() string {
 
+	wasThereError := false
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		log.DefaultLogger.Debugw("Creating k8s clientset", err)
+		wasThereError = true
 	}
 
 	pods, err := clientset.CoreV1().Pods("kube-system").List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		log.DefaultLogger.Debugw("Getting pods from kube-system namespace", err)
+		wasThereError = true
 	}
 
 	// Loop through the pods and check if their name contains the search string.
@@ -137,6 +140,10 @@ func GetClusterType() string {
 			return "aks"
 		}
 
+	}
+
+	if wasThereError {
+		return "unidentified"
 	}
 
 	return "others"
