@@ -67,7 +67,7 @@ type RunContext struct {
 	EnvironmentId  string
 }
 
-func NewCLIPayload(context RunContext, id, name, version, category string) Payload {
+func NewCLIPayload(context RunContext, id, name, version, category, clusterType string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
@@ -84,13 +84,13 @@ func NewCLIPayload(context RunContext, id, name, version, category string) Paylo
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					Context:         context,
-					ClusterType:     GetClusterType(),
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
-func NewAPIPayload(clusterId, name, version, host string) Payload {
+func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 	return Payload{
 		ClientID: clusterId,
 		UserID:   clusterId,
@@ -107,14 +107,14 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
-					ClusterType:     GetClusterType(),
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewCreatePayload prepares payload for Test or Test suite creation
-func NewCreatePayload(name string, params CreateParams) Payload {
+func NewCreatePayload(name, clusterType string, params CreateParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -135,14 +135,14 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					TestType:        params.TestType,
 					TestSource:      params.TestSource,
 					TestSuiteSteps:  params.TestSuiteSteps,
-					ClusterType:     GetClusterType(),
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewRunPayload prepares payload for Test or Test suite execution
-func NewRunPayload(name string, params RunParams) Payload {
+func NewRunPayload(name, clusterType string, params RunParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -163,7 +163,7 @@ func NewRunPayload(name string, params RunParams) Payload {
 					TestType:        params.TestType,
 					DurationMs:      params.DurationMs,
 					Status:          params.Status,
-					ClusterType:     GetClusterType(),
+					ClusterType:     clusterType,
 				},
 			}},
 	}

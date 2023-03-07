@@ -29,7 +29,7 @@ type Sender func(client *http.Client, payload Payload) (out string, err error)
 
 // SendServerStartEvent will send event to GA
 func SendServerStartEvent(clusterId, version string) (string, error) {
-	payload := NewAPIPayload(clusterId, "testkube_api_start", version, "localhost")
+	payload := NewAPIPayload(clusterId, "testkube_api_start", version, "localhost", GetClusterType())
 	return sendData(senders, payload)
 }
 
@@ -41,31 +41,31 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution")
+	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), "init", version, "cli_command_execution")
+	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), "init", version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendHeartbeatEvent will send CLI event to GA
 func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
-	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host)
+	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendCreateEvent will send API create event for Test or Test suite to GA
 func SendCreateEvent(event string, params CreateParams) (string, error) {
-	payload := NewCreatePayload(event, params)
+	payload := NewCreatePayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
 // SendCreateEvent will send API run event for Test or Test suite to GA
 func SendRunEvent(event string, params RunParams) (string, error) {
-	payload := NewRunPayload(event, params)
+	payload := NewRunPayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
