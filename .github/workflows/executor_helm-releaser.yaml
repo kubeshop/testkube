@@ -1,18 +1,16 @@
 name: testkube-executor-helm-releaser
-
 on:
-  push:
-    tags: 
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      # - "v[0-9]+.[0-9]+.[0-9]+-*"
-      # - "vTesting[0-9]+.[0-9]+.[0-9]+"
-      # - "vTesting[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_run:
+    workflows: ["Docker images building and pushing for single executor", "Docker images"]
+    types: 
+      - completed
 
 jobs:
   releasing_helm_chart_executor:
     strategy:
       matrix:
         executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
+    if: ${{ !contains(GITHUB_REF#refs/*/, '-') }}        
     runs-on: ubuntu-latest
     steps:
       - name: getting Tag name pushed.
