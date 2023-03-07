@@ -1,4 +1,4 @@
-# Legacy Testkube Executor
+# Prebuilt Testkube Executor
 
 **The new, and recommended way of running custom images is to use [Container Executors](container-executor.mdx).**
 
