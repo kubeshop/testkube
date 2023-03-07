@@ -1,4 +1,8 @@
+import CICDComparison from "../img/cicd-comparison.png";
+
 # Benefits of using Testkube
+
+<img src={CICDComparison} />
 
 Whether you want to simplify your company's DevOps workflows or empower your QA and Testing teams, Testkube provides your teams the power to:
 

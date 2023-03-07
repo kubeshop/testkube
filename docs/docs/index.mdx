@@ -1,4 +1,3 @@
-import CICDComparison from "./img/cicd-comparison.png";
 import DocCard from "../src/theme/DocCard";
 import clsx from "clsx";
 
@@ -14,13 +13,13 @@ Testkube is a Kubernetes-native testing framework for Testers, Developers, and D
 ## Try it out
 
 export const DocCardList = (input) => (
-  <section className={clsx("row")}>
+  <section className={clsx("row indent--min")}>
     {[
       {
         icon: "🛠",
-        label: "Getting Started",
+        label: "Get started",
         description:
-          "Get up and running by installing the Testkube CLI and its components within minutes! ",
+          "Get up and running by installing the Testkube CLI and its components within minutes.",
         href: "/getting-started",
         type: "intro",
       },
@@ -34,14 +33,14 @@ export const DocCardList = (input) => (
       },
       {
         icon: "🚀",
-        label: "Connect with your CI/CD",
+        label: "Connect to your CI/CD",
         description:
-          "Our guides will walk you through incorporating Testkube into your CI/CD environment, with the tools you already use.",
+          "Incorporate Testkube into your CI/CD environment with the tools you already use.",
         href: "/guides/cicd",
         type: "intro",
       },
     ].map((item, i) => (
-      <article key={i} className="col nopadding intro__card">
+      <article key={i} className="col padding--sm intro__card">
         <DocCard item={item} />
       </article>
     ))}
@@ -49,6 +48,77 @@ export const DocCardList = (input) => (
 );
 
 <DocCardList />
+
+## Tool Support
+To start testing with Testkube, choose your favorite testing tool:
+
+export const ToolList = (input) => (
+  <section className={clsx("row indent--min")}>
+    {[
+      {
+        description: "Cypress",
+        href: "/test-types/executor-cypress", 
+        type: "tool_icons",
+      },
+      {
+        description: "k6",
+        href: "/test-types/executor-k6",
+        type: "tool_icons",
+      },
+      {
+        description: "Postman",
+        href: "/test-types/executor-postman",
+        type: "tool_icons",
+      },
+      {
+        description: "Ginkgo",
+        href: "/test-types/executor-ginkgo",
+        type: "tool_icons",
+      },
+      {
+        description: "JMeter",
+        href: "/test-types/executor-jmeter",
+        type: "tool_icons",
+      },
+      {
+        description: "Gradle",
+        href: "/test-types/executor-gradle",
+        type: "tool_icons",
+      },
+      {
+        description: "Maven",
+        href: "/test-types/executor-maven",
+        type: "tool_icons",
+      },
+      {
+        description: "Artillery",
+        href: "/test-types/executor-artillery",
+        type: "tool_icons",
+      },
+      {
+        description: "Playwright",
+        href: "/test-types/executor-playwright",
+        type: "tool_icons",
+      },
+      {
+        description: "KubePug",
+        href: "/test-types/executor-kubepug",
+        type: "tool_icons",
+      },
+      {
+        description: "cURL",
+        href: "/test-types/executor-curl",
+        type: "tool_icons",
+      },
+    ].map((item, i) => (
+      <article key={i} className="nopadding tools__card">
+        <DocCard item={item} />
+      </article>
+    ))}
+  </section>
+);
+
+<ToolList />
 
 ## Advantages of using Testkube
 
@@ -58,5 +128,3 @@ With Testkube, tests are part of a cluster's state and can be executed as needed
 - ⏲️ On a schedule
 - 🧑‍💻 Manually via Testkube's CLI or Open Source Dashboard
 - ⚡ Externally triggered via API
-
-<img src={CICDComparison} />

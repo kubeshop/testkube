@@ -91,7 +91,7 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"),
+		Value: getRunnerCloudTLSInsecure(),
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_URL",
@@ -100,11 +100,19 @@ var RunnerEnvVars = []corev1.EnvVar{
 }
 
 func getRunnerCloudMode() string {
-	mode := "false"
+	val := "false"
 	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
-		mode = "true"
+		val = "true"
 	}
-	return mode
+	return val
+}
+
+func getRunnerCloudTLSInsecure() string {
+	val := "false"
+	if os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE") == "true" {
+		val = "true"
+	}
+	return val
 }
 
 // Templates contains templates for executor

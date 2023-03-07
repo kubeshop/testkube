@@ -87,7 +87,7 @@ If these guides do not solve the issue that you encountered or you have other qu
 
 ## Other Installation Methods
 
-### Installation on OpenShift
+### Installation on OpenShift deployed on GCP
 
 To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
 
