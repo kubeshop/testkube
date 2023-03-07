@@ -14,7 +14,7 @@ function CardContainer({ href, children }) {
   return (
     <Link
       href={href}
-      className={clsx("card padding--lg", styles.cardContainer)}
+      className={clsx("card padding--md", styles.cardContainer)}
     >
       {children}
     </Link>
@@ -153,6 +153,8 @@ export default function DocCard({ item }) {
       return <CardCategory item={item} />;
     case "intro":
       return <CardIntro item={item} />;
+    case "tool_icons":
+      return <CardToolIcons item={item} />;
     default:
       throw new Error(`unknown item type ${JSON.stringify(item)}`);
   }
@@ -164,6 +166,18 @@ function CardIntro({ item }) {
       href={item.href}
       icon={item.icon}
       title={item.label}
+      description={item.description}
+    />
+  );
+}
+
+function CardToolIcons({ item }) {
+  const executorLogo = testExecutorLogo.get(item.href);
+  const icon = executorLogo
+  return (
+    <CardLayout
+      href={item.href}
+      logo={executorLogo}
       description={item.description}
     />
   );
