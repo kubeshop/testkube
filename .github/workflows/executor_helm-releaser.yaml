@@ -23,6 +23,7 @@ jobs:
           # Setting up Git:
             
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          git checkout "release-$RELEASE_VERSION"         
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
@@ -35,7 +36,19 @@ jobs:
           export RELEASE_VERSION
 
           cd ./scripts
-          ./chart_releaser.sh --testkube-executor-name ${{ matrix.executor }} --main-chart false
+          ./chart_releaser.sh --testkube-executor-name ${{ matrix.executor }} --main-chart false --branch true
+
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+
+      - name: Publish helm-release repo with version based on a Tag pushed.
+        run: |
+
+          git checkout main
+          git merge "release-$RELEASE_VERSION"
+          # git push origin main
+          git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts main
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
