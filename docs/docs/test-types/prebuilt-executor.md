@@ -1,6 +1,6 @@
 # Prebuilt Testkube Executor
 
-**The new, and recommended way of running custom images is to use [Container Executors](container-executor.mdx).**
+**The new and recommended way of running custom images is to use [Container Executors](container-executor.mdx).**
 
 
 To use a testing framework that is not on the currently supported framework list for Testkube, you can create your custom executor and configure it to run any type of tests that you need. These custom test types can be added to your Testkube installation and/or contributed to our repo. We are very happy to receive executor contributions from our community.
