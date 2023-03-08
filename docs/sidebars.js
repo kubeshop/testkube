@@ -158,7 +158,7 @@ const sidebars = {
         "test-types/executor-playwright",
         "test-types/executor-postman",
         "test-types/executor-soapui",
-        "test-types/executor-custom",
+        "test-types/prebuilt-executor",
         "test-types/container-executor",
       ],
     },

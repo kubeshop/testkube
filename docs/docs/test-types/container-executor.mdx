@@ -7,6 +7,8 @@ The Testkube Container Executor allows you to run your own container images for 
 
 The Test execution fails if the container exits with an error and succeeds when the container command successfully executes.
 
+That's the new and recommended way of running custom images. Docs about the prebuilt custom executors can be found [here](prebuilt-executor.md).
+
 ## Creating and configuring Container Executor: Curl
 
 In the following example, the custom Curl executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
