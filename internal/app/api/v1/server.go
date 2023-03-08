@@ -33,7 +33,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -68,7 +67,7 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	templates kubeexecutor.Templates,
+	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 ) TestkubeAPI {
 
@@ -100,7 +99,7 @@ func NewTestkubeAPI(
 		ConfigMap:            configMap,
 		Executor:             executor,
 		ContainerExecutor:    containerExecutor,
-		templates:            templates,
+		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
 	}
 
@@ -139,7 +138,7 @@ type TestkubeAPI struct {
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
 	ConfigMap            config.Repository
-	templates            kubeexecutor.Templates
+	jobTemplate          string
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
 }
@@ -180,7 +179,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 	}
 }
 
-// Init initializes api server settings
+// InitEnvs initializes api server settings
 func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
