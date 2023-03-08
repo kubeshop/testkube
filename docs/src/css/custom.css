@@ -333,7 +333,9 @@ ul:hover {
   background-color: var(--ifm-color-third);
   border-left-color: var(--ifm-color-primary);
 }
-
+.theme-admonition-info ul {
+  margin: 1ch;
+}
 /* article {
   max-width: 700px;
   margin-left: auto;

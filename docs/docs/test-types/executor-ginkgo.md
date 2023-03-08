@@ -1,9 +1,29 @@
+import Admonition from "@theme/Admonition";
+
 # Ginkgo
 
-Testkube allows us to run Ginkgo-based tests. (https://onsi.github.io/ginkgo/)
+Testkube allows us to run [Ginkgo-based tests](https://onsi.github.io/ginkgo/).
 
-| Ginkgo is a mature testing framework for Go designed to help you write expressive specs. Ginkgo builds on top of Go's testing foundation and is complemented by the Gomega matcher library. Together, Ginkgo and Gomega let you express the intent behind your specs clearly.
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Ginkgo Testing?">
+        <ul>
+          <li>Ginkgo is a mature testing framework for Go designed to help you write expressive specs. Ginkgo builds on top of Go's testing foundation and is complemented by the Gomega matcher library.</li>
+		  <li>Together, Ginkgo and Gomega let you express the intent behind your specs clearly.</li>
+        </ul>
+        <b>What can I do with the Ginkgo testing framework?</b>
+        <ul>
+          <li>With Ginkgo, you can run a huge variety of test types in all sorts of contexts: unit tests, integration tests, performance tests, acceptance tests, etc.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
 
+<ExecutorInfo />
+
+**Check out our [blog post](https://testkube.io/blog/maximize-app-performance-in-kubernetes-with-ginkgo-and-testkube) to learn to write more expressive tests in Go using Ginkgo, Gomega, and Testkube.**
 
 ## **Test Environment**
 
