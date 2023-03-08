@@ -66,15 +66,15 @@ Running tests in a containerized environment is convenient: it's simple, portabl
 
 ### Reports
 
-Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
+Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. Configuration files located at `playwright.config.js` or `playwright.config.ts`:
 
 ```bash
 reporter: [
-  ['html', { open: 'never' }]
+  ['html']
 ],
 ```
 
-Having this option on the default setting will not block the Testkube test runner, as the following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
+The following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
 
 ```bash
 ENV CI=1
