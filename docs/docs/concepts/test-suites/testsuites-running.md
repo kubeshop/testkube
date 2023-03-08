@@ -1,6 +1,6 @@
 # Running Test Suites
 
-To run your Tests Suites, pass `testsuites run` command with the test name to your `kubectl testkube` plugin. Test Suites are started asynchronously by default.
+To run your Tests Suites, pass the `testsuites run` command with the test name to your `kubectl testkube` plugin. Test Suites are started asynchronously by default.
 
 ```sh
 testkube run testsuite test-example

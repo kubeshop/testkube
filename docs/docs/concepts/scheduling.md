@@ -1,7 +1,7 @@
 # Test and Test Suite Scheduling
 
 In order to run Tests and Test Suites on a regular basis, we support a scheduling mechanism for these objects.
-CRDs both for test and test suite contain a **schedule** field used to define rules for launching them in time.
+CRDs both for tests and test suites contain a **schedule** field used to define rules for launching them in time.
 Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details <https://en.wikipedia.org/wiki/Cron>).
 
 ## Scheduling Architecture
@@ -9,7 +9,7 @@ Testkube's schedule data format is the same that is used to define Kubernetes Cr
 Testkube uses the scheduling engine from Kubernetes Cron jobs.
 In fact, for each scheduled Test or Test Suite, a special cron job is created from this template:
 <https://github.com/kubeshop/helm-charts/tree/main/charts/testkube-api/cronjob-template.yml>.
-Technically, it is a callback to Testkube API server method launching either Test or Test Suite execution.
+Technically, it is a callback to the Testkube API server method, launching either Test or Test Suite execution.
 This works similarly to scheduled Test and Test Suite executions done by external scheduling platforms.
 
 ## Create a Test with a Schedule
@@ -25,7 +25,7 @@ Detected test type postman/collection
 Test created  / scheduled-test 🥇
 ```
 
-We successfully created a scheduled test and can check a list of the available tests:
+We successfully created a scheduled test and can check the list of the available tests:
 
 ```sh
 kubectl testkube get tests
@@ -38,7 +38,8 @@ kubectl testkube get tests
 ```
 
 The scheduled test was created and successfully scheduled for execution.
-Let's check a Cron job connected to this test.
+
+Let's check a Cron job connected to this test:
 
 ```sh
 kubectl get cronjobs -A
@@ -50,6 +51,7 @@ testkube    scheduled-test-tests   */1 * * * *   False     1        42s         
 ```
 
 The Cron job for this test was successfully created and the test was executed.
+
 To the check Cron job details:
 
 ```sh
@@ -97,7 +99,7 @@ As mentioned above, we have a scheduled callback for launching our test.
 
 ## Getting Scheduled Test Results
 
-Now we can check whether the test is executed every minute for the schedule we provided.
+Now we can check if the test is executed every minute per the schedule we provided.
 
 ```sh
 kubectl testkube get execution
@@ -115,7 +117,7 @@ kubectl testkube get execution
   6256c87e418062706814e1f0 | scheduled-test      | postman/collection | passed  |
 ```
 
-The test is successfully regularly executed.
+The test is successfully executed on the stated schedule.
 
 ## Create a Test Suite with a Schedule
 
@@ -146,7 +148,7 @@ We will skip the Cron job details, they are fully similar to test one described 
 
 ## Getting Scheduled Test Suite Results
 
-The Test Suite is executed every minute for the schedule we provided.
+The Test Suite is executed every minute per the schedule we provided.
 
 ```sh
 kubectl testkube get tse
@@ -160,4 +162,4 @@ kubectl testkube get tse
   6256cdcc418062706814e208 | scheduled-testsuite | scheduled-testsuite.formerly-champion-dodo | passed |     2 |
 ```
 
-The Test Suite is successfully executed according to the schedule set.
+The Test Suite is successfully executed on the stated schedule.

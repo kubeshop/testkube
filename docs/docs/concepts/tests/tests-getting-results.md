@@ -1,6 +1,6 @@
 # Getting Results
 
-We saw how simple it is to create and run Testkube tests execution. Obtaining test results is also simple.
+We saw how simple it is to create and run Testkube tests executions. Obtaining test results is also simple.
 
 ## Getting Test Executions After Test is Executed
 
@@ -31,7 +31,7 @@ $ kubectl testkube watch execution 615d6398b046f8fbd3d955d4
 
 By default, Testkube returns string output of a particular executor. It can also return JSON or Go-Template based outputs.
 
-### JSON output
+### JSON Output
 
 Sometimes you need to parse test results programmatically. To simplify this task, test execution results can be in JSON format.
 
@@ -316,7 +316,7 @@ testkube get executions api-incluster-test
   api-incluster-test | postman/collection |      | 615d7e1ab046f8fbd3d955d6 | success
 ```
 
-### Getting a Test status of a Given Test from Test CRD
+### Getting the Test Status of a Given Test from Test CRD
 
 To get the Test CRD status of a particular test, pass the test name as a parameter:
 
