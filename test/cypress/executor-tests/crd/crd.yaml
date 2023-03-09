@@ -8,7 +8,7 @@ metadata:
 spec:
   type: cypress:v11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -34,7 +34,7 @@ metadata:
 spec:
   type: cypress:v11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -62,7 +62,7 @@ metadata:
 spec:
   type: cypress:v11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -90,12 +90,74 @@ metadata:
 spec:
   type: cypress/project
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-default-executor-smoke-electron-git-dir
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress/project
+  content:
+    type: git-dir # backwards compatibility check
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-11
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+---
+# cypress-default-executor-smoke-electron-testsource TestSource
+apiVersion: tests.testkube.io/v1
+kind: TestSource
+metadata:
+  name: testsource-cypress-default-executor-smoke-electron-testsource
+  namespace: testkube
+spec:
+  type: git
+  repository:
+    type: git
+    uri: https://github.com/kubeshop/testkube.git
+    branch: main
+    path: test/cypress/executor-tests/cypress-11
+---
+# cypress-default-executor-smoke-electron-testsource - Test
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-default-executor-smoke-electron-testsource
+  namespace: testkube
+spec:
+  type: cypress/project
+  content:
+    repository:
+      path: test/cypress/executor-tests/cypress-11
+  source: testsource-cypress-default-executor-smoke-electron-testsource
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
@@ -113,7 +175,7 @@ metadata:
   name: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
   namespace: testkube
 spec:
-  type: git-dir
+  type: git-dir # backwards compatibility check
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
@@ -152,7 +214,7 @@ metadata:
 spec:
   type: cypress:v10/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -178,7 +240,7 @@ metadata:
 spec:
   type: cypress:v10/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -207,7 +269,7 @@ metadata:
 spec:
   type: cypress:v10/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -235,7 +297,7 @@ metadata:
 spec:
   type: cypress:v9/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -252,7 +314,7 @@ metadata:
 spec:
   type: cypress:v9/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -273,7 +335,7 @@ metadata:
 spec:
   type: cypress:v9/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -294,7 +356,7 @@ metadata:
 spec:
   type: cypress:v8/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -311,7 +373,7 @@ metadata:
 spec:
   type: cypress:v8/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -332,7 +394,7 @@ metadata:
 spec:
   type: cypress:v8/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
@@ -353,7 +415,7 @@ metadata:
 spec:
   type: cypress/project
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube

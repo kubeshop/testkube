@@ -8,9 +8,9 @@ metadata:
 spec:
   type: artillery/test
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/artillery/executor-smoke/artillery-smoke-test.yaml
@@ -25,9 +25,9 @@ metadata:
 spec:
   type: artillery/test
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/artillery/executor-smoke/artillery-smoke-test-negative.yaml

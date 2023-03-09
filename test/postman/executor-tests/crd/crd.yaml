@@ -8,12 +8,61 @@ metadata:
 spec:
   type: postman/collection
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  executionRequest:
+    args:
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: postman-executor-smoke-git-file # backwards compatibility check
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: postman/collection
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  executionRequest:
+    args:
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+---
+# postman-executor-smoke-testsource - TestSource
+apiVersion: tests.testkube.io/v1
+kind: TestSource
+metadata:
+  name: testsource-postman-executor-smoke-testsource
+  namespace: testkube
+spec:
+  type: git
+  repository:
+    type: git
+    uri: https://github.com/kubeshop/testkube.git
+    branch: main
+    path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+---
+# postman-executor-smoke-testsource - Test
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: postman-executor-smoke-testsource
+  namespace: testkube
+spec:
+  type: postman/collection
+  source: testsource-postman-executor-smoke-testsource
   executionRequest:
     args:
       - --env-var
@@ -26,7 +75,7 @@ metadata:
   name: testsource-postman-executor-smoke-testsource-git-file
   namespace: testkube
 spec:
-  type: git-file
+  type: git-file # backwards compatibility check
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
@@ -54,7 +103,7 @@ metadata:
   name: testsource-postman-executor-smoke-testsource-overwrite
   namespace: testkube
 spec:
-  type: git-file
+  type: git
   repository:
     type: git
     uri: https://github.com/kubeshop/testkube.git
@@ -89,9 +138,9 @@ metadata:
 spec:
   type: postman/collection
   content:
-    type: git-file
+    type: git
     repository:
-      type: git-file
+      type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
