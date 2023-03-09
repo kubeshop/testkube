@@ -208,14 +208,14 @@ func main() {
 		if cmConfig.ClusterId == "" {
 			cmConfig.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
 			if err != nil {
-				log.DefaultLogger.Errorw("error getting unique clusterId", "error", err)
+				log.DefaultLogger.Warnw("error getting unique clusterId", "error", err)
 			}
 		}
 
 		clusterId = cmConfig.ClusterId
 		_, err = configMapConfig.Upsert(ctx, cmConfig)
 		if err != nil {
-			log.DefaultLogger.Errorw("error upserting config ConfigMap", "error", err)
+			log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
 		}
 
 	}
