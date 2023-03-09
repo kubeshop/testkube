@@ -136,6 +136,7 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 			"git",
 			"sparse-checkout",
 			"set",
+			"--no-cone",
 			path,
 		)
 		if err != nil {
