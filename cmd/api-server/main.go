@@ -503,14 +503,14 @@ func loadFromBase64StringOrFile(base64Val string, configDir, filename, configTyp
 			return "", errors.Wrapf(err, "error decoding %s from base64", configType)
 		}
 		raw = string(data)
-		log.DefaultLogger.Infof("using %s config from env var", configType)
+		log.DefaultLogger.Infof("parsed %s from env var", configType)
 	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
 		data, err = io.ReadAll(f)
 		if err != nil {
 			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
 		}
 		raw = string(data)
-		log.DefaultLogger.Infof("loaded %s config from config dir %s", configType, configDir)
+		log.DefaultLogger.Infof("loaded %s from file %s", configType, filepath.Join(configDir, filename))
 	} else {
 		log.DefaultLogger.Infof("no %s config found", configType)
 	}
