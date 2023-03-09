@@ -155,8 +155,7 @@ spec:
   content_types:
   - string                               # test content as string 
   - file-uri                             # http based file content
-  - git-file                             # file stored in Git
-  - git-dir                              # entire dir/project stored in Git
+  - git                                  # file or git stored in Git
   features: 
   - artifacts                            # executor can have artifacts after test run (e.g. videos, screenshots)
   - junit-report                         # executor can have junit xml based results
@@ -189,7 +188,7 @@ This is a very basic example of a custom executor. Please visit our internal pro
 For Go-based executors, we have prepared many handy functions, such as printing valid outputs or wrappers around calling external processes.
 Currently, in other languages, you'll need to manage this on your own.
 
-Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git-file and git-dir. The entire complexity of checking out or downloading test content is covered by Testkube.
+Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git. The entire complexity of checking out or downloading test content is covered by Testkube.
 
 Testkube will store its files and directories in a directory defined by the `RUNNER_DATADIR` env and will save the test-content file for:
 

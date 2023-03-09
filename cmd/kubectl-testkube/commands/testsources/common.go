@@ -44,7 +44,7 @@ func newSourceFromFlags(cmd *cobra.Command) (source *testkube.TestSource, err er
 	}
 
 	if repository != nil && sourceType == "" {
-		sourceType = string(testkube.TestContentTypeGitDir)
+		sourceType = string(testkube.TestContentTypeGit)
 	}
 
 	source = &testkube.TestSource{

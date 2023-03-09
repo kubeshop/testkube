@@ -73,7 +73,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			defer os.RemoveAll(dir) // clean up
 
 			fetcher := content.NewFetcher(dir)
-			if _, err = fetcher.FetchGitDir(&request); err != nil {
+			if _, err = fetcher.FetchGit(&request); err != nil {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
 		}

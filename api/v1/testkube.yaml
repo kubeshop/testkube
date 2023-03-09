@@ -2825,8 +2825,11 @@ components:
           enum:
             - string
             - file-uri
+            # Deprecated: use git instead
             - git-file
+            # Deprecated: use git instead
             - git-dir
+            - git
         repository:
           $ref: "#/components/schemas/Repository"
         data:
