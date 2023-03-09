@@ -113,6 +113,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Set up JMeter
+        run: |
+          wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.5.zip
+          unzip apache-jmeter-5.5.zip
+          mv apache-jmeter-5.5 jmeter
+          sudo mv jmeter /opt
+          echo "/opt/jmeter/bin" >> $GITHUB_PATH
+
       - name: Setup gotestsum
         run: go install gotest.tools/gotestsum@latest
 
