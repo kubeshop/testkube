@@ -3,15 +3,11 @@ package executor
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/kubeshop/testkube/internal/config"
 
 	"github.com/pkg/errors"
 
@@ -305,27 +301,6 @@ func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, job
 	return &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusAborted,
 	}, nil
-}
-
-func ParseJobTemplate(cfg *config.Config) (template string, err error) {
-	var data, decoded []byte
-
-	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "job-template.yml"))
-	if err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return "", err
-		}
-		template = string(data)
-	} else if cfg.TestkubeTemplateJob != "" {
-		decoded, err = base64.StdEncoding.DecodeString(cfg.TestkubeTemplateJob)
-		if err != nil {
-			return "", err
-		}
-		template = string(decoded)
-	}
-
-	return template, nil
 }
 
 // SyncDefaultExecutors creates or updates default executors
