@@ -1,7 +1,7 @@
 # Creating Test Suites
 
 A large IT department has a frontend team and a backend team, everything is
-deployed on Kubernetes cluster, and each team is responsible for its part of the work. The frontend engineers test their code using the Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have a lot of Postman collections defined and want to run them against a Kubernetes cluster but some of their services are not exposed externally.
+deployed on Kubernetes clusters, and each team is responsible for its part of the work. The frontend engineers test their code using the Cypress testing framework, but the backend engineers prefer simpler tools like Postman. They have many Postman collections defined and want to run them against a Kubernetes cluster but some of their services are not exposed externally.
 
 A QA leader is responsible for release trains and wants to be sure that before the release all tests are completed successfully. The QA leader will need to create pipelines that orchestrate each teams' tests into a common platform.
 
@@ -44,7 +44,7 @@ testkube-suite           1m
 testsuite-example-2   2d21h
 ```
 
-Get the details of a test:
+To get the details of a test:
 
 ```sh
 kubectl get testsuites -ntestkube testkube-suite -oyaml

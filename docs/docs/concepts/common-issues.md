@@ -1,8 +1,8 @@
-# Common issues
+# Common Issues
 
-## How do I expose Testkube to the internet?
+## How do I expose Testkube to the Internet?
 
-To expose Testkube to the Internet, you will need to create ingresses both for Testkube's API and Testkube's dashboard.
+To expose Testkube to the Internet, you will need to create an Ingress for both the Testkube API and the Testkube dashboard.
 
 Check the guides [here](../guides/going-to-production/exposing-testkube/overview.md) for different configurations.
 
@@ -162,4 +162,4 @@ metadata:
 
 ## Observability
 
-There are two types of storage Mongo and Minio, more details [here](../guides/logging.md)
+There are two types of storage Mongo and Minio, read more details [here](../guides/logging.md).

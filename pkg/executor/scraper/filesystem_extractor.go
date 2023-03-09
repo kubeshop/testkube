@@ -24,6 +24,12 @@ func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) er
 	log.DefaultLogger.Infof("extracting files from directories: %v", e.dirs)
 	for _, dir := range e.dirs {
 		log.DefaultLogger.Infof("walking directory: %v", e.dirs)
+
+		if _, err := e.fs.Stat(dir); os.IsNotExist(err) {
+			log.DefaultLogger.Debugw("directory %s does not exist, skipping", dir)
+			continue
+		}
+
 		err := e.fs.Walk(
 			dir,
 			func(path string, fileInfo os.FileInfo, err error) error {

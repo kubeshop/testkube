@@ -194,8 +194,8 @@ const config = {
             to: "/test-types/executor-curl",
           },
           {
-            from: "/executor-custom",
-            to: "/test-types/executor-custom",
+            from: "/test-types/executor-custom",
+            to: "/test-types/container-executor",
           },
           {
             from: "/UI",
