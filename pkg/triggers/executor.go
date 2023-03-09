@@ -36,8 +36,6 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 
 	switch t.Spec.Execution {
 	case ExecutionTest:
-		var results []testkube.Execution
-
 		tests, err := s.getTests(t)
 		if err != nil {
 			return err
@@ -65,11 +63,8 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 
 		for r := range wp.GetResponses() {
 			status.addExecutionID(r.Result.Id)
-			results = append(results, r.Result)
 		}
 	case ExecutionTestSuite:
-		var results []testkube.TestSuiteExecution
-
 		testSuites, err := s.getTestSuites(t)
 		if err != nil {
 			return err
@@ -97,7 +92,6 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 
 		for r := range wp.GetResponses() {
 			status.addTestSuiteExecutionID(r.Result.Id)
-			results = append(results, r.Result)
 		}
 	default:
 		return errors.Errorf("invalid execution: %s", t.Spec.Execution)

@@ -36,7 +36,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -63,21 +62,25 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace string, images executor.Images,
-	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
-	emiter *event.Emitter, configMap config.Repository, testsClient testsv3.Interface) (client *JobExecutor, err error) {
-	clientSet, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		return client, err
-	}
-
+func NewJobExecutor(
+	repo result.Repository,
+	namespace string,
+	images executor.Images,
+	jobTemplate string,
+	serviceAccountName string,
+	metrics ExecutionCounter,
+	emiter *event.Emitter,
+	configMap config.Repository,
+	testsClient testsv3.Interface,
+	clientset kubernetes.Interface,
+) (client *JobExecutor, err error) {
 	return &JobExecutor{
-		ClientSet:          clientSet,
+		ClientSet:          clientset,
 		Repository:         repo,
 		Log:                log.DefaultLogger,
 		Namespace:          namespace,
 		images:             images,
-		templates:          templates,
+		jobTemplate:        jobTemplate,
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		Emitter:            emiter,
@@ -94,11 +97,11 @@ type ExecutionCounter interface {
 type JobExecutor struct {
 	Repository         result.Repository
 	Log                *zap.SugaredLogger
-	ClientSet          *kubernetes.Clientset
+	ClientSet          kubernetes.Interface
 	Namespace          string
 	Cmd                string
 	images             executor.Images
-	templates          executor.Templates
+	jobTemplate        string
 	serviceAccountName string
 	metrics            ExecutionCounter
 	Emitter            *event.Emitter
@@ -279,7 +282,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, execution, options)
 	if err != nil {
 		return err
 	}
@@ -600,7 +603,10 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 // Abort aborts K8S by job name
 func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	l := c.Log.With("execution", execution.Id)
-	result, _ = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	result, err = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	if err != nil {
+		l.Errorw("error aborting job", "execution", execution.Id, "error", err)
+	}
 	l.Debugw("job aborted", "execution", execution.Id, "result", result)
 	if err := c.stopExecution(ctx, l, execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor abort", "error", err)

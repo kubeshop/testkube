@@ -519,7 +519,8 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		if selector == "" {
 			err = s.TestsClient.DeleteAll()
 		} else {
-			testList, err := s.TestsClient.List(selector)
+			var testList *testsv3.TestList
+			testList, err = s.TestsClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
