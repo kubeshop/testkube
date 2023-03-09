@@ -1,16 +1,31 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
 
 # Postman
 
-<!-- Watch this simple Testkube intro video for Postman collections with Testkube:
+Testkube is able to run Postman collections inside your Kubernetes cluster so it can be used to test internal or external services.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/rWqlbVvd8Dc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
-</iframe> -->
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Postman?">
+        <ul>
+          <li>Postman is a platform for designing, building, testing, and iterating APIs.</li>
+        </ul>
+        <b>What can I do with Postman?</b>
+        <ul>
+          <li>Postman simplifies every step of the API lifecycle, making it easy for you to iterate and test your APIs by sending and inspecting responses,
+          writing assertions to validate endpoints, or setting up logic to mirror your workflows.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
 
 **Check out our [blog post](https://testkube.io/blog/api-testing-in-kubernetes-with-postman) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Postman.**
-
-Testkube is able to run Postman collections inside your Kubernetes cluster so it can be used to test internal or external services.
 
 ## Prerequisite: Example Postman test
 ### Service Under Test
