@@ -35,9 +35,9 @@ metadata:
 spec:
   type: container-executor-cypress-v12.7.0/test
   content:
-    type: git
+    type: git-dir
     repository:
-      type: git
+      type: git-dir
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/cypress/executor-tests/cypress-12
