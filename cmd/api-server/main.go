@@ -193,14 +193,24 @@ func main() {
 	}
 
 	if clusterId == "" {
-		cmConfig, _ = configRepository.Get(ctx)
+		cmConfig, err = configRepository.Get(ctx)
+		if err != nil {
+			log.DefaultLogger.Warnw("error fetching config ConfigMap", "error", err)
+		}
 		cmConfig.EnableTelemetry = telemetryEnabled
 		if cmConfig.ClusterId == "" {
-			cmConfig.ClusterId, _ = configMapConfig.GetUniqueClusterId(ctx)
+			cmConfig.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
+			if err != nil {
+				log.DefaultLogger.Errorw("error getting unique clusterId", "error", err)
+			}
 		}
 
 		clusterId = cmConfig.ClusterId
 		_, err = configMapConfig.Upsert(ctx, cmConfig)
+		if err != nil {
+			log.DefaultLogger.Errorw("error upserting config ConfigMap", "error", err)
+		}
+
 	}
 
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)

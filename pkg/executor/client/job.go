@@ -603,7 +603,10 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 // Abort aborts K8S by job name
 func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	l := c.Log.With("execution", execution.Id)
-	result, _ = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	result, err = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	if err != nil {
+		l.Errorw("error aborting job", "execution", execution.Id, "error", err)
+	}
 	l.Debugw("job aborted", "execution", execution.Id, "result", result)
 	if err := c.stopExecution(ctx, l, execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor abort", "error", err)
