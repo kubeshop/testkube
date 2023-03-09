@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: container-executor-cypress-12.7.0-smoke
+  name: container-executor-cypress-v12.7.0-smoke
   namespace: testkube
   labels:
     core-tests: executors
@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: container-executor-tests-cypress # TODO: update before merge
+      branch: main
       path: test/cypress/executor-tests/cypress-12
       workingDir: test/cypress/executor-tests/cypress-12
   executionRequest:

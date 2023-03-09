@@ -2,6 +2,6 @@
 	"name": "executor-container-cypress-smoke-tests",
 	"description": "container executor cypress smoke tests",
 	"steps": [
-		{"execute": {"name": "container-executor-cypress-12.7.0-smoke"}}
+		{"execute": {"name": "container-executor-cypress-v12.7.0-smoke"}}
 	]
 }
