@@ -66,13 +66,7 @@ Running tests in a containerized environment is convenient: it's simple, portabl
 
 ### Reports
 
-Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. Configuration files located at `playwright.config.js` or `playwright.config.ts`:
-
-```bash
-reporter: [
-  ['html']
-],
-```
+Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. 
 
 The following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
 
