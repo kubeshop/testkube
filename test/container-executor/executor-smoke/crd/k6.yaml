@@ -8,7 +8,7 @@ metadata:
 spec:
   type: container-executor-k6-0.43.1/test
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
