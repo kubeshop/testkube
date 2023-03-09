@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRunGradle(t *testing.T) {
+func TestRunGradleIntegration(t *testing.T) {
 
 	t.Run("run gradle wrapper project with explicit target arg", func(t *testing.T) {
 		// setup
@@ -80,7 +80,7 @@ func TestRunGradle(t *testing.T) {
 	})
 }
 
-func TestRunErrors(t *testing.T) {
+func TestRunErrorsIntegration(t *testing.T) {
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
 		os.Setenv("RUNNER_DATADIR", "/unknown")
