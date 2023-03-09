@@ -64,7 +64,7 @@ func GenerateYAML[G Gettable](tmpl Template, items []G) (string, error) {
 	for _, item := range items {
 		result, err := ExecuteTemplate(tmpl, item)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("could not populate YAML template for %s: %w", tmpl, err)
 		}
 
 		if !firstEntry {
