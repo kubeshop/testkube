@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -328,101 +326,6 @@ func ParseJobTemplate(cfg *config.Config) (template string, err error) {
 	}
 
 	return template, nil
-}
-
-func ParseContainerTemplates(cfg *config.Config) (t Templates, err error) {
-	var decoded, data []byte
-
-	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "job-container-template.yml"))
-	if err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return t, err
-		}
-		t.Job = string(data)
-	} else if cfg.TestkubeContainerTemplateJob != "" {
-		decoded, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplateJob)
-		if err != nil {
-			return t, err
-		}
-		t.Job = string(decoded)
-	}
-
-	f, err = os.Open(filepath.Join(cfg.TestkubeConfigDir, "job-scraper-template.yml"))
-	if err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return t, err
-		}
-		t.Scraper = string(data)
-	} else if cfg.TestkubeContainerTemplateScraper != "" {
-		decoded, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplateScraper)
-		if err != nil {
-			return t, err
-		}
-		t.Scraper = string(decoded)
-	}
-
-	f, err = os.Open(filepath.Join(cfg.TestkubeConfigDir, "pvc-container-template.yml"))
-	if err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return t, err
-		}
-		t.PVC = string(data)
-	} else if cfg.TestkubeContainerTemplatePVC != "" {
-		decoded, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplatePVC)
-		if err != nil {
-			return t, err
-		}
-		t.PVC = string(decoded)
-	}
-
-	return t, nil
-}
-
-// NewTemplatesFromEnv returns base64 encoded templates from nev
-func NewTemplatesFromEnv(env string) (t Templates, err error) {
-	err = envconfig.Process(env, &t)
-	if err != nil {
-		return t, err
-	}
-	templates := []*string{&t.Job, &t.PVC, &t.Scraper}
-	for i := range templates {
-		if *templates[i] != "" {
-			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
-			if err != nil {
-				return t, err
-			}
-
-			*templates[i] = string(dataDecoded)
-		}
-	}
-
-	return t, nil
-}
-
-func ParseExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
-	var data []byte
-
-	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "executors.json"))
-	if err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return nil, err
-		}
-	} else if cfg.TestkubeDefaultExecutors != "" {
-		data, err = base64.StdEncoding.DecodeString(cfg.TestkubeDefaultExecutors)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err = json.Unmarshal(data, &executors); err != nil {
-		return nil, err
-	}
-
-	return executors, nil
 }
 
 // SyncDefaultExecutors creates or updates default executors

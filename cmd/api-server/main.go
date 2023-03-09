@@ -2,12 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 
@@ -233,7 +240,7 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	defaultExecutors, err := kubeexecutor.ParseExecutors(cfg)
+	defaultExecutors, err := parseDefaultExecutors(cfg)
 	if err != nil {
 		ui.ExitOnError("Parsing default executors", err)
 	}
@@ -264,7 +271,7 @@ func main() {
 		ui.ExitOnError("Creating executor client", err)
 	}
 
-	containerTemplates, err := kubeexecutor.ParseContainerTemplates(cfg)
+	containerTemplates, err := parseContainerTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating container job templates", err)
 	}
@@ -302,6 +309,11 @@ func main() {
 		configMapClient,
 	)
 
+	slackLoader, err := newSlackLoader(cfg)
+	if err != nil {
+		ui.ExitOnError("Creating slack loader", err)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -322,6 +334,7 @@ func main() {
 		metrics,
 		jobTemplate,
 		sched,
+		slackLoader,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"
@@ -394,6 +407,129 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err error) {
+	var data []byte
+
+	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "job-container-template.yml"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return t, errors.Wrapf(err, "error reading job-container-template.yml from config dir %s", cfg.TestkubeConfigDir)
+		}
+		t.Job = string(data)
+		log.DefaultLogger.Info("using job container template from config dir")
+	} else if cfg.TestkubeContainerTemplateJob != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplateJob)
+		if err != nil {
+			return t, errors.Wrap(err, "error decoding job container template from base64")
+		}
+		t.Job = string(data)
+		log.DefaultLogger.Info("using job container template from env var")
+	}
+
+	f, err = os.Open(filepath.Join(cfg.TestkubeConfigDir, "job-scraper-template.yml"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return t, errors.Wrapf(err, "error reading job-scraper-template.yml from config dir %s", cfg.TestkubeConfigDir)
+		}
+		t.Scraper = string(data)
+		log.DefaultLogger.Info("using job scraper template from config dir")
+	} else if cfg.TestkubeContainerTemplateScraper != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplateScraper)
+		if err != nil {
+			return t, errors.Wrap(err, "error decoding job scraper template from base64")
+		}
+		t.Scraper = string(data)
+		log.DefaultLogger.Info("using job scraper template from env var")
+	}
+
+	f, err = os.Open(filepath.Join(cfg.TestkubeConfigDir, "pvc-container-template.yml"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return t, errors.Wrapf(err, "error reading pvc-container-template.yml from config dir %s", cfg.TestkubeConfigDir)
+		}
+		t.PVC = string(data)
+		log.DefaultLogger.Info("using pvc container template from config dir")
+	} else if cfg.TestkubeContainerTemplatePVC != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.TestkubeContainerTemplatePVC)
+		if err != nil {
+			return t, errors.Wrap(err, "error decoding pvc container template from base64")
+		}
+		t.PVC = string(data)
+		log.DefaultLogger.Info("using pvc container template from env var")
+	}
+
+	return t, nil
+}
+
+func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
+	var data []byte
+
+	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "executors.json"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading executors.json from config dir %s", cfg.TestkubeConfigDir)
+		}
+		log.DefaultLogger.Info("using default executors from config dir")
+	} else if cfg.TestkubeDefaultExecutors != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.TestkubeDefaultExecutors)
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding default executors from base64")
+		}
+		log.DefaultLogger.Info("using default executors from env var")
+	}
+
+	if err = json.Unmarshal(data, &executors); err != nil {
+		return nil, err
+	}
+
+	return executors, nil
+}
+
+func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
+	var data []byte
+	var slackTemplate, slackConfig string
+
+	f, err := os.Open(filepath.Join(cfg.TestkubeConfigDir, "slack-template.json"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading slack-template.json from config dir %s", cfg.TestkubeConfigDir)
+		}
+		slackTemplate = string(data)
+		log.DefaultLogger.Info("using slack template from config dir")
+	} else if cfg.SlackTemplate != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.SlackTemplate)
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding slack template from base64")
+		}
+		slackTemplate = string(data)
+		log.DefaultLogger.Info("using slack template from env var")
+	}
+
+	f, err = os.Open(filepath.Join(cfg.TestkubeConfigDir, "slack-config.json"))
+	if err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading slack-config.json from config dir %s", cfg.TestkubeConfigDir)
+		}
+		slackConfig = string(data)
+		log.DefaultLogger.Info("using slack config from config dir")
+	} else if cfg.SlackConfig != "" {
+		data, err = base64.StdEncoding.DecodeString(cfg.SlackConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding slack config from base64")
+		}
+		slackConfig = string(data)
+		log.DefaultLogger.Info("using slack config from env var")
+	}
+
+	return slack.NewSlackLoader(slackTemplate, slackConfig, testkube.AllEventTypes), nil
 }
 
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
