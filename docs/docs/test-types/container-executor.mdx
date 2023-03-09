@@ -195,7 +195,7 @@ Custom Container Executor can also be created with Testkube CLI using `testkube 
 
 So, the final command may look like this:
 ```sh
-testkube create executor --name container-executor-playwright --executor-type container --image mcr.microsoft.com/playwright:v1.31.1-focal --types executor-playwright/test  --command "/bin/sh -c" --args "npm install; npx playwright test"
+testkube create executor --name container-executor-playwright --executor-type container --image mcr.microsoft.com/playwright:v1.31.1-focal --types executor-playwright/test --command "/bin/sh" --command "-c" --args "npm install; npx playwright test"
 ```
 
 </TabItem>
