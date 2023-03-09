@@ -13,6 +13,7 @@
   --ifm-font-size-base: 16px;
   --ifm-color-primary: #818cf8;
   --ifm-color-secondary: #c8cdff;
+  --ifm-color-third: #EFEDFF;
   --ifm-color-primary-dark: #29784c;
   --ifm-color-primary-darker: #277148;
   --ifm-color-primary-darkest: #205d3b;
@@ -47,6 +48,7 @@
 [data-theme="dark"] {
   --ifm-color-primary: #818cf8;
   --ifm-color-secondary: #6660f6;
+  --ifm-color-third: #1e293b;
   --ifm-color-primary-dark: #21af90;
   --ifm-color-primary-darker: #1fa588;
   --ifm-color-primary-darkest: #1a8870;
@@ -326,6 +328,12 @@ ul:hover {
   z-index: 1;
   text-align: center;
 }
+
+.theme-admonition-info {
+  background-color: var(--ifm-color-third);
+  border-left-color: var(--ifm-color-primary);
+}
+
 /* article {
   max-width: 700px;
   margin-left: auto;

@@ -20,6 +20,7 @@ func TestFilesystemExtractor_Extract(t *testing.T) {
 	defer ctrl.Finish()
 
 	fs := filesystem2.NewMockFileSystem(ctrl)
+	fs.EXPECT().Stat("/my/directory").Return(nil, nil)
 	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader("test")), nil)
 	extractor := scraper.NewFilesystemExtractor([]string{"/my/directory"}, fs)
 

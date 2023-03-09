@@ -9,13 +9,13 @@ MongoDB is used for storage of Testkube Test results and various Testkube config
 In order to use an external MongoDB instance, follow these steps:
 
 1. Make sure you have access to the MongoDB you want to connect to - note: newest versions of MongoDB might not work optimally with Testkube, for the best experience, use MongoDB v4.4.12
-2. Install testkube with --set mongo.enabled=false:
+2. Install Testkube with --set mongo.enabled=false:
 `kubectl testkube install --set mongo.enabled=false`
-3. [Update MongoDB details for the api-server in the helm values with valid connection string](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube/values.yaml)
+3. [Update MongoDB details for the api-server in the Helm values with valid connection string](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube/values.yaml).
 
-### SSL connections
+### SSL Connections
 
-Inspecting the Testkube api-server manifest shows the following MongoDB-related environment variables:
+Inspecting the Testkube API-server manifest shows the following MongoDB-related environment variables:
 
 * _"API_MONGO_DSN"_ (default:"mongodb://localhost:27017") - connection string
 * _"API_MONGO_DB"_ (default:"testkube") - database name

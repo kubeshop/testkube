@@ -13,8 +13,8 @@ The available configuration parameters in Helm charts are:
 | testkube-api.storage.accessKey       | yes         | minio123                             | Access Key                                           |
 | testkube-api.storage.location        | yes         |                                      | Region                                               |
 | testkube-api.storage.token           | yes         |                                      | S3 Token                                             |
-| testkube-api.storage.SSL             | yes         | false                                | Indicates whether SSL communication is to be enabled |
-| testkube-api.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacts  |
+| testkube-api.storage.SSL             | yes         | false                                | Indicates whether SSL communication is to be enabled. |
+| testkube-api.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacts.  |
 
 The API Server accepts the following environment variables:
 

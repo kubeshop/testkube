@@ -16,7 +16,7 @@ require (
 	github.com/gookit/color v1.5.2
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.9.3
+	github.com/kubeshop/testkube-operator v1.9.4
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
