@@ -28,19 +28,23 @@ import (
 func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test %s", name)
 		crTest, err := s.TestsClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client was unable to find test: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to find test: %w", errPrefix, err))
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			test.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+			}
 			return s.getCRDs(c, data, err)
 		}
 
@@ -52,31 +56,35 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test %s with execution", name)
 		crTest, err := s.TestsClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client failed to find test: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to find test: %w", errPrefix, err))
 		}
 
 		test := testsmapper.MapTestCRToAPI(*crTest)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			test.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.Test{test})
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+			}
 			return s.getCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
 		startExecution, startErr := s.ExecutionResults.GetLatestByTest(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, startErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: failed to get executions by start time: %w", errPrefix, startErr))
 		}
 
 		endExecution, endErr := s.ExecutionResults.GetLatestByTest(ctx, name, "endtime")
 		if endErr != nil && endErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, endErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: failed to get executions by end time: %w", errPrefix, endErr))
 		}
 
 		testWithExecution := testkube.TestWithExecution{
@@ -102,7 +110,7 @@ func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error
 
 	crTests, err := s.TestsClient.List(c.Query("selector"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("client failed to list tests: %w", err)
 	}
 
 	search := c.Query("textSearch")
@@ -131,9 +139,10 @@ func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error
 // ListTestsHandler is a method for getting list of all available tests
 func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list tests"
 		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get filtered tests: %w", errPrefix, err))
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
@@ -143,6 +152,9 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+			}
 			return s.getCRDs(c, data, err)
 		}
 
@@ -169,7 +181,7 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 
 		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit, last)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("failed to get metrics for test %s: %w", testName, err))
 		}
 
 		return c.JSON(metrics)
@@ -180,7 +192,7 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
 	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames, "starttime")
 	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, err
+		return nil, fmt.Errorf("could not get latest executions for tests %s sorted by start time: %w", testNames, err)
 	}
 
 	startExecutionMap := make(map[string]testkube.Execution, len(executions))
@@ -190,7 +202,7 @@ func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string
 
 	executions, err = s.ExecutionResults.GetLatestByTests(ctx, testNames, "endtime")
 	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, err
+		return nil, fmt.Errorf("could not get latest executions for tests %s sorted by end time: %w", testNames, err)
 	}
 
 	endExecutionMap := make(map[string]testkube.Execution, len(executions))
@@ -229,9 +241,10 @@ func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string
 // ListTestWithExecutionsHandler is a method for getting list of all available test with latest executions
 func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list tests with executions"
 		crTests, err := s.getFilteredTestList(c)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get filtered tests: %w", errPrefix, err))
 		}
 
 		tests := testsmapper.MapTestListKubeToAPI(*crTests)
@@ -241,6 +254,9 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTest, tests)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+			}
 			return s.getCRDs(c, data, err)
 		}
 
@@ -253,7 +269,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 
 		executionMap, err := s.getLatestExecutions(ctx, testNames)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get latest executions: %w", errPrefix, err))
 		}
 
 		for i := range tests {
@@ -293,7 +309,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		if status != "" {
 			statusList, err := testkube.ParseExecutionStatusList(status, ",")
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("execution status filter invalid: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: execution status filter invalid: %w", errPrefix, err))
 			}
 
 			statusMap := statusList.ToMap()
@@ -315,7 +331,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			pageSize = result.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test page filter invalid: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test page filter invalid: %w", errPrefix, err))
 			}
 		}
 
@@ -323,7 +339,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		if pageSizeParam != "" {
 			pageSize, err = strconv.Atoi(pageSizeParam)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test page size filter invalid: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test page size filter invalid: %w", errPrefix, err))
 			}
 		}
 
@@ -346,23 +362,28 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 // CreateTestHandler creates new test CR based on test content
 func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create test"
 
 		var request testkube.TestUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: failed to unmarshal request: %w", errPrefix, err))
 		}
 
+		errPrefix = errPrefix + " " + request.Name
 		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
 			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor args: %w", errPrefix, err))
 			}
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			request.QuoteTestTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+			}
 			return s.getCRDs(c, data, err)
 		}
 
@@ -380,7 +401,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusCreated)
@@ -391,10 +412,11 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 // UpdateTestHandler updates an existing test CR based on test content
 func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update test"
 		var request testkube.TestUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		var name string
@@ -402,20 +424,21 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			name = *request.Name
 		}
 
+		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
 		test, err := s.TestsClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test: %w", errPrefix, err))
 		}
 
 		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Args != nil {
 			*(*request.ExecutionRequest).Args, err = testkube.PrepareExecutorArgs(*(*request.ExecutionRequest).Args)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor arguments: %w", errPrefix, err))
 			}
 		}
 
@@ -452,7 +475,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test %w", errPrefix, err))
 		}
 
 		return c.JSON(updatedTest)
@@ -463,18 +486,19 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to delete test %s", name)
 		err := s.TestsClient.Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
 		}
 
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not delete the executions of the test: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -486,13 +510,14 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to abort test %s", name)
 		filter := result.NewExecutionsFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
 		executions, err := s.ExecutionResults.GetExecutions(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("executions with name %s not found", name))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: executions with name %s not found", errPrefix, name))
 			}
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get executions: %w", errPrefix, err))
 		}
 
 		var results []testkube.ExecutionResult
@@ -513,6 +538,7 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 // DeleteTestsHandler for deleting all tests
 func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete tests"
 		var err error
 		var testNames []string
 		selector := c.Query("selector")
@@ -523,7 +549,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 			testList, err = s.TestsClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					return s.Error(c, http.StatusBadGateway, err)
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list tests: %w", errPrefix, err))
 				}
 			} else {
 				for _, item := range testList.Items {
@@ -536,10 +562,10 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: could not find tests: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: could not delete tests: %w", errPrefix, err))
 		}
 
 		// delete all executions for tests
@@ -550,7 +576,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not delete executions: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
