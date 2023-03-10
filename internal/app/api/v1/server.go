@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/base64"
 	"os"
 	"strconv"
 	"time"
@@ -28,7 +27,6 @@ import (
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
@@ -69,6 +67,7 @@ func NewTestkubeAPI(
 	metrics metrics.Metrics,
 	jobTemplate string,
 	scheduler *scheduler.Scheduler,
+	slackLoader *slack.SlackLoader,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -101,6 +100,7 @@ func NewTestkubeAPI(
 		ContainerExecutor:    containerExecutor,
 		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
+		slackLoader:          slackLoader,
 	}
 
 	// will be reused in websockets handler
@@ -108,7 +108,7 @@ func NewTestkubeAPI(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(s.getSlackLoader())
+	s.Events.Loader.Register(s.slackLoader)
 
 	s.InitEnvs()
 	s.InitStorage()
@@ -141,6 +141,7 @@ type TestkubeAPI struct {
 	jobTemplate          string
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
+	slackLoader          *slack.SlackLoader
 }
 
 type storageParams struct {
@@ -437,21 +438,4 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
-}
-
-func (s TestkubeAPI) getSlackLoader() *slack.SlackLoader {
-	messageTemplate := os.Getenv("SLACK_TEMPLATE")
-
-	templateDecoded, err := base64.StdEncoding.DecodeString(messageTemplate)
-	if err != nil {
-		s.Log.Errorw("error while decoding slack template", "error", err.Error())
-	}
-
-	configString := os.Getenv("SLACK_CONFIG")
-	configDecoded, err := base64.StdEncoding.DecodeString(configString)
-	if err != nil {
-		s.Log.Errorw("error while decoding slack config", "error", err.Error())
-	}
-
-	return slack.NewSlackLoader(string(templateDecoded), string(configDecoded), testkube.AllEventTypes)
 }
