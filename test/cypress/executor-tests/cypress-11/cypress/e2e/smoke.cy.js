@@ -1,6 +1,6 @@
 describe('Testkube website', () => {
   it('Open Testkube website', () => {
-    cy.visit('/')
+    cy.visit('/').screenshot()
   })
   it(`Validate CYPRESS_CUSTOM_ENV ENV (${Cypress.env('CUSTOM_ENV')})`, () => {
     expect('CYPRESS_CUSTOM_ENV_value').to.equal(Cypress.env('CUSTOM_ENV')) //CYPRESS_CUSTOM_ENV - "cypress" prefix - auto-loaded from global ENVs
