@@ -1,4 +1,4 @@
-module test
+module executortests
 
 go 1.19
 
