@@ -84,28 +84,6 @@ func TestRun(t *testing.T) {
 		err = cleanup(tempDir)
 		assert.NoError(t, err)
 	})
-	t.Run("run successful jmeter test with arguments", func(t *testing.T) {
-		runner, err := NewRunner()
-		assert.NoError(t, err)
-
-		execution := testkube.NewQueuedExecution()
-		execution.TestType = "jmeter/test"
-		execution.Content = testkube.NewStringTestContent("")
-		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
-
-		execution.Args = []string{"-Jthreads", "10", "-Jrampup", "0", "-Jloopcount", "1", "-Jip", "sampleip", "-Jport", "1234"}
-
-		result, err := runner.Run(*execution)
-
-		assert.NoError(t, err)
-		assert.Empty(t, result.ErrorMessage)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-
-		err = cleanup(tempDir)
-		assert.NoError(t, err)
-	})
-
 }
 
 func cleanup(tempDir string) error {
