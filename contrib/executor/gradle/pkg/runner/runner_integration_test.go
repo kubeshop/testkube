@@ -110,8 +110,7 @@ func TestRunErrorsIntegration(t *testing.T) {
 		result, err := runner.Run(*execution)
 
 		// then
-		assert.NoError(t, err)
-		assert.Equal(t, result.Status, testkube.ExecutionStatusFailed)
+		assert.EqualError(t, err, "gradle executor handles only repository based tests, but repository is nil")
 	})
 
 	t.Run("no settings.gradle", func(t *testing.T) {
