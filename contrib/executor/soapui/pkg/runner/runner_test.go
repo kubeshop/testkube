@@ -3,10 +3,12 @@ package runner
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
