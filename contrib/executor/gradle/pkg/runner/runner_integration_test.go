@@ -65,7 +65,7 @@ func TestRunGradleIntegration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		execution.Envs = map[string]string{"TESTKUBE_GRADLE": "true"}
+		os.SetEnv("TESTKUBE_GRADLE", "true")
 
 		// when
 		result, err := runner.Run(*execution)
