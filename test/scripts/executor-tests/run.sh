@@ -166,6 +166,15 @@ cypress-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+ginkgo-smoke() {
+  name="Ginkgo"
+  test_crd_file="test/ginkgo/executor-tests/crd/smoke.yaml"
+  testsuite_name="executor-ginkgo-smoke-tests"
+  testsuite_file="test/suites/executor-ginkgo-smoke-tests.json"
+  
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 gradle-smoke() {
   name="Gradle"
   test_crd_file="test/gradle/executor-smoke/crd/crd.yaml"
@@ -261,6 +270,7 @@ main() {
       container-playwright-smoke
       curl-smoke
       cypress-smoke
+      ginkgo-smoke
       gradle-smoke
       jmeter-smoke
       k6-smoke
@@ -279,6 +289,7 @@ main() {
       container-playwright-smoke
       curl-smoke
       cypress-smoke
+      ginkgo-smoke
       gradle-smoke
       jmeter-smoke
       k6-smoke
