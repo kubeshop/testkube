@@ -1,10 +1,11 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
@@ -19,13 +20,16 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			request.QuoteExecutorTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
 
 		executor := executorsmapper.MapAPIToCRD(request)
-		if executor.Spec.ExecutorType != "container" && executor.Spec.JobTemplate == "" {
-			executor.Spec.JobTemplate = s.jobTemplates.Job
+		notContainerExecutor := executor.Spec.ExecutorType != "container"
+		emptyJobTemplate := executor.Spec.JobTemplate == ""
+		if notContainerExecutor && emptyJobTemplate {
+			executor.Spec.JobTemplate = s.jobTemplate
 		}
 		executor.Namespace = s.Namespace
 
@@ -41,28 +45,36 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.ExecutorUpsertRequest
+		var request testkube.ExecutorUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		executor, err := s.ExecutorsClient.Get(request.Name)
+		executor, err := s.ExecutorsClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// map update executor but load spec only to not override metadata.ResourceVersion
+		executorSpec := executorsmapper.MapUpdateToSpec(request, executor)
+
+		updatedExecutor, err := s.ExecutorsClient.Update(executorSpec)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		executorSpec := executorsmapper.MapAPIToCRD(request)
-		executor.Spec = executorSpec.Spec
-		executor.Labels = request.Labels
-
-		executor, err = s.ExecutorsClient.Update(executor)
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		return c.JSON(executor)
+		return c.JSON(updatedExecutor)
 	}
 }
 
@@ -76,11 +88,9 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			results := []testkube.ExecutorUpsertRequest{}
 			for _, item := range list.Items {
-				if item.Spec.JobTemplate != "" {
-					item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
-				}
-
-				results = append(results, executorsmapper.MapCRDToAPI(item))
+				result := executorsmapper.MapCRDToAPI(item)
+				result.QuoteExecutorTextFields()
+				results = append(results, result)
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, results)
@@ -105,11 +115,9 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if item.Spec.JobTemplate != "" {
-				item.Spec.JobTemplate = fmt.Sprintf("%q", item.Spec.JobTemplate)
-			}
-
-			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{executorsmapper.MapCRDToAPI(*item)})
+			result := executorsmapper.MapCRDToAPI(*item)
+			result.QuoteExecutorTextFields()
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{result})
 			return s.getCRDs(c, data, err)
 		}
 

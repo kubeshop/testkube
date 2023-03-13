@@ -36,9 +36,11 @@ type ExecutionRequest struct {
 	Image string `json:"image,omitempty"`
 	// container image pull secrets
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	// environment variables passed to executor
+	// Environment variables passed to executor.
+	// Deprecated: use Basic Variables instead
 	Envs map[string]string `json:"envs,omitempty"`
-	// execution variables passed to executor from secrets
+	// Execution variables passed to executor from secrets.
+	// Deprecated: use Secret Variables instead
 	SecretEnvs map[string]string `json:"secretEnvs,omitempty"`
 	// whether to start execution sync or async
 	Sync bool `json:"sync,omitempty"`
@@ -46,10 +48,26 @@ type ExecutionRequest struct {
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers
 	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// whether to run test as negative test
+	NegativeTest bool `json:"negativeTest,omitempty"`
+	// whether negativeTest was changed by user
+	IsNegativeTestChangedOnRun bool `json:"isNegativeTestChangedOnRun,omitempty"`
 	// duration in seconds the test may be active, until its stopped
 	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
 	// list of file paths that need to be copied into the test from uploads
 	Uploads []string `json:"uploads,omitempty"`
 	// minio bucket name to get uploads from
-	BucketName string `json:"bucketName,omitempty"`
+	BucketName      string           `json:"bucketName,omitempty"`
+	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
+	// job template extensions
+	JobTemplate    string              `json:"jobTemplate,omitempty"`
+	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
+	// script to run before test execution
+	PreRunScript string `json:"preRunScript,omitempty"`
+	// scraper template extensions
+	ScraperTemplate string `json:"scraperTemplate,omitempty"`
+	// config map references
+	EnvConfigMaps []EnvReference `json:"envConfigMaps,omitempty"`
+	// secret references
+	EnvSecrets []EnvReference `json:"envSecrets,omitempty"`
 }

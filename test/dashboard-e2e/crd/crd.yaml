@@ -20,4 +20,9 @@ spec:
       - baseUrl=http://testkube-dashboard.testkube.svc.cluster.local:8080
       - --env
       - API_URL=http://testkube-api-server.testkube.svc.cluster.local:8088/v1
+    # variables:
+    #   DEBUG:
+    #     name: DEBUG
+    #     type: basic
+    #     value: cypress:*
   schedule: "15 */4 * * *"

@@ -1,9 +1,10 @@
 package webhooks
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook

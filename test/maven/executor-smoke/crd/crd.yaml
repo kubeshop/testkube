@@ -10,7 +10,7 @@ metadata:
 spec:
   type: maven:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git
@@ -33,7 +33,7 @@ metadata:
 spec:
   type: maven:jdk11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git
@@ -49,22 +49,18 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: maven-executor-smoke-jdk8
+  name: maven-executor-smoke-jdk18  # expected failure - ENVs not set
   namespace: testkube
   labels:
-    core-tests: executors
+    core-tests: executors-negative
 spec:
-  type: maven:jdk8/test
+  type: maven:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git
       branch: main
-      path: examples/hello-maven
+      path: examples/hello-maven-jdk18
   executionRequest:
-    variables:
-      TESTKUBE_MAVEN:
-        name: TESTKUBE_MAVEN
-        value: "true"
-        type: basic
+    negativeTest: true

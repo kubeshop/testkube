@@ -7,20 +7,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/gofiber/fiber/v2"
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/server"
 )
 
 func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
@@ -129,13 +131,6 @@ func (r MockExecutionResultsRepository) Get(ctx context.Context, id string) (tes
 	return r.GetFn(ctx, id)
 }
 
-func (r MockExecutionResultsRepository) GetByName(ctx context.Context, name string) (testkube.Execution, error) {
-	if r.GetFn == nil {
-		panic("not implemented")
-	}
-	return r.GetFn(ctx, name)
-}
-
 func (r MockExecutionResultsRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
 	panic("not implemented")
 }
@@ -168,7 +163,7 @@ func (r MockExecutionResultsRepository) Update(ctx context.Context, result testk
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
+func (r MockExecutionResultsRepository) UpdateResult(ctx context.Context, id string, execution testkube.Execution) error {
 	panic("not implemented")
 }
 
@@ -216,19 +211,19 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Execute(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) ExecuteSync(execution *testkube.Execution, options client.ExecuteOptions) (testkube.ExecutionResult, error) {
+func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Abort(execution *testkube.Execution) *testkube.ExecutionResult {
+func (e MockExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 
-func (e MockExecutor) Logs(id string) (chan output.Output, error) {
+func (e MockExecutor) Logs(ctx context.Context, id string) (chan output.Output, error) {
 	if e.LogsFn == nil {
 		panic("not implemented")
 	}

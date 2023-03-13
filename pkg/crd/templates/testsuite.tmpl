@@ -16,9 +16,9 @@ spec:
   {{- if ne (len .Before) 0 }}
   before:
   {{- range .Before }}
-  - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
-    execute:
+  - execute:
+      stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
       {{- end }}
@@ -27,7 +27,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end }}
@@ -37,9 +37,9 @@ spec:
   {{- if ne (len .Steps) 0 }}
   steps:
   {{- range .Steps }}
-  - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
-    execute:
+  - execute:
+      stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
       {{- end }}
@@ -48,7 +48,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end}}
@@ -58,9 +58,9 @@ spec:
   {{- if ne (len .After) 0 }}
   after:
   {{- range .After }}
-  - stopTestOnFailure: {{ .StopTestOnFailure }}
     {{- if .Execute }}
-    execute:
+  - execute:
+      stopOnFailure: {{ .StopTestOnFailure }}
       {{- if .Execute.Namespace }}
       namespace: {{ .Execute.Namespace }}
       {{- end }}
@@ -69,7 +69,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Delay }}
-    delay:
+  - delay:
       {{- if .Delay.Duration }}
       duration: {{ .Delay.Duration }}
       {{- end }}
@@ -109,6 +109,16 @@ spec:
             key: {{ $value.SecretRef.Key }}
             {{- end }}
         {{- end }}
+        {{- if $value.ConfigMapRef }}
+        valueFrom:
+          configMapKeyRef:
+            {{- if $value.ConfigMapRef.Name }}
+            name: {{ $value.ConfigMapRef.Name }}
+            {{- end }}
+            {{- if $value.ConfigMapRef.Key }}
+            key: {{ $value.ConfigMapRef.Key }}
+            {{- end }}
+        {{- end }}
     {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.HttpProxy }}
@@ -122,3 +132,21 @@ spec:
     {{- end}}
   {{- end }}
   {{- end }}
+{{- if .Status }}
+status:
+  {{- if .Status.LatestExecution }}
+  latestExecution:
+    {{- if .Status.LatestExecution.Id }}
+    id: {{ .Status.LatestExecution.Id }}
+    {{- end }}
+    {{- if not .Status.LatestExecution.StartTime.IsZero }}
+    startTime: {{ .Status.LatestExecution.StartTime.Format "2006-01-02T15:04:05Z" }}
+    {{- end }}
+    {{- if not .Status.LatestExecution.EndTime.IsZero }}
+    endTime: {{ .Status.LatestExecution.EndTime.Format "2006-01-02T15:04:05Z" }}
+    {{- end }}
+    {{- if .Status.LatestExecution.Status }}
+    status: {{ .Status.LatestExecution.Status }}
+    {{- end }}
+  {{- end }}
+{{- end }}

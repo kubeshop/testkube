@@ -3,8 +3,11 @@ package triggers
 import (
 	"context"
 	"strconv"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/pkg/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
@@ -12,7 +15,6 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/pkg/errors"
 )
 
 type Execution string
@@ -34,8 +36,6 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 
 	switch t.Spec.Execution {
 	case ExecutionTest:
-		var results []testkube.Execution
-
 		tests, err := s.getTests(t)
 		if err != nil {
 			return err
@@ -44,16 +44,27 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.ExecutionRequest{}
 
 		wp := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
-		go wp.SendRequests(s.scheduler.PrepareTestRequests(tests, request))
-		go wp.Run(ctx)
+		go func() {
+			isDelayDefined := t.Spec.Delay != nil
+			if isDelayDefined {
+				s.logger.Infof(
+					"trigger service: executor component: trigger %s/%s has delayed test execution configured for %f seconds",
+					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+				)
+				time.Sleep(t.Spec.Delay.Duration)
+			}
+			s.logger.Infof(
+				"trigger service: executor component: scheduling test executions for trigger %s/%s",
+				t.Namespace, t.Name,
+			)
+			go wp.SendRequests(s.scheduler.PrepareTestRequests(tests, request))
+			go wp.Run(ctx)
+		}()
 
 		for r := range wp.GetResponses() {
 			status.addExecutionID(r.Result.Id)
-			results = append(results, r.Result)
 		}
 	case ExecutionTestSuite:
-		var results []testkube.TestSuiteExecution
-
 		testSuites, err := s.getTestSuites(t)
 		if err != nil {
 			return err
@@ -62,12 +73,25 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		request := testkube.TestSuiteExecutionRequest{}
 
 		wp := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
-		go wp.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
-		go wp.Run(ctx)
+		go func() {
+			isDelayDefined := t.Spec.Delay != nil
+			if isDelayDefined {
+				s.logger.Infof(
+					"trigger service: executor component: trigger %s/%s has delayed testsuite execution configured for %f seconds",
+					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+				)
+				time.Sleep(t.Spec.Delay.Duration)
+			}
+			s.logger.Infof(
+				"trigger service: executor component: scheduling testsuite executions for trigger %s/%s",
+				t.Namespace, t.Name,
+			)
+			go wp.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
+			go wp.Run(ctx)
+		}()
 
 		for r := range wp.GetResponses() {
 			status.addTestSuiteExecutionID(r.Result.Id)
-			results = append(results, r.Result)
 		}
 	default:
 		return errors.Errorf("invalid execution: %s", t.Spec.Execution)

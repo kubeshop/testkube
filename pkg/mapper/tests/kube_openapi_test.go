@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestMapTestCRToAPI(t *testing.T) {
@@ -45,6 +46,26 @@ func TestMapTestCRToAPI(t *testing.T) {
 					"TESTKUBE": "1",
 				},
 				Sync: false,
+				EnvConfigMaps: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "configmap",
+						},
+						Mount:          true,
+						MountPath:      "/data",
+						MapToVariables: false,
+					},
+				},
+				EnvSecrets: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "secret",
+						},
+						Mount:          false,
+						MountPath:      "",
+						MapToVariables: true,
+					},
+				},
 			},
 		},
 	}
@@ -78,6 +99,26 @@ func TestMapTestCRToAPI(t *testing.T) {
 				"TESTKUBE": "1",
 			},
 			Sync: false,
+			EnvConfigMaps: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "configmap",
+					},
+					Mount:          true,
+					MountPath:      "/data",
+					MapToVariables: false,
+				},
+			},
+			EnvSecrets: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "secret",
+					},
+					Mount:          false,
+					MountPath:      "",
+					MapToVariables: true,
+				},
+			},
 		},
 	}
 	assert.Equal(t, want, got)

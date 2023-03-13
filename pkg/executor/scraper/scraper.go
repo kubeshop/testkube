@@ -1,9 +1,7 @@
 package scraper
 
 import (
-	"fmt"
-
-	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"context"
 )
 
 // Scraper is responsible for collecting and persisting the necessary artifacts
@@ -12,33 +10,22 @@ type Scraper interface {
 	Scrape(executionID string, directories []string) error
 }
 
-// NewMinioScraper returns a Minio implementation of the Scraper
-func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token string, ssl bool) *MinioScraper {
-
-	return &MinioScraper{
-		Endpoint:        endpoint,
-		AccessKeyID:     accessKeyID,
-		SecretAccessKey: secretAccessKey,
-		Location:        location,
-		Token:           token,
-		Ssl:             ssl,
-	}
-
+type ScraperV2 struct {
+	extractor Extractor
+	loader    Uploader
 }
 
-// MinioScraper manages getting artifacts from job pods
-type MinioScraper struct {
-	Endpoint, AccessKeyID, SecretAccessKey, Location, Token string
-	Ssl                                                     bool
+func NewScraperV2(extractor Extractor, loader Uploader) *ScraperV2 {
+	return &ScraperV2{
+		extractor: extractor,
+		loader:    loader,
+	}
 }
 
-// Scrape gets artifacts from pod based on execution ID and directories list
-func (s MinioScraper) Scrape(id string, directories []string) error {
-	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Location, s.Token, s.Ssl) // create storage client
-	err := client.Connect()
-	if err != nil {
-		return fmt.Errorf("error occured creating minio client: %w", err)
-	}
-
-	return client.ScrapeArtefacts(id, directories...)
+func (s *ScraperV2) Scrape(ctx context.Context, meta map[string]any) error {
+	return s.
+		extractor.
+		Extract(ctx, func(ctx context.Context, object *Object) error {
+			return s.loader.Upload(ctx, object, meta)
+		})
 }

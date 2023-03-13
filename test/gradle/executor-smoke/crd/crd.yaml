@@ -10,7 +10,7 @@ metadata:
 spec:
   type: gradle:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -33,7 +33,7 @@ metadata:
 spec:
   type: gradle:jdk17/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -56,7 +56,7 @@ metadata:
 spec:
   type: gradle:jdk11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -79,7 +79,7 @@ metadata:
 spec:
   type: gradle:jdk8/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -91,3 +91,22 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-executor-smoke-jdk18-negative # expected failure - ENVs not set
+  namespace: testkube
+  labels:
+    core-tests: executors-negative
+spec:
+  type: gradle:jdk18/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle-jdk18
+  executionRequest:
+    negativeTest: true

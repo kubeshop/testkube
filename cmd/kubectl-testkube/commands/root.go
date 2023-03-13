@@ -25,6 +25,7 @@ func init() {
 	RootCmd.AddCommand(NewUpdateCmd())
 
 	RootCmd.AddCommand(NewGetCmd())
+	RootCmd.AddCommand(NewSetCmd())
 	RootCmd.AddCommand(NewRunCmd())
 	RootCmd.AddCommand(NewDeleteCmd())
 	RootCmd.AddCommand(NewAbortCmd())
@@ -47,16 +48,20 @@ func init() {
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
+
+	RootCmd.AddCommand(NewAgentCmd())
+
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
 
 var RootCmd = &cobra.Command{
 	Use:   "testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		ui.SetVerbose(verbose)
+	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		ui.SetVerbose(verbose)
-
 		cfg, _ := config.Load()
 
 		if cfg.TelemetryEnabled {
@@ -84,7 +89,6 @@ var RootCmd = &cobra.Command{
 				}
 				ui.Debug("telemetry init event response", out)
 			}
-
 		}
 	},
 

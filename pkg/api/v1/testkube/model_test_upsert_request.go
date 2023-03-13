@@ -32,4 +32,5 @@ type TestUpsertRequest struct {
 	// list of file paths that will be needed from uploads
 	Uploads          []string          `json:"uploads,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
+	Status           *TestStatus       `json:"status,omitempty"`
 }

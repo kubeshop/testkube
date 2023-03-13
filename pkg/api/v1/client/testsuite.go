@@ -15,22 +15,28 @@ func NewTestSuiteClient(
 	testSuiteTransport Transport[testkube.TestSuite],
 	testSuiteExecutionTransport Transport[testkube.TestSuiteExecution],
 	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution],
+	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary],
 	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult],
+	testSuiteArtifactTransport Transport[testkube.Artifact],
 ) TestSuiteClient {
 	return TestSuiteClient{
-		testSuiteTransport:                 testSuiteTransport,
-		testSuiteExecutionTransport:        testSuiteExecutionTransport,
-		testSuiteWithExecutionTransport:    testSuiteWithExecutionTransport,
-		testSuiteExecutionsResultTransport: testSuiteExecutionsResultTransport,
+		testSuiteTransport:                     testSuiteTransport,
+		testSuiteExecutionTransport:            testSuiteExecutionTransport,
+		testSuiteWithExecutionTransport:        testSuiteWithExecutionTransport,
+		testSuiteWithExecutionSummaryTransport: testSuiteWithExecutionSummaryTransport,
+		testSuiteExecutionsResultTransport:     testSuiteExecutionsResultTransport,
+		testSuiteArtifactTransport:             testSuiteArtifactTransport,
 	}
 }
 
 // TestSuiteClient is a client for test suites
 type TestSuiteClient struct {
-	testSuiteTransport                 Transport[testkube.TestSuite]
-	testSuiteExecutionTransport        Transport[testkube.TestSuiteExecution]
-	testSuiteWithExecutionTransport    Transport[testkube.TestSuiteWithExecution]
-	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult]
+	testSuiteTransport                     Transport[testkube.TestSuite]
+	testSuiteExecutionTransport            Transport[testkube.TestSuiteExecution]
+	testSuiteWithExecutionTransport        Transport[testkube.TestSuiteWithExecution]
+	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary]
+	testSuiteExecutionsResultTransport     Transport[testkube.TestSuiteExecutionsResult]
+	testSuiteArtifactTransport             Transport[testkube.Artifact]
 }
 
 // GetTestSuite returns single test suite by id
@@ -55,15 +61,15 @@ func (c TestSuiteClient) ListTestSuites(selector string) (testSuites testkube.Te
 	return c.testSuiteTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
-// ListTestSuiteWithExecutions list all test suite with executions
-func (c TestSuiteClient) ListTestSuiteWithExecutions(selector string) (
-	testSuiteWithExecutions testkube.TestSuiteWithExecutions, err error) {
-	uri := c.testSuiteWithExecutionTransport.GetURI("/test-suite-with-executions")
+// ListTestSuiteWithExecutionSummaries list all test suite with execution summaries
+func (c TestSuiteClient) ListTestSuiteWithExecutionSummaries(selector string) (
+	testSuiteWithExecutionSummaries testkube.TestSuiteWithExecutionSummaries, err error) {
+	uri := c.testSuiteWithExecutionSummaryTransport.GetURI("/test-suite-with-executions")
 	params := map[string]string{
 		"selector": selector,
 	}
 
-	return c.testSuiteWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+	return c.testSuiteWithExecutionSummaryTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // CreateTestSuite creates new TestSuite Custom Resource
@@ -80,9 +86,9 @@ func (c TestSuiteClient) CreateTestSuite(options UpsertTestSuiteOptions) (testSu
 }
 
 // UpdateTestSuite updates TestSuite Custom Resource
-func (c TestSuiteClient) UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
+func (c TestSuiteClient) UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error) {
 	uri := c.testSuiteTransport.GetURI("/test-suites/%s", options.Name)
-	request := testkube.TestSuiteUpsertRequest(options)
+	request := testkube.TestSuiteUpdateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -120,6 +126,12 @@ func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
+// GetTestSuiteExecutionArtifacts returns test suite execution artifacts by excution id
+func (c TestSuiteClient) GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.testSuiteArtifactTransport.GetURI("/test-suite-executions/%s/artifacts", executionID)
+	return c.testSuiteArtifactTransport.ExecuteMultiple(http.MethodGet, uri, nil, nil)
+}
+
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
@@ -130,6 +142,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 		HttpProxy:       options.HTTPProxy,
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
+		ContentRequest:  options.ContentRequest,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -149,6 +162,7 @@ func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int
 		HttpProxy:       options.HTTPProxy,
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
+		ContentRequest:  options.ContentRequest,
 	}
 
 	body, err := json.Marshal(executionRequest)

@@ -8,20 +8,24 @@ import (
 )
 
 type Params struct {
-	EventCount       int64  `json:"event_count,omitempty"`
-	EventCategory    string `json:"event_category,omitempty"`
-	AppVersion       string `json:"app_version,omitempty"`
-	AppName          string `json:"app_name,omitempty"`
-	CustomDimensions string `json:"custom_dimensions,omitempty"`
-	DataSource       string `json:"data_source,omitempty"`
-	Host             string `json:"host,omitempty"`
-	MachineID        string `json:"machine_id,omitempty"`
-	ClusterID        string `json:"cluster_id,omitempty"`
-	OperatingSystem  string `json:"operating_system,omitempty"`
-	Architecture     string `json:"architecture,omitempty"`
-	TestType         string `json:"test_type,omitempty"`
-	DurationMs       int32  `json:"duration_ms,omitempty"`
-	Status           string `json:"status,omitempty"`
+	EventCount       int64      `json:"event_count,omitempty"`
+	EventCategory    string     `json:"event_category,omitempty"`
+	AppVersion       string     `json:"app_version,omitempty"`
+	AppName          string     `json:"app_name,omitempty"`
+	CustomDimensions string     `json:"custom_dimensions,omitempty"`
+	DataSource       string     `json:"data_source,omitempty"`
+	Host             string     `json:"host,omitempty"`
+	MachineID        string     `json:"machine_id,omitempty"`
+	ClusterID        string     `json:"cluster_id,omitempty"`
+	OperatingSystem  string     `json:"operating_system,omitempty"`
+	Architecture     string     `json:"architecture,omitempty"`
+	TestType         string     `json:"test_type,omitempty"`
+	DurationMs       int32      `json:"duration_ms,omitempty"`
+	Status           string     `json:"status,omitempty"`
+	TestSource       string     `json:"test_source,omitempty"`
+	TestSuiteSteps   int32      `json:"test_suite_steps,omitempty"`
+	Context          RunContext `json:"context,omitempty"`
+	ClusterType      string     `json:"cluster_type,omitempty"`
 }
 
 type Event struct {
@@ -37,11 +41,13 @@ type Payload struct {
 
 // CreateParams contains Test or Test suite creation parameters
 type CreateParams struct {
-	AppVersion string
-	DataSource string
-	Host       string
-	ClusterID  string
-	TestType   string
+	AppVersion     string
+	DataSource     string
+	Host           string
+	ClusterID      string
+	TestType       string
+	TestSource     string
+	TestSuiteSteps int32
 }
 
 // RunParams contains Test or Test suite run parameters
@@ -55,7 +61,13 @@ type RunParams struct {
 	Status     string
 }
 
-func NewCLIPayload(id, name, version, category string) Payload {
+type RunContext struct {
+	Type           string
+	OrganizationId string
+	EnvironmentId  string
+}
+
+func NewCLIPayload(context RunContext, id, name, version, category, clusterType string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
@@ -71,12 +83,14 @@ func NewCLIPayload(id, name, version, category string) Payload {
 					MachineID:       machineID,
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
+					Context:         context,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
-func NewAPIPayload(clusterId, name, version, host string) Payload {
+func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 	return Payload{
 		ClientID: clusterId,
 		UserID:   clusterId,
@@ -93,13 +107,14 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewCreatePayload prepares payload for Test or Test suite creation
-func NewCreatePayload(name string, params CreateParams) Payload {
+func NewCreatePayload(name, clusterType string, params CreateParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -111,20 +126,23 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					EventCategory:   "api",
 					AppVersion:      params.AppVersion,
 					AppName:         "testkube-api-server",
-					DataSource:      params.DataSource,
 					Host:            AnonymizeHost(params.Host),
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       params.ClusterID,
+					DataSource:      params.DataSource,
 					TestType:        params.TestType,
+					TestSource:      params.TestSource,
+					TestSuiteSteps:  params.TestSuiteSteps,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewRunPayload prepares payload for Test or Test suite execution
-func NewRunPayload(name string, params RunParams) Payload {
+func NewRunPayload(name, clusterType string, params RunParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -136,15 +154,16 @@ func NewRunPayload(name string, params RunParams) Payload {
 					EventCategory:   "api",
 					AppVersion:      params.AppVersion,
 					AppName:         "testkube-api-server",
-					DataSource:      params.DataSource,
 					Host:            AnonymizeHost(params.Host),
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       params.ClusterID,
+					DataSource:      params.DataSource,
 					TestType:        params.TestType,
 					DurationMs:      params.DurationMs,
 					Status:          params.Status,
+					ClusterType:     clusterType,
 				},
 			}},
 	}

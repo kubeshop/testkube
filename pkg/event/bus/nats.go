@@ -2,13 +2,13 @@ package bus
 
 import (
 	"fmt"
-	"os"
 	"sync"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/nats-io/nats.go"
 )
 
 var _ Bus = &NATSBus{}
@@ -18,13 +18,8 @@ const (
 	SubscriptionName = "events"
 )
 
-func NewNATSConnection() (*nats.EncodedConn, error) {
-	natsURI := "localhost"
-	if uri, ok := os.LookupEnv("NATS_URI"); ok {
-		natsURI = uri
-	}
-
-	nc, err := nats.Connect(natsURI)
+func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
+	nc, err := nats.Connect(uri)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err

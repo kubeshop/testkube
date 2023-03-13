@@ -7,14 +7,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/version"
+
+	"github.com/pkg/errors"
+
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
-	"github.com/kubeshop/testkube/internal/pkg/api"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/mongo"
+)
+
+const (
+	abortionPollingInterval = 100 * time.Millisecond
 )
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
@@ -30,6 +35,7 @@ func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, requ
 			ExecFn:  s.executeTestSuite,
 		}
 	}
+
 	return requests
 }
 
@@ -46,6 +52,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
 			request.Name = testSuite.ExecutionRequest.Name
 		}
+
 		if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
 			request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
 		}
@@ -87,60 +94,17 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 }
 
 func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
-	defer func(testExecution *testkube.TestSuiteExecution) {
-		testExecution.Stop()
-		err := s.testExecutionResults.EndExecution(ctx, *testExecution)
-		if err != nil {
-			s.logger.Errorw("error setting end time", "error", err.Error())
-		}
-
-		wg.Done()
-
-		telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
-		if err != nil {
-			s.logger.Debugw("getting telemetry enabled error", "error", err)
-		}
-
-		if !telemetryEnabled {
-			return
-		}
-
-		clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-		if err != nil {
-			s.logger.Debugw("getting cluster id error", "error", err)
-		}
-
-		host, err := os.Hostname()
-		if err != nil {
-			s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
-		}
-
-		status := ""
-		if testExecution.Status != nil {
-			status = string(*testExecution.Status)
-		}
-
-		out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
-			AppVersion: api.Version,
-			Host:       host,
-			ClusterID:  clusterID,
-			DurationMs: testExecution.DurationMs,
-			Status:     status,
-		})
-		if err != nil {
-			s.logger.Debugw("sending run test suite telemetry event error", "error", err)
-		} else {
-			s.logger.Debugw("sending run test suite telemetry event", "output", out)
-		}
-	}(testsuiteExecution)
+	defer s.runAfterEachStep(ctx, testsuiteExecution, wg)
 
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
+
 	hasFailedSteps := false
 	cancelSteps := false
 	var stepResult *testkube.TestSuiteStepExecutionResult
 
 	var abortionStatus *testkube.TestSuiteExecutionStatus
 	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
+
 	go s.abortionCheck(ctx, testsuiteExecution, request.Timeout, abortChan)
 
 	for i := range testsuiteExecution.StepResults {
@@ -148,14 +112,17 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		select {
 		case abortionStatus = <-abortChan:
 			s.logger.Infow("Aborting test suite execution", "execution", testsuiteExecution.Id, "i", i)
+
 			cancelSteps = true
 			stepResult.Execution.ExecutionResult.Abort()
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborting
 		default:
 			s.logger.Debugw("Running step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+
 			if cancelSteps {
-				stepResult.Execution.ExecutionResult.Abort()
 				s.logger.Debugw("Aborting step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+
+				stepResult.Execution.ExecutionResult.Abort()
 				continue
 			}
 
@@ -169,11 +136,12 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
 
 			s.logger.Debugw("Step execution result", "step", testsuiteExecution.StepResults[i].Step, "result", stepResult.Execution.ExecutionResult)
+
 			err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
-				hasFailedSteps = true
-
 				s.logger.Errorw("saving test suite execution results error", "error", err)
+
+				hasFailedSteps = true
 				continue
 			}
 
@@ -209,48 +177,115 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	if err != nil {
 		s.logger.Errorw("saving final test suite execution result error", "error", err)
 	}
+}
 
+func (s *Scheduler) runAfterEachStep(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
+	testsuiteExecution.Stop()
+	err := s.testExecutionResults.EndExecution(ctx, *testsuiteExecution)
+	if err != nil {
+		s.logger.Errorw("error setting end time", "error", err.Error())
+	}
+
+	wg.Done()
+
+	if testsuiteExecution.TestSuite != nil {
+		testSuite, err := s.testSuitesClient.Get(testsuiteExecution.TestSuite.Name)
+		if err != nil {
+			s.logger.Errorw("getting test suite error", "error", err)
+		}
+
+		if testSuite != nil {
+			testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
+			if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
+				s.logger.Errorw("updating test suite error", "error", err)
+			}
+		}
+	}
+
+	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	if err != nil {
+		s.logger.Debugw("getting telemetry enabled error", "error", err)
+	}
+
+	if !telemetryEnabled {
+		return
+	}
+
+	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+	if err != nil {
+		s.logger.Debugw("getting cluster id error", "error", err)
+	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+	}
+
+	status := ""
+	if testsuiteExecution.Status != nil {
+		status = string(*testsuiteExecution.Status)
+	}
+
+	out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
+		AppVersion: version.Version,
+		Host:       host,
+		ClusterID:  clusterID,
+		DurationMs: testsuiteExecution.DurationMs,
+		Status:     status,
+	})
+
+	if err != nil {
+		s.logger.Debugw("sending run test suite telemetry event error", "error", err)
+	} else {
+		s.logger.Debugw("sending run test suite telemetry event", "output", out)
+	}
 }
 
 // abortionCheck is polling database to see if the user aborted the test suite execution
 func (s *Scheduler) abortionCheck(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, timeout int32, abortChan chan *testkube.TestSuiteExecutionStatus) {
-	const abortionPollingInterval = 100 * time.Millisecond
 	s.logger.Infow("Abortion check started", "test", testsuiteExecution.Name, "timeout", timeout)
+
 	ticker := time.NewTicker(abortionPollingInterval)
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
-	defer ticker.Stop()
+
+	defer func() {
+		timer.Stop()
+		ticker.Stop()
+	}()
+
 	for testsuiteExecution.Status == testkube.TestSuiteExecutionStatusRunning {
 		select {
 		case <-timer.C:
 			s.logger.Debugw("Abortion check timeout", "test", testsuiteExecution.Name)
+
 			if timeout > 0 {
 				s.logger.Debugw("Aborting test suite execution due to timeout", "execution", testsuiteExecution.Id)
+
 				abortChan <- testkube.TestSuiteExecutionStatusTimeout
 				return
 			}
 		case <-ticker.C:
 			if s.wasTestSuiteAborted(ctx, testsuiteExecution.Id) {
 				s.logger.Debugw("Aborting test suite execution", "execution", testsuiteExecution.Id)
+
 				abortChan <- testkube.TestSuiteExecutionStatusAborted
 				return
 			}
 		}
 	}
+
 	s.logger.Debugw("Abortion check, finished checking", "test", testsuiteExecution.Name)
 }
 
 func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 	execution, err := s.testExecutionResults.Get(ctx, id)
-	if err == mongo.ErrNoDocuments {
-		execution, err = s.testExecutionResults.GetByName(ctx, id)
-	}
 	if err != nil {
 		s.logger.Errorw("getting test execution", "error", err)
 		return false
 	}
 
 	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
+
 	return *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
 }
 
@@ -267,7 +302,6 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
 
 	switch step.Type() {
-
 	case testkube.TestSuiteStepTypeExecuteTest:
 		executeTestStep := step.Execute
 		request := testkube.ExecutionRequest{
@@ -281,18 +315,21 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			HttpsProxy:            request.HttpsProxy,
 			ExecutionLabels:       request.ExecutionLabels,
 			ActiveDeadlineSeconds: int64(request.Timeout),
+			ContentRequest:        request.ContentRequest,
 		}
 
 		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
+
 		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
 		if err != nil {
 			result.Err(err)
 			return
 		}
-		result.Execution = &execution
 
+		result.Execution = &execution
 	case testkube.TestSuiteStepTypeDelay:
 		l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
+
 		duration := time.Millisecond * time.Duration(step.Delay.Duration)
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	default:
@@ -302,19 +339,24 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteStepExecutionResult) {
 	timer := time.NewTimer(duration)
-	const abortionPollingInterval = 100 * time.Millisecond
 	ticker := time.NewTicker(abortionPollingInterval)
-	defer timer.Stop()
-	defer ticker.Stop()
+
+	defer func() {
+		timer.Stop()
+		ticker.Stop()
+	}()
+
 	for {
 		select {
 		case <-timer.C:
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
+
 			result.Execution.ExecutionResult.Success()
 			return
 		case <-ticker.C:
 			if s.wasTestSuiteAborted(context.Background(), testSuiteId) {
 				s.logger.Infow("delay aborted", "testSuiteId", testSuiteId, "duration", duration)
+
 				result.Execution.ExecutionResult.Abort()
 				return
 			}

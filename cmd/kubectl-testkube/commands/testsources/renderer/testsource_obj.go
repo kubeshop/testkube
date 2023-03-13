@@ -38,6 +38,10 @@ func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
 				testSource.Repository.TokenSecret.Key))
 		}
 
+		if testSource.Repository.CertificateSecret != "" {
+			ui.Warn("  Certificate: ", testSource.Repository.CertificateSecret)
+		}
+
 		ui.Warn("  Working dir: ", testSource.Repository.WorkingDir)
 	}
 

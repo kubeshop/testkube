@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/denisbrodbeck/machineid"
+
 	"github.com/kubeshop/testkube/pkg/log"
 )
 

@@ -1,9 +1,10 @@
 package event
 
 import (
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"go.uber.org/zap"
 )
 
 func NewLoader() *Loader {

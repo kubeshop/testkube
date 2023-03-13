@@ -4,15 +4,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetWebhookCmd() *cobra.Command {
-	var name, namespace string
+	var name string
 	var selectors []string
 	var crdOnly bool
 
@@ -56,7 +57,6 @@ func NewGetWebhookCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as argument")
-	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 

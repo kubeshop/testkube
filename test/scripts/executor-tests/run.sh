@@ -102,13 +102,46 @@ artillery-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-container-smoke() {
-  name="Container executor"
+container-curl-smoke() {
+  name="Container executor - Curl"
   test_crd_file="test/container-executor/executor-smoke/crd/curl.yaml"
-  testsuite_name="executor-container-smoke-tests"
-  testsuite_file="test/suites/executor-container-smoke-tests.json"
+  testsuite_name="executor-container-curl-smoke-tests"
+  testsuite_file="test/suites/executor-container-curl-smoke-tests.json"
 
   custom_executor_crd_file="test/executors/container-executor-curl.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+container-cypress-smoke() {
+  name="Container executor - Cypress"
+  test_crd_file="test/container-executor/executor-smoke/crd/cypress.yaml"
+  testsuite_name="executor-container-cypress-smoke-tests"
+  testsuite_file="test/suites/executor-container-cypress-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-cypress.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+container-k6-smoke() {
+  name="Container executor - K6"
+  test_crd_file="test/container-executor/executor-smoke/crd/k6.yaml"
+  testsuite_name="executor-container-k6-smoke-tests"
+  testsuite_file="test/suites/executor-container-k6-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-k6.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+container-playwright-smoke() {
+  name="Container executor - Playwright"
+  test_crd_file="test/container-executor/executor-smoke/crd/playwright.yaml"
+  testsuite_name="executor-container-playwright-smoke-tests"
+  testsuite_file="test/suites/executor-container-playwright-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-playwright.yaml"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
@@ -191,6 +224,15 @@ maven-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+playwright-smoke() {
+  name="playwright"
+  test_crd_file="test/playwright/executor-tests/crd/crd.yaml"
+  testsuite_name="executor-playwright-smoke-tests"
+  testsuite_file="test/suites/executor-playwright-smoke-tests.json"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 postman-smoke() {
   name="postman"
   test_crd_file="test/postman/executor-tests/crd/crd.yaml"
@@ -213,7 +255,10 @@ main() {
   case $executor_type in
     all)
       artillery-smoke
-      container-smoke
+      container-curl-smoke
+      container-cypress-smoke
+      container-k6-smoke
+      container-playwright-smoke
       curl-smoke
       cypress-smoke
       gradle-smoke
@@ -223,11 +268,15 @@ main() {
       kubepug-smoke
       maven-smoke
       postman-smoke
+      playwright-smoke
       soapui-smoke
       ;;
     smoke)
       artillery-smoke
-      container-smoke
+      container-curl-smoke
+      container-cypress-smoke
+      container-k6-smoke
+      container-playwright-smoke
       curl-smoke
       cypress-smoke
       gradle-smoke
@@ -235,6 +284,7 @@ main() {
       k6-smoke
       kubepug-smoke
       maven-smoke
+      playwright-smoke
       postman-smoke
       soapui-smoke
       ;;

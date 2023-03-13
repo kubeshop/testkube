@@ -4,6 +4,6 @@
 	"steps": [
 		{"execute": {"name": "maven-executor-smoke-jdk18"}},
 		{"execute": {"name": "maven-executor-smoke-jdk11"}},
-		{"execute": {"name": "maven-executor-smoke-jdk8"}}
+		{"execute": {"name": "maven-executor-smoke-jdk18-negative"}}
 	]
 }

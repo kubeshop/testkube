@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )

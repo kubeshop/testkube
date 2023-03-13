@@ -5,9 +5,10 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver"
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 var ErrOldClientVersion = fmt.Errorf("client version is older than api version, please upgrade")

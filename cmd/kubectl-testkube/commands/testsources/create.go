@@ -4,28 +4,30 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewCreateTestSourceCmd() *cobra.Command {
 	var (
-		name, uri         string
-		sourceType        string
-		file              string
-		gitUri            string
-		gitBranch         string
-		gitCommit         string
-		gitPath           string
-		gitUsername       string
-		gitToken          string
-		gitWorkingDir     string
-		labels            map[string]string
-		gitUsernameSecret map[string]string
-		gitTokenSecret    map[string]string
+		name, uri            string
+		sourceType           string
+		file                 string
+		gitUri               string
+		gitBranch            string
+		gitCommit            string
+		gitPath              string
+		gitUsername          string
+		gitToken             string
+		gitWorkingDir        string
+		labels               map[string]string
+		gitUsernameSecret    map[string]string
+		gitTokenSecret       map[string]string
+		gitCertificateSecret string
 	)
 
 	cmd := &cobra.Command{
@@ -55,7 +57,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 			err = validateUpsertOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
-			options, err := NewUpsertTestSourceOptionsFromFlags(cmd, nil)
+			options, err := NewUpsertTestSourceOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test source options", err)
 
 			if !crdOnly {
@@ -78,7 +80,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test source name - mandatory")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "source file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
@@ -89,6 +91,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 
 	return cmd
@@ -107,6 +110,11 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 	}
 
 	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return err
+	}
+
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
 	if err != nil {
 		return err
 	}
@@ -141,8 +149,8 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
-		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) && gitCertificateSecret != "" {
+		return fmt.Errorf("please pass only one auth method for git repository")
 	}
 
 	return nil

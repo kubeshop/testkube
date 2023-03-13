@@ -1,16 +1,18 @@
 package executors
 
 import (
+	"fmt"
 	"os"
-	"reflect"
+
+	"github.com/spf13/cobra"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
-func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string]string) (options apiClient.UpsertExecutorOptions, err error) {
+// NewUpsertExecutorOptionsFromFlags creates upsert executor options fom command flags
+func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpsertExecutorOptions, err error) {
 	name := cmd.Flag("name").Value.String()
 	types, err := cmd.Flags().GetStringArray("types")
 	if err != nil {
@@ -58,6 +60,28 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string
 		return options, err
 	}
 
+	tooltips, err := cmd.Flags().GetStringToString("tooltip")
+	if err != nil {
+		return options, err
+	}
+
+	contentTypes, err := cmd.Flags().GetStringArray("content-type")
+	if err != nil {
+		return options, err
+	}
+
+	iconURI := cmd.Flag("icon-uri").Value.String()
+	docsURI := cmd.Flag("docs-uri").Value.String()
+
+	var meta *testkube.ExecutorMeta
+	if iconURI != "" || docsURI != "" || len(tooltips) != 0 {
+		meta = &testkube.ExecutorMeta{
+			IconURI:  iconURI,
+			DocsURI:  docsURI,
+			Tooltips: tooltips,
+		}
+	}
+
 	options = apiClient.UpsertExecutorOptions{
 		Name:             name,
 		Types:            types,
@@ -67,15 +91,140 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command, testLabels map[string
 		Command:          command,
 		Args:             executorArgs,
 		Uri:              uri,
+		ContentTypes:     contentTypes,
 		JobTemplate:      jobTemplateContent,
 		Features:         features,
+		Labels:           labels,
+		Meta:             meta,
 	}
 
-	// if labels are passed and are different from the existing overwrite
-	if len(labels) > 0 && !reflect.DeepEqual(testLabels, labels) {
-		options.Labels = labels
-	} else {
-		options.Labels = testLabels
+	return options, nil
+}
+
+// NewUpsertExecutorOptionsFromFlags creates update executor options fom command flags
+func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpdateExecutorOptions, err error) {
+	var fields = []struct {
+		name        string
+		destination **string
+	}{
+		{
+			"name",
+			&options.Name,
+		},
+		{
+			"executor-type",
+			&options.ExecutorType,
+		},
+		{
+			"uri",
+			&options.Uri,
+		},
+		{
+			"image",
+			&options.Image,
+		},
+	}
+
+	for _, field := range fields {
+		if cmd.Flag(field.name).Changed {
+			value := cmd.Flag(field.name).Value.String()
+			*field.destination = &value
+		}
+	}
+
+	var slices = []struct {
+		name        string
+		destination **[]string
+	}{
+		{
+			"types",
+			&options.Types,
+		},
+		{
+			"command",
+			&options.Command,
+		},
+		{
+			"args",
+			&options.Args,
+		},
+		{
+			"feature",
+			&options.Features,
+		},
+		{
+			"content-type",
+			&options.ContentTypes,
+		},
+	}
+
+	for _, slice := range slices {
+		if cmd.Flag(slice.name).Changed {
+			value, err := cmd.Flags().GetStringArray(slice.name)
+			if err != nil {
+				return options, err
+			}
+
+			*slice.destination = &value
+		}
+	}
+
+	if cmd.Flag("job-template").Changed {
+		jobTemplate := cmd.Flag("job-template").Value.String()
+		b, err := os.ReadFile(jobTemplate)
+		if err != nil {
+			return options, fmt.Errorf("reading job template %w", err)
+		}
+
+		value := string(b)
+		options.JobTemplate = &value
+	}
+
+	if cmd.Flag("image-pull-secrets").Changed {
+		imagePullSecretNames, err := cmd.Flags().GetStringArray("image-pull-secrets")
+		if err != nil {
+			return options, err
+		}
+
+		var imageSecrets []testkube.LocalObjectReference
+		for _, secretName := range imagePullSecretNames {
+			imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
+		}
+
+		options.ImagePullSecrets = &imageSecrets
+	}
+
+	if cmd.Flag("label").Changed {
+		labels, err := cmd.Flags().GetStringToString("label")
+		if err != nil {
+			return options, err
+		}
+
+		options.Labels = &labels
+	}
+
+	if cmd.Flag("icon-uri").Changed || cmd.Flag("docs-uri").Changed || cmd.Flag("tooltip").Changed {
+		meta := &testkube.ExecutorMetaUpdate{}
+		if cmd.Flag("icon-uri").Changed {
+			value := cmd.Flag("icon-uri").Value.String()
+			meta.IconURI = &value
+		}
+
+		if cmd.Flag("docs-uri").Changed {
+			value := cmd.Flag("docs-uri").Value.String()
+			meta.DocsURI = &value
+		}
+
+		if cmd.Flag("tooltip").Changed {
+			tooltips, err := cmd.Flags().GetStringToString("tooltip")
+			if err != nil {
+				return options, err
+			}
+
+			meta.Tooltips = &tooltips
+		}
+
+		options.Meta = &meta
 	}
 
 	return options, nil

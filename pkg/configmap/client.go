@@ -3,14 +3,23 @@ package configmap
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/kubeshop/testkube/pkg/log"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/log"
 )
+
+//go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
+type Interface interface {
+	Get(ctx context.Context, id string) (map[string]string, error)
+	Create(ctx context.Context, id string, stringData map[string]string) error
+	Apply(ctx context.Context, id string, stringData map[string]string) error
+	Update(ctx context.Context, id string, stringData map[string]string) error
+}
 
 // Client provide methods to manage configmaps
 type Client struct {
@@ -34,9 +43,8 @@ func NewClient(namespace string) (*Client, error) {
 }
 
 // Create is a method to create new configmap
-func (c *Client) Create(id string, stringData map[string]string) error {
+func (c *Client) Create(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Create(ctx, configMapSpec, metav1.CreateOptions{}); err != nil {
@@ -47,9 +55,8 @@ func (c *Client) Create(id string, stringData map[string]string) error {
 }
 
 // Get is a method to retrieve an existing configmap
-func (c *Client) Get(id string) (map[string]string, error) {
+func (c *Client) Get(ctx context.Context, id string) (map[string]string, error) {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec, err := configMapsClient.Get(ctx, id, metav1.GetOptions{})
 	if err != nil {
@@ -65,9 +72,8 @@ func (c *Client) Get(id string) (map[string]string, error) {
 }
 
 // Update is a method to update an existing configmap
-func (c *Client) Update(id string, stringData map[string]string) error {
+func (c *Client) Update(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewSpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Update(ctx, configMapSpec, metav1.UpdateOptions{}); err != nil {
@@ -78,9 +84,8 @@ func (c *Client) Update(id string, stringData map[string]string) error {
 }
 
 // Apply is a method to create or update a configmap
-func (c *Client) Apply(id string, stringData map[string]string) error {
+func (c *Client) Apply(ctx context.Context, id string, stringData map[string]string) error {
 	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
-	ctx := context.Background()
 
 	configMapSpec := NewApplySpec(id, c.Namespace, stringData)
 	if _, err := configMapsClient.Apply(ctx, configMapSpec, metav1.ApplyOptions{

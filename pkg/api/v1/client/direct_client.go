@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/oauth2"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
-	"golang.org/x/oauth2"
 )
 
 type transport struct {
@@ -36,42 +36,37 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return base.RoundTrip(req)
 }
 
-// GetHTTPClient prepares http client
-func GetHTTTPClient(token *oauth2.Token) (*http.Client, error) {
-	httpClient := phttp.NewClient()
+func ConfigureClient(client *http.Client, token *oauth2.Token, cloudApiKey string) {
 	if token != nil {
-		httpClient.Transport = &transport{headers: map[string]string{
+		client.Transport = &transport{headers: map[string]string{
 			"Authorization": oauth.AuthorizationPrefix + " " + token.AccessToken}}
 	}
-
-	return httpClient, nil
-}
-
-// GetHTTPSSEClient prepares http client
-func GetHTTTPSSEClient(token *oauth2.Token) (*http.Client, error) {
-	httpClient := phttp.NewSSEClient()
-	if token != nil {
-		httpClient.Transport = &transport{headers: map[string]string{
-			"Authorization": oauth.AuthorizationPrefix + " " + token.AccessToken}}
+	if cloudApiKey != "" {
+		client.Transport = &transport{headers: map[string]string{
+			"Authorization": "Bearer " + cloudApiKey}}
 	}
-
-	return httpClient, nil
 }
 
 // NewDirectClient returns new direct client
-func NewDirectClient[A All](httpClient *http.Client, apiURI string) DirectClient[A] {
+func NewDirectClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string) DirectClient[A] {
+	if apiPathPrefix == "" {
+		apiPathPrefix = "/" + Version
+	}
+
 	return DirectClient[A]{
-		client:    httpClient,
-		sseClient: httpClient,
-		apiURI:    apiURI,
+		client:        httpClient,
+		sseClient:     httpClient,
+		apiURI:        apiURI,
+		apiPathPrefix: apiPathPrefix,
 	}
 }
 
 // DirectClient implements direct client
 type DirectClient[A All] struct {
-	client    *http.Client
-	sseClient *http.Client
-	apiURI    string
+	client        *http.Client
+	sseClient     *http.Client
+	apiURI        string
+	apiPathPrefix string
 }
 
 // baseExecute is base execute method
@@ -161,7 +156,7 @@ func (t DirectClient[A]) ExecuteMethod(method, uri string, selector string, isCo
 // GetURI returns uri for api method
 func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
-	return fmt.Sprintf("%s/%s%s", t.apiURI, Version, path)
+	return fmt.Sprintf("%s%s%s", t.apiURI, t.apiPathPrefix, path)
 }
 
 // GetLogs returns logs stream from job pods, based on job pods logs

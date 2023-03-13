@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -39,14 +38,7 @@ func NewGetTestsCmd() *cobra.Command {
 
 				if test.Test != nil {
 					if crdOnly {
-						if test.Test.Content != nil && test.Test.Content.Data != "" {
-							test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
-						}
-
-						if test.Test.ExecutionRequest != nil && test.Test.ExecutionRequest.VariablesFile != "" {
-							test.Test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.Test.ExecutionRequest.VariablesFile)
-						}
-
+						test.Test.QuoteTestTextFields()
 						common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
 						return
 					}
@@ -71,14 +63,7 @@ func NewGetTestsCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, test := range tests {
-							if test.Content != nil && test.Content.Data != "" {
-								test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
-							}
-
-							if test.ExecutionRequest != nil && test.ExecutionRequest.VariablesFile != "" {
-								test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.ExecutionRequest.VariablesFile)
-							}
-
+							test.QuoteTestTextFields()
 							common.UIPrintCRD(crd.TemplateTest, test, &firstEntry)
 						}
 
@@ -88,19 +73,12 @@ func NewGetTestsCmd() *cobra.Command {
 					err = render.List(cmd, tests, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
 				} else {
-					tests, err := client.ListTestWithExecutions(strings.Join(selectors, ","))
-					ui.ExitOnError("getting all test with executions in namespace "+namespace, err)
+					tests, err := client.ListTestWithExecutionSummaries(strings.Join(selectors, ","))
+					ui.ExitOnError("getting all test with execution summaries in namespace "+namespace, err)
 					if crdOnly {
 						for _, test := range tests {
 							if test.Test != nil {
-								if test.Test.Content != nil && test.Test.Content.Data != "" {
-									test.Test.Content.Data = fmt.Sprintf("%q", test.Test.Content.Data)
-								}
-
-								if test.Test.ExecutionRequest != nil && test.Test.ExecutionRequest.VariablesFile != "" {
-									test.Test.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", test.Test.ExecutionRequest.VariablesFile)
-								}
-
+								test.Test.QuoteTestTextFields()
 								common.UIPrintCRD(crd.TemplateTest, test.Test, &firstEntry)
 							}
 						}

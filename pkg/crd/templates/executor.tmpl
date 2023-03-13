@@ -52,3 +52,24 @@ spec:
   - {{ $feature -}}
   {{- end}}
   {{- end}}
+  {{- if gt (len .ContentTypes) 0 }}
+  content_types:
+  {{- range $contentType := .ContentTypes}}
+  - {{ $contentType -}}
+  {{- end}}
+  {{- end}}
+  {{- if .Meta }}
+  meta:
+    {{- if .Meta.IconURI }}
+    iconURI: {{ .Meta.IconURI }}
+    {{- end }}
+    {{- if .Meta.DocsURI }}
+    docsURI: {{ .Meta.DocsURI }}
+    {{- end }}
+    {{- if ne (len .Meta.Tooltips) 0 }}
+    tooltips:
+    {{- range $key, $value := .Meta.Tooltips }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+    {{- end }}
+  {{- end}}

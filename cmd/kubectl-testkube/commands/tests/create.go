@@ -3,8 +3,8 @@ package tests
 import (
 	"fmt"
 	"strconv"
+	"time"
 
-	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -28,8 +28,12 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitBranch                string
 		gitCommit                string
 		gitPath                  string
+		gitWorkingDir            string
 		gitUsername              string
 		gitToken                 string
+		gitUsernameSecret        map[string]string
+		gitTokenSecret           map[string]string
+		gitCertificateSecret     string
 		sourceName               string
 		labels                   map[string]string
 		variables                map[string]string
@@ -41,15 +45,24 @@ func NewCreateTestsCmd() *cobra.Command {
 		envs                     map[string]string
 		secretEnvs               map[string]string
 		httpProxy, httpsProxy    string
-		gitUsernameSecret        map[string]string
-		gitTokenSecret           map[string]string
 		secretVariableReferences map[string]string
 		copyFiles                []string
 		image                    string
 		command                  []string
 		imagePullSecretNames     []string
 		timeout                  int64
-		gitWorkingDir            string
+		artifactStorageClassName string
+		artifactVolumeMountPath  string
+		artifactDirs             []string
+		jobTemplate              string
+		preRunScript             string
+		scraperTemplate          string
+		negativeTest             bool
+		mountConfigMaps          map[string]string
+		variableConfigMaps       []string
+		mountSecrets             map[string]string
+		variableSecrets          []string
+		uploadTimeout            string
 	)
 
 	cmd := &cobra.Command{
@@ -67,11 +80,9 @@ func NewCreateTestsCmd() *cobra.Command {
 
 			namespace := cmd.Flag("namespace").Value.String()
 			var client client.Client
-			var testLabels map[string]string
 			if !crdOnly {
 				client, namespace = common.GetClient(cmd)
 				test, _ := client.GetTest(testName)
-				testLabels = test.Labels
 
 				if testName == test.Name {
 					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
@@ -81,39 +92,42 @@ func NewCreateTestsCmd() *cobra.Command {
 			err = validateCreateOptions(cmd)
 			ui.ExitOnError("validating passed flags", err)
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, testLabels)
+			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
+			ui.ExitOnError("validating artifact flags", err)
+
+			options, err := NewUpsertTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
 			if !crdOnly {
 				executors, err := client.ListExecutors("")
 				ui.ExitOnError("getting available executors", err)
 
-				err = validateExecutorType(options.Type_, executors)
+				contentType := ""
+				if options.Content != nil {
+					contentType = options.Content.Type_
+				}
+
+				err = validateExecutorTypeAndContent(options.Type_, contentType, executors)
 				ui.ExitOnError("validating executor type", err)
 
 				if len(copyFiles) > 0 {
-					err := uploadFiles(client, testName, apiv1.Test, copyFiles)
+					var timeout time.Duration
+					if uploadTimeout != "" {
+						timeout, err = time.ParseDuration(uploadTimeout)
+						if err != nil {
+							ui.ExitOnError("invalid upload timeout duration", err)
+						}
+					}
+					err := uploadFiles(client, testName, apiv1.Test, copyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
-			}
 
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
-
-			if !crdOnly {
 				_, err = client.CreateTest(options)
 				ui.ExitOnError("creating test "+testName+" in namespace "+namespace, err)
 
 				ui.Success("Test created", namespace, "/", testName)
 			} else {
-				if options.Content != nil && options.Content.Data != "" {
-					options.Content.Data = fmt.Sprintf("%q", options.Content.Data)
-				}
-
-				if options.ExecutionRequest != nil && options.ExecutionRequest.VariablesFile != "" {
-					options.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", options.ExecutionRequest.VariablesFile)
-				}
-
+				(*testkube.TestUpsertRequest)(&options).QuoteTestTextFields()
 				data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
 				ui.ExitOnError("executing crd template", err)
 
@@ -123,7 +137,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
-	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman/collection)")
 
@@ -134,8 +148,12 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
+	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
+	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
+	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
@@ -148,15 +166,26 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
-	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
-	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&image, "image", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
-	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
+	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
+	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
+	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
+	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
+	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
 }
@@ -178,13 +207,18 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return err
 	}
 
+	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
+	if err != nil {
+		return err
+	}
+
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 	sourceName := cmd.Flag("source").Value.String()
 
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != ""
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
 
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
@@ -214,22 +248,25 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
+	if (gitUsername != "" || gitToken != "" || gitCertificateSecret != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
 		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
 	}
 
 	return nil
 }
 
-func validateExecutorType(executorType string, executors testkube.ExecutorsDetails) error {
+func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {
 	typeValid := false
 	executorTypes := []string{}
+	contentTypes := []string{}
 
 	for _, ed := range executors {
 		executorTypes = append(executorTypes, ed.Executor.Types...)
 		for _, et := range ed.Executor.Types {
 			if et == executorType {
 				typeValid = true
+				contentTypes = ed.Executor.ContentTypes
+				break
 			}
 		}
 	}
@@ -238,17 +275,28 @@ func validateExecutorType(executorType string, executors testkube.ExecutorsDetai
 		return fmt.Errorf("invalid executor type '%s' use one of: %v", executorType, executorTypes)
 	}
 
+	if len(contentTypes) != 0 {
+		contentValid := false
+		for _, ct := range contentTypes {
+			if ct == contentType {
+				contentValid = true
+				break
+			}
+		}
+
+		if !contentValid {
+			return fmt.Errorf("invalid content type '%s' use one of: %v", contentType, contentTypes)
+		}
+	}
+
 	return nil
 }
 
-func validateSchedule(schedule string) error {
-	if schedule == "" {
-		return nil
-	}
-
-	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	if _, err := specParser.Parse(schedule); err != nil {
-		return err
+func validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath string, artifactDirs []string) error {
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
+		if artifactStorageClassName == "" || artifactVolumeMountPath == "" {
+			return fmt.Errorf("both artifact storage class name and mount path should be provided")
+		}
 	}
 
 	return nil

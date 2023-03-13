@@ -6,33 +6,34 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
+	"github.com/kubeshop/testkube/pkg/version"
+
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/pkg/scheduler"
-
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-
 	"github.com/kelseyhightower/envconfig"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
-	"github.com/kubeshop/testkube/internal/pkg/api"
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
-	"github.com/kubeshop/testkube/pkg/config"
+	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -41,7 +42,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-const HeartbeatInterval = time.Hour
+const (
+	HeartbeatInterval = time.Hour
+	HttpBodyLimit     = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
+)
 
 func NewTestkubeAPI(
 	namespace string,
@@ -61,8 +65,9 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	jobTemplates *JobTemplates,
+	jobTemplate string,
 	scheduler *scheduler.Scheduler,
+	slackLoader *slack.SlackLoader,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -73,6 +78,7 @@ func NewTestkubeAPI(
 	}
 
 	httpConfig.ClusterID = clusterId
+	httpConfig.Http.BodyLimit = HttpBodyLimit
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
@@ -92,8 +98,9 @@ func NewTestkubeAPI(
 		ConfigMap:            configMap,
 		Executor:             executor,
 		ContainerExecutor:    containerExecutor,
-		jobTemplates:         jobTemplates,
+		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
+		slackLoader:          slackLoader,
 	}
 
 	// will be reused in websockets handler
@@ -101,12 +108,11 @@ func NewTestkubeAPI(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(slack.NewSlackLoader())
+	s.Events.Loader.Register(s.slackLoader)
 
 	s.InitEnvs()
 	s.InitStorage()
 	s.InitRoutes()
-	s.InitEvents()
 
 	return s
 }
@@ -132,9 +138,10 @@ type TestkubeAPI struct {
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
 	ConfigMap            config.Repository
-	jobTemplates         *JobTemplates
+	jobTemplate          string
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
+	slackLoader          *slack.SlackLoader
 }
 
 type storageParams struct {
@@ -144,6 +151,7 @@ type storageParams struct {
 	SecretAccessKey string
 	Location        string
 	Token           string
+	Bucket          string
 }
 
 type oauthParams struct {
@@ -164,7 +172,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 		return
 	}
 
-	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, api.Version)
+	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, version.Version)
 	if err != nil {
 		s.Log.Debug("telemetry send error", "error", err.Error())
 	} else {
@@ -172,7 +180,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 	}
 }
 
-// Init initializes api server settings
+// InitEnvs initializes api server settings
 func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
@@ -184,7 +192,13 @@ func (s *TestkubeAPI) InitEnvs() {
 }
 
 func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint, s.storageParams.AccessKeyId, s.storageParams.SecretAccessKey, s.storageParams.Location, s.storageParams.Token, s.storageParams.SSL)
+	s.Storage = minio.NewClient(s.storageParams.Endpoint,
+		s.storageParams.AccessKeyId,
+		s.storageParams.SecretAccessKey,
+		s.storageParams.Location,
+		s.storageParams.Token,
+		s.storageParams.Bucket,
+		s.storageParams.SSL)
 }
 
 func (s *TestkubeAPI) InitRoutes() {
@@ -232,6 +246,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
+	tests.Post("/:id/abort", s.AbortTestHandler())
 
 	tests.Get("/:id/metrics", s.TestMetricsHandler())
 
@@ -257,17 +272,19 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+	testsuites.Get("/:id/executions/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
 	testsuites.Patch("/:id/executions/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
 
 	testsuites.Get("/:id/metrics", s.TestSuiteMetricsHandler())
 
-	testExecutions := s.Routes.Group("/test-suite-executions")
-	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
-	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
-	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
-	testExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
+	testSuiteExecutions := s.Routes.Group("/test-suite-executions")
+	testSuiteExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testSuiteExecutions.Post("/", s.ExecuteTestSuitesHandler())
+	testSuiteExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
+	testSuiteExecutions.Get("/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
+	testSuiteExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
@@ -314,6 +331,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	files := s.Routes.Group("/uploads")
 	files.Post("/", s.UploadFiles())
 
+	repositories := s.Routes.Group("/repositories")
+	repositories.Post("/", s.ValidateRepositoryHandler())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
@@ -343,7 +363,7 @@ func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
 				if err != nil {
 					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				out, err := telemetry.SendHeartbeatEvent(host, api.Version, s.Config.ClusterID)
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, s.Config.ClusterID)
 				if err != nil {
 					l.Debugw("sending heartbeat telemetry event error", "error", err)
 				} else {

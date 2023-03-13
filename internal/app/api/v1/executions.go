@@ -10,13 +10,13 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
-	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -34,7 +34,7 @@ const (
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
-func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
+func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
@@ -70,6 +70,10 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			tests = append(tests, testList.Items...)
 		}
 
+		l := s.Log.With("testID", id)
+		if len(tests) != 0 {
+			l.Infow("executing test", "test", tests[0])
+		}
 		var results []testkube.Execution
 		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
@@ -102,7 +106,7 @@ func (s TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 }
 
 // ListExecutionsHandler returns array of available test executions
-func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// TODO refactor into some Services (based on some abstraction for CRDs at least / CRUD)
 		// should we split this to separate endpoint? currently this one handles
@@ -135,20 +139,18 @@ func (s TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
+func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		executionID := c.Params("executionID")
 		l := s.Log.With("executionID", executionID)
 
 		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
-		defer func() {
-			c.Conn.Close()
-		}()
+		defer c.Conn.Close()
 
 		execution, err := s.ExecutionResults.Get(context.Background(), executionID)
 		if err != nil {
-			l.Errorw("can't find execuction ", "error", err)
+			l.Errorw("can't find execution ", "error", err)
 			return
 		}
 
@@ -158,14 +160,14 @@ func (s TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 			return
 		}
 
-		logs, err := executor.Logs(executionID)
+		logs, err := executor.Logs(context.Background(), executionID)
 		if err != nil {
 			l.Errorw("can't get pod logs", "error", err)
 			return
 		}
 		for logLine := range logs {
 			l.Debugw("sending log line to websocket", "line", logLine)
-			c.WriteJSON(logLine)
+			_ = c.WriteJSON(logLine)
 		}
 	})
 }
@@ -184,15 +186,15 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.Response.Header.Set("Connection", "keep-alive")
 		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
 
-		ctx.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
 			s.Log.Debug("start streaming logs")
-			w.Flush()
+			_ = w.Flush()
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {
 				output.PrintError(os.Stdout, fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 				s.Log.Errorw("getting execution error", "error", err)
-				w.Flush()
+				_ = w.Flush()
 				return
 			}
 
@@ -201,20 +203,20 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 				if err != nil {
 					output.PrintError(os.Stdout, fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 					s.Log.Errorw("getting execution error", "error", err)
-					w.Flush()
+					_ = w.Flush()
 				}
 				return
 			}
 
-			s.streamLogsFromJob(executionID, execution.TestType, w)
-		}))
+			s.streamLogsFromJob(ctx, executionID, execution.TestType, w)
+		})
 
 		return nil
 	}
 }
 
 // GetExecutionHandler returns test execution object for given test and execution id/name
-func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		id := c.Params("id", "")
@@ -226,10 +228,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				execution, err = s.ExecutionResults.GetByName(ctx, executionID)
-				if err == mongo.ErrNoDocuments {
-					return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
-				}
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
 			}
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, err)
@@ -268,7 +267,7 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 		for key, value := range testSecretMap {
 			if variable, ok := execution.Variables[key]; ok && value != "" {
-				variable.Value = string(value)
+				variable.Value = value
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
 			}
@@ -280,29 +279,31 @@ func (s TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) AbortExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
 
 		s.Log.Infow("aborting execution", "executionID", executionID)
 		execution, err := s.ExecutionResults.Get(ctx, executionID)
-		if err == mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
-		}
-
 		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+			}
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		result := s.Executor.Abort(&execution)
-		s.Metrics.IncAbortTest(execution.TestType, result.IsFailed())
+		res, err := s.Executor.Abort(ctx, &execution)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
 
-		return err
+		return c.JSON(res)
 	}
 }
 
-func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
+func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
@@ -321,7 +322,15 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		//// quickfix end
 
-		file, err := s.Storage.DownloadFile(executionID, fileName)
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+
+		file, err := s.Storage.DownloadFile(execution.Id, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -331,12 +340,19 @@ func (s TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	}
 }
 
-// GetArtifacts returns list of files in the given bucket
-func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
+// ListArtifactsHandler returns list of files in the given bucket
+func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
-		files, err := s.Storage.ListFiles(executionID)
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, err)
+		}
+		files, err := s.Storage.ListFiles(execution.Id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -348,25 +364,30 @@ func (s TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 // streamLogsFromResult writes logs from the output of executionResult to the writer
 func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
 	enc := json.NewEncoder(w)
-	fmt.Fprintf(w, "data: ")
+	_, _ = fmt.Fprintf(w, "data: ")
 	s.Log.Debug("using logs from result")
 	output := testkube.ExecutorOutput{
 		Type_:   output.TypeResult,
 		Content: executionResult.Output,
 		Result:  executionResult,
 	}
+
+	if executionResult.ErrorMessage != "" {
+		output.Content = output.Content + "\n" + executionResult.ErrorMessage
+	}
+
 	err := enc.Encode(output)
 	if err != nil {
 		s.Log.Infow("Encode", "error", err)
 		return err
 	}
-	fmt.Fprintf(w, "\n")
-	w.Flush()
+	_, _ = fmt.Fprintf(w, "\n")
+	_ = w.Flush()
 	return nil
 }
 
 // streamLogsFromJob streams logs in chunks to writer from the running execution
-func (s *TestkubeAPI) streamLogsFromJob(executionID, testType string, w *bufio.Writer) {
+func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Infow("getting logs from Kubernetes job")
 
@@ -374,16 +395,16 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID, testType string, w *bufio.W
 	if err != nil {
 		output.PrintError(os.Stdout, err)
 		s.Log.Errorw("getting logs error", "error", err)
-		w.Flush()
+		_ = w.Flush()
 		return
 	}
 
-	logs, err := executor.Logs(executionID)
+	logs, err := executor.Logs(ctx, executionID)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 	if err != nil {
 		output.PrintError(os.Stdout, err)
 		s.Log.Errorw("getting logs error", "error", err)
-		w.Flush()
+		_ = w.Flush()
 		return
 	}
 
@@ -392,22 +413,22 @@ func (s *TestkubeAPI) streamLogsFromJob(executionID, testType string, w *bufio.W
 	// and pass single log output as sse data chunk
 	for out := range logs {
 		s.Log.Debugw("got log line from pod", "out", out)
-		fmt.Fprintf(w, "data: ")
+		_, _ = fmt.Fprintf(w, "data: ")
 		err = enc.Encode(out)
 		if err != nil {
 			s.Log.Infow("Encode", "error", err)
 		}
 		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
-		fmt.Fprintf(w, "\n")
-		w.Flush()
+		_, _ = fmt.Fprintf(w, "\n")
+		_ = w.Flush()
 	}
 }
 
 func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
-	result := make([]testkube.ExecutionSummary, len(executions))
+	res := make([]testkube.ExecutionSummary, len(executions))
 
 	for i, execution := range executions {
-		result[i] = testkube.ExecutionSummary{
+		res[i] = testkube.ExecutionSummary{
 			Id:         execution.Id,
 			Name:       execution.Name,
 			Number:     execution.Number,
@@ -422,19 +443,19 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 		}
 	}
 
-	return result
+	return res
 }
 
 // GetLatestExecutionLogs returns the latest executions' logs
-func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]string, error) {
-	latestExecutions, err := s.getNewestExecutions(c)
+func (s *TestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map[string][]string, error) {
+	latestExecutions, err := s.getNewestExecutions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not list executions: %w", err)
 	}
 
 	executionLogs := map[string][]string{}
 	for _, e := range latestExecutions {
-		logs, err := s.getExecutionLogs(e)
+		logs, err := s.getExecutionLogs(ctx, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get logs: %w", err)
 		}
@@ -445,9 +466,9 @@ func (s *TestkubeAPI) GetLatestExecutionLogs(c context.Context) (map[string][]st
 }
 
 // getNewestExecutions returns the latest Testkube executions
-func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Execution, error) {
+func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execution, error) {
 	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
-	executions, err := s.ExecutionResults.GetExecutions(c, f)
+	executions, err := s.ExecutionResults.GetExecutions(ctx, f)
 	if err != nil {
 		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
 	}
@@ -455,22 +476,22 @@ func (s *TestkubeAPI) getNewestExecutions(c context.Context) ([]testkube.Executi
 }
 
 // getExecutionLogs returns logs from an execution
-func (s *TestkubeAPI) getExecutionLogs(execution testkube.Execution) ([]string, error) {
-	result := []string{}
+func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.Execution) ([]string, error) {
+	var res []string
 	if execution.ExecutionResult.IsCompleted() {
-		return append(result, execution.ExecutionResult.Output), nil
+		return append(res, execution.ExecutionResult.Output), nil
 	}
 
-	logs, err := s.Executor.Logs(execution.Id)
+	logs, err := s.Executor.Logs(ctx, execution.Id)
 	if err != nil {
 		return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
 	}
 
 	for out := range logs {
-		result = append(result, out.Result.Output)
+		res = append(res, out.Result.Output)
 	}
 
-	return result, nil
+	return res, nil
 }
 
 func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, error) {

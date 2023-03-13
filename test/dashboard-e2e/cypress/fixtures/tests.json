@@ -94,5 +94,37 @@
         "labels": {
             "core-tests": "dashboard-e2e-internal"
         }
+    },
+    "postman-negative-test": {
+        "name": "internal-dashboard-e2e-postman-git-file-ran-negative-test",
+        "type": "postman/collection",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "main",
+              "path": "test/postman/executor-tests/postman-executor-smoke.postman_collection.json"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
+    },
+    "postman-negative-init": {
+        "name": "internal-dashboard-e2e-postman-git-file-ran-negative-init",
+        "type": "postman/collection",
+        "content": {
+            "type": "git-file",
+            "repository": {
+              "type": "git-file",
+              "uri": "https://github.com/kubeshop/testkube",
+              "branch": "some-non-existing-branch",
+              "path": "some/incorrect/path/non-existing-file.json"
+            }
+        },
+        "labels": {
+            "core-tests": "cli-internal"
+        }
     }
 }

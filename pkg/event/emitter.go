@@ -75,10 +75,10 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
 	// check for missing listeners
 	for kind, lMap := range oldMap {
-		// skip not changed kinds
+		// clean missing kinds
 		if _, ok := newMap[kind]; !ok {
 			for _, l := range lMap {
-				result = append(result, l)
+				e.stopListener(l.Name())
 			}
 
 			continue
@@ -100,20 +100,22 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 				e.startListener(l)
 				result = append(result, l)
 			}
-		} else {
-			// start new listeners and restart updated ones
-			for name, l := range lMap {
-				if current, ok := oldMap[kind][name]; !ok {
-					e.startListener(l)
-				} else {
-					if !common.CompareListeners(current, l) {
-						e.stopListener(current.Name())
-						e.startListener(l)
-					}
-				}
 
-				result = append(result, l)
+			continue
+		}
+
+		// start new listeners and restart updated ones
+		for name, l := range lMap {
+			if current, ok := oldMap[kind][name]; !ok {
+				e.startListener(l)
+			} else {
+				if !common.CompareListeners(current, l) {
+					e.stopListener(current.Name())
+					e.startListener(l)
+				}
 			}
+
+			result = append(result, l)
 		}
 	}
 

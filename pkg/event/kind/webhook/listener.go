@@ -7,12 +7,13 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 var _ common.Listener = &WebhookListener{}
@@ -75,6 +76,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
+	request.Header.Set("Content-Type", "application/json")
 	resp, err := l.HttpClient.Do(request)
 	if err != nil {
 		log.Errorw("webhook send error", "error", err)

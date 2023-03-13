@@ -35,5 +35,6 @@ func getSupportedEvents() map[string][]string {
 	m[testtrigger.ResourceService] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceIngress] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceEvent] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
+	m[testtrigger.ResourceConfigMap] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	return m
 }

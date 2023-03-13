@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 )
@@ -24,7 +26,7 @@ func Run(r runner.Runner, args []string) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		test, err = io.ReadAll(os.Stdin)
 		if err != nil {
-			output.PrintError(os.Stderr, fmt.Errorf("can't read stind input: %w", err))
+			output.PrintError(os.Stderr, fmt.Errorf("can't read stdin input: %w", err))
 			os.Exit(1)
 		}
 	} else if len(args) > 1 {
@@ -42,8 +44,16 @@ func Run(r runner.Runner, args []string) {
 		os.Exit(1)
 	}
 
-	output.PrintEvent("running test", e.Id)
+	if r.GetType().IsMain() && e.PreRunScript != "" {
+		output.PrintEvent("running script", e.Id)
 
+		if err = runScript(e.PreRunScript); err != nil {
+			output.PrintError(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+
+	output.PrintEvent("running test", e.Id)
 	result, err := r.Run(e)
 	if err != nil {
 		output.PrintError(os.Stderr, err)
@@ -51,4 +61,30 @@ func Run(r runner.Runner, args []string) {
 	}
 
 	output.PrintResult(result)
+}
+
+func runScript(body string) error {
+	scriptFile, err := os.CreateTemp("", "prerun*.sh")
+	if err != nil {
+		return err
+	}
+
+	filename := scriptFile.Name()
+	if _, err = io.Copy(scriptFile, strings.NewReader(body)); err != nil {
+		return err
+	}
+
+	if err = scriptFile.Close(); err != nil {
+		return err
+	}
+
+	if err = os.Chmod(filename, 0777); err != nil {
+		return err
+	}
+
+	if _, err = executor.Run("", "/bin/sh", nil, filename); err != nil {
+		return err
+	}
+
+	return nil
 }

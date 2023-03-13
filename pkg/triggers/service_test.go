@@ -5,9 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"github.com/golang/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -15,18 +24,14 @@ import (
 	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/result"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +56,8 @@ func TestService_Run(t *testing.T) {
 	mockTestSuitesClient := testsuitesv2.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
-	configMap := config.NewMockRepository(mockCtrl)
+	configMapConfig := config.NewMockRepository(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -71,7 +77,9 @@ func TestService_Run(t *testing.T) {
 	mockTestsClient.EXPECT().Get("some-test").Return(&mockTest, nil).AnyTimes()
 	var mockNextExecutionNumber int32 = 1
 	mockResultRepository.EXPECT().GetNextExecutionNumber(gomock.Any(), "some-test").Return(mockNextExecutionNumber, nil)
+	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
 	mockExecution := testkube.Execution{Name: "test-execution-1"}
+	mockExecution.ExecutionResult = &mockExecutionResult
 	mockResultRepository.EXPECT().GetByNameAndTest(gomock.Any(), "some-custom-execution-1", "some-test").Return(mockExecution, nil)
 	mockSecretUUID := "b524c2f6-6bcf-4178-87c1-1aa2b2abb5dc"
 	mockTestsClient.EXPECT().GetCurrentSecretUUID("some-test").Return(mockSecretUUID, nil)
@@ -90,14 +98,14 @@ func TestService_Run(t *testing.T) {
 			Features:         nil,
 			ContentTypes:     nil,
 			JobTemplate:      "",
+			Meta:             nil,
 		},
 	}
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
 	mockResultRepository.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultRepository.EXPECT().StartExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
-	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockExecutionResult, nil)
-	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), mockExecutionResult).Return(nil)
+	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(&mockExecutionResult, nil)
+	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	mockTestExecution := testkube.Execution{
 		Id:              "test-suite-execution-1",
@@ -120,7 +128,8 @@ func TestService_Run(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		testLogger,
-		configMap,
+		configMapConfig,
+		mockConfigMapClient,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
@@ -140,7 +149,7 @@ func TestService_Run(t *testing.T) {
 		mockTestResultRepository,
 		mockLeaseBackend,
 		testLogger,
-		configMap,
+		configMapConfig,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),

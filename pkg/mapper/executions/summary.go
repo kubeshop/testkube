@@ -2,21 +2,21 @@ package executions
 
 import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
-// MapToSummary maps testkube.Executions to array of testkube.ExecutionSummary for lists without so many details
-func MapToSummary(executions []testkube.Execution) []testkube.ExecutionSummary {
-	result := make([]testkube.ExecutionSummary, len(executions))
-	for i, s := range executions {
-		result[i] = testkube.ExecutionSummary{
-			Id:        s.Id,
-			Name:      s.Name,
-			Number:    s.Number,
-			TestName:  s.TestName,
-			TestType:  s.TestType,
-			Status:    s.ExecutionResult.Status,
-			StartTime: s.StartTime,
-			EndTime:   s.EndTime,
-		}
+// MapToSummary maps testkube.Execution to testkube.ExecutionSummary for lists without so many details.
+func MapToSummary(execution *testkube.Execution) *testkube.ExecutionSummary {
+	var status *testkube.ExecutionStatus
+	if execution.ExecutionResult != nil {
+		status = execution.ExecutionResult.Status
 	}
 
-	return result
+	return &testkube.ExecutionSummary{
+		Id:        execution.Id,
+		Name:      execution.Name,
+		Number:    execution.Number,
+		TestName:  execution.TestName,
+		TestType:  execution.TestType,
+		Status:    status,
+		StartTime: execution.StartTime,
+		EndTime:   execution.EndTime,
+	}
 }

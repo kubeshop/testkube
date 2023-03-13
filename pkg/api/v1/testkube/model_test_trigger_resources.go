@@ -21,4 +21,5 @@ const (
 	SERVICE_TestTriggerResources     TestTriggerResources = "service"
 	INGRESS_TestTriggerResources     TestTriggerResources = "ingress"
 	EVENT_TestTriggerResources       TestTriggerResources = "event"
+	CONFIGMAP_TestTriggerResources   TestTriggerResources = "configmap"
 )

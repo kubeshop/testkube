@@ -9,7 +9,7 @@ const config = {
   title: "Testkube Documentation",
   tagline:
     "Your somewhat opinionated and friendly Kubernetes testing framework",
-  url: "https://testkube.kubeshop.io",
+  url: "https://kubeshop.github.io",
   baseUrl: "/testkube/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -32,7 +32,7 @@ const config = {
     [
       "classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
-      ({
+      {
         docs: {
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
@@ -47,7 +47,7 @@ const config = {
         googleAnalytics: {
           trackingID: "UA-204665550-6",
         },
-      }),
+      },
     ],
     [
       "redocusaurus",
@@ -56,7 +56,7 @@ const config = {
         specs: [
           {
             spec: "https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml",
-            route: "/openapi",
+            route: "/reference/openapi",
           },
         ],
         theme: {
@@ -68,7 +68,7 @@ const config = {
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
-    ({
+    {
       navbar: {
         logo: {
           alt: "Testkube",
@@ -142,7 +142,7 @@ const config = {
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },
-    }),
+    },
   plugins: [
     [
       "@docusaurus/plugin-client-redirects",
@@ -194,34 +194,136 @@ const config = {
             to: "/test-types/executor-curl",
           },
           {
-            from: "/executor-custom",
-            to: "/test-types/executor-custom",
+            from: "/test-types/executor-custom",
+            to: "/test-types/container-executor",
           },
           {
             from: "/UI",
-            to: "/using-testkube/UI",
+            to: "/concepts/dashboard",
           },
           {
             from: "/tests-running",
-            to: "/using-testkube/tests/tests-running",
+            to: "/concepts/tests/tests-running",
           },
           {
             from: "/tests-creating",
-            to: "/using-testkube/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
           },
           {
             from: "/tests-variables",
-            to: "/using-testkube/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
           },
           {
             from: "/testsuites-running",
-            to: "/using-testkube/test-suites/testsuites-running",
+            to: "/concepts/test-suites/testsuites-running",
           },
           {
             from: "/testsuites-creating",
-            to: "/using-testkube/test-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/helm-charts",
+            to: "/reference/helm-chart",
+          },
+          {
+            from: "/telemetry",
+            to: "/reference/telemetry",
+          },
+          {
+            from: "/installing",
+            to: "/getting-started",
+          },
+          {
+            from: "/using-testkube/tests/tests-running",
+            to: "/concepts/tests/tests-running",
+          },
+          {
+            from: "/using-testkube/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/tests/tests-variables",
+            to: "/concepts/tests/tests-variables",
+          },
+          {
+            from: "/using-testkube/test-suites/testsuites-creating",
+            to: "/concepts/test-suites/testsuites-creating",
+          },
+          {
+            from: "/guides/test-suites/testsuites-getting-results",
+            to: "/concepts/test-suites/testsuites-getting-results",
+          },
+          {
+            from: "/using-testkube/test-suites/testsuites-getting-results",
+            to: "/concepts/test-suites/testsuites-getting-results",
+          },
+          {
+            from: "/openapi",
+            to: "/reference/openapi",
+          },
+          {
+            from: "/category/tests",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/using-testkube/triggers",
+            to: "/concepts/triggers",
+          },
+          {
+            from: "/using-testkube/UI",
+            to: "/concepts/dashboard",
+          },
+          {
+            from: "/FAQ",
+            to: "/concepts/common-issues",
+          },
+          {
+            from: "/integrations/testkube-automation",
+            to: "/guides/cicd",
+          },
+          {
+            from: "/guides/tests/tests-creating",
+            to: "/concepts/tests/tests-creating",
+          },
+          {
+            from: "/guides/exposing-testkube/ingress-nginx",
+            to: "/guides/going-to-production/exposing-testkube/ingress-nginx",
+          },
+          {
+            from: "/guides/exposing-testkube/overview",
+            to: "/guides/going-to-production/exposing-testkube/overview",
+          },
+          {
+            from: "/architecture",
+            to: "/reference/architecture",
+          },
+          {
+            from: "/integrations/slack-integration",
+            to: "/guides/slack-integration",
+          },
+          {
+            from: "/integrations",
+            to: "/getting-started",
           },
         ],
+        createRedirects(existingPath) {
+          if (existingPath.includes("/reference/cli")) {
+            // Redirect from /cli-reference to /reference/cli
+            return [existingPath.replace("/reference/cli", "/cli-reference")];
+          }
+
+          if (
+            existingPath.includes("/guides/going-to-production/authentication")
+          ) {
+            return [
+              existingPath.replace(
+                "/guides/going-to-production/authentication",
+                "/authentication"
+              ),
+            ];
+          }
+          return undefined; // Return a falsy value: no redirect created
+        },
       },
     ],
   ],

@@ -24,6 +24,7 @@ type ExecuteOptions struct {
 	Labels               map[string]string
 	UsernameSecret       *testkube.SecretRef
 	TokenSecret          *testkube.SecretRef
+	CertificateSecret    string
 	ImageOverride        string
 	ImagePullSecretNames []string
 }

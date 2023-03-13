@@ -5,13 +5,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetExecutorCmd() *cobra.Command {
@@ -34,7 +35,9 @@ func NewGetExecutorCmd() *cobra.Command {
 				ui.ExitOnError("getting executor: "+name, err)
 
 				if crdOnly {
-					common.UIPrintCRD(crd.TemplateExecutor, mapExecutorDetailsToCreateExecutorOptions(namespace, &executor), &firstEntry)
+					options := mapExecutorDetailsToCreateExecutorOptions(namespace, &executor)
+					(*testkube.ExecutorUpsertRequest)(options).QuoteExecutorTextFields()
+					common.UIPrintCRD(crd.TemplateExecutor, options, &firstEntry)
 					return
 				}
 
@@ -47,7 +50,9 @@ func NewGetExecutorCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, executor := range executors {
-						common.UIPrintCRD(crd.TemplateExecutor, mapExecutorDetailsToCreateExecutorOptions(namespace, &executor), &firstEntry)
+						options := mapExecutorDetailsToCreateExecutorOptions(namespace, &executor)
+						(*testkube.ExecutorUpsertRequest)(options).QuoteExecutorTextFields()
+						common.UIPrintCRD(crd.TemplateExecutor, options, &firstEntry)
 					}
 
 					return
@@ -85,6 +90,8 @@ func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testk
 		}
 
 		options.Features = executor.Executor.Features
+		options.ContentTypes = executor.Executor.ContentTypes
+		options.Meta = executor.Executor.Meta
 	}
 
 	return options

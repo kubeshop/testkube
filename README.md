@@ -26,6 +26,7 @@
   <a href=""><img title="Code builds" src="https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks"/></a>
   <a href=""><img title="mit licence" src="https://img.shields.io/badge/License-MIT-yellow.svg"/></a>
   <a href="https://github.com/kubeshop/testkube/releases"><img title="Release date" src="https://img.shields.io/github/release-date/kubeshop/testkube"/></a>
+  <a href="https://contribute.design/kubeshop/testkube"><img title="Design contributions welcome" src="https://contribute.design/api/shield/kubeshop/testkube"/></a>
 </p>
 
 <p align="center">
@@ -74,13 +75,13 @@ Main Testkube components are:
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
   - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests ([@lreimer](https://github.com/lreimer))
-  - [SoapUI](https://kubeshop.github.io/testkube/executor-soapui/) - runs SoapUI tests
-  - [Kubepug](https://kubeshop.github.io/testkube/executor-kubepug/) - runs Kubepug tests
-  - [Artillery.io](https://kubeshop.github.io/testkube/executor-artillery/) - runs Artillery tests
-  - [Curl Executor](https://github.com/kubeshop/testkube-executor-curl) - runs simple Curl commands
-  - [Maven](https://kubeshop.github.io/testkube/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
-  - [Gradle](https://kubeshop.github.io/testkube/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
-  - [Ginkgo](https://kubeshop.github.io/testkube/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
+  - [SoapUI](https://kubeshop.github.io/testkube/test-types/executor-soapui/) - runs SoapUI tests
+  - [Kubepug](https://kubeshop.github.io/testkube/test-types/executor-kubepug/) - runs Kubepug tests
+  - [Artillery.io](https://kubeshop.github.io/testkube/test-types/executor-artillery/) - runs Artillery tests
+  - [Curl Executor](https://kubeshop.github.io/testkube/test-types/curl) - runs simple Curl commands
+  - [Maven](https://kubeshop.github.io/testkube/test-types/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
+  - [Gradle](https://kubeshop.github.io/testkube/test-types/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
+  - [Ginkgo](https://kubeshop.github.io/testkube/test-types/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
 - [Testkube Dashboard](https://github.com/kubeshop/testkube-dashboard) - standalone web application for viewing real-time Testkube test results
@@ -88,9 +89,7 @@ Main Testkube components are:
 
 ## Getting Started
 
-Check out the [Installation](https://kubeshop.github.io/testkube/installing/) and
-[Getting Started](https://kubeshop.github.io/testkube/getting-started/) guides to set up Testkube and
-run your first tests!
+Checkout the [Getting Started](https://kubeshop.github.io/testkube/getting-started/) guides to set up Testkube and run your first tests!
 
 # Documentation
 
@@ -103,7 +102,10 @@ Shout-out to our contributors 🎉 - you're great!
 - ⭐️ [@lreimer](https://github.com/lreimer) - [K6 executor](https://github.com/kubeshop/testkube-executor-k6) [Gradle executor](https://github.com/kubeshop/testkube-executor-gradle) [Maven executor](https://github.com/kubeshop/testkube-executor-maven)
 - ⭐️ [@jdborneman-terminus](https://github.com/jdborneman-terminus) - [Ginkgo executor](https://github.com/kubeshop/testkube-executor-ginkgo) 
 - ️⭐️ [@abhishek9686](https://github.com/abhishek9686)
-- ⭐️ [@andrei-n-cosma](https://github.com/andrei-n-cosma)
+- ⭐️ [@ancosma](https://github.com/ancosma)
+- ⭐️ [@Stupremee](https://github.com/Stupremee)
+- ⭐️ [@artem-zherdiev-ingio](https://github.com/artem-zherdiev-ingio)
+- ⭐️ [@chooco13](https://github.com/chooco13) - [Playwright executor](https://github.com/kubeshop/testkube-executor-playwright)
 
 
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥

@@ -1,6 +1,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -24,11 +26,11 @@ type TestAPI interface {
 	GetTest(id string) (test testkube.Test, err error)
 	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
 	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpsertTestOptions) (test testkube.Test, err error)
+	UpdateTest(options UpdateTestOptions) (test testkube.Test, err error)
 	DeleteTest(name string) error
 	DeleteTests(selector string) error
 	ListTests(selector string) (tests testkube.Tests, err error)
-	ListTestWithExecutions(selector string) (tests testkube.TestWithExecutions, err error)
+	ListTestWithExecutionSummaries(selector string) (tests testkube.TestWithExecutionSummaries, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
 	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
@@ -39,6 +41,7 @@ type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
+	AbortExecutions(test string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
 }
@@ -46,11 +49,11 @@ type ExecutionAPI interface {
 // TestSuiteAPI describes test suite api methods
 type TestSuiteAPI interface {
 	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	UpdateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
+	UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error)
 	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
 	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
 	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutions(selector string) (testSuitesWithExecutions testkube.TestSuiteWithExecutions, err error)
+	ListTestSuiteWithExecutionSummaries(selector string) (testSuitesWithExecutionSummaries testkube.TestSuiteWithExecutionSummaries, err error)
 	DeleteTestSuite(name string) error
 	DeleteTestSuites(selector string) error
 	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
@@ -63,12 +66,13 @@ type TestSuiteExecutionAPI interface {
 	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 	AbortTestSuiteExecution(executionID string) error
+	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 }
 
 // ExecutorAPI describes executor api methods
 type ExecutorAPI interface {
 	CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
+	UpdateExecutor(options UpdateExecutorOptions) (executor testkube.ExecutorDetails, err error)
 	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
 	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
 	DeleteExecutor(name string) (err error)
@@ -99,7 +103,7 @@ type ServiceAPI interface {
 // TestSourceAPI describes test source api methods
 type TestSourceAPI interface {
 	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
-	UpdateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
+	UpdateTestSource(options UpdateTestSourceOptions) (testSource testkube.TestSource, err error)
 	GetTestSource(name string) (testSource testkube.TestSource, err error)
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
@@ -108,27 +112,41 @@ type TestSourceAPI interface {
 
 // CopyFileAPI describes methods to handle files in the object storage
 type CopyFileAPI interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
 // TODO consider replacing below types by testkube.*
 
-// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating/changing testsuite
+// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating testsuite
 type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
 
-// UpsertTestOptions - is mapping for now to OpenAPI schema for creating/changing test
+// UpdateTestSuiteOptions - mapping to OpenAPI schema for changing testsuite
+type UpdateTestSuiteOptions testkube.TestSuiteUpdateRequest
+
+// UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
 // if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
 
-// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating/changing executor request
+// UpdateTestOptions - is mapping for now to OpenAPI schema for changing test
+// if needed can be extended to custom struct
+type UpdateTestOptions testkube.TestUpdateRequest
+
+// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
 type UpsertExecutorOptions testkube.ExecutorUpsertRequest
+
+// UpdateExecutorOptions - is mapping for now to OpenAPI schema for changing executor request
+type UpdateExecutorOptions testkube.ExecutorUpdateRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
 
-// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating/changing test source
+// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
 type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
+
+// UpdateTestSourceOptions - is mapping for now to OpenAPI schema for changing test source
+// if needed can be extended to custom struct
+type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
@@ -144,6 +162,15 @@ type ExecuteTestOptions struct {
 	Image                         string
 	Uploads                       []string
 	BucketName                    string
+	ArtifactRequest               *testkube.ArtifactRequest
+	JobTemplate                   string
+	ContentRequest                *testkube.TestContentRequest
+	PreRunScriptContent           string
+	ScraperTemplate               string
+	NegativeTest                  bool
+	IsNegativeTestChangedOnRun    bool
+	EnvConfigMaps                 []testkube.EnvReference
+	EnvSecrets                    []testkube.EnvReference
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -152,13 +179,15 @@ type ExecuteTestSuiteOptions struct {
 	HTTPProxy          string
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
+	ContentRequest     *testkube.TestContentRequest
 }
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
-		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution |
-		testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo | testkube.TestSource
+		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
+		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
+		testkube.TestSource
 }
 
 // Executable is an interface of executable objects

@@ -32,7 +32,7 @@ spec:
         {{- if .ResourceSelector.LabelSelector.MatchExpressions }}
         matchExpressions:
             {{- range $exp := .ResourceSelector.LabelSelector.MatchExpressions }}
-            key: {{ $exp.Key }}
+          - key: {{ $exp.Key }}
             operator: {{ $exp.Operator }}
             values: {{ $exp.Values }}
             {{- end }}
@@ -41,6 +41,22 @@ spec:
   {{- end }}
   {{- if .Event }}
   event: {{ .Event }}
+  {{- end }}
+  {{- if .ConditionSpec }}
+  conditionSpec:
+    {{- if .ConditionSpec.Timeout }}
+    timeout: {{ .ConditionSpec.Timeout }}
+    {{- end }}
+    {{- if ne (len .ConditionSpec.Conditions) 0 }}
+    conditions:
+    {{- range $exp := .ConditionSpec.Conditions }}
+    - type: {{ $exp.Type_ }}
+      status: {{ $exp.Status }}
+      {{- if $exp.Reason }}
+      reason: {{ $exp.Reason }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
   {{- end }}
   {{- if .Action }}
   action: {{ .Action }}
@@ -67,7 +83,7 @@ spec:
         {{- if .TestSelector.LabelSelector.MatchExpressions }}
         matchExpressions:
             {{- range $exp := .TestSelector.LabelSelector.MatchExpressions }}
-            key: {{ $exp.Key }}
+          - key: {{ $exp.Key }}
             operator: {{ $exp.Operator }}
             values: {{ $exp.Values }}
             {{- end }}

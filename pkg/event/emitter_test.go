@@ -1,3 +1,5 @@
+//go:build !integration
+
 package event
 
 import (
@@ -6,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
-	"github.com/stretchr/testify/assert"
 )
 
 var eventBus bus.Bus
@@ -66,11 +69,21 @@ func TestEmitter_Listen(t *testing.T) {
 		emitter.Notify(event1)
 		emitter.Notify(event2)
 
-		time.Sleep(time.Millisecond * 50)
 		// then
+		retryCount := 100
+		notificationsCountListener1 := 0
+		notificationsCountListener2 := 0
+		for i := 0; i < retryCount; i++ {
+			notificationsCountListener1 = listener1.GetNotificationCount()
+			notificationsCountListener2 = listener2.GetNotificationCount()
+			if notificationsCountListener1 == 1 && notificationsCountListener2 == 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 
-		assert.Equal(t, 1, listener1.GetNotificationCount())
-		assert.Equal(t, 1, listener2.GetNotificationCount())
+		assert.Equal(t, 1, notificationsCountListener1)
+		assert.Equal(t, 1, notificationsCountListener2)
 	})
 
 }
@@ -200,14 +213,14 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 		// when listeners are added
 		emitter.UpdateListeners(common.Listeners{listener4})
 
-		// then should have 3 listeners
-		assert.Len(t, emitter.Listeners, 3)
+		// then should have 1 listeners
+		assert.Len(t, emitter.Listeners, 1)
 
 		// when listeners are added
 		emitter.UpdateListeners(common.Listeners{listener4, listener5})
 
 		// then should have 4 listeners
-		assert.Len(t, emitter.Listeners, 4)
+		assert.Len(t, emitter.Listeners, 2)
 	})
 
 }

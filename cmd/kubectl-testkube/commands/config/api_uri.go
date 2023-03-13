@@ -3,9 +3,10 @@ package config
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 // NewConfigureAPIURICmd is api uri config command

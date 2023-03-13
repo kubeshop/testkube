@@ -49,9 +49,9 @@ func (c ExecutorClient) CreateExecutor(options UpsertExecutorOptions) (executor 
 }
 
 // UpdateExecutor updates Executor Custom Resource
-func (c ExecutorClient) UpdateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error) {
+func (c ExecutorClient) UpdateExecutor(options UpdateExecutorOptions) (executor testkube.ExecutorDetails, err error) {
 	uri := c.executorTransport.GetURI("/executors/%s", options.Name)
-	request := testkube.ExecutorUpsertRequest(options)
+	request := testkube.ExecutorUpdateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/git"
 	"github.com/kubeshop/testkube/pkg/helm"
 	"github.com/kubeshop/testkube/pkg/process"
+	"github.com/kubeshop/testkube/pkg/semver"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/version"
 )
 
 var appName string
@@ -67,7 +67,7 @@ func NewReleaseCmd() *cobra.Command {
 			ui.ExitOnError("getting chart path", err)
 
 			testkubeVersion := helm.GetVersion(chart)
-			nextTestkubeVersion := getNextVersion(dev, testkubeVersion, version.Patch)
+			nextTestkubeVersion := getNextVersion(dev, testkubeVersion, semver.Patch)
 			ui.Info("Generated new testkube version", nextTestkubeVersion)
 
 			// bump main testkube chart version
@@ -126,7 +126,7 @@ func getCurrentAppVersion() string {
 	ui.ExitOnError("getting tags", err)
 
 	versions := strings.Split(string(out), "\n")
-	currentAppVersion := version.GetNewest(versions)
+	currentAppVersion := semver.GetNewest(versions)
 	ui.Info("Current version based on tags", currentAppVersion)
 
 	return currentAppVersion
@@ -135,14 +135,14 @@ func getCurrentAppVersion() string {
 func getNextVersion(dev bool, currentVersion string, kind string) (nextVersion string) {
 	var err error
 	switch true {
-	case dev && version.IsPrerelease(currentVersion):
-		nextVersion, err = version.NextPrerelease(currentVersion)
-	case dev && !version.IsPrerelease(currentVersion):
-		nextVersion, err = version.Next(currentVersion, version.Patch)
+	case dev && semver.IsPrerelease(currentVersion):
+		nextVersion, err = semver.NextPrerelease(currentVersion)
+	case dev && !semver.IsPrerelease(currentVersion):
+		nextVersion, err = semver.Next(currentVersion, semver.Patch)
 		// semver sorting prerelease parts as strings
 		nextVersion = nextVersion + "-beta001"
 	default:
-		nextVersion, err = version.Next(currentVersion, kind)
+		nextVersion, err = semver.Next(currentVersion, kind)
 	}
 	ui.ExitOnError("getting next version for "+kind, err)
 

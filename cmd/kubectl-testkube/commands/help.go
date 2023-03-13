@@ -6,8 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -68,7 +69,7 @@ func helpMessageByGroups(cmd *cobra.Command) string {
 	delete(groups, cmdGroupCobra)
 
 	groupNames := []string{}
-	for k, _ := range groups {
+	for k := range groups {
 		groupNames = append(groupNames, k)
 	}
 	sort.Strings(groupNames)

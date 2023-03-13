@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -18,6 +19,7 @@ func NewOutputEvent(message string) Output {
 	return Output{
 		Type_:   TypeLogEvent,
 		Content: message,
+		Time:    time.Now(),
 	}
 }
 
@@ -26,6 +28,7 @@ func NewOutputLine(content []byte) Output {
 	return Output{
 		Type_:   TypeLogLine,
 		Content: string(content),
+		Time:    time.Now(),
 	}
 }
 
@@ -34,6 +37,7 @@ func NewOutputError(err error) Output {
 	return Output{
 		Type_:   TypeError,
 		Content: string(err.Error()),
+		Time:    time.Now(),
 	}
 }
 
@@ -42,6 +46,7 @@ func NewOutputResult(result testkube.ExecutionResult) Output {
 	return Output{
 		Type_:  TypeResult,
 		Result: &result,
+		Time:   time.Now(),
 	}
 }
 

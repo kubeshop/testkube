@@ -3,12 +3,13 @@ package webhooks
 import (
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewCreateWebhookCmd() *cobra.Command {

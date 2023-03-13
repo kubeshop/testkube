@@ -1,7 +1,7 @@
 package testkube
 
-func NewRunningExecutionResult() ExecutionResult {
-	return ExecutionResult{
+func NewRunningExecutionResult() *ExecutionResult {
+	return &ExecutionResult{
 		Status: StatusPtr(RUNNING_ExecutionStatus),
 	}
 }
@@ -17,6 +17,7 @@ func NewErrorExecutionResult(err error) ExecutionResult {
 	return ExecutionResult{
 		Status:       StatusPtr(FAILED_ExecutionStatus),
 		ErrorMessage: err.Error(),
+		Output:       err.Error(),
 	}
 }
 
@@ -67,20 +68,20 @@ func (e *ExecutionResult) IsTimeout() bool {
 	return *e.Status == TIMEOUT_ExecutionStatus
 }
 
-func (e *ExecutionResult) Err(err error) ExecutionResult {
+func (e *ExecutionResult) Err(err error) *ExecutionResult {
 	e.Status = ExecutionStatusFailed
 	e.ErrorMessage = err.Error()
-	return *e
+	return e
 }
 
-// Errs return error result if any of passed errors is not nil
-func (e *ExecutionResult) WithErrors(errors ...error) ExecutionResult {
+// WithErrors return error result if any of passed errors is not nil
+func (e *ExecutionResult) WithErrors(errors ...error) *ExecutionResult {
 	for _, err := range errors {
 		if err != nil {
 			return e.Err(err)
 		}
 	}
-	return *e
+	return e
 }
 
 func (e *ExecutionResult) FailedStepsCount() int {
@@ -91,4 +92,31 @@ func (e *ExecutionResult) FailedStepsCount() int {
 		}
 	}
 	return count
+}
+
+// GetDeepCopy gives a copy of ExecutionResult with new pointers
+func (e *ExecutionResult) GetDeepCopy() *ExecutionResult {
+	if e == nil {
+		return nil
+	}
+
+	status := new(ExecutionStatus)
+	if e.Status != nil {
+		*status = *e.Status
+	}
+
+	reports := new(ExecutionResultReports)
+	if e.Reports != nil {
+		*reports = *e.Reports
+	}
+
+	result := ExecutionResult{
+		Status:       status,
+		Output:       e.Output,
+		OutputType:   e.OutputType,
+		ErrorMessage: e.ErrorMessage,
+		Steps:        e.Steps,
+		Reports:      reports,
+	}
+	return &result
 }

@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Name }}-scraper
+  namespace: {{ .Namespace }}
+spec:
+  {{- if gt .ActiveDeadlineSeconds 0 }}
+  activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
+  {{- end }}
+  template:
+    spec:
+      containers:
+        - name: {{ .Name }}-scraper
+          image: {{ .ScraperImage }}
+          imagePullPolicy: Always
+          command:
+            - "/bin/runner"
+            - '{{ .Jsn }}'
+          {{- if .ArtifactRequest }}
+          volumeMounts:
+            - name: artifact-volume
+              mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
+      {{- if .ArtifactRequest }}
+      volumes:
+        - name: artifact-volume
+          persistentVolumeClaim:
+            claimName: {{ .Name }}-pvc
+      {{- end }}
+      restartPolicy: Never
+      {{- if .ServiceAccountName }}
+      serviceAccountName: {{ .ServiceAccountName }}
+      {{- end }}
+      {{- if gt (len .ImagePullSecrets) 0 }}
+      imagePullSecrets:
+      {{- range $secret := .ImagePullSecrets }}
+      - name: {{ $secret -}}
+      {{- end }}
+      {{- end }}
+  backoffLimit: 0
+  ttlSecondsAfterFinished: {{ .DelaySeconds }}

@@ -1,16 +1,17 @@
 package executors
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func UpdateExecutorCmd() *cobra.Command {
 	var (
-		types, command, executorArgs, imagePullSecretNames, features []string
-		name, executorType, image, uri, jobTemplate                  string
-		labels                                                       map[string]string
+		types, command, executorArgs, imagePullSecretNames, features, contentTypes []string
+		name, executorType, image, uri, jobTemplate, iconURI, docsURI              string
+		labels, tooltips                                                           map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -29,12 +30,7 @@ func UpdateExecutorCmd() *cobra.Command {
 				ui.Failf("Executor with name '%s' not exists in namespace %s", name, namespace)
 			}
 
-			var labels map[string]string
-			if executor.Executor != nil {
-				labels = executor.Executor.Labels
-			}
-
-			options, err := NewUpsertExecutorOptionsFromFlags(cmd, labels)
+			options, err := NewUpdateExecutorOptionsFromFlags(cmd)
 			ui.ExitOnError("getting executor options", err)
 
 			_, err = client.UpdateExecutor(options)
@@ -56,6 +52,10 @@ func UpdateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringArrayVar(&features, "feature", []string{}, "feature provided by executor")
+	cmd.Flags().StringVarP(&iconURI, "icon-uri", "", "", "URI to executor icon")
+	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
+	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
+	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
 
 	return cmd
 }

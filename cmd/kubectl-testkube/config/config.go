@@ -1,22 +1,20 @@
 package config
 
-import (
-	"github.com/kubeshop/testkube/pkg/ui"
-)
-
-var storage Storage
-
-// init load default configs for testkube global configuration used in RootCmd
-func init() {
-	storage = Storage{}
-	err := storage.Init()
-	ui.WarnOnError("can't init configuration, using default values", err)
-}
+// defaultDirectory is the default directory for the config file
+var defaultDirectory = ""
 
 func Load() (Data, error) {
+	storage, err := GetStorage(defaultDirectory)
+	if err != nil {
+		return Data{}, err
+	}
 	return storage.Load()
 }
 
 func Save(data Data) error {
+	storage, err := GetStorage(defaultDirectory)
+	if err != nil {
+		return err
+	}
 	return storage.Save(data)
 }

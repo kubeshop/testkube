@@ -6,22 +6,37 @@ on:
       - opened
       - edited
       - synchronize
-    
+
 permissions:
   contents: read
   pull-requests: read
 
 jobs:
-  golangci:
+  lint-openapi:
+    name: Lint OpenAPI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: OpenAPI Lint Checks
+        uses: nwestfall/openapi-action@v1.0.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          file: api/v1/testkube.yaml
+
+  lint-go:
     name: Lint Go
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.18
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
@@ -31,9 +46,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Linting GO code
+
+      - name: Lint using golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
-          args: --enable revive --timeout=5m
+          args: --timeout=5m
           only-new-issues: true

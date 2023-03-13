@@ -3,9 +3,10 @@ package detector
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/stretchr/testify/assert"
 )
 
 const validK6Script = `import http from 'k6/http';

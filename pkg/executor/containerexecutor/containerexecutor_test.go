@@ -5,115 +5,150 @@ import (
 	"testing"
 	"time"
 
-	v3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+
+	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 )
 
+var ctx = context.Background()
+
 func TestExecuteAsync(t *testing.T) {
+	t.Parallel()
+
 	ce := ContainerExecutor{
-		clientSet:  getFakeClient("1"),
-		log:        logger(),
-		repository: FakeResultRepository{},
-		metrics:    FakeMetricCounter{},
-		emitter:    FakeEmitter{},
-		namespace:  "default",
-		configMap:  FakeConfigRepository{},
+		clientSet:   getFakeClient("1"),
+		log:         logger(),
+		repository:  FakeResultRepository{},
+		metrics:     FakeMetricCounter{},
+		emitter:     FakeEmitter{},
+		namespace:   "default",
+		configMap:   FakeConfigRepository{},
+		testsClient: FakeTestsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
 	options := client.ExecuteOptions{}
-	res, err := ce.Execute(execution, options)
+	res, err := ce.Execute(ctx, execution, options)
 	assert.NoError(t, err)
 
-	// Status is either running or passed, depending if async goroutine managed to finish
+	// Status is either running or passed, depends if async goroutine managed to finish
 	assert.Contains(t,
 		[]testkube.ExecutionStatus{testkube.RUNNING_ExecutionStatus, testkube.PASSED_ExecutionStatus},
 		*res.Status)
 }
 
 func TestExecuteSync(t *testing.T) {
+	t.Parallel()
+
 	ce := ContainerExecutor{
-		clientSet:  getFakeClient("1"),
-		log:        logger(),
-		repository: FakeResultRepository{},
-		metrics:    FakeMetricCounter{},
-		emitter:    FakeEmitter{},
-		namespace:  "default",
-		configMap:  FakeConfigRepository{},
+		clientSet:   getFakeClient("1"),
+		log:         logger(),
+		repository:  FakeResultRepository{},
+		metrics:     FakeMetricCounter{},
+		emitter:     FakeEmitter{},
+		namespace:   "default",
+		configMap:   FakeConfigRepository{},
+		testsClient: FakeTestsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
 	options := client.ExecuteOptions{ImagePullSecretNames: []string{"secret-name1"}}
-	res, err := ce.ExecuteSync(execution, options)
+	res, err := ce.ExecuteSync(ctx, execution, options)
 	assert.NoError(t, err)
 	assert.Equal(t, testkube.PASSED_ExecutionStatus, *res.Status)
 }
 
-func TestNewJobSpecEmptyArgs(t *testing.T) {
+func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
-		Name:      "name",
-		Namespace: "namespace",
-		InitImage: "kubeshop/testkube-executor-init:0.7.10",
-		Image:     "ubuntu",
-		Args:      []string{},
+		Name:        "name",
+		Namespace:   "namespace",
+		InitImage:   "kubeshop/testkube-executor-init:0.7.10",
+		Image:       "ubuntu",
+		JobTemplate: defaultJobTemplate,
+		Args:        []string{},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
 
-func TestNewJobSpecWithArgs(t *testing.T) {
+func TestNewExecutorJobSpecWithArgs(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
 		Name:                  "name",
 		Namespace:             "namespace",
 		InitImage:             "kubeshop/testkube-executor-init:0.7.10",
 		Image:                 "curl",
+		JobTemplate:           defaultJobTemplate,
 		ImagePullSecrets:      []string{"secret-name"},
 		Command:               []string{"/bin/curl"},
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
 		Envs:                  map[string]string{"key": "value"},
-		Variables:             map[string]testkube.Variable{"aa": testkube.Variable{Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
+		Variables:             map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
 	wantEnvs := []corev1.EnvVar{
-		{Name: "DEBUG", Value: ""}, {Name: "RUNNER_ENDPOINT", Value: ""},
-		{Name: "RUNNER_ACCESSKEYID", Value: ""}, {Name: "RUNNER_SECRETACCESSKEY", Value: ""},
-		{Name: "RUNNER_LOCATION", Value: ""}, {Name: "RUNNER_TOKEN", Value: ""},
-		{Name: "RUNNER_SSL", Value: ""}, {Name: "RUNNER_SCRAPPERENABLED", Value: ""},
-		{Name: "RUNNER_DATADIR", Value: "/data"}, {Name: "NAME", Value: "value"},
+		{Name: "DEBUG", Value: ""},
+		{Name: "RUNNER_ENDPOINT", Value: ""},
+		{Name: "RUNNER_ACCESSKEYID", Value: ""},
+		{Name: "RUNNER_SECRETACCESSKEY", Value: ""},
+		{Name: "RUNNER_LOCATION", Value: ""},
+		{Name: "RUNNER_TOKEN", Value: ""},
+		{Name: "RUNNER_BUCKET", Value: ""},
+		{Name: "RUNNER_SSL", Value: ""},
+		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
+		{Name: "RUNNER_DATADIR", Value: "/data"},
+		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
+		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
+		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
+		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
 		{Name: "key", Value: "value"},
+		{Name: "aa", Value: "bb"},
 	}
 
-	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
+	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
-func TestNewJobSpecWithoutInitImage(t *testing.T) {
+func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
-		Name:      "name",
-		Namespace: "namespace",
-		InitImage: "",
-		Image:     "ubuntu",
-		Args:      []string{},
+		Name:        "name",
+		Namespace:   "namespace",
+		InitImage:   "",
+		Image:       "ubuntu",
+		JobTemplate: defaultJobTemplate,
+		Args:        []string{},
 	}
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
 
-func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
+func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -121,28 +156,31 @@ func TestNewJobSpecWithWorkingDirRelative(t *testing.T) {
 			TestNamespace: "namespace",
 		},
 		client.ExecuteOptions{
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{
 						WorkingDir: "relative/path",
 					},
 				},
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
 	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
-func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
+func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -150,28 +188,31 @@ func TestNewJobSpecWithWorkingDirAbsolute(t *testing.T) {
 			TestNamespace: "namespace",
 		},
 		client.ExecuteOptions{
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{
 						WorkingDir: "/absolute/path",
 					},
 				},
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
 	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
-func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
+func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
-		"kubeshop/testkube-executor-init:0.7.10",
+		executor.Images{},
+		executor.Templates{},
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -180,17 +221,17 @@ func TestNewJobSpecWithoutWorkingDir(t *testing.T) {
 		},
 		client.ExecuteOptions{
 			Namespace: "namespace",
-			TestSpec: v3.TestSpec{
-				ExecutionRequest: &v3.ExecutionRequest{
+			TestSpec: testsv3.TestSpec{
+				ExecutionRequest: &testsv3.ExecutionRequest{
 					Image: "ubuntu",
 				},
-				Content: &v3.TestContent{
-					Repository: &v3.Repository{},
+				Content: &testsv3.TestContent{
+					Repository: &testsv3.Repository{},
 				},
 			},
 		},
 	)
-	spec, err := NewJobSpec(logger(), jobOptions)
+	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -247,7 +288,91 @@ func (FakeEmitter) Notify(event testkube.Event) {
 type FakeResultRepository struct {
 }
 
-func (FakeResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.ExecutionResult) error {
+func (r FakeResultRepository) GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (result testkube.ExecutionsTotals, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) Insert(ctx context.Context, result testkube.Execution) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) Update(ctx context.Context, result testkube.Execution) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTest(ctx context.Context, testName string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteAll(ctx context.Context) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTests(ctx context.Context, testNames []string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r FakeResultRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (FakeResultRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
+	return testkube.Execution{}, nil
+}
+
+func (FakeResultRepository) UpdateResult(ctx context.Context, id string, execution testkube.Execution) error {
 	return nil
 }
 func (FakeResultRepository) StartExecution(ctx context.Context, id string, startTime time.Time) error {
@@ -272,6 +397,69 @@ func (FakeConfigRepository) Get(ctx context.Context) (testkube.Config, error) {
 	return testkube.Config{}, nil
 }
 
-func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) error {
+func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) (testkube.Config, error) {
+	return config, nil
+}
+
+type FakeTestsClient struct {
+}
+
+func (FakeTestsClient) List(selector string) (*testsv3.TestList, error) {
+	return &testsv3.TestList{}, nil
+}
+
+func (FakeTestsClient) ListLabels() (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
+func (FakeTestsClient) Get(name string) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Create(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Update(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+	return &testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) Delete(name string) error {
+	return nil
+}
+
+func (FakeTestsClient) DeleteAll() error {
+	return nil
+}
+
+func (FakeTestsClient) CreateTestSecrets(test *testsv3.Test) error {
+	return nil
+}
+
+func (FakeTestsClient) UpdateTestSecrets(test *testsv3.Test) error {
+	return nil
+}
+
+func (FakeTestsClient) LoadTestVariablesSecret(test *testsv3.Test) (*corev1.Secret, error) {
+	return &corev1.Secret{}, nil
+}
+
+func (FakeTestsClient) GetCurrentSecretUUID(testName string) (string, error) {
+	return "", nil
+}
+
+func (FakeTestsClient) GetSecretTestVars(testName, secretUUID string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
+func (FakeTestsClient) ListByNames(names []string) ([]testsv3.Test, error) {
+	return []testsv3.Test{}, nil
+}
+
+func (FakeTestsClient) DeleteByLabels(selector string) error {
+	return nil
+}
+
+func (FakeTestsClient) UpdateStatus(test *testsv3.Test) error {
 	return nil
 }

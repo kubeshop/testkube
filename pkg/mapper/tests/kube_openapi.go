@@ -1,10 +1,11 @@
 package tests
 
 import (
+	v1 "k8s.io/api/core/v1"
+
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	v1 "k8s.io/api/core/v1"
 )
 
 // MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list
@@ -29,6 +30,7 @@ func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Schedule = crTest.Spec.Schedule
 	test.ExecutionRequest = MapExecutionRequestFromSpec(crTest.Spec.ExecutionRequest)
 	test.Uploads = crTest.Spec.Uploads
+	test.Status = MapStatusFromSpec(crTest.Status)
 	return
 }
 
@@ -47,7 +49,11 @@ func MergeVariablesAndParams(variables map[string]testsv3.Variable, params map[s
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 
@@ -64,12 +70,13 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 		content.Uri = specContent.Uri
 		if specContent.Repository != nil {
 			content.Repository = &testkube.Repository{
-				Type_:      specContent.Repository.Type_,
-				Uri:        specContent.Repository.Uri,
-				Branch:     specContent.Repository.Branch,
-				Commit:     specContent.Repository.Commit,
-				Path:       specContent.Repository.Path,
-				WorkingDir: specContent.Repository.WorkingDir,
+				Type_:             specContent.Repository.Type_,
+				Uri:               specContent.Repository.Uri,
+				Branch:            specContent.Repository.Branch,
+				Commit:            specContent.Repository.Commit,
+				Path:              specContent.Repository.Path,
+				WorkingDir:        specContent.Repository.WorkingDir,
+				CertificateSecret: specContent.Repository.CertificateSecret,
 			}
 
 			if specContent.Repository.UsernameSecret != nil {
@@ -107,10 +114,19 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		return nil
 	}
 
+	var artifactRequest *testkube.ArtifactRequest
+	if specExecutionRequest.ArtifactRequest != nil {
+		artifactRequest = &testkube.ArtifactRequest{
+			StorageClassName: specExecutionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:  specExecutionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:             specExecutionRequest.ArtifactRequest.Dirs,
+		}
+	}
+
 	return &testkube.ExecutionRequest{
 		Name:                  specExecutionRequest.Name,
 		TestSuiteName:         specExecutionRequest.TestSuiteName,
-		Number:                int32(specExecutionRequest.Number),
+		Number:                specExecutionRequest.Number,
 		ExecutionLabels:       specExecutionRequest.ExecutionLabels,
 		Namespace:             specExecutionRequest.Namespace,
 		VariablesFile:         specExecutionRequest.VariablesFile,
@@ -127,6 +143,13 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		HttpProxy:             specExecutionRequest.HttpProxy,
 		HttpsProxy:            specExecutionRequest.HttpsProxy,
 		ActiveDeadlineSeconds: specExecutionRequest.ActiveDeadlineSeconds,
+		ArtifactRequest:       artifactRequest,
+		JobTemplate:           specExecutionRequest.JobTemplate,
+		PreRunScript:          specExecutionRequest.PreRunScript,
+		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
+		NegativeTest:          specExecutionRequest.NegativeTest,
+		EnvConfigMaps:         MapEnvReferences(specExecutionRequest.EnvConfigMaps),
+		EnvSecrets:            MapEnvReferences(specExecutionRequest.EnvSecrets),
 	}
 }
 
@@ -138,6 +161,43 @@ func MapImagePullSecrets(lor []v1.LocalObjectReference) []testkube.LocalObjectRe
 	var res []testkube.LocalObjectReference
 	for _, ref := range lor {
 		res = append(res, testkube.LocalObjectReference{Name: ref.Name})
+	}
+
+	return res
+}
+
+// MapStatusFromSpec maps CRD to OpenAPI spec TestStatus
+func MapStatusFromSpec(specStatus testsv3.TestStatus) *testkube.TestStatus {
+	if specStatus.LatestExecution == nil {
+		return nil
+	}
+
+	return &testkube.TestStatus{
+		LatestExecution: &testkube.ExecutionCore{
+			Id:        specStatus.LatestExecution.Id,
+			Number:    specStatus.LatestExecution.Number,
+			Status:    (*testkube.ExecutionStatus)(specStatus.LatestExecution.Status),
+			StartTime: specStatus.LatestExecution.StartTime.Time,
+			EndTime:   specStatus.LatestExecution.EndTime.Time,
+		},
+	}
+}
+
+// MapEnvReferences maps CRD to OpenAPI spec EnvReference
+func MapEnvReferences(envs []testsv3.EnvReference) []testkube.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testkube.EnvReference
+	for _, env := range envs {
+		res = append(res, testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: env.Name,
+			},
+			Mount:          env.Mount,
+			MountPath:      env.MountPath,
+			MapToVariables: env.MapToVariables,
+		})
 	}
 
 	return res

@@ -1,10 +1,11 @@
 package testsuites
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
@@ -38,7 +39,7 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 	test.Schedule = cr.Spec.Schedule
 	test.Created = cr.CreationTimestamp.Time
 	test.ExecutionRequest = MapExecutionRequestFromSpec(cr.Spec.ExecutionRequest)
-
+	test.Status = MapStatusFromSpec(cr.Status)
 	return
 }
 
@@ -58,7 +59,7 @@ func mapCRStepToAPI(crstep testsuitesv2.TestSuiteStepSpec) (teststep testkube.Te
 	case crstep.Delay != nil:
 		teststep = testkube.TestSuiteStep{
 			Delay: &testkube.TestSuiteStepDelay{
-				Duration: int32(crstep.Delay.Duration),
+				Duration: crstep.Delay.Duration,
 			},
 		}
 	}
@@ -98,6 +99,17 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv2.Va
 			}
 		}
 
+		if v.ConfigMapRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.ConfigMapRef.Name,
+					},
+					Key: v.ConfigMapRef.Key,
+				},
+			}
+		}
+
 		out[k] = variable
 	}
 	return out
@@ -118,7 +130,11 @@ func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params 
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 
@@ -142,5 +158,21 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExe
 		HttpProxy:       specExecutionRequest.HttpProxy,
 		HttpsProxy:      specExecutionRequest.HttpsProxy,
 		Timeout:         specExecutionRequest.Timeout,
+	}
+}
+
+// MapStatusFromSpec maps CRD to OpenAPI spec TestSuiteStatus
+func MapStatusFromSpec(specStatus testsuitesv2.TestSuiteStatus) *testkube.TestSuiteStatus {
+	if specStatus.LatestExecution == nil {
+		return nil
+	}
+
+	return &testkube.TestSuiteStatus{
+		LatestExecution: &testkube.TestSuiteExecutionCore{
+			Id:        specStatus.LatestExecution.Id,
+			Status:    (*testkube.TestSuiteExecutionStatus)(specStatus.LatestExecution.Status),
+			StartTime: specStatus.LatestExecution.StartTime.Time,
+			EndTime:   specStatus.LatestExecution.EndTime.Time,
+		},
 	}
 }

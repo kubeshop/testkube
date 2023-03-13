@@ -1,19 +1,21 @@
 package testsources
 
 import (
+	"fmt"
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources/renderer"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetTestSourceCmd() *cobra.Command {
-	var name, namespace string
+	var name string
 	var selectors []string
 	var crdOnly bool
 
@@ -32,6 +34,10 @@ func NewGetTestSourceCmd() *cobra.Command {
 				ui.ExitOnError("getting test source: "+name, err)
 
 				if crdOnly {
+					if testSource.Data != "" {
+						testSource.Data = fmt.Sprintf("%q", testSource.Data)
+					}
+
 					common.UIPrintCRD(crd.TemplateTestSource, testSource, &firstEntry)
 					return
 				}
@@ -44,6 +50,10 @@ func NewGetTestSourceCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, testSource := range testSources {
+						if testSource.Data != "" {
+							testSource.Data = fmt.Sprintf("%q", testSource.Data)
+						}
+
 						common.UIPrintCRD(crd.TemplateTestSource, testSource, &firstEntry)
 					}
 
@@ -57,7 +67,6 @@ func NewGetTestSourceCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test source name, you can also pass it as argument")
-	cmd.Flags().StringVarP(&namespace, "namespace", "", "testkube", "Kubernetes namespace")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 

@@ -49,9 +49,9 @@ func (c TestSourceClient) CreateTestSource(options UpsertTestSourceOptions) (tes
 }
 
 // UpdateTestSource updates TestSource Custom Resource
-func (c TestSourceClient) UpdateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error) {
+func (c TestSourceClient) UpdateTestSource(options UpdateTestSourceOptions) (testSource testkube.TestSource, err error) {
 	uri := c.testSourceTransport.GetURI("/test-sources/%s", options.Name)
-	request := testkube.TestSourceUpsertRequest(options)
+	request := testkube.TestSourceUpdateRequest(options)
 
 	body, err := json.Marshal(request)
 	if err != nil {

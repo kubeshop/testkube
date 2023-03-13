@@ -3,27 +3,31 @@ package triggers
 import (
 	"context"
 
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
+	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
+
 	networkingv1 "k8s.io/api/networking/v1"
 
 	"github.com/google/go-cmp/cmp"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
+
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
 )
 
 type k8sInformers struct {
@@ -37,6 +41,7 @@ type k8sInformers struct {
 	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
 	testSuiteInformer    testkubeinformerv2.TestSuiteInformer
 	testInformer         testkubeinformerv3.TestInformer
+	configMapInformer    coreinformerv1.ConfigMapInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
@@ -48,6 +53,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	serviceInformer := f.Core().V1().Services()
 	ingressInformer := f.Networking().V1().Ingresses()
 	clusterEventInformer := f.Core().V1().Events()
+	configMapInformer := f.Core().V1().ConfigMaps()
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
 	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
@@ -65,6 +71,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		testTriggerInformer:  testTriggerInformer,
 		testSuiteInformer:    testSuiteInformer,
 		testInformer:         testInformer,
+		configMapInformer:    configMapInformer,
 	}
 }
 
@@ -116,6 +123,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
+	s.informers.configMapInformer.Informer().AddEventHandler(s.configMapEventHandler(ctx))
 
 	s.logger.Debugf("trigger service: starting pod informer")
 	go s.informers.podInformer.Informer().Run(stop)
@@ -137,9 +145,16 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
 	go s.informers.testInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting config map informer")
+	go s.informers.configMapInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getPodConditions(ctx, s.clientset, object)
+		}
+	}
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			pod, ok := obj.(*corev1.Pod)
@@ -155,7 +170,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s created", pod.Namespace, pod.Name)
-			event := newPodEvent(testtrigger.EventCreated, pod)
+			event := newWatcherEvent(testtrigger.EventCreated, pod, testtrigger.ResourcePod, withConditionsGetter(getConditions(pod)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create pod event: %v", err)
 			}
@@ -167,7 +182,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
-			event := newPodEvent(testtrigger.EventDeleted, pod)
+			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod, withConditionsGetter(getConditions(pod)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete pod event: %v", err)
 			}
@@ -176,6 +191,11 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 }
 
 func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getDeploymentConditions(ctx, s.clientset, object)
+		}
+	}
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			deployment, ok := obj.(*appsv1.Deployment)
@@ -191,7 +211,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.logger.Debugf("emiting event: deployment %s/%s created", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(testtrigger.EventCreated, deployment, nil)
+			event := newWatcherEvent(testtrigger.EventCreated, deployment, testtrigger.ResourceDeployment, withConditionsGetter(getConditions(deployment)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create deployment event: %v", err)
 			}
@@ -222,7 +242,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				newDeployment.Namespace, newDeployment.Name,
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
-			event := newDeploymentEvent(testtrigger.EventModified, newDeployment, causes)
+			event := newWatcherEvent(testtrigger.EventModified, newDeployment, testtrigger.ResourceDeployment, withCauses(causes), withConditionsGetter(getConditions(newDeployment)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
@@ -234,7 +254,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: deployment %s/%s deleted", deployment.Namespace, deployment.Name)
-			event := newDeploymentEvent(testtrigger.EventDeleted, deployment, nil)
+			event := newWatcherEvent(testtrigger.EventDeleted, deployment, testtrigger.ResourceDeployment, withConditionsGetter(getConditions(deployment)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete deployment event: %v", err)
 			}
@@ -243,6 +263,11 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 }
 
 func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getStatefulSetConditions(ctx, s.clientset, object)
+		}
+	}
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			statefulset, ok := obj.(*appsv1.StatefulSet)
@@ -258,7 +283,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: statefulset %s/%s created", statefulset.Namespace, statefulset.Name)
-			event := newStatefulSetEvent(testtrigger.EventCreated, statefulset)
+			event := newWatcherEvent(testtrigger.EventCreated, statefulset, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(statefulset)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create statefulset event: %v", err)
 			}
@@ -288,7 +313,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				"trigger service: watcher component: emiting event: statefulset %s/%s updated",
 				newStatefulSet.Namespace, newStatefulSet.Name,
 			)
-			event := newStatefulSetEvent(testtrigger.EventModified, newStatefulSet)
+			event := newWatcherEvent(testtrigger.EventModified, newStatefulSet, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(newStatefulSet)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update statefulset event: %v", err)
 			}
@@ -300,7 +325,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: statefulset %s/%s deleted", statefulset.Namespace, statefulset.Name)
-			event := newStatefulSetEvent(testtrigger.EventDeleted, statefulset)
+			event := newWatcherEvent(testtrigger.EventDeleted, statefulset, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(statefulset)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete statefulset event: %v", err)
 			}
@@ -309,6 +334,11 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 }
 
 func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getDaemonSetConditions(ctx, s.clientset, object)
+		}
+	}
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			daemonset, ok := obj.(*appsv1.DaemonSet)
@@ -324,7 +354,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: daemonset %s/%s created", daemonset.Namespace, daemonset.Name)
-			event := newDaemonSetEvent(testtrigger.EventCreated, daemonset)
+			event := newWatcherEvent(testtrigger.EventCreated, daemonset, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(daemonset)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create daemonset event: %v", err)
 			}
@@ -354,7 +384,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				"trigger service: watcher component: emiting event: daemonset %s/%s updated",
 				newDaemonSet.Namespace, newDaemonSet.Name,
 			)
-			event := newDaemonSetEvent(testtrigger.EventModified, newDaemonSet)
+			event := newWatcherEvent(testtrigger.EventModified, newDaemonSet, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(newDaemonSet)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update daemonset event: %v", err)
 			}
@@ -366,7 +396,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: daemonset %s/%s deleted", daemonset.Namespace, daemonset.Name)
-			event := newDaemonSetEvent(testtrigger.EventDeleted, daemonset)
+			event := newWatcherEvent(testtrigger.EventDeleted, daemonset, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(daemonset)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete daemonset event: %v", err)
 			}
@@ -375,6 +405,11 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 }
 
 func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getServiceConditions(ctx, s.clientset, object)
+		}
+	}
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			service, ok := obj.(*corev1.Service)
@@ -390,7 +425,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: service %s/%s created", service.Namespace, service.Name)
-			event := newServiceEvent(testtrigger.EventCreated, service)
+			event := newWatcherEvent(testtrigger.EventCreated, service, testtrigger.ResourceService, withConditionsGetter(getConditions(service)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create service event: %v", err)
 			}
@@ -420,7 +455,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				"trigger service: watcher component: emiting event: service %s/%s updated",
 				newService.Namespace, newService.Name,
 			)
-			event := newServiceEvent(testtrigger.EventModified, newService)
+			event := newWatcherEvent(testtrigger.EventModified, newService, testtrigger.ResourceService, withConditionsGetter(getConditions(newService)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update service event: %v", err)
 			}
@@ -432,7 +467,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: service %s/%s deleted", service.Namespace, service.Name)
-			event := newServiceEvent(testtrigger.EventDeleted, service)
+			event := newWatcherEvent(testtrigger.EventDeleted, service, testtrigger.ResourceService, withConditionsGetter(getConditions(service)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete service event: %v", err)
 			}
@@ -456,7 +491,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: ingress %s/%s created", ingress.Namespace, ingress.Name)
-			event := newIngressEvent(testtrigger.EventCreated, ingress)
+			event := newWatcherEvent(testtrigger.EventCreated, ingress, testtrigger.ResourceIngress)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create ingress event: %v", err)
 			}
@@ -486,7 +521,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				"trigger service: watcher component: emiting event: ingress %s/%s updated",
 				oldIngress.Namespace, newIngress.Name,
 			)
-			event := newIngressEvent(testtrigger.EventModified, newIngress)
+			event := newWatcherEvent(testtrigger.EventModified, newIngress, testtrigger.ResourceIngress)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update ingress event: %v", err)
 			}
@@ -498,7 +533,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: ingress %s/%s deleted", ingress.Namespace, ingress.Name)
-			event := newIngressEvent(testtrigger.EventDeleted, ingress)
+			event := newWatcherEvent(testtrigger.EventDeleted, ingress, testtrigger.ResourceIngress)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete ingress event: %v", err)
 			}
@@ -522,7 +557,7 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: cluster event %s/%s created", clusterEvent.Namespace, clusterEvent.Name)
-			event := NewClusterEventEvent(testtrigger.EventCreated, clusterEvent)
+			event := newWatcherEvent(testtrigger.EventCreated, clusterEvent, testtrigger.ResourceEvent)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create cluster event event: %v", err)
 			}
@@ -604,6 +639,72 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				test.Namespace, test.Name,
 			)
 			s.addTest(test)
+		},
+	}
+}
+
+func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			configMap, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf("failed to process create config map event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			if inPast(configMap.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: config map %s/%s was created in the past",
+					configMap.Namespace, configMap.Name,
+				)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: config map %s/%s created", configMap.Namespace, configMap.Name)
+			event := newWatcherEvent(testtrigger.EventCreated, configMap, testtrigger.ResourceConfigMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching create config map event: %v", err)
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldConfigMap, ok := oldObj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update config map event for old object due to it being an unexpected type, received type %+v",
+					oldConfigMap,
+				)
+				return
+			}
+			newConfigMap, ok := newObj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update config map event for new object due to it being an unexpected type, received type %+v",
+					newConfigMap,
+				)
+				return
+			}
+			if cmp.Equal(oldConfigMap.Data, newConfigMap.Data) && cmp.Equal(oldConfigMap.BinaryData, newConfigMap.BinaryData) {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: config map data and binary data are equal")
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emiting event: config map %s/%s updated",
+				oldConfigMap.Namespace, newConfigMap.Name,
+			)
+			event := newWatcherEvent(testtrigger.EventModified, newConfigMap, testtrigger.ResourceConfigMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching update config map event: %v", err)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			configMap, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				s.logger.Errorf("failed to process delete config map event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: config map %s/%s deleted", configMap.Namespace, configMap.Name)
+			event := newWatcherEvent(testtrigger.EventDeleted, configMap, testtrigger.ResourceConfigMap)
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching delete config map event: %v", err)
+			}
 		},
 	}
 }

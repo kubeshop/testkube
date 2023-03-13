@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -22,14 +24,22 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if request.Data != "" {
+				request.Data = fmt.Sprintf("%q", request.Data)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
 
 		testSource := testsourcesmapper.MapAPIToCRD(request)
 		testSource.Namespace = s.Namespace
+		var secrets map[string]string
+		if request.Repository != nil {
+			secrets = getTestSecretsData(request.Repository.Username, request.Repository.Token)
+		}
 
-		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
+		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
@@ -41,28 +51,60 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestSourceUpsertRequest
+		var request testkube.TestSourceUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSource, err := s.TestSourcesClient.Get(request.Name)
+		testSource, err := s.TestSourcesClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
+			return s.Error(c, http.StatusBadGateway, err)
+		}
+
+		// map update test source but load spec only to not override metadata.ResourceVersion
+		testSourceSpec := testsourcesmapper.MapUpdateToSpec(request, testSource)
+
+		var option *testsources.Option
+		if request.Repository != nil && (*request.Repository) != nil {
+			username := (*request.Repository).Username
+			token := (*request.Repository).Token
+			if username != nil || token != nil {
+				var uValue, tValue string
+				if username != nil {
+					uValue = *username
+				}
+
+				if token != nil {
+					tValue = *token
+				}
+
+				option = &testsources.Option{Secrets: getTestSecretsData(uValue, tValue)}
+			}
+		}
+
+		var updatedTestSource *testsourcev1.TestSource
+		if option != nil {
+			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec, *option)
+		} else {
+			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec)
+		}
+
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		testSourceSpec := testsourcesmapper.MapAPIToCRD(request)
-		testSource.Spec = testSourceSpec.Spec
-		testSource.Labels = request.Labels
-
-		testSource, err = s.TestSourcesClient.Update(testSource, testsources.Option{Secrets: getTestSourceSecretsData(&request)})
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
-		}
-
-		return c.JSON(testSource)
+		return c.JSON(updatedTestSource)
 	}
 }
 
@@ -76,10 +118,15 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 		results := []testkube.TestSource{}
 		for _, item := range list.Items {
 			results = append(results, testsourcesmapper.MapCRDToAPI(item))
-
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range results {
+				if results[i].Data != "" {
+					results[i].Data = fmt.Sprintf("%q", results[i].Data)
+				}
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, results)
 			return s.getCRDs(c, data, err)
 		}
@@ -99,6 +146,10 @@ func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 
 		result := testsourcesmapper.MapCRDToAPI(*item)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if result.Data != "" {
+				result.Data = fmt.Sprintf("%q", result.Data)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSource{result})
 			return s.getCRDs(c, data, err)
 		}
@@ -163,10 +214,16 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 		var result testkube.TestSourceBatchResult
 		for name, item := range testSourceBatch {
 			testSource := testsourcesmapper.MapAPIToCRD(item)
+			var username, token string
+			if item.Repository != nil {
+				username = item.Repository.Username
+				token = item.Repository.Token
+			}
+
 			if existed, ok := testSourceMap[name]; !ok {
 				testSource.Namespace = s.Namespace
 
-				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadRequest, err)
 				}
@@ -176,7 +233,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 				existed.Spec = testSource.Spec
 				existed.Labels = item.Labels
 
-				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(&item)})
+				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadGateway, err)
 				}
@@ -200,15 +257,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	}
 }
 
-func getTestSourceSecretsData(testSource *testkube.TestSourceUpsertRequest) map[string]string {
-	// create secrets for test
-	username := ""
-	token := ""
-	if testSource.Repository != nil {
-		username = testSource.Repository.Username
-		token = testSource.Repository.Token
-	}
-
+func getTestSourceSecretsData(username, token string) map[string]string {
 	if username == "" && token == "" {
 		return nil
 	}

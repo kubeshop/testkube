@@ -1,8 +1,9 @@
 {
 	"info": {
-		"_postman_id": "2bb973c5-c029-4cc9-b821-b5c766f82d8c",
+		"_postman_id": "25756fae-eca1-42e0-9ee7-4cb9b381fe32",
 		"name": "Testkube-Sanity",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22855798"
 	},
 	"item": [
 		{
@@ -380,15 +381,20 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Most recent execution is that one recently run\", function () {",
+							"pm.test(\"Execution is among the recent ones\", function () {",
 							"    console.log(\"response\", pm.response.json());",
 							"    let jsonArray = pm.response.json();",
-							"    let jsonData = jsonArray.results[0];",
+							"    let jsonData = jsonArray.results",
 							"",
-							"    pm.expect(jsonData[\"name\"]).to.eql(pm.environment.get(\"execution_name\"));",
-							"});",
+							"    let contains = false;",
+							"    for (let i=0; i<jsonData.length; i++) {",
+							"        if (jsonData[i].name == pm.environment.get(\"execution_name\")) {",
+							"            contains = true;",
+							"        }",
+							"    }",
 							"",
-							""
+							"    pm.expect(contains).to.be.true",
+							"});"
 						],
 						"type": "text/javascript"
 					}

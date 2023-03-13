@@ -8,16 +8,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
-	"github.com/kubeshop/testkube/internal/pkg/api/datefilter"
-	"github.com/kubeshop/testkube/internal/pkg/api/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -33,10 +35,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if request.Description != "" {
-				request.Description = fmt.Sprintf("%q", request.Description)
-			}
-
+			request.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
 			return s.getCRDs(c, data, err)
 		}
@@ -62,23 +61,31 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 // UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestSuiteUpsertRequest
+		var request testkube.TestSuiteUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSuite, err := s.TestsSuitesClient.Get(request.Name)
+		testSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, err)
+			}
+
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
-		testSuite.Spec = testSuiteSpec.Spec
-		testSuite.Labels = request.Labels
-		updated, err := s.TestsSuitesClient.Update(testSuite)
+		testSuiteSpec := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+
+		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec)
 
 		s.Metrics.IncUpdateTestSuite(err)
 
@@ -86,7 +93,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
 
-		return c.JSON(updated)
+		return c.JSON(updatedTestSuite)
 	}
 }
 
@@ -105,10 +112,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if testSuite.Description != "" {
-				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}
-
+			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
 			return s.getCRDs(c, data, err)
 		}
@@ -132,10 +136,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if testSuite.Description != "" {
-				testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-			}
-
+			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
 			return s.getCRDs(c, data, err)
 		}
@@ -206,7 +207,8 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
-			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			var testSuiteList *testsuitesv2.TestSuiteList
+			testSuiteList, err = s.TestsSuitesClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
@@ -284,9 +286,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range testSuites {
-				if testSuites[i].Description != "" {
-					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
-				}
+				testSuites[i].QuoteTestSuiteTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
@@ -395,9 +395,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range testSuites {
-				if testSuites[i].Description != "" {
-					testSuites[i].Description = fmt.Sprintf("%q", testSuites[i].Description)
-				}
+				testSuites[i].QuoteTestSuiteTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
@@ -405,7 +403,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		results := make([]testkube.TestSuiteWithExecution, 0, len(testSuites))
+		results := make([]testkube.TestSuiteWithExecutionSummary, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
 			testSuiteNames[i] = testSuites[i].Name
@@ -418,12 +416,12 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 		for i := range testSuites {
 			if execution, ok := executionMap[testSuites[i].Name]; ok {
-				results = append(results, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecutionSummary{
 					TestSuite:       &testSuites[i],
-					LatestExecution: &execution,
+					LatestExecution: testsuiteexecutionsmapper.MapToSummary(&execution),
 				})
 			} else {
-				results = append(results, testkube.TestSuiteWithExecution{
+				results = append(results, testkube.TestSuiteWithExecutionSummary{
 					TestSuite: &testSuites[i],
 				})
 			}
@@ -466,6 +464,36 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 				}
 
 				results = append(results[:i], results[i+1:]...)
+			}
+		}
+
+		var page, pageSize int
+		pageParam := c.Query("page", "")
+		if pageParam != "" {
+			pageSize = testresult.PageDefaultLimit
+			page, err = strconv.Atoi(pageParam)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page filter invalid: %w", err))
+			}
+		}
+
+		pageSizeParam := c.Query("pageSize", "")
+		if pageSizeParam != "" {
+			pageSize, err = strconv.Atoi(pageSizeParam)
+			if err != nil {
+				s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page size filter invalid: %w", err))
+			}
+		}
+
+		if pageParam != "" || pageSizeParam != "" {
+			startPos := page * pageSize
+			endPos := (page + 1) * pageSize
+			if startPos < len(results) {
+				if endPos > len(results) {
+					endPos = len(results)
+				}
+
+				results = results[startPos:endPos]
 			}
 		}
 
@@ -573,10 +601,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		id := c.Params("executionID")
 		execution, err := s.TestExecutionResults.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
-			execution, err = s.TestExecutionResults.GetByName(ctx, id)
-			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
-			}
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 		}
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -604,6 +629,44 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
+		ctx := context.Background()
+		id := c.Params("executionID")
+		execution, err := s.TestExecutionResults.Get(ctx, id)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		var artifacts []testkube.Artifact
+		for _, stepResult := range execution.StepResults {
+			if stepResult.Execution.Id == "" {
+				continue
+			}
+			stepArtifacts, err := s.Storage.ListFiles(stepResult.Execution.Id)
+			if err != nil {
+				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
+				continue
+			}
+			s.Log.Debugw("listing artifacts for step", "executionID", stepResult.Execution.Id, "artifacts", stepArtifacts)
+			for i := range stepArtifacts {
+				stepArtifacts[i].ExecutionName = stepResult.Execution.Name
+				artifacts = append(artifacts, stepArtifacts[i])
+			}
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
+		return c.JSON(artifacts)
+	}
+}
+
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
@@ -611,10 +674,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 		id := c.Params("executionID")
 		execution, err := s.TestExecutionResults.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
-			execution, err = s.TestExecutionResults.GetByName(ctx, id)
-			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
-			}
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 		}
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)

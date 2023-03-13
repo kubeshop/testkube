@@ -1,0 +1,79 @@
+{
+	"info": {
+		"_postman_id": "7162980e-a593-4191-ac46-93d1d4850266",
+		"name": "postman-executor-smoke-negative",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22855798"
+	},
+	"item": [
+		{
+			"name": "request",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const TESTKUBE_POSTMAN = pm.environment.get(\"TESTKUBE_POSTMAN\")",
+							"console.log(`TESTKUBE_POSTMAN ENV: ${TESTKUBE_POSTMAN}`)",
+							"",
+							"",
+							"pm.test(\"'TESTKUBE_POSTMAN' env should be set to 'TESTKUBE_POSTMAN_value' value\", () => {",
+							"  pm.expect(TESTKUBE_POSTMAN).to.eql(\"TESTKUBE_POSTMAN_value\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://testkube.non.existing.url.example",
+					"protocol": "https",
+					"host": [
+						"testkube",
+						"kubeshop",
+						"io"
+					],
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

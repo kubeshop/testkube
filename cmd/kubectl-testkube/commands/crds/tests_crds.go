@@ -9,19 +9,24 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 var (
-	executorArgs []string
-	envs         map[string]string
+	executorArgs             []string
+	envs                     map[string]string
+	variables                map[string]string
+	preRunScript             string
+	secretVariableReferences map[string]string
 )
 
 // NewCRDTestsCmd is command to generate test CRDs
@@ -40,7 +45,15 @@ func NewCRDTestsCmd() *cobra.Command {
 			testEnvs := make(map[string]map[string]map[string]string, 0)
 			testSecretEnvs := make(map[string]map[string]map[string]string, 0)
 
-			err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			var script []byte
+			var err error
+
+			if preRunScript != "" {
+				script, err = os.ReadFile(preRunScript)
+				ui.ExitOnError("getting prerun script", err)
+			}
+
+			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return nil
 				}
@@ -96,7 +109,31 @@ func NewCRDTestsCmd() *cobra.Command {
 				if _, ok := tests[testType]; !ok {
 					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
 				}
-				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs}
+
+				scriptBody := string(script)
+				if scriptBody != "" {
+					scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
+				}
+
+				for key, value := range envs {
+					if value != "" {
+						envs[key] = fmt.Sprintf("%q", value)
+					}
+				}
+
+				vars, err := common.CreateVariables(cmd, true)
+				if err != nil {
+					return err
+				}
+
+				for name, variable := range vars {
+					if variable.Value != "" {
+						variable.Value = fmt.Sprintf("%q", variable.Value)
+						vars[name] = variable
+					}
+				}
+
+				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, Variables: vars, PreRunScript: scriptBody}
 				tests[testType][testName] = *test
 				return nil
 			})
@@ -109,6 +146,11 @@ func NewCRDTestsCmd() *cobra.Command {
 
 	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
+	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
+
 	return cmd
 }
 
@@ -226,6 +268,13 @@ func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
 
 						if secretEnvTest.ExecutionRequest == nil {
 							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+						}
+
+						for key, value := range variables {
+							if value.Value != "" {
+								value.Value = fmt.Sprintf("%q", value.Value)
+								variables[key] = value
+							}
 						}
 
 						secretEnvTest.ExecutionRequest.Variables = variables

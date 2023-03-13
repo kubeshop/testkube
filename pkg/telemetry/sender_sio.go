@@ -10,7 +10,7 @@ import (
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
 
 // Brew builds can't be parametrized so we are embedding this one
-var SegmentioKey = "iL0p6r5C9i35F7tRxnB0k3gB2nGh7VTK"
+var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
 
 // SegmentioSender sends ananymous telemetry data to segment.io
 // TODO refactor Sender func as out is not needed (use debug loggers to log output)
@@ -44,7 +44,7 @@ func mapEvent(userID string, event Event) analytics.Track {
 }
 
 func mapProperties(params Params) analytics.Properties {
-	return analytics.NewProperties().
+	properties := analytics.NewProperties().
 		Set("name", params.AppName).
 		Set("version", params.AppVersion).
 		Set("arch", params.Architecture).
@@ -52,5 +52,35 @@ func mapProperties(params Params) analytics.Properties {
 		Set("clusterId", params.ClusterID).
 		Set("eventCategory", params.EventCategory).
 		Set("host", params.Host).
-		Set("machineId", params.MachineID)
+		Set("contextType", params.Context.Type).
+		Set("cloudOrganizationId", params.Context.OrganizationId).
+		Set("cloudEnvironmentId", params.Context.EnvironmentId).
+		Set("machineId", params.MachineID).
+		Set("clusterType", params.ClusterType)
+
+	if params.DataSource != "" {
+		properties = properties.Set("dataSource", params.DataSource)
+	}
+
+	if params.TestType != "" {
+		properties = properties.Set("testType", params.TestType)
+	}
+
+	if params.DurationMs != 0 {
+		properties = properties.Set("durationMs", params.DurationMs)
+	}
+
+	if params.Status != "" {
+		properties = properties.Set("status", params.Status)
+	}
+
+	if params.TestSource != "" {
+		properties = properties.Set("testSource", params.TestSource)
+	}
+
+	if params.TestSuiteSteps != 0 {
+		properties = properties.Set("testSuiteSteps", params.TestSuiteSteps)
+	}
+
+	return properties
 }

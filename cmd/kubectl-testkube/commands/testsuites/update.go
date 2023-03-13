@@ -1,16 +1,10 @@
 package testsuites
 
 import (
-	"encoding/json"
-	"io"
-	"os"
-	"reflect"
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	testkubeapiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func UpdateTestSuitesCmd() *cobra.Command {
@@ -33,66 +27,27 @@ func UpdateTestSuitesCmd() *cobra.Command {
 		Short: "Update Test Suite",
 		Long:  `Update Test Custom Resource Definitions, `,
 		Run: func(cmd *cobra.Command, args []string) {
+			options, err := NewTestSuiteUpdateOptionsFromFlags(cmd)
+			ui.ExitOnError("getting test suite options", err)
 
-			var content []byte
-			var err error
-
-			if file != "" {
-				// read test content
-				content, err = os.ReadFile(file)
-				ui.ExitOnError("reading file"+file, err)
-			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-				content, err = io.ReadAll(os.Stdin)
-				ui.ExitOnError("reading stdin", err)
+			testSuiteName := ""
+			if options.Name != nil {
+				testSuiteName = *options.Name
 			}
 
-			var options testkubeapiv1.UpsertTestSuiteOptions
-
-			err = json.Unmarshal(content, &options)
-			ui.ExitOnError("Invalid file content", err)
-
-			if name != "" {
-				options.Name = name
-			}
-
-			if options.Name == "" {
+			if testSuiteName == "" {
 				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
 			client, namespace := common.GetClient(cmd)
-			options.Namespace = namespace
-
-			testSuite, _ := client.GetTestSuite(options.Name)
-			if options.Name != testSuite.Name {
-				ui.Failf("TestSuite with name '%s' not exists in namespace %s", options.Name, options.Namespace)
+			testSuite, _ := client.GetTestSuite(testSuiteName)
+			if testSuiteName != testSuite.Name {
+				ui.Failf("TestSuite with name '%s' not exists in namespace %s", testSuiteName, namespace)
 			}
-
-			// if labels are passed and are different from the existing overwrite
-			if len(labels) > 0 && !reflect.DeepEqual(testSuite.Labels, labels) {
-				options.Labels = labels
-			} else {
-				options.Labels = testSuite.Labels
-			}
-
-			variables, err := common.CreateVariables(cmd)
-			ui.ExitOnError("Invalid variables", err)
-
-			options.ExecutionRequest = &testkube.TestSuiteExecutionRequest{
-				Variables:  variables,
-				Name:       cmd.Flag("execution-name").Value.String(),
-				HttpProxy:  cmd.Flag("http-proxy").Value.String(),
-				HttpsProxy: cmd.Flag("https-proxy").Value.String(),
-				Timeout:    timeout,
-			}
-
-			options.Schedule = cmd.Flag("schedule").Value.String()
-
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
 
 			testSuite, err = client.UpdateTestSuite(options)
-			ui.ExitOnError("updating TestSuite "+options.Name+" in namespace "+options.Namespace, err)
-			ui.Success("TestSuite updated", options.Name)
+			ui.ExitOnError("updating TestSuite "+testSuiteName+" in namespace "+namespace, err)
+			ui.Success("TestSuite updated", testSuiteName)
 		},
 	}
 

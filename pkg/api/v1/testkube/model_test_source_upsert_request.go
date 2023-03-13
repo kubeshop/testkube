@@ -9,7 +9,7 @@
  */
 package testkube
 
-// test create request body
+// test source create request body
 type TestSourceUpsertRequest struct {
 	// test type
 	Type_      string      `json:"type,omitempty"`

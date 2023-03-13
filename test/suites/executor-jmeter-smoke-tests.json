@@ -2,6 +2,8 @@
 	"name": "executor-jmeter-smoke-tests",
 	"description": "jmeter executor smoke tests",
 	"steps": [
-		{"execute": {"name": "jmeter-executor-smoke"}}
+		{"execute": {"name": "jmeter-executor-smoke"}},
+		{"execute": {"name": "jmeter-executor-smoke-negative"}},
+		{"execute": {"name": "jmeter-executor-smoke-env-and-property-values"}}
 	]
 }

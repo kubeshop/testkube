@@ -42,6 +42,7 @@ func TestLoader_Add(t *testing.T) {
 	})
 }
 
+// nolint
 func newTestWebsocket() *websocket.Conn {
 	return &websocket.Conn{Conn: &fastwebsocket.Conn{}}
 }

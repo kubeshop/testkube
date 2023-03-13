@@ -1,16 +1,16 @@
 package testsuites
 
 import (
-	"fmt"
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites/renderer"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewGetTestSuiteCmd() *cobra.Command {
@@ -36,10 +36,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 				if testSuite.TestSuite != nil {
 					if crdOnly {
-						if testSuite.TestSuite.Description != "" {
-							testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
-						}
-
+						testSuite.TestSuite.QuoteTestSuiteTextFields()
 						common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
 						return
 					}
@@ -62,10 +59,7 @@ func NewGetTestSuiteCmd() *cobra.Command {
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
-							if testSuite.Description != "" {
-								testSuite.Description = fmt.Sprintf("%q", testSuite.Description)
-							}
-
+							testSuite.QuoteTestSuiteTextFields()
 							common.UIPrintCRD(crd.TemplateTestSuite, testSuite, &firstEntry)
 						}
 
@@ -75,16 +69,13 @@ func NewGetTestSuiteCmd() *cobra.Command {
 					err = render.List(cmd, testSuites, os.Stdout)
 					ui.ExitOnError("rendering list", err)
 				} else {
-					testSuites, err := client.ListTestSuiteWithExecutions(strings.Join(selectors, ","))
-					ui.ExitOnError("getting test suite with executions", err)
+					testSuites, err := client.ListTestSuiteWithExecutionSummaries(strings.Join(selectors, ","))
+					ui.ExitOnError("getting test suite with execution summaries", err)
 
 					if crdOnly {
 						for _, testSuite := range testSuites {
 							if testSuite.TestSuite != nil {
-								if testSuite.TestSuite.Description != "" {
-									testSuite.TestSuite.Description = fmt.Sprintf("%q", testSuite.TestSuite.Description)
-								}
-
+								testSuite.TestSuite.QuoteTestSuiteTextFields()
 								common.UIPrintCRD(crd.TemplateTestSuite, testSuite.TestSuite, &firstEntry)
 							}
 						}

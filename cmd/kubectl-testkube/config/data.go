@@ -1,9 +1,26 @@
 package config
 
 import (
-	"github.com/kubeshop/testkube/pkg/oauth"
 	"golang.org/x/oauth2"
+
+	"github.com/kubeshop/testkube/pkg/oauth"
 )
+
+type ContextType string
+
+const (
+	ContextTypeCloud      ContextType = "cloud"
+	ContextTypeKubeconfig ContextType = "kubeconfig"
+)
+
+type CloudContext struct {
+	Environment  string `json:"environment,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	ApiKey       string `json:"apiKey,omitempty"`
+	ApiUri       string `json:"apiUri,omitempty"`
+	AgentKey     string `json:"agentKey,omitempty"`
+	AgentUri     string `json:"agentUri,omitempty"`
+}
 
 type Data struct {
 	TelemetryEnabled bool       `json:"telemetryEnabled,omitempty"`
@@ -11,6 +28,9 @@ type Data struct {
 	Initialized      bool       `json:"initialized,omitempty"`
 	APIURI           string     `json:"apiURI,omitempty"`
 	OAuth2Data       OAuth2Data `json:"oauth2Data"`
+
+	ContextType  ContextType  `json:"contextType,omitempty"`
+	CloudContext CloudContext `json:"cloudContext,omitempty"`
 }
 
 func (c *Data) EnableAnalytics() {

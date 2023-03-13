@@ -16,7 +16,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	}
 
 	ui.Warn("ID:        ", execution.Id)
-	ui.Warn("Name       ", execution.Name)
+	ui.Warn("Name:      ", execution.Name)
 	if execution.Number != 0 {
 		ui.Warn("Number:           ", fmt.Sprintf("%d", execution.Number))
 	}
@@ -35,6 +35,15 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(execution.Args) > 0 {
 		ui.Warn("Args:    ", execution.Args...)
+	}
+
+	if execution.Content != nil && execution.Content.Repository != nil {
+		ui.Warn("Repository parameters:")
+		ui.Warn("  Branch:         ", execution.Content.Repository.Branch)
+		ui.Warn("  Commit:         ", execution.Content.Repository.Commit)
+		ui.Warn("  Path:           ", execution.Content.Repository.Path)
+		ui.Warn("  Working dir:    ", execution.Content.Repository.WorkingDir)
+		ui.Warn("  Certificate:    ", execution.Content.Repository.CertificateSecret)
 	}
 
 	render.RenderExecutionResult(&execution)

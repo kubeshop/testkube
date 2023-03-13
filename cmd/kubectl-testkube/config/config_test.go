@@ -1,11 +1,33 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSave(t *testing.T) {
+	// override default directory
+	dir, err := ioutil.TempDir("", "test-config-save")
+	assert.NoError(t, err)
+	defaultDirectory = dir
+
+	t.Run("test save into default storage", func(t *testing.T) {
+		err := Save(Data{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("test load stored config into default storage", func(t *testing.T) {
+		err := Save(Data{Namespace: "some", TelemetryEnabled: true})
+		assert.NoError(t, err)
+		data, err := Load()
+		assert.NoError(t, err)
+		assert.Equal(t, "some", data.Namespace)
+		assert.Equal(t, true, data.TelemetryEnabled)
+	})
+}
 
 func TestSaveTelemetryEnabled(t *testing.T) {
 

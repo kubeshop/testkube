@@ -30,4 +30,5 @@ type TestSuite struct {
 	Repeats          int32                      `json:"repeats,omitempty"`
 	Created          time.Time                  `json:"created,omitempty"`
 	ExecutionRequest *TestSuiteExecutionRequest `json:"executionRequest,omitempty"`
+	Status           *TestSuiteStatus           `json:"status"`
 }

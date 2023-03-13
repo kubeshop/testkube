@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -38,7 +39,7 @@ func (s TestkubeAPI) UpdateConfigsHandler() fiber.Handler {
 		s.Log.Warnw("#######", "request", config)
 		config.EnableTelemetry = request.EnableTelemetry
 		s.Log.Warnw("#######", "request", config)
-		err = s.ConfigMap.Upsert(ctx, config)
+		_, err = s.ConfigMap.Upsert(ctx, config)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("unable to update config: %w", err))
 		}

@@ -1,12 +1,12 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewMigrateCmd() *cobra.Command {
-	var namespace string
 	cmd := &cobra.Command{
 		Use:   "migrate",
 		Short: "manual migrate command",
@@ -19,8 +19,6 @@ func NewMigrateCmd() *cobra.Command {
 			}
 		},
 	}
-
-	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "testkube namespace")
 
 	return cmd
 }

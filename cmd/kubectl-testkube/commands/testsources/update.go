@@ -1,9 +1,10 @@
 package testsources
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func UpdateTestSourceCmd() *cobra.Command {
@@ -39,10 +40,7 @@ func UpdateTestSourceCmd() *cobra.Command {
 				ui.Failf("Test source with name '%s' not exists in namespace %s", name, namespace)
 			}
 
-			err := validateUpsertOptions(cmd)
-			ui.ExitOnError("validating passed flags", err)
-
-			options, err := NewUpsertTestSourceOptionsFromFlags(cmd, testSource.Labels)
+			options, err := NewUpdateTestSourceOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test source options", err)
 
 			_, err = client.UpdateTestSource(options)
@@ -54,7 +52,7 @@ func UpdateTestSourceCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test source name - mandatory")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "source file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")

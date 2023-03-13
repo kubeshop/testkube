@@ -1,10 +1,6 @@
 package testsuites
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"os"
 	"strconv"
 
 	"github.com/robfig/cron"
@@ -38,70 +34,29 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		Short:   "Create new TestSuite",
 		Long:    `Create new TestSuite Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			var content []byte
 			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
 			ui.ExitOnError("parsing flag value", err)
 
-			if file != "" {
-				// read test content
-				content, err = os.ReadFile(file)
-				ui.ExitOnError("reading file"+file, err)
-			} else if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-				content, err = io.ReadAll(os.Stdin)
-				ui.ExitOnError("reading stdin", err)
-			}
-
-			var options testkube.TestSuiteUpsertRequest
-
-			err = json.Unmarshal(content, &options)
-			ui.ExitOnError("Invalid file content", err)
-
-			if name != "" {
-				options.Name = name
-			}
+			options, err := NewTestSuiteUpsertOptionsFromFlags(cmd)
+			ui.ExitOnError("getting test suite options", err)
 
 			if options.Name == "" {
 				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
-			namespace := cmd.Flag("namespace").Value.String()
-			var client apiClient.Client
 			if !crdOnly {
-				client, namespace = common.GetClient(cmd)
+				client, namespace := common.GetClient(cmd)
 				test, _ := client.GetTestSuite(options.Name)
 				if options.Name == test.Name {
 					ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, namespace)
 				}
-			}
 
-			options.Namespace = namespace
-			options.Labels = labels
-
-			variables, err := common.CreateVariables(cmd)
-			ui.ExitOnError("Invalid variables", err)
-
-			options.Schedule = cmd.Flag("schedule").Value.String()
-			options.ExecutionRequest = &testkube.TestSuiteExecutionRequest{
-				Variables:  variables,
-				Name:       cmd.Flag("execution-name").Value.String(),
-				HttpProxy:  cmd.Flag("http-proxy").Value.String(),
-				HttpsProxy: cmd.Flag("https-proxy").Value.String(),
-				Timeout:    timeout,
-			}
-
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
-
-			if !crdOnly {
 				_, err = client.CreateTestSuite(apiClient.UpsertTestSuiteOptions(options))
 				ui.ExitOnError("creating test suite "+options.Name+" in namespace "+options.Namespace, err)
 
 				ui.Success("Test suite created", options.Name)
 			} else {
-				if options.Description != "" {
-					options.Description = fmt.Sprintf("%q", options.Description)
-				}
-
+				(*testkube.TestSuiteUpsertRequest)(&options).QuoteTestSuiteTextFields()
 				data, err := crd.ExecuteTemplate(crd.TemplateTestSuite, options)
 				ui.ExitOnError("executing crd template", err)
 

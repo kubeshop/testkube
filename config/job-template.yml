@@ -1,0 +1,97 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+spec:
+  {{- if gt .ActiveDeadlineSeconds 0 }}
+  activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
+  {{- end }}
+  template:
+    spec:
+      initContainers:
+        - name: {{ .Name }}-init
+          image: {{ .InitImage }}
+          imagePullPolicy: Always
+          command:
+            - "/bin/runner"
+            - '{{ .Jsn }}'
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          {{- if .CertificateSecret }}
+          - name: {{ .CertificateSecret }}
+            mountPath: /etc/certs
+          {{- end }}
+          {{- range $configmap := .EnvConfigMaps }}
+          {{- if and $configmap.Mount $configmap.Reference }}
+          - name: {{ $configmap.Reference.Name }}
+            mountPath: {{ $configmap.MountPath }}
+          {{- end }}
+          {{- end }}
+          {{- range $secret := .EnvSecrets }}
+          {{- if and $secret.Mount $secret.Reference }}
+          - name: {{ $secret.Reference.Name }}
+            mountPath: {{ $secret.MountPath }}
+          {{- end }}
+          {{- end }}
+      containers:
+        - name: {{ .Name }}
+          image: {{ .Image }}
+          imagePullPolicy: Always
+          command:
+            - "/bin/runner"
+            - '{{ .Jsn }}'
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          {{- if .CertificateSecret }}
+          - name: {{ .CertificateSecret }}
+            mountPath: /etc/certs
+          {{- end }}
+          {{- range $configmap := .EnvConfigMaps }}
+          {{- if and $configmap.Mount $configmap.Reference }}
+          - name: {{ $configmap.Reference.Name }}
+            mountPath: {{ $configmap.MountPath }}
+          {{- end }}
+          {{- end }}
+          {{- range $secret := .EnvSecrets }}
+          {{- if and $secret.Mount $secret.Reference }}
+          - name: {{ $secret.Reference.Name }}
+            mountPath: {{ $secret.MountPath }}
+          {{- end }}
+          {{- end }}
+      volumes:
+        - name: data-volume
+          emptyDir: {}
+      {{- if .CertificateSecret }}
+      - name: {{ .CertificateSecret }}
+        secret:
+          secretName: {{ .CertificateSecret }}
+      {{- end }}
+      {{- range $configmap := .EnvConfigMaps }}
+      {{- if and $configmap.Mount $configmap.Reference }}
+      - name: {{ $configmap.Reference.Name }}
+        configmap:
+          name: {{ $configmap.Reference.Name }}
+      {{- end }}
+      {{- end }}
+      {{- range $secret := .EnvSecrets }}
+      {{- if and $secret.Mount $secret.Reference }}
+      - name: {{ $secret.Reference.Name }}
+        secret:
+          secretName: {{ $secret.Reference.Name }}
+      {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      {{ if .ServiceAccountName }}
+      serviceAccountName: {{ .ServiceAccountName }}
+      {{ end }}
+      {{- if gt (len .ImagePullSecrets) 0 }}
+      imagePullSecrets:
+      {{- range $secret := .ImagePullSecrets }}
+      - name: {{ $secret -}}
+      {{- end }}
+      {{- end }}
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 180

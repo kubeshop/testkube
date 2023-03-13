@@ -1,16 +1,16 @@
 package tests
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func NewUpdateTestsCmd() *cobra.Command {
 
 	var (
 		testName                 string
-		testNamespace            string
 		testContentType          string
 		file                     string
 		executorType             string
@@ -41,6 +41,17 @@ func NewUpdateTestsCmd() *cobra.Command {
 		imagePullSecretNames     []string
 		timeout                  int64
 		gitWorkingDir            string
+		artifactStorageClassName string
+		artifactVolumeMountPath  string
+		artifactDirs             []string
+		jobTemplate              string
+		preRunScript             string
+		scraperTemplate          string
+		negativeTest             bool
+		mountConfigMaps          map[string]string
+		variableConfigMaps       []string
+		mountSecrets             map[string]string
+		variableSecrets          []string
 	)
 
 	cmd := &cobra.Command{
@@ -54,28 +65,25 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, namespace := common.GetClient(cmd)
 			test, _ := client.GetTest(testName)
 			if testName != test.Name {
-				ui.Failf("Test with name '%s' not exists in namespace %s", testName, testNamespace)
+				ui.Failf("Test with name '%s' not exists in namespace %s", testName, namespace)
 			}
 
-			options, err := NewUpsertTestOptionsFromFlags(cmd, test.Labels)
+			options, err := NewUpdateTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
-			err = validateSchedule(options.Schedule)
-			ui.ExitOnError("validating schedule", err)
-
 			test, err = client.UpdateTest(options)
-			ui.ExitOnError("updating test "+testName+" in namespace "+testNamespace, err)
+			ui.ExitOnError("updating test "+testName+" in namespace "+namespace, err)
 
-			ui.Success("Test updated", testNamespace, "/", testName)
+			ui.Success("Test updated", namespace, "/", testName)
 		},
 	}
 
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will try to read content from stdin if not specified")
-	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman-collection)")
 
@@ -102,11 +110,24 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVarP(&image, "image", "i", "", "if uri is git repository we can set additional branch parameter")
+	cmd.Flags().StringVarP(&image, "image", "i", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
+	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
+	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
+	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
+	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
 
 	return cmd
 }

@@ -16,17 +16,17 @@ ARG TARGETOS TARGETARCH
 
 RUN cd cmd/api-server; \
     GOOS=$TARGETOS GOARCH=$TARGETARCH  go build \
-        -ldflags "-X github.com/kubeshop/testkube/internal/pkg/api.Version=$VERSION \
-            -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$COMMIT \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$SLACK_BOT_CLIENT_ID \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$SLACK_BOT_CLIENT_SECRET \
+        -ldflags "-X github.com/kubeshop/testkube/pkg/version.Version=$VERSION \
+            -X github.com/kubeshop/testkube/pkg/version.Commit=$COMMIT \
+	    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$SLACK_BOT_CLIENT_ID \
+	    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$SLACK_BOT_CLIENT_SECRET \
             -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$ANALYTICS_TRACKING_ID \
             -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$ANALYTICS_API_KEY \
             -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey=$SEGMENTIO_KEY" \
         -o /app -mod mod -a .
 
 FROM alpine:3.16  
-RUN apk --no-cache add ca-certificates libssl1.1
+RUN apk --no-cache add ca-certificates libssl1.1 git
 WORKDIR /root/
 COPY  --from=build /app /bin/app
 
