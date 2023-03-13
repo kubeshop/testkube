@@ -119,7 +119,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		},
 	}
 
-	var timeout int32 = 5
+	var timeout int32 = 1
 	status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
