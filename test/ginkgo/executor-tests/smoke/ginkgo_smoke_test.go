@@ -5,8 +5,8 @@ import (
 	"github.com/onsi/gomega"
 )
 
-Describe("Ginkgo smoke test", func() {
-    It("Positive test - should always pass", func(){
+var _ = Describe("Books", func() {
+	It("Positive test - should always pass", func(){
 		Expect(true).To(Equal(true))
-    })
+	})
 })
