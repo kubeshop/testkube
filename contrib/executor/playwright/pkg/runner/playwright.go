@@ -52,7 +52,7 @@ func (r *PlaywrightRunner) Run(execution testkube.Execution) (result testkube.Ex
 	_, err = os.Stat(r.Params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
 		output.PrintLog(fmt.Sprintf("%s Datadir %s does not exist", ui.IconCross, r.Params.DataDir))
-		return result, fmt.Errorf("Datadir not exist: %w", err)
+		return result, fmt.Errorf("datadir not exist: %w", err)
 	}
 
 	runPath := filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)

@@ -47,6 +47,7 @@ func TestRun(t *testing.T) {
 		})
 
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
+		assert.NoError(t, err)
 	})
 
 	t.Run("GinkgoRunner should run tests from a repo that fail", func(t *testing.T) {
@@ -83,6 +84,7 @@ func TestRun(t *testing.T) {
 		})
 
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+		assert.NoError(t, err)
 	})
 
 	t.Run("InitializeGinkgoParams should should set up some default parameters for ginkgo", func(t *testing.T) {
