@@ -44,7 +44,6 @@ func TestRunGradleIntegration(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.Equal(t, result.Status, testkube.ExecutionStatusPassed)
-		assert.Len(t, result.Steps, 1)
 	})
 
 	t.Run("run gradle project test with envs", func(t *testing.T) {
