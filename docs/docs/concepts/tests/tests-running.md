@@ -206,7 +206,7 @@ Local files can be set on the execution of a Testkube Test. Pass the file in the
 testkube run test maven-example-file-test --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml" --args "--settings" --args "/tmp/settings.xml" -v "TESTKUBE_MAVEN=true"
 ```
 
-There is a 10 second timeout limit by default on all requests on the client side, and a 1 GB body size limit on server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
+By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
 ## Summary
 

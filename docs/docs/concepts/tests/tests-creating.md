@@ -342,7 +342,7 @@ To run this test, refer to `settings.xml` from the `/data/uploads` folder:
 testkube run test maven-example-file-test --args "--settings" --args "/data/uploads/settings.xml" -v "TESTKUBE_MAVEN=true" --args "-e" --args "-X" --env "DEBUG=\"true\""
 ```
 
-There is a 10 second timeout limit by default on all requests on the client side, and a 1 GB body size limit on server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
+By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
 ### Changing the Default Job Template Used for Test Execution
 
