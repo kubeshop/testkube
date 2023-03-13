@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -26,8 +25,7 @@ func NewRunner() (*JMeterRunner, error) {
 	}
 
 	return &JMeterRunner{
-		Params:  params,
-		Fetcher: content.NewFetcher(""),
+		Params: params,
 		Scraper: scraper.NewMinioScraper(
 			params.Endpoint,
 			params.AccessKeyID,
@@ -43,7 +41,6 @@ func NewRunner() (*JMeterRunner, error) {
 // JMeterRunner runner
 type JMeterRunner struct {
 	Params  envs.Params
-	Fetcher content.ContentFetcher
 	Scraper scraper.Scraper
 }
 
@@ -69,9 +66,23 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 		}
 	}
 
-	path, err := r.Fetcher.Fetch(execution.Content)
-	if err != nil {
-		return result, err
+	path := ""
+	workingDir := ""
+	if execution.Content != nil {
+		if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
+			path = filepath.Join(r.Params.DataDir, "test-content")
+		}
+
+		if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeGit) {
+			path = filepath.Join(r.Params.DataDir, "repo")
+			if execution.Content.Repository != nil {
+				path = filepath.Join(path, execution.Content.Repository.Path)
+				workingDir = execution.Content.Repository.WorkingDir
+			}
+		}
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -81,10 +92,11 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 
 	if fileInfo.IsDir() {
 		scriptName := execution.Args[len(execution.Args)-1]
-		workingDir := ""
-		if execution.Content != nil && execution.Content.Repository != nil {
-			scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
-			workingDir = execution.Content.Repository.WorkingDir
+		if workingDir != "" {
+			path = filepath.Join(r.Params.DataDir, "repo")
+			if execution.Content != nil && execution.Content.Repository != nil {
+				scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
+			}
 		}
 
 		execution.Args = execution.Args[:len(execution.Args)-1]
@@ -107,8 +119,8 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 	}
 
 	runPath := r.Params.DataDir
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = filepath.Join(r.Params.DataDir, "repo", workingDir)
 	}
 
 	reportPath := filepath.Join(runPath, "report.jtl")

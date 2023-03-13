@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -31,7 +30,6 @@ func NewRunner() (*SoapUIRunner, error) {
 	return &SoapUIRunner{
 		SoapUIExecPath: "/usr/local/SmartBear/EntryPoint.sh",
 		SoapUILogsPath: "/home/soapui/.soapuios/logs",
-		Fetcher:        content.NewFetcher(""),
 		Scraper: scraper.NewMinioScraper(
 			params.Endpoint,
 			params.AccessKeyID,
@@ -49,7 +47,6 @@ func NewRunner() (*SoapUIRunner, error) {
 type SoapUIRunner struct {
 	SoapUIExecPath string
 	SoapUILogsPath string
-	Fetcher        content.ContentFetcher
 	Scraper        scraper.Scraper
 	DataDir        string
 }
@@ -58,9 +55,21 @@ type SoapUIRunner struct {
 func (r *SoapUIRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
 
-	testFile, err := r.Fetcher.Fetch(execution.Content)
-	if err != nil {
-		return result, err
+	testFile := ""
+	if execution.Content != nil {
+		if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
+			testFile = filepath.Join(r.DataDir, "test-content")
+		}
+
+		if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
+			execution.Content.Type_ == string(testkube.TestContentTypeGit) {
+			testFile = filepath.Join(r.DataDir, "repo")
+			if execution.Content.Repository != nil {
+				testFile = filepath.Join(testFile, execution.Content.Repository.Path)
+			}
+		}
 	}
 
 	setUpEnvironment(execution.Args, testFile)

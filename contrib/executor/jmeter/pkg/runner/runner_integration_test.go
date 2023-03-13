@@ -4,6 +4,7 @@ package runner
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -11,19 +12,17 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	t.Run("run successful jmeter test", func(t *testing.T) {
-		testData, err := os.ReadFile("../../examples/kubeshop.jmx")
-		assert.NoError(t, err)
+	tempDir := os.TempDir()
+	os.Setenv("RUNNER_DATADIR", tempDir)
 
+	t.Run("run successful jmeter test", func(t *testing.T) {
 		runner, err := NewRunner()
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeString),
-			Data:  string(testData),
-		}
+		execution.Content = testkube.NewStringTestContent("")
+		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
 
 		execution.Variables = map[string]testkube.Variable{}
 
@@ -34,22 +33,17 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
 		assert.Len(t, result.Steps, 1)
 
-		err = cleanup()
+		err = cleanup(tempDir)
 		assert.NoError(t, err)
 	})
 	t.Run("run failing jmeter test", func(t *testing.T) {
-		testData, err := os.ReadFile("../../examples/kubeshop_failed.jmx")
-		assert.NoError(t, err)
-
 		runner, err := NewRunner()
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeString),
-			Data:  string(testData),
-		}
+		execution.Content = testkube.NewStringTestContent("")
+		writeTestContent(t, tempDir, "../../examples/kubeshop_failed.jmx")
 
 		execution.Variables = map[string]testkube.Variable{}
 
@@ -60,22 +54,17 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Len(t, result.Steps, 1)
 
-		err = cleanup()
+		err = cleanup(tempDir)
 		assert.NoError(t, err)
 	})
 	t.Run("run successful jmeter test with variables", func(t *testing.T) {
-		testData, err := os.ReadFile("../../examples/kubeshop.jmx")
-		assert.NoError(t, err)
-
 		runner, err := NewRunner()
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeString),
-			Data:  string(testData),
-		}
+		execution.Content = testkube.NewStringTestContent("")
+		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
 
 		execution.Variables = map[string]testkube.Variable{
 			"threads":   {Name: "threads", Value: "10", Type_: testkube.VariableTypeBasic},
@@ -92,22 +81,17 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
 		assert.Len(t, result.Steps, 1)
 
-		err = cleanup()
+		err = cleanup(tempDir)
 		assert.NoError(t, err)
 	})
 	t.Run("run successful jmeter test with arguments", func(t *testing.T) {
-		testData, err := os.ReadFile("../../examples/kubeshop.jmx")
-		assert.NoError(t, err)
-
 		runner, err := NewRunner()
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeString),
-			Data:  string(testData),
-		}
+		execution.Content = testkube.NewStringTestContent("")
+		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
 
 		execution.Args = []string{"-Jthreads", "10", "-Jrampup", "0", "-Jloopcount", "1", "-Jip", "sampleip", "-Jport", "1234"}
 
@@ -118,16 +102,28 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
 		assert.Len(t, result.Steps, 1)
 
-		err = cleanup()
+		err = cleanup(tempDir)
 		assert.NoError(t, err)
 	})
 
 }
 
-func cleanup() error {
-	err := os.Remove("jmeter.log")
+func cleanup(tempDir string) error {
+	err := os.Remove(filepath.Join(tempDir, "jmeter.log"))
 	if err != nil {
 		return err
 	}
-	return os.Remove("report.jtl")
+	return os.Remove(filepath.Join(tempDir, "report.jtl"))
+}
+
+func writeTestContent(t *testing.T, dir string, testScript string) {
+	jmeterScript, err := os.ReadFile(testScript)
+	if err != nil {
+		assert.FailNow(t, "Unable to read jmeter test script")
+	}
+
+	err = os.WriteFile(filepath.Join(dir, "test-content"), jmeterScript, 0644)
+	if err != nil {
+		assert.FailNow(t, "Unable to write jmeter runner test content file")
+	}
 }
