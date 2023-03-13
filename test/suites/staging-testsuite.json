@@ -3,10 +3,10 @@
     "description": "Staging release tests",
     "steps": [
         {"execute": {"name": "postman-executor-smoke"}},
-        {"execute": {"name": "postman-executor-smoke-testsource-git-file"}},
+        {"execute": {"name": "postman-executor-smoke-testsource"}},
         {"execute": {"name": "k6-executor-smoke"}},
         {"execute": {"name": "container-executor-curl-smoke"}},
         {"execute" :{"name": "cypress-11-executor-smoke-chrome"}},
-        {"execute" :{"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}}
+        {"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}}
     ]
 }

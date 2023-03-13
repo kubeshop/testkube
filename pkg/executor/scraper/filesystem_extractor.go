@@ -23,21 +23,23 @@ func NewFilesystemExtractor(dirs []string, fs filesystem.FileSystem) *Filesystem
 func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) error {
 	log.DefaultLogger.Infof("extracting files from directories: %v", e.dirs)
 	for _, dir := range e.dirs {
-		log.DefaultLogger.Infof("walking directory: %v", e.dirs)
+		log.DefaultLogger.Infof("walking directory: %v", dir)
 
 		if _, err := e.fs.Stat(dir); os.IsNotExist(err) {
-			log.DefaultLogger.Debugw("directory %s does not exist, skipping", dir)
+			log.DefaultLogger.Warnf("directory %s does not exist, skipping", dir)
 			continue
 		}
 
 		err := e.fs.Walk(
 			dir,
 			func(path string, fileInfo os.FileInfo, err error) error {
+				log.DefaultLogger.Infof("walking path %s", path)
 				if err != nil {
 					return errors.Wrapf(err, "error walking path %s", path)
 				}
 
 				if fileInfo.IsDir() {
+					log.DefaultLogger.Infof("skipping directory %s", path)
 					return nil
 				}
 

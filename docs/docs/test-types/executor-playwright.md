@@ -1,6 +1,30 @@
+import Admonition from "@theme/Admonition";
+
+
 # Playwright
 
-[Playwright](https://playwright.dev/) is an end-to-end testing and automation framework developed by Microsoft. Starting from the Testkube Helm chart version 1.9.5, it is now possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
+Since the v1.9.5 Testkube Helm chart, it is now possible to use Testkube to manage your [Playwright](https://playwright.dev/) tests inside your Kubernetes cluster.
+
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Playwright Testing?">
+        <ul>
+          <li>Playwright is an end-to-end testing and automation framework developed by Microsoft.</li>
+        </ul>
+        <b>What can I do with Playwright?</b>
+        <ul>
+          <li>With Playwright, you can easily perform actions and assert the state against expectations.</li>
+          <li>Playwright supports end-to-end testing with multiple browsers, operating systems, and programming languages.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
+
+**Check out our [blog post](https://testkube.io/blog/bring-playwright-tests-into-the-cloud-with-testkube) to learn how to harness the power of Playwright Testing in your cloud-native apps.**
 
 ## Running Playwright Tests
 
@@ -66,15 +90,9 @@ Running tests in a containerized environment is convenient: it's simple, portabl
 
 ### Reports
 
-Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. Please update your configuration files located at `playwright.config.js` or `playwright.config.ts`:
+Similarly to many other testing tools, Playwright provides the option to open a browser window for reports. It is important to make sure reporters are not opening additional windows. 
 
-```bash
-reporter: [
-  ['html', { open: 'never' }]
-],
-```
-
-Having this option on the default setting will not block the Testkube test runner, as the following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
+The following environment variables are set on a Dockerfile-level, but it is still important to be mindful of these differences.
 
 ```bash
 ENV CI=1

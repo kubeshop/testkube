@@ -45,6 +45,9 @@ func NewMongoLeaseBackend(db *mongo.Database) *MongoLeaseBackend {
 func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error) {
 	leaseMongoID := newLeaseMongoID(clusterID)
 	currentLease, err := b.findOrInsertCurrentLease(ctx, leaseMongoID, id, clusterID)
+	if err != nil {
+		return false, err
+	}
 
 	acquired, renewable := leaseStatus(currentLease, id, clusterID)
 	switch {
@@ -59,6 +62,9 @@ func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string
 		acquiredAt = time.Now()
 	}
 	newLease, err := b.tryUpdateLease(ctx, leaseMongoID, id, clusterID, acquiredAt)
+	if err != nil {
+		return false, err
+	}
 	acquired, _ = leaseStatus(newLease, id, clusterID)
 
 	return acquired, nil
