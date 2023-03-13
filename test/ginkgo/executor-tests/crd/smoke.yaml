@@ -3,12 +3,33 @@ kind: Test
 metadata:
   name: ginkgo-executor-smoke
   namespace: testkube
+  labels:
+    core-tests: executors
 spec:
   type: ginkgo/test
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: ginkgo-executor-tests
+      branch: ginkgo-executor-tests # TODO: update before merge
       path: test/ginkgo/executor-tests/ginkgo-smoke.go
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: ginkgo-executor-smoke-negative
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: ginkgo-executor-tests # TODO: update before merge
+      path: test/ginkgo/executor-tests/ginkgo-smoke-negative.go
+  executionRequest:
+    negativeTest: true
