@@ -2,7 +2,7 @@
 
 **Check out our [blog post](https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube) to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.**
 
-[SoapUI](https://www.soapui.org) is an open-source tool used for end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.
+[SoapUI](https://www.soapui.org) is an open-source tool used for the end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.
 
 ## **Running a SoapUI Test**
 

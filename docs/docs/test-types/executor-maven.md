@@ -1,11 +1,11 @@
 # Maven
 
-Testkube allows us to run Maven-based tasks which could be also tests. For example we can easily run JUnit tests in Testkube now. 
+Testkube allows us to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now. 
 
 
-## **Test Environment**
+## Test Environment
 
-We'll try to put simple JUnit test to our cluster and run it. Testkube Maven Executor handles `mvn` and `mvnw` binaries.
+We'll try to add a simple JUnit test to our cluster and run it. Testkube Maven Executor handles `mvn` and `mvnw` binaries.
 Because Maven projects are quite complicated in terms of directory structure. We'll need to load them from a Git directory.
 
 You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-maven/tree/main/examples.
@@ -51,7 +51,7 @@ kubectl testkube run maven-example-project --args='runMyCustomTask'
 ```
 
 
-## **Create a New Maven-based Test**
+## Create a New Maven-based Test
 
 ```bash
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --name maven-example-test --git-branch main
@@ -59,7 +59,7 @@ kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-exec
 
 
 
-## **Running a Test**
+## Running a Test
 
 Let's pass the env variable to our test run:
 
@@ -78,7 +78,7 @@ Use the following command to get test execution details:
 $ kubectl testkube get execution 62d148db0260f256c1a1e993
 ```
 
-## **Getting Test Results**
+## Getting Test Results
 
 Now we can watch/get test execution details:
 
@@ -113,10 +113,10 @@ Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/platform
 Status Test execution completed with success 🥇
 ```
 
-## Using different JDKs 
+## Using Different JDKs 
 
 In the Java world, usually you want to have control over your Runtime environment. Testkube can easily handle that for you! 
-We're building several Java images to handle constraints which Maven can put in it's build file.
+We're building several Java images to handle constraints which Maven can put in its build file.
 
 To use a different executor you can use one of our pre-built ones (for Java 8,11,17,18) or build your own Docker image based on a Maven executor.
 
@@ -156,6 +156,6 @@ kubectl testkube run test maven-jdk18-example-test -f -v TESTKUBE_MAVEN=true
 ```
 
 
-## **Summary**
+## Summary
 
 Testkube simplifies running Java tests based on Maven and simplifies the merging of Java based tests into your global testing ecosystem.

@@ -35,28 +35,28 @@ K6 tests may vary significantly. The test may be just a single file, but may als
 - File
 - String
 
-## Creating and running Test
+## Creating and Running a Test
 
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
 
-If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`k6 script`), and then choose Test Source.
+If you prefer to use the Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`k6 script`), and then choose Test Source.
 
 ### File
 
-In case of File source the test file is uploaded directly.
+If the source is **File**, the test file is uploaded directly.
 
 ![K6 test - creation dialog - file](../img/dashboard-k6-create-test-file.png)
 
-### Git file
+### Git File
 
-In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to k6 script in your repository (`test/k6/executor-tests/k6-smoke-test-without-envs.js`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+If the source is a **Git file**, you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and the path to k6 script in your repository (`test/k6/executor-tests/k6-smoke-test-without-envs.js`). In this example, the repository is public, but in the case of private ones you would need to additionally fill in Git credentials.
 
 ![K6 test - creation dialog - git file](../img/dashboard-k6-create-test-git-file.png)
 
 ### String
 
-For String source the test script is added directly.
+If the source is a **String**, the test script is added directly.
 
 ![K6 test - creation dialog - string](../img/dashboard-k6-create-test-string.png)
 
@@ -69,11 +69,11 @@ You need to set:
 - `--name` (for example, `k6-test`)
 - `--type` (in this case `k6/script`)
 
-And, then choose Test Content type based on Test Source you want to use:
+Then choose the Test Content type based on Test Source you want to use:
 
 ### File
 
-In case of File test source:
+In the case of File test source:
 
 - `--test-content-type` (`file-uri`)
 - `--file` (path to your k6 script - in this case `test/k6/executor-tests/k6-smoke-test-without-envs.js`)
@@ -101,7 +101,7 @@ testkube create test --name k6-test --type k6/script --test-content-type git-fil
 Test created testkube / k6-test 🥇
 ```
 
-### Git directory
+### Git Directory
 
 - `--test-content-type` (`git-directory`, so the whole directory will be checked out from the Git repository)
 - `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
@@ -119,7 +119,7 @@ Test created testkube / k6-test 🥇
 
 ## Using Additional K6 Arguments in Your Tests
 
-Additional agruments can be passed to the `k6` binary both on test creation (`--executor-args`), and during test execution (`--args`).
+Additional arguments can be passed to the `k6` binary both on test creation (`--executor-args`), and during test execution (`--args`).
 
 ```sh
 testkube run test -k6-test --args '--vus 100 --no-connection-reuse'
@@ -128,7 +128,7 @@ testkube run test -k6-test --args '--vus 100 --no-connection-reuse'
 </TabItem>
 <TabItem value="crd" label="Custom Resource">
 
-#### Git file
+#### Git File
 ```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -146,9 +146,9 @@ spec:
       path: test/k6/executor-tests/k6-smoke-test-without-envs.js
 ```
 
-#### Git directory
+#### Git Directory
 
-Checking out whole git directory (in the following example `test/k6/executor-tests`), and running specific test file (`test/k6/executor-tests/k6-smoke-test-without-envs.js`):
+Check out the entire Git directory (in the following example `test/k6/executor-tests`), and run a specific test file (`test/k6/executor-tests/k6-smoke-test-without-envs.js`):
 
 ```yaml
 apiVersion: tests.testkube.io/v3

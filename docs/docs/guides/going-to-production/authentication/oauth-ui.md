@@ -2,7 +2,7 @@
 
 Testkube doesn't provide a separate user/role management system to protect access to its Dashboard.
 
-Users can configure and OAuth based authentication module using Testkube Helm chart parameters.
+Users can configure an OAuth based authentication module using Testkube Helm chart parameters.
 
 Testkube can automatically create an OAuth2-Proxy service and deployment integrated
 with GitHub, as well as properly configure Kubernetes NGINX Ingress Controller and create required ingresses.
@@ -32,9 +32,9 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 --set testkube-dashboard.ingress.annotations."nginx\.ingress\.kubernetes\.io/auth-signin"="http://\$host/oauth2/start?rd=\$escaped_request_uri"
 ```
 
-## Create Cookie Secret
+## Create a Cookie Secret
 
-Use OpenSSL to generate a shared secret or it can be any 16 or 32 byte value 64base encoded.
+Use OpenSSL to generate a shared secret or provide any 16 or 32 byte value 64base encoded.
 
 ```sh
 $ openssl rand -hex 16
@@ -55,7 +55,7 @@ The authorization callback URL should be a prebuilt page at the Testkube Dashboa
 
 ![View created App](../../../img/github_app_response_ui.png)
 
-Remember the generated Client ID and Client Secret.
+Make note of the generated Client ID and Client Secret.
 
 ## OAuth Service, Deployment and Ingresses Parameters
 

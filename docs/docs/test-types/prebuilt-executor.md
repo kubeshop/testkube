@@ -23,11 +23,11 @@ Please visit our [Contribution](../contributing/intro.md) page to see the guidel
 
 # Custom Executors
 
-## **Creating a Custom Executor**
+## Creating a Custom Executor
 
 A custom executor can be created on your own or by using our executor template (in `go` language).
 
-### **Using `testkube-executor-template`**
+### Using `testkube-executor-template`
 
 ```bash
 See the implementation example here: <https://github.com/exu/testkube-executor-example>).
@@ -189,12 +189,12 @@ This is a very basic example of a custom executor. Please visit our internal pro
 For Go-based executors, we have prepared many handy functions, such as printing valid outputs or wrappers around calling external processes.
 Currently, in other languages, you'll need to manage this on your own.
 
-Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git-file and git-dir. The entire complexity of checking out or downloading test content is covered by Testkube.
+Testkube has simplified test content management. We support several different test content types such as string, uri, git-file and git-dir. The entire complexity of checking out or downloading test content is covered by Testkube.
 
 Testkube will store its files and directories in a directory defined by the `RUNNER_DATADIR` env and will save the test-content file for:
 
 - String content (e.g., a postman collection is passed as string content read from a JSON file).
-- URI - Testkube will get the content of the file defined by the uri.
+- URI - Testkube will get the content of the file defined by the URI.
 - Git related content - Testkube will checkout the repo content in the current directory.
 
 To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../getting-started/index.md).
@@ -294,7 +294,7 @@ EXPOSE 8080
 CMD [ "/bin/runner" ]
 ```
 
-3. Build and push the docker container (change `user/repo` to your Docker Hub username):
+3. Build and push the Docker container (change `user/repo` to your Docker Hub username):
 
 ```bash
 docker build --platform=linux/amd64 -t USER/testkube-executor-example-nodejs:latest -f Dockerfile .

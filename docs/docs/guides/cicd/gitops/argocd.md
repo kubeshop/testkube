@@ -1,28 +1,28 @@
 # Gitops Testing with ArgoCD
 
-The following is a step-by-step walkthrough to get this in place for the automated application deployment and execution of Postman collections in a local Minikube cluster to test.
+The following is a step-by-step walkthrough to test the automated application deployment and execution of Postman collections in a local Minikube cluster.
 
 Let’s start with setting things up for our GitOps-powered testing machine!
 
 ## Tutorial
 
-### 1. Make sure you have Testkube installed in your cluster
+### 1. Make sure you have Testkube installed in your cluster.
 
-If you haven't installed Testkube in your cluster yet, check the [Getting Started guide](../../../getting-started/index.md) for a walkthrough on installing Testkube.
+If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](../../../getting-started/index.md) for a walkthrough on installing Testkube.
 
-### 2. Install ArgoCD
+### 2. Install ArgoCD.
 
 Follow the [ArgoCD Installation Guide](https://argo-cd.readthedocs.io/en/stable/getting_started/).
 
 Note: For step 3 in the guide, “Access The Argo CD API Server”, choose the “Port Forwarding” method, as that is the easiest way to connect to it with a Minikube cluster.
 
-### 3. Install Testkube
+### 3. Install Testkube.
 
 Follow the installation guide for Testkube [here](https://docs.testkube.io/getting-started/overview). Make sure to install the CLI client and the components in your cluster.
 
 ### 4. Install a “Hello Kubernetes!” application in your cluster.
 
-We will create a YAML file for a simple “Hello Kubernetes” application that we will then create our integration tests against.
+We will create a YAML file for a simple “Hello Kubernetes” application that we will create our integration tests against.
 
 Create the following Deployment file:
 
@@ -147,9 +147,7 @@ And apply it with the following command:
 kubectl patch deployments.apps -n argocd argocd-repo-server --type json --patch-file patch.yaml
 ```
 
-### 7. Define Testkube as a plugin in ArgoCD’s Configuration Management Plugin
-Create the file argocd-plugins.yaml
-‍
+### 7. Define Testkube as a plugin in ArgoCD’s Configuration Management Plugin.
 
 Create the file **argocd-plugins.yaml**:
 
@@ -203,7 +201,7 @@ Now let’s create the application with:
 kubectl apply -f testkube-application.yaml
 ```
 
-### 9. Run the initial ArgoCD sync and check your cluster
+### 9. Run the initial ArgoCD sync and check your cluster.
 
 On ArgoCD’s dashboard, we will now see the newly created application. Let’s click to get into it and sync our tests.
 
@@ -213,11 +211,11 @@ And now click on Sync to see your tests created.
 
 ![Sync Testing](../../../img/sync-testing.png)
 
-Voilà! there’s our test collection created and managed by ArgoCD with every new test created and updated in the Github repository containing the tests!
+Voilà! Our test collection is created and managed by ArgoCD with every new test created and updated in the GitHub repository containing the tests!
 
 ![Test Management with ArgoCD](../../../img/test-management-with-ArgoCD.png)
 
-### 10. Run ad-hoc tests from the CLI
+### 10. Run ad-hoc tests from the CLI.
 
 List the tests in your cluster with:
 
@@ -244,7 +242,7 @@ The test execution will start in the background. Copy the command from the image
 $ testkube tests execution EXECUTION_ID
 ```
 
-‍You should see that the tests have run successfully, just like in the image below.
+‍You should see that the tests have run successfully, as in the image below.
 
 ![Viewing Executed Tests](../../../img/viewing-executed-tests.png)
 
@@ -258,13 +256,11 @@ testkube dashboard
 
 And you will be able to see the results of the execution in the Executions tab as seen in the image below:
 
-![Test Execution Dashboard](../../../img/test-execution-dashboard.png)
+![Test Execution Dashboard](../../../img/test-execution-dashboard-1.9.png)
 
-test execution we based dashboard for k8s
+### 12. Test the flow; update the test and deploy the updated test with ArgoCD.
 
-### 12. Test the flow: update the test and deploy the updated test with ArgoCD.
-
-Let’s add an additional test to our collection. Replace the content our existing test in **hello-kubernetes.json** with the following:
+Let’s add an additional test to our collection. Replace the content of our existing test in **hello-kubernetes.json** with the following:
 
 ```json title="hello-kubernetes.json"
 {
@@ -324,4 +320,4 @@ We now have an automated test deployment and execution pipeline based on GitOps 
 
 Once fully realized - using GitOps for testing of Kubernetes applications as described above provides a powerful alternative to a more traditional approach where orchestration is tied to your current CI/CD tooling and not closely aligned with the lifecycle of Kubernetes applications.
 
-We would love to get your thoughts on the above approach - over-engineering done right? Waste of time? Let us know [our Discord server](https://discord.com/channels/884464549347074049/885185660808474664)!
+We would love to get your thoughts on the above approach - over-engineering done right? Waste of time? Let us know on [our Discord server](https://discord.com/channels/884464549347074049/885185660808474664)!

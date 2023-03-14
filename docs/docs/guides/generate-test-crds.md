@@ -4,22 +4,22 @@
 
 We support the following file naming convention for Postman files to support multiple environment files:
 
-## Test Filename Convention
+### Test Filename Convention
 
-`<Test name>.postman_collection.json` - where `Test name` should be reused for the environment files.
+`<Test name>.postman_collection.json` - Where `Test name` should be reused for the environment files.
 
 For example, mytest.postman_collection.json.
 
-## Test Environment File Naming Convention
+### Test Environment File Naming Convention
 
-`<Test name>.<Test env>.postman_environment.json` - where `Test name` is reused from the test files and 
+`<Test name>.<Test env>.postman_environment.json` - Where `Test name` is reused from the test files and 
 `Test env` is pointing to a particular testing environment.
 
 For example, mytest.prod.postman_collection.json.
 
-## Test Secret Environment File Naming Convention
+### Test Secret Environment File Naming Convention
 
-`<Test name>.<Test env>.postman_secret_environment.json` - where `Test name` is reused from test files and 
+`<Test name>.<Test env>.postman_secret_environment.json` - Where `Test name` is reused from test files and 
 `Test env` is pointing to particular testing environment.
 
 For example, mytest.prod.postman_secret_environment.json.

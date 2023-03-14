@@ -1,20 +1,37 @@
 # Ginkgo
 
+**Check out our [blog post](https://testkube.io/blog/maximize-app-performance-in-kubernetes-with-ginkgo-and-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Ginko.**
+
 Testkube allows us to run Ginkgo-based tests. (https://onsi.github.io/ginkgo/)
 
-| Ginkgo is a mature testing framework for Go designed to help you write expressive specs. Ginkgo builds on top of Go's testing foundation and is complemented by the Gomega matcher library. Together, Ginkgo and Gomega let you express the intent behind your specs clearly.
+Ginkgo is a mature testing framework for Go designed to help you write expressive specs. Ginkgo builds on top of Go's testing foundation and is complemented by the Gomega matcher library. Together, Ginkgo and Gomega let you express the intent behind your specs clearly.
 
 
 ## **Test Environment**
 
-Let's try some simple Ginkgo. Testkube's Ginkgo Executor is using the `ginkgo` binary and allows configuring it's behavior using arguments.
+Let's try some simple Ginkgo. Testkube's Ginkgo Executor uses the `ginkgo` binary and allows configuring its behavior using arguments.
+
 Because Ginkgo projects are quite complicated in terms of directory structure, we'll need to load them from a Git directory.
 
-You can find example projects in the repository here: https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples.
+You can find example projects in the repository [here](https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples).
 
-Let's create a simple test which will check if an env variable is set to true: 
+Let's create a simple test which will check if an env variable is set to true:
 
 ```go
+package smoke_test
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Smoke", func() {
+	Describe("Ginkgo smoke test", func() {
+		It("Positive test - should always pass", func(){
+			Expect(true).To(Equal(true))
+		})
+	})
+})
 ```
 
 
@@ -38,7 +55,7 @@ spec:
 
 ## **Create a New Ginkgo-based Test**
 
-### Write a Ginkgo test 
+### Write a Ginkgo Test 
 
 We'll try to check if there are any executors registered on the Testkube demo cluster. To do that we need to check the `/v1/executors`
 endpoint. Results should have at least one Executor registered.
@@ -91,7 +108,7 @@ ginkgo bootstrap
 
 Everything was pushed to the Git repository.
 
-You can also look at the code in our examples: [https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api]
+You can also look at the code in our [examples](https://github.com/kubeshop/testkube-executor-ginkgo/tree/main/examples/testkube-api).
 
 ### Add Test to Testkube 
 

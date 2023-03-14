@@ -4,7 +4,7 @@
 
 The Apache JMeter™ application is open source software, a 100% pure Java application designed to load test functional behavior and measure performance. It was originally designed for testing Web Applications but has since expanded to other test functions.
 
-## What can I do with it?
+## What can I do with JMeter?
 
 Apache JMeter may be used to test performance both on static and dynamic resources and Web dynamic applications.
 It can be used to simulate a heavy load on a server, group of servers, network or object to test its strength or to analyze overall performance under different load types.
@@ -12,11 +12,11 @@ It can be used to simulate a heavy load on a server, group of servers, network o
 [JMeter](https://jmeter.apache.org/) 
 
 
-## **Running a JMeter Test**
+## Running a JMeter Test
 
-JMeter is integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation. To run a JMeter test in Testkube you need to create a Test. 
+JMeter is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation. To run a JMeter test in Testkube you need to create a Test. 
 
-### **Using Files as Input**
+### Using Files as Input
 
 Let's save our JMeter test in file e.g. `test.jmx`. 
 
@@ -123,7 +123,7 @@ kubectl testkube create test --test-content-type git-file --git-uri https://gith
 
 Testkube will clone the repository and create a Testkube Test Custom Resource in your cluster automatically on each test run. 
 
-### **Using Additional JMeter Arguments in Your Tests**
+### Using Additional JMeter Arguments in Your Tests
 
 You can also pass additional arguments to the `jmeter` binary thanks to the `--args` flag:
 
@@ -134,7 +134,7 @@ $ kubectl testkube run test -f jmeter-test --args '-LsutHost=https://staging.kub
 ### **JMeter Test Results**
 
 A JMeter test will be successful in Testkube when all checks and thresholds are successful. In the case of an error, the test will have `failed` status,
-JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in Testkube Dashboard, 
+and the JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in the Testkube Dashboard, 
 or download it with the `testkube get artifacts EXECUTION_ID` command.
 
 

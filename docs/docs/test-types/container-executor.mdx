@@ -9,9 +9,9 @@ The Test execution fails if the container exits with an error and succeeds when 
 
 That's the new and recommended way of running custom images. Docs about the prebuilt custom executors can be found [here](prebuilt-executor.md).
 
-## Creating and configuring Container Executor: Curl
+## Creating and Configuring the Container Executor: cURL
 
-In the following example, the custom Curl executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
+In the following example, the custom cURL executor will be creating using `curlimages/curl:7.85.0` image. Testkube supports interacting with custom executors using any of available methods - Testkube Dashboard, CLI, and CRD.
 
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
@@ -20,33 +20,33 @@ Let's start with Dashboard first. You can view existing executors by going to th
 
 ![Dashboard menu - executors icon](../img/dashboard-executors-icon.png)
 
-That's also a place where you can create a new custom Container Executor. In order to do it just click the `Create a new executor` button.
-The executor creation dialog will be displayed. That's where you can name you executor, and set image that will be used for execution. That's where you also need to set `Executor type` - that's the name you will later use in your Tests as the test type. In this example we created a custom Curl executor:
+Also in the Dashboard, you can create a new custom Container Executor. To do this, click the `Create a new executor` button.
+The executor creation dialog will be displayed. That's where you can name you executor and set the image that will be used for execution. You also need to set `Executor type` - that's the name you will later use in your Tests as the test type. In this example we created a custom Curl executor:
 
 ![Container executor creation dialog](../img/dashboard-create-an-executor-dialog-curl.png)
 
-After the executor is created, you will be redirected to executor settings view. That's where you can set additional seetings.
+After the executor is created, you will be redirected to the executor settings view. That's where you can set additional settings.
 
 #### Additional settings
 
-Command & Arguments tab is a place, where you can define the Command your custom executor will run, and default arguments. Let's set the Command to `curl`:
+In the Command & Arguments tab you can define the Command your custom executor will run and default arguments. Let's set the Command to `curl`:
 
 ![Container executor settings - Command and Arguments](../img/dashboard-executor-settings-command-arguments.png)
 
-Container image tab allow you to change the container image which is used, or set `Secret ref name` if the image is in the private registry.
+The Container Image tab allows you to change the container image which is used, or set `Secret ref name` if the image is in the private registry.
 Additionally, the Definition tab allows you to check the Executor CRD:
 
 ![Container executor settings - Definition](../img/dashboard-executor-settings-definition.png)
 
-Now, the container executor is created, and configured - it can be used for running tests.
+The container executor is created and configured and it can be used for running tests.
 
 </TabItem>
 
 <TabItem value="cli" label="CLI">
   
-Custom Container Executor can also be created with Testkube CLI using `testkube create executor` command:
+The Custom Container Executor can also be created with the Testkube CLI using the `testkube create executor` command:
 
-Let's check available configuration options first:
+Let's check available the configuration options first:
 
 ```sh
 $ testkube create executor --help
@@ -91,7 +91,7 @@ Global Flags:
 - `--types` that's the name you will later use in your Tests as the test type (for example, `executor-curl/test`)
 - `--command` (for example, `curl`)
 
-Which result in:
+Which results in:
 
 ```sh
 testkube create executor --name curl-container-executor --executor-type container --image curlimages/curl:7.85.0 --types curl-container/test --command curl
@@ -145,7 +145,7 @@ Executing this test will run a Kubernetes Job with:
 - `curl` command
 - `https://testkube.kubeshop.io/` argument
 
-You can provide image, args, command, and image pull secrets in the HTTP Request, Test Spec, and Executor spec. The container executor merges all the data using the following order:
+You can provide the image, args, command, and image pull secrets in the HTTP Request, Test Spec, and Executor spec. The container executor merges all the data using the following order:
 
 1. HTTP Request.
 2. Test.Spec.ExecutionRequest fields are used if they are not filled before.
@@ -154,26 +154,26 @@ You can provide image, args, command, and image pull secrets in the HTTP Request
 </TabItem>
 </Tabs>
 
-## Creating and configuring Container Executor: Playwright
-Despite having the dedicated [Playwright executor](executor-playwright.md), you may want to use, for example, a version that isn't supported. That's where you can use the Container executor - it allow you to use any Playwright image you may need.
+## Creating and Configuring a Container Executor: Playwright
+Despite having the dedicated [Playwright executor](executor-playwright.md), you may want to use a version that isn't supported. That's where you can use the Container executor. It allows you to use any Playwright image you may need.
 
 The example Playwright project uses Playwright `1.31.1`: https://github.com/kubeshop/testkube/tree/main/test/playwright/executor-tests/playwright-project
-That's the specific version that's needed to run the tests. So, in this example the container executor will be created with `mcr.microsoft.com/playwright:v1.31.1-focal` Playwright official image. If you need another image you can find specific image tags in the Playwright Docs: https://playwright.dev/docs/docker#image-tags
+That is the specific version that is needed to run the tests. So, in this example the container executor will be created with `mcr.microsoft.com/playwright:v1.31.1-focal` Playwright official image. If you need another image you can find specific image tags in the Playwright Docs: https://playwright.dev/docs/docker#image-tags.
 
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
 
-Again, let's start with Dashboard first. In order to create a new custom Container Executor you need to go to the Executors tab, and then click the `Create a new executor` button.
+Again, let's start with the Dashboard first. In order to create a new custom Container Executor you need to go to the Executors tab and then click the `Create a new executor` button.
 
 ![Dashboard menu - executors icon](../img/dashboard-executors-icon.png)
 
-The executor creation dialog will be displayed. That's where you can name you executor, and set image that will be used for execution. That's where you also need to set `Executor type` - that's the name you will later use in your Tests as the test type. In this example we created a custom Playwright executor:
+The executor creation dialog will be displayed. That's where you can name the executor and set the image that will be used for execution. That's where you also need to set `Executor type`, the name you will later use in your Tests as the test type. In this example we created a custom Playwright executor:
 
 ![Container executor creation dialog](../img/dashboard-create-an-executor-dialog-playwright.png)
 
 After the executor is created, you will be redirected to executor settings view. That's where you can set additional seetings.
 
-In this case you will need to set Command that will be executed.
+In this case you will need to set the Command that will be executed.
 
 ![Container executor settings - command and arguments](../img/dashboard-create-executor-playwright-command-args.png)
 
@@ -246,7 +246,7 @@ spec:
 
 ## Input Data
 
-You can provide input data via string, files, and Git repositories via Testkube Dashboard. The data is downloaded into `/data` before the test is run using Kubernetes Init container. When using `string` type, the content is put into `/data/test-content` file. For example:
+You can provide input data via string, files, and Git repositories via the Testkube Dashboard. The data is downloaded into `/data` before the test is run using the Kubernetes Init container. When using the `string` type, the content is put into `/data/test-content` file. For example:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
@@ -295,16 +295,16 @@ spec:
     type: git-dir
 ```
 
-Downloads into `/data/repo` directory
+Downloads into the `/data/repo` directory.
 
 ```sh
 $ ls /data/repO
 CODE_OF_CONDUCT.md  CONTRIBUTING.md  LICENSE  Makefile  README.md  build  cmd  go.mod  go.sum  pkg
 ```
 
-## Collecting test artifacts
+## Collecting Test Artifacts
 
-For container executors that produce files during test execution we support collecting (scraping) these artifacts and storing them in our S3 compatible file storage. You need to save test related files into specified directories on the dynamically created volume, they will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
+For container executors that produce files during test execution, Testkube supports collecting (scraping) these artifacts and storing them in our S3 compatible file storage. You need to save test related files into specified directories on the dynamically created volume. They will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
@@ -344,7 +344,7 @@ spec:
     - artifacts
 ```
 
-Run your test using CLI command:
+Run your test using the CLI command:
 
 ```sh
 testkube run test cli-container

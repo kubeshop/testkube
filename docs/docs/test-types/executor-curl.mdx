@@ -4,11 +4,11 @@ import TabItem from "@theme/TabItem";
 # cURL
 Testkube is able to run cURL commands as tests.
 
-## Abstraction over curl
-Testkube executor provides an abstraction over curl, that allow you to create JSON-based curl test files. They allow you to combine curl command with expected results:
+## Abstraction over cURL
+Testkube executor provides an abstraction over cURL that allow you to create JSON-based cURL test files. They allow you to combine a cURL command with expected results:
 
-- `expected_status` allow you to assert specific status code is returned
-- `expected_body` allow to validate the body of the response.
+- `expected_status` allows you to assert that a specific status code is returned.
+- `expected_body` allows you to validate the body of the response.
 
 Below is an example of how to format the test:
 
@@ -25,10 +25,10 @@ Below is an example of how to format the test:
 }
 ```
 
-You can also find this test in the Testkube repository: https://github.com/kubeshop/testkube/blob/main/test/curl/curl.json
+You can also find this test in the Testkube repository: https://github.com/kubeshop/testkube/blob/main/test/curl/curl.json.
 
-## Example test
-In this example we will use the following curl test: https://github.com/kubeshop/testkube/blob/main/test/curl/executor-tests/curl-smoke-test.json
+## Example Test
+In this example we will use the following cURL test: https://github.com/kubeshop/testkube/blob/main/test/curl/executor-tests/curl-smoke-test.json.
 
 ```js
 {
@@ -40,20 +40,20 @@ In this example we will use the following curl test: https://github.com/kubeshop
 }
 ```
 
-## Creating and running Test
+## Creating and Running a Test
 
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
 
-If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`curl/test`), and then choose Test Source.
+If you prefer to use the Dashboard, just go to Tests, and click the `Add a new test` button. Fill in the Test Name, choose the Test Type (`curl/test`), and then choose Test Source.
 
 ### File
-In case of File source the test file is uploaded directly.
+For a File source, the test file is uploaded directly.
 
 ![curl test - creation dialog - file](../img/dashboard-curl-create-test-file.png)
 
-### Git file
-In case of Git file you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to curl test in your repository (`test/curl/executor-tests/curl-smoke-test.json`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+### Git File
+For a Git file, you need to fill in the repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and the path to the cURL test in your repository (`test/curl/executor-tests/curl-smoke-test.json`). In this example, the repository is public, but in the case of private ones, you would need to additionally fill in the Git credentials.
 
 ![curl test - creation dialog - git file](../img/dashboard-curl-create-test-git-file.png)
 
@@ -67,11 +67,11 @@ You need to set:
 - `--name` (for example, `curl-test`)
 - `--type` (in this case `curl/test`)
 
-And, then choose Test Content type based on Test Source you want to use:
+And, then choose the Test Content type based on the Test Source you want to use:
 
 ### File
 
-In case of File test source:
+For a File test source:
 
 - `--test-content-type` (`file-uri`)
 - `--file` (path to your curl test - in this case `test/curl/executor-tests/curl-smoke-test.json`)
@@ -86,12 +86,12 @@ Test created testkube / curl-test 🥇
 
 You can then run the test with `testkube run test curl-test`.
 
-### Git file
+### Git File
 
 - `--test-content-type` (`git-file`, so specific file will be checked out from the Git repository)
-- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-uri` - Repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`).
 - `--git-branch`
-- `--git-path` - path to the k6 script in the repository (in this case `test/curl/executor-tests/curl-smoke-test.json`)
+- `--git-path` - Path to the k6 script in the repository (in this case `test/curl/executor-tests/curl-smoke-test.json`).
 
 ```sh
 testkube create test --name curl-test --type curl/test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/curl/executor-tests/curl-smoke-test.json
@@ -206,10 +206,10 @@ Test execution completed with success in 9.462s 🥇
 </TabItem>
 <TabItem value="crd" label="Custom Resource">
 
-Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
+The third option to create the Test is to use a Test CRD. If you already have the test created, you can check the definition in Dashboard (`Definition` tab in Test Settings). 
 
-You can also get a definition while using `testkube create test` command by adding `--crd-only`.
-In that case, the test won't be created, but the definition will be displayed.
+You can also get a definition while using the `testkube create test` command by adding `--crd-only`.
+In that case, the test won't be created but the definition will be displayed.
 
 Output:
 ```sh
@@ -238,4 +238,4 @@ spec:
 </TabItem>
 </Tabs>
 
-When the Test CRD is saved to the yaml file it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
+When the Test CRD is saved to the yaml file, it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
