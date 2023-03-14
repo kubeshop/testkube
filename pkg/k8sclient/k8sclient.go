@@ -72,8 +72,10 @@ func GetK8sClientConfig() (*rest.Config, error) {
 		config, err = clientcmd.BuildConfigFromFlags("", cubeConfigPath)
 	} else {
 		config, err = rest.InClusterConfig()
-		config.QPS = 40.0
-		config.Burst = 400.0
+		if err == nil {
+			config.QPS = 40.0
+			config.Burst = 400.0
+		}
 	}
 
 	if err != nil {

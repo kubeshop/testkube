@@ -1,20 +1,30 @@
-# JMeter
+import Admonition from "@theme/Admonition";
+
+[JMeter](https://jmeter.apache.org/) is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation.
+
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is JMeter?">
+        <ul>
+          <li>Apache JMeter is an open-source, pure Java application designed to load test functional behavior and measure performance. It was originally designed for testing Web Applications but has since expanded to other test functions.</li>
+        </ul>
+        <b>What can I do with JMeter?</b>
+        <ul>
+          <li>JMeter can be used to test performance both on static and dynamic resources and Web dynamic applications.</li>
+          <li>It can also be used to simulate a heavy load on a server, group of servers, network, or object to test its strength or to analyze overall performance under different load types.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
 
 **Check out our [blog post](https://testkube.io/blog/jmeter-and-kubernetes-how-to-run-tests-efficiently-with-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with JMeter.**
 
-The Apache JMeter™ application is open source software, a 100% pure Java application designed to load test functional behavior and measure performance. It was originally designed for testing Web Applications but has since expanded to other test functions.
-
-## What can I do with JMeter?
-
-Apache JMeter may be used to test performance both on static and dynamic resources and Web dynamic applications.
-It can be used to simulate a heavy load on a server, group of servers, network or object to test its strength or to analyze overall performance under different load types.
-
-[JMeter](https://jmeter.apache.org/) 
-
 
 ## Running a JMeter Test
-
-JMeter is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation. To run a JMeter test in Testkube you need to create a Test. 
 
 ### Using Files as Input
 
@@ -118,7 +128,7 @@ You can also create a Test based on a Git repository:
 
 ```bash
 # create test from this Git repository
-kubectl testkube create test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube-executor-jmeter.git --git-branch main --git-path examples/kubeshop.jmx --type jmeter/test --name jmeter-test-from-git
+kubectl testkube create test --test-content-type git --git-uri https://github.com/kubeshop/testkube-executor-jmeter.git --git-branch main --git-path examples/kubeshop.jmx --type jmeter/test --name jmeter-test-from-git
 ```
 
 Testkube will clone the repository and create a Testkube Test Custom Resource in your cluster automatically on each test run. 

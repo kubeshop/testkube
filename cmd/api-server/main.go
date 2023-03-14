@@ -2,12 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 
@@ -42,8 +49,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
 
-	"github.com/kelseyhightower/envconfig"
-
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
@@ -60,22 +65,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type MongoConfig struct {
-	DSN          string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	DB           string `envconfig:"API_MONGO_DB" default:"testkube"`
-	SSLSecretRef string `envconfig:"API_MONGO_SSL_CERT"`
-	AllowDiskUse bool   `envconfig:"API_MONGO_ALLOW_DISK_USE"`
-}
-
-var Config MongoConfig
-
 var verbose = flag.Bool("v", false, "enable verbosity level")
 
 func init() {
 	flag.Parse()
 	ui.Verbose = *verbose
-	err := envconfig.Process("mongo", &Config)
-	ui.PrintOnError("Processing mongo environment config", err)
 }
 
 func runMigrations() (err error) {
@@ -150,6 +144,20 @@ func main() {
 	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
+	clientset, err := k8sclient.ConnectToK8s()
+	if err != nil {
+		ui.ExitOnError("Creating k8s clientset", err)
+	}
+
+	k8sCfg, err := k8sclient.GetK8sClientConfig()
+	if err != nil {
+		ui.ExitOnError("Getting k8s client config", err)
+	}
+	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
+	if err != nil {
+		ui.ExitOnError("Creating TestKube Clientset", err)
+	}
+
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
@@ -161,11 +169,11 @@ func main() {
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 	} else {
-		mongoSSLConfig := getMongoSSLConfig(Config, secretClient)
-		db, err := storage.GetMongoDatabase(Config.DSN, Config.DB, mongoSSLConfig)
+		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
+		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
-		resultsRepository = result.NewMongoRepository(db, Config.AllowDiskUse)
-		testResultsRepository = testresult.NewMongoRepository(db, Config.AllowDiskUse)
+		resultsRepository = result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 	}
@@ -193,13 +201,23 @@ func main() {
 
 	if clusterId == "" {
 		cmConfig, err = configRepository.Get(ctx)
+		if err != nil {
+			log.DefaultLogger.Warnw("error fetching config ConfigMap", "error", err)
+		}
 		cmConfig.EnableTelemetry = telemetryEnabled
 		if cmConfig.ClusterId == "" {
 			cmConfig.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
+			if err != nil {
+				log.DefaultLogger.Warnw("error getting unique clusterId", "error", err)
+			}
 		}
 
 		clusterId = cmConfig.ClusterId
 		_, err = configMapConfig.Upsert(ctx, cmConfig)
+		if err != nil {
+			log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
+		}
+
 	}
 
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
@@ -210,24 +228,10 @@ func main() {
 		ui.ExitOnError("Running server migrations", err)
 	}
 
-	clientset, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		ui.ExitOnError("Creating k8s clientset", err)
-	}
-
-	k8sCfg, err := k8sclient.GetK8sClientConfig()
-	if err != nil {
-		ui.ExitOnError("Getting k8s client config", err)
-	}
-	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
-	if err != nil {
-		ui.ExitOnError("Creating TestKube Clientset", err)
-	}
-
 	apiVersion := version.Version
 
 	// configure NATS event bus
-	nc, err := bus.NewNATSConnection()
+	nc, err := bus.NewNATSConnection(cfg.NatsURI)
 	if err != nil {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
@@ -236,32 +240,38 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	templates, err := kubeexecutor.NewTemplatesFromEnv("TESTKUBE_TEMPLATE")
+	defaultExecutors, err := parseDefaultExecutors(cfg)
 	if err != nil {
-		ui.ExitOnError("Creating job templates", err)
+		ui.ExitOnError("Parsing default executors", err)
 	}
 
-	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, cfg.TestkubeDefaultExecutors, cfg.TestkubeReadonlyExecutors)
+	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	if err != nil {
 		ui.ExitOnError("Sync default executors", err)
+	}
+
+	jobTemplate, err := parseJobTemplate(cfg)
+	if err != nil {
+		ui.ExitOnError("Creating job templates", err)
 	}
 
 	executor, err := client.NewJobExecutor(
 		resultsRepository,
 		cfg.TestkubeNamespace,
 		images,
-		templates,
+		jobTemplate,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
 		testsClientV3,
+		clientset,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
 	}
 
-	containerTemplates, err := kubeexecutor.NewTemplatesFromEnv("TESTKUBE_CONTAINER_TEMPLATE")
+	containerTemplates, err := parseContainerTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating container job templates", err)
 	}
@@ -299,6 +309,11 @@ func main() {
 		configMapClient,
 	)
 
+	slackLoader, err := newSlackLoader(cfg)
+	if err != nil {
+		ui.ExitOnError("Creating slack loader", err)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -317,8 +332,9 @@ func main() {
 		executor,
 		containerExecutor,
 		metrics,
-		templates,
+		jobTemplate,
 		sched,
+		slackLoader,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"
@@ -393,28 +409,137 @@ func main() {
 	}
 }
 
+func parseJobTemplate(cfg *config.Config) (template string, err error) {
+	template, err = loadFromBase64StringOrFile(
+		cfg.TestkubeTemplateJob,
+		cfg.TestkubeConfigDir,
+		"job-template.yml",
+		"job template",
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return template, nil
+}
+
+func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err error) {
+	t.Job, err = loadFromBase64StringOrFile(
+		cfg.TestkubeContainerTemplateJob,
+		cfg.TestkubeConfigDir,
+		"job-container-template.yml",
+		"job container template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	t.Scraper, err = loadFromBase64StringOrFile(
+		cfg.TestkubeContainerTemplateScraper,
+		cfg.TestkubeConfigDir,
+		"job-scraper-template.yml",
+		"job scraper template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	t.PVC, err = loadFromBase64StringOrFile(
+		cfg.TestkubeContainerTemplatePVC,
+		cfg.TestkubeConfigDir,
+		"pvc-container-template.yml",
+		"pvc container template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	return t, nil
+}
+
+func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
+	rawExecutors, err := loadFromBase64StringOrFile(
+		cfg.TestkubeDefaultExecutors,
+		cfg.TestkubeConfigDir,
+		"executors.json",
+		"executors",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
+		return nil, err
+	}
+
+	return executors, nil
+}
+
+func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
+	slackTemplate, err := loadFromBase64StringOrFile(
+		cfg.SlackTemplate,
+		cfg.TestkubeConfigDir,
+		"slack-template.json",
+		"slack template",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	slackConfig, err := loadFromBase64StringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
+	if err != nil {
+		return nil, err
+	}
+
+	return slack.NewSlackLoader(slackTemplate, slackConfig, testkube.AllEventTypes), nil
+}
+
+func loadFromBase64StringOrFile(base64Val string, configDir, filename, configType string) (raw string, err error) {
+	var data []byte
+
+	if base64Val != "" {
+		data, err = base64.StdEncoding.DecodeString(base64Val)
+		if err != nil {
+			return "", errors.Wrapf(err, "error decoding %s from base64", configType)
+		}
+		raw = string(data)
+		log.DefaultLogger.Infof("parsed %s from env var", configType)
+	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
+		data, err = io.ReadAll(f)
+		if err != nil {
+			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
+		}
+		raw = string(data)
+		log.DefaultLogger.Infof("loaded %s from file %s", configType, filepath.Join(configDir, filename))
+	} else {
+		log.DefaultLogger.Infof("no %s config found", configType)
+	}
+
+	return raw, nil
+}
+
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
 // and the given secret reference
-func getMongoSSLConfig(c MongoConfig, secretClient *secret.Client) *storage.MongoSSLConfig {
-	if c.SSLSecretRef == "" {
+func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage.MongoSSLConfig {
+	if cfg.APIMongoSSLCert == "" {
 		return nil
 	}
 
 	clientCertPath := "/tmp/mongodb.pem"
 	rootCAPath := "/tmp/mongodb-root-ca.pem"
-	mongoSSLSecret, err := secretClient.Get(Config.SSLSecretRef)
-	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", c.SSLSecretRef), err)
+	mongoSSLSecret, err := secretClient.Get(cfg.APIMongoSSLCert)
+	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
 
 	var keyFile, caFile, pass string
 	var ok bool
 	if keyFile, ok = mongoSSLSecret["sslClientCertificateKeyFile"]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", c.SSLSecretRef)
+		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", cfg.APIMongoSSLCert)
 	}
 	if caFile, ok = mongoSSLSecret["sslCertificateAuthorityFile"]; !ok {
-		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", c.SSLSecretRef)
+		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", cfg.APIMongoSSLCert)
 	}
 	if pass, ok = mongoSSLSecret["sslClientCertificateKeyFilePassword"]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", c.SSLSecretRef)
+		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)

@@ -137,7 +137,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
-	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git")
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman/collection)")
 

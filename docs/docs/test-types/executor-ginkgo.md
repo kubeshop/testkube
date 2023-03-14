@@ -1,11 +1,9 @@
+import Admonition from "@theme/Admonition";
+
 # Ginkgo
 
-**Check out our [blog post](https://testkube.io/blog/maximize-app-performance-in-kubernetes-with-ginkgo-and-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Ginko.**
 
-Testkube allows us to run Ginkgo-based tests. (https://onsi.github.io/ginkgo/)
-
-Ginkgo is a mature testing framework for Go designed to help you write expressive specs. Ginkgo builds on top of Go's testing foundation and is complemented by the Gomega matcher library. Together, Ginkgo and Gomega let you express the intent behind your specs clearly.
-
+**Check out our [blog post](https://testkube.io/blog/maximize-app-performance-in-kubernetes-with-ginkgo-and-testkube) to learn to write more expressive tests in Go using Ginkgo, Gomega, and Testkube.**
 
 ## **Test Environment**
 

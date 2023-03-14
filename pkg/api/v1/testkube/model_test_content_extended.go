@@ -10,6 +10,7 @@ const (
 	TestContentTypeFileURI TestContentType = "file-uri"
 	TestContentTypeGitFile TestContentType = "git-file"
 	TestContentTypeGitDir  TestContentType = "git-dir"
+	TestContentTypeGit     TestContentType = "git"
 	TestContentTypeEmpty   TestContentType = ""
 )
 
@@ -24,12 +25,15 @@ func NewStringTestContent(str string) *TestContent {
 }
 
 // IsDir - for content fetched as dir
+//
+// Deprecated: check source data
 func (c *TestContent) IsDir() bool {
 	return TestContentType(c.Type_) == TestContentTypeGitDir
 
 }
 
 // IsFile - for content fetched as file
+// Deprected: check source data
 func (c *TestContent) IsFile() bool {
 	return TestContentType(c.Type_) == TestContentTypeGitFile ||
 		TestContentType(c.Type_) == TestContentTypeFileURI ||

@@ -1,17 +1,32 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
 
 # K6
 
+Testkube's k6 executor provides a convenient way of running k6 tests.
+
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is k6?">
+        <ul>
+          <li><a href="https://k6.io/docs/">k6</a> is a free, developer-centric, and extensible open-source load testing tool that makes performance testing easy and productive for engineering teams.</li>
+        </ul>
+        <b>What can I do with k6?</b>
+        <ul>
+          <li>With k6, you can test the reliability and performance of your systems and catch performance regressions and problems earlier. K6 will help you to build resilient and performant applications that scale.</li>
+        </ul>
+        K6 is developed by Grafana Labs and the Open-Source community.
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
+
 **Check out our [blog post](https://kubeshop.io/blog/load-testing-in-kubernetes-with-k6-and-testkube) to follow tutorial steps to harness the power of k6 load testing in Kubernetes with Testkube's CLI and API.**
 
-[K6](https://k6.io/docs/) is an open-source load testing tool that makes performance testing easy and productive for engineering teams. K6 is free, developer-centric and extensible.
-
-Using k6, you can test the reliability and performance of your systems and catch performance regressions and problems earlier. K6 will help you to build resilient and performant applications that scale.
-
-K6 is developed by Grafana Labs and the community.
-
-Testkube's k6 executor provides a convenient way of running k6 tests.
 
 ## Example k6 test
 

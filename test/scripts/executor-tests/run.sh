@@ -113,6 +113,17 @@ container-curl-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-cypress-smoke() {
+  name="Container executor - Cypress"
+  test_crd_file="test/container-executor/executor-smoke/crd/cypress.yaml"
+  testsuite_name="executor-container-cypress-smoke-tests"
+  testsuite_file="test/suites/executor-container-cypress-smoke-tests.json"
+
+  custom_executor_crd_file="test/executors/container-executor-cypress.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 container-k6-smoke() {
   name="Container executor - K6"
   test_crd_file="test/container-executor/executor-smoke/crd/k6.yaml"
@@ -153,6 +164,15 @@ cypress-smoke() {
   custom_executor_crd_file="test/executors/cypress.yaml"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+ginkgo-smoke() {
+  name="Ginkgo"
+  test_crd_file="test/ginkgo/executor-tests/crd/smoke.yaml"
+  testsuite_name="executor-ginkgo-smoke-tests"
+  testsuite_file="test/suites/executor-ginkgo-smoke-tests.json"
+  
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
 gradle-smoke() {
@@ -245,10 +265,12 @@ main() {
     all)
       artillery-smoke
       container-curl-smoke
+      container-cypress-smoke
       container-k6-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke
+      ginkgo-smoke
       gradle-smoke
       jmeter-smoke
       k6-smoke
@@ -262,10 +284,12 @@ main() {
     smoke)
       artillery-smoke
       container-curl-smoke
+      container-cypress-smoke
       container-k6-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke
+      ginkgo-smoke
       gradle-smoke
       jmeter-smoke
       k6-smoke

@@ -80,7 +80,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique test source name - mandatory")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git-file|git-dir")
+	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "source file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")

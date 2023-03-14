@@ -30,7 +30,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, errWrongRepositoryType)
 		}
 
-		if request.CertificateSecret == "" && request.Username == "" && request.Token == "" {
+		if request.Username == "" && request.Token == "" {
 			var items = []struct {
 				secretRef *testkube.SecretRef
 				field     *string
@@ -65,7 +65,9 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 					}
 				}
 			}
+		}
 
+		if request.CertificateSecret == "" {
 			dir, err := os.MkdirTemp("", "checkout")
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, err)
@@ -73,7 +75,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			defer os.RemoveAll(dir) // clean up
 
 			fetcher := content.NewFetcher(dir)
-			if _, err = fetcher.FetchGitDir(&request); err != nil {
+			if _, err = fetcher.FetchGit(&request); err != nil {
 				return s.Error(c, http.StatusBadGateway, err)
 			}
 		}

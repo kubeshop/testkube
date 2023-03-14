@@ -10,7 +10,7 @@ metadata:
 spec:
   type: maven:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git
@@ -33,7 +33,7 @@ metadata:
 spec:
   type: maven:jdk11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git
@@ -56,7 +56,7 @@ metadata:
 spec:
   type: maven:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-maven.git

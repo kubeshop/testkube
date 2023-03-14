@@ -1140,6 +1140,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1203,6 +1211,22 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with deleting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1244,6 +1268,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1272,6 +1304,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1292,6 +1340,22 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with deleting test and its executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1313,6 +1377,22 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "no execution found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with aborting test execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1343,6 +1423,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        500:
+          description: "problem with getting metrics"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from storage"
           content:
@@ -1378,6 +1466,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1407,6 +1511,30 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2825,8 +2953,11 @@ components:
           enum:
             - string
             - file-uri
+            # Deprecated: use git instead
             - git-file
+            # Deprecated: use git instead
             - git-dir
+            - git
         repository:
           $ref: "#/components/schemas/Repository"
         data:

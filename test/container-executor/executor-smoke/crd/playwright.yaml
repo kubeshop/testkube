@@ -8,7 +8,7 @@ metadata:
 spec:
   type: container-executor-playwright-v1.31.1/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube

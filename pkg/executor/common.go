@@ -3,8 +3,6 @@ package executor
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,9 +114,9 @@ func getRunnerCloudTLSInsecure() string {
 
 // Templates contains templates for executor
 type Templates struct {
-	Job     string
-	PVC     string
-	Scraper string
+	Job     string `json:"job"`
+	PVC     string `json:"pvc"`
+	Scraper string `json:"scraper"`
 }
 
 // Images contains images for executor
@@ -306,43 +303,15 @@ func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, job
 	}, nil
 }
 
-// NewTemplatesFromEnv returns base64 encoded templates from nev
-func NewTemplatesFromEnv(env string) (t Templates, err error) {
-	err = envconfig.Process(env, &t)
-	if err != nil {
-		return t, err
-	}
-	templates := []*string{&t.Job, &t.PVC, &t.Scraper}
-	for i := range templates {
-		if *templates[i] != "" {
-			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
-			if err != nil {
-				return t, err
-			}
-
-			*templates[i] = string(dataDecoded)
-		}
-	}
-
-	return t, nil
-}
-
 // SyncDefaultExecutors creates or updates default executors
-func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace, data string, readOnlyExecutors bool) (
-	images Images, err error) {
-	var executors []testkube.ExecutorDetails
-
-	if data == "" {
+func SyncDefaultExecutors(
+	executorsClient executorsclientv1.Interface,
+	namespace string,
+	executors []testkube.ExecutorDetails,
+	readOnlyExecutors bool,
+) (images Images, err error) {
+	if len(executors) == 0 {
 		return images, nil
-	}
-
-	dataDecoded, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return images, err
-	}
-
-	if err := json.Unmarshal(dataDecoded, &executors); err != nil {
-		return images, err
 	}
 
 	for _, executor := range executors {
