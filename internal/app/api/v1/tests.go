@@ -28,6 +28,9 @@ import (
 func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to get test: id cannot be empty"))
+		}
 		errPrefix := fmt.Sprintf("failed to get test %s", name)
 		crTest, err := s.TestsClient.Get(name)
 		if err != nil {
@@ -56,6 +59,9 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to get test with execution: id cannot be empty"))
+		}
 		errPrefix := fmt.Sprintf("failed to get test %s with execution", name)
 		crTest, err := s.TestsClient.Get(name)
 		if err != nil {
@@ -369,6 +375,10 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: failed to unmarshal request: %w", errPrefix, err))
 		}
+		err = testkube.ValidateUpsertTestRequest(request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: invalid test: %w", errPrefix, err))
+		}
 
 		errPrefix = errPrefix + " " + request.Name
 		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
@@ -418,13 +428,17 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
-
 		var name string
 		if request.Name != nil {
 			name = *request.Name
+			errPrefix = errPrefix + " " + name
 		}
 
-		errPrefix = errPrefix + " " + name
+		err = testkube.ValidateUpdateTestRequest(request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: invalid test: %w", errPrefix, err))
+		}
+
 		// we need to get resource first and load its metadata.ResourceVersion
 		test, err := s.TestsClient.Get(name)
 		if err != nil {
@@ -486,6 +500,9 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to delete test: id cannot be empty"))
+		}
 		errPrefix := fmt.Sprintf("failed to delete test %s", name)
 		err := s.TestsClient.Delete(name)
 		if err != nil {
@@ -510,6 +527,9 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to abort test: id cannot be empty"))
+		}
 		errPrefix := fmt.Sprintf("failed to abort test %s", name)
 		filter := result.NewExecutionsFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
 		executions, err := s.ExecutionResults.GetExecutions(ctx, filter)
