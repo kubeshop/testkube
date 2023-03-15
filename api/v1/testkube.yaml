@@ -2747,6 +2747,9 @@ components:
           example:
             env: "prod"
             app: "backend"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution     
 
     TestSuiteExecutionStatus:
       type: string
@@ -3212,6 +3215,9 @@ components:
           type: string
           description: script to run before test execution
           example: "echo -n '$SECRET_ENV' > ./secret_file"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     Artifact:
       type: object
@@ -3305,6 +3311,9 @@ components:
           example:
             env: "prod"
             app: "backend"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     ExecutionStatus:
       type: string
@@ -3965,6 +3974,25 @@ components:
       nullable: true
       allOf:
         - $ref: "#/components/schemas/ExecutorMeta"
+
+    RunningContext:
+      description: running context for test or test suite execution
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: One of possible context types
+          enum:
+            - userCLI
+            - userUI
+            - testsuite
+            - testtrigger
+            - scheduler
+        context:
+          type: string
+          description: Context value depending from its type
 
     Webhook:
       description: CRD based webhook data
