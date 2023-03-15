@@ -1,7 +1,5 @@
 import Admonition from "@theme/Admonition";
 
-# JMeter
-
 [JMeter](https://jmeter.apache.org/) is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation.
 
 export const ExecutorInfo = () => {
@@ -26,11 +24,9 @@ export const ExecutorInfo = () => {
 **Check out our [blog post](https://testkube.io/blog/jmeter-and-kubernetes-how-to-run-tests-efficiently-with-testkube) to follow tutorial steps for end-to-end testing of your Kubernetes applications with JMeter.**
 
 
-## **Running a JMeter Test**
+## Running a JMeter Test
 
-To run a JMeter test in Testkube you need to create a Test: 
-
-### **Using Files as Input**
+### Using Files as Input
 
 Let's save our JMeter test in file e.g. `test.jmx`. 
 
@@ -137,7 +133,7 @@ kubectl testkube create test --test-content-type git --git-uri https://github.co
 
 Testkube will clone the repository and create a Testkube Test Custom Resource in your cluster automatically on each test run. 
 
-### **Using Additional JMeter Arguments in Your Tests**
+### Using Additional JMeter Arguments in Your Tests
 
 You can also pass additional arguments to the `jmeter` binary thanks to the `--args` flag:
 
@@ -148,7 +144,7 @@ $ kubectl testkube run test -f jmeter-test --args '-LsutHost=https://staging.kub
 ### **JMeter Test Results**
 
 A JMeter test will be successful in Testkube when all checks and thresholds are successful. In the case of an error, the test will have `failed` status,
-JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in Testkube Dashboard, 
+and the JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in the Testkube Dashboard, 
 or download it with the `testkube get artifacts EXECUTION_ID` command.
 
 

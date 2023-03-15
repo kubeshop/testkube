@@ -1,6 +1,6 @@
 # Webhooks
 
-Webhooks allow you to build or set up integrations and send HTTP POST payloads (your Testkube Execution and its current state) whenever an event is triggered. In this case, when your Tests are started or finished.
+[Webhooks](https://docs.github.com/en/webhooks-and-events/webhooks/about-webhooks) allow you to build or set up integrations and send HTTP POST payloads (your Testkube Execution and its current state) whenever an event is triggered. In this case, when your Tests start or finish.
 
 To set them up when using Testkube, you'll need to create your webhook as shown in the following format example:
 
@@ -19,7 +19,7 @@ spec:
   - end-test-failed
 ```
 
-And then apply with 
+And then apply with: 
 
 ```sh 
 kubectl apply -f webhook.yaml

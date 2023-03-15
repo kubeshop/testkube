@@ -2,6 +2,10 @@ import Admonition from "@theme/Admonition";
 
 # SoapUI
 
+[SoapUI](https://www.soapui.org) is an open-source tool used for the end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.
+
+**Check out our [blog post](https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube) to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.**
+
 Testkube supports the [SoapUI](https://www.soapui.org) executor implementation.
 
 export const ExecutorInfo = () => {
@@ -15,10 +19,6 @@ export const ExecutorInfo = () => {
     </div>
   );
 }
-
-<ExecutorInfo />
-
-**Check out our [blog post](https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube) to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.**
 
 ## **Running a SoapUI Test**
 

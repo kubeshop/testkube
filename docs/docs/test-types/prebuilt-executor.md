@@ -23,11 +23,11 @@ Please visit our [Contribution](../contributing/intro.md) page to see the guidel
 
 # Custom Executors
 
-## **Creating a Custom Executor**
+## Creating a Custom Executor
 
 A custom executor can be created on your own or by using our executor template (in `go` language).
 
-### **Using `testkube-executor-template`**
+### Using `testkube-executor-template`
 
 ```bash
 See the implementation example here: <https://github.com/exu/testkube-executor-example>).
@@ -187,167 +187,6 @@ This is a very basic example of a custom executor. Please visit our internal pro
 
 For Go-based executors, we have prepared many handy functions, such as printing valid outputs or wrappers around calling external processes.
 Currently, in other languages, you'll need to manage this on your own.
-
-Testkube has simplified test content management. We are supporting several different test content types such as string, uri, git. The entire complexity of checking out or downloading test content is covered by Testkube.
-
-Testkube will store its files and directories in a directory defined by the `RUNNER_DATADIR` env and will save the test-content file for:
-
-- String content (e.g., a postman collection is passed as string content read from a JSON file).
-- URI - Testkube will get the content of the file defined by the uri.
-- Git related content - Testkube will checkout the repo content in the current directory.
-
-To be able to proceed with this guide, Testkube should be installed. Review the Testkube [installation instructions](../getting-started/index.md).
-
-We have created a simple NodeJS executor.
-
-The executor will get the URI and try to call the HTTP GET method on the passed value, and will return:
-
-- **success** - when the status code is 200.
-- **failed** - for any other status code.
-
-```javascript
-"use strict";
-
-const https = require("https");
-const fs = require("fs");
-const path = require("path");
-
-const args = process.argv.slice(2);
-if (args.length == 0) {
-  error("Please pass arguments");
-  process.exit(1);
-}
-
-var uri;
-if (!process.env.RUNNER_DATADIR) {
-  error("No valid data directory detected");
-  process.exit(1);
-}
-
-const testContentPath = path.join(process.env.RUNNER_DATADIR, "test-content");
-uri = fs.readFileSync(testContentPath, { encoding: "utf8", flag: "r"});
-
-https.get(uri, (res) => {
-    if (res.statusCode == 200) {
-      successResult("Got valid status code: 200 OK");
-    } else {
-      errorResult("Got invalid status code");
-    }
-  })
-  .on("error", (err) => { error("Error: " + err.message); });
-
-
-function errorResult(message) {
-  console.log(JSON.stringify({ "type": "result", "result": { "status": "error", "errorMessage": message, }}));
-}
-
-function successResult(output) {
-  console.log(JSON.stringify({ "type": "result", "result": { "status": "success", "output": output, }}));
-}
-
-// 'error' will return the error info not related to the test itself (issues with the executor)
-function error(message) {
-  console.log(JSON.stringify({ "type": "error", "content": message, })); 
-}
-  
-```
-
-The code is ready and working. With the defaults assumed, `RUNNER_DATADIR` will be `/data` and the file will be saved in the `/data/test-content` directory.
-
-As we can see, we are pushing JSON output to `stdin` with the `console.log` function that is based on our [OpenAPI spec - ExecutorOutput](https://kubeshop.github.io/testkube/reference/openapi/).
-
-The two basic output types handled here are:
-
-- For executor failures (non-test related), return `error`.
-- For a test result, return `result` with the test status (success, error).
-
-When the executor code is ready, the next steps are to create:
-
-- A Docker image (create image and push).
-- A Kubernetes Executor Custom Resource Definition (CRD).
-- The test itself.
-
-We will simplify and use the latest tag for the steps below but a best practice is to use versioning. Currently, Testkube runs the command directly and passes the execution information as an argument.
-
-1. Add the runner binary (we have plans to remove this step in a future release):
-
-```bash
-#!/usr/bin/env sh
-node app.js "$@"
-```
-
-2. Add the runner binary into the Dockerfile:
-
-```Dockerfile
-FROM node:17
-
-# Create app directory
-WORKDIR /usr/src/app
-
-# Bundle app source
-COPY runner /bin/runner
-RUN chmod +x /bin/runner
-COPY app.js app.js
-
-EXPOSE 8080
-CMD [ "/bin/runner" ]
-```
-
-3. Build and push the docker container (change `user/repo` to your Docker Hub username):
-
-```bash
-docker build --platform=linux/amd64 -t USER/testkube-executor-example-nodejs:latest -f Dockerfile .
-docker push USER/testkube-executor-example-nodejs:latest
-```
-
-4. After the image is in place for Kubernetes to load, create the executor:
-
-```bash
-kubectl testkube create executor --image kubeshop/testkube-executor-example-nodejs:latest --types "example/test" --name example-nodejs-executor
-```
-
-When everything is in place, we can add our Testkube tests.
-
-```
-echo "https://httpstat.us/200" | kubectl testkube create test --name example-test --type example/test
-```
-
-As we can see, we need to pass the test name and test type `example/test` (which we defined in our executor CRD).
-
-Now it's finally time to run our test!
-
-```
-kubectl tests run example-test -f
-
-Type          : example/test
-Name          : example-test-string
-Execution ID  : 6218ccd2a26fa94ee7a7cfd1
-Execution name: moderately-pleasant-labrador
-
-
-Getting pod logs
-Execution completed Got valid status code: 200 OK
-
-.
-Use the following command to get test execution details:
-$ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
-
-
-
-Got valid status code: 200 OK
-Test execution completed with success in 6.163s 🥇
-
-Use the following command to get test execution details:
-$ kubectl testkube get execution 6218ccd2a26fa94ee7a7cfd1
-
-
-Watch the test execution until complete:
-$ kubectl testkube watch execution 6218ccd2a26fa94ee7a7cfd1
-
-
-```
-
-Our test completed successfully! Create another test with a different status code and check to see the result.
 
 ## **Resources**
 

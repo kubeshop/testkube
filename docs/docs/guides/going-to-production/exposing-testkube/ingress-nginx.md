@@ -10,7 +10,7 @@ helm repo add kubeshop https://kubeshop.github.io/helm-charts && helm repo updat
 
 A values file for guidance can be found [here](https://github.com/kubeshop/helm-charts/blob/39f73098630b333ba66db137e7fc016c39d92876/testkube/charts/testkube/values-demo.yaml).
 
-## Configure Ingress-NGINX to expose Testkube API
+## Configure Ingress-NGINX to Expose Testkube API
 
 The Testkube Dashboard needs the Testkube API to be exposed. For this, you can run:
 
@@ -22,7 +22,7 @@ By default, the API's entry point is the path `/results`, so the results will be
 
 The Ingress configuration used is available in the [Testkube Helm Repo](https://github.com/kubeshop/helm-charts).
 
-## Exposing Testkube Dashboard 
+## Exposing the Testkube Dashboard 
 
 To expose the Dashboard and the API together, run: 
 
@@ -67,7 +67,7 @@ ingress:
 
 Certificates are automatically generated using Let's Encrypt and cert-manager, but can be configured for any particular case. A full values file example can be found [here](https://github.com/kubeshop/helm-charts/blob/39f73098630b333ba66db137e7fc016c39d92876/testkube/charts/testkube/values-demo.yaml).
 
-If there is no need for TLS (Transport Layer Security) to be enabled, omit the TLS configuration.
+If there is no need for a TLS (Transport Layer Security) to be enabled, omit the TLS configuration.
 
 :::important
 We highly discourage working in a non-safe environment which is exposed without the use of a TLS-based connection. Please do so in a private internal environment for testing or development purposes only.
