@@ -9,13 +9,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
-	"github.com/spf13/cobra"
-
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -23,6 +22,7 @@ import (
 
 var (
 	executorArgs             []string
+	executorType             string
 	envs                     map[string]string
 	variables                map[string]string
 	preRunScript             string
@@ -32,10 +32,11 @@ var (
 // NewCRDTestsCmd is command to generate test CRDs
 func NewCRDTestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tests-crds <manifestDirectory>",
-		Short: "Generate tests CRD file based on directory",
-		Long:  `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
-		Args:  validator.ManifestsDirectory,
+		Use:     "tests-crds <manifestDirectory>",
+		Aliases: []string{"test-crd", "test-crds", "tests-crd"},
+		Short:   "Generate tests CRD file based on directory",
+		Long:    `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
+		Args:    validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
 			// try to detect type if none passed
 			d := detector.NewDefaultDetector()
@@ -58,7 +59,7 @@ func NewCRDTestsCmd() *cobra.Command {
 					return nil
 				}
 
-				if filepath.Ext(path) != ".json" {
+				if info.IsDir() {
 					return nil
 				}
 
@@ -106,6 +107,10 @@ func NewCRDTestsCmd() *cobra.Command {
 					testType = test.Type_
 				}
 
+				if executorType != "" && testType != executorType {
+					return nil
+				}
+
 				if _, ok := tests[testType]; !ok {
 					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
 				}
@@ -144,6 +149,7 @@ func NewCRDTestsCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type, if it is specified it will generate only tests of this type")
 	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
