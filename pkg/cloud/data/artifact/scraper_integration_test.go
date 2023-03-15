@@ -81,7 +81,7 @@ func TestCloudScraper(t *testing.T) {
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
 	req3 := &cloudscraper.PutObjectSignedURLRequest{
-		Object:        "file3.txt",
+		Object:        "subdir/file3.txt",
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
@@ -96,7 +96,7 @@ func TestCloudScraper(t *testing.T) {
 		"testName":      "my-test",
 		"testSuiteName": "my-test-suite",
 	}
-	s := scraper.NewScraperV2(extractor, cloudLoader)
+	s := scraper.NewELScraper(extractor, cloudLoader)
 	err = s.Scrape(context.Background(), meta)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, testServerRequests)
