@@ -9,21 +9,14 @@ import (
 
 	junit "github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
-	cloudagent "github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-	"github.com/kubeshop/testkube/pkg/filesystem"
-	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -39,34 +32,16 @@ func NewCypressRunner(dependency string) (*CypressRunner, error) {
 		dependency: dependency,
 	}
 
-	if params.CloudMode {
-		grpcConn, err := cloudagent.NewGRPCConnection(
-			context.Background(),
-			params.CloudAPITLSInsecure,
-			params.CloudAPIURL,
-			log.DefaultLogger,
-		)
-		if err != nil {
-			return nil, errors.Errorf("error establishing gRPC connection with cloud API: %v", err)
-		}
-		grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-		r.GRPCConn = grpcConn
-		r.CloudClient = grpcClient
-	}
-
 	return r, nil
 }
 
 // CypressRunner - implements runner interface used in worker to start test execution
 type CypressRunner struct {
-	Params      envs.Params
-	GRPCConn    *grpc.ClientConn
-	CloudClient cloud.TestKubeCloudAPIClient
-	dependency  string
+	Params     envs.Params
+	dependency string
 }
 
 func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	ctx := context.Background()
 	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
 	// make some validation
 	err = r.Validate(execution)
@@ -146,8 +121,14 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
-		if err := r.scrape(ctx, projectPath, execution); err != nil {
-			return *result.WithErrors(err, serr), nil
+		directories := []string{
+			projectPath,
+		}
+
+		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+
+		if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
+			return *result.WithErrors(err), nil
 		}
 	}
 
@@ -199,51 +180,6 @@ func (r *CypressRunner) installModule(runPath string) (out []byte, err error) {
 		return nil, errors.Errorf("checking package.json file: %v", err)
 	}
 	return
-}
-
-func (r *CypressRunner) scrape(ctx context.Context, projectPath string, execution testkube.Execution) error {
-	var err error
-
-	if !r.Params.ScrapperEnabled {
-		return nil
-	}
-	// scrape artifacts first even if there are errors above
-	directories := []string{
-		filepath.Join(projectPath, "cypress/videos"),
-		filepath.Join(projectPath, "cypress/screenshots"),
-	}
-	output.PrintLog(fmt.Sprintf("%s Extracting artifacts from %s using filesystem extractor", ui.IconCheckMark, directories))
-	extractor := scraper.NewFilesystemExtractor(directories, filesystem.NewOSFileSystem())
-	var loader scraper.Uploader
-	var meta map[string]any
-	if r.Params.CloudMode {
-		output.PrintLog(fmt.Sprintf("%s Uploading artifacts using Cloud uploader", ui.IconCheckMark))
-		meta = cloudscraper.ExtractCloudLoaderMeta(execution)
-		cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(r.CloudClient, r.Params.CloudAPIKey)
-		loader = cloudscraper.NewCloudUploader(cloudExecutor)
-	} else {
-		output.PrintLog(fmt.Sprintf("%s Uploading artifacts using MinIO uploader", ui.IconCheckMark))
-		meta = scraper.ExtractMinIOLoaderMeta(execution)
-		loader, err = scraper.NewMinIOLoader(
-			r.Params.Endpoint,
-			r.Params.AccessKeyID,
-			r.Params.SecretAccessKey,
-			r.Params.Location,
-			r.Params.Token,
-			r.Params.Bucket,
-			r.Params.Ssl,
-		)
-		if err != nil {
-			return err
-		}
-	}
-	scraperV2 := scraper.NewScraperV2(extractor, loader)
-	if err = scraperV2.Scrape(ctx, meta); err != nil {
-		output.PrintLog(fmt.Sprintf("%s Error encountered while scraping artifacts", ui.IconCross))
-		return errors.Errorf("scrape artifacts error: %v", err)
-	}
-
-	return nil
 }
 
 // Validate checks if Execution has valid data in context of Cypress executor

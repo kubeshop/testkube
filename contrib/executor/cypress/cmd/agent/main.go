@@ -16,9 +16,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	if r.Params.CloudMode {
-		defer r.GRPCConn.Close()
-	}
-
 	agent.Run(r, os.Args)
 }
