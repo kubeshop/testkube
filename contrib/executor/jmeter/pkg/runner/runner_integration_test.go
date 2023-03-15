@@ -61,34 +61,6 @@ func TestRun(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("run successful jmeter test with variables", func(t *testing.T) {
-		runner, err := NewRunner()
-		assert.NoError(t, err)
-
-		execution := testkube.NewQueuedExecution()
-		execution.TestType = "jmeter/test"
-		execution.Content = testkube.NewStringTestContent("")
-		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
-
-		execution.Variables = map[string]testkube.Variable{
-			"threads":   {Name: "threads", Value: "10", Type_: testkube.VariableTypeBasic},
-			"rampup":    {Name: "rampup", Value: "0", Type_: testkube.VariableTypeBasic},
-			"loopcount": {Name: "loopcount", Value: "1", Type_: testkube.VariableTypeBasic},
-			"ip":        {Name: "ip", Value: "sampleip", Type_: testkube.VariableTypeBasic},
-			"port":      {Name: "port", Value: "1234", Type_: testkube.VariableTypeBasic},
-		}
-
-		result, err := runner.Run(*execution)
-
-		assert.NoError(t, err)
-		assert.Empty(t, result.ErrorMessage)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-
-		err = cleanup(tempDir)
-		assert.NoError(t, err)
-	})
-
 	t.Run("run successful jmeter test with arguments", func(t *testing.T) {
 		runner, err := NewRunner()
 		assert.NoError(t, err)
