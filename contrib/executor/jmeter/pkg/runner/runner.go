@@ -1,10 +1,12 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -13,7 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,27 +23,19 @@ func NewRunner() (*JMeterRunner, error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize JMeter runner variables: %w", err)
+		return nil, errors.Errorf("could not initialize JMeter runner variables: %v", err)
 	}
 
-	return &JMeterRunner{
+	r := &JMeterRunner{
 		Params: params,
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Location,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
-	}, nil
+	}
+
+	return r, nil
 }
 
 // JMeterRunner runner
 type JMeterRunner struct {
-	Params  envs.Params
-	Scraper scraper.Scraper
+	Params envs.Params
 }
 
 func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
@@ -68,16 +62,23 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 
 	path := ""
 	workingDir := ""
+	basePath, err := filepath.Abs(r.Params.DataDir)
+	if err != nil {
+		output.PrintLog(fmt.Sprintf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir))
+		basePath = r.Params.DataDir
+	}
 	if execution.Content != nil {
-		if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
-			path = filepath.Join(r.Params.DataDir, "test-content")
+		isStringContentType := execution.Content.Type_ == string(testkube.TestContentTypeString)
+		isFileURIContentType := execution.Content.Type_ == string(testkube.TestContentTypeFileURI)
+		if isStringContentType || isFileURIContentType {
+			path = filepath.Join(basePath, "test-content")
 		}
 
-		if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeGit) {
-			path = filepath.Join(r.Params.DataDir, "repo")
+		isGitFileContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitFile)
+		isGitDirContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitDir)
+		isGitContentType := execution.Content.Type_ == string(testkube.TestContentTypeGit)
+		if isGitFileContentType || isGitDirContentType || isGitContentType {
+			path = filepath.Join(basePath, "repo")
 			if execution.Content.Repository != nil {
 				path = filepath.Join(path, execution.Content.Repository.Path)
 				workingDir = execution.Content.Repository.WorkingDir
@@ -107,7 +108,7 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 		fileInfo, errFile := os.Stat(scriptFile)
 		if errors.Is(errFile, os.ErrNotExist) || fileInfo.IsDir() {
 			output.PrintLog(fmt.Sprintf("%s Could not find file %s in the directory, error: %s", ui.IconCross, scriptName, errFile))
-			return *result.Err(fmt.Errorf("could not find file %s in the directory: %w", scriptName, errFile)), nil
+			return *result.Err(errors.Errorf("could not find file %s in the directory: %v", scriptName, errFile)), nil
 		}
 		path = scriptFile
 	}
@@ -118,13 +119,27 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 		params = append(params, fmt.Sprintf("-J%s=%s", value.Name, value.Value))
 	}
 
-	runPath := r.Params.DataDir
+	runPath := basePath
 	if workingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", workingDir)
+		runPath = filepath.Join(basePath, "repo", workingDir)
 	}
 
-	reportPath := filepath.Join(runPath, "report.jtl")
-	args := []string{"-n", "-t", path, "-l", reportPath}
+	outputDir := filepath.Join(runPath, "output")
+	// clean output directory it already exists, only useful for local development
+	_, err = os.Stat(outputDir)
+	if err == nil {
+		if err = os.RemoveAll(outputDir); err != nil {
+			output.PrintLog(fmt.Sprintf("%s Failed to clean output directory %s", ui.IconWarning, outputDir))
+		}
+	}
+	// recreate output directory with wide permissions so JMeter can create report files
+	if err = os.Mkdir(outputDir, 0777); err != nil {
+		return *result.Err(errors.Errorf("could not create directory %s: %v", runPath, err)), nil
+	}
+
+	jtlPath := filepath.Join(outputDir, "report.jtl")
+	reportPath := filepath.Join(outputDir, "report")
+	args := []string{"-n", "-t", path, "-l", jtlPath, "-e", "-o", reportPath}
 	args = append(args, params...)
 
 	// append args from execution
@@ -134,14 +149,14 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 	// run JMeter inside repo directory ignore execution error in case of failed test
 	out, err := executor.Run(runPath, "jmeter", envManager, args...)
 	if err != nil {
-		return *result.WithErrors(fmt.Errorf("jmeter run error: %w", err)), nil
+		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
 	}
 	out = envManager.ObfuscateSecrets(out)
 
-	output.PrintLog(fmt.Sprintf("%s Getting report %s", ui.IconFile, reportPath))
-	f, err := os.Open(reportPath)
+	output.PrintLog(fmt.Sprintf("%s Getting report %s", ui.IconFile, jtlPath))
+	f, err := os.Open(jtlPath)
 	if err != nil {
-		return *result.WithErrors(fmt.Errorf("getting jtl report error: %w", err)), nil
+		return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
 	}
 
 	results := parser.Parse(f)
@@ -149,16 +164,15 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 	output.PrintLog(fmt.Sprintf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark))
 
 	// scrape artifacts first even if there are errors above
-	// Basic implementation will scrape report
-	// TODO add additional artifacts to scrape
 	if r.Params.ScrapperEnabled {
 		directories := []string{
-			reportPath,
+			outputDir,
 		}
 
-		err := r.Scraper.Scrape(execution.Id, directories)
-		if err != nil {
-			return *executionResult.WithErrors(fmt.Errorf("scrape artifacts error: %w", err)), nil
+		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+
+		if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
+			return *executionResult.WithErrors(err), nil
 		}
 	}
 

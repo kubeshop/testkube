@@ -26,5 +26,10 @@ Chart.lock
 bin/
 site
 dist/
+data/
+temp/
 
 .vscode
+
+### Environment
+.env

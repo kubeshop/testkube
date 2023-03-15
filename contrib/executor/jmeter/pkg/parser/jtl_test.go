@@ -23,8 +23,11 @@ const (
 )
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 
 	t.Run("parse failed test", func(t *testing.T) {
+		t.Parallel()
+
 		results := Parse(strings.NewReader(failedTest))
 		assert.True(t, results.HasError)
 		assert.Equal(t, 3, len(results.Results))
@@ -33,6 +36,8 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("parse success test", func(t *testing.T) {
+		t.Parallel()
+
 		results := Parse(strings.NewReader(successTest))
 		assert.False(t, results.HasError)
 		assert.Equal(t, "200", results.Results[0].ResponseCode)
