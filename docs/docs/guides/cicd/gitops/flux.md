@@ -2,11 +2,11 @@
 
 ## Tutorial
 
-The following is a step-by-step walkthrough to get this in place for the automated application deployment and execution of Postman collections in a local Kind cluster to test.
+The following is a step-by-step walkthrough to test the automated application deployment and execution of Postman collections in a local Kind cluster.
 
 Let’s start with setting things up for our GitOps-powered testing machine!
 
-### 1. [Fork the example repository](https://github.com/kubeshop/testkube-flux/fork) and clone it locally
+### 1. [Fork the example repository](https://github.com/kubeshop/testkube-flux/fork) and clone it locally.
 
 ```sh
 git clone https://github.com/$GITHUB_USER/testkube-flux.git
@@ -22,7 +22,7 @@ kind create cluster
 
 ### 3. Create a Github Classic Token.
 
-Must be of type [Classic](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic) (i.e. starts with ghp\_)
+Must be of type [Classic](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic) (i.e. starts with ghp\_).
 
 ```sh
 GITHUB_TOKEN=<ghp_>
@@ -43,9 +43,9 @@ flux bootstrap github \
 --personal
 ```
 
-### 5. Create a Flux Source and a Kusktomize Controller.
+### 5. Create a Flux Source and a Kustomize Controller.
 
-The following command will create Flux source to tell Flux to apply changes that are created in your repository:
+The following command will create a Flux source to tell Flux to apply changes that are created in your repository:
 
 ```sh
 flux create source git testkube-tests \
@@ -69,7 +69,7 @@ flux create kustomization testkube-test \
 
 ### 6. Install Testkube in the cluster.
 
-If you don't have the Testkube CLI, follow the instruction [here](../../../getting-started/step1-installing-cli.md) to install it.
+If you don't have the Testkube CLI, follow the instructions [here](../../../getting-started/step1-installing-cli.md) to install it.
 
 Run the following command to install Testkube and its components in the cluster:
 
@@ -79,7 +79,7 @@ testkube install
 
 ### 7. Create a Test CRD with Testkube CLI.
 
-In this example the test being used is a Postman test, which you can find in **/img/server/tests/postman-collection.json**.
+In this example, the test being used is a Postman test, which you can find in **/img/server/tests/postman-collection.json**.
 
 To create a Kubernetes CRD for the test, run:
 
@@ -87,11 +87,11 @@ To create a Kubernetes CRD for the test, run:
 testkube generate tests-crds img/server/tests/postman-collection.json > cluster/testkube/server-postman-test.yaml
 ```
 
-Note: You can [run Testkube from your CI/CD pipeline](https://docs.testkube.io/integrations/testkube-automation/) in case you want to automate the creation of the Test CRDs.
+Note: You can [run Testkube from your CI/CD pipeline](https://docs.testkube.io/integrations/testkube-automation/) if you want to automate the creation of the Test CRDs.
 
 ### 8. Add the generated test to the Kustomize file.
 
-The name of the test file created in the previous step is **server-postman-test.yaml**, add that to the Kustomize file located in [cluster/testkube/kustomization.yaml](https://docs.testkube.io/integrations/testkube-automation/):
+The name of the test file created in the previous step is **server-postman-test.yaml**. Add that to the Kustomize file located in [cluster/testkube/kustomization.yaml](https://docs.testkube.io/integrations/testkube-automation/):
 
 ```diff
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -156,4 +156,4 @@ Test execution completed with success in 13.345s
 
 ## GitOps Takeaways
 
-Once fully realized - using GitOps for testing of Kubernetes applications as described above provides a powerful alternative to a more traditional approach where orchestration is tied to your current CI/CD tooling and not closely aligned with the lifecycle of Kubernetes applications.
+Once fully realized - using GitOps for testing of Kubernetes applications as described above provides a powerful alternative to the more traditional approach where orchestration is tied to your current CI/CD tooling and not closely aligned with the lifecycle of Kubernetes applications.

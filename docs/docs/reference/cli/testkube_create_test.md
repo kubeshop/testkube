@@ -51,6 +51,7 @@ testkube create test [flags]
       --test-content-type string                   content type of test one of string|file-uri|git
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.
   -t, --type string                                test type (defaults to postman/collection)
+      --upload-timeout string                      timeout to use when uploading files, example: 30s
       --uri string                                 URI of resource - will be loaded by http GET
   -v, --variable stringToString                    variable key value pair: --variable key1=value1 (default [])
       --variable-configmap stringArray             config map name used to map all keys to basis variables

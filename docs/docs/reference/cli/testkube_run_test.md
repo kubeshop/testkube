@@ -41,6 +41,7 @@ testkube run test <testName> [flags]
       --scraper-template string                    scraper template file path for extensions to scraper template
   -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --upload-timeout string                      timeout to use when uploading files, example: 30s
   -v, --variable stringToString                    execution variable passed to executor (default [])
       --variable-configmap stringArray             config map name used to map all keys to basis variables
       --variable-secret stringArray                secret name used to map all keys to secret variables

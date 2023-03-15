@@ -51,7 +51,7 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 			assert.Equal(t, b, []byte("test1"))
 		case "file2.txt":
 			assert.Equal(t, b, []byte("test2"))
-		case "file3.txt":
+		case "subdir/file3.txt":
 			assert.Equal(t, b, []byte("test3"))
 		default:
 			t.Fatalf("unexpected file: %s", object.Name)
@@ -64,4 +64,39 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 	err = extractor.Extract(context.Background(), processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)
+}
+
+func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
+	t.Parallel()
+
+	tempDir, err := os.MkdirTemp("", "test")
+	require.NoError(t, err)
+
+	defer os.RemoveAll(tempDir)
+
+	err = os.Mkdir(filepath.Join(tempDir, "subdir"), os.ModePerm)
+	require.NoError(t, err)
+
+	file1 := filepath.Join(tempDir, "file1.txt")
+
+	err = os.WriteFile(file1, []byte("test1"), os.ModePerm)
+	assert.NoError(t, err)
+
+	processCallCount := 0
+	processFn := func(ctx context.Context, object *scraper.Object) error {
+		processCallCount++
+		b, err := io.ReadAll(object.Data)
+		if err != nil {
+			t.Fatalf("error reading %s: %v", object.Name, err)
+		}
+		assert.Equal(t, b, []byte("test1"))
+
+		return nil
+	}
+
+	scrapeDirs := []string{filepath.Join(tempDir, "file1.txt")}
+	extractor := scraper.NewFilesystemExtractor(scrapeDirs, filesystem.NewOSFileSystem())
+	err = extractor.Extract(context.Background(), processFn)
+	require.NoError(t, err)
+	assert.Equal(t, processCallCount, 1)
 }

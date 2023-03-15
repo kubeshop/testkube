@@ -2,10 +2,11 @@ package agent
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -23,16 +24,25 @@ func Run(r runner.Runner, args []string) {
 	var err error
 
 	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
+	switch {
+	case (stat.Mode() & os.ModeCharDevice) == 0:
 		test, err = io.ReadAll(os.Stdin)
 		if err != nil {
-			output.PrintError(os.Stderr, fmt.Errorf("can't read stdin input: %w", err))
+			output.PrintError(os.Stderr, errors.Errorf("can't read stdin input: %v", err))
 			os.Exit(1)
 		}
-	} else if len(args) > 1 {
+	case len(args) > 1:
 		test = []byte(args[1])
-	} else {
-		output.PrintError(os.Stderr, fmt.Errorf("missing input JSON argument or stdin input"))
+		hasFileFlag := args[1] == "-f" || args[1] == "--file"
+		if hasFileFlag {
+			test, err = os.ReadFile(args[2])
+			if err != nil {
+				output.PrintError(os.Stderr, errors.Errorf("error reading JSON file: %v", err))
+				os.Exit(1)
+			}
+		}
+	default:
+		output.PrintError(os.Stderr, errors.Errorf("execution json must be provided using stdin, program argument or -f|--file flag"))
 		os.Exit(1)
 	}
 
@@ -40,7 +50,7 @@ func Run(r runner.Runner, args []string) {
 
 	err = json.Unmarshal(test, &e)
 	if err != nil {
-		output.PrintError(os.Stderr, err)
+		output.PrintError(os.Stderr, errors.Wrap(err, "error unmarshalling execution json"))
 		os.Exit(1)
 	}
 
