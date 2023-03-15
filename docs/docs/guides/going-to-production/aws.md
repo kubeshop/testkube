@@ -10,7 +10,7 @@ Once the cluster is up and running we need to deploy the AWS Load Balancer Contr
 
 Another important point is [ExternalDNS](https://github.com/kubernetes-sigs/external-dns). It is not compulsory to deploy it into your cluster, but it helps you dynamically manage your DNS records via k8s resources.
 
-And last but not least - Testkube CLI. You can download a binary file from our [installation](https://kubeshop.github.io/testkube/getting-started/installing-cli) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
+And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](https://kubeshop.github.io/testkube/getting-started/installing-cli) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
 
 ## Ingress and Service Resources Configuration
 
@@ -71,7 +71,7 @@ path: /
 
 :::caution
 
-Do not forget to add `apiServerEndpoint` to the `values.yaml` for `testkube-dashboard`, e.g.: `apiServerEndpoint: "test-api.aws.testkube.io/results/v1"`
+Do not forget to add `apiServerEndpoint` to the `values.yaml` for `testkube-dashboard`, e.g.: `apiServerEndpoint: "test-api.aws.testkube.io/results/v1"`.
 
 :::
 
@@ -93,7 +93,7 @@ After the installation command is complete, you will see the following resources
 
 ![AWS Console3](../../img/aws-resource-console-3.png)
 
-Please note that the annotations may vary, depending on your Load Balancer schema type, backend-protocols (you may use http only), target-type etc. However, this is the bare minimum that should be applied to your configuration.
+Please note that the annotations may vary, depending on your Load Balancer schema type, backend-protocols (you may use http only), target-type, etc. However, this is the bare minimum that should be applied to your configuration.
 
 ## Expose Testkube with Only One Load Balancer
 
@@ -173,6 +173,6 @@ This way we will have 1 Load Balancer with two listener rules pointing on corres
 
 ## Give it a go!
 
-With just a few changes you can deploy Testkube into EKS cluster and expose it to the outside world while all the necessary resources are created automatically.
+With just a few changes you can deploy Testkube into an EKS cluster and expose it to the outside world while all the necessary resources are created automatically.
 
-If you have any questions you can [join our Discord community](https://discord.com/invite/6zupCZFQbe) or, if you have any ideas for other useful features, you can create the feature requests at our [GitHub Issues](https://github.com/kubeshop/testkube) page.
+If you have any questions you can [join our Discord community](https://discord.com/invite/6zupCZFQbe) or, if you have any ideas for other useful features, you can create feature requests at our [GitHub Issues](https://github.com/kubeshop/testkube) page.

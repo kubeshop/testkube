@@ -2,7 +2,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
 # Artillery.io
-Artillery.io is an open-source load testing tool. It's designed to be both straightforward in configuration (YAML files), and powerful. Artillery executor allow you to run Artillery tests with Testkube.
+Artillery.io is an open-source load testing tool. It's designed to be both straightforward in configuration (YAML files), and powerful. The Artillery executor allow you to run Artillery tests with Testkube.
 
 ## **Test Environment**
 
@@ -60,15 +60,15 @@ If you want to upload a test file directly (like in this example) you can use Da
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
 
-If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`artillery/test`), Test Source (`File`, which allow you to upload specific file), and choose the File.
+If you prefer to use the Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`artillery/test`), Test Source (`File`, which allow you to upload specific file), and choose the File.
 ![Container executor creation dialog](../img/dashboard-create-artillery-api-test.png)
 
 </TabItem>
 
 <TabItem value="cli" label="CLI">
 
-If you prefer using the CLI instead, you can create the test with `testcube create test`.
-You need to set test:
+If you prefer using the CLI instead, you can create the test with `testkube create test`.
+You need to set the test:
 - `--name` (for example, `artillery-api-test`)
 - `--type` (in this case `artillery/test`)
 - `--file` which is a path to your test file (in this case `test.yaml`)

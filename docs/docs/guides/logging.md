@@ -12,7 +12,7 @@ logs:
 ```
 
 ## [Mongo](https://www.mongodb.com/kubernetes)
-When mongo is specified it will store in a separate collection so the execution handling performance is not affected.
+When mongo is specified, logs will be stored in a separate collection so the execution handling performance is not affected.
 
 ## [MinIO](https://min.io/)
-When MinIO is specified, it will store the logs as separate files in the configured bucket of the MinIO instance or S3 bucket if ;inIO is configured to work with S3.
+When MinIO is specified, logs will be stores as separate files in the configured bucket of the MinIO instance or the S3 bucket if MinIO is configured to work with S3.

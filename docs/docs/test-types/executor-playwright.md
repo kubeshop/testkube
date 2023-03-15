@@ -3,26 +3,7 @@ import Admonition from "@theme/Admonition";
 
 # Playwright
 
-Since the v1.9.5 Testkube Helm chart, it is now possible to use Testkube to manage your [Playwright](https://playwright.dev/) tests inside your Kubernetes cluster.
-
-export const ExecutorInfo = () => {
-  return (
-    <div>
-      <Admonition type="info" icon="🎓" title="What is Playwright Testing?">
-        <ul>
-          <li>Playwright is an end-to-end testing and automation framework developed by Microsoft.</li>
-        </ul>
-        <b>What can I do with Playwright?</b>
-        <ul>
-          <li>With Playwright, you can easily perform actions and assert the state against expectations.</li>
-          <li>Playwright supports end-to-end testing with multiple browsers, operating systems, and programming languages.</li>
-        </ul>
-      </Admonition>
-    </div>
-  );
-}
-
-<ExecutorInfo />
+[Playwright](https://playwright.dev/) is an end-to-end testing and automation framework developed by Microsoft. Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
 
 **Check out our [blog post](https://testkube.io/blog/bring-playwright-tests-into-the-cloud-with-testkube) to learn how to harness the power of Playwright Testing in your cloud-native apps.**
 
@@ -101,4 +82,4 @@ ENV PWTEST_SKIP_TEST_OUTPUT=1
 
 ### Using Different Playwright Versions
 
-The Testkube Playwright executor supports only one version for now: 1.30.0. In case this does not suffice, the [container executor docs](https://kubeshop.github.io/testkube/test-types/container-executor/#creating-and-configuring-container-executor-playwright) contain instructions on how to set up your own executor with a different version of Playwright.
+The Testkube Playwright executor supports only one version for now: 1.30.0. In case this does not suffice, the [container executor docs](https://kubeshop.github.io/testkube/test-types/container-executor/#creating-and-configuring-container-executor-playwright) contains instructions on how to set up your own executor with a different version of Playwright.

@@ -1,16 +1,16 @@
-# Github Actions
+# GitHub Actions
 
-In order to automate Testkube runs, access to a K8s cluster is needed, for example, a configured environment with the set up context and kubeconfig for communication with the K8s cluster.
+In order to automate Testkube runs, access to a K8s cluster is needed. For example, a configured environment with the set up context and kubeconfig for communication with the K8s cluster.
 
 Testkube uses your K8s context and access settings in order to interact with the cluster and tests resources, etc.
 
 In the next few sections, we will go through the process of Testkube and Helm (for Testkube's release deploy/upgrade) automations with the usage of GitHub Actions and GKE K8s.
 
-## Testkube Github Action
+## Testkube GitHub Action
 
-The testkube Github Action is available here <https://github.com/kubeshop/testkube-docker-action> and it makes possible running the Testkube cli commands in a github workflow.
+The testkube GitHub Action is available here <https://github.com/kubeshop/testkube-docker-action> and it enables running the Testkube CLI commands in a GitHub workflow.
 
-Following example shows how to create a test using the github action, a more complex example can be found [here](https://github.com/kubeshop/helm-charts/blob/59054b87f83f890f4f62cf966ac63fd7e46de336/.github/workflows/testkube-docker-action.yaml).
+The following example shows how to create a test using the GitHub action; a more complex example can be found [here](https://github.com/kubeshop/helm-charts/blob/59054b87f83f890f4f62cf966ac63fd7e46de336/.github/workflows/testkube-docker-action.yaml).
 
 ```yaml
 # Creating test
@@ -25,9 +25,9 @@ Following example shows how to create a test using the github action, a more com
     stdin: "import http from 'k6/http';\nimport { sleep,check } from 'k6';\n\nexport default function () {\n  const baseURI = `${__ENV.TESTKUBE_HOMEPAGE_URI || 'https://testkube.kubeshop.io'}`\n  check(http.get(`${baseURI}/`), {\n    'check testkube homepage home page': (r) =>\n      r.body.includes('Your Friendly Cloud-Native Testing Framework for Kubernetes'),\n  });\n\n\n  sleep(1);\n}\n"
 ```
 
-## Configuring your GH Actions for Access to GKE
+## Configuring Your GH Actions for Access to GKE
 
-To obtain set up access to a GKE (Google Kubernetes Engine) from GH (GitHub) actions, please visit the official documentation from GH: <https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine>
+To obtain set up access to a GKE (Google Kubernetes Engine) from GH (GitHub) actions, please visit the official documentation from GH: <https://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine>.
 
 1. Create a Service Account (SA).
 2. Save it into GH's **Secrets** of the repository.

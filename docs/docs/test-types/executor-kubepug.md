@@ -64,7 +64,7 @@ These tests also support input strings, file URIs, Git files and Git directories
 
 ## Testing the Output of `kubectl get`
 
-Another way to test Kubernetes objects is to create the Testkube Test with the output of `kubectl get`. The output has to be in the correct format in order for KubePug to be able to scan it using `-o yaml` argument.
+Another way to test Kubernetes objects is to create the Testkube Test with the output of `kubectl get`. The output has to be in the correct format in order for KubePug to be able to scan it using the `-o yaml` argument.
 
 ```bash
 $ kubectl get PodSecurityPolicy gce.gke-metrics-agent -o yaml | kubectl testkube create test --type kubepug/yaml --name kubepug-example-test2

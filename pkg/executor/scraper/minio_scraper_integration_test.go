@@ -5,8 +5,10 @@ package scraper_test
 import (
 	"context"
 	"github.com/golang/mock/gomock"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/filesystem"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -51,7 +53,29 @@ func TestMinIOScraper(t *testing.T) {
 	meta := map[string]any{
 		"executionId": "minio-test",
 	}
-	s := scraper.NewScraperV2(extractor, loader)
+	s := scraper.NewELScraper(extractor, loader)
 	err = s.Scrape(context.Background(), meta)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("error scraping: %v", err)
+	}
+
+	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
+	artifacts, err := c.ListFilesFromBucket("test-bucket-2")
+	if err != nil {
+		t.Fatalf("error listing files from bucket: %v", err)
+	}
+	assert.True(t, containsArtifact(t, artifacts, "minio-test/file1.txt"))
+	assert.True(t, containsArtifact(t, artifacts, "minio-test/file2.txt"))
+	assert.True(t, containsArtifact(t, artifacts, "minio-test/subdir/file3.txt"))
+}
+
+func containsArtifact(t *testing.T, artifacts []testkube.Artifact, name string) bool {
+	t.Helper()
+
+	for _, a := range artifacts {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
 }

@@ -13,14 +13,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-type MinIOLoader struct {
+type MinIOUploader struct {
 	Endpoint, AccessKeyID, SecretAccessKey, Location, Token, Bucket string
 	Ssl                                                             bool
 	client                                                          *minio.Client
 }
 
-func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) (*MinIOLoader, error) {
-	l := &MinIOLoader{
+func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) (*MinIOUploader, error) {
+	l := &MinIOUploader{
 		Endpoint:        endpoint,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
@@ -40,7 +40,7 @@ func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, buc
 	return l, nil
 }
 
-func (l *MinIOLoader) Upload(ctx context.Context, object *Object, meta map[string]any) error {
+func (l *MinIOUploader) Upload(ctx context.Context, object *Object, meta map[string]any) error {
 	folder, err := utils.GetStringKey(meta, "executionId")
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (l *MinIOLoader) Upload(ctx context.Context, object *Object, meta map[strin
 	return nil
 }
 
-func ExtractMinIOLoaderMeta(execution testkube.Execution) map[string]any {
+func ExtractMinIOUploaderMeta(execution testkube.Execution) map[string]any {
 	return map[string]any{
 		"executionId": execution.Id,
 	}

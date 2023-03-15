@@ -4,7 +4,7 @@ Testkube doesn't provide a separate user/role management system to protect acces
 
 Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and the CLI config command.
 
-Testkube can automatically configure the Kubernetes NGINX Ingress Controller and create required ingresses.
+Testkube can automatically configure the Kubernetes NGINX Ingress Controller and create the required ingresses.
 
 ## Provide Parameters for API Ingress
 
@@ -32,11 +32,11 @@ The authorization callback URL should be a prebuilt page at the Testkube Dashboa
 
 ![View created App](../../../img/github_app_response_cli.png)
 
-Remember the generated Client ID and Client Secret.
+Make note of the generated Client ID and Client Secret.
 
 ## Provide Parameters for CLI
 
-Run the command below to configure oauth parameters (we support github OAuth provider):
+Run the command below to configure oauth parameters (we support GitHub OAuth provider):
 
 ```sh
 kubectl testkube config oauth https://demo.testkube.io/api --client-id XXXXXXXXXX --client-secret XXXXXXXXXX
@@ -50,7 +50,7 @@ https://github.com/login/oauth/authorize?access_type=offline&client_id=XXXXXXXXX
 Authentication will be cancelled in 60 seconds
 ```
 
-Authorization for the Github application will be requested and access will need to be confirmed.
+Authorization for the GitHub application will be requested and access will need to be confirmed.
 ![Confirm App authorization](../../../img/github_app_authorize_cli.png)
 
 If authorization is successful, you will see the success page.
@@ -90,6 +90,6 @@ Output:
 
 You can use 2 environment variables to override CLI config values:
 
-`TESTKUBE_API_URI` - for API uri.
+`TESTKUBE_API_URI` - For the API uri.
 
-`TESTKUBE_OAUTH_ACCESS_TOKEN` - for OAuth access token.
+`TESTKUBE_OAUTH_ACCESS_TOKEN` - For the OAuth access token.

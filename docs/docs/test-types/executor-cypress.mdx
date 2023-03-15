@@ -30,8 +30,8 @@ export const ExecutorInfo = () => {
 <iframe width="100%" height="315px" src="https://www.youtube.com/embed/lGCkfIqzGfw" title="YouTube Tutorial: End-to-End Testing in Kubernetes with Cypress and Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </span>
 
-## Example Cypress project
-If you haven't created the Cypress project yet please follow the Cypress documentation for details: https://docs.cypress.io/guides/dashboard/projects.
+## Example Cypress Project
+If you haven't created the Cypress project yet, please follow the Cypress documentation for details: https://docs.cypress.io/guides/dashboard/projects.
 
 In this example we will use the following Cypress project: https://github.com/kubeshop/testkube/tree/main/test/cypress/executor-tests/cypress-11
 `smoke.cy.js` contains three `it` steps:
@@ -50,32 +50,32 @@ describe('Testkube website', () => {
 })
 ```
 
-The test opens Testkube website, and validates 2 methods of loading ENV variables.
+The test opens the Testkube website and validates 2 methods of loading ENV variables.
 
-## Creating and running Test
+## Creating and Running Tests
 
-Cypress projects consist of multiple files, so the Test can only be created using Git Directory as the test source. Git Directory checkouts whole Cypress project directory from your repository.
+Cypress projects consist of multiple files, so the Test can only be created using a Git Directory as the test source. The Git Directory checkouts the whole Cypress project directory from your repository.
 
 <Tabs groupId="dashboard-cli">
 <TabItem value="dash" label="Dashboard">
 
-If you prefer to use Dashboard, just go to Tests, and click `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`cypress/project`), and choose Test Source (`Git Directory`). Then, you need to fill in repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to Cypress project directory in your repository (`test/cypress/executor-tests/cypress-11`). In this example, the repository is public, but in case of private ones you mwould need to additionally fill in Git credentials.
+If you prefer to use the Dashboard, just go to Tests and click the `Add a new test` button. Then you need to fill in the Test Name, choose the Test Type (`cypress/project`), and choose the Test Source (`Git Directory`). Then, you need to fill in the repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and path to the Cypress project directory in your repository (`test/cypress/executor-tests/cypress-11`). In this example, the repository is public, but in the case of private ones, you would need to additionally fill in the Git credentials.
 
 ![Cypress test - creation dialog](../img/dashboard-create-cypress-test.png)
 
-Now, when the test is created you can run it. But, in this example, the test checks ENV variables, which aren't set yet.
+When the test is created, you can run it. But, in this example, the test checks ENV variables, which aren't set yet.
 In order for this test to pass:
-- `CYPRESS_CUSTOM_ENV` ENV need to be set to `CYPRESS_CUSTOM_ENV_value`
-- `NON_CYPRESS_ENV` ENV need to be set to `NON_CYPRESS_ENV_value`
+- `CYPRESS_CUSTOM_ENV` ENV needs to be set to `CYPRESS_CUSTOM_ENV_value`.
+- `NON_CYPRESS_ENV` ENV needs to be set to `NON_CYPRESS_ENV_value`.
 
 #### Setting ENV variables
-In order to set ENV variables, or arguments you need to open the test you created, and then go to `Settings`, and `Variables & Secrets`.
+In order to set ENV variables, or arguments, you need to open the test you created, and then go to `Settings`, and `Variables & Secrets`.
 
-Cypress auto-loads ENV variables with `CYPRESS_` prefix, which are available in the tests without this prefix. So, if you will set `CYPRESS_CUSTOM_ENV` ENV, it will be available as `CUSTOM_ENV`. So, let's add it. Choose `Add a new variable`, leave the default type (`Basic`), and fill in variable name `CYPRESS_CUSTOM_ENV`, and it's value `CYPRESS_CUSTOM_ENV_value`. Then, click Save to set it.
+Cypress auto-loads ENV variables with `CYPRESS_` prefix, which are available in the tests without this prefix. So, if you set `CYPRESS_CUSTOM_ENV` ENV, it will be available as `CUSTOM_ENV`. Choose `Add a new variable`, leave the default type (`Basic`), and fill in the variable name `CYPRESS_CUSTOM_ENV`, and its value `CYPRESS_CUSTOM_ENV_value`. Then, click Save.
 
 ![Cypress test - setting ENV variable](../img/dashboard-cypress-env.png)
 
-Another way of setting ENVs in Cypress is by `--env` argument. That's something you can also do at `Variables & Secrets` settings - just go to `Arguments` section.
+Another way of setting ENVs in Cypress is by the `--env` argument. That's something you can also do at the `Variables & Secrets` settings - just go to the `Arguments` section.
 ![Cypress test - setting arguments](../img/dashboard-cypress-arguments.png)
 
 
@@ -89,12 +89,12 @@ You need to set test:
 - `--name` (for example, `cypress-test-2`)
 - `--type` (in this case `cypress/project`)
 - `--test-content-type` (`git-dir`, so the whole test directory will be checked out from the Git repository)
-- `--git-uri` - repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`)
+- `--git-uri` - Repository URI (in case of this example, `https://github.com/kubeshop/testkube.git`).
 - `--git-branch`
-- `--git-path` - path to the Cypress project directory in the repository (in this case `test/cypress/executor-tests/cypress-11`). If it's in the roo path in the repository you can omit it.
+- `--git-path` - Path to the Cypress project directory in the repository (in this case `test/cypress/executor-tests/cypress-11`). If it's in the root path in the repository, you can omit it.
 
 
-Additionally, because the test from this example require 2 ENVs to be set we need to set them.
+Additionally, because the test from this example require 2 ENVs to be set, we need to set them.
 - `--variable CYPRESS_CUSTOM_ENV=CYPRESS_CUSTOM_ENV_value` (global ENV variable that will be set in the execution container)
 - `--executor-args "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value"` (`--execution-args` pass arguments to the executor binary - in this case `--env`)
 
@@ -147,7 +147,7 @@ $ kubectl testkube get execution cypress-test-2-1
 
 #### Getting Execution Results
 
-You can then get test result with `testkube get execution` command using execution name, or execution ID.
+You can then get test result with the `testkube get execution` command using the execution name or execution ID.
 
 ```sh
 testkube get execution cypress-test-2-1
@@ -295,9 +295,9 @@ Test execution completed with success in 22.204s 🥇
 </TabItem>
 
 <TabItem value="crd" label="Custom Resource">
-Third option to create the Test is to use a Test CRD. If you already have the test created you can check definition in Dashboard (`Definition` tab in Test Settings). 
+The third option to create the Test is to use a Test CRD. If you already have the test created you can check the definition in the Dashboard (`Definition` tab in Test Settings). 
 
-You can also get a definition while using `testkube create test` command by adding `--crd-only`.
+You can also get a definition while using the `testkube create test` command by adding `--crd-only`.
 In that case, the test won't be created, but the definition will be displayed.
 
 ```sh
@@ -332,7 +332,7 @@ spec:
 ```
 
 
-When the Test CRD is saved to the yaml file it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
+When the Test CRD is saved to the yaml file, it can then be applied directly with `kubectl apply -f SOME_FILE_NAME.yaml`.
 </TabItem>
 </Tabs>
 
@@ -343,7 +343,7 @@ We're building several Cypress images to handle features that different versions
 
 To use a different executor you can use one of our pre-built ones (for Cypress 8, 9, 10 and Custom Testkube images) or build your own Docker image based on a Cypress executor.
 
-Let's assume we need official Cypress 10 for our test runs. To handle that issue, create a new Cypress executor:
+Let's assume we need official Cypress 10 version for our test runs. To handle that issue, create a new Cypress executor:
 
 content of `cypress-v10-executor.yaml`
 ```yaml
