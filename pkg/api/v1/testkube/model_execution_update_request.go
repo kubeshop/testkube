@@ -69,5 +69,6 @@ type ExecutionUpdateRequest struct {
 	// config *map references
 	EnvConfigMaps *[]EnvReference `json:"envConfigMaps,omitempty"`
 	// secret references
-	EnvSecrets *[]EnvReference `json:"envSecrets,omitempty"`
+	EnvSecrets     *[]EnvReference `json:"envSecrets,omitempty"`
+	RunningContext *RunningContext `json:"runningContext,omitempty"`
 }

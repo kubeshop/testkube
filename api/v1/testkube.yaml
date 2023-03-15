@@ -3694,6 +3694,9 @@ components:
           description: "secret references"
           items:
             $ref: "#/components/schemas/EnvReference"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -3760,6 +3763,9 @@ components:
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
