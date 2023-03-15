@@ -26,7 +26,6 @@ func NewStringTestContent(str string) *TestContent {
 
 // IsDir - for content fetched as dir
 //
-//
 // Deprecated: check source data
 func (c *TestContent) IsDir() bool {
 	return TestContentType(c.Type_) == TestContentTypeGitDir
