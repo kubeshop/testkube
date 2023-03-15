@@ -52,6 +52,9 @@ func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) er
 				if err != nil {
 					return errors.Wrapf(err, "error getting relative path for %s", path)
 				}
+				if relpath == "." {
+					relpath = fileInfo.Name()
+				}
 				object := &Object{
 					Name: relpath,
 					Size: fileInfo.Size(),
