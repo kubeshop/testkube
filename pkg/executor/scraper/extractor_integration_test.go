@@ -51,7 +51,7 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 			assert.Equal(t, b, []byte("test1"))
 		case "file2.txt":
 			assert.Equal(t, b, []byte("test2"))
-		case "file3.txt":
+		case "subdir/file3.txt":
 			assert.Equal(t, b, []byte("test3"))
 		default:
 			t.Fatalf("unexpected file: %s", object.Name)

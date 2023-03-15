@@ -3,6 +3,7 @@ package scraper
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/kubeshop/testkube/pkg/log"
 
@@ -47,14 +48,18 @@ func (e *FilesystemExtractor) Extract(ctx context.Context, process ProcessFn) er
 				if err != nil {
 					return errors.Wrapf(err, "error opening buffered %s", path)
 				}
+				relpath, err := filepath.Rel(dir, path)
+				if err != nil {
+					return errors.Wrapf(err, "error getting relative path for %s", path)
+				}
 				object := &Object{
-					Name: fileInfo.Name(),
+					Name: relpath,
 					Size: fileInfo.Size(),
 					Data: reader,
 				}
-				log.DefaultLogger.Infof("filesystem extractor is sending file to be processed: %v", fileInfo.Name())
+				log.DefaultLogger.Infof("filesystem extractor is sending file to be processed: %v", object.Name)
 				if err := process(ctx, object); err != nil {
-					return errors.Wrapf(err, "failed to process file %s", fileInfo.Name())
+					return errors.Wrapf(err, "failed to process file %s", object.Name)
 				}
 
 				return nil
