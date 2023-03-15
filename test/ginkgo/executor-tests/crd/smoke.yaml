@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: ginkgo-executor-tests # TODO: update before merge
+      branch: main
       path: test/ginkgo/executor-tests/smoke
 ---
 apiVersion: tests.testkube.io/v3
@@ -29,7 +29,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: ginkgo-executor-tests # TODO: update before merge
+      branch: main
       path: test/ginkgo/executor-tests/smoke-negative
   executionRequest:
     negativeTest: true
