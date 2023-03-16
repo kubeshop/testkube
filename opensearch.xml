@@ -4,8 +4,8 @@
   <ShortName>Testkube Documentation</ShortName>
   <Description>Search Testkube Documentation</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Image width="16" height="16" type="image/x-icon">https://kubeshop.github.io/testkube/img/logo.svg</Image>
-  <Url type="text/html" method="get" template="https://kubeshop.github.io/testkube/search?q={searchTerms}"/>
-  <Url type="application/opensearchdescription+xml" rel="self" template="https://kubeshop.github.io/testkube/opensearch.xml" />
-  <moz:SearchForm>https://kubeshop.github.io/testkube/</moz:SearchForm>
+  <Image width="16" height="16" type="image/x-icon">https://docs.testkube.io/img/logo.svg</Image>
+  <Url type="text/html" method="get" template="https://docs.testkube.io/search?q={searchTerms}"/>
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://docs.testkube.io/opensearch.xml" />
+  <moz:SearchForm>https://docs.testkube.io/</moz:SearchForm>
 </OpenSearchDescription>
