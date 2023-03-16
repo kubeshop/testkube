@@ -271,7 +271,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 
 	t.Run("flaky cypress test", func(t *testing.T) {
 		t.Parallel()
-		
+
 		output := []byte(`
 {"type":"error","content":"can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-20T12:44:15.719459174Z"}
 {"type":"line","content":"🚚 Preparing test runner","time":"2023-01-20T12:44:15.714299549Z"}
