@@ -8,8 +8,8 @@ on:
   push:
     branches:
       - algolia-test
-    paths:
-      - "docs/**"
+    # paths:
+    #   - "docs/**"
 
 defaults:
   run:
