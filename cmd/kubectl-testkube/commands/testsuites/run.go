@@ -53,6 +53,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				HTTPProxy:          httpProxy,
 				HTTPSProxy:         httpsProxy,
 				ExecutionLabels:    executionLabels,
+				RunningContext: &testkube.RunningContext{
+					Type_: string(testkube.RunningContextTypeUserCLI),
+				},
 			}
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {

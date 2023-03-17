@@ -316,6 +316,10 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			ExecutionLabels:       request.ExecutionLabels,
 			ActiveDeadlineSeconds: int64(request.Timeout),
 			ContentRequest:        request.ContentRequest,
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestSuite),
+				Context: testsuiteExecution.Name,
+			},
 		}
 
 		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)

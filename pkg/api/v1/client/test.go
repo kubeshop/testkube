@@ -152,6 +152,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		IsNegativeTestChangedOnRun: options.IsNegativeTestChangedOnRun,
 		EnvConfigMaps:              options.EnvConfigMaps,
 		EnvSecrets:                 options.EnvSecrets,
+		RunningContext:             options.RunningContext,
 	}
 
 	body, err := json.Marshal(request)
@@ -183,6 +184,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		ScraperTemplate:            options.ScraperTemplate,
 		NegativeTest:               options.NegativeTest,
 		IsNegativeTestChangedOnRun: options.IsNegativeTestChangedOnRun,
+		RunningContext:             options.RunningContext,
 	}
 
 	body, err := json.Marshal(request)

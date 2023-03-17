@@ -230,6 +230,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.BucketName = options.Request.BucketName
 	execution.ArtifactRequest = options.Request.ArtifactRequest
 	execution.PreRunScript = options.Request.PreRunScript
+	execution.RunningContext = options.Request.RunningContext
 
 	return execution
 }

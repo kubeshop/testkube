@@ -22,14 +22,15 @@ func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 
 	testExecution := TestSuiteExecution{
-		Id:         primitive.NewObjectID().Hex(),
-		StartTime:  time.Now(),
-		Name:       request.Name,
-		Status:     TestSuiteExecutionStatusRunning,
-		SecretUUID: request.SecretUUID,
-		TestSuite:  testSuite.GetObjectRef(),
-		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
-		Variables:  map[string]Variable{},
+		Id:             primitive.NewObjectID().Hex(),
+		StartTime:      time.Now(),
+		Name:           request.Name,
+		Status:         TestSuiteExecutionStatusRunning,
+		SecretUUID:     request.SecretUUID,
+		TestSuite:      testSuite.GetObjectRef(),
+		Labels:         common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
+		Variables:      map[string]Variable{},
+		RunningContext: request.RunningContext,
 	}
 
 	if testSuite.ExecutionRequest != nil {

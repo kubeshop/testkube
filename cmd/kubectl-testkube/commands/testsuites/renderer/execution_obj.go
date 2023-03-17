@@ -21,6 +21,11 @@ func TestSuiteExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	}
 	ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
 	ui.Warn("Labels:  ", testkube.MapToString(execution.Labels))
+	if execution.RunningContext != nil {
+		ui.Warn("Running context:")
+		ui.Warn("Type:   ", execution.RunningContext.Type_)
+		ui.Warn("Context:", execution.RunningContext.Context)
+	}
 	ui.Table(execution, os.Stdout)
 
 	ui.NL()
