@@ -133,7 +133,7 @@ spec:
 
 ## Executors
 
-Executors are Testkube-specific test runners. There are a list of predefined Executors coming with Testkube. You can also write your own custom Testkube Executor using [this guide](https://kubeshop.github.io/testkube/executor-custom/).
+Executors are Testkube-specific test runners. There are predefined Executors avialable in Testkube. You can also write your own custom Testkube Executor using [this guide](https://kubeshop.github.io/testkube/executor-custom/).
 
 ```yaml title="Example:"
 apiVersion: executor.testkube.io/v1

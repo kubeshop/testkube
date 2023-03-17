@@ -1,6 +1,6 @@
 # Testkube Helm Charts
 
-## 1. Add the Kubeshop Helm repository
+## 1. Add the Kubeshop Helm repository.
 
 ```sh
 helm repo add kubeshop https://kubeshop.github.io/helm-charts
@@ -10,7 +10,7 @@ If this repo already exists, run `helm repo update` to retrieve
 the `latest` versions of the packages.  You can then run `helm search repo
 testkube` to see the charts.
 
-## 2. Install the `testkube` chart
+## 2. Install the `testkube` chart.
 
 ```sh
 helm install --create-namespace my-testkube kubeshop/testkube
@@ -25,7 +25,7 @@ If you wish to install into a different namespace, please use following command:
 helm install --namespace namespace_name my-testkube kubeshop/testkube
 ```
 
-To uninstall the `testkube` chart if it was installed into default namespace:
+To uninstall the `testkube` chart if it was installed into the default namespace:
 
 ```sh
 helm delete my-testkube kubeshop/testkube
@@ -70,8 +70,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.logs.storage            | no          | "minio"                              |
 | testkube-api.logs.bucket             | no          | "testkube-logs"                      |
 
->For more configuration parameters of `MongoDB` chart please visit:
+>For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
->For more configuration parameters of `NATS` chart please visit:
+>For more configuration parameters of an `NATS` chart please visit: 
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
