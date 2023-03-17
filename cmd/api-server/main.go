@@ -372,21 +372,25 @@ func main() {
 
 	api.InitEvents()
 
-	triggerService := triggers.NewService(
-		sched,
-		clientset,
-		testkubeClientset,
-		testsuitesClient,
-		testsClientV3,
-		resultsRepository,
-		testResultsRepository,
-		triggerLeaseBackend,
-		log.DefaultLogger,
-		configMapConfig,
-		triggers.WithHostnameIdentifier(),
-	)
-	log.DefaultLogger.Info("starting trigger service")
-	triggerService.Run(ctx)
+	if !cfg.DisableTestTriggers {
+		triggerService := triggers.NewService(
+			sched,
+			clientset,
+			testkubeClientset,
+			testsuitesClient,
+			testsClientV3,
+			resultsRepository,
+			testResultsRepository,
+			triggerLeaseBackend,
+			log.DefaultLogger,
+			configMapConfig,
+			triggers.WithHostnameIdentifier(),
+		)
+		log.DefaultLogger.Info("starting trigger service")
+		triggerService.Run(ctx)
+	} else {
+		log.DefaultLogger.Info("test triggers are disabled")
+	}
 
 	// telemetry based functions
 	api.SendTelemetryStartEvent(ctx)
