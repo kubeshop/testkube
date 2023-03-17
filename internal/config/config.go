@@ -25,6 +25,7 @@ type Config struct {
 	NatsURI                          string `envconfig:"NATS_URI" default:"nats://localhost:4222"`
 	JobServiceAccountName            string `envconfig:"JOB_SERVICE_ACCOUNT_NAME" default:""`
 	JobTemplateFile                  string `envconfig:"JOB_TEMPLATE_FILE" default:""`
+	DisableTestTriggers              bool   `envconfig:"DISABLE_TEST_TRIGGERS" default:"false"`
 	TestkubeDefaultExecutors         string `envconfig:"TESTKUBE_DEFAULT_EXECUTORS" default:""`
 	TestkubeTemplateJob              string `envconfig:"TESTKUBE_TEMPLATE_JOB" default:""`
 	TestkubeContainerTemplateJob     string `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_JOB" default:""`
