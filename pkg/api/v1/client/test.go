@@ -240,7 +240,7 @@ func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkub
 }
 
 // DownloadFile downloads file
-func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
+func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact *ArtifactObject, err error) {
 	uri := c.executionTransport.GetURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
 	return c.executionTransport.GetFile(uri, fileName, destination)
 }

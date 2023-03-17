@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	executionID string
-	filename    string
-	destination string
-	downloadDir string
+	executionID    string
+	filename       string
+	destination    string
+	downloadDir    string
+	downloadFormat string
 )
 
 func NewDownloadCmd() *cobra.Command {
@@ -104,7 +105,10 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 			client, _ := common.GetClient(cmd)
-			tests.DownloadArtifacts(executionID, downloadDir, client)
+			if downloadFormat != "folder" && downloadFormat != "archive" {
+				ui.ExitOnError("invalid format", fmt.Errorf("format should be one of folder|archive"))
+			}
+			tests.DownloadArtifacts(executionID, downloadDir, downloadFormat, client)
 		},
 	}
 
@@ -113,6 +117,7 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
+	cmd.Flags().StringVar(&downloadFormat, "download-format", "folder", "download format (folder|archive)")
 
 	// output renderer flags
 	return cmd

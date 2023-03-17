@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
-	"path/filepath"
-
+	"io"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
 
 	"github.com/pkg/errors"
 
@@ -151,27 +149,16 @@ func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
+func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (content io.ReadCloser, err error) {
 	req, err := t.getProxy(http.MethodGet).
 		Suffix(uri).
 		SetHeader("Accept", "text/event-stream").
 		Stream(context.Background())
 	if err != nil {
-		return name, err
-	}
-	defer req.Close()
-
-	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))
-	if err != nil {
-		return name, err
+		return nil, err
 	}
 
-	if _, err = f.ReadFrom(req); err != nil {
-		return name, err
-	}
-
-	defer f.Close()
-	return f.Name(), err
+	return req, nil
 }
 
 func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
