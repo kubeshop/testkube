@@ -21,7 +21,7 @@ func (d *Detector) Add(adapter Adapter) {
 }
 
 // Detect detects test type
-func (d *Detector) Detect(options client.UpsertTestOptions) (name string, found bool) {
+func (d *Detector) Detect(path string, options client.UpsertTestOptions) (name string, found bool) {
 	for _, adapter := range d.Adapters {
 		if name, found := adapter.Is(options); found {
 			return name, found
