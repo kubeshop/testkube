@@ -17,7 +17,7 @@ run:
 
 .PHONY: docker-build
 docker-build:
-	docker build -t $(REPOSITORY)/$(NAME):$randTag -f build/agent/Dockerfile .
+	docker build -t $(REPOSITORY)/$(NAME) -f build/agent/Dockerfile .
 
 .PHONY: docker-build-local
 docker-build-local: build-local-linux

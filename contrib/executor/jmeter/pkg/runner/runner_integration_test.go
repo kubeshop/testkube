@@ -16,6 +16,7 @@ func TestRun(t *testing.T) {
 
 	tempDir := os.TempDir()
 	os.Setenv("RUNNER_DATADIR", tempDir)
+	os.Setenv("ENTRYPOINT_CMD", "jmeter")
 
 	t.Run("run successful jmeter test", func(t *testing.T) {
 		runner, err := NewRunner()

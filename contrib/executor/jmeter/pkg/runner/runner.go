@@ -139,15 +139,17 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 
 	jtlPath := filepath.Join(outputDir, "report.jtl")
 	reportPath := filepath.Join(outputDir, "report")
-	args := []string{"-n", "-t", path, "-l", jtlPath, "-e", "-o", reportPath}
+	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
+	args := []string{"-n", "-j", jmeterLogPath, "-t", path, "-l", jtlPath, "-e", "-o", reportPath}
 	args = append(args, params...)
 
 	// append args from execution
 	args = append(args, execution.Args...)
 	output.PrintLog(fmt.Sprintf("%s Using arguments: %v", ui.IconWorld, args))
 
+	mainCmd := getEntrypoint()
 	// run JMeter inside repo directory ignore execution error in case of failed test
-	out, err := executor.Run(runPath, "jmeter", envManager, args...)
+	out, err := executor.Run(runPath, mainCmd, envManager, args...)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
 	}
@@ -177,6 +179,17 @@ func (r *JMeterRunner) Run(execution testkube.Execution) (result testkube.Execut
 	}
 
 	return executionResult, nil
+}
+
+func getEntrypoint() (entrypoint string) {
+	if entrypoint = os.Getenv("ENTRYPOINT_CMD"); entrypoint != "" {
+		return entrypoint
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "."
+	}
+	return filepath.Join(wd, "scripts/entrypoint.sh")
 }
 
 func MapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {
