@@ -1,0 +1,68 @@
+name: testkube-executor-helm-releaser
+on:
+  workflow_run:
+    workflows: [Docker images building and pushing for executor]
+    types: 
+      - completed
+
+jobs:
+  releasing_helm_chart_executor:
+    strategy:
+      matrix:
+        executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
+    runs-on: ubuntu-latest
+    steps:
+      - name: getting Tag name pushed.
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+
+      - name: Editing helm-release repo with version based on a Tag pushed.
+        run: |
+
+          # Setting up Git:
+
+          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          cd ./helm-charts
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          git checkout "release-$RELEASE_VERSION"
+
+          # Calling chart releaser script by passing needed folder name:
+          # E.G. in order to relase api-server": 
+          # -->> ./chart_releaser.sh --helm-chart-folder api-server
+
+          export GH_PUSH_TOKEN
+          export RELEASE_VERSION
+
+          cd ./scripts
+          ./chart_releaser.sh --testkube-executor-name ${{ matrix.executor }} --main-chart false --branch true
+
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+
+  releasing_helm_chart_main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: getting Tag name pushed.
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+
+      - name: Publish helm-release repo with version based on a Tag pushed.
+        run: |
+
+          # Setting up Git:
+
+          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          cd ./helm-charts
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+          git checkout main
+
+          git merge "release-$RELEASE_VERSION"
+          # git push origin main
+          git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts main
+
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}

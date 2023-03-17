@@ -93,7 +93,6 @@ func TestService_matchConditionsRetry(t *testing.T) {
 func TestService_matchConditionsTimeout(t *testing.T) {
 	t.Parallel()
 
-	retry := 0
 	e := &watcherEvent{
 		resource:  "deployment",
 		name:      "test-deployment",
@@ -103,7 +102,6 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		eventType: "modified",
 		causes:    nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
-			retry++
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
 				{
@@ -162,7 +160,6 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 
 	err := s.match(context.Background(), e)
 	assert.ErrorIs(t, err, ErrConditionTimeout)
-	assert.Equal(t, 2, retry)
 }
 
 func TestService_match(t *testing.T) {

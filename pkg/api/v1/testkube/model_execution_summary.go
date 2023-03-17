@@ -37,5 +37,6 @@ type ExecutionSummary struct {
 	// calculated test duration in ms
 	DurationMs int32 `json:"durationMs,omitempty"`
 	// test and execution labels
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels         map[string]string `json:"labels,omitempty"`
+	RunningContext *RunningContext   `json:"runningContext,omitempty"`
 }

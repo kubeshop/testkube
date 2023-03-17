@@ -1,0 +1,20 @@
+{
+	"id": "6183cec12acc0cb7de5c249e",
+	"testName": "dashboard-test",
+	"testType": "cypress/project",
+	"name": "currently-giving-blowfish",
+	"content": {
+		"type": "git-dir",
+		"repository": {
+			"type": "git",
+			"uri": "https://github.com/kubeshop/testkube-dashboard.git",
+			"branch": "main"
+		}
+	},
+	"startTime": "2021-11-04T12:14:57.118Z",
+	"endTime": "0001-01-01T00:00:00Z",
+	"executionResult": {
+		"status": "pending"
+	},
+	"args": []
+}

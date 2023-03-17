@@ -8,12 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -161,7 +160,17 @@ func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string,
 	}
 	defer req.Close()
 
-	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))
+	target := filepath.Join(destination, fileName)
+	dir := filepath.Dir(target)
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return name, err
+		}
+	} else if err != nil {
+		return name, err
+	}
+
+	f, err := os.Create(target)
 	if err != nil {
 		return name, err
 	}
