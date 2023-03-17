@@ -92,7 +92,6 @@ jobs:
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
-          git checkout -b "release-$RELEASE_VERSION"
 
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase testkube-api":
@@ -102,7 +101,7 @@ jobs:
           export RELEASE_VERSION
 
           cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-api --main-chart true --branch true
+          ./chart_releaser.sh --helm-chart-folder testkube-api --main-chart true
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}

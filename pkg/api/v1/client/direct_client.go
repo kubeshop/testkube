@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -194,17 +194,8 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string) (name string
 		return name, fmt.Errorf("error: %d", resp.StatusCode)
 	}
 
-	target := filepath.Join(destination, fileName)
-	dir := filepath.Dir(target)
-	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
-			return name, err
-		}
-	} else if err != nil {
-		return name, err
-	}
-
-	f, err := os.Create(target)
+	split := strings.Split(fileName, "/")
+	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
 	if err != nil {
 		return name, err
 	}

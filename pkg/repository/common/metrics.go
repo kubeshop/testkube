@@ -54,9 +54,6 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 }
 
 func calculate(durations []float64, quantile float64) float64 {
-	if len(durations) == 0 {
-		return 0
-	}
 	percentile, err := stats.PercentileNearestRank(durations, quantile)
 	if err != nil {
 		log.DefaultLogger.Errorw("Unable to calculate percentile", "error", err)

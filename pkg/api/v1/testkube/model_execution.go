@@ -59,6 +59,5 @@ type Execution struct {
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
 	// script to run before test execution
-	PreRunScript   string          `json:"preRunScript,omitempty"`
-	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	PreRunScript string `json:"preRunScript,omitempty"`
 }

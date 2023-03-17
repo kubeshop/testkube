@@ -9,8 +9,8 @@ const config = {
   title: "Testkube Documentation",
   tagline:
     "Your somewhat opinionated and friendly Kubernetes testing framework",
-  url: "https://docs.testkube.io",
-  baseUrl: "/",
+  url: "https://kubeshop.github.io",
+  baseUrl: "/testkube/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/logo.svg",
