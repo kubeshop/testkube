@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
@@ -60,6 +61,8 @@ type Service struct {
 	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
+	testkubeNamespace             string
+	watcherNamespaces             []string
 }
 
 type Option func(*Service)
@@ -79,7 +82,6 @@ func NewService(
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
-		informers:                     newK8sInformers(clientset, testKubeClientset),
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
 		scraperInterval:               defaultScraperInterval,
@@ -107,6 +109,8 @@ func NewService(
 	for _, opt := range opts {
 		opt(s)
 	}
+
+	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 
 	return s
 }
@@ -153,6 +157,23 @@ func WithScraperInterval(interval time.Duration) Option {
 func WithExecutor(executor ExecutorF) Option {
 	return func(s *Service) {
 		s.executor = executor
+	}
+}
+
+func WithTestkubeNamespace(namespace string) Option {
+	return func(s *Service) {
+		s.testkubeNamespace = namespace
+	}
+}
+
+func WithWatcherNamespaces(namespaces string) Option {
+	return func(s *Service) {
+		for _, namespace := range strings.Split(namespaces, ",") {
+			value := strings.TrimSpace(namespace)
+			if value != "" {
+				s.watcherNamespaces = append(s.watcherNamespaces, value)
+			}
+		}
 	}
 }
 
