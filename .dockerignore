@@ -1,0 +1,11 @@
+.git
+.gitignore
+.github
+LICENSE
+README.md
+Makefile
+docs
+assets
+config
+choco
+test

@@ -117,6 +117,12 @@ func parseLogs(b []byte) ([]Output, error) {
 			})
 			continue
 		}
+		// skip appending log entry if log content is empty
+		// this can happen due to scraper logging progress or other libraries having internal logs
+		// and GetLogEntry returns an empty Output
+		if log.Content == "" {
+			continue
+		}
 		logs = append(logs, log)
 	}
 	return logs, nil

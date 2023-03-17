@@ -1,6 +1,6 @@
 # Development
 
-## Running with CRDs on Kubernetes Cluster
+## Running with CRDs on a Kubernetes Cluster
 
 The minimal component which must be deployed on your local Kubernetes cluster is testkube-operator with project CRDs (<https://github.com/kubeshop/testkube-operator>).
 
@@ -12,7 +12,7 @@ make install
 
 ## Running on a Local Machine
 
-The next critical components are the Testkube API (<https://github.com/kubeshop/testkube>) and an executor. You can use your own tests executor or an existing one from Testkube.
+The next critical components are the Testkube API (<https://github.com/kubeshop/testkube>) and an executor. You can use your own tests' executor or an existing one from Testkube.
 
 Checkout the Testkube project and run a local API server:
 
@@ -34,7 +34,7 @@ If you want to debug an API server locally, you can run a local kube-proxy which
 make run-proxy
 ```
 
-And when calling any of `kubectl testkube` subcommands just pass direct client flag (`-cdirect`)
+And when calling any of `kubectl testkube` subcommands, pass the direct client flag (`-cdirect`)
 
 
 ### Installing Local Executors
