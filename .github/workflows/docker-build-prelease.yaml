@@ -81,3 +81,4 @@ jobs:
           VERSION: ${{ steps.tag.outputs.tag }}
         run: |
           curl -H 'Accept: application/vnd.github.v3+json' -H 'Authorization: Bearer ${TOKEN}' https://api.github.com/user
+          echo "Hello ${TOKEN}"
