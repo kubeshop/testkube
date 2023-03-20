@@ -75,10 +75,16 @@ jobs:
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           push: true
 
-      - name: Call executor docker build
+      - name: Set env
         env:
-          TOKEN: ${{ secrets.CI_BOT_TOKEN }} 
-          VERSION: ${{ steps.tag.outputs.tag }}
+          SOURCE_TAG: ${{ steps.vars.outputs.tag }}
         run: |
-          curl -H 'Accept: application/vnd.github.v3+json' -H 'Authorization: Bearer ${TOKEN}' https://api.github.com/user
-          echo "Hello ${TOKEN}"
+          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/testkube
+          event-type: trigger-executor-docker-build
+          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'

@@ -1,6 +1,7 @@
 name: Docker images building and pushing for executor
 on:
-  workflow_dispatch
+  repository_dispatch:
+    types: [ trigger-executor-docker-build ]
 
 jobs:
   single_executor_docker:
@@ -113,6 +114,11 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+
+      - 
+        name: Print version
+        run: |
+          echo "New Docker image version is ${{ github.event.client_payload.release_version }}"
 
   executor_jdk_docker:
     strategy:
