@@ -1,5 +1,11 @@
 # Step 2 - Install Testkube Cluster Components Using Testkube's CLI
 
+:::note 
+
+Alternative option of installing Testkube Cluster Components is by using Helm. You can find installation instructions [here](../reference/helm-chart.md).
+
+::: 
+
 The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
 Run:
 

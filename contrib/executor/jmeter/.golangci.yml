@@ -1,0 +1,29 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - goimports
+    - govet
+    - staticcheck
+    - revive
+    - unused
+    - errname
+    - errorlint
+    - gocyclo
+    - gofmt
+    - goimports
+    - misspell
+    - predeclared
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  lll:
+    line-length: 150
+  misspell:
+    locale: US
+  goimports:
+    local-prefixes: github.com/kubeshop/testkube,github.com/kubeshop/testkube-executor-jmeter

@@ -1,0 +1,12 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: gradle-executor
+  namespace: testkube
+spec:
+  executor_type: job
+  image: testkube/testkube-gradle-executor:latest
+  types:
+    - gradle/project
+    - gradle/test
+    - gradle/integrationTest
