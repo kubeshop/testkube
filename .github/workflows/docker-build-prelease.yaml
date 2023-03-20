@@ -74,3 +74,11 @@ jobs:
             build.args.SLACK_BOT_CLIENT_SECRET=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           push: true
+
+      - name: 
+        env:
+          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }} 
+          VERSION: ${{ steps.tag.outputs.tag }}
+        run: |
+          curl -X POST -H 'Accept: application/vnd.github.v3+json' -H 'Authorization: Bearer ${TOKEN}' --data '{"ref": "${VERSION}"}' https://api.github.com/repos/kubeshop/testkube/actions/workflows/executor_docker-build.yaml/dispatches
+

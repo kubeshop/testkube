@@ -1,9 +1,6 @@
 name: Docker images building and pushing for executor
 on:
-  workflow_run:
-    workflows: [Docker images]
-    types: 
-      - completed
+  workflow_dispatch
 
 jobs:
   single_executor_docker:

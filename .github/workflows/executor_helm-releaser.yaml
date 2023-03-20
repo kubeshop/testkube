@@ -1,9 +1,6 @@
 name: Helm releaser for executor
 on:
-  workflow_run:
-    workflows: [Docker images building and pushing for executor]
-    types: 
-      - completed
+  workflow_dispatch
 
 jobs:
   releasing_helm_chart_executor:
