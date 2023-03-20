@@ -1,0 +1,30 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - errcheck
+    - goimports
+    - govet
+    - staticcheck
+    - revive
+    - unused
+    - varcheck
+    - errname
+    - errorlint
+    - gocyclo
+    - gofmt
+    - goimports
+    - lll
+    - misspell
+    - predeclared
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  lll:
+    line-length: 150
+  misspell:
+    locale: US

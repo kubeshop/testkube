@@ -33,4 +33,5 @@ type TestSuiteExecutionRequest struct {
 	// duration in seconds the test suite may be active, until its stopped
 	Timeout        int32               `json:"timeout,omitempty"`
 	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
+	RunningContext *RunningContext     `json:"runningContext,omitempty"`
 }

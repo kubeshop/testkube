@@ -1,0 +1,14 @@
+{
+  "name": "cypress-example-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "simple-test.js",
+  "scripts": {
+    "test": "cypress run simple-test.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cypress": "^10.4.0"
+  }
+}

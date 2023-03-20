@@ -1,4 +1,4 @@
-name: Docker images
+name: Docker images stage
 on:
   push:
     branches:
