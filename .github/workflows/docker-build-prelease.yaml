@@ -84,7 +84,5 @@ jobs:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/testkube
           event-type: trigger-executor-docker-build
           client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
