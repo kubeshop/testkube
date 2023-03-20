@@ -2,7 +2,7 @@
 
 :::note 
 
-Alternative option of installing Testkube Cluster Components is by using Helm. You can find installation instructions [here](../reference/helm-chart.md)
+Alternative option of installing Testkube Cluster Components is by using Helm. You can find installation instructions [here](../reference/helm-chart.md).
 
 ::: 
 
