@@ -1,4 +1,4 @@
-name: testkube-executor-helm-releaser
+name: Helm releaser for executor
 on:
   workflow_run:
     workflows: [Docker images building and pushing for executor]

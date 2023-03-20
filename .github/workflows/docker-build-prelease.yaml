@@ -1,4 +1,4 @@
-name: Docker images
+name: Docker images pre
 on:
   push:
     tags:
