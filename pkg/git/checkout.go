@@ -4,6 +4,7 @@
 package git
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/process"
@@ -72,7 +73,7 @@ func CheckoutCommit(uri, path, commit, dir string) (err error) {
 }
 
 // Checkout will checkout directory from Git repository
-func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
+func Checkout(uri, branch, commit, token, dir string, isBitbucketServerToken bool) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-checkout")
@@ -83,6 +84,15 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 
 	if commit == "" {
 		args := []string{"clone"}
+
+		// In some orgs using a username and a password to authenticate against Git servers is
+		// prohibited. This appends the HTTP Authorization header to the git clone args to
+		// authenticate using a bearer token. More info:
+		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
+		if isBitbucketServerToken {
+			args = append(args, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", token))
+		}
+
 		if branch != "" {
 			args = append(args, "-b", branch)
 		}
@@ -106,7 +116,7 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 }
 
 // PartialCheckout will checkout only given directory from Git repository
-func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, err error) {
+func PartialCheckout(uri, path, branch, commit, token, dir string, isBitbucketServerToken bool) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-sparse-checkout")
@@ -117,6 +127,15 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 
 	if commit == "" {
 		args := []string{"clone"}
+
+		// In some orgs using a username and a password to authenticate against Git servers is
+		// prohibited. This appends the HTTP Authorization header to the git clone args to
+		// authenticate using a bearer token. More info:
+		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
+		if isBitbucketServerToken {
+			args = append(args, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", token))
+		}
+
 		if branch != "" {
 			args = append(args, "-b", branch)
 		}
