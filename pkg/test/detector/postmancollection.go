@@ -32,6 +32,14 @@ func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name 
 	return
 }
 
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d PostmanCollectionAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	name, ok = d.Is(options)
+	ext := filepath.Ext(path)
+	ok = ok && (ext == ".json")
+	return
+}
+
 func checkName(filename, pattern string) (string, bool) {
 	ok := filepath.Ext(filename) == ".json" &&
 		strings.HasSuffix(strings.TrimSuffix(filename, filepath.Ext(filename)), pattern)

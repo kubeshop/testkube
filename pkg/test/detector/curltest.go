@@ -2,6 +2,7 @@ package detector
 
 import (
 	"encoding/json"
+	"path/filepath"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -28,6 +29,14 @@ func (d CurlTestAdapter) Is(options apiClient.UpsertTestOptions) (name string, o
 		}
 	}
 
+	return
+}
+
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d CurlTestAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	name, ok = d.Is(options)
+	ext := filepath.Ext(path)
+	ok = ok && (ext == ".json")
 	return
 }
 

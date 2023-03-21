@@ -18,7 +18,7 @@ func TestDetectorDetect(t *testing.T) {
 		detector.Add(PostmanCollectionAdapter{})
 		detector.Add(K6Adapter{})
 
-		name, found := detector.Detect(client.UpsertTestOptions{
+		name, found := detector.Detect("postman_collection.json", client.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(exampleValidContent),
 		})
 

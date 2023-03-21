@@ -29,6 +29,12 @@ func (d CypressAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok
 	return
 }
 
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d CypressAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	//TODO: implement support for multiple files tests
+	return "", false
+}
+
 // IsTestName detecs if filename has a conventional test name
 func (d CypressAdapter) IsTestName(filename string) (string, bool) {
 	return "", false

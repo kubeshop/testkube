@@ -1,13 +1,14 @@
 package detector
 
 import (
+	"path/filepath"
 	"strings"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// K6Adapter is detector adapter for Postman collection saved as JSON content
+// K6Adapter is detector adapter for K6 test
 type K6Adapter struct{}
 
 // Is detects based on upsert test options what kind of test it is
@@ -20,6 +21,14 @@ func (d K6Adapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool
 		return d.GetType(), true
 	}
 
+	return
+}
+
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d K6Adapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	name, ok = d.Is(options)
+	ext := filepath.Ext(path)
+	ok = ok && (ext == ".js")
 	return
 }
 

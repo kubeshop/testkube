@@ -4,9 +4,18 @@ import "github.com/kubeshop/testkube/pkg/api/v1/client"
 
 func NewDefaultDetector() Detector {
 	d := Detector{Adapters: make(map[string]Adapter, 0)}
-	d.Add(PostmanCollectionAdapter{})
+	d.Add(ArtilleryAdapter{})
 	d.Add(CurlTestAdapter{})
+	d.Add(JMeterAdapter{})
 	d.Add(K6Adapter{})
+	d.Add(PostmanCollectionAdapter{})
+	d.Add(SoapUIAdapter{})
+	d.Add(MavenAdapter{})
+	d.Add(GradleAdapter{})
+	d.Add(PlaywrightAdapter{})
+	d.Add(CypressAdapter{})
+	d.Add(GinkgoAdapter{})
+	d.Add(KubePugAdapter{})
 	return d
 }
 
@@ -23,7 +32,7 @@ func (d *Detector) Add(adapter Adapter) {
 // Detect detects test type
 func (d *Detector) Detect(path string, options client.UpsertTestOptions) (name string, found bool) {
 	for _, adapter := range d.Adapters {
-		if name, found := adapter.Is(options); found {
+		if name, found := adapter.IsWithPath(path, options); found {
 			return name, found
 		}
 	}

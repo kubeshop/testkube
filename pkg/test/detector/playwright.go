@@ -29,6 +29,12 @@ func (d PlaywrightAdapter) Is(options apiClient.UpsertTestOptions) (name string,
 	return
 }
 
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d PlaywrightAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	//TODO: implement support for multiple files tests
+	return "", false
+}
+
 // GetType returns test type
 func (d PlaywrightAdapter) GetType() string {
 	return "playwright/script"
@@ -50,6 +56,6 @@ func (d PlaywrightAdapter) IsSecretEnvName(filename string) (string, string, boo
 }
 
 // GetSecretVariables retuns secret variables
-func GetSecretVariables(data string) (map[string]testkube.Variable, error) {
+func (d PlaywrightAdapter) GetSecretVariables(data string) (map[string]testkube.Variable, error) {
 	return nil, nil
 }

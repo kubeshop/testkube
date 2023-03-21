@@ -1,6 +1,7 @@
 package detector
 
 import (
+	"path/filepath"
 	"strings"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -26,6 +27,14 @@ func (d SoapUIAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok 
 		return d.GetType(), true
 	}
 
+	return
+}
+
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d SoapUIAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	name, ok = d.Is(options)
+	ext := filepath.Ext(path)
+	ok = ok && (ext == ".xml")
 	return
 }
 

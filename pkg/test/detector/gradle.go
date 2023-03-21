@@ -5,11 +5,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// KubePugAdapter is a test adapter for kubepug
-type KubePugAdapter struct{}
+// GradleAdapter is an adapter for gradle tests
+type GradleAdapter struct{}
 
 // Is detects based on upsert test options what kind of test it is
-func (d KubePugAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
+func (d GradleAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	if options.Content == nil {
 		return
 	}
@@ -18,38 +18,36 @@ func (d KubePugAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok
 		return
 	}
 
-	// TODO: implement kubepug detector
-
 	return
 }
 
 // IsWithPath detects based on upsert test options what kind of test it is
-func (d KubePugAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
-	// TODO: implement kubepug detector
+func (d GradleAdapter) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	// TODO: implement for multiple files gradle tests
 	return "", false
 }
 
 // IsTestName detecs if filename has a conventional test name
-func (d KubePugAdapter) IsTestName(filename string) (string, bool) {
+func (d GradleAdapter) IsTestName(filename string) (string, bool) {
 	return "", false
 }
 
 // IsEnvName detecs if filename has a conventional env name
-func (d KubePugAdapter) IsEnvName(filename string) (string, string, bool) {
+func (d GradleAdapter) IsEnvName(filename string) (string, string, bool) {
 	return "", "", false
 }
 
 // IsSecretEnvName detecs if filename has a conventional secret env name
-func (d KubePugAdapter) IsSecretEnvName(filename string) (string, string, bool) {
+func (d GradleAdapter) IsSecretEnvName(filename string) (string, string, bool) {
 	return "", "", false
 }
 
 // GetSecretVariables retuns secret variables
-func (d KubePugAdapter) GetSecretVariables(data string) (map[string]testkube.Variable, error) {
+func (d GradleAdapter) GetSecretVariables(data string) (map[string]testkube.Variable, error) {
 	return nil, nil
 }
 
 // GetType returns test type
-func (d KubePugAdapter) GetType() string {
-	return "kubepug/yaml"
+func (d GradleAdapter) GetType() string {
+	return "gradle/project"
 }

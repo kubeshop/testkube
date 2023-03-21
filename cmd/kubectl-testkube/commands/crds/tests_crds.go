@@ -174,7 +174,7 @@ func generateTest(namespace, path string) (*client.UpsertTestOptions, error) {
 
 	// try to detect type if none passed
 	d := detector.NewDefaultDetector()
-	if detectedType, ok := d.Detect(client.UpsertTestOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
+	if detectedType, ok := d.Detect(path, client.UpsertTestOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
 		ui.Debug("Detected test type", detectedType)
 		testType = detectedType
 	} else {

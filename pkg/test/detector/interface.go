@@ -9,6 +9,8 @@ import (
 type Adapter interface {
 	// Is detects based on upsert test options what kind of test it is
 	Is(options apiClient.UpsertTestOptions) (string, bool)
+	// IsWithPath detects based on path(extension) what kind of test it is
+	IsWithPath(path string, options apiClient.UpsertTestOptions) (string, bool)
 	// IsTestName detecs if filename has a conventional test name
 	IsTestName(filename string) (string, bool)
 	// IsEnvName detecs if filename has a conventional env name
