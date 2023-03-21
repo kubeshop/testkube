@@ -1,6 +1,7 @@
 name: Helm releaser for executor
 on:
-  workflow_dispatch
+  repository_dispatch:
+    types: [ trigger-executor-helm-releaser ]
 
 jobs:
   releasing_helm_chart_executor:
@@ -9,10 +10,6 @@ jobs:
         executor: [artillery, curl, cypress, ginkgo, gradle, init, jmeter, k6, kubepug, maven, playwright, postman, scraper, soapui]
     runs-on: ubuntu-latest
     steps:
-      - name: getting Tag name pushed.
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
 
@@ -36,15 +33,12 @@ jobs:
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+          RELEASE_VERSION: ${{ github.event.client_payload.release_version }}
 
   releasing_helm_chart_main:
+    needs: releasing_helm_chart_executor
     runs-on: ubuntu-latest
     steps:
-      - name: getting Tag name pushed.
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-
       - name: Publish helm-release repo with version based on a Tag pushed.
         run: |
 
@@ -62,4 +56,4 @@ jobs:
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+          RELEASE_VERSION: ${{ github.event.client_payload.release_version }}

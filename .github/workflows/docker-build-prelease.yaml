@@ -75,15 +75,3 @@ jobs:
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
             build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
           push: true
-
-      - name: Set env
-        env:
-          SOURCE_TAG: ${{ steps.vars.outputs.tag }}
-        run: |
-          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
-
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          event-type: trigger-executor-docker-build
-          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
