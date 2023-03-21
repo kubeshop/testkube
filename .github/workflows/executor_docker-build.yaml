@@ -140,7 +140,7 @@ jobs:
         uses: docker/bake-action@v1
         with:
           files: |
-          contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
+            contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
           targets: build
           set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
