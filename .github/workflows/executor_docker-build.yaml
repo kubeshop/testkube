@@ -60,8 +60,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
 
       -
@@ -173,8 +173,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -190,8 +190,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -279,8 +279,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             prefix=
@@ -296,8 +296,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -313,8 +313,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -414,8 +414,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -431,8 +431,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
