@@ -8,9 +8,11 @@ import (
 )
 
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
+const CloudEnvVariableName = "TESTKUBE_CLOUD_API_KEY"
 
 // Brew builds can't be parametrized so we are embedding this one
 var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
+var CloudSegmentioKey = ""
 
 // SegmentioSender sends ananymous telemetry data to segment.io
 // TODO refactor Sender func as out is not needed (use debug loggers to log output)
@@ -19,6 +21,11 @@ func SegmentioSender(client *http.Client, payload Payload) (out string, err erro
 	// TODO consider removing this as CLI has fixed key and API overrides it in build time
 	if key, ok := os.LookupEnv(SegmentioEnvVariableName); ok {
 		SegmentioKey = key
+	}
+	if key, ok := os.LookupEnv(CloudEnvVariableName); ok {
+		if key != "" {
+			SegmentioKey = CloudSegmentioKey
+		}
 	}
 
 	segmentio := analytics.New(SegmentioKey)
